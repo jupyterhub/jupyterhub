@@ -19,7 +19,7 @@ Basic principals:
 
 ## dependencies
 
-    npm install node-http-proxy
+    npm install http-proxy
     pip install tornado
 
 ## to use
