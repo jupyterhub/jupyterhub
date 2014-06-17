@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 
+import os
+import re
 import socket
 import sys
 import uuid
+from collections import defaultdict
 from subprocess import Popen
 
 import json
@@ -20,15 +23,90 @@ from tornado import web
 
 from tornado.options import define, options
 
+from IPython.utils.traitlets import HasTraits, Any, Unicode, Integer
+
 def random_port():
+    """get a single random port"""
     sock = socket.socket()
     sock.bind(('', 0))
     port = sock.getsockname()[1]
     sock.close()
     return port
 
-define("port", default=8001, help="run on the given port", type=int)
+auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
 
+def token_authorized(method):
+    def check_token(self, *args, **kwargs):
+        auth_header = self.request.headers.get('Authorization', '')
+        match = auth_header_pat.match(auth_header)
+        if not match:
+            raise web.HTTPError(403)
+        token = match.group(1)
+        app_log.info("api token: %r", token)
+        session = self.user_manager.user_for_api_token(token)
+        if session is None:
+            raise web.HTTPError(403)
+        self.request_session = session
+        return method(self, *args, **kwargs)
+    return check_token
+
+
+class UserSession(HasTraits):
+    env_prefix = Unicode('IP_')
+    process = Any()
+    port = Integer()
+    user = Unicode()
+    
+    url_prefix = Unicode()
+    def _url_prefix_default(self):
+        return '/user/%s' % self.user
+    
+    api_token = Unicode()
+    def _api_token_default(self):
+        return str(uuid.uuid4())
+    
+    cookie_token = Unicode()
+    def _cookie_token_default(self):
+        return str(uuid.uuid4())
+    
+    def _env_key(self, d, key, value):
+        d['%s%s' % (self.env_prefix, key)] = value
+    
+    @property
+    def env(self):
+        env = os.environ.copy()
+        # self._env_key(env, 'PORT', str(self.port))
+        # self._env_key(env, 'USER', self.user)
+        # self._env_key(env, 'URL_PREFIX', self.url_prefix)
+        self._env_key(env, 'API_TOKEN', self.api_token)
+        return env
+    
+    @property
+    def auth_data(self):
+        return dict(
+            user=self.user,
+        )
+    
+    def start(self):
+        assert self.process is None or self.process.poll() is not None
+        self.process = Popen([sys.executable, 'singleuser.py', '--user=%s' % self.user, '--port=%i' % self.port], env=self.env)
+    
+    def running(self):
+        if self.process is None:
+            return False
+        if self.process.poll() is not None:
+            self.process = None
+            return False
+        return True
+    
+    def stop(self):
+        if self.process is None:
+            return
+        
+        if self.process.poll() is None:
+            self.process.terminate()
+        self.process = None
+    
 
 class SingleUserManager(object):
     
@@ -36,8 +114,9 @@ class SingleUserManager(object):
     single_user_t = 'http://localhost:{port}'
     
     def __init__(self):
-        self.processes = {}
-        self.ports = {}
+        self.users = defaultdict(UserSession)
+        self.by_api_token = {}
+        self.by_cookie_token = {}
     
     def _wait_for_port(self, port, timeout=2):
         tic = time.time()
@@ -50,13 +129,16 @@ class SingleUserManager(object):
                 break
     
     def spawn(self, user):
-        assert user not in self.processes
-        port = random_port()
-        self.processes[user] = Popen(
-            [sys.executable, 'singleuser.py', '--port=%i' % port, '--user=%s' % user])
-        self.ports[user] = port
+        if user in self.users:
+            session = self.users[user]
+        else:
+            session = self.users[user] = UserSession(user=user)
+        assert not session.running()
+        session.port = port = random_port()
+        session.start()
+        
         r = requests.post(
-            self.routes_t.format(uri=u'/user/%s' % user),
+            self.routes_t.format(uri=session.url_prefix),
             data=json.dumps(dict(
                 target=self.single_user_t.format(port=port),
                 user=user,
@@ -64,39 +146,47 @@ class SingleUserManager(object):
         )
         self._wait_for_port(port)
         r.raise_for_status()
-        print("spawn done")
+    
+    def user_for_api_token(self, token):
+        for session in self.users.values():
+            if session.api_token == token:
+                return session
+    
+    def user_for_cookie_token(self, token):
+        for session in self.users.values():
+            if session.cookie_token == token:
+                return session
     
     def exists(self, user):
-        if user in self.processes:
-            if self.processes[user].poll() is None:
+        if user in self.users:
+            if self.users[user].process.poll() is None:
                 return True
             else:
-                self.processes.pop(user)
-                self.ports.pop(user)
+                session = self.users.pop(user)
+                r = requests.delete(
+                    self.routes_t.format(uri=session.url_prefix),
+                )
         
         return False
     
-    def get(self, user):
-        """ensure process exists and return its port"""
-        if not self.exists(user):
-            self.spawn(user)
-        return self.ports[user]
-    
     def shutdown(self, user):
-        assert user in self.processes
-        port = self.ports[user]
-        self.processes[user].terminate()
+        assert user in self.users
+        session = self.users.pop(user)
+        session.stop()
         r = requests.delete(self.routes_url,
-            data=json.dumps(user=user, port=port),
+            data=json.dumps(user=user, port=session.port),
         )
         r.raise_for_status()
 
 class BaseHandler(RequestHandler):
     cookie_name = 'multiusertest'
+    
     def get_current_user(self):
-        user = self.get_cookie(self.cookie_name, '')
-        if user:
-            return user
+        token = self.get_cookie(self.cookie_name, '')
+        if token:
+            session = self.user_manager.user_for_cookie_token(token)
+            if session:
+                return session.user
         
     @property
     def user_manager(self):
@@ -122,6 +212,17 @@ class UserHandler(BaseHandler):
             self.redirect(url_concat(self.settings['login_url'], {
                 'next' : '/user/%s' % user
             }))
+
+class AuthorizationsHandler(BaseHandler):
+    @token_authorized
+    def get(self, token):
+        app_log.info('cookie token: %r', token)
+        session = self.user_manager.user_for_cookie_token(token)
+        if session is None:
+            raise web.HTTPError(404)
+        self.write(json.dumps({
+            'user' : session.user,
+        }))
 
 class LogoutHandler(BaseHandler):
     
@@ -150,7 +251,12 @@ class LoginHandler(BaseHandler):
         pwd = self.get_argument('password', default=u'')
         next_url = self.get_argument('next', default='') or '/user/%s' % user
         if user and pwd == 'password':
-            self.set_cookie(self.cookie_name, user)
+            if user not in self.user_manager.users:
+                session = self.user_manager.users[user] = UserSession(user=user)
+            else:
+                session = self.user_manager.users[user]
+            cookie_token = session.cookie_token
+            self.set_cookie(self.cookie_name, cookie_token)
         else:
             self._render(
                 message={'error': 'Invalid username or password'},
@@ -161,6 +267,7 @@ class LoginHandler(BaseHandler):
         self.redirect(next_url)
 
 def main():
+    define("port", default=8001, help="run on the given port", type=int)
     tornado.options.parse_command_line()
     application = Application([
         (r"/", MainHandler),
@@ -168,6 +275,7 @@ def main():
         # (r"/shutdown/([^/]+)", ShutdownHandler),
         # (r"/start/([^/]+)", StartHandler),
         (r"/user/([^/]+)/?.*", UserHandler),
+        (r"/api/authorizations/([^/]+)", AuthorizationsHandler),
     ],
         user_manager=SingleUserManager(),
         cookie_secret='super secret',
