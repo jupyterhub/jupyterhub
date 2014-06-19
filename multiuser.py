@@ -5,7 +5,6 @@ import re
 import socket
 import sys
 import uuid
-from collections import defaultdict
 from subprocess import Popen
 
 import json
@@ -16,14 +15,17 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 from tornado.log import app_log
-from tornado.escape import url_escape
+from tornado.escape import url_escape, xhtml_escape
 from tornado.httputil import url_concat
 from tornado.web import RequestHandler, Application
 from tornado import web
 
 from tornado.options import define, options
 
-from IPython.utils.traitlets import HasTraits, Any, Unicode, Integer
+from IPython.utils.traitlets import HasTraits, Any, Unicode, Integer, Dict
+from IPython.html import utils
+
+from headers import HeadersHandler
 
 def random_port():
     """get a single random port"""
@@ -52,14 +54,21 @@ def token_authorized(method):
 
 
 class UserSession(HasTraits):
-    env_prefix = Unicode('IP_')
+    env_prefix = Unicode('IPY_')
     process = Any()
     port = Integer()
     user = Unicode()
+    cookie_secret = Unicode()
+    cookie_name = Unicode()
+    def _cookie_name_default(self):
+        return 'ipy-multiuser-%s' % self.user
+    
+    multiuser_prefix = Unicode()
+    multiuser_api_url = Unicode()
     
     url_prefix = Unicode()
     def _url_prefix_default(self):
-        return '/user/%s' % self.user
+        return '/user/%s/' % self.user
     
     api_token = Unicode()
     def _api_token_default(self):
@@ -72,12 +81,10 @@ class UserSession(HasTraits):
     def _env_key(self, d, key, value):
         d['%s%s' % (self.env_prefix, key)] = value
     
-    @property
-    def env(self):
+    env = Dict()
+    def _env_default(self):
         env = os.environ.copy()
-        # self._env_key(env, 'PORT', str(self.port))
-        # self._env_key(env, 'USER', self.user)
-        # self._env_key(env, 'URL_PREFIX', self.url_prefix)
+        self._env_key(env, 'COOKIE_SECRET', self.cookie_secret)
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     
@@ -89,7 +96,15 @@ class UserSession(HasTraits):
     
     def start(self):
         assert self.process is None or self.process.poll() is not None
-        self.process = Popen([sys.executable, 'singleuser.py', '--user=%s' % self.user, '--port=%i' % self.port], env=self.env)
+        cmd = [sys.executable, 'singleuser.py',
+            '--user=%s' % self.user, '--port=%i' % self.port,
+            '--cookie-name=%s' % self.cookie_name,
+            '--multiuser-prefix=%s' % self.multiuser_prefix,
+            '--multiuser-api-url=%s' % self.multiuser_api_url,
+            '--base-url=%s' % self.url_prefix,
+            ]
+        app_log.info("Spawning: %s" % cmd)
+        self.process = Popen(cmd, env=self.env)
     
     def running(self):
         if self.process is None:
@@ -108,15 +123,11 @@ class UserSession(HasTraits):
         self.process = None
     
 
-class SingleUserManager(object):
+class SingleUserManager(HasTraits):
     
-    routes_t = 'http://localhost:8000/api/routes{uri}'
-    single_user_t = 'http://localhost:{port}'
-    
-    def __init__(self):
-        self.users = defaultdict(UserSession)
-        self.by_api_token = {}
-        self.by_cookie_token = {}
+    users = Dict()
+    routes_t = Unicode('http://localhost:8000/api/routes{uri}')
+    single_user_t = Unicode('http://localhost:{port}')
     
     def _wait_for_port(self, port, timeout=2):
         tic = time.time()
@@ -128,12 +139,18 @@ class SingleUserManager(object):
             else:
                 break
     
+    
+    def get_session(self, user, **kwargs):
+        if user not in self.users:
+            kwargs['user'] = user
+            self.users[user] = UserSession(**kwargs)
+        return self.users[user]
+            
     def spawn(self, user):
-        if user in self.users:
-            session = self.users[user]
-        else:
-            session = self.users[user] = UserSession(user=user)
-        assert not session.running()
+        session = self.get_session(user)
+        if session.running():
+            app_log.warn("User session %s already running", user)
+            return
         session.port = port = random_port()
         session.start()
         
@@ -148,26 +165,16 @@ class SingleUserManager(object):
         r.raise_for_status()
     
     def user_for_api_token(self, token):
+        """Get the user session object for a given API token"""
         for session in self.users.values():
             if session.api_token == token:
                 return session
     
     def user_for_cookie_token(self, token):
+        """Get the user session object for a given cookie token"""
         for session in self.users.values():
             if session.cookie_token == token:
                 return session
-    
-    def exists(self, user):
-        if user in self.users:
-            if self.users[user].process.poll() is None:
-                return True
-            else:
-                session = self.users.pop(user)
-                r = requests.delete(
-                    self.routes_t.format(uri=session.url_prefix),
-                )
-        
-        return False
     
     def shutdown(self, user):
         assert user in self.users
@@ -179,15 +186,30 @@ class SingleUserManager(object):
         r.raise_for_status()
 
 class BaseHandler(RequestHandler):
-    cookie_name = 'multiusertest'
+    @property
+    def cookie_name(self):
+        return self.settings.get('cookie_name', 'cookie')
+    
+    @property
+    def multiuser_url(self):
+        return self.settings.get('multiuser_url', '')
+    
+    @property
+    def multiuser_prefix(self):
+        return self.settings.get('multiuser_prefix', '/multiuser/')
     
     def get_current_user(self):
+        
         token = self.get_cookie(self.cookie_name, '')
         if token:
             session = self.user_manager.user_for_cookie_token(token)
             if session:
                 return session.user
-        
+    
+    @property
+    def base_url(self):
+        return self.settings.setdefault('base_url', '/')
+    
     @property
     def user_manager(self):
         return self.settings['user_manager']
@@ -195,22 +217,33 @@ class BaseHandler(RequestHandler):
     def clear_login_cookie(self):
         self.clear_cookie(self.cookie_name)
     
+    def spawn_single_user(self, user):
+        session = self.user_manager.get_session(user,
+            cookie_secret=self.settings['cookie_secret'],
+            multiuser_api_url=self.settings['multiuser_api_url'],
+            multiuser_prefix=self.settings['multiuser_prefix'],
+        )
+        self.user_manager.spawn(user)
+        return session
+        
+
+    
 class MainHandler(BaseHandler):
     @web.authenticated
     def get(self):
-        self.redirect("/user/%s" % self.get_current_user())
+        self.redirect("/user/%s/" % self.get_current_user())
 
 class UserHandler(BaseHandler):
     @web.authenticated
     def get(self, user):
-        self.write("multi-user at single-user url: %s" % user)
+        self.log.info("multi-user at single-user url: %s", user)
         if self.get_current_user() == user:
-            self.user_manager.spawn(user)
+            self.spawn_single_user(user)
             self.redirect('')
         else:
             self.clear_login_cookie()
             self.redirect(url_concat(self.settings['login_url'], {
-                'next' : '/user/%s' % user
+                'next' : '/user/%s/' % user
             }))
 
 class AuthorizationsHandler(BaseHandler):
@@ -219,6 +252,9 @@ class AuthorizationsHandler(BaseHandler):
         app_log.info('cookie token: %r', token)
         session = self.user_manager.user_for_cookie_token(token)
         if session is None:
+            app_log.info('cookie tokens: %r',
+                { user:s.cookie_token for user,s in self.user_manager.users.items() }
+            )
             raise web.HTTPError(404)
         self.write(json.dumps({
             'user' : session.user,
@@ -240,7 +276,7 @@ class LoginHandler(BaseHandler):
         )
 
     def get(self):
-        if self.get_current_user():
+        if False and self.get_current_user():
             self.redirect(self.get_argument('next', default='/'))
         else:
             user = self.get_argument('user', default='')
@@ -249,14 +285,15 @@ class LoginHandler(BaseHandler):
     def post(self):
         user = self.get_argument('user', default='')
         pwd = self.get_argument('password', default=u'')
-        next_url = self.get_argument('next', default='') or '/user/%s' % user
+        next_url = self.get_argument('next', default='') or '/user/%s/' % user
         if user and pwd == 'password':
             if user not in self.user_manager.users:
-                session = self.user_manager.users[user] = UserSession(user=user)
+                session = self.spawn_single_user(user)
             else:
                 session = self.user_manager.users[user]
             cookie_token = session.cookie_token
-            self.set_cookie(self.cookie_name, cookie_token)
+            self.set_cookie(session.cookie_name, cookie_token, path=session.url_prefix)
+            self.set_cookie(self.cookie_name, cookie_token, path=self.base_url)
         else:
             self._render(
                 message={'error': 'Invalid username or password'},
@@ -269,17 +306,38 @@ class LoginHandler(BaseHandler):
 def main():
     define("port", default=8001, help="run on the given port", type=int)
     tornado.options.parse_command_line()
-    application = Application([
+    handlers = [
         (r"/", MainHandler),
         (r"/login", LoginHandler),
-        # (r"/shutdown/([^/]+)", ShutdownHandler),
-        # (r"/start/([^/]+)", StartHandler),
-        (r"/user/([^/]+)/?.*", UserHandler),
+        (r"/logout", LogoutHandler),
+        (r"/headers", HeadersHandler),
         (r"/api/authorizations/([^/]+)", AuthorizationsHandler),
-    ],
+    ]
+    
+    # add base_url to handlers
+    base_url = "/multiuser/"
+    for i, tup in enumerate(handlers):
+        lis = list(tup)
+        lis[0] = utils.url_path_join(base_url, tup[0])
+        handlers[i] = tuple(lis)
+    
+    handlers.extend([
+        (r"/user/([^/]+)/?.*", UserHandler),
+        (r"/", web.RedirectHandler, {"url" : base_url}),
+    ])
+    
+    application = Application(handlers,
+        base_url=base_url,
         user_manager=SingleUserManager(),
         cookie_secret='super secret',
-        login_url='/login',
+        cookie_name='multiusertest',
+        multiuser_prefix=base_url,
+        multiuser_api_url=utils.url_path_join(
+            'http://localhost:%i' % options.port,
+            base_url,
+            'api',
+        ),
+        login_url=utils.url_path_join(base_url, 'login'),
     )
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(options.port)

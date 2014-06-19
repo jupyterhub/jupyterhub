@@ -6,7 +6,7 @@
     {% if message %}
     <div id="message">{{message}}</div>
     {% end if %}
-    <form action="/login?next={{next}}" method="post">
+    <form action="?next={{next}}" method="post">
       <input type="text" name="user" id="user_input" value="{{user}}">
       <input type="password" name="password" id="password_input">
       <button type="submit" id="login_submit">Log in</button>
