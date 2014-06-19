@@ -3,6 +3,7 @@
 
 import json
 import os
+import time
 
 import requests
 
@@ -30,6 +31,10 @@ class BaseHandler(RequestHandler):
     @property
     def user(self):
         return self.settings['user']
+    
+    @property
+    def base_url(self):
+        return self.settings['base_url']
     
     @property
     def multiuser_api_key(self):
@@ -70,13 +75,22 @@ class MainHandler(BaseHandler):
     
     @web.authenticated
     def get(self, uri):
-        self.write("single-user %s: %s" % (self.user, uri))
+        self.render("singleuser.html",
+            uri=uri,
+            user=self.user,
+            base_url=self.base_url,
+        )
 
+from tornado.ioloop import PeriodicCallback
 
 class WSHandler(BaseHandler, WebSocketHandler):
     def open(self):
-        import IPython
-        IPython.embed()
+        pc = PeriodicCallback(self.ping, 1000)
+        pc.start()
+        
+    def ping(self):
+        self.write_message(str(time.time()))
+    
 
 
 def main():
@@ -91,6 +105,7 @@ def main():
     tornado.options.parse_command_line()
     handlers = [
         ("/headers", HeadersHandler),
+        ("/ws", WSHandler),
         (r"(.*)", MainHandler),
     ]
     base_url = options.base_url
@@ -106,6 +121,8 @@ def main():
         cookie_name=options.cookie_name,
         login_url=utils.url_path_join(options.multiuser_prefix, 'login'),
         multiuser_api_url = options.multiuser_api_url,
+        base_url=options.base_url,
+        template_path=os.path.join(here, 'templates'),
     )
     
     http_server = tornado.httpserver.HTTPServer(application)

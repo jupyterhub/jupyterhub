@@ -49,7 +49,7 @@ var ConfigurableProxy = function (options) {
     this.default_target = 'http://localhost:' + this.upstream_port;
     this.routes = {};
     
-    this.proxy = httpProxy.createProxyServer({
+    var proxy = this.proxy = httpProxy.createProxyServer({
         ws : true
     });
     // tornado-style regex routing,
@@ -76,6 +76,8 @@ var ConfigurableProxy = function (options) {
             }
         }
     );
+    // proxy websockets
+    this.server.on('upgrade', bound(this, this.handle_ws));
 };
 
 ConfigurableProxy.prototype.listen = function (port) {
@@ -135,6 +137,21 @@ ConfigurableProxy.prototype.target_for_url = function (url) {
     }
     // no custom target, fall back to default
     return this.default_target;
+};
+
+ConfigurableProxy.prototype.handle_ws = function (req, res, head) {
+    console.log("upgrade", req.url);
+    // no local route found, time to proxy
+    var target = this.target_for_url(req.url);
+    console.log("proxy ws " + req.url + " to " + target);
+    this.proxy.ws(req, res, head, {
+        target: target
+    }, function (e) {
+        console.log("Proxy error: ", e);
+        res.writeHead(502);
+        res.write("Proxy target missing");
+        res.end();
+    });
 };
 
 ConfigurableProxy.prototype.handle_request = function (req, res) {
