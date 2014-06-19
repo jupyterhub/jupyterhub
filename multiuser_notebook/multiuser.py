@@ -25,7 +25,7 @@ from tornado.options import define, options
 from IPython.utils.traitlets import HasTraits, Any, Unicode, Integer, Dict
 from IPython.html import utils
 
-from headers import HeadersHandler
+from .headers import HeadersHandler
 
 def random_port():
     """get a single random port"""
@@ -36,6 +36,8 @@ def random_port():
     return port
 
 auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
+
+here = os.path.dirname(__file__)
 
 def token_authorized(method):
     def check_token(self, *args, **kwargs):
@@ -96,7 +98,7 @@ class UserSession(HasTraits):
     
     def start(self):
         assert self.process is None or self.process.poll() is not None
-        cmd = [sys.executable, 'singleuser.py',
+        cmd = [sys.executable, '-m', 'multiuser_notebook.singleuser',
             '--user=%s' % self.user, '--port=%i' % self.port,
             '--cookie-name=%s' % self.cookie_name,
             '--multiuser-prefix=%s' % self.multiuser_prefix,
@@ -338,10 +340,11 @@ def main():
             'api',
         ),
         login_url=utils.url_path_join(base_url, 'login'),
+        template_path=os.path.join(here, 'templates'),
     )
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(options.port)
-    proxy = Popen(["node", "proxy.js"])
+    proxy = Popen(["node", os.path.join(here, 'js', 'main.js')])
     try:
         tornado.ioloop.IOLoop.instance().start()
     finally:

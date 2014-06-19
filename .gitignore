@@ -1,4 +1,4 @@
 node_modules
-*.pyx
+*.py[co]
 *~
 .DS_Store

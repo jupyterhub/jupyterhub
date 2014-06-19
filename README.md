@@ -24,7 +24,7 @@ Basic principals:
 
 ## to use
 
-    $> python multiuser.py
+    $> python -m multiuser_notebook
 
 visit `http://localhost:8000`, and login (any username, password=`password`).
 

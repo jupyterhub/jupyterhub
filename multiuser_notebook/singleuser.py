@@ -18,7 +18,9 @@ from tornado.options import define, options
 
 from IPython.html import utils
 
-from headers import HeadersHandler
+from .headers import HeadersHandler
+
+here = os.path.dirname(__file__)
 
 class BaseHandler(RequestHandler):
     @property
