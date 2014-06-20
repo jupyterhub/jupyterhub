@@ -40,6 +40,7 @@ auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
 here = os.path.dirname(__file__)
 
 def token_authorized(method):
+    """decorator for a method authorized by the Authorization header"""
     def check_token(self, *args, **kwargs):
         auth_header = self.request.headers.get('Authorization', '')
         match = auth_header_pat.match(auth_header)
@@ -52,6 +53,8 @@ def token_authorized(method):
             raise web.HTTPError(403)
         self.request_session = session
         return method(self, *args, **kwargs)
+    check_token.__name__ = method.__name__
+    check_token.__doc__ = method.__doc__
     return check_token
 
 
@@ -98,7 +101,7 @@ class UserSession(HasTraits):
     
     def start(self):
         assert self.process is None or self.process.poll() is not None
-        cmd = [sys.executable, '-m', 'multiuser_notebook.singleuser',
+        cmd = [sys.executable, '-m', 'multiuser.singleuser',
             '--user=%s' % self.user, '--port=%i' % self.port,
             '--cookie-name=%s' % self.cookie_name,
             '--multiuser-prefix=%s' % self.multiuser_prefix,
