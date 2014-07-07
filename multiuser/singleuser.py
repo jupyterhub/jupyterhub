@@ -1,134 +1,96 @@
 #!/usr/bin/env python
-"""Dummy Single-User app to test the multi-user environment"""
+"""Extend regular notebook server to be aware of multi-user things."""
 
-import json
 import os
-import time
 
 import requests
 
-import tornado.httpserver
-import tornado.ioloop
-import tornado.options
 from tornado import web
-from tornado.web import RequestHandler, Application
-from tornado.websocket import WebSocketHandler
-from tornado.log import app_log
 
-from tornado.options import define, options
+from IPython.utils.traitlets import Unicode
 
 from IPython.html import utils
+from IPython.html.notebookapp import NotebookApp
 
-from .headers import HeadersHandler
 
-here = os.path.dirname(__file__)
+# Define two methods to attach to AuthenticatedHandler,
+# which authenticate via the central auth server.
 
-class BaseHandler(RequestHandler):
-    @property
-    def cookie_name(self):
-        return self.settings['cookie_name']
-    
-    @property
-    def user(self):
-        return self.settings['user']
-    
-    @property
-    def base_url(self):
-        return self.settings['base_url']
-    
-    @property
-    def multiuser_api_key(self):
-        return self.settings['multiuser_api_key']
-    
-    @property
-    def multiuser_api_url(self):
-        return self.settings['multiuser_api_url']
-    
-    def verify_token(self, token):
-        r = requests.get(utils.url_path_join(
-            self.multiuser_api_url, "authorizations", token,
-        ),
-            headers = {'Authorization' : 'token %s' % self.multiuser_api_key}
-        )
-        if r.status_code == 404:
-            return {'user' : ''}
-        r.raise_for_status()
-        return r.json()
-    
-    def get_current_user(self):
-        token = self.get_cookie(self.cookie_name, '')
-        if token:
-            auth_data = self.verify_token(token)
-            if not auth_data:
-                # treat invalid token the same as no token
-                return None
-            user = auth_data['user']
-            if user == self.user:
-                return user
-            else:
-                raise web.HTTPError(403, "User %s does not have access to %s" % (user, self.user))
-        else:
-            app_log.debug("No token cookie")
+
+def verify_token(self, token):
+    """monkeypatch method for token verification"""
+    multiuser_api_url = self.settings['multiuser_api_url']
+    multiuser_api_key = self.settings['multiuser_api_key']
+    r = requests.get(utils.url_path_join(
+        multiuser_api_url, "authorizations", token,
+    ),
+        headers = {'Authorization' : 'token %s' % multiuser_api_key}
+    )
+    if r.status_code == 404:
+        return {'user' : ''}
+    r.raise_for_status()
+    return r.json()
+
+
+def get_current_user(self):
+    """alternative get_current_user to query the central server"""
+    my_user = self.settings['user']
+    token = self.get_cookie(self.cookie_name, '')
+    if token:
+        auth_data = self.verify_token(token)
+        if not auth_data:
+            # treat invalid token the same as no token
             return None
+        user = auth_data['user']
+        if user == my_user:
+            return user
+        else:
+            raise web.HTTPError(403, "User %s does not have access to %s" % (user, my_user))
+    else:
+        self.log.debug("No token cookie")
+        return None
 
-class MainHandler(BaseHandler):
+
+# register new multi-user related command-line aliases
+aliases = NotebookApp.aliases.get_default_value()
+aliases.update({
+    'user' : 'SingleUserNotebookApp.user',
+    'cookie-name': 'SingleUserNotebookApp.cookie_name',
+    'multiuser-prefix': 'SingleUserNotebookApp.multiuser_prefix',
+    'multiuser-api-url': 'SingleUserNotebookApp.multiuser_api_url',
+    'base-url': 'SingleUserNotebookApp.base_url',
+})
+
+
+class SingleUserNotebookApp(NotebookApp):
+    """A Subclass of the regular NotebookApp that is aware of the parent multi-user context."""
+    user = Unicode(config=True)
+    cookie_name = Unicode(config=True)
+    multiuser_prefix = Unicode(config=True)
+    multiuser_api_url = Unicode(config=True)
+    aliases = aliases
+    browser = False
     
-    @web.authenticated
-    def get(self, uri):
-        self.render("singleuser.html",
-            uri=uri,
-            user=self.user,
-            base_url=self.base_url,
-        )
-
-from tornado.ioloop import PeriodicCallback
-
-class WSHandler(BaseHandler, WebSocketHandler):
-    def open(self):
-        pc = PeriodicCallback(self.ping, 1000)
-        pc.start()
+    def init_webapp(self):
+        # monkeypatch authentication to use the multi-user
+        from IPython.html.base.handlers import AuthenticatedHandler
+        AuthenticatedHandler.verify_token = verify_token
+        AuthenticatedHandler.get_current_user = get_current_user
         
-    def ping(self):
-        self.write_message(str(time.time()))
-    
+        # load the multi-user related settings into the tornado settings dict
+        env = os.environ
+        s = self.webapp_settings
+        s['user'] = self.user
+        s['multiuser_api_key'] = env.get('IPY_API_TOKEN', '')
+        s['cookie_secret'] = env.get('IPY_COOKIE_SECRET', '')
+        s['cookie_name'] = self.cookie_name
+        s['login_url'] = utils.url_path_join(self.multiuser_prefix, 'login')
+        s['multiuser_api_url'] = self.multiuser_api_url
+        super(SingleUserNotebookApp, self).init_webapp()
 
 
 def main():
-    env = os.environ
-    define("port", default=8888, help="run on the given port", type=int)
-    define("user", default='', help="my username", type=str)
-    define("cookie_name", default='cookie', help="my cookie name", type=str)
-    define("base_url", default='/', help="My base URL", type=str)
-    define("multiuser_prefix", default='/multiuser/', help="The multi-user URL", type=str)
-    define("multiuser_api_url", default='http://localhost:8001/multiuser/api/', help="The multi-user API URL", type=str)
-    
-    tornado.options.parse_command_line()
-    handlers = [
-        ("/headers", HeadersHandler),
-        ("/ws", WSHandler),
-        (r"(.*)", MainHandler),
-    ]
-    base_url = options.base_url
-    for i, tup in enumerate(handlers):
-        lis = list(tup)
-        lis[0] = utils.url_path_join(base_url, tup[0])
-        handlers[i] = tuple(lis)
-    
-    application = Application(handlers,
-        user=options.user,
-        multiuser_api_key=env['IPY_API_TOKEN'],
-        cookie_secret=env['IPY_COOKIE_SECRET'],
-        cookie_name=options.cookie_name,
-        login_url=utils.url_path_join(options.multiuser_prefix, 'login'),
-        multiuser_api_url = options.multiuser_api_url,
-        base_url=options.base_url,
-        template_path=os.path.join(here, 'templates'),
-    )
-    
-    http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(options.port)
-    app_log.info("User %s listening on %s" % (options.user, options.port))
-    tornado.ioloop.IOLoop.instance().start()
+    return SingleUserNotebookApp.launch_instance()
 
 
 if __name__ == "__main__":
