@@ -1,15 +1,16 @@
 #!/usr/bin/env python
 
+import json
 import os
 import re
 import socket
+import signal
 import sys
+import time
 import uuid
 from subprocess import Popen
 
-import json
 import requests
-import time
 
 import tornado.httpserver
 import tornado.ioloop
@@ -22,7 +23,8 @@ from tornado import web
 
 from tornado.options import define, options
 
-from IPython.utils.traitlets import HasTraits, Any, Unicode, Integer, Dict
+from IPython.utils.traitlets import Any, Unicode, Integer, Dict
+from IPython.config import LoggingConfigurable
 from IPython.html import utils
 
 from .headers import HeadersHandler
@@ -58,7 +60,7 @@ def token_authorized(method):
     return check_token
 
 
-class UserSession(HasTraits):
+class UserSession(LoggingConfigurable):
     env_prefix = Unicode('IPY_')
     process = Any()
     port = Integer()
@@ -109,7 +111,10 @@ class UserSession(HasTraits):
             '--base-url=%s' % self.url_prefix,
             ]
         app_log.info("Spawning: %s" % cmd)
-        self.process = Popen(cmd, env=self.env)
+        self.process = Popen(cmd, env=self.env,
+            # don't forward signals:
+            preexec_fn=os.setpgrp,
+        )
     
     def running(self):
         if self.process is None:
@@ -119,16 +124,24 @@ class UserSession(HasTraits):
             return False
         return True
     
-    def stop(self):
-        if self.process is None:
-            return
+    def request_stop(self):
+        if self.running():
+            self.process.send_signal(signal.SIGINT)
+            time.sleep(0.1)
+        if self.running():
+            self.process.send_signal(signal.SIGINT)
         
-        if self.process.poll() is None:
+    def stop(self):
+        for i in range(100):
+            if self.running():
+                time.sleep(0.1)
+            else:
+                break
+        if self.running():
             self.process.terminate()
-        self.process = None
     
 
-class SingleUserManager(HasTraits):
+class SingleUserManager(LoggingConfigurable):
     
     users = Dict()
     routes_t = Unicode('http://localhost:8000/api/routes{uri}')
@@ -189,6 +202,20 @@ class SingleUserManager(HasTraits):
             data=json.dumps(user=user, port=session.port),
         )
         r.raise_for_status()
+    
+    def cleanup(self):
+        sessions = list(self.users.values())
+        self.users = {}
+        for session in sessions:
+            self.log.info("Cleaning up %s's server" % session.user)
+            session.request_stop()
+        for i in range(100):
+            if any([ session.running() for session in sessions ]):
+                time.sleep(0.1)
+            else:
+                break
+        for session in sessions:
+            session.stop()
 
 class BaseHandler(RequestHandler):
     @property
@@ -330,10 +357,11 @@ def main():
         (r"/user/([^/]+)/?.*", UserHandler),
         (r"/", web.RedirectHandler, {"url" : base_url}),
     ])
+    user_manager = SingleUserManager()
     
     application = Application(handlers,
         base_url=base_url,
-        user_manager=SingleUserManager(),
+        user_manager=user_manager,
         cookie_secret='super secret',
         cookie_name='multiusertest',
         multiuser_prefix=base_url,
@@ -350,8 +378,11 @@ def main():
     proxy = Popen(["node", os.path.join(here, 'js', 'main.js')])
     try:
         tornado.ioloop.IOLoop.instance().start()
+    except KeyboardInterrupt:
+        print("\nInterrupted")
     finally:
         proxy.terminate()
+        user_manager.cleanup()
 
 
 if __name__ == "__main__":
