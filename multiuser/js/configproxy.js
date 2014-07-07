@@ -42,11 +42,28 @@ var json_handler = function (handler) {
     };
 };
 
+var authorized = function (method) {
+    return function (req, res) {
+        console.log(req.headers);
+        auth = req.headers.authorization;
+        console.log(auth, this.auth_token);
+        if (!this.auth_token || auth == this.auth_token) {
+            return method.apply(this, arguments);
+        } else {
+            res.writeHead(403);
+            res.end();
+        }
+    };
+};
+
 var ConfigurableProxy = function (options) {
     var that = this;
     this.options = options || {};
+    this.auth_token = this.options.auth_token;
+    this.upstream_ip = this.options.upstream_ip || 'localhost';
     this.upstream_port = this.options.upstream_port || 8001;
-    this.default_target = 'http://localhost:' + this.upstream_port;
+    
+    this.default_target = "http://" + this.upstream_ip + ":" + this.upstream_port;
     this.routes = {};
     
     var proxy = this.proxy = httpProxy.createProxyServer({
@@ -57,15 +74,15 @@ var ConfigurableProxy = function (options) {
     
     this.handlers = [
         [ /^\/api\/routes$/, {
-            get : bound(this, this.get_routes)
+            get : bound(this, authorized(this.get_routes))
         } ],
         [ /^\/api\/routes(\/.*)$/, {
-            post : json_handler(bound(this, this.post_routes)),
-            'delete' : bound(this, this.delete_routes)
+            post : json_handler(bound(this, authorized(this.post_routes))),
+            'delete' : bound(this, authorized(this.delete_routes))
         } ]
     ];
     
-    this.server = http.createServer(
+    this.server = this.proxy_server = http.createServer(
         function (req, res) {
             try {
                 return that.handle_request(req, res);
@@ -78,10 +95,6 @@ var ConfigurableProxy = function (options) {
     );
     // proxy websockets
     this.server.on('upgrade', bound(this, this.handle_ws));
-};
-
-ConfigurableProxy.prototype.listen = function (port) {
-    this.server.listen(port);
 };
 
 ConfigurableProxy.prototype.fail = function (res, code, msg) {

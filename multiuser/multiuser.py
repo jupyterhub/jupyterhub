@@ -146,6 +146,9 @@ class SingleUserManager(LoggingConfigurable):
     users = Dict()
     routes_t = Unicode('http://localhost:8000/api/routes{uri}')
     single_user_t = Unicode('http://localhost:{port}')
+    proxy_auth_token = Unicode()
+    def _proxy_auth_token_default(self):
+        return str(uuid.uuid4())
     
     def _wait_for_port(self, port, timeout=2):
         tic = time.time()
@@ -156,7 +159,6 @@ class SingleUserManager(LoggingConfigurable):
                 time.sleep(0.1)
             else:
                 break
-    
     
     def get_session(self, user, **kwargs):
         if user not in self.users:
@@ -178,6 +180,7 @@ class SingleUserManager(LoggingConfigurable):
                 target=self.single_user_t.format(port=port),
                 user=user,
             )),
+            headers={'Authorization': self.proxy_auth_token},
         )
         self._wait_for_port(port)
         r.raise_for_status()
@@ -375,6 +378,8 @@ def main():
     )
     http_server = tornado.httpserver.HTTPServer(application)
     http_server.listen(options.port)
+    env = os.environ.copy()
+    env['CONFIGPROXY_AUTH_TOKEN'] = user_manager.proxy_auth_token
     proxy = Popen(["node", os.path.join(here, 'js', 'main.js')])
     try:
         tornado.ioloop.IOLoop.instance().start()
