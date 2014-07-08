@@ -1,0 +1,14 @@
+{
+  "version": "0.0.1",
+  "name": "configurable-http-proxy",
+  "description": "A configurable-on-the-fly HTTP Proxy",
+  "author": "IPython Developers",
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/minrk/multiuser"
+    },
+  "dependencies": {
+    "http-proxy": "~1.1",
+    "commander": "~2.2"
+  }
+}

@@ -8,7 +8,7 @@ Three actors:
 
 - multi user server (tornado process)
 - configurable http proxy (node-http-proxy)
-- multiple single user servers (tornado)
+- multiple single user servers (Python/IPython/tornado)
 
 Basic principals:
 
@@ -19,8 +19,8 @@ Basic principals:
 
 ## dependencies
 
-    npm install node-http-proxy
-    pip install tornado
+    npm install
+    pip install ipython[notebook]
 
 ## to use
 
