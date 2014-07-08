@@ -44,8 +44,15 @@ var json_handler = function (handler) {
 
 var authorized = function (method) {
     return function (req, res) {
-        auth = req.headers.authorization;
-        if (!this.auth_token || auth == this.auth_token) {
+        if (!this.auth_token) {
+            return method.apply(this, arguments);
+        }
+        var match = (req.headers.authorization || '').match(/token\s+(\S+)/);
+        var token;
+        if (match !== null) {
+            token = match[1];
+        }
+        if (token == this.auth_token) {
             return method.apply(this, arguments);
         } else {
             res.writeHead(403);
@@ -185,7 +192,6 @@ ConfigurableProxy.prototype.handle_proxy_request = function (req, res) {
 };
 
 ConfigurableProxy.prototype.handle_api_request = function (req, res) {
-    console.log("handle api", req.method, req.url);
     for (var i = 0; i < this.api_handlers.length; i++) {
         var pat = this.api_handlers[i][0];
         var match = pat.exec(req.url);

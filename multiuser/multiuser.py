@@ -192,7 +192,7 @@ class SingleUserManager(LoggingConfigurable):
                 ),
                 user=user,
             )),
-            headers={'Authorization': self.proxy_auth_token},
+            headers={'Authorization': "token %s" % self.proxy_auth_token},
         )
         self._wait_for_port(self.single_user_ip, port)
         r.raise_for_status()
@@ -398,7 +398,7 @@ def main():
         '--port', str(options.port),
         '--api-port', str(options.proxy_api_port),
         '--upstream-port', str(options.multiuser_port),
-    ])
+    ], env=env)
     try:
         tornado.ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:

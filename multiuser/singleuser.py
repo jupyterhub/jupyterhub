@@ -19,6 +19,11 @@ from IPython.html.notebookapp import NotebookApp
 
 def verify_token(self, token):
     """monkeypatch method for token verification"""
+    token_cache = self.settings['token_cache']
+    if token in token_cache:
+        # we've seen this token before, don't ask upstream again
+        return token_cache[token]
+    
     multiuser_api_url = self.settings['multiuser_api_url']
     multiuser_api_key = self.settings['multiuser_api_key']
     r = requests.get(utils.url_path_join(
@@ -27,9 +32,12 @@ def verify_token(self, token):
         headers = {'Authorization' : 'token %s' % multiuser_api_key}
     )
     if r.status_code == 404:
-        return {'user' : ''}
-    r.raise_for_status()
-    return r.json()
+        data = {'user' : ''}
+    else:
+        r.raise_for_status()
+        data = r.json()
+    token_cache[token] = data
+    return data
 
 
 def get_current_user(self):
@@ -80,6 +88,7 @@ class SingleUserNotebookApp(NotebookApp):
         # load the multi-user related settings into the tornado settings dict
         env = os.environ
         s = self.webapp_settings
+        s['token_cache'] = {}
         s['user'] = self.user
         s['multiuser_api_key'] = env.get('IPY_API_TOKEN', '')
         s['cookie_secret'] = env.get('IPY_COOKIE_SECRET', '')
