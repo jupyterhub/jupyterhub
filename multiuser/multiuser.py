@@ -49,7 +49,6 @@ def token_authorized(method):
         if not match:
             raise web.HTTPError(403)
         token = match.group(1)
-        app_log.info("api token: %r", token)
         session = self.user_manager.user_for_api_token(token)
         if session is None:
             raise web.HTTPError(403)
@@ -144,17 +143,23 @@ class UserSession(LoggingConfigurable):
 class SingleUserManager(LoggingConfigurable):
     
     users = Dict()
-    routes_t = Unicode('http://localhost:8000/api/routes{uri}')
-    single_user_t = Unicode('http://localhost:{port}')
+    routes_t = Unicode('http://{ip}:{port}/api/routes{uri}')
+    single_user_t = Unicode('http://{ip}:{port}')
+    
+    single_user_ip = Unicode('localhost')
+    proxy_ip = Unicode('localhost')
+    proxy_port = Integer(8001)
+    
     proxy_auth_token = Unicode()
     def _proxy_auth_token_default(self):
         return str(uuid.uuid4())
     
-    def _wait_for_port(self, port, timeout=2):
+    def _wait_for_port(self, ip, port, timeout=2):
+        """wait for a peer to show up at a port"""
         tic = time.time()
         while time.time() - tic < timeout:
             try:
-                socket.create_connection(('localhost', port))
+                socket.create_connection((ip, port))
             except socket.error:
                 time.sleep(0.1)
             else:
@@ -175,14 +180,21 @@ class SingleUserManager(LoggingConfigurable):
         session.start()
         
         r = requests.post(
-            self.routes_t.format(uri=session.url_prefix),
+            self.routes_t.format(
+                ip=self.proxy_ip,
+                port=self.proxy_port,
+                uri=session.url_prefix,
+            ),
             data=json.dumps(dict(
-                target=self.single_user_t.format(port=port),
+                target=self.single_user_t.format(
+                    ip=self.single_user_ip,
+                    port=port
+                ),
                 user=user,
             )),
             headers={'Authorization': self.proxy_auth_token},
         )
-        self._wait_for_port(port)
+        self._wait_for_port(self.single_user_ip, port)
         r.raise_for_status()
     
     def user_for_api_token(self, token):
@@ -271,7 +283,7 @@ class MainHandler(BaseHandler):
 class UserHandler(BaseHandler):
     @web.authenticated
     def get(self, user):
-        self.log.info("multi-user at single-user url: %s", user)
+        self.log.debug("multi-user at single-user url: %s", user)
         if self.get_current_user() == user:
             self.spawn_single_user(user)
             self.redirect('')
@@ -284,10 +296,9 @@ class UserHandler(BaseHandler):
 class AuthorizationsHandler(BaseHandler):
     @token_authorized
     def get(self, token):
-        app_log.info('cookie token: %r', token)
         session = self.user_manager.user_for_cookie_token(token)
         if session is None:
-            app_log.info('cookie tokens: %r',
+            app_log.debug('cookie tokens: %r',
                 { user:s.cookie_token for user,s in self.user_manager.users.items() }
             )
             raise web.HTTPError(404)
@@ -339,8 +350,11 @@ class LoginHandler(BaseHandler):
         self.redirect(next_url)
 
 def main():
-    define("port", default=8001, help="run on the given port", type=int)
+    define("port", default=8000, help="The public facing port of the proxy", type=int)
+    define("proxy_api_port", help="The port for the proxy API handlers", type=int)
+    define("multiuser_port", default=8081, help="The port for this process", type=int)
     tornado.options.parse_command_line()
+    options.proxy_api_port = options.proxy_api_port or options.port + 1
     handlers = [
         (r"/", MainHandler),
         (r"/login", LoginHandler),
@@ -360,7 +374,7 @@ def main():
         (r"/user/([^/]+)/?.*", UserHandler),
         (r"/", web.RedirectHandler, {"url" : base_url}),
     ])
-    user_manager = SingleUserManager()
+    user_manager = SingleUserManager(proxy_port=options.proxy_api_port)
     
     application = Application(handlers,
         base_url=base_url,
@@ -369,7 +383,7 @@ def main():
         cookie_name='multiusertest',
         multiuser_prefix=base_url,
         multiuser_api_url=utils.url_path_join(
-            'http://localhost:%i' % options.port,
+            'http://localhost:%i' % options.multiuser_port,
             base_url,
             'api',
         ),
@@ -377,10 +391,14 @@ def main():
         template_path=os.path.join(here, 'templates'),
     )
     http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(options.port)
+    http_server.listen(options.multiuser_port)
     env = os.environ.copy()
     env['CONFIGPROXY_AUTH_TOKEN'] = user_manager.proxy_auth_token
-    proxy = Popen(["node", os.path.join(here, 'js', 'main.js')])
+    proxy = Popen(["node", os.path.join(here, 'js', 'main.js'),
+        '--port', str(options.port),
+        '--api-port', str(options.proxy_api_port),
+        '--upstream-port', str(options.multiuser_port),
+    ])
     try:
         tornado.ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:

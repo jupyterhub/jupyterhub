@@ -44,9 +44,7 @@ var json_handler = function (handler) {
 
 var authorized = function (method) {
     return function (req, res) {
-        console.log(req.headers);
         auth = req.headers.authorization;
-        console.log(auth, this.auth_token);
         if (!this.auth_token || auth == this.auth_token) {
             return method.apply(this, arguments);
         } else {
@@ -61,7 +59,7 @@ var ConfigurableProxy = function (options) {
     this.options = options || {};
     this.auth_token = this.options.auth_token;
     this.upstream_ip = this.options.upstream_ip || 'localhost';
-    this.upstream_port = this.options.upstream_port || 8001;
+    this.upstream_port = this.options.upstream_port || 8081;
     
     this.default_target = "http://" + this.upstream_ip + ":" + this.upstream_port;
     this.routes = {};
@@ -72,7 +70,7 @@ var ConfigurableProxy = function (options) {
     // tornado-style regex routing,
     // because cross-language cargo-culting is always a good idea
     
-    this.handlers = [
+    this.api_handlers = [
         [ /^\/api\/routes$/, {
             get : bound(this, authorized(this.get_routes))
         } ],
@@ -82,22 +80,30 @@ var ConfigurableProxy = function (options) {
         } ]
     ];
     
-    this.server = this.proxy_server = http.createServer(
-        function (req, res) {
+    var log_errors = function(handler) {
+        return function (req, res) {
             try {
-                return that.handle_request(req, res);
+                return handler.apply(that, arguments);
             } catch (e) {
                 console.log("Error in handler for " +
                     req.method + ' ' + req.url + ': ', e
                 );
             }
-        }
+        };
+    };
+    this.api_server = http.createServer(
+        log_errors(that.handle_api_request)
+    );
+    
+    this.proxy_server = http.createServer(
+        log_errors(that.handle_proxy_request)
     );
     // proxy websockets
-    this.server.on('upgrade', bound(this, this.handle_ws));
+    this.proxy_server.on('upgrade', bound(this, this.handle_ws));
 };
 
 ConfigurableProxy.prototype.fail = function (res, code, msg) {
+    console.log('[' + code + '] ' + req.method + ' ' + req.url + ': ' + msg);
     res.writeHead(code);
     res.write(msg);
     res.end();
@@ -122,7 +128,7 @@ ConfigurableProxy.prototype.get_routes = function (req, res) {
 
 ConfigurableProxy.prototype.post_routes = function (req, res, path, data) {
     // POST adds a new route
-    console.log('post', path, data);
+    console.log('POST', path, data);
     this.add_route(path, data);
     res.writeHead(201);
     res.end();
@@ -130,8 +136,7 @@ ConfigurableProxy.prototype.post_routes = function (req, res, path, data) {
 
 ConfigurableProxy.prototype.delete_routes = function (req, res, path) {
     // DELETE removes an existing route
-    
-    console.log('delete', path);
+    console.log('DELETE', path);
     if (this.routes[path] === undefined) {
         res.writeHead(404);
     } else {
@@ -153,10 +158,9 @@ ConfigurableProxy.prototype.target_for_url = function (url) {
 };
 
 ConfigurableProxy.prototype.handle_ws = function (req, res, head) {
-    console.log("upgrade", req.url);
     // no local route found, time to proxy
     var target = this.target_for_url(req.url);
-    console.log("proxy ws " + req.url + " to " + target);
+    console.log("PROXY WS " + req.url + " to " + target);
     this.proxy.ws(req, res, head, {
         target: target
     }, function (e) {
@@ -167,13 +171,26 @@ ConfigurableProxy.prototype.handle_ws = function (req, res, head) {
     });
 };
 
-ConfigurableProxy.prototype.handle_request = function (req, res) {
-    console.log("handle", req.method, req.url);
-    for (var i = 0; i < this.handlers.length; i++) {
-        var pat = this.handlers[i][0];
+ConfigurableProxy.prototype.handle_proxy_request = function (req, res) {
+    var target = this.target_for_url(req.url);
+    console.log("PROXY " + req.method + " " + req.url + " to " + target);
+    this.proxy.web(req, res, {
+        target: target
+    }, function (e) {
+        console.log("Proxy error: ", e);
+        res.writeHead(502);
+        res.write("Proxy target missing");
+        res.end();
+    });
+};
+
+ConfigurableProxy.prototype.handle_api_request = function (req, res) {
+    console.log("handle api", req.method, req.url);
+    for (var i = 0; i < this.api_handlers.length; i++) {
+        var pat = this.api_handlers[i][0];
         var match = pat.exec(req.url);
         if (match) {
-            var handlers = this.handlers[i][1];
+            var handlers = this.api_handlers[i][1];
             var handler = handlers[req.method.toLowerCase()];
             if (!handler) {
                 // 405 on found resource, but not found method
@@ -186,17 +203,7 @@ ConfigurableProxy.prototype.handle_request = function (req, res) {
             return;
         }
     }
-    // no local route found, time to proxy
-    var target = this.target_for_url(req.url);
-    console.log("proxy " + req.url + " to " + target);
-    this.proxy.web(req, res, {
-        target: target
-    }, function (e) {
-        console.log("Proxy error: ", e);
-        res.writeHead(502);
-        res.write("Proxy target missing");
-        res.end();
-    });
+    this.fail(res, 404, req.method + " " + req.url);
 };
 
 exports.ConfigurableProxy = ConfigurableProxy;

@@ -4,47 +4,51 @@ cli entrypoint for starting a Configurable Proxy
 
 */
 var fs = require('fs');
-var minimist = require('minimist');
+var args = require('commander');
+
+args
+    .version('0.0.0')
+    // .option('-h', '--help', 'show help')
+    .option('--key <keyfile>', 'SSL key to use, if any')
+    .option('--cert <certfile>', 'SSL certificate to use, if any')
+    .option('--ip <n>', 'Public-facing IP of the proxy', parseInt)
+    .option('--port <n>', 'Public-facing port of the proxy', parseInt)
+    .option('--upstream-ip <ip>', 'IP address of the default proxy target', 'localhost')
+    .option('--upstream-port <n>', 'Port of the default proxy target', parseInt)
+    .option('--api-ip <ip>', 'Inward-facing IP for API request', 'localhost')
+    .option('--api-port <n>', 'Inward-facing port for API request', parseInt)
+
+args.parse(process.argv);
+
 var ConfigurableProxy = require('./configproxy.js').ConfigurableProxy;
 
-var argv = minimist(process.argv.slice(2), {boolean: ['h', 'help']});
-
-if (argv.h || argv.help) {
-    console.log("help!");
-    process.exit();
-}
-
 var options = {};
-if (argv.ssl_key) {
-    options.key = fs.readFileSync(argv.ssl_key);
+if (args.key) {
+    options.key = fs.readFileSync(args.key);
 }
 
-if (argv.ssl_cert) {
-    options.cert = fs.readFileSync(argv.ssl_cert);
+if (args.cert) {
+    options.cert = fs.readFileSync(args.cert);
 }
 
-options.upstream_ip = argv.upstream_ip;
-options.upstream_port = argv.upstream_port;
-options.api_token = process.env.CONFIGPROXY_AUTH_TOKEN;
+// because camelCase is the js way!
+options.upstream_ip = args.upstreamIp;
+options.upstream_port = args.upstreamPort;
+options.auth_token = process.env.CONFIGPROXY_AUTH_TOKEN;
 
 var proxy = new ConfigurableProxy(options);
 
 var listen = {};
-listen.port = argv.port || 8000;
-listen.ip = argv.ip;
-listen.api_ip = argv.api_ip || 'localhost';
-listen.api_port = argv.api_port || listen.port + 1;
-
+listen.port = args.port || 8000;
+listen.ip = args.ip;
+listen.api_ip = args.apiIp || 'localhost';
+listen.api_port = args.apiPort || listen.port + 1;
 
 proxy.proxy_server.listen(listen.port, listen.ip);
-// proxy.api_server(listen.api_port, listen.api_ip);
+proxy.api_server.listen(listen.api_port, listen.api_ip);
 
-console.log(
-    "Proxying " + (listen.ip || '*') + ":" + listen.port +
-    " to " + proxy.upstream_ip + ":" + proxy.upstream_port
+console.log("Proxying %s:%s to %s:%s", (listen.ip || '*'), listen.port,
+    proxy.upstream_ip, proxy.upstream_port
 );
-
-if (options.api_ip || options.api_port) {
-    console.log("API entry points on " + (listen.api_ip || '*') + ":" + listen.api_port);
-}
+console.log("Proxy API at %s:%s/api/routes", (listen.api_ip || '*'), listen.api_port);
 
