@@ -1,2 +1,2 @@
-from .multiuser import main
+from .app import main
 main()
