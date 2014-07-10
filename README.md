@@ -1,14 +1,12 @@
-# Proof of concept for configurable proxy
+# Multi-user server for Jupyter notebooks
 
-This is a proof of concept implementation of a configurable proxy for managed multi-user webapps,
-ultimately for use in IPython.
-
+This repo hosts the development of a multi-user server to manage and proxy multiple instances of the single-user IPython notebook server.
 
 Three actors:
 
-- multi user server (tornado process)
+- multi-user server (tornado process)
 - configurable http proxy (node-http-proxy)
-- multiple single user servers (Python/IPython/tornado)
+- multiple single-user IPython notbeook servers (Python/IPython/tornado)
 
 Basic principals:
 
@@ -20,7 +18,7 @@ Basic principals:
 ## dependencies
 
     npm install
-    pip install ipython[notebook]
+    pip install -r requirements.txt
 
 ## to use
 
