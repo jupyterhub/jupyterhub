@@ -1,10 +1,12 @@
 """Miscellaneous utilities"""
 
-# Copyright (c) IPython Development Team.
+# Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
 import socket
 import time
+
+
 
 def random_port():
     """get a single random port"""
@@ -13,6 +15,7 @@ def random_port():
     port = sock.getsockname()[1]
     sock.close()
     return port
+
 
 def wait_for_server(ip, port, timeout=10):
     """wait for a server to show up at ip:port"""
