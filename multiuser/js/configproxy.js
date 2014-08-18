@@ -33,7 +33,7 @@ var json_handler = function (handler) {
             try {
                 data = JSON.parse(buf) || {};
             } catch (e) {
-                that.fail(res, 400, "Body not valid JSON: " + e);
+                that.fail(req, res, 400, "Body not valid JSON: " + e);
                 return;
             }
             args.push(data);
@@ -109,7 +109,8 @@ var ConfigurableProxy = function (options) {
     this.proxy_server.on('upgrade', bound(this, this.handle_ws));
 };
 
-ConfigurableProxy.prototype.fail = function (res, code, msg) {
+ConfigurableProxy.prototype.fail = function (req, res, code, msg) {
+    msg = msg || '';
     console.log('[' + code + '] ' + req.method + ' ' + req.url + ': ' + msg);
     res.writeHead(code);
     res.write(msg);
@@ -200,7 +201,7 @@ ConfigurableProxy.prototype.handle_api_request = function (req, res) {
             var handler = handlers[req.method.toLowerCase()];
             if (!handler) {
                 // 405 on found resource, but not found method
-                this.fail(res, 405, req.method + " " + req.url + " not supported.");
+                this.fail(req, res, 405, "Method not supported.");
                 return;
             }
             var args = [req, res];
@@ -209,7 +210,7 @@ ConfigurableProxy.prototype.handle_api_request = function (req, res) {
             return;
         }
     }
-    this.fail(res, 404, req.method + " " + req.url);
+    this.fail(req, res, 404);
 };
 
 exports.ConfigurableProxy = ConfigurableProxy;
