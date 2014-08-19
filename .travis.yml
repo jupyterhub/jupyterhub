@@ -1,0 +1,13 @@
+# http://travis-ci.org/#!/jupyter/multiuser-server
+language: python
+python:
+    - 3.4
+    - 2.7
+before_install:
+    # workaround for https://github.com/travis-ci/travis-cookbooks/issues/155
+    - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
+    - time npm install
+    - time sudo apt-get install libzmq3-dev
+    - time pip install -f https://nipy.bic.berkeley.edu/wheelhouse/travis -r requirements.txt -r dev-requirements.txt
+script:
+    - py.test multiuser
