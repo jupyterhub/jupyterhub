@@ -6,7 +6,7 @@
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy import create_engine
 
-from multiuser import db
+from .. import db
 
 try:
     unicode

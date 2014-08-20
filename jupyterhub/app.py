@@ -31,8 +31,8 @@ from .handlers import (
 from . import db
 from .utils import url_path_join
 
-class MultiUserApp(Application):
-    """An Application for starting the Multi-User Notebook server."""
+class JupyterHubApp(Application):
+    """An Application for starting a Multi-User Notebook server."""
     ip = Unicode('localhost', config=True,
         help="The public facing ip of the proxy"
     )
@@ -88,7 +88,7 @@ class MultiUserApp(Application):
         return b'secret!'
     
     # class for spawning single-user servers
-    spawner_class = DottedObjectName("multiuser.spawner.LocalProcessSpawner")
+    spawner_class = DottedObjectName("jupyterhub.spawner.LocalProcessSpawner")
     
     db_url = Unicode('sqlite:///:memory:', config=True)
     debug_db = Bool(False)
@@ -215,7 +215,7 @@ class MultiUserApp(Application):
         self.tornado_application = web.Application(self.handlers, **self.tornado_settings)
         
     def initialize(self, *args, **kwargs):
-        super(MultiUserApp, self).initialize(*args, **kwargs)
+        super(JupyterHubApp, self).initialize(*args, **kwargs)
         self.init_db()
         self.init_hub()
         self.init_proxy()
@@ -247,7 +247,7 @@ class MultiUserApp(Application):
         finally:
             self.cleanup()
 
-main = MultiUserApp.launch_instance
+main = JupyterHubApp.launch_instance
 
 if __name__ == "__main__":
     main()

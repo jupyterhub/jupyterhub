@@ -1,4 +1,4 @@
-# http://travis-ci.org/#!/jupyter/multiuser-server
+# http://travis-ci.org/#!/jupyter/jupyterhub
 language: python
 python:
     - 3.4
@@ -10,4 +10,4 @@ before_install:
     - time sudo apt-get install libzmq3-dev
     - time pip install -f https://nipy.bic.berkeley.edu/wheelhouse/travis -r requirements.txt -r dev-requirements.txt
 script:
-    - py.test multiuser
+    - py.test jupyterhub

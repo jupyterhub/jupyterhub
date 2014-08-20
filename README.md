@@ -1,6 +1,6 @@
-# Multi-user server for Jupyter notebooks
+# JupyterHub: A multi-user server for Jupyter notebooks
 
-This repo hosts the development of a multi-user server to manage and proxy multiple instances of the single-user IPython notebook server.
+This repo hosts the development of a multi-user server to manage and proxy multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
 
 Three actors:
 
@@ -22,7 +22,7 @@ Basic principals:
 
 ## to use
 
-    $> python -m multiuser
+    $> python -m jupyterhub
 
 visit `http://localhost:8000`, and login (any username, password=`password`).
 

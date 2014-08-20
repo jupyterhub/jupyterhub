@@ -53,7 +53,7 @@ class Spawner(LoggingConfigurable):
     )
     def _cmd_default(self):
         # should have sudo -u self.user
-        return [sys.executable, '-m', 'multiuser.singleuser']
+        return [sys.executable, '-m', 'jupyterhub.singleuserapp']
     
     @classmethod
     def fromJSON(cls, state, **kwargs):
