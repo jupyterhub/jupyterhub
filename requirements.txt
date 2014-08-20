@@ -1,3 +1,4 @@
+ipython[notebook]
+simplepam
 sqlalchemy
 requests
-ipython[notebook]

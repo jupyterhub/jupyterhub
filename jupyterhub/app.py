@@ -9,7 +9,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.options
 from tornado.log import LogFormatter
-from tornado import web
+from tornado import gen, web
 
 from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Instance, Bool, Bytes, Any,
@@ -87,8 +87,27 @@ class JupyterHubApp(Application):
     def _cookie_secret_default(self):
         return b'secret!'
     
+    authenticator = DottedObjectName("jupyterhub.auth.PAMAuthenticator", config=True,
+        help="""Class for authenticating users.
+        
+        This should be a class with the following form:
+        
+        - constructor takes one kwarg: `config`, the IPython config object.
+        
+        - is a tornado.gen.coroutine
+        - returns username on success, None on failure
+        - takes two arguments: (handler, data),
+          where `handler` is the calling web.RequestHandler,
+          and `data` is the POST form data from the login page.
+        """
+    )
     # class for spawning single-user servers
-    spawner_class = DottedObjectName("jupyterhub.spawner.LocalProcessSpawner")
+    spawner_class = DottedObjectName("jupyterhub.spawner.LocalProcessSpawner", config=True,
+        help="""The class to use for spawning single-user servers.
+        
+        Should be a subclass of Spawner.
+        """
+    )
     
     db_url = Unicode('sqlite:///:memory:', config=True)
     debug_db = Bool(False)
@@ -201,6 +220,7 @@ class JupyterHubApp(Application):
             log=self.log,
             db=self.db,
             hub=self.hub,
+            authenticator=import_item(self.authenticator)(config=self.config),
             spawner_class=import_item(self.spawner_class),
             base_url=base_url,
             cookie_secret=self.cookie_secret,
@@ -225,15 +245,25 @@ class JupyterHubApp(Application):
         self.init_tornado_settings()
         self.init_tornado_application()
     
+    @gen.coroutine
     def cleanup(self):
         self.log.info("Cleaning up proxy...")
         self.proxy.terminate()
         self.log.info("Cleaning up single-user servers...")
-        Spawner = import_item(self.spawner_class)
+        
+        # request (async) process termination
+        futures = []
         for user in self.db.query(db.User):
             if user.spawner is not None:
-                user.spawner.stop()
+                futures.append(user.spawner.stop())
+        
+        # wait for the requests to stop finish:
+        for f in futures:
+            yield f
+        
+        # finally stop the loop once we are all cleaned up
         self.log.info("...done")
+        tornado.ioloop.IOLoop.instance().stop()
     
     def start(self):
         """Start the whole thing"""
@@ -242,12 +272,17 @@ class JupyterHubApp(Application):
         # start the webserver
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)
+        
+        loop = tornado.ioloop.IOLoop.instance()
         try:
-            tornado.ioloop.IOLoop.instance().start()
+            loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
-            self.cleanup()
+            # have to start the loop one more time,
+            # to allow for async cleanup code.
+            loop.add_callback(self.cleanup)
+            tornado.ioloop.IOLoop.instance().start()
 
 main = JupyterHubApp.launch_instance
 

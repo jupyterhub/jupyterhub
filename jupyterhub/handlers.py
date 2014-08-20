@@ -12,11 +12,11 @@ from tornado.log import app_log
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 from tornado.web import RequestHandler
-from tornado import web
+from tornado import gen, web
 
 from . import db
 from .spawner import LocalProcessSpawner
-from .utils import random_port, wait_for_server, url_path_join
+from .utils import wait_for_server, url_path_join
 
 
 class BaseHandler(RequestHandler):
@@ -59,7 +59,7 @@ class BaseHandler(RequestHandler):
     def clear_login_cookie(self):
         username = self.get_current_user()
         if username is not None:
-            user = self.db.query(User).filter(name=username).first()
+            user = self.db.query(db.User).filter(name=username).first()
             if user is not None:
                 self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
         self.clear_cookie(self.cookie_name, path=self.hub.base_url)
@@ -103,10 +103,10 @@ class LogoutHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     """Render the login page."""
 
-    def _render(self, message=None, user=None):
+    def _render(self, message=None, username=None):
         self.render('login.html',
                 next=url_escape(self.get_argument('next', default='')),
-                user=user,
+                username=username,
                 message=message,
         )
 
@@ -114,9 +114,10 @@ class LoginHandler(BaseHandler):
         if False and self.get_current_user():
             self.redirect(self.get_argument('next', default='/'))
         else:
-            user = self.get_argument('user', default='')
-            self._render(user=user)
+            username = self.get_argument('username', default='')
+            self._render(username=username)
     
+    @gen.coroutine
     def notify_proxy(self, user):
         proxy = self.db.query(db.Proxy).first()
         r = requests.post(
@@ -130,9 +131,10 @@ class LoginHandler(BaseHandler):
             )),
             headers={'Authorization': "token %s" % proxy.auth_token},
         )
-        wait_for_server(user.server.ip, user.server.port)
+        yield wait_for_server(user.server.ip, user.server.port)
         r.raise_for_status()
     
+    @gen.coroutine
     def spawn_single_user(self, name):
         user = db.User(name=name,
             server=db.Server(
@@ -154,51 +156,69 @@ class LoginHandler(BaseHandler):
             hub=self.hub,
             api_token=api_token.token,
         )
-        spawner.start()
+        yield spawner.start()
         
         # store state
         user.state = spawner.get_state()
         self.db.commit()
         
         self.notify_proxy(user)
-        return user
+        raise gen.Return(user)
     
-    def post(self):
-        name = self.get_argument('user', default='')
-        pwd = self.get_argument('password', default=u'')
-        next_url = self.get_argument('next', default='') or '/user/%s/' % name
-        if name and pwd == 'password':
-            user = self.db.query(db.User).filter(db.User.name == name).first()
-            if user is None:
-                user = self.spawn_single_user(name)
-            
-            # create and set a new cookie token for the single-user server
-            cookie_token = user.new_cookie_token()
-            self.db.add(cookie_token)
-            self.db.commit()
-            
-            self.set_cookie(
-                user.server.cookie_name,
-                cookie_token.token,
-                path=user.server.base_url,
-            )
-            
-            # create and set a new cookie token for the hub
-            cookie_token = user.new_cookie_token()
-            self.db.add(cookie_token)
-            self.db.commit()
-            self.set_cookie(
-                self.hub.server.cookie_name,
-                cookie_token.token,
-                path=self.hub.server.base_url)
+    def set_login_cookies(self, user):
+        """Set login cookies for the Hub and single-user server."""
+        # create and set a new cookie token for the single-user server
+        cookie_token = user.new_cookie_token()
+        self.db.add(cookie_token)
+        self.db.commit()
+        
+        self.set_cookie(
+            user.server.cookie_name,
+            cookie_token.token,
+            path=user.server.base_url,
+        )
+        
+        # create and set a new cookie token for the hub
+        cookie_token = user.new_cookie_token()
+        self.db.add(cookie_token)
+        self.db.commit()
+        self.set_cookie(
+            self.hub.server.cookie_name,
+            cookie_token.token,
+            path=self.hub.server.base_url)
+    
+    @gen.coroutine
+    def authenticate(self, data):
+        auth = self.settings.get('authenticator', None)
+        if auth is not None:
+            result = yield auth.authenticate(self, data)
+            raise gen.Return(result)
         else:
+            self.log.error("No authentication function, login is impossible!")
+    
+    @gen.coroutine
+    def post(self):
+        # parse the arguments dict
+        data = {}
+        for arg in self.request.arguments:
+            data[arg] = self.get_argument(arg)
+        
+        username = data['username']
+        authorized = yield self.authenticate(data)
+        if authorized:
+            user = self.db.query(db.User).filter(db.User.name == username).first()
+            if user is None:
+                user = yield self.spawn_single_user(username)
+            self.set_login_cookies(user)
+            next_url = self.get_argument('next', default='') or '/user/%s/' % username
+            self.redirect(next_url)
+        else:
+            self.log.debug("Failed login for %s", username)
             self._render(
                 message={'error': 'Invalid username or password'},
-                user=user,
+                username=username,
             )
-            return
 
-        self.redirect(next_url)
 
 #------------------------------------------------------------------------------
 # API Handlers
@@ -216,7 +236,6 @@ def token_authorized(method):
             raise web.HTTPError(403)
         token = match.group(1)
         db_token = self.db.query(db.APIToken).filter(db.APIToken.token == token).first()
-        self.log.info("Token: %s: %s", token, db_token)
         if db_token is None:
             raise web.HTTPError(403)
         return method(self, *args, **kwargs)
