@@ -48,6 +48,13 @@ class Spawner(LoggingConfigurable):
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     
+    cmd = List(Unicode, config=True,
+        help="""The command used for starting notebooks."""
+    )
+    def _cmd_default(self):
+        # should have sudo -u self.user
+        return [sys.executable, '-m', 'multiuser.singleuser']
+    
     @classmethod
     def fromJSON(cls, state, **kwargs):
         """Create a new instance, and load its JSON state
@@ -94,7 +101,7 @@ class Spawner(LoggingConfigurable):
             '--base-url=%s' % self.user.server.base_url,
             
             '--hub-prefix=%s' % self.hub.server.base_url,
-            '--hub-api-url=%s' % self.hub.api_host_url,
+            '--hub-api-url=%s' % self.hub.api_url,
             ]
 
     def start(self):
@@ -107,15 +114,8 @@ class Spawner(LoggingConfigurable):
         raise NotImplementedError("Override in subclass")
 
 
-class PopenSpawner(Spawner):
+class LocalProcessSpawner(Spawner):
     """A Spawner that just uses Popen to start local processes."""
-    cmd = List(Unicode, config=True,
-        help="""The command used for starting notebooks."""
-    )
-    def _cmd_default(self):
-        # should have sudo -u self.user
-        return [sys.executable, '-m', 'multiuser.singleuser']
-    
     proc = Instance(Popen)
     pid = Integer()
     
@@ -144,13 +144,12 @@ class PopenSpawner(Spawner):
         # if we resumed from stored state,
         # we don't have the Popen handle anymore
         
-        # this doesn't work on Windows.
-        # multi-user doesn't support Windows.
+        # this doesn't work on Windows, but that's okay because we don't support Windows.
         try:
             os.kill(self.pid, 0)
         except OSError as e:
             if e.errno == errno.ESRCH:
-                # no such process, return exitcode == 0, since we don't know
+                # no such process, return exitcode == 0, since we don't know the exit status
                 return 0
         else:
             # None indicates the process is running
@@ -159,7 +158,7 @@ class PopenSpawner(Spawner):
     def _wait_for_death(self, timeout=10):
         """wait for the process to die, up to timeout seconds"""
         for i in range(int(timeout * 10)):
-            if self.poll() is None:
+            if self.poll() is not None:
                 break
             else:
                 time.sleep(0.1)
@@ -181,5 +180,8 @@ class PopenSpawner(Spawner):
         if self.poll() is None:
             os.kill(self.pid, signal.SIGKILL)
             self._wait_for_death(5)
-        
-        # it all failed, zombie process
+
+        if self.poll() is None:
+            # it all failed, zombie process
+            self.log.warn("Process %i never died", self.pid)
+    

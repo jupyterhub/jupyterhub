@@ -14,11 +14,9 @@ from tornado.httputil import url_concat
 from tornado.web import RequestHandler
 from tornado import web
 
-from IPython.html.utils import url_path_join
-
 from . import db
-from .spawner import PopenSpawner
-from .utils import random_port, wait_for_server
+from .spawner import LocalProcessSpawner
+from .utils import random_port, wait_for_server, url_path_join
 
 
 class BaseHandler(RequestHandler):
@@ -34,6 +32,10 @@ class BaseHandler(RequestHandler):
         return self.settings.get('config', None)
     
     @property
+    def base_url(self):
+        return self.settings.get('base_url', '/')
+    
+    @property
     def db(self):
         return self.settings['db']
     
@@ -41,53 +43,30 @@ class BaseHandler(RequestHandler):
     def hub(self):
         return self.settings['hub']
     
-    @property
-    def cookie_name(self):
-        return self.settings.get('cookie_name', 'cookie')
-    
-    @property
-    def hub_url(self):
-        return self.settings.get('hub_url', '')
-    
-    @property
-    def hub_prefix(self):
-        return self.settings.get('hub_prefix', '/hub/')
-    
     def get_current_user(self):
         if 'get_current_user' in self.settings:
-            return self.settings['get_current_user']()
+            return self.settings['get_current_user'](self)
         
-        token = self.get_cookie(self.cookie_name, '')
+        token = self.get_cookie(self.hub.server.cookie_name, None)
         if token:
-            session = self.user_manager.user_for_cookie_token(token)
-            if session:
-                return session.user
-    
-    @property
-    def base_url(self):
-        return self.settings.setdefault('base_url', '/')
+            cookie_token = self.db.query(db.CookieToken).filter(db.CookieToken.token==token).first()
+            if cookie_token:
+                return cookie_token.user.name
+            else:
+                # have cookie, but it's not valid. Clear it and start over.
+                self.clear_cookie(self.hub.server.cookie_name)
     
     def clear_login_cookie(self):
-        self.clear_cookie(self.cookie_name)
+        username = self.get_current_user()
+        if username is not None:
+            user = self.db.query(User).filter(name=username).first()
+            if user is not None:
+                self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
+        self.clear_cookie(self.cookie_name, path=self.hub.base_url)
     
     @property
     def spawner_class(self):
-        return self.settings.get('spawner_class', PopenSpawner)
-    
-    # def spawn_single_user(self, user):
-    #     spawner = self.spawner_class(
-    #         user=user,
-    #         cookie_secret=self.settings['cookie_secret'],
-    #         hub_api_url=self.settings['hub_api_url'],
-    #         hub_prefix=self.settings['hub_prefix'],
-    #         )
-    #     session = self.user_manager.get_session(user,
-    #         cookie_secret=self.settings['cookie_secret'],
-    #         hub_api_url=self.settings['hub_api_url'],
-    #         hub_prefix=self.settings['hub_prefix'],
-    #     )
-    #     self.user_manager.spawn(user)
-    #     return session
+        return self.settings.get('spawner_class', LocalProcessSpawner)
 
 
 class RootHandler(BaseHandler):
@@ -104,14 +83,14 @@ class UserHandler(BaseHandler):
     """
     @web.authenticated
     def get(self, user):
-        self.log.debug("hub at single-user url: %s", user)
+        self.log.warn("Hub caught serving single-user url: %s", user)
         if self.get_current_user() == user:
             self.spawn_single_user(user)
             self.redirect('')
         else:
             self.clear_login_cookie()
             self.redirect(url_concat(self.settings['login_url'], {
-                'next' : '/user/%s/' % user
+                'next' : self.request.path,
             }))
 
 
@@ -169,7 +148,7 @@ class LoginHandler(BaseHandler):
         self.db.add(api_token)
         self.db.commit()
         
-        spawner = self.spawner_class(
+        spawner = user.spawner = self.spawner_class(
             config=self.config,
             user=user,
             hub=self.hub,
@@ -189,8 +168,6 @@ class LoginHandler(BaseHandler):
         pwd = self.get_argument('password', default=u'')
         next_url = self.get_argument('next', default='') or '/user/%s/' % name
         if name and pwd == 'password':
-            import IPython
-            # IPython.embed()
             user = self.db.query(db.User).filter(db.User.name == name).first()
             if user is None:
                 user = self.spawn_single_user(name)
@@ -231,7 +208,7 @@ class LoginHandler(BaseHandler):
 auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
 
 def token_authorized(method):
-    """decorator for a method authorized by the Authorization header"""
+    """decorator for a method authorized by the Authorization token header"""
     def check_token(self, *args, **kwargs):
         auth_header = self.request.headers.get('Authorization', '')
         match = auth_header_pat.match(auth_header)
@@ -252,12 +229,7 @@ class AuthorizationsHandler(BaseHandler):
     @token_authorized
     def get(self, token):
         db_token = self.db.query(db.CookieToken).filter(db.CookieToken.token == token).first()
-        import IPython
-        IPython.embed()
         if db_token is None:
-            # app_log.debug('cookie tokens: %r',
-            #     { user:s.cookie_token for user,s in self.user_manager.users.items() }
-            # )
             raise web.HTTPError(404)
         self.write(json.dumps({
             'user' : db_token.user.name,

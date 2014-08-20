@@ -6,7 +6,7 @@
 import socket
 import time
 
-
+from IPython.html.utils import url_path_join
 
 def random_port():
     """get a single random port"""

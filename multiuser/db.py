@@ -1,4 +1,4 @@
-"""sqlalchemy ORM tools for the user database"""
+"""sqlalchemy ORM tools for the state of the constellation of processes"""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -11,14 +11,12 @@ from sqlalchemy import (
     Column, Integer, String, ForeignKey, Unicode, Binary,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-
 from sqlalchemy.orm import sessionmaker, relationship, backref
-
 from sqlalchemy import create_engine
 
 from IPython.utils.py3compat import str_to_unicode
 
-from .utils import random_port
+from .utils import random_port, url_path_join
 
 
 def new_token(*args, **kwargs):
@@ -56,30 +54,44 @@ Base = declarative_base()
 
 
 class Server(Base):
+    """The basic state of a server
+    
+    connection and cookie info
+    """
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
     proto = Column(Unicode, default=u'http')
     ip = Column(Unicode, default=u'localhost')
     port = Column(Integer, default=random_port)
-    cookie_secret = Column(Binary)
-    cookie_name = Column(Unicode)
     base_url = Column(Unicode, default=u'/')
+    cookie_secret = Column(Binary, default=b'secret')
+    cookie_name = Column(Unicode, default=u'cookie')
     
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)
     
     @property
-    def url(self):
-        return "{proto}://{ip}:{port}{url}".format(
+    def host(self):
+        return "{proto}://{ip}:{port}".format(
             proto=self.proto,
             ip=self.ip,
             port=self.port,
-            url=self.base_url,
+        )
+    
+    @property
+    def url(self):
+        return "{host}{uri}".format(
+            host=self.host,
+            uri=self.base_url,
         )
 
 
 class Proxy(Base):
-    """A configurable-http-proxy instance"""
+    """A configurable-http-proxy instance.
+    
+    A proxy consists of the API server info and the public-facing server info,
+    plus an auth token for configuring the proxy table.
+    """
     __tablename__ = 'proxies'
     id = Column(Integer, primary_key=True)
     auth_token = Column(Unicode, default=new_token)
@@ -98,22 +110,22 @@ class Proxy(Base):
 
 
 class Hub(Base):
-    """Bring it all together at the hub"""
+    """Bring it all together at the hub.
+    
+    The Hub is a server, plus its API path suffix
+    
+    the api_url is the full URL plus the api_path suffix on the end
+    of the server base_url.
+    """
     __tablename__ = 'hubs'
     id = Column(Integer, primary_key=True)
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
-    api_url = Column(Unicode, default=u'/hub/api/')
     
     @property
-    def api_host_url(self):
+    def api_url(self):
         """return the full API url (with proto://host...)"""
-        return "{proto}://{ip}:{port}{url}".format(
-            proto=self.server.proto,
-            ip=self.server.ip,
-            port=self.server.port,
-            url=self.api_url,
-        )
+        return url_path_join(self.server.url, 'api')
     
     def __repr__(self):
         if self.server:
@@ -125,16 +137,30 @@ class Hub(Base):
 
 
 class User(Base):
-    """The User table"""
+    """The User table
+    
+    Each user has a single server,
+    and multiple tokens used for authorization.
+    
+    API tokens grant access to the Hub's REST API.
+    These are used by single-user servers to authenticate requests.
+    
+    Cookie tokens are used to authenticate browser sessions.
+    
+    A `state` column contains a JSON dict,
+    used for restoring state of a Spawner.
+    """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     name = Column(Unicode)
+    # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     
     api_tokens = relationship("APIToken", backref="user")
     cookie_tokens = relationship("CookieToken", backref="user")
     state = Column(JSONDict)
+    spawner = None
     
     def __repr__(self):
         if self.server:
@@ -197,17 +223,3 @@ def new_session(url="sqlite:///:memory:", **kwargs):
     return session
 
 
-if __name__ == '__main__':
-    engine = create_engine('sqlite:///:memory:', echo=True)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    Base.metadata.create_all(engine)
-    
-    hub = Hub()
-    session.add(hub)
-    session.commit()
-    
-    minrk = User(name="minrk")
-    session.add(minrk)
-    session.commit()
-    

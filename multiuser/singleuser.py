@@ -5,12 +5,14 @@ import os
 
 import requests
 
+from tornado import ioloop
 from tornado import web
 
 from IPython.utils.traitlets import Unicode
 
-from IPython.html import utils
 from IPython.html.notebookapp import NotebookApp
+
+from .utils import url_path_join
 
 
 # Define two methods to attach to AuthenticatedHandler,
@@ -26,7 +28,7 @@ def verify_token(self, token):
     
     hub_api_url = self.settings['hub_api_url']
     hub_api_key = self.settings['hub_api_key']
-    r = requests.get(utils.url_path_join(
+    r = requests.get(url_path_join(
         hub_api_url, "authorizations", token,
     ),
         headers = {'Authorization' : 'token %s' % hub_api_key}
@@ -53,11 +55,7 @@ def get_current_user(self):
         if user == my_user:
             return user
         else:
-            # import IPython
-            # IPython.embed()
             return None
-            # imoprt
-            # raise web.HTTPError(403, "User %s does not have access to %s" % (user, my_user))
     else:
         self.log.debug("No token cookie")
         return None
@@ -83,6 +81,10 @@ class SingleUserNotebookApp(NotebookApp):
     aliases = aliases
     browser = False
     
+    def _confirm_exit(self):
+        # disable the exit confirmation for background notebook processes
+        ioloop.IOLoop.instance().stop()
+    
     def init_webapp(self):
         # monkeypatch authentication to use the hub
         from IPython.html.base.handlers import AuthenticatedHandler
@@ -97,7 +99,7 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_api_key'] = env.get('IPY_API_TOKEN', '')
         s['cookie_secret'] = env.get('IPY_COOKIE_SECRET', '')
         s['cookie_name'] = self.cookie_name
-        s['login_url'] = utils.url_path_join(self.hub_prefix, 'login')
+        s['login_url'] = url_path_join(self.hub_prefix, 'login')
         s['hub_api_url'] = self.hub_api_url
         super(SingleUserNotebookApp, self).init_webapp()
 
