@@ -5,6 +5,7 @@
 
 import socket
 import time
+from subprocess import check_call, CalledProcessError, STDOUT, PIPE
 
 from IPython.html.utils import url_path_join
 
@@ -27,4 +28,3 @@ def wait_for_server(ip, port, timeout=10):
             time.sleep(0.1)
         else:
             break
-

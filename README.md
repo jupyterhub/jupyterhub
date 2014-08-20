@@ -16,13 +16,15 @@ Basic principals:
 - Hub configures proxy to forward url prefixes to single-user servers
 
 ## dependencies
-
-    npm install
-    pip install -r requirements.txt
+    
+    # get the dependencies of the nodejs proxy (-g for global install)
+    npm install [-g]
+    # install the Python pargs (-e for editable/development install)
+    pip install [-e] .
 
 ## to use
 
-    $> python -m jupyterhub
+    $> jupyterhub
 
-visit `http://localhost:8000`, and login (any username, password=`password`).
+visit `http://localhost:8000`, and login with your unix credentials.
 

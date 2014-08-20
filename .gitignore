@@ -2,3 +2,8 @@ node_modules
 *.py[co]
 *~
 .DS_Store
+build
+dist
+share/jupyter/components
+*.egg-info
+MANIFEST

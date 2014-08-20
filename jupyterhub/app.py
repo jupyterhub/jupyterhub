@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 """The multi-user notebook application"""
 
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
+
+
 import logging
 import os
 from subprocess import Popen
@@ -29,10 +33,15 @@ from .handlers import (
 )
 
 from . import db
+from ._data import DATA_FILES_PATH
 from .utils import url_path_join
 
 class JupyterHubApp(Application):
     """An Application for starting a Multi-User Notebook server."""
+    data_files_path = Unicode(DATA_FILES_PATH, config=True,
+        help="The location of jupyter data files (e.g. /usr/local/share/jupyter)"
+    )
+    
     ip = Unicode('localhost', config=True,
         help="The public facing ip of the proxy"
     )
@@ -41,6 +50,13 @@ class JupyterHubApp(Application):
     )
     base_url = Unicode('/', config=True,
         help="The base URL of the entire application"
+    )
+    
+    proxy_cmd = Unicode('configurable-http-proxy', config=True,
+        help="""The command to start the http proxy.
+        
+        Only override if configurable-http-proxy is not on your PATH
+        """
     )
     proxy_auth_token = Unicode(config=True,
         help="The Proxy Auth token"
@@ -206,7 +222,7 @@ class JupyterHubApp(Application):
         """Actually start the configurable-http-proxy"""
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
-        self.proxy = Popen(["node", os.path.join(here, 'js', 'main.js'),
+        self.proxy = Popen([self.proxy_cmd,
             '--port', str(self.proxy.public_server.port),
             '--api-port', str(self.proxy.api_server.port),
             '--upstream-port', str(self.hub.server.port),
@@ -217,7 +233,7 @@ class JupyterHubApp(Application):
         base_url = self.base_url
         settings = dict(
             config=self.config,
-            log=self.log,
+            # log=self.log,
             db=self.db,
             hub=self.hub,
             authenticator=import_item(self.authenticator)(config=self.config),

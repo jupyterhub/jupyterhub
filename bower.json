@@ -1,0 +1,9 @@
+{
+  "name": "ipython-deps",
+  "version": "0.0.1",
+  "dependencies": {
+    "bootstrap": "components/bootstrap#~3.1",
+    "font-awesome": "components/font-awesome#~4.1",
+    "jquery": "components/jquery#~2.0"
+  }
+}

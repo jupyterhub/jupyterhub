@@ -1,5 +1,8 @@
 """Tests for PAM authentication"""
 
+# Copyright (c) Jupyter Development Team.
+# Distributed under the terms of the Modified BSD License.
+
 import mock
 import simplepam
 from tornado.testing import AsyncTestCase, gen_test

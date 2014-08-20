@@ -1,0 +1,24 @@
+include README.md
+include COPYING.md
+include setupegg.py
+
+graft jupyterhub
+graft scripts
+
+# Load configproxy js
+graft lib
+
+# Documentation
+graft docs
+
+# docs subdirs we want to skip
+prune docs/build
+prune docs/gh-pages
+prune docs/dist
+
+# Patterns to exclude from any directory
+global-exclude *~
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .git
+global-exclude .ipynb_checkpoints

@@ -6,8 +6,10 @@ python:
 before_install:
     # workaround for https://github.com/travis-ci/travis-cookbooks/issues/155
     - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-    - time npm install
+    - time npm install -g bower .
     - time sudo apt-get install libzmq3-dev
-    - time pip install -f https://nipy.bic.berkeley.edu/wheelhouse/travis -r requirements.txt -r dev-requirements.txt
+    - time pip install -f https://nipy.bic.berkeley.edu/wheelhouse/travis -r dev-requirements.txt
+install:
+    - time pip install .
 script:
     - py.test jupyterhub

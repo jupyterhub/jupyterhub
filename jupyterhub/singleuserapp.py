@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """Extend regular notebook server to be aware of multiuser things."""
 
+# Copyright (c) Jupyter Development Team.
+# Distributed under the terms of the Modified BSD License.
+
 import os
 
 import requests
