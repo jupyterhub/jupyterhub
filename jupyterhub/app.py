@@ -198,6 +198,7 @@ class JupyterHubApp(Application):
         base_url = self.base_url
         settings = dict(
             config=self.config,
+            log=self.log,
             db=self.db,
             hub=self.hub,
             spawner_class=import_item(self.spawner_class),
@@ -216,6 +217,7 @@ class JupyterHubApp(Application):
         
     def initialize(self, *args, **kwargs):
         super(JupyterHubApp, self).initialize(*args, **kwargs)
+        self.init_logging()
         self.init_db()
         self.init_hub()
         self.init_proxy()

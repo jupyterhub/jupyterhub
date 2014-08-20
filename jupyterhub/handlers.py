@@ -25,7 +25,7 @@ class BaseHandler(RequestHandler):
     @property
     def log(self):
         """I can't seem to avoid typing self.log"""
-        return app_log
+        return self.settings.get('log', app_log)
     
     @property
     def config(self):
