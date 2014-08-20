@@ -137,6 +137,15 @@ ConfigurableProxy.prototype.get_routes = function (req, res) {
 ConfigurableProxy.prototype.post_routes = function (req, res, path, data) {
     // POST adds a new route
     console.log('POST', path, data);
+    
+    // ensure path starts with /
+    if (path[0] != '/') {
+        path = '/' + path;
+    }
+    // ensure path *doesn't* end with /
+    if (path[path.length - 1] == '/') {
+        path = path.substr(0, path.length - 1);
+    }
     this.add_route(path, data);
     res.writeHead(201);
     res.end();
@@ -154,11 +163,27 @@ ConfigurableProxy.prototype.delete_routes = function (req, res, path) {
     res.end();
 };
 
+var url_startswith = function (url, prefix) {
+    // does the url path start with prefix?
+    // use array splitting to match prefix and avoid trailing-slash and partial-word issues
+    prefix_parts = prefix.split('/');
+    parts = url.split('/');
+    if (parts.length < prefix_parts.length) {
+        return false;
+    }
+    for (var i = 0; i < prefix_parts.length; i++) {
+         if (prefix_parts[i] != parts[i]) {
+             return false;
+         }
+    }
+    return true;
+}
+
 ConfigurableProxy.prototype.target_for_url = function (url) {
-    // return proxy target for a given url
-    for (var path in this.routes) {
-        if (url.indexOf(path) === 0) {
-            return this.routes[path].target;
+    // return proxy target for a given url path
+    for (var prefix in this.routes) {
+        if (url_startswith(url, prefix)) {
+            return this.routes[prefix].target;
         }
     }
     // no custom target, fall back to default
