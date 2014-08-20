@@ -5,6 +5,7 @@
 
 import errno
 import os
+import pwd
 import signal
 import sys
 import time
@@ -53,8 +54,9 @@ class Spawner(LoggingConfigurable):
         help="""The command used for starting notebooks."""
     )
     def _cmd_default(self):
-        # should have sudo -u self.user
-        return [sys.executable, '-m', 'jupyterhub.singleuserapp']
+        here = os.path.abspath(os.path.dirname(__file__))
+        singleuser_py = os.path.join(here, 'singleuserapp.py')
+        return [sys.executable, singleuser_py]
     
     @classmethod
     def fromJSON(cls, state, **kwargs):
@@ -118,6 +120,25 @@ class Spawner(LoggingConfigurable):
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
 
 
+def set_user(username):
+    """return a preexec_fn for setting the user of a spawned process"""
+    user = pwd.getpwnam(username)
+    uid = user.pw_uid
+    gid = user.pw_gid
+    home = user.pw_dir
+    
+    def preexec():
+        # don't forward signals
+        os.setpgrp()
+        # set the user and group
+        os.setuid(uid)
+        os.setgid(gid)
+        # start in the user's home dir
+        os.chdir(home)
+    
+    return preexec
+
+
 class LocalProcessSpawner(Spawner):
     """A Spawner that just uses Popen to start local processes."""
     proc = Instance(Popen)
@@ -136,8 +157,8 @@ class LocalProcessSpawner(Spawner):
         
         self.log.info("Spawning %r", cmd)
         self.proc = Popen(cmd, env=self.env,
-            # don't forward signals
-            preexec_fn=os.setpgrp,
+            # spawn the process as the correct user
+            preexec_fn=set_user(self.user.name),
         )
         self.pid = self.proc.pid
     

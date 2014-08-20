@@ -12,7 +12,7 @@ from IPython.utils.traitlets import Unicode
 
 from IPython.html.notebookapp import NotebookApp
 
-from .utils import url_path_join
+from IPython.html.utils import url_path_join
 
 
 # Define two methods to attach to AuthenticatedHandler,
