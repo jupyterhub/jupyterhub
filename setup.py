@@ -116,7 +116,7 @@ class Bower(Command):
         pass
     
     def run(self):
-        check_call(['bower', 'install'])
+        check_call(['bower', 'install', '--allow-root'])
         self.distribution.data_files = get_data_files()
     
     def get_outputs(self):
