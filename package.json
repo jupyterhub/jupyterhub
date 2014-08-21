@@ -8,8 +8,9 @@
       "url": "https://github.com/jupyter/jupyterhub"
     },
   "dependencies": {
+    "commander": "~2.2",
     "http-proxy": "~1.1",
-    "commander": "~2.2"
+    "loglevel": "~1.0"
   },
   "files": [
     "lib/configproxy.js",
