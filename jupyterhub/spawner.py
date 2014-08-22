@@ -7,7 +7,6 @@ import errno
 import os
 import pwd
 import signal
-import sys
 import time
 from subprocess import Popen
 
@@ -16,7 +15,7 @@ from tornado.ioloop import IOLoop
 
 from IPython.config import LoggingConfigurable
 from IPython.utils.traitlets import (
-    Any, Dict, Instance, Integer, List, Unicode,
+    Any, Dict, Enum, Instance, Integer, List, Unicode,
 )
 
 
@@ -54,9 +53,7 @@ class Spawner(LoggingConfigurable):
         help="""The command used for starting notebooks."""
     )
     def _cmd_default(self):
-        here = os.path.abspath(os.path.dirname(__file__))
-        singleuser_py = os.path.join(here, 'singleuserapp.py')
-        return [sys.executable, singleuser_py]
+        return ['jupyterhub-singleuser']
     
     @classmethod
     def fromJSON(cls, state, **kwargs):
@@ -109,19 +106,25 @@ class Spawner(LoggingConfigurable):
     
     @gen.coroutine
     def start(self):
+        """Start the single-user process"""
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
     
     @gen.coroutine
-    def stop(self):
+    def stop(self, now=False):
+        """Stop the single-user process"""
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
     
     @gen.coroutine
     def poll(self):
+        """Check if the single-user process is running
+
+        return None if it is, an exit status (0 if unknown) if it is not.
+        """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
 
 
-def set_user(username):
-    """return a preexec_fn for setting the user of a spawned process"""
+def set_user_setuid(username):
+    """return a preexec_fn for setting the user (via setuid) of a spawned process"""
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
@@ -139,10 +142,47 @@ def set_user(username):
     return preexec
 
 
+def set_user_sudo(username):
+    """return a preexec_fn for setting the user (assuming sudo is used for setting the user)"""
+    user = pwd.getpwnam(username)
+    home = user.pw_dir
+
+    def preexec():
+        # don't forward signals
+        os.setpgrp()
+        # start in the user's home dir
+        os.chdir(home)
+
+    return preexec
+
+
 class LocalProcessSpawner(Spawner):
     """A Spawner that just uses Popen to start local processes."""
     proc = Instance(Popen)
     pid = Integer()
+    sudo_args = List(['-n'], config=True,
+        help="""arguments to be passed to sudo (in addition to -u [username])
+
+        only used if set_user = sudo
+        """
+    )
+
+    make_preexec_fn = Any(set_user_setuid)
+
+    set_user = Enum(['sudo', 'setuid'], default_value='setuid', config=True,
+        help="""scheme for setting the user of the spawned process
+
+        sudo can be more prudently restricted,
+        but setuid is simpler for a server run as root
+        """
+    )
+    def _set_user_changed(self, name, old, new):
+        if new == 'sudo':
+            self.make_preexec_fn = set_user_sudo
+        elif new == 'setuid':
+            self.make_preexec_fn = set_user_setuid
+        else:
+            raise ValueError("This should be impossible")
     
     def load_state(self, state):
         self.pid = state['pid']
@@ -150,20 +190,28 @@ class LocalProcessSpawner(Spawner):
     def get_state(self):
         return dict(pid=self.pid)
     
+    def sudo_cmd(self, user):
+        return ['sudo', '-u', user.name] + self.sudo_args
+
     @gen.coroutine
     def start(self):
+        """Start the process"""
         self.user.server.port = random_port()
-        cmd = self.cmd + self.get_args()
+        cmd = []
+        if self.set_user == 'sudo':
+            cmd = self.sudo_cmd(self.user)
+        cmd.extend(self.cmd)
+        cmd.extend(self.get_args())
         
         self.log.info("Spawning %r", cmd)
         self.proc = Popen(cmd, env=self.env,
-            # spawn the process as the correct user
-            preexec_fn=set_user(self.user.name),
+            preexec_fn=self.make_preexec_fn(self.user.name),
         )
         self.pid = self.proc.pid
     
     @gen.coroutine
     def poll(self):
+        """Poll the process"""
         # if we started the process, poll with Popen
         if self.proc is not None:
             raise gen.Return(self.proc.poll())
