@@ -82,7 +82,7 @@ class SingleUserNotebookApp(NotebookApp):
     hub_prefix = Unicode(config=True)
     hub_api_url = Unicode(config=True)
     aliases = aliases
-    browser = False
+    open_browser = False
     
     def _confirm_exit(self):
         # disable the exit confirmation for background notebook processes
