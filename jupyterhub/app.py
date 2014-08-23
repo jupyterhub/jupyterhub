@@ -10,8 +10,8 @@ import os
 from subprocess import Popen
 
 import tornado.httpserver
-import tornado.ioloop
 import tornado.options
+from tornado.ioloop import IOLoop
 from tornado.log import LogFormatter
 from tornado import gen, web
 
@@ -282,7 +282,7 @@ class JupyterHubApp(Application):
         
         # finally stop the loop once we are all cleaned up
         self.log.info("...done")
-        tornado.ioloop.IOLoop.instance().stop()
+        IOLoop.instance().stop()
     
     def start(self):
         """Start the whole thing"""
@@ -292,16 +292,18 @@ class JupyterHubApp(Application):
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)
         
-        loop = tornado.ioloop.IOLoop.instance()
+        loop = IOLoop.instance()
         try:
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
-            # have to start the loop one more time,
+            # have to install/start a new IOLoop briefly,
             # to allow for async cleanup code.
-            loop.add_callback(self.cleanup)
-            tornado.ioloop.IOLoop.instance().start()
+            IOLoop.clear_instance()
+            cleanup_loop = IOLoop.instance()
+            cleanup_loop.add_callback(self.cleanup)
+            cleanup_loop.start()
 
 main = JupyterHubApp.launch_instance
 
