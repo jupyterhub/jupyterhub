@@ -223,8 +223,11 @@ class JupyterHubApp(Application):
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
         self.proxy = Popen([self.proxy_cmd,
+            '--ip', self.proxy.public_server.ip,
             '--port', str(self.proxy.public_server.port),
+            '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
+            '--upstream-ip', self.hub.server.ip,
             '--upstream-port', str(self.hub.server.port),
         ], env=env)
     
