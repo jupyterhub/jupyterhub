@@ -39,7 +39,7 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     api_token = Unicode()
     
-    env_prefix = Unicode('IPY_')
+    env_prefix = Unicode('JPY_')
     def _env_key(self, d, key, value):
         d['%s%s' % (self.env_prefix, key)] = value
     

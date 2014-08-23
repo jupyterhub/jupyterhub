@@ -99,8 +99,8 @@ class SingleUserNotebookApp(NotebookApp):
         s = self.webapp_settings
         s['token_cache'] = {}
         s['user'] = self.user
-        s['hub_api_key'] = env.get('IPY_API_TOKEN', '')
-        s['cookie_secret'] = env.get('IPY_COOKIE_SECRET', '')
+        s['hub_api_key'] = env.pop('JPY_API_TOKEN', '')
+        s['cookie_secret'] = env.pop('JPY_COOKIE_SECRET', '')
         s['cookie_name'] = self.cookie_name
         s['login_url'] = url_path_join(self.hub_prefix, 'login')
         s['hub_api_url'] = self.hub_api_url
