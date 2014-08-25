@@ -32,7 +32,7 @@ from .handlers import (
     UserHandler,
 )
 
-from . import db
+from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import url_path_join
 
@@ -62,7 +62,7 @@ class JupyterHubApp(Application):
         help="The Proxy Auth token"
     )
     def _proxy_auth_token_default(self):
-        return db.new_token()
+        return orm.new_token()
     
     proxy_api_ip = Unicode('localhost', config=True,
         help="The ip for the proxy API handlers"
@@ -185,12 +185,12 @@ class JupyterHubApp(Application):
     def init_db(self):
         # TODO: load state from db for resume
         # TODO: if not resuming, clear existing db contents
-        self.db = db.new_session(self.db_url, echo=self.debug_db)
+        self.db = orm.new_session(self.db_url, echo=self.debug_db)
     
     def init_hub(self):
         """Load the Hub config into the database"""
-        self.hub = db.Hub(
-            server=db.Server(
+        self.hub = orm.Hub(
+            server=orm.Server(
                 ip=self.hub_ip,
                 port=self.hub_port,
                 base_url=self.hub_prefix,
@@ -203,17 +203,17 @@ class JupyterHubApp(Application):
     
     def init_proxy(self):
         """Load the Proxy config into the database"""
-        self.proxy = db.Proxy(
-            public_server=db.Server(
+        self.proxy = orm.Proxy(
+            public_server=orm.Server(
                 ip=self.ip,
                 port=self.port,
             ),
-            api_server=db.Server(
+            api_server=orm.Server(
                 ip=self.proxy_api_ip,
                 port=self.proxy_api_port,
                 base_url='/api/routes/'
             ),
-            auth_token = db.new_token(),
+            auth_token = orm.new_token(),
         )
         self.db.add(self.proxy)
         self.db.commit()
@@ -272,7 +272,7 @@ class JupyterHubApp(Application):
         
         # request (async) process termination
         futures = []
-        for user in self.db.query(db.User):
+        for user in self.db.query(orm.User):
             if user.spawner is not None:
                 futures.append(user.spawner.stop())
         

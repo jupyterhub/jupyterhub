@@ -3,7 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from .. import db
+from .. import orm
 
 try:
     unicode
@@ -13,7 +13,7 @@ except NameError:
 
 
 def test_server(session):
-    server = db.Server()
+    server = orm.Server()
     session.add(server)
     session.commit()
     assert server.ip == u'localhost'
@@ -26,13 +26,13 @@ def test_server(session):
 
 
 def test_proxy(session):
-    proxy = db.Proxy(
+    proxy = orm.Proxy(
         auth_token=u'abc-123',
-        public_server=db.Server(
+        public_server=orm.Server(
             ip=u'192.168.1.1',
             port=8000,
         ),
-        api_server=db.Server(
+        api_server=orm.Server(
             ip=u'127.0.0.1',
             port=8001,
         ),
@@ -45,8 +45,8 @@ def test_proxy(session):
 
 
 def test_hub(session):
-    hub = db.Hub(
-        server=db.Server(
+    hub = orm.Hub(
+        server=orm.Server(
             ip = u'1.2.3.4',
             port = 1234,
             base_url='/hubtest/',
@@ -61,8 +61,8 @@ def test_hub(session):
 
 
 def test_user(session):
-    user = db.User(name=u'kaylee',
-        server=db.Server(),
+    user = orm.User(name=u'kaylee',
+        server=orm.Server(),
         state={'pid': 4234},
     )
     session.add(user)
@@ -73,7 +73,7 @@ def test_user(session):
 
 
 def test_tokens(session):
-    user = db.User(name=u'inara')
+    user = orm.User(name=u'inara')
     session.add(user)
     session.commit()
     token = user.new_cookie_token()

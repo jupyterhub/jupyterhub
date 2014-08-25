@@ -5,7 +5,7 @@
 
 from pytest import fixture
 
-from .. import db
+from .. import orm
 
 # global session object
 _session = None
@@ -14,5 +14,5 @@ _session = None
 def session():
     global _session
     if _session is None:
-        _session = db.new_session('sqlite:///:memory:', echo=True)
+        _session = orm.new_session('sqlite:///:memory:', echo=True)
     return _session

@@ -18,7 +18,7 @@ from IPython.utils.py3compat import unicode_type
 
 from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner
-from .. import db
+from .. import orm
 
 _echo_sleep = """
 import sys, time
@@ -43,13 +43,13 @@ def sleep(t):
 class TestLocalProcessSpawner(AsyncTestCase):
     
     def setup_class(cls):
-        session = cls.session = db.new_session('sqlite:///:memory:')
-        user = cls.user = db.User(
+        session = cls.session = orm.new_session('sqlite:///:memory:')
+        user = cls.user = orm.User(
             name=getpass.getuser(),
-            server = db.Server(),
+            server = orm.Server(),
         )
-        hub = cls.hub = db.Hub(
-            server = db.Server(),
+        hub = cls.hub = orm.Hub(
+            server = orm.Server(),
         )
         session.add(user)
         session.add(hub)

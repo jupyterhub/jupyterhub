@@ -14,7 +14,7 @@ from tornado.httputil import url_concat
 from tornado.web import RequestHandler
 from tornado import gen, web
 
-from . import db
+from . import orm
 from .spawner import LocalProcessSpawner
 from .utils import wait_for_server, url_path_join
 
@@ -49,7 +49,7 @@ class BaseHandler(RequestHandler):
         
         token = self.get_cookie(self.hub.server.cookie_name, None)
         if token:
-            cookie_token = self.db.query(db.CookieToken).filter(db.CookieToken.token==token).first()
+            cookie_token = self.db.query(orm.CookieToken).filter(orm.CookieToken.token==token).first()
             if cookie_token:
                 return cookie_token.user.name
             else:
@@ -59,7 +59,7 @@ class BaseHandler(RequestHandler):
     def clear_login_cookie(self):
         username = self.get_current_user()
         if username is not None:
-            user = self.db.query(db.User).filter(name=username).first()
+            user = self.db.query(orm.User).filter(name=username).first()
             if user is not None:
                 self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
         self.clear_cookie(self.cookie_name, path=self.hub.base_url)
@@ -119,7 +119,7 @@ class LoginHandler(BaseHandler):
     
     @gen.coroutine
     def notify_proxy(self, user):
-        proxy = self.db.query(db.Proxy).first()
+        proxy = self.db.query(orm.Proxy).first()
         r = requests.post(
             url_path_join(
                 proxy.api_server.url,
@@ -136,8 +136,8 @@ class LoginHandler(BaseHandler):
     
     @gen.coroutine
     def spawn_single_user(self, name):
-        user = db.User(name=name,
-            server=db.Server(
+        user = orm.User(name=name,
+            server=orm.Server(
                 cookie_name='%s-%s' % (self.hub.server.cookie_name, name),
                 cookie_secret=self.hub.server.cookie_secret,
                 base_url=url_path_join(self.base_url, 'user', name),
@@ -206,7 +206,7 @@ class LoginHandler(BaseHandler):
         username = data['username']
         authorized = yield self.authenticate(data)
         if authorized:
-            user = self.db.query(db.User).filter(db.User.name == username).first()
+            user = self.db.query(orm.User).filter(orm.User.name == username).first()
             if user is None:
                 user = yield self.spawn_single_user(username)
             self.set_login_cookies(user)
@@ -235,7 +235,7 @@ def token_authorized(method):
         if not match:
             raise web.HTTPError(403)
         token = match.group(1)
-        db_token = self.db.query(db.APIToken).filter(db.APIToken.token == token).first()
+        db_token = self.db.query(orm.APIToken).filter(orm.APIToken.token == token).first()
         if db_token is None:
             raise web.HTTPError(403)
         return method(self, *args, **kwargs)
@@ -247,7 +247,7 @@ def token_authorized(method):
 class AuthorizationsHandler(BaseHandler):
     @token_authorized
     def get(self, token):
-        db_token = self.db.query(db.CookieToken).filter(db.CookieToken.token == token).first()
+        db_token = self.db.query(orm.CookieToken).filter(orm.CookieToken.token == token).first()
         if db_token is None:
             raise web.HTTPError(404)
         self.write(json.dumps({
