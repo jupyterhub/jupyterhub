@@ -3,9 +3,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from sqlalchemy.orm import sessionmaker, relationship, backref
-from sqlalchemy import create_engine
-
 from .. import db
 
 try:
@@ -14,22 +11,8 @@ except NameError:
     # py3
     unicode = str
 
-# global session object
-session = None
 
-def setup_module():
-    global session
-    session = db.new_session('sqlite:///:memory:', echo=True)
-
-setup = setup_module
-
-def teardown_module():
-    session.close()
-
-teardown = teardown_module
-
-
-def test_server():
+def test_server(session):
     server = db.Server()
     session.add(server)
     session.commit()
@@ -42,7 +25,7 @@ def test_server():
     assert server.url == 'http://localhost:%i/' % server.port
 
 
-def test_proxy():
+def test_proxy(session):
     proxy = db.Proxy(
         auth_token=u'abc-123',
         public_server=db.Server(
@@ -61,7 +44,7 @@ def test_proxy():
     assert proxy.auth_token == u'abc-123'
 
 
-def test_hub():
+def test_hub(session):
     hub = db.Hub(
         server=db.Server(
             ip = u'1.2.3.4',
@@ -77,7 +60,7 @@ def test_hub():
     assert hub.api_url == u'http://1.2.3.4:1234/hubtest/api'
 
 
-def test_user():
+def test_user(session):
     user = db.User(name=u'kaylee',
         server=db.Server(),
         state={'pid': 4234},
@@ -89,7 +72,7 @@ def test_user():
     assert user.state == {'pid': 4234}
 
 
-def test_tokens():
+def test_tokens(session):
     user = db.User(name=u'inara')
     session.add(user)
     session.commit()
