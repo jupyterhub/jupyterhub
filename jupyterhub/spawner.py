@@ -158,6 +158,17 @@ def set_user_sudo(username):
 
 class LocalProcessSpawner(Spawner):
     """A Spawner that just uses Popen to start local processes."""
+    
+    INTERRUPT_TIMEOUT = Integer(10, config=True,
+        help="Seconds to wait for process to halt after SIGINT before proceeding to SIGTERM"
+    )
+    TERM_TIMEOUT = Integer(5, config=True,
+        help="Seconds to wait for process to halt after SIGTERM before proceeding to SIGKILL"
+    )
+    KILL_TIMEOUT = Integer(5, config=True,
+        help="Seconds to wait for process to halt after SIGKILL before giving up"
+    )
+    
     proc = Instance(Popen)
     pid = Integer()
     sudo_args = List(['-n'], config=True,
@@ -238,7 +249,8 @@ class LocalProcessSpawner(Spawner):
             if status is not None:
                 break
             else:
-                yield gen.Task(IOLoop.instance().add_timeout, time.time() + 0.1)
+                loop = IOLoop.current()
+                yield gen.Task(loop.add_timeout, loop.time() + 0.1)
     
     @gen.coroutine
     def stop(self, now=False):
@@ -255,7 +267,7 @@ class LocalProcessSpawner(Spawner):
                 if e.errno == errno.ESRCH:
                     return
             
-            yield self._wait_for_death(10)
+            yield self._wait_for_death(self.INTERRUPT_TIMEOUT)
         
         # clean shutdown failed, use TERM
         status = yield self.poll()
@@ -266,7 +278,7 @@ class LocalProcessSpawner(Spawner):
             except OSError as e:
                 if e.errno == errno.ESRCH:
                     return
-            yield self._wait_for_death(5)
+            yield self._wait_for_death(self.TERM_TIMEOUT)
         
         # TERM failed, use KILL
         status = yield self.poll()
@@ -277,7 +289,7 @@ class LocalProcessSpawner(Spawner):
             except OSError as e:
                 if e.errno == errno.ESRCH:
                     return
-            yield self._wait_for_death(5)
+            yield self._wait_for_death(self.KILL_TIMEOUT)
 
         status = yield self.poll()
         if status is None:
