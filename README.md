@@ -17,8 +17,9 @@ Basic principals:
 
 ## dependencies
     
-    # get the dependencies of the nodejs proxy (-g for global install)
-    npm install [-g]
+    # get the nodejs proxy (-g for global install)
+    npm install [-g] jupyter/configurable-http-proxy
+    
     # install the Python pargs (-e for editable/development install)
     pip install [-e] .
 
