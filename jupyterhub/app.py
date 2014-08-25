@@ -42,6 +42,18 @@ class JupyterHubApp(Application):
         help="The location of jupyter data files (e.g. /usr/local/share/jupyter)"
     )
     
+    ssl_key = Unicode('', config=True,
+        help="""Path to SSL key file for the public facing interface of the proxy
+        
+        Use with ssl_cert
+        """
+    )
+    ssl_cert = Unicode('', config=True,
+        help="""Path to SSL certificate file for the public facing interface of the proxy
+        
+        Use with ssl_key
+        """
+    )
     ip = Unicode('localhost', config=True,
         help="The public facing ip of the proxy"
     )
@@ -222,14 +234,20 @@ class JupyterHubApp(Application):
         """Actually start the configurable-http-proxy"""
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
-        self.proxy = Popen([self.proxy_cmd,
+        cmd = [self.proxy_cmd,
             '--ip', self.proxy.public_server.ip,
             '--port', str(self.proxy.public_server.port),
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
             '--upstream-ip', self.hub.server.ip,
             '--upstream-port', str(self.hub.server.port),
-        ], env=env)
+        ]
+        if self.ssl_key:
+            cmd.extend(['--ssl-key', self.ssl_key])
+        if self.ssl_cert:
+            cmd.extend(['--ssl-cert', self.ssl_cert])
+
+        self.proxy = Popen(cmd, env=env)
     
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
