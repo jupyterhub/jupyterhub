@@ -8,7 +8,7 @@ Three actors:
 - configurable http proxy (node-http-proxy)
 - multiple single-user IPython notebook servers (Python/IPython/tornado)
 
-Basic principals:
+Basic principles:
 
 - Hub spawns proxy
 - Proxy forwards ~all requests to hub by default
