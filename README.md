@@ -15,13 +15,23 @@ Basic principals:
 - Hub handles login, and spawns single-user servers on demand
 - Hub configures proxy to forward url prefixes to single-user servers
 
+
 ## dependencies
-    
+
     # get the nodejs proxy (-g for global install)
     npm install [-g] jupyter/configurable-http-proxy
     
     # install the Python pargs (-e for editable/development install)
     pip install [-e] .
+    
+Note on debian/ubuntu machines, you may need to install the `nodejs-legacy` package
+to get node executables to work:
+
+    sudo apt-get install nodejs-legacy
+
+This installs the traditional `node` executable, in addition to debian's renamed `nodejs`
+executable, with which the apt-get installed `npm` doesn't actually work.
+
 
 ## to use
 
