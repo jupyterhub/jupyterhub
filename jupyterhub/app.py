@@ -262,7 +262,8 @@ class JupyterHubApp(Application):
             base_url=base_url,
             cookie_secret=self.cookie_secret,
             login_url=url_path_join(self.hub.server.base_url, 'login'),
-            template_path=os.path.join(here, 'templates'),
+            template_path=os.path.join(self.data_files_path, 'templates'),
+            static_files_path=os.path.join(self.data_files_path, 'static'),
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
