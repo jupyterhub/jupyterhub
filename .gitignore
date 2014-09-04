@@ -4,6 +4,6 @@ node_modules
 .DS_Store
 build
 dist
-share/jupyter/components
+share/jupyter/static/components
 *.egg-info
 MANIFEST

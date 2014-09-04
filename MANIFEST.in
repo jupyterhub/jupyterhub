@@ -4,9 +4,8 @@ include setupegg.py
 
 graft jupyterhub
 graft scripts
-
-# Load configproxy js
-graft lib
+graft share
+prune share/jupyter/static/components
 
 # Documentation
 graft docs
