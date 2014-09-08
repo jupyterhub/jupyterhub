@@ -239,8 +239,7 @@ class JupyterHubApp(Application):
             '--port', str(self.proxy.public_server.port),
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
-            '--upstream-ip', self.hub.server.ip,
-            '--upstream-port', str(self.hub.server.port),
+            '--default-target', self.hub.server.host,
         ]
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
