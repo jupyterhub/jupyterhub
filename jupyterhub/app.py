@@ -9,10 +9,12 @@ import logging
 import os
 from subprocess import Popen
 
+from jinja2 import Environment, FileSystemLoader
+
 import tornado.httpserver
 import tornado.options
 from tornado.ioloop import IOLoop
-from tornado.log import LogFormatter
+from tornado.log import LogFormatter, app_log
 from tornado import gen, web
 
 from IPython.utils.traitlets import (
@@ -25,6 +27,7 @@ from IPython.utils.importstring import import_item
 here = os.path.dirname(__file__)
 
 from .handlers import (
+    Template404,
     RootHandler,
     LoginHandler,
     LogoutHandler,
@@ -35,6 +38,13 @@ from .handlers import (
 from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import url_path_join
+
+
+class RedirectHandler(web.RedirectHandler):
+    def get(self, *a, **kw):
+        self.set_header("mu-redirect", True)
+        app_log.warn("mu redirect: %s -> %s", self.request.path, self._url)
+        return super(RedirectHandler, self).get(*a, **kw)
 
 class JupyterHubApp(Application):
     """An Application for starting a Multi-User Notebook server."""
@@ -62,6 +72,10 @@ class JupyterHubApp(Application):
     )
     base_url = Unicode('/', config=True,
         help="The base URL of the entire application"
+    )
+    
+    jinja_environment_options = Dict(config=True,
+        help="Supply extra arguments that will be passed to Jinja environment."
     )
     
     proxy_cmd = Unicode('configurable-http-proxy', config=True,
@@ -157,7 +171,7 @@ class JupyterHubApp(Application):
     
     def _log_format_default(self):
         """override default log format to include time"""
-        return u"%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
+        return u"H %(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
     
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -191,8 +205,11 @@ class JupyterHubApp(Application):
         self.handlers = self.add_url_prefix(self.hub_prefix, handlers)
         self.handlers.extend([
             (r"/user/([^/]+)/?.*", UserHandler),
-            (r"/", web.RedirectHandler, {"url" : self.hub_prefix}),
+            (r"/?", RedirectHandler, {"url" : self.hub_prefix}),
         ])
+        self.handlers.append(
+            (r'(.*)', Template404)
+        )
     
     def init_db(self):
         # TODO: load state from db for resume
@@ -240,20 +257,28 @@ class JupyterHubApp(Application):
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
+            '--log-level=debug',
         ]
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
+        
 
         self.proxy = Popen(cmd, env=env)
     
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.base_url
+        template_path = os.path.join(self.data_files_path, 'templates'),
+        jinja_env = Environment(
+            loader=FileSystemLoader(template_path),
+            **self.jinja_environment_options
+        )
+        
         settings = dict(
             config=self.config,
-            # log=self.log,
+            log=self.log,
             db=self.db,
             hub=self.hub,
             authenticator=import_item(self.authenticator)(config=self.config),
@@ -261,8 +286,10 @@ class JupyterHubApp(Application):
             base_url=base_url,
             cookie_secret=self.cookie_secret,
             login_url=url_path_join(self.hub.server.base_url, 'login'),
-            template_path=os.path.join(self.data_files_path, 'templates'),
-            static_files_path=os.path.join(self.data_files_path, 'static'),
+            static_path=os.path.join(self.data_files_path, 'static'),
+            static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
+            template_path=template_path,
+            jinja2_env=jinja_env,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

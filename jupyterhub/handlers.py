@@ -5,8 +5,15 @@
 
 import json
 import re
+try:
+    # py3
+    from http.client import responses
+except ImportError:
+    from httplib import responses
 
 import requests
+
+from jinja2 import TemplateNotFound
 
 from tornado.log import app_log
 from tornado.escape import url_escape
@@ -54,26 +61,97 @@ class BaseHandler(RequestHandler):
                 return cookie_token.user.name
             else:
                 # have cookie, but it's not valid. Clear it and start over.
-                self.clear_cookie(self.hub.server.cookie_name)
+                self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
     
     def clear_login_cookie(self):
         username = self.get_current_user()
         if username is not None:
             user = self.db.query(orm.User).filter(name=username).first()
-            if user is not None:
+            if user is not None and user.server is not None:
                 self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
-        self.clear_cookie(self.cookie_name, path=self.hub.base_url)
+        self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
     
     @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
+    
+    #---------------------------------------------------------------
+    # template rendering
+    #---------------------------------------------------------------
+    
+    def get_template(self, name):
+        """Return the jinja template object for a given name"""
+        return self.settings['jinja2_env'].get_template(name)
+    
+    def render_template(self, name, **ns):
+        ns.update(self.template_namespace)
+        template = self.get_template(name)
+        return template.render(**ns)
+    
+    @property
+    def logged_in(self):
+        """Is a user currently logged in?"""
+        user = self.get_current_user()
+        return (user and not user == 'anonymous')
+    
+    @property
+    def template_namespace(self):
+        return dict(
+            base_url=self.base_url,
+            logged_in=self.logged_in,
+            login_url=self.settings['login_url'],
+            static_url=self.static_url,
+        )
+    
+    def write_error(self, status_code, **kwargs):
+        """render custom error pages"""
+        exc_info = kwargs.get('exc_info')
+        message = ''
+        status_message = responses.get(status_code, 'Unknown HTTP Error')
+        if exc_info:
+            exception = exc_info[1]
+            # get the custom message, if defined
+            try:
+                message = exception.log_message % exception.args
+            except Exception:
+                pass
+            
+            # construct the custom reason, if defined
+            reason = getattr(exception, 'reason', '')
+            if reason:
+                status_message = reason
+        
+        # build template namespace
+        ns = dict(
+            status_code=status_code,
+            status_message=status_message,
+            message=message,
+            exception=exception,
+        )
+        
+        self.set_header('Content-Type', 'text/html')
+        # render the template
+        try:
+            html = self.render_template('%s.html' % status_code, **ns)
+        except TemplateNotFound:
+            self.log.debug("No template for %d", status_code)
+            html = self.render_template('error.html', **ns)
+        
+        self.write(html)
+
+
+class Template404(BaseHandler):
+    """Render our 404 template"""
+    def prepare(self):
+        raise web.HTTPError(404)
 
 
 class RootHandler(BaseHandler):
     """Redirect from / to /user/foo/ after logging in."""
     @web.authenticated
     def get(self):
-        self.redirect("/user/%s/" % self.get_current_user())
+        uri = "/user/%s/" % self.get_current_user()
+        self.redirect(uri, permanent=False)
 
 
 class UserHandler(BaseHandler):
@@ -98,24 +176,25 @@ class LogoutHandler(BaseHandler):
     """Log a user out by clearing their login cookie."""
     def get(self):
         self.clear_login_cookie()
-        self.write("logged out")
+        html = self.render_template('logout.html')
+        self.finish(html)
 
 class LoginHandler(BaseHandler):
     """Render the login page."""
 
     def _render(self, message=None, username=None):
-        self.render('login.html',
+        return self.render_template('login.html',
                 next=url_escape(self.get_argument('next', default='')),
                 username=username,
                 message=message,
         )
 
     def get(self):
-        if False and self.get_current_user():
-            self.redirect(self.get_argument('next', default='/'))
+        if self.get_argument('next', False) and self.get_current_user():
+            self.redirect(self.get_argument('next'))
         else:
             username = self.get_argument('username', default='')
-            self._render(username=username)
+            self.finish(self._render(username=username))
     
     @gen.coroutine
     def notify_proxy(self, user):
@@ -211,13 +290,15 @@ class LoginHandler(BaseHandler):
                 user = yield self.spawn_single_user(username)
             self.set_login_cookies(user)
             next_url = self.get_argument('next', default='') or '/user/%s/' % username
+            print('next', next_url)
             self.redirect(next_url)
         else:
             self.log.debug("Failed login for %s", username)
-            self._render(
+            html = self._render(
                 message={'error': 'Invalid username or password'},
                 username=username,
             )
+            self.finish(html)
 
 
 #------------------------------------------------------------------------------

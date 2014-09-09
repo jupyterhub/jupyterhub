@@ -1,18 +1,44 @@
-<html>
-<head>
-    
-</head>
-<body>
-    {% if message %}
-    <div id="message">{{message}}</div>
-    {% end if %}
-    <form action="?next={{next}}" method="post">
-      <input type="text" name="username" id="user_input" value="{{username}}">
-      <input type="password" name="password" id="password_input">
-      <button type="submit" id="login_submit">Log in</button>
-    </form>
+{% extends "page.html" %}
 
-<script type="text/javascript">
-</script>
-</body>
-</html>
+
+{% block login_widget %}
+{% endblock %}
+
+{% block site %}
+
+<div id="login-main" class="container">
+  <div class="row">
+    <form action="{{login_url}}?next={{next}}" method="post" role="form">
+      <div class="col-lg-6">
+        <div class="input-group">
+          <span class="input-group-addon">Username:</span>
+          <input type="username" class="form-control" name="username" id="username_input" val="{{username}}">
+        </div>
+      </div>
+      <div class="col-lg-6">
+        <div class="input-group">
+          <span class="input-group-addon">Password:</span>
+          <input type="password" class="form-control" name="password" id="password_input">
+          <span class="input-group-btn">
+            <button type="submit" id="login_submit" class="btn btn-default">Log in</button>
+          </span>
+        </div>
+      </div>
+    </form>
+  </div>
+  {% if message %}
+  <div class="row">
+    <div class="message">
+      {{message}}
+    </div>
+  </div>
+  {% endif %}
+<div/>
+
+{% endblock %}
+
+
+{% block script %}
+{{super()}}
+
+{% endblock %}

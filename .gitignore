@@ -5,5 +5,7 @@ node_modules
 build
 dist
 share/jupyter/static/components
+share/jupyter/static/css/style.min.css
+share/jupyter/static/css/style.min.css.map
 *.egg-info
 MANIFEST

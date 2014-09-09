@@ -1,0 +1,76 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="utf-8">
+
+    <title>{% block title %}Jupyter Hub{% endblock %}</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{{static_url("images/favicon.ico") }}">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    {% block stylesheet %}
+    <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
+    {% endblock %}
+    <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
+    <script>
+      require.config({
+          baseUrl: '{{static_url("", include_version=False)}}',
+          paths: {
+            jquery: 'components/jquery/jquery.min',
+            bootstrap: 'components/bootstrap/js/bootstrap.min',
+            moment: "components/moment/moment",
+          },
+          shim: {
+            bootstrap: {
+              deps: ["jquery"],
+              exports: "bootstrap"
+            },
+          }
+      });
+    </script>
+
+    {% block meta %}
+    {% endblock %}
+
+</head>
+
+<body {% block params %}{% endblock %}>
+
+<noscript>
+  <div id='noscript'>
+    Jupyter Hub requires JavaScript.<br>
+    Please enable it to proceed.
+  </div>
+</noscript>
+
+<div id="header" class="navbar navbar-static-top">
+  <div class="container">
+  <span id="jupyterlogo" class="pull-left"><a href="{{base_url}}home/" alt='dashboard'><img src='{{static_url("images/jupyterlogo.png") }}' alt='Jupyter Hub' class='jpy-logo'/></a></span>
+
+  {% block login_widget %}
+
+    <span id="login_widget">
+      {% if logged_in %}
+        <button id="logout">Logout</button>
+      {% else %}
+        <button id="login">Login</button>
+      {% endif %}
+    </span>
+
+  {% endblock %}
+
+  {% block header %}
+  {% endblock %}
+  </div>
+</div>
+
+{% block main %}
+{% endblock %}
+
+{% block script %}
+{% endblock %}
+
+</body>
+
+</html>

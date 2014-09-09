@@ -23,7 +23,11 @@ Basic principles:
     
     # install the Python pargs (-e for editable/development install)
     pip install [-e] .
-    
+
+You will also need `bower` to fetch frontend-javascript and `less` to compile CSS:
+
+    npm install -g bower less
+
 Note on debian/ubuntu machines, you may need to install the `nodejs-legacy` package
 to get node executables to work:
 

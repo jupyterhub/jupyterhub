@@ -42,8 +42,11 @@ except NameError:
         locs = locs or globs
         exec(compile(open(fname).read(), fname, "exec"), globs, locs)
 
-here = os.path.abspath(os.path.dirname(__file__))
 pjoin = os.path.join
+
+here = os.path.abspath(os.path.dirname(__file__))
+share_jupyter = pjoin(here, 'share', 'jupyter')
+static = pjoin(share_jupyter, 'static')
 
 #---------------------------------------------------------------------------
 # Build basic package data, etc.
@@ -53,7 +56,6 @@ def get_data_files():
     """Get data files in share/jupyter"""
     
     data_files = []
-    share_jupyter = pjoin(here, 'share', 'jupyter')
     ntrim = len(here) + 1
     
     for (d, dirs, filenames) in os.walk(share_jupyter):
@@ -117,19 +119,41 @@ class Bower(Command):
     
     def run(self):
         check_call(['bower', 'install', '--allow-root'])
+        # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+
+class CSS(Command):
+    description = "compile CSS from LESS"
     
-    def get_outputs(self):
-        return []
+    user_options = []
     
-    def get_inputs(self):
-        return []
+    def initialize_options(self):
+        pass
+    
+    def finalize_options(self):
+        pass
+    
+    def run(self):
+        style_less = pjoin(static, 'less', 'style.less')
+        style_css = pjoin(static, 'css', 'style.min.css')
+        sourcemap = style_css + '.map'
+        check_call([
+            'lessc', '-x', '--verbose',
+            '--source-map-basepath={}'.format(static),
+            '--source-map={}'.format(sourcemap),
+            '--source-map-rootpath=../',
+            style_less, style_css,
+        ])
+        # update data-files in case this created new files
+        self.distribution.data_files = get_data_files()
 
 # ensure bower is run as part of install
 install.sub_commands.insert(0, ('bower', None))
+install.sub_commands.insert(1, ('css', None))
 
 setup_args['cmdclass'] = {
     'bower': Bower,
+    'css': CSS,
 }
 
 # setuptools requirements
