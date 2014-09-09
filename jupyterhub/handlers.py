@@ -126,7 +126,7 @@ class LoginHandler(BaseHandler):
                 user.server.base_url,
             ),
             data=json.dumps(dict(
-                target=user.server.url,
+                target=user.server.host,
                 user=user.name,
             )),
             headers={'Authorization': "token %s" % proxy.auth_token},
