@@ -106,9 +106,8 @@ setup_args = dict(
 from distutils.cmd import Command
 from distutils.command.install import install
 
-class Bower(Command):
-    description = "fetch static components with bower"
-    
+class BaseCommand(Command):
+    """Dumb empty command because Command needs subclasses to override too much"""
     user_options = []
     
     def initialize_options(self):
@@ -117,12 +116,24 @@ class Bower(Command):
     def finalize_options(self):
         pass
     
+    def get_inputs(self):
+        return []
+    
+    def get_outputs(self):
+        return []
+
+
+class Bower(BaseCommand):
+    description = "fetch static components with bower"
+    
+    user_options = []
+    
     def run(self):
         check_call(['bower', 'install', '--allow-root'])
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
 
-class CSS(Command):
+class CSS(BaseCommand):
     description = "compile CSS from LESS"
     
     user_options = []
