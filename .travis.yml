@@ -6,7 +6,7 @@ python:
 before_install:
     # workaround for https://github.com/travis-ci/travis-cookbooks/issues/155
     - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-    - time npm install -g bower jupyter/configurable-http-proxy
+    - time npm install -g less bower jupyter/configurable-http-proxy
     - time sudo apt-get install libzmq3-dev
     - time pip install -f https://nipy.bic.berkeley.edu/wheelhouse/travis -r dev-requirements.txt
 install:
