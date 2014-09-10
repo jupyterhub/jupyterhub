@@ -21,7 +21,7 @@ from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Instance, Bool, Bytes, Any,
     DottedObjectName,
 )
-from IPython.config import Application
+from IPython.config import Application, catch_config_error
 from IPython.utils.importstring import import_item
 
 here = os.path.dirname(__file__)
@@ -47,7 +47,14 @@ class RedirectHandler(web.RedirectHandler):
         return super(RedirectHandler, self).get(*a, **kw)
 
 class JupyterHubApp(Application):
-    """An Application for starting a Multi-User Notebook server."""
+    """An Application for starting a Multi-User Jupyter Notebook server."""
+    
+    description = """Start a multi-user Jupyter Notebook server
+    
+    spawns a configurable-http-proxy and multi-user Hub,
+    which authenticates users and spawns single-user Notebook servers
+    on behalf of users.
+    """
     data_files_path = Unicode(DATA_FILES_PATH, config=True,
         help="The location of jupyter data files (e.g. /usr/local/share/jupyter)"
     )
@@ -171,7 +178,7 @@ class JupyterHubApp(Application):
     
     def _log_format_default(self):
         """override default log format to include time"""
-        return u"H %(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
+        return u"%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
     
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -185,6 +192,13 @@ class JupyterHubApp(Application):
         logger.parent = self.log
         logger.setLevel(self.log.level)
     
+    def init_ports(self):
+        if self.hub_port == self.port:
+            raise TraitError("The hub and proxy cannot both listen on port %i" % self.port)
+        if self.hub_port == self.proxy_api_port:
+            raise TraitError("The hub and proxy API cannot both listen on port %i" % self.hub_port)
+        if self.proxy_api_port == self.port:
+            raise TraitError("The proxy's public and API ports cannot both be %i" % self.port)
     
     @staticmethod
     def add_url_prefix(prefix, handlers):
@@ -298,10 +312,12 @@ class JupyterHubApp(Application):
     def init_tornado_application(self):
         """Instantiate the tornado Application object"""
         self.tornado_application = web.Application(self.handlers, **self.tornado_settings)
-        
+    
+    @catch_config_error
     def initialize(self, *args, **kwargs):
         super(JupyterHubApp, self).initialize(*args, **kwargs)
         self.init_logging()
+        self.init_ports()
         self.init_db()
         self.init_hub()
         self.init_proxy()
