@@ -4,18 +4,20 @@
 {% block login_widget %}
 {% endblock %}
 
-{% block site %}
+{% block main %}
 
 <div id="login-main" class="container">
-  <div class="row">
-    <form action="{{login_url}}?next={{next}}" method="post" role="form">
-      <div class="col-lg-6">
+  <form action="{{login_url}}?next={{next}}" method="post" role="form">
+    <div class="row">
+      <div class="col-sm-6 col-sm-offset-3">
         <div class="input-group">
           <span class="input-group-addon">Username:</span>
           <input type="username" class="form-control" name="username" id="username_input" val="{{username}}">
         </div>
       </div>
-      <div class="col-lg-6">
+    </div>
+    <div class="row">
+      <div class="col-sm-6 col-sm-offset-3">
         <div class="input-group">
           <span class="input-group-addon">Password:</span>
           <input type="password" class="form-control" name="password" id="password_input">
@@ -24,8 +26,8 @@
           </span>
         </div>
       </div>
-    </form>
-  </div>
+    </div>
+  </form>
   {% if message %}
   <div class="row">
     <div class="message">
