@@ -363,12 +363,8 @@ class JupyterHubApp(Application):
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
-            # have to install/start a new IOLoop briefly,
-            # to allow for async cleanup code.
-            IOLoop.clear_instance()
-            cleanup_loop = IOLoop.instance()
-            cleanup_loop.add_callback(self.cleanup)
-            cleanup_loop.start()
+            # run the cleanup step (in a new loop, because the interrupted one is unclean)
+            IOLoop().run_sync(self.cleanup)
 
 main = JupyterHubApp.launch_instance
 

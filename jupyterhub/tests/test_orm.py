@@ -12,10 +12,10 @@ except NameError:
     unicode = str
 
 
-def test_server(session):
+def test_server(db):
     server = orm.Server()
-    session.add(server)
-    session.commit()
+    db.add(server)
+    db.commit()
     assert server.ip == u'localhost'
     assert server.base_url == '/'
     assert server.proto == 'http'
@@ -25,7 +25,7 @@ def test_server(session):
     assert server.url == 'http://localhost:%i/' % server.port
 
 
-def test_proxy(session):
+def test_proxy(db):
     proxy = orm.Proxy(
         auth_token=u'abc-123',
         public_server=orm.Server(
@@ -37,14 +37,14 @@ def test_proxy(session):
             port=8001,
         ),
     )
-    session.add(proxy)
-    session.commit()
+    db.add(proxy)
+    db.commit()
     assert proxy.public_server.ip == u'192.168.1.1'
     assert proxy.api_server.ip == u'127.0.0.1'
     assert proxy.auth_token == u'abc-123'
 
 
-def test_hub(session):
+def test_hub(db):
     hub = orm.Hub(
         server=orm.Server(
             ip = u'1.2.3.4',
@@ -53,37 +53,37 @@ def test_hub(session):
         ),
         
     )
-    session.add(hub)
-    session.commit()
+    db.add(hub)
+    db.commit()
     assert hub.server.ip == u'1.2.3.4'
     hub.server.port == 1234
     assert hub.api_url == u'http://1.2.3.4:1234/hubtest/api'
 
 
-def test_user(session):
+def test_user(db):
     user = orm.User(name=u'kaylee',
         server=orm.Server(),
         state={'pid': 4234},
     )
-    session.add(user)
-    session.commit()
+    db.add(user)
+    db.commit()
     assert user.name == u'kaylee'
     assert user.server.ip == u'localhost'
     assert user.state == {'pid': 4234}
 
 
-def test_tokens(session):
+def test_tokens(db):
     user = orm.User(name=u'inara')
-    session.add(user)
-    session.commit()
+    db.add(user)
+    db.commit()
     token = user.new_cookie_token()
-    session.add(token)
-    session.commit()
+    db.add(token)
+    db.commit()
     assert token in user.cookie_tokens
-    session.add(user.new_cookie_token())
-    session.add(user.new_cookie_token())
-    session.add(user.new_api_token())
-    session.commit()
+    db.add(user.new_cookie_token())
+    db.add(user.new_cookie_token())
+    db.add(user.new_api_token())
+    db.commit()
     assert len(user.api_tokens) == 1
     assert len(user.cookie_tokens) == 3
     

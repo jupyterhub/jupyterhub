@@ -5,7 +5,6 @@
 
 import mock
 import simplepam
-from tornado.testing import AsyncTestCase, gen_test
 from IPython.utils.py3compat import unicode_type
 
 from ..auth import PAMAuthenticator
@@ -22,22 +21,19 @@ def fake_auth(username, password, service='login'):
     if password == username:
         return True
 
-class TestPAM(AsyncTestCase):
-    
-    @gen_test
-    def test_pam_auth(self):
-        authenticator = PAMAuthenticator()
-        with mock.patch('simplepam.authenticate', fake_auth):
-            authorized = yield authenticator.authenticate(None, {
-                u'username': u'match',
-                u'password': u'match',
-            })
-        self.assertEqual(authorized, u'match')
-        
-        with mock.patch('simplepam.authenticate', fake_auth):
-            authorized = yield authenticator.authenticate(None, {
-                u'username': u'match',
-                u'password': u'nomatch',
-            })
-        self.assertEqual(authorized, None)
 
+def test_pam_auth(io_loop):
+    authenticator = PAMAuthenticator()
+    with mock.patch('simplepam.authenticate', fake_auth):
+        authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+            u'username': u'match',
+            u'password': u'match',
+        }))
+    assert authorized == u'match'
+    
+    with mock.patch('simplepam.authenticate', fake_auth):
+        authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+            u'username': u'match',
+            u'password': u'nomatch',
+        }))
+    assert authorized is None
