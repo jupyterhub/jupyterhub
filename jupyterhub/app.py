@@ -71,7 +71,7 @@ class JupyterHubApp(Application):
         Use with ssl_key
         """
     )
-    ip = Unicode('localhost', config=True,
+    ip = Unicode('', config=True,
         help="The public facing ip of the proxy"
     )
     port = Integer(8000, config=True,
