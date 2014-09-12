@@ -15,4 +15,6 @@ RUN python setup.py css
 
 RUN pip install .
 
+EXPOSE 8000
+
 CMD ["jupyterhub"]
