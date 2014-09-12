@@ -16,15 +16,13 @@ Basic principles:
 - Hub configures proxy to forward url prefixes to single-user servers
 
 
-## dependencies
+## Dependencies
 
-    # get the nodejs proxy (-g for global install)
+First install the configurable HTTP proxy package (-g for global install):
+
     npm install [-g] jupyter/configurable-http-proxy
-    
-    # install the Python pargs (-e for editable/development install)
-    pip install [-e] .
 
-You will also need `bower` to fetch frontend-javascript and `less` to compile CSS:
+Next install `bower` to fetch the JavaScript dependencies and `less` to compile CSS:
 
     npm install -g bower less
 
@@ -36,10 +34,31 @@ to get node executables to work:
 This installs the traditional `node` executable, in addition to debian's renamed `nodejs`
 executable, with which the apt-get installed `npm` doesn't actually work.
 
+## Installation
 
-## to use
+After installing the dependencies, you need to run a few commands to build the static
+HTML/CSS assets:
 
-    $> jupyterhub
+    python setup.py bower
+    python setup.py css
 
-visit `http://localhost:8000`, and login with your unix credentials.
+Then you can install the Python package by doing:
+
+    pip install .
+
+or for a development install:
+
+    pip install -e .
+
+## Running the server
+
+To start the server, run the command:
+
+    jupyterhub
+
+and then visit `http://localhost:8000`, and sign in with your unix credentials.
+
+If you want multiple users to be able to sign into the server, you will need to run the
+`jupyterhub` command as a privileged user, such as root.
+
 
