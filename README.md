@@ -36,19 +36,24 @@ executable, with which the apt-get installed `npm` doesn't actually work.
 
 ## Installation
 
-After installing the dependencies, you need to run a few commands to build the static
-HTML/CSS assets:
-
-    python setup.py bower
-    python setup.py css
-
 Then you can install the Python package by doing:
 
     pip install .
+    
+This will fetch Javascript dependencies and compile CSS, and install these files to `sys.prefix`/share/jupyter.
 
-or for a development install:
+
+### Development install
+
+For a development install:
 
     pip install -e .
+
+In which case you may need to manually update javascript and css after some updates, with:
+
+    python setup.py bower # fetch updated js (changes rarely)
+    python setup.py css   # recompile CSS from LESS sources
+
 
 ## Running the server
 
