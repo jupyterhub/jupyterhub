@@ -167,10 +167,20 @@ setup_args['cmdclass'] = {
     'css': CSS,
 }
 
+
 # setuptools requirements
 
 if 'setuptools' in sys.modules:
     setup_args['zip_safe'] = False
+    from setuptools.command.develop import develop
+    class develop_js_css(develop):
+        def run(self):
+            if not self.uninstall:
+                self.distribution.run_command('bower')
+                self.distribution.run_command('css')
+            develop.run(self)
+    setup_args['cmdclass']['develop'] = develop_js_css
+
 
     with open('requirements.txt') as f:
         install_requires = [ line.strip() for line in f.readlines() ]
