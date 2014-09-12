@@ -166,7 +166,6 @@ class JupyterHubApp(Application):
     
     handlers = List()
     
-    
     _log_formatter_cls = LogFormatter
     
     def _log_level_default(self):
@@ -191,6 +190,8 @@ class JupyterHubApp(Application):
         logger.propagate = True
         logger.parent = self.log
         logger.setLevel(self.log.level)
+        # IPython < 3 compat
+        self._log_format_changed('', '', self.log_format)
     
     def init_ports(self):
         if self.hub_port == self.port:
