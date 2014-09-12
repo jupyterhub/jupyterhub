@@ -31,8 +31,11 @@ from .handlers import (
     RootHandler,
     LoginHandler,
     LogoutHandler,
-    AuthorizationsHandler,
     UserHandler,
+)
+
+from .apihandlers import (
+    AuthorizationsAPIHandler,
 )
 
 from . import orm
@@ -215,7 +218,7 @@ class JupyterHubApp(Application):
             (r"/", RootHandler),
             (r"/login", LoginHandler),
             (r"/logout", LogoutHandler),
-            (r"/api/authorizations/([^/]+)", AuthorizationsHandler),
+            (r"/api/authorizations/([^/]+)", AuthorizationsAPIHandler),
         ]
         self.handlers = self.add_url_prefix(self.hub_prefix, handlers)
         self.handlers.extend([

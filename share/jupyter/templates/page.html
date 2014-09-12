@@ -46,15 +46,15 @@
 
 <div id="header" class="navbar navbar-static-top">
   <div class="container">
-  <span id="jupyterlogo" class="pull-left"><a href="{{base_url}}home/" alt='dashboard'><img src='{{static_url("images/jupyterlogo.png") }}' alt='Jupyter Hub' class='jpy-logo'/></a></span>
+  <span id="jupyterlogo" class="pull-left"><a href="{{base_url}}" alt='dashboard'><img src='{{static_url("images/jupyterlogo.png") }}' alt='Jupyter Hub' class='jpy-logo'/></a></span>
 
   {% block login_widget %}
 
     <span id="login_widget">
       {% if logged_in %}
-        <button id="logout">Logout</button>
+        <a id="logout" class="btn navbar-btn btn-default pull-right" href="{{base_url}}logout">Logout</a>
       {% else %}
-        <button id="login">Login</button>
+        <a id="login" class="btn navbar-btn btn-default pull-right" href="{{base_url}}login">Login</a>
       {% endif %}
     </span>
 
