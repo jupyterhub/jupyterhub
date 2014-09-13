@@ -10,9 +10,6 @@ WORKDIR /srv/jupyterhub
 RUN apt-get update
 RUN apt-get -y install python-dev python-pip
 
-RUN python setup.py bower
-RUN python setup.py css
-
 RUN pip install .
 
 EXPOSE 8000
