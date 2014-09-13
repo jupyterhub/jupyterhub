@@ -268,8 +268,9 @@ class JupyterHubApp(Application):
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
-            '--log-level=debug',
         ]
+        if self.log_level == logging.DEBUG:
+            cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
