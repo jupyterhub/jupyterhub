@@ -5,7 +5,7 @@
 
 import socket
 import time
-from subprocess import check_call, CalledProcessError, STDOUT, PIPE
+from tornado import web
 
 from IPython.html.utils import url_path_join
 
@@ -47,6 +47,6 @@ def authenticated_403(method):
         if self.get_current_user() is None:
             raise web.HTTPError(403)
         return method(self, *args, **kwargs)
-    check_token.__name__ = method.__name__
-    check_token.__doc__ = method.__doc__
-    return check_token
+    check_user.__name__ = method.__name__
+    check_user.__doc__ = method.__doc__
+    return check_user
