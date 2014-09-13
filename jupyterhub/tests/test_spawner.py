@@ -15,7 +15,7 @@ from .. import orm
 _echo_sleep = """
 import sys, time
 print(sys.argv)
-time.sleep(10)
+time.sleep(30)
 """
 
 _uninterruptible = """

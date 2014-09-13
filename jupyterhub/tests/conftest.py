@@ -10,7 +10,10 @@ from tornado import ioloop
 
 from .. import orm
 
-# global session object
+from .mocking import MockHubApp
+
+
+# global db session object
 _db = None
 
 @fixture
@@ -31,7 +34,18 @@ def db():
         _db.commit()
     return _db
 
+
 @fixture
 def io_loop():
     """Get the current IOLoop"""
+    ioloop.IOLoop.clear_current()
     return ioloop.IOLoop.current()
+
+
+
+@fixture
+def app(request):
+    app = MockHubApp()
+    app.start([])
+    request.addfinalizer(app.stop)
+    return app

@@ -175,6 +175,13 @@ class JupyterHubApp(Application):
         """override default log format to include time"""
         return u"%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
     
+    def _log_format_changed(self, name, old, new):
+        """Change the log formatter when log_format is set."""
+        # FIXME: IPython < 3 compat
+        _log_handler = self.log.handlers[0]
+        _log_formatter = self._log_formatter_cls(fmt=new, datefmt=self.log_datefmt)
+        _log_handler.setFormatter(_log_formatter)
+    
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
         # self.log is a child of. The logging module dipatches log messages to a log
@@ -186,7 +193,7 @@ class JupyterHubApp(Application):
         logger.propagate = True
         logger.parent = self.log
         logger.setLevel(self.log.level)
-        # IPython < 3 compat
+        # FIXME: IPython < 3 compat
         self._log_format_changed('', '', self.log_format)
     
     def init_ports(self):
@@ -268,8 +275,9 @@ class JupyterHubApp(Application):
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
-            '--log-level=debug',
         ]
+        if self.log_level == logging.DEBUG:
+            cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
@@ -340,7 +348,6 @@ class JupyterHubApp(Application):
         
         # finally stop the loop once we are all cleaned up
         self.log.info("...done")
-        IOLoop.instance().stop()
     
     def start(self):
         """Start the whole thing"""
@@ -350,7 +357,7 @@ class JupyterHubApp(Application):
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)
         
-        loop = IOLoop.instance()
+        loop = IOLoop.current()
         try:
             loop.start()
         except KeyboardInterrupt:

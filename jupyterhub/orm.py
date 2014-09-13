@@ -12,6 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 
 from IPython.utils.py3compat import str_to_unicode
@@ -216,6 +217,8 @@ class CookieToken(Token, Base):
 
 def new_session(url="sqlite:///:memory:", **kwargs):
     """Create a new session at url"""
+    kwargs.setdefault('connect_args', {'check_same_thread': False})
+    kwargs.setdefault('poolclass', StaticPool)
     engine = create_engine(url, **kwargs)
     Session = sessionmaker(bind=engine)
     session = Session()
