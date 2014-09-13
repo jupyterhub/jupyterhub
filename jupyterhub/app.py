@@ -348,7 +348,6 @@ class JupyterHubApp(Application):
         
         # finally stop the loop once we are all cleaned up
         self.log.info("...done")
-        IOLoop.instance().stop()
     
     def start(self):
         """Start the whole thing"""
@@ -358,7 +357,7 @@ class JupyterHubApp(Application):
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)
         
-        loop = IOLoop.instance()
+        loop = IOLoop.current()
         try:
             loop.start()
         except KeyboardInterrupt:
