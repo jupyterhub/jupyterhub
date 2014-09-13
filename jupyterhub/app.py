@@ -42,13 +42,6 @@ from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import url_path_join
 
-
-class RedirectHandler(web.RedirectHandler):
-    def get(self, *a, **kw):
-        self.set_header("mu-redirect", True)
-        app_log.warn("mu redirect: %s -> %s", self.request.path, self._url)
-        return super(RedirectHandler, self).get(*a, **kw)
-
 class JupyterHubApp(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
     
@@ -223,7 +216,7 @@ class JupyterHubApp(Application):
         self.handlers = self.add_url_prefix(self.hub_prefix, handlers)
         self.handlers.extend([
             (r"/user/([^/]+)/?.*", UserHandler),
-            (r"/?", RedirectHandler, {"url" : self.hub_prefix}),
+            (r"/?", web.RedirectHandler, {"url" : self.hub_prefix}),
         ])
         self.handlers.append(
             (r'(.*)', Template404)
