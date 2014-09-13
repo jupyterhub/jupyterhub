@@ -7,13 +7,21 @@ from tornado import gen
 import simplepam
 
 from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import Unicode
+from IPython.utils.traitlets import Unicode, Set
 
 class Authenticator(LoggingConfigurable):
     """A class for authentication.
     
     The API is one method, `authenticate`, a tornado gen.coroutine.
     """
+    
+    whitelist = Set(config=True,
+        help="""Username whitelist.
+        
+        Use this to restrict which users can login.
+        If empty, allow any user to attempt login.
+        """
+    )
     
     @gen.coroutine
     def authenticate(self, handler, data):
@@ -39,8 +47,10 @@ class PAMAuthenticator(Authenticator):
         Return None otherwise.
         """
         username = data['username']
+        if self.whitelist and username not in self.whitelist:
+            return
         # simplepam wants bytes, not unicode
-        # see 
+        # see simplepam#3
         busername = username.encode(self.encoding)
         bpassword = data['password'].encode(self.encoding)
         if simplepam.authenticate(busername, bpassword, service=self.service):
