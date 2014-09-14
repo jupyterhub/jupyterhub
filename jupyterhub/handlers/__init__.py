@@ -1,8 +1,8 @@
 from .base import *
 from .login import *
 
-from . import base, login
+from . import base, pages, login
 
 default_handlers = []
-for mod in (base, login):
+for mod in (base, pages, login):
     default_handlers.extend(mod.default_handlers)
