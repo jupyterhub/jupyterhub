@@ -67,7 +67,7 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
-            return orm_token.user.name
+            return orm_token.user
 
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
@@ -76,7 +76,7 @@ class BaseHandler(RequestHandler):
             cookie_token = self.db.query(orm.CookieToken).filter(
                 orm.CookieToken.token==token).first()
             if cookie_token:
-                return cookie_token.user.name
+                return cookie_token.user
             else:
                 # have cookie, but it's not valid. Clear it and start over.
                 self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
@@ -88,7 +88,7 @@ class BaseHandler(RequestHandler):
             return user
         return self.get_current_user_cookie()
 
-    def get_user(self, username):
+    def user_from_username(self, username):
         """Get ORM User for username"""
 
         user = self.db.query(orm.User).filter(orm.User.name==username).first()
@@ -97,13 +97,11 @@ class BaseHandler(RequestHandler):
             self.db.add(user)
             self.db.commit()
         return user
-
+    
     def clear_login_cookie(self):
-        username = self.get_current_user()
-        if username is not None:
-            user = self.get_user(username)
-            if user.server is not None:
-                self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
+        user = self.get_current_user()
+        if user and user.server:
+            self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
 
     def set_login_cookies(self, user):
@@ -208,8 +206,7 @@ class BaseHandler(RequestHandler):
     @property
     def logged_in(self):
         """Is a user currently logged in?"""
-        user = self.get_current_user()
-        return (user and not user == 'anonymous')
+        return self.get_current_user() is not None
 
     @property
     def template_namespace(self):
@@ -267,7 +264,7 @@ class RootHandler(BaseHandler):
     """Render the Hub root page."""
     @web.authenticated
     def get(self):
-        user = self.get_user(self.get_current_user())
+        user = self.get_current_user()
         html = self.render_template('index.html',
             server_running = user.server is not None,
             server_url = '/user/%s' % user.name,
@@ -281,10 +278,11 @@ class UserHandler(BaseHandler):
     This handler shouldn't be called if the proxy is set up correctly.
     """
     @web.authenticated
-    def get(self, user):
+    def get(self, name):
         self.log.warn("Hub serving single-user url: %s", self.request.path)
-        if self.get_current_user() == user:
-            self.spawn_single_user(self.get_user(user))
+        current_user = self.get_current_user()
+        if current_user and current_user.name == name:
+            self.spawn_single_user(current_user)
             self.redirect('')
         else:
             self.log.warn("Hub serving single-user url: %s", self.request.path)

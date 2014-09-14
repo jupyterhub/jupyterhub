@@ -6,8 +6,6 @@
 from tornado.escape import url_escape
 from tornado import gen
 
-from .. import orm
-
 from .base import BaseHandler
 
 
@@ -46,7 +44,7 @@ class LoginHandler(BaseHandler):
         username = data['username']
         authorized = yield self.authenticate(data)
         if authorized:
-            user = self.get_user(username)
+            user = self.user_from_username(username)
             yield self.spawn_single_user(user)
             self.set_login_cookies(user)
             next_url = self.get_argument('next', default='') or self.hub.server.base_url
