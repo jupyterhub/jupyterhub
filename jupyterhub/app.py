@@ -223,7 +223,7 @@ class JupyterHubApp(Application):
         self.handlers = self.add_url_prefix(self.hub_prefix, handlers)
         self.handlers.extend([
             (r"/user/([^/]+)/?.*", UserHandler),
-            (r"/?", web.RedirectHandler, {"url" : self.hub_prefix}),
+            (r"/?", web.RedirectHandler, {"url" : self.hub_prefix, "permanent": False}),
         ])
         self.handlers.append(
             (r'(.*)', Template404)
