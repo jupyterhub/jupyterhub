@@ -8,7 +8,7 @@ import uuid
 
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
-    Column, Integer, String, ForeignKey, Unicode, Binary,
+    Column, Integer, String, ForeignKey, Unicode, Binary, Boolean,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
@@ -157,6 +157,7 @@ class User(Base):
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
+    admin = Column(Boolean, default=False)
     
     api_tokens = relationship("APIToken", backref="user")
     cookie_tokens = relationship("CookieToken", backref="user")

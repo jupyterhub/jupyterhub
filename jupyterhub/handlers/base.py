@@ -56,6 +56,10 @@ class BaseHandler(RequestHandler):
     # Login and cookie-related
     #---------------------------------------------------------------
 
+    @property
+    def admin_users(self):
+        return self.settings.setdefault('admin_users', set())
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
         auth_header = self.request.headers.get('Authorization', '')
@@ -90,10 +94,10 @@ class BaseHandler(RequestHandler):
 
     def user_from_username(self, username):
         """Get ORM User for username"""
-
         user = self.db.query(orm.User).filter(orm.User.name==username).first()
         if user is None:
-            user = orm.User(name=username)
+            admin = (not self.admin_users) or username in self.admin_users
+            user = orm.User(name=username, admin=admin)
             self.db.add(user)
             self.db.commit()
         return user

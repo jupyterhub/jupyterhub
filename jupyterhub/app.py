@@ -158,6 +158,12 @@ class JupyterHubApp(Application):
     debug_db = Bool(False)
     db = Any()
     
+    admin_users = Set(config=True,
+        help="""list of usernames of admin users
+
+        If unspecified, all users are admin.
+        """
+    )
     tornado_settings = Dict(config=True)
     
     handlers = List()
@@ -300,6 +306,7 @@ class JupyterHubApp(Application):
             log=self.log,
             db=self.db,
             hub=self.hub,
+            admin_users=self.admin_users,
             authenticator=import_item(self.authenticator)(config=self.config),
             spawner_class=import_item(self.spawner_class),
             base_url=base_url,
