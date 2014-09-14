@@ -26,10 +26,14 @@ class LoginHandler(BaseHandler):
                 username=username,
                 message=message,
         )
-
+    
     def get(self):
-        if self.get_argument('next', False) and self.get_current_user():
-            self.redirect(self.get_argument('next'), permanent=False)
+        next_url = self.get_argument('next', False)
+        if next_url and self.get_current_user():
+            # set new login cookie
+            # because single-user cookie may have been cleared or incorrect
+            self.set_login_cookie(self.get_current_user())
+            self.redirect(next_url, permanent=False)
         else:
             username = self.get_argument('username', default='')
             self.finish(self._render(username=username))
@@ -46,7 +50,7 @@ class LoginHandler(BaseHandler):
         if authorized:
             user = self.user_from_username(username)
             yield self.spawn_single_user(user)
-            self.set_login_cookies(user)
+            self.set_login_cookie(user)
             next_url = self.get_argument('next', default='') or self.hub.server.base_url
             self.redirect(next_url)
         else:

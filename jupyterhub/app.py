@@ -218,12 +218,9 @@ class JupyterHubApp(Application):
 
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
-            (r"/user/([^/]+)/?.*", handlers.UserHandler),
-            (r"/?", web.RedirectHandler, {"url" : self.hub_prefix, "permanent": False}),
+            (r"(?!%s).*" % self.hub_prefix, handlers.PrefixRedirectHandler),
+            (r'(.*)', handlers.Template404),
         ])
-        self.handlers.append(
-            (r'(.*)', handlers.Template404)
-        )
     
     def init_db(self):
         # TODO: load state from db for resume
