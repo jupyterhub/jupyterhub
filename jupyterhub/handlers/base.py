@@ -294,3 +294,7 @@ class UserHandler(BaseHandler):
             self.redirect(url_concat(self.settings['login_url'], {
                 'next' : self.request.path,
             }))
+
+default_handlers = [
+    (r"/", RootHandler),
+]

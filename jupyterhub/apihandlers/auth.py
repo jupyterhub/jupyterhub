@@ -20,3 +20,7 @@ class AuthorizationsAPIHandler(BaseHandler):
         self.write(json.dumps({
             'user' : orm_token.user.name,
         }))
+
+default_handlers = [
+    (r"/api/authorizations/([^/]+)", AuthorizationsAPIHandler),
+]

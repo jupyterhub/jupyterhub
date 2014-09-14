@@ -56,3 +56,8 @@ class LoginHandler(BaseHandler):
                 username=username,
             )
             self.finish(html)
+
+default_handlers = [
+    (r"/login", LoginHandler),
+    (r"/logout", LogoutHandler),
+]

@@ -14,29 +14,19 @@ from jinja2 import Environment, FileSystemLoader
 import tornado.httpserver
 import tornado.options
 from tornado.ioloop import IOLoop
-from tornado.log import LogFormatter, app_log
+from tornado.log import LogFormatter
 from tornado import gen, web
 
 from IPython.utils.traitlets import (
-    Unicode, Integer, Dict, TraitError, List, Instance, Bool, Bytes, Any,
-    DottedObjectName,
+    Unicode, Integer, Dict, TraitError, List, Bool, Bytes, Any,
+    DottedObjectName, Set,
 )
 from IPython.config import Application, catch_config_error
 from IPython.utils.importstring import import_item
 
 here = os.path.dirname(__file__)
 
-from .handlers import (
-    Template404,
-    RootHandler,
-    LoginHandler,
-    LogoutHandler,
-    UserHandler,
-)
-
-from .apihandlers import (
-    AuthorizationsAPIHandler,
-)
+from . import handlers, apihandlers
 
 from . import orm
 from ._data import DATA_FILES_PATH
@@ -220,19 +210,19 @@ class JupyterHubApp(Application):
         return handlers
     
     def init_handlers(self):
-        handlers = [
-            (r"/", RootHandler),
-            (r"/login", LoginHandler),
-            (r"/logout", LogoutHandler),
-            (r"/api/authorizations/([^/]+)", AuthorizationsAPIHandler),
-        ]
-        self.handlers = self.add_url_prefix(self.hub_prefix, handlers)
+        h = []
+        h.extend(handlers.default_handlers)
+        h.extend(apihandlers.default_handlers)
+
+        self.handlers = self.add_url_prefix(self.hub_prefix, h)
+
+        # some extra handlers, outside hub_prefix
         self.handlers.extend([
-            (r"/user/([^/]+)/?.*", UserHandler),
+            (r"/user/([^/]+)/?.*", handlers.UserHandler),
             (r"/?", web.RedirectHandler, {"url" : self.hub_prefix, "permanent": False}),
         ])
         self.handlers.append(
-            (r'(.*)', Template404)
+            (r'(.*)', handlers.Template404)
         )
     
     def init_db(self):
