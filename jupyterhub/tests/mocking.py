@@ -58,11 +58,12 @@ class MockHubApp(JupyterHubApp):
             self.io_loop = IOLoop.current()
             # put initialize in start for SQLAlchemy threading reasons
             super(MockHubApp, self).initialize(argv=argv)
-            user = orm.User(name=getpass.getuser())
+
+            # add some initial users - 1 admin, 1 non-admin
+            admin = orm.User(name='admin', admin=True)
+            user = orm.User(name='user')
+            self.db.add(admin)
             self.db.add(user)
-            self.db.commit()
-            token = user.new_api_token()
-            self.db.add(token)
             self.db.commit()
             self.io_loop.add_callback(evt.set)
             super(MockHubApp, self).start()
@@ -72,6 +73,6 @@ class MockHubApp(JupyterHubApp):
         evt.wait(timeout=5)
     
     def stop(self):
-        self.io_loop.stop()
+        self.io_loop.add_callback(self.io_loop.stop)
         self._thread.join()
 
