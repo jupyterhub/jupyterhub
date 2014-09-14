@@ -75,7 +75,7 @@ class Server(Base):
     def host(self):
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
-            ip=self.ip,
+            ip=self.ip or '*',
             port=self.port,
         )
     

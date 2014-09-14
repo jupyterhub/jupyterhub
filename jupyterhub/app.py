@@ -229,6 +229,10 @@ class JupyterHubApp(Application):
         # TODO: load state from db for resume
         # TODO: if not resuming, clear existing db contents
         self.db = orm.new_session(self.db_url, echo=self.debug_db)
+        for name in self.admin_users:
+            user = orm.User(name=name, admin=True)
+            self.db.add(user)
+        self.db.commit()
     
     def init_hub(self):
         """Load the Hub config into the database"""
@@ -279,8 +283,7 @@ class JupyterHubApp(Application):
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
         
-
-        self.proxy = Popen(cmd, env=env)
+        self.proxy_process = Popen(cmd, env=env)
     
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
@@ -330,7 +333,7 @@ class JupyterHubApp(Application):
     @gen.coroutine
     def cleanup(self):
         self.log.info("Cleaning up proxy...")
-        self.proxy.terminate()
+        self.proxy_process.terminate()
         self.log.info("Cleaning up single-user servers...")
         
         # request (async) process termination

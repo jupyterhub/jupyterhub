@@ -91,13 +91,19 @@ class BaseHandler(RequestHandler):
         if user is not None:
             return user
         return self.get_current_user_cookie()
+    
+    def find_user(self, name):
+        """Get a user by name
+        
+        return None if no such user
+        """
+        return self.db.query(orm.User).filter(orm.User.name==name).first()
 
     def user_from_username(self, username):
         """Get ORM User for username"""
-        user = self.db.query(orm.User).filter(orm.User.name==username).first()
+        user = self.find_user(username)
         if user is None:
-            admin = (not self.admin_users) or username in self.admin_users
-            user = orm.User(name=username, admin=admin)
+            user = orm.User(name=username)
             self.db.add(user)
             self.db.commit()
         return user
@@ -166,6 +172,18 @@ class BaseHandler(RequestHandler):
         r.raise_for_status()
 
     @gen.coroutine
+    def notify_proxy_delete(self, user):
+        proxy = self.db.query(orm.Proxy).first()
+        r = requests.delete(
+            url_path_join(
+                proxy.api_server.url,
+                user.server.base_url,
+            ),
+            headers={'Authorization': "token %s" % proxy.auth_token},
+        )
+        r.raise_for_status()
+
+    @gen.coroutine
     def spawn_single_user(self, user):
         user.server = orm.Server(
             cookie_name='%s-%s' % (self.hub.server.cookie_name, user.name),
@@ -192,6 +210,20 @@ class BaseHandler(RequestHandler):
         self.db.commit()
 
         self.notify_proxy(user)
+        raise gen.Return(user)
+    
+    @gen.coroutine
+    def stop_single_user(self, user):
+        if user.spawner is None:
+            return
+        status = yield user.spawner.poll()
+        yield user.spawner.stop()
+        self.notify_proxy_delete(user)
+        user.state = {}
+        user.spawner = None
+        user.server = None
+        self.db.commit()
+        
         raise gen.Return(user)
 
     #---------------------------------------------------------------

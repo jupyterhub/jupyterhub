@@ -38,7 +38,7 @@ def auth_decorator(check_auth):
     def decorator(method):
         def decorated(self, *args, **kwargs):
             check_auth(self)
-            return method(self, *args)
+            return method(self, *args, **kwargs)
         decorated.__name__ = method.__name__
         decorated.__doc__ = method.__doc__
         return decorated
