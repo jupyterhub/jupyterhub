@@ -4,7 +4,7 @@ MAINTAINER IPython Project <ipython-dev@scipy.org>
 
 # System pre-requisites
 RUN apt-get update
-RUN apt-get -y install python-dev python-pip
+RUN apt-get -y install python3-dev python3-pip python3
 RUN npm install -g bower less
 
 # Add sources for jupyterhub
@@ -15,9 +15,10 @@ WORKDIR /srv/jupyterhub
 RUN npm install -g jupyter/configurable-http-proxy
 
 # Install JupyterHub!
-RUN pip install .
+RUN pip3 install .
 
 # Default port for JupyterHub
 EXPOSE 8000
 
-CMD ["jupyterhub"]
+CMD ["python", "-m", "jupyterhub"]
+
