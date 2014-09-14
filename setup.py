@@ -69,11 +69,15 @@ def get_data_files():
 ns = {}
 execfile(pjoin(here, 'jupyterhub', 'version.py'), ns)
 
+packages = []
+for d, _, _ in os.walk('jupyterhub'):
+    if os.path.exists(pjoin(d, '__init__.py')):
+        packages.append(d.replace(os.path.sep, '.'))
+
 setup_args = dict(
     name                = 'jupyterhub',
     scripts             = glob(pjoin('scripts', '*')),
-    packages            = ['jupyterhub'],
-    package_data        = {'jupyterhub' : ['templates/*']},
+    packages            = packages,
                         # dummy, so that install_data doesn't get skipped
                         # this will be overridden when bower is run anyway
     data_files          = get_data_files() or ['dummy'],
