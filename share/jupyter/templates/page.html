@@ -15,11 +15,12 @@
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
     <script>
       require.config({
-          baseUrl: '{{static_url("", include_version=False)}}',
+          baseUrl: '{{static_url("js", include_version=False)}}',
           paths: {
-            jquery: 'components/jquery/jquery.min',
-            bootstrap: 'components/bootstrap/js/bootstrap.min',
-            moment: "components/moment/moment",
+            components: '../components',
+            jquery: '../components/jquery/jquery.min',
+            bootstrap: '../components/bootstrap/js/bootstrap.min',
+            moment: "../components/moment/moment",
           },
           shim: {
             bootstrap: {
@@ -29,13 +30,22 @@
           }
       });
     </script>
+    
+    <script type="text/javascript">
+      window.jhdata = {
+        base_url: "{{base_url}}",
+        {% if user %}
+        user: "{{user.name}}",
+        {% endif %}
+      }
+    </script>
 
     {% block meta %}
     {% endblock %}
 
 </head>
 
-<body {% block params %}{% endblock %}>
+<body>
 
 <noscript>
   <div id='noscript'>
@@ -51,7 +61,7 @@
   {% block login_widget %}
 
     <span id="login_widget">
-      {% if logged_in %}
+      {% if user %}
         <a id="logout" class="btn navbar-btn btn-default pull-right" href="{{base_url}}logout">Logout</a>
       {% else %}
         <a id="login" class="btn navbar-btn btn-default pull-right" href="{{base_url}}login">Login</a>

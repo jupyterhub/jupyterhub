@@ -1,11 +1,12 @@
 """mock utilities for testing"""
+
+import sys
+import threading
+
 try:
     from unittest import mock
 except ImportError:
     import mock
-
-import getpass
-import threading
 
 from tornado.ioloop import IOLoop
 
@@ -30,12 +31,16 @@ def mock_authenticate(username, password, service='login'):
 
 class MockSpawner(LocalProcessSpawner):
     
-    def make_preexec_fn(self):
+    def make_preexec_fn(self, *a, **kw):
         # skip the setuid stuff
         return
     
     def _set_user_changed(self, name, old, new):
         pass
+    
+    def _cmd_default(self):
+        return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
+
 
 class MockPAMAuthenticator(PAMAuthenticator):
     def authenticate(self, *args, **kwargs):
@@ -44,13 +49,18 @@ class MockPAMAuthenticator(PAMAuthenticator):
 
 class MockHubApp(JupyterHubApp):
     """HubApp with various mock bits"""
-    # def start_proxy(self):
-    #     pass
+    
+    def _ip_default(self):
+        return 'localhost'
+    
     def _authenticator_default(self):
         return '%s.%s' % (__name__, 'MockPAMAuthenticator')
     
     def _spawner_class_default(self):
         return '%s.%s' % (__name__, 'MockSpawner')
+    
+    def _admin_users_default(self):
+        return {'admin'}
     
     def start(self, argv=None):
         evt = threading.Event()
@@ -58,11 +68,10 @@ class MockHubApp(JupyterHubApp):
             self.io_loop = IOLoop.current()
             # put initialize in start for SQLAlchemy threading reasons
             super(MockHubApp, self).initialize(argv=argv)
-            user = orm.User(name=getpass.getuser())
+
+            # add an initial user
+            user = orm.User(name='user')
             self.db.add(user)
-            self.db.commit()
-            token = user.new_api_token()
-            self.db.add(token)
             self.db.commit()
             self.io_loop.add_callback(evt.set)
             super(MockHubApp, self).start()
@@ -72,6 +81,6 @@ class MockHubApp(JupyterHubApp):
         evt.wait(timeout=5)
     
     def stop(self):
-        self.io_loop.stop()
+        self.io_loop.add_callback(self.io_loop.stop)
         self._thread.join()
 

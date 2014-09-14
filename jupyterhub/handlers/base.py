@@ -56,6 +56,10 @@ class BaseHandler(RequestHandler):
     # Login and cookie-related
     #---------------------------------------------------------------
 
+    @property
+    def admin_users(self):
+        return self.settings.setdefault('admin_users', set())
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
         auth_header = self.request.headers.get('Authorization', '')
@@ -87,11 +91,17 @@ class BaseHandler(RequestHandler):
         if user is not None:
             return user
         return self.get_current_user_cookie()
+    
+    def find_user(self, name):
+        """Get a user by name
+        
+        return None if no such user
+        """
+        return self.db.query(orm.User).filter(orm.User.name==name).first()
 
     def user_from_username(self, username):
         """Get ORM User for username"""
-
-        user = self.db.query(orm.User).filter(orm.User.name==username).first()
+        user = self.find_user(username)
         if user is None:
             user = orm.User(name=username)
             self.db.add(user)
@@ -104,28 +114,29 @@ class BaseHandler(RequestHandler):
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
 
-    def set_login_cookies(self, user):
+    def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
         # create and set a new cookie token for the single-user server
-        cookie_token = user.new_cookie_token()
-        self.db.add(cookie_token)
-        self.db.commit()
-
-        self.set_cookie(
-            user.server.cookie_name,
-            cookie_token.token,
-            path=user.server.base_url,
-        )
-
+        if user.server:
+            cookie_token = user.new_cookie_token()
+            self.db.add(cookie_token)
+            self.db.commit()
+            self.set_cookie(
+                user.server.cookie_name,
+                cookie_token.token,
+                path=user.server.base_url,
+            )
+        
         # create and set a new cookie token for the hub
-        cookie_token = user.new_cookie_token()
-        self.db.add(cookie_token)
-        self.db.commit()
-        self.set_cookie(
-            self.hub.server.cookie_name,
-            cookie_token.token,
-            path=self.hub.server.base_url)
-
+        if not self.get_current_user_cookie():
+            cookie_token = user.new_cookie_token()
+            self.db.add(cookie_token)
+            self.db.commit()
+            self.set_cookie(
+                self.hub.server.cookie_name,
+                cookie_token.token,
+                path=self.hub.server.base_url)
+    
     @gen.coroutine
     def authenticate(self, data):
         auth = self.settings.get('authenticator', None)
@@ -162,6 +173,18 @@ class BaseHandler(RequestHandler):
         r.raise_for_status()
 
     @gen.coroutine
+    def notify_proxy_delete(self, user):
+        proxy = self.db.query(orm.Proxy).first()
+        r = requests.delete(
+            url_path_join(
+                proxy.api_server.url,
+                user.server.base_url,
+            ),
+            headers={'Authorization': "token %s" % proxy.auth_token},
+        )
+        r.raise_for_status()
+
+    @gen.coroutine
     def spawn_single_user(self, user):
         user.server = orm.Server(
             cookie_name='%s-%s' % (self.hub.server.cookie_name, user.name),
@@ -189,6 +212,21 @@ class BaseHandler(RequestHandler):
 
         self.notify_proxy(user)
         raise gen.Return(user)
+    
+    @gen.coroutine
+    def stop_single_user(self, user):
+        if user.spawner is None:
+            return
+        status = yield user.spawner.poll()
+        if status is None:
+            yield user.spawner.stop()
+        self.notify_proxy_delete(user)
+        user.state = {}
+        user.spawner = None
+        user.server = None
+        self.db.commit()
+        
+        raise gen.Return(user)
 
     #---------------------------------------------------------------
     # template rendering
@@ -204,15 +242,11 @@ class BaseHandler(RequestHandler):
         return template.render(**ns)
 
     @property
-    def logged_in(self):
-        """Is a user currently logged in?"""
-        return self.get_current_user() is not None
-
-    @property
     def template_namespace(self):
+        user = self.get_current_user()
         return dict(
             base_url=self.hub.server.base_url,
-            logged_in=self.logged_in,
+            user=user,
             login_url=self.settings['login_url'],
             static_url=self.static_url,
         )
@@ -260,33 +294,46 @@ class Template404(BaseHandler):
         raise web.HTTPError(404)
 
 
-class RootHandler(BaseHandler):
-    """Render the Hub root page."""
-    @web.authenticated
-    def get(self):
-        user = self.get_current_user()
-        html = self.render_template('index.html',
-            server_running = user.server is not None,
-            server_url = '/user/%s' % user.name,
-        )
-        self.finish(html)
-
-
-class UserHandler(BaseHandler):
-    """Respawn single-user server after logging in.
-
-    This handler shouldn't be called if the proxy is set up correctly.
+class PrefixRedirectHandler(BaseHandler):
+    """Redirect anything outside a prefix inside.
+    
+    Redirects /foo to /prefix/foo, etc.
     """
-    @web.authenticated
+    def get(self):
+        self.redirect(url_path_join(
+            self.hub.server.base_url, self.request.path,
+        ), permanent=False)
+
+class UserSpawnHandler(BaseHandler):
+    """Requests to /user/name handled by the Hub
+    should result in spawning the single-user server and
+    being redirected to the original.
+    """
+    @gen.coroutine
     def get(self, name):
-        self.log.warn("Hub serving single-user url: %s", self.request.path)
         current_user = self.get_current_user()
         if current_user and current_user.name == name:
-            self.spawn_single_user(current_user)
-            self.redirect('')
+            # logged in, spawn the server
+            if current_user.spawner:
+                status = yield current_user.spawner.poll()
+                if status is not None:
+                    yield self.spawn_single_user(current_user)
+            else:
+                yield self.spawn_single_user(current_user)
+            # set login cookie anew
+            self.set_login_cookie(current_user)
+            self.redirect(url_path_join(
+                self.base_url, 'user', name,
+            ))
         else:
-            self.log.warn("Hub serving single-user url: %s", self.request.path)
+            # not logged in to the right user,
+            # clear any cookies and reload (will redirect to login)
             self.clear_login_cookie()
-            self.redirect(url_concat(self.settings['login_url'], {
-                'next' : self.request.path,
-            }))
+            self.redirect(url_concat(
+                self.settings['login_url'],
+                {'next': self.request.path,
+            }), permanent=False)
+
+default_handlers = [
+    (r'/user/([^/]+)/?.*', UserSpawnHandler),
+]

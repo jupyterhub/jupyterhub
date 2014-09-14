@@ -38,12 +38,12 @@ def db():
 @fixture
 def io_loop():
     """Get the current IOLoop"""
-    ioloop.IOLoop.clear_current()
-    return ioloop.IOLoop.current()
+    loop = ioloop.IOLoop()
+    loop.make_current()
+    return loop
 
 
-
-@fixture
+@fixture(scope='module')
 def app(request):
     app = MockHubApp()
     app.start([])
