@@ -15,6 +15,7 @@ WORKDIR /srv/jupyterhub
 RUN npm install -g jupyter/configurable-http-proxy
 
 # Install JupyterHub!
+RUN bower install --allow-root
 RUN pip3 install .
 
 # Default port for JupyterHub
