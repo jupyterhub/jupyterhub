@@ -36,75 +36,27 @@
   </table>
 </div>
 
+{% call modal('Delete User', btn_class='btn-danger delete-button') %}
+  Are you sure you want to delete user <span class="delete-username">USER</span>?
+  This operation cannot be undone.
+{% endcall %}
 
-<div class="modal fade" id="edit-user-dialog" tabindex="-1" role="dialog" aria-labelledby="edit-user-label" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title" id="edit-user-label">Edit User</h4>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <input type="text" class="form-control username-input" placeholder="username">
-        </div>
-        <div class="checkbox">
-          <label>
-            <input type="checkbox" class="admin-checkbox">Admin
-          </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary save-button" data-dismiss="modal">Save changes</button>
-      </div>
-    </div>
-  </div>
+{% macro user_modal(name) %}
+{% call modal(name, btn_class='btn-primary save-button') %}
+<div class="form-group">
+  <input type="text" class="form-control username-input" placeholder="username">
 </div>
+<div class="checkbox">
+  <label>
+    <input type="checkbox" class="admin-checkbox">Admin
+  </label>
+</div>
+{% endcall %}
+{% endmacro %}
 
-<div class="modal fade" id="delete-user-dialog" tabindex="-1" role="dialog" aria-labelledby="delete-user-label" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title" id="delete-user-label">Delete User</h4>
-      </div>
-      <div class="modal-body">
-        Are you sure you want to delete user <span class="delete-username">USER</span>?
-        This operation cannot be undone.
-        <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-danger delete-button" data-dismiss="modal">Delete User</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+{{ user_modal('Edit User') }}
 
-<div class="modal fade" id="add-user-dialog" tabindex="-1" role="dialog" aria-labelledby="add-user-label" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
-        <h4 class="modal-title" id="add-user-label">Add User</h4>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <input type="text" class="form-control username-input" placeholder="username">
-        </div>
-        <div class="checkbox">
-          <label>
-            <input type="checkbox" class="admin-checkbox">Admin
-          </label>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary save-button" data-dismiss="modal">Save changes</button>
-      </div>
-    </div>
-  </div>
-</div>
+{{ user_modal('Add User') }}
 
 {% endblock %}
 
