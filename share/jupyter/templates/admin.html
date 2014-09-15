@@ -3,11 +3,113 @@
 {% block main %}
 
 <div class="container">
-  <div class="row">
-    <div class="text-center">
-      <a class="btn btn-lg btn-primary">Administrate!</a>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th colspan="4">Users</th>
+      </tr>
+    </thead>
+    <tbody>
+  {% for user in users %}
+    <tr class="user-row" data-user="{{user.name}}" data-admin="{{user.admin}}">
+      <td class="name-col col-xs-3">{{user.name}}</td>
+      <td class="admin-col col-xs-3">{% if user.admin %}admin{% endif %}</td>
+      <td class="server-col col-xs-2 text-center">
+      {% if user.server %}
+        <span class="stop-server btn btn-xs btn-danger">stop server</span>
+      {% else %}
+        <span class="start-server btn btn-xs btn-success">start server</span>
+      {% endif %}
+      </td>
+      <td class="edit-col col-xs-3 col-xs-offset-1 text-center">
+        <span class="edit-user btn btn-xs btn-primary">edit</span>
+        <span class="delete-user btn btn-xs btn-danger">delete</span>
+      </td>
+    </tr>
+  {% endfor %}
+    <tr class="user-row add-user-row">
+      <td colspan="4">
+        <a id="add-user" class="col-xs-12 btn btn-primary">Add User</a>
+      </td>
+    </tr>
+  </tbody>
+  </table>
+</div>
+
+
+<div class="modal fade" id="edit-user-dialog" tabindex="-1" role="dialog" aria-labelledby="edit-user-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="edit-user-label">Edit User</h4>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <input type="text" class="form-control username-input" placeholder="username">
+        </div>
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" class="admin-checkbox">Admin
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary save-button" data-dismiss="modal">Save changes</button>
+      </div>
     </div>
   </div>
 </div>
 
+<div class="modal fade" id="delete-user-dialog" tabindex="-1" role="dialog" aria-labelledby="delete-user-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="delete-user-label">Delete User</h4>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete user <span class="delete-username">USER</span>?
+        This operation cannot be undone.
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-danger delete-button" data-dismiss="modal">Delete User</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="add-user-dialog" tabindex="-1" role="dialog" aria-labelledby="add-user-label" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="add-user-label">Add User</h4>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <input type="text" class="form-control username-input" placeholder="username">
+        </div>
+        <div class="checkbox">
+          <label>
+            <input type="checkbox" class="admin-checkbox">Admin
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary save-button" data-dismiss="modal">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+require(["admin"]);
+</script>
 {% endblock %}
