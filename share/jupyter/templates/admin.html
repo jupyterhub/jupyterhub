@@ -10,20 +10,22 @@
       </tr>
     </thead>
     <tbody>
-  {% for user in users %}
-    <tr class="user-row" data-user="{{user.name}}" data-admin="{{user.admin}}">
-      <td class="name-col col-xs-3">{{user.name}}</td>
-      <td class="admin-col col-xs-3">{% if user.admin %}admin{% endif %}</td>
-      <td class="server-col col-xs-2 text-center">
-      {% if user.server %}
+  {% for u in users %}
+    <tr class="user-row" data-user="{{u.name}}" data-admin="{{u.admin}}">
+      <td class="name-col col-sm-4">{{u.name}}</td>
+      <td class="admin-col col-sm-4">{% if u.admin %}admin{% endif %}</td>
+      <td class="server-col col-sm-2 text-center">
+      {% if u.server %}
         <span class="stop-server btn btn-xs btn-danger">stop server</span>
       {% else %}
         <span class="start-server btn btn-xs btn-success">start server</span>
       {% endif %}
       </td>
-      <td class="edit-col col-xs-3 col-xs-offset-1 text-center">
+      <td class="edit-col col-sm-2">
         <span class="edit-user btn btn-xs btn-primary">edit</span>
+        {% if u.name != user.name %}
         <span class="delete-user btn btn-xs btn-danger">delete</span>
+        {% endif %}
       </td>
     </tr>
   {% endfor %}
