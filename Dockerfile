@@ -5,6 +5,7 @@ MAINTAINER IPython Project <ipython-dev@scipy.org>
 # System pre-requisites
 RUN apt-get update
 RUN apt-get -y install python3-dev python3-pip python3
+RUN alias python=python3
 RUN npm install -g bower less
 
 # Add sources for jupyterhub
@@ -21,5 +22,4 @@ RUN pip3 install .
 # Default port for JupyterHub
 EXPOSE 8000
 
-CMD ["python", "-m", "jupyterhub"]
-
+CMD ["jupyterhub"]
