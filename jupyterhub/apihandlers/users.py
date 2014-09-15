@@ -84,16 +84,34 @@ class UserAPIHandler(BaseUserHandler):
             if 'admin' in data:
                 user.admin = data['admin']
                 self.db.commit()
+        
+        # add to whitelist, if a whitelist is in use
+        
+        if self.authenticator and self.authenticator.whitelist:
+            self.authenticator.whitelist.add(user.name)
+        
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
     
     @admin_only
+    @gen.coroutine
     def delete(self, name):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
         if user.name == self.get_current_user().name:
             raise web.HTTPError(400, "Cannot delete yourself!")
+        if user.spawner is not None:
+            yield self.stop_single_user(user)
+        
+        # remove the user from the whitelist, if there is one
+        if self.authenticator and user.name in self.authenticator.whitelist:
+            self.authenticator.whitelist.remove(user.name)
+        
+        # remove from the db
+        self.db.delete(user)
+        self.db.commit()
+        
         self.set_status(204)
     
     @admin_only

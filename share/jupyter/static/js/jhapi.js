@@ -45,9 +45,7 @@ define(['jquery', 'utils'], function ($, utils) {
     
     JHAPI.prototype.start_server = function (user, options) {
         options = options || {};
-        options.update({
-            type: 'POST',
-        });
+        options = update(options, {type: 'POST', dataType: null});
         this.api_request(
             utils.url_path_join('users', user, 'server'),
             options
@@ -55,9 +53,8 @@ define(['jquery', 'utils'], function ($, utils) {
     };
     
     JHAPI.prototype.stop_server = function (user, options) {
-        options = update(options || {}, {
-            type: 'DELETE',
-        });
+        options = options || {};
+        options = update(options, {type: 'DELETE', dataType: null});
         this.api_request(
             utils.url_path_join('users', user, 'server'),
             options
@@ -75,10 +72,37 @@ define(['jquery', 'utils'], function ($, utils) {
         );
     };
     
-    JHAPI.prototype.delete_user = function (user, options) {
-        options = update(options || {}, {
-            type: 'DELETE',
+    JHAPI.prototype.add_user = function (user, userinfo, options) {
+        options = options || {};
+        options = update(options, {
+            type: 'POST',
+            dataType: null,
+            data: JSON.stringify(userinfo)
         });
+        
+        this.api_request(
+            utils.url_path_join('users', user),
+            options
+        );
+    };
+    
+    JHAPI.prototype.edit_user = function (user, userinfo, options) {
+        options = options || {};
+        options = update(options, {
+            type: 'PATCH',
+            dataType: null,
+            data: JSON.stringify(userinfo)
+        });
+        
+        this.api_request(
+            utils.url_path_join('users', user),
+            options
+        );
+    };
+    
+    JHAPI.prototype.delete_user = function (user, options) {
+        options = options || {};
+        options = update(options, {type: 'DELETE', dataType: null});
         this.api_request(
             utils.url_path_join('users', user),
             options

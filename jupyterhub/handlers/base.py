@@ -51,6 +51,10 @@ class BaseHandler(RequestHandler):
     @property
     def hub(self):
         return self.settings['hub']
+    
+    @property
+    def authenticator(self):
+        return self.settings.get('authenticator', None)
 
     #---------------------------------------------------------------
     # Login and cookie-related
@@ -139,7 +143,7 @@ class BaseHandler(RequestHandler):
     
     @gen.coroutine
     def authenticate(self, data):
-        auth = self.settings.get('authenticator', None)
+        auth = self.authenticator
         if auth is not None:
             result = yield auth.authenticate(self, data)
             raise gen.Return(result)
