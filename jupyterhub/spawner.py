@@ -49,11 +49,9 @@ class Spawner(LoggingConfigurable):
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     
-    cmd = List(Unicode, config=True,
+    cmd = List(Unicode, default_value=['jupyterhub-singleuser'], config=True,
         help="""The command used for starting notebooks."""
     )
-    def _cmd_default(self):
-        return ['jupyterhub-singleuser']
     
     @classmethod
     def fromJSON(cls, state, **kwargs):
@@ -183,8 +181,8 @@ class LocalProcessSpawner(Spawner):
     set_user = Enum(['sudo', 'setuid'], default_value='setuid', config=True,
         help="""scheme for setting the user of the spawned process
 
-        sudo can be more prudently restricted,
-        but setuid is simpler for a server run as root
+        'sudo' can be more prudently restricted,
+        but 'setuid' is simpler for a server run as root
         """
     )
     def _set_user_changed(self, name, old, new):
