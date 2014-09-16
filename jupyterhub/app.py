@@ -4,10 +4,16 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-
+import io
 import logging
 import os
 from subprocess import Popen
+
+try:
+    raw_input
+except NameError:
+    # py3
+    raw_input = input
 
 from jinja2 import Environment, FileSystemLoader
 
@@ -32,15 +38,77 @@ from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import url_path_join
 
+# classes for config
+from .auth import Authenticator, PAMAuthenticator
+from .spawner import Spawner, LocalProcessSpawner
+
+aliases = {
+    'log-level': 'Application.log_level',
+    'f': 'JupyterHubApp.config_file',
+    'config': 'JupyterHubApp.config_file',
+    'y': 'JupyterHubApp.answer_yes',
+    'ssl-key': 'JupyterHubApp.ssl_key',
+    'ssl-cert': 'JupyterHubApp.ssl_cert',
+    'ip': 'JupyterHubApp.ip',
+    'port': 'JupyterHubApp.port',
+    'db': 'JupyterHubApp.db_url',
+    'pid-file': 'JupyterHubApp.pid_file',
+}
+
+flags = {
+    'debug': ({'Application' : {'log_level' : logging.DEBUG}},
+        "set log level to logging.DEBUG (maximize logging output)"),
+    'generate-config': ({'JupyterHubApp': {'generate_config' : True}},
+        "generate default config file")
+}
+
+
 class JupyterHubApp(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
     
     description = """Start a multi-user Jupyter Notebook server
     
-    spawns a configurable-http-proxy and multi-user Hub,
+    Spawns a configurable-http-proxy and multi-user Hub,
     which authenticates users and spawns single-user Notebook servers
     on behalf of users.
     """
+    
+    examples = """
+    
+    generate default config file:
+    
+        jupyterhub --generate-config -f myconfig.py
+    
+    spawn the server on 10.0.1.2:443 with https:
+    
+        jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
+    """
+    
+    aliases = Dict(aliases)
+    flags = Dict(flags)
+    
+    classes = List([
+        Spawner,
+        LocalProcessSpawner,
+        Authenticator,
+        PAMAuthenticator,
+    ])
+    
+    config_file = Unicode('jupyter_hub_config.py', config=True,
+        help="The config file to load",
+    )
+    generate_config = Bool(False, config=True,
+        help="Generate default config file",
+    )
+    answer_yes = Bool(False, config=True,
+        help="Answer yes to any questions (e.g. confirm overwrite)"
+    )
+    pid_file = Unicode('', config=True,
+        help="""File to write PID
+        Useful for daemonizing jupyterhub.
+        """
+    )
+    
     data_files_path = Unicode(DATA_FILES_PATH, config=True,
         help="The location of jupyter data files (e.g. /usr/local/share/jupyter)"
     )
@@ -279,7 +347,7 @@ class JupyterHubApp(Application):
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
-        
+        self.log.info("Starting proxy: %s", cmd)
         self.proxy_process = Popen(cmd, env=env)
     
     def init_tornado_settings(self):
@@ -315,9 +383,20 @@ class JupyterHubApp(Application):
         """Instantiate the tornado Application object"""
         self.tornado_application = web.Application(self.handlers, **self.tornado_settings)
     
+    def write_pid_file(self):
+        pid = os.getpid()
+        if self.pid_file:
+            self.log.debug("Writing PID %i to %s", pid, self.pid_file)
+            with io.open(self.pid_file, 'w') as f:
+                f.write(u'%i' % pid)
+    
     @catch_config_error
     def initialize(self, *args, **kwargs):
         super(JupyterHubApp, self).initialize(*args, **kwargs)
+        if self.generate_config:
+            return
+        self.load_config_file(self.config_file)
+        self.write_pid_file()
         self.init_logging()
         self.init_ports()
         self.init_db()
@@ -329,25 +408,56 @@ class JupyterHubApp(Application):
     
     @gen.coroutine
     def cleanup(self):
-        self.log.info("Cleaning up proxy...")
-        self.proxy_process.terminate()
+        """Shutdown our various subprocesses and cleanup runtime files."""
         self.log.info("Cleaning up single-user servers...")
-        
         # request (async) process termination
         futures = []
         for user in self.db.query(orm.User):
             if user.spawner is not None:
                 futures.append(user.spawner.stop())
         
+        # clean up proxy while SUS are shutting down
+        self.log.info("Cleaning up proxy[%i]..." % self.proxy_process.pid)
+        self.proxy_process.terminate()
+        
         # wait for the requests to stop finish:
         for f in futures:
             yield f
         
+        if self.pid_file and os.path.exists(self.pid_file):
+            self.log.info("Cleaning up PID file %s", self.pid_file)
+            os.remove(self.pid_file)
+        
         # finally stop the loop once we are all cleaned up
         self.log.info("...done")
     
+    def write_config_file(self):
+        if os.path.exists(self.config_file) and not self.answer_yes:
+            answer = ''
+            def ask():
+                prompt = "Overwrite %s with default config? [y/N]" % self.config_file
+                try:
+                    return raw_input(prompt).lower() or 'n'
+                except KeyboardInterrupt:
+                    print('') # empty line
+                    return 'n'
+            answer = ask()
+            while not answer.startswith(('y', 'n')):
+                print("Please answer 'yes' or 'no'")
+                answer = ask()
+            if answer.startswith('n'):
+                return
+        
+        config_text = self.generate_config_file()
+        print("Writing default config to: %s" % self.config_file)
+        with io.open(self.config_file, encoding='utf8', mode='w') as f:
+            f.write(config_text)
+    
     def start(self):
         """Start the whole thing"""
+        if self.generate_config:
+            self.write_config_file()
+            return
         # start the proxy
         self.start_proxy()
         # start the webserver

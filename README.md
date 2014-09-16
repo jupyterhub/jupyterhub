@@ -66,4 +66,13 @@ and then visit `http://localhost:8000`, and sign in with your unix credentials.
 If you want multiple users to be able to sign into the server, you will need to run the
 `jupyterhub` command as a privileged user, such as root.
 
+### Some examples
+
+generate a default config file:
+
+    jupyterhub --generate-config
+
+spawn the server on 10.0.1.2:443 with https:
+
+    jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
 
