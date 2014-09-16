@@ -4,8 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import socket
-import time
-from tornado import web
+from tornado import web, gen, ioloop
 
 from IPython.html.utils import url_path_join
 
@@ -18,14 +17,16 @@ def random_port():
     return port
 
 
+@gen.coroutine
 def wait_for_server(ip, port, timeout=10):
     """wait for a server to show up at ip:port"""
-    tic = time.time()
-    while time.time() - tic < timeout:
+    loop = ioloop.IOLoop.current()
+    tic = loop.time()
+    while loop.time() - tic < timeout:
         try:
             socket.create_connection((ip, port))
         except socket.error:
-            time.sleep(0.1)
+            yield gen.Task(loop.add_timeout, loop.time() + 0.1)
         else:
             break
 

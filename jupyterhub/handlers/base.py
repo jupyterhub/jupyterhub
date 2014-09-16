@@ -214,7 +214,7 @@ class BaseHandler(RequestHandler):
         user.state = spawner.get_state()
         self.db.commit()
 
-        self.notify_proxy(user)
+        yield self.notify_proxy(user)
         raise gen.Return(user)
     
     @gen.coroutine
