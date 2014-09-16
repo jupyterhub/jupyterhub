@@ -4,6 +4,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import getpass
 import io
 import logging
 import os
@@ -216,10 +217,10 @@ class JupyterHubApp(Application):
     debug_db = Bool(False)
     db = Any()
     
-    admin_users = Set(config=True,
+    admin_users = Set({getpass.getuser()}, config=True,
         help="""list of usernames of admin users
 
-        If unspecified, all users are admin.
+        If unspecified, only the user that launches the server will be admin.
         """
     )
     tornado_settings = Dict(config=True)
