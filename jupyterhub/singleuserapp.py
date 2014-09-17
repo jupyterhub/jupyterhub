@@ -18,6 +18,12 @@ from IPython.html.notebookapp import NotebookApp
 from IPython.html.utils import url_path_join
 
 
+from distutils.version import LooseVersion as V
+
+import IPython
+if V(IPython.__version__) < V('2.2'):
+    raise ImportError("JupyterHub Requires IPython >= 2.2, found %s" % IPython.__version__)
+
 # Define two methods to attach to AuthenticatedHandler,
 # which authenticate via the central auth server.
 

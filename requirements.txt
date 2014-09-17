@@ -1,4 +1,4 @@
-ipython[notebook]
+ipython[notebook]>=2.2
 tornado>=3.2
 jinja2
 simplepam
