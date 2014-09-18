@@ -10,6 +10,13 @@ from tornado.log import app_log
 
 from IPython.html.utils import url_path_join
 
+try:
+    TimeoutError
+except NameError:
+    # python < 3.3
+    class TimeoutError(Exception):
+        pass
+
 def random_port():
     """get a single random port"""
     sock = socket.socket()
@@ -34,7 +41,8 @@ def wait_for_server(ip, port, timeout=10):
                 )
             yield gen.Task(loop.add_timeout, loop.time() + 0.1)
         else:
-            break
+            return
+    raise TimeoutError
 
 def auth_decorator(check_auth):
     """Make an authentication decorator
