@@ -6,8 +6,12 @@
 import json
 import uuid
 
+import requests
+from tornado import gen
+
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
+    inspect,
     Column, Integer, String, ForeignKey, Unicode, Binary, Boolean,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
@@ -17,7 +21,7 @@ from sqlalchemy import create_engine
 
 from IPython.utils.py3compat import str_to_unicode
 
-from .utils import random_port, url_path_join
+from .utils import random_port, url_path_join, wait_for_server
 
 
 def new_token(*args, **kwargs):
@@ -85,6 +89,11 @@ class Server(Base):
             host=self.host,
             uri=self.base_url,
         )
+    
+    @gen.coroutine
+    def wait_up(self, timeout=10):
+        """Wait for this server to come up"""
+        yield wait_for_server(self.ip or 'localhost', self.port, timeout=timeout)
 
 
 class Proxy(Base):
@@ -108,6 +117,34 @@ class Proxy(Base):
             )
         else:
             return "<%s [unconfigured]>" % self.__class__.__name__
+
+    @gen.coroutine
+    def add_user(self, user):
+        """Add a user's server to the proxy table."""
+        r = requests.post(
+            url_path_join(
+                self.api_server.url,
+                user.server.base_url,
+            ),
+            data=json.dumps(dict(
+                target=user.server.host,
+                user=user.name,
+            )),
+            headers={'Authorization': "token %s" % self.auth_token},
+        )
+        r.raise_for_status()
+
+    @gen.coroutine
+    def delete_user(self, user):
+        """Remove a user's server to the proxy table."""
+        r = requests.delete(
+            url_path_join(
+                self.api_server.url,
+                user.server.base_url,
+            ),
+            headers={'Authorization': "token %s" % self.auth_token},
+        )
+        r.raise_for_status()
 
 
 class Hub(Base):
@@ -189,6 +226,50 @@ class User(Base):
     def new_cookie_token(self):
         """Return a new cookie token"""
         return self._new_token(CookieToken)
+
+    @gen.coroutine
+    def spawn(self, spawner_class, base_url='/', hub=None, config=None):
+        db = inspect(self).session
+        if hub is None:
+            hub = db.query(Hub).first()
+        self.server = Server(
+            cookie_name='%s-%s' % (hub.server.cookie_name, self.name),
+            cookie_secret=hub.server.cookie_secret,
+            base_url=url_path_join(base_url, 'user', self.name),
+        )
+        db.add(self.server)
+        db.commit()
+
+        api_token = self.new_api_token()
+        db.add(api_token)
+        db.commit()
+
+        spawner = self.spawner = spawner_class(
+            config=config,
+            user=self,
+            hub=hub,
+            api_token=api_token.token,
+        )
+        yield spawner.start()
+
+        # store state
+        self.state = spawner.get_state()
+        db.commit()
+    
+        yield self.server.wait_up()
+        raise gen.Return(self)
+
+    @gen.coroutine
+    def stop(self):
+        if self.spawner is None:
+            return
+        status = yield self.spawner.poll()
+        if status is None:
+            yield self.spawner.stop()
+        self.state = {}
+        self.spawner = None
+        self.server = None
+        inspect(self).session.commit()
 
 
 class Token(object):

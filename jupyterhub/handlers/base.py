@@ -3,7 +3,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import json
 import re
 
 try:
@@ -11,8 +10,6 @@ try:
     from http.client import responses
 except ImportError:
     from httplib import responses
-
-import requests
 
 from jinja2 import TemplateNotFound
 
@@ -23,10 +20,11 @@ from tornado import gen, web
 
 from .. import orm
 from ..spawner import LocalProcessSpawner
-from ..utils import wait_for_server, url_path_join
+from ..utils import url_path_join
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
+
 
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
@@ -51,6 +49,10 @@ class BaseHandler(RequestHandler):
     @property
     def hub(self):
         return self.settings['hub']
+    
+    @property
+    def proxy(self):
+        return self.settings['proxy']
     
     @property
     def authenticator(self):
@@ -160,77 +162,19 @@ class BaseHandler(RequestHandler):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     @gen.coroutine
-    def notify_proxy(self, user):
-        proxy = self.db.query(orm.Proxy).first()
-        r = requests.post(
-            url_path_join(
-                proxy.api_server.url,
-                user.server.base_url,
-            ),
-            data=json.dumps(dict(
-                target=user.server.host,
-                user=user.name,
-            )),
-            headers={'Authorization': "token %s" % proxy.auth_token},
-        )
-        yield wait_for_server(user.server.ip, user.server.port)
-        r.raise_for_status()
-
-    @gen.coroutine
-    def notify_proxy_delete(self, user):
-        proxy = self.db.query(orm.Proxy).first()
-        r = requests.delete(
-            url_path_join(
-                proxy.api_server.url,
-                user.server.base_url,
-            ),
-            headers={'Authorization': "token %s" % proxy.auth_token},
-        )
-        r.raise_for_status()
-
-    @gen.coroutine
     def spawn_single_user(self, user):
-        user.server = orm.Server(
-            cookie_name='%s-%s' % (self.hub.server.cookie_name, user.name),
-            cookie_secret=self.hub.server.cookie_secret,
-            base_url=url_path_join(self.base_url, 'user', user.name),
-        )
-        self.db.add(user.server)
-        self.db.commit()
-
-        api_token = user.new_api_token()
-        self.db.add(api_token)
-        self.db.commit()
-
-        spawner = user.spawner = self.spawner_class(
-            config=self.config,
-            user=user,
+        yield user.spawn(
+            spawner_class=self.spawner_class,
+            base_url=self.base_url,
             hub=self.hub,
-            api_token=api_token.token,
         )
-        yield spawner.start()
-
-        # store state
-        user.state = spawner.get_state()
-        self.db.commit()
-
-        yield self.notify_proxy(user)
+        yield self.proxy.add_user(user)
         raise gen.Return(user)
     
     @gen.coroutine
     def stop_single_user(self, user):
-        if user.spawner is None:
-            return
-        status = yield user.spawner.poll()
-        if status is None:
-            yield user.spawner.stop()
-        self.notify_proxy_delete(user)
-        user.state = {}
-        user.spawner = None
-        user.server = None
-        self.db.commit()
-        
-        raise gen.Return(user)
+        yield self.proxy.delete_user(user)
+        yield user.stop()
 
     #---------------------------------------------------------------
     # template rendering

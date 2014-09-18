@@ -364,6 +364,7 @@ class JupyterHubApp(Application):
             config=self.config,
             log=self.log,
             db=self.db,
+            proxy=self.proxy,
             hub=self.hub,
             admin_users=self.admin_users,
             authenticator=import_item(self.authenticator)(config=self.config),
