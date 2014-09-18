@@ -3,8 +3,10 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import errno
 import socket
 from tornado import web, gen, ioloop
+from tornado.log import app_log
 
 from IPython.html.utils import url_path_join
 
@@ -25,7 +27,11 @@ def wait_for_server(ip, port, timeout=10):
     while loop.time() - tic < timeout:
         try:
             socket.create_connection((ip, port))
-        except socket.error:
+        except socket.error as e:
+            if e.errno != errno.ECONNREFUSED:
+                app_log.error("Unexpected error waiting for %s:%i %s",
+                    ip, port, e
+                )
             yield gen.Task(loop.add_timeout, loop.time() + 0.1)
         else:
             break
