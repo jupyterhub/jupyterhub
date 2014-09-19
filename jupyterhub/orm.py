@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import errno
 import json
 import uuid
 
@@ -94,6 +95,19 @@ class Server(Base):
     def wait_up(self, timeout=10):
         """Wait for this server to come up"""
         yield wait_for_server(self.ip or 'localhost', self.port, timeout=timeout)
+    
+    def is_up(self):
+        """Is the server accepting connections?"""
+        try:
+            socket.create_connection((self.ip or 'localhost', self.port))
+        except socket.error as e:
+            if e.errno == errno.ECONNREFUSED:
+                return True
+            else:
+                raise
+        else:
+            return True
+        
 
 
 class Proxy(Base):
@@ -145,6 +159,21 @@ class Proxy(Base):
             headers={'Authorization': "token %s" % self.auth_token},
         )
         r.raise_for_status()
+
+    @gen.coroutine
+    def add_all_users(self):
+        """Update the proxy table from the database.
+        
+        Used when loading up a new proxy.
+        """
+        db = inspect(self).session
+        futures = []
+        for user in db.query(User):
+            if (user.server):
+                futures.append(self.add_user(user))
+        # wait after submitting them all
+        for f in futures:
+            yield f
 
 
 class Hub(Base):
