@@ -5,10 +5,11 @@
 
 import errno
 import json
+import socket
 import uuid
 
-import requests
 from tornado import gen
+from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
@@ -133,33 +134,38 @@ class Proxy(Base):
             return "<%s [unconfigured]>" % self.__class__.__name__
 
     @gen.coroutine
-    def add_user(self, user):
+    def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
-        r = requests.post(
-            url_path_join(
+        client = client or AsyncHTTPClient()
+        
+        req = HTTPRequest(url_path_join(
                 self.api_server.url,
                 user.server.base_url,
             ),
-            data=json.dumps(dict(
+            method="POST",
+            headers={'Authorization': 'token {}'.format(self.auth_token)},
+            body=json.dumps(dict(
                 target=user.server.host,
                 user=user.name,
             )),
-            headers={'Authorization': "token %s" % self.auth_token},
         )
-        r.raise_for_status()
-
+        
+        res = yield client.fetch(req)
+    
     @gen.coroutine
-    def delete_user(self, user):
+    def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
-        r = requests.delete(
-            url_path_join(
+        client = client or AsyncHTTPClient()
+        req = HTTPRequest(url_path_join(
                 self.api_server.url,
                 user.server.base_url,
             ),
-            headers={'Authorization': "token %s" % self.auth_token},
+            method="DELETE",
+            headers={'Authorization': 'token {}'.format(self.auth_token)},
         )
-        r.raise_for_status()
-
+        
+        res = yield client.fetch(req)
+    
     @gen.coroutine
     def add_all_users(self):
         """Update the proxy table from the database.
