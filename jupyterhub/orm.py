@@ -262,6 +262,14 @@ class User(Base):
         """Return a new cookie token"""
         return self._new_token(CookieToken)
 
+    @classmethod
+    def find(cls, db, name):
+        """Find a user by name.
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name==name).first()
+
     @gen.coroutine
     def spawn(self, spawner_class, base_url='/', hub=None, config=None):
         db = inspect(self).session
@@ -320,6 +328,15 @@ class Token(object):
             t=self.token,
             u=self.user.name,
         )
+
+    @classmethod
+    def find(cls, db, token):
+        """Find a token object by value.
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.token==token).first()
+
 
 
 class APIToken(Token, Base):

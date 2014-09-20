@@ -71,6 +71,11 @@ def test_user(db):
     assert user.server.ip == u'localhost'
     assert user.state == {'pid': 4234}
 
+    found = orm.User.find(db, u'kaylee')
+    assert found.name == user.name
+    found = orm.User.find(db, u'badger')
+    assert found is None
+
 
 def test_tokens(db):
     user = orm.User(name=u'inara')
@@ -87,3 +92,7 @@ def test_tokens(db):
     assert len(user.api_tokens) == 1
     assert len(user.cookie_tokens) == 3
     
+    found = orm.CookieToken.find(db, token=token.token)
+    assert found.token == token.token
+    found = orm.APIToken.find(db, token.token)
+    assert found is None
