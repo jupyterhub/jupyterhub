@@ -94,6 +94,11 @@ class SingleUserNotebookApp(NotebookApp):
         # disable the exit confirmation for background notebook processes
         ioloop.IOLoop.instance().stop()
     
+    def init_kernel_argv(self):
+        """construct the kernel arguments"""
+        # FIXME: This is 2.x-compat, remove when 3.x is requred
+        self.kernel_argv = ["--profile-dir", self.profile_dir.location]
+    
     def init_webapp(self):
         # monkeypatch authentication to use the hub
         from IPython.html.base.handlers import AuthenticatedHandler
