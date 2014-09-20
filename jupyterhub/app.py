@@ -20,7 +20,7 @@ from jinja2 import Environment, FileSystemLoader
 
 import tornado.httpserver
 import tornado.options
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import LogFormatter
 from tornado import gen, web
 
@@ -108,6 +108,9 @@ class JupyterHubApp(Application):
         help="""File to write PID
         Useful for daemonizing jupyterhub.
         """
+    )
+    proxy_check_interval = Integer(int(1e4), config=True,
+        help="Interval (in ms) at which to check if the proxy is running."
     )
     
     data_files_path = Unicode(DATA_FILES_PATH, config=True,
@@ -331,6 +334,7 @@ class JupyterHubApp(Application):
         self.db.add(self.proxy)
         self.db.commit()
     
+    @gen.coroutine
     def start_proxy(self):
         """Actually start the configurable-http-proxy"""
         env = os.environ.copy()
@@ -350,6 +354,35 @@ class JupyterHubApp(Application):
             cmd.extend(['--ssl-cert', self.ssl_cert])
         self.log.info("Starting proxy: %s", cmd)
         self.proxy_process = Popen(cmd, env=env)
+        def _check():
+            status = self.proxy_process.poll()
+            if status is not None:
+                e = RuntimeError("Proxy failed to start with exit code %i" % status)
+                # py2-compatible `raise e from None`
+                e.__cause__ = None
+                raise e
+        
+        for server in (self.proxy.public_server, self.proxy.api_server):
+            for i in range(10):
+                _check()
+                try:
+                    yield server.wait_up(1)
+                except TimeoutError:
+                    continue
+                else:
+                    break
+            yield server.wait_up(1)
+        self.log.debug("Proxy started and appears to be up")
+    
+    @gen.coroutine
+    def check_proxy(self):
+        if self.proxy_process.poll() is None:
+            return
+        self.log.error("Proxy stopped with exit code %i", self.proxy_process.poll())
+        yield self.start_proxy()
+        self.log.info("Setting up routes on new proxy")
+        yield self.proxy.add_all_users()
+        self.log.info("New proxy back up, and good to go")
     
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
@@ -364,6 +397,7 @@ class JupyterHubApp(Application):
             config=self.config,
             log=self.log,
             db=self.db,
+            proxy=self.proxy,
             hub=self.hub,
             admin_users=self.admin_users,
             authenticator=import_item(self.authenticator)(config=self.config),
@@ -459,13 +493,23 @@ class JupyterHubApp(Application):
         if self.generate_config:
             self.write_config_file()
             return
+        
         # start the proxy
-        self.start_proxy()
+        try:
+            IOLoop().run_sync(self.start_proxy)
+        except Exception as e:
+            self.log.critical("Failed to start proxy", exc_info=True)
+            return
+        
+        loop = IOLoop.current()
+        
+        pc = PeriodicCallback(self.check_proxy, self.proxy_check_interval)
+        pc.start()
+        
         # start the webserver
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)
         
-        loop = IOLoop.current()
         try:
             loop.start()
         except KeyboardInterrupt:
