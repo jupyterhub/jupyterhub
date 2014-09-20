@@ -493,14 +493,15 @@ class JupyterHubApp(Application):
         if self.generate_config:
             self.write_config_file()
             return
-        loop = IOLoop.current()
         
         # start the proxy
         try:
-            loop.run_sync(self.start_proxy)
+            IOLoop().run_sync(self.start_proxy)
         except Exception as e:
             self.log.critical("Failed to start proxy", exc_info=True)
             return
+        
+        loop = IOLoop.current()
         
         pc = PeriodicCallback(self.check_proxy, self.proxy_check_interval)
         pc.start()
