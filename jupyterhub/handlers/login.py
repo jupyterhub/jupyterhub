@@ -35,7 +35,7 @@ class LoginHandler(BaseHandler):
             self.set_login_cookie(self.get_current_user())
             self.redirect(next_url, permanent=False)
         elif not next_url and self.get_current_user():
-            self.redirect(self.hub.server.base_url , permanent=False)
+            self.redirect(self.hub.server.base_url, permanent=False)
         else:
             username = self.get_argument('username', default='')
             self.finish(self._render(username=username))

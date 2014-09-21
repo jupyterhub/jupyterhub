@@ -291,7 +291,12 @@ class JupyterHubApp(Application):
 
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
-            (r"%s" % self.hub_prefix.rstrip('/'), web.RedirectHandler, {"url": self.hub_prefix}),
+            (r"%s" % self.hub_prefix.rstrip('/'), web.RedirectHandler,
+                {
+                    "url": self.hub_prefix,
+                    "permanent": False,
+                }
+            ),
             (r"(?!%s).*" % self.hub_prefix, handlers.PrefixRedirectHandler),
             (r'(.*)', handlers.Template404),
         ])
