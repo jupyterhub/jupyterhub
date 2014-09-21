@@ -105,9 +105,22 @@ class SingleUserNotebookApp(NotebookApp):
         AuthenticatedHandler.verify_token = verify_token
         AuthenticatedHandler.get_current_user = get_current_user
         
+        # redirect logout to the hub
+        from IPython.html.auth.logout import LogoutHandler
+        
+        app = self
+        def logout_get(self):
+            self.redirect(url_path_join(app.hub_prefix, 'logout'),
+                permanent=False,
+            )
+        LogoutHandler.get = logout_get
+        
         # load the hub related settings into the tornado settings dict
         env = os.environ
-        s = self.webapp_settings
+        # FIXME: IPython < 3 compat
+        s = getattr(self, 'tornado_settings',
+                getattr(self, 'webapp_settings')
+        )
         s['token_cache'] = {}
         s['user'] = self.user
         s['hub_api_key'] = env.pop('JPY_API_TOKEN', '')
