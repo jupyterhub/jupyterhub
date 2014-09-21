@@ -129,13 +129,15 @@ def set_user_setuid(username):
     home = user.pw_dir
     
     def preexec():
-        # don't forward signals
-        os.setpgrp()
-        # set the user and group
-        os.setuid(uid)
-        os.setgid(gid)
         # start in the user's home dir
         os.chdir(home)
+        
+        # don't forward signals
+        os.setpgrp()
+        
+        # set the user and group
+        os.setgid(gid)
+        os.setuid(uid)
     
     return preexec
 
