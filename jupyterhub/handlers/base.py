@@ -167,6 +167,7 @@ class BaseHandler(RequestHandler):
             spawner_class=self.spawner_class,
             base_url=self.base_url,
             hub=self.hub,
+            config=self.config,
         )
         yield self.proxy.add_user(user)
         raise gen.Return(user)
