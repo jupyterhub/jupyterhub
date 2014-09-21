@@ -288,8 +288,10 @@ class JupyterHubApp(Application):
 
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
 
+
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
+            (r"%s" % self.hub_prefix.rstrip('/'), web.RedirectHandler, {"url": self.hub_prefix}),
             (r"(?!%s).*" % self.hub_prefix, handlers.PrefixRedirectHandler),
             (r'(.*)', handlers.Template404),
         ])
