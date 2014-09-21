@@ -15,7 +15,7 @@ from tornado.ioloop import IOLoop
 
 from IPython.config import LoggingConfigurable
 from IPython.utils.traitlets import (
-    Any, Dict, Enum, Instance, Integer, List, Unicode,
+    Any, Bool, Dict, Enum, Instance, Integer, List, Unicode,
 )
 
 
@@ -38,6 +38,19 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     api_token = Unicode()
     
+    debug = Bool(False, config=True,
+        help="Enable debug-logging of the single-user server"
+    )
+    def _debug_changed(self, name, old, new):
+        try:
+            # remove --debug if False,
+            # and avoid doubling it if True
+            self.cmd.remove('--debug')
+        except ValueError:
+            pass
+        if new:
+            self.cmd.append('--debug')
+
     env_prefix = Unicode('JPY_')
     def _env_key(self, d, key, value):
         d['%s%s' % (self.env_prefix, key)] = value
