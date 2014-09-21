@@ -21,7 +21,7 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, unicode)
-    assert isinstance(server.cookie_secret, bytes)
+    assert isinstance(server.cookie_secret, unicode)
     assert server.url == 'http://localhost:%i/' % server.port
 
 

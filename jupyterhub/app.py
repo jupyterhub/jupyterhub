@@ -25,7 +25,7 @@ from tornado.log import LogFormatter
 from tornado import gen, web
 
 from IPython.utils.traitlets import (
-    Unicode, Integer, Dict, TraitError, List, Bool, Bytes, Any,
+    Unicode, Integer, Dict, TraitError, List, Bool, Any,
     DottedObjectName, Set,
 )
 from IPython.config import Application, catch_config_error
@@ -37,7 +37,7 @@ from . import handlers, apihandlers
 
 from . import orm
 from ._data import DATA_FILES_PATH
-from .utils import url_path_join
+from .utils import url_path_join, random_hex, TimeoutError
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -190,9 +190,13 @@ class JupyterHubApp(Application):
         if newnew != new:
             self.hub_prefix = newnew
     
-    cookie_secret = Bytes(config=True)
+    cookie_secret = Unicode(config=True,
+        help="""The cookie secret to use to encrypt cookies.
+        Loaded from the JPY_COOKIE_SECRET env variable by default.
+        """
+    )
     def _cookie_secret_default(self):
-        return b'secret!'
+        return os.environ.get('JPY_COOKIE_SECRET', random_hex(64))
     
     authenticator = DottedObjectName("jupyterhub.auth.PAMAuthenticator", config=True,
         help="""Class for authenticating users.

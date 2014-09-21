@@ -60,7 +60,7 @@ class Spawner(LoggingConfigurable):
         env = os.environ.copy()
         for key in ['HOME', 'USER', 'USERNAME', 'LOGNAME', 'LNAME']:
             env.pop(key, None)
-        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret.decode('ascii'))
+        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret)
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     

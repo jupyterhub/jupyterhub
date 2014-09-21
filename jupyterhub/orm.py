@@ -71,7 +71,7 @@ class Server(Base):
     ip = Column(Unicode, default=u'localhost')
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode, default=u'/')
-    cookie_secret = Column(Binary, default=b'secret')
+    cookie_secret = Column(Unicode, default=u'')
     cookie_name = Column(Unicode, default=u'cookie')
     
     def __repr__(self):
