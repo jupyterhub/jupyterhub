@@ -7,25 +7,19 @@
 
 <div id="login-main" class="container">
   <form action="{{login_url}}?next={{next}}" method="post" role="form">
-    <div class="row">
-      <div class="col-sm-6 col-sm-offset-3">
         <div class="input-group">
           <span class="input-group-addon">Username:</span>
           <input type="username" class="form-control" name="username" id="username_input" val="{{username}}">
         </div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-sm-6 col-sm-offset-3">
         <div class="input-group">
-          <span class="input-group-addon">Password:</span>
+          <span id='pwd-addon' class="input-group-addon">Password:</span>
           <input type="password" class="form-control" name="password" id="password_input">
+        </div>
+        <div class="input-group">
           <span class="input-group-btn">
             <button type="submit" id="login_submit" class="btn btn-default">Log in</button>
           </span>
         </div>
-      </div>
-    </div>
   </form>
   {% if message %}
   <div class="row">

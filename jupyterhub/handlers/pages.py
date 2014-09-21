@@ -30,6 +30,7 @@ class RootHandler(BaseHandler):
 
 class HomeHandler(BaseHandler):
     """Render the user's home page."""
+
     @web.authenticated
     def get(self):
         html = self.render_template('home.html',
@@ -40,6 +41,7 @@ class HomeHandler(BaseHandler):
 
 class AdminHandler(BaseHandler):
     """Render the admin page."""
+
     @admin_only
     def get(self):
         html = self.render_template('admin.html',
@@ -47,6 +49,7 @@ class AdminHandler(BaseHandler):
             users=self.db.query(orm.User),
         )
         self.finish(html)
+
 
 default_handlers = [
     (r'/', RootHandler),
