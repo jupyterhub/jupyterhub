@@ -50,7 +50,7 @@ class Spawner(LoggingConfigurable):
             pass
         if new:
             self.cmd.append('--debug')
-
+    
     env_prefix = Unicode('JPY_')
     def _env_key(self, d, key, value):
         d['%s%s' % (self.env_prefix, key)] = value
@@ -58,7 +58,9 @@ class Spawner(LoggingConfigurable):
     env = Dict()
     def _env_default(self):
         env = os.environ.copy()
-        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret)
+        for key in ['HOME', 'USER', 'USERNAME', 'LOGNAME', 'LNAME']:
+            env.pop(key, None)
+        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret.decode('ascii'))
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     
@@ -142,15 +144,15 @@ def set_user_setuid(username):
     home = user.pw_dir
     
     def preexec():
-        # start in the user's home dir
-        os.chdir(home)
-        
         # don't forward signals
         os.setpgrp()
         
         # set the user and group
         os.setgid(gid)
         os.setuid(uid)
+
+        # start in the user's home dir
+        os.chdir(home)
     
     return preexec
 
@@ -222,13 +224,18 @@ class LocalProcessSpawner(Spawner):
         """Start the process"""
         self.user.server.port = random_port()
         cmd = []
+        env = self.env
         if self.set_user == 'sudo':
             cmd = self.sudo_cmd(self.user)
+        elif self.set_user == 'setuid':
+            env['USER'] = self.user.name
+            env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
+        
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
         
         self.log.info("Spawning %r", cmd)
-        self.proc = Popen(cmd, env=self.env,
+        self.proc = Popen(cmd, env=env,
             preexec_fn=self.make_preexec_fn(self.user.name),
         )
         self.pid = self.proc.pid
