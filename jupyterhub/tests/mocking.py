@@ -38,6 +38,9 @@ class MockSpawner(LocalProcessSpawner):
     def _set_user_changed(self, name, old, new):
         pass
     
+    def user_env(self, env):
+        return env
+    
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 

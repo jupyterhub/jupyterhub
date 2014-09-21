@@ -218,18 +218,21 @@ class LocalProcessSpawner(Spawner):
     
     def sudo_cmd(self, user):
         return ['sudo', '-u', user.name] + self.sudo_args
+    
+    def user_env(self, env):
+        if self.set_user == 'setuid':
+            env['USER'] = self.user.name
+            env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
+        return env
 
     @gen.coroutine
     def start(self):
         """Start the process"""
         self.user.server.port = random_port()
         cmd = []
-        env = self.env
+        env = self.user_env(self.env)
         if self.set_user == 'sudo':
             cmd = self.sudo_cmd(self.user)
-        elif self.set_user == 'setuid':
-            env['USER'] = self.user.name
-            env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
         
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
