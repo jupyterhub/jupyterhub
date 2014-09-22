@@ -447,7 +447,7 @@ class JupyterHubApp(Application):
             )
             self.db.add(self.proxy)
             self.db.commit()
-
+        self.proxy.log = self.log
         self.proxy.public_server.ip = self.ip
         self.proxy.public_server.port = self.port
         self.proxy.api_server.ip = self.proxy_api_ip
@@ -644,6 +644,7 @@ class JupyterHubApp(Application):
             return
         
         loop = IOLoop.current()
+        loop.add_callback(self.proxy.add_all_users)
         
         if self.proxy_process:
             # only check / restart the proxy if we started it in the first place.

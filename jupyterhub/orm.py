@@ -9,6 +9,7 @@ import socket
 import uuid
 
 from tornado import gen
+from tornado.log import app_log
 from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 
 from sqlalchemy.types import TypeDecorator, VARCHAR
@@ -123,6 +124,7 @@ class Proxy(Base):
     public_server = relationship(Server, primaryjoin=_public_server_id == Server.id)
     _api_server_id = Column(Integer, ForeignKey('servers.id'))
     api_server = relationship(Server, primaryjoin=_api_server_id == Server.id)
+    log = app_log
     
     def __repr__(self):
         if self.public_server:
@@ -135,6 +137,9 @@ class Proxy(Base):
     @gen.coroutine
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
+        self.log.info("Adding user %s to proxy %s => %s",
+            user.name, user.server.base_url, user.server.host,
+        )
         client = client or AsyncHTTPClient()
         
         req = HTTPRequest(url_path_join(
@@ -154,6 +159,7 @@ class Proxy(Base):
     @gen.coroutine
     def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
+        self.log.info("Removing user %s from proxy", user.name)
         client = client or AsyncHTTPClient()
         req = HTTPRequest(url_path_join(
                 self.api_server.url,
