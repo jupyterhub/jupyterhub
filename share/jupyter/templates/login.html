@@ -11,15 +11,11 @@
           <span class="input-group-addon">Username:</span>
           <input type="username" class="form-control" name="username" id="username_input" val="{{username}}">
         </div>
-        <div class="input-group">
-          <span id='pwd-addon' class="input-group-addon">Password:</span>
+        <div class="input-group pwd-group">
+          <span class="input-group-addon">Password:</span>
           <input type="password" class="form-control" name="password" id="password_input">
         </div>
-        <div class="input-group">
-          <span class="input-group-btn">
-            <button type="submit" id="login_submit" class="btn btn-default">Log in</button>
-          </span>
-        </div>
+        <button type="submit" id="login_submit" class="btn btn-default">Log in</button>
   </form>
   {% if message %}
   <div class="row">

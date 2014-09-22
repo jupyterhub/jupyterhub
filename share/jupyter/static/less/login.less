@@ -1,49 +1,33 @@
 #login-main {
-     & >  form {
-        margin: 80px auto;
+    form {
+        margin: 8px auto;
         width: 400px;
         padding: 50px;
-        margin-top: 8px;
-        border: 1px solid black;
+        border: 1px solid #ccc;
+        font-size: large;
+    }
+    
+    * {
+        border-radius: 0px;
     }
 
-
-    & .input-group{
-        width:100%;
+    .input-group, input, button {
+        width: 100%;
     }
 
-    & .input-group-addon {
-        width:100px;
-        border-radius:0;
+    .input-group-addon {
+        width: 100px;
     }
 
-    & .form-control{
-        font-size:large;
-    }
-
-    & input[type=username]
-    {
-        width:100%;
-        border-radius:0;
-    }
-
-    & input[type=password]{
-        width:100%;
-        margin-top:-1px;
-        border-radius:0;
-    }
-
-    & button[type=submit]{
-        margin-top:10px;
-        width:100%;
-    }
-
-    & input[type=password]:focus,input[type=username]:focus{
+    input:focus {
         z-index: 5;
     }
-
-    & #pwd-addon{
-        border-top:none;
+    
+    .pwd-group {
+        margin-top: -1px;
     }
-
+    
+    button[type=submit] {
+        margin-top: 16px;
+    }
 }
