@@ -3,7 +3,9 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import binascii
 import errno
+import os
 import socket
 from tornado import web, gen, ioloop
 from tornado.log import app_log
@@ -11,7 +13,8 @@ from tornado.log import app_log
 from IPython.html.utils import url_path_join
 
 try:
-    TimeoutError
+    # make TimeoutError importable on Python >= 3.3
+    TimeoutError = TimeoutError
 except NameError:
     # python < 3.3
     class TimeoutError(Exception):
@@ -25,6 +28,12 @@ def random_port():
     sock.close()
     return port
 
+def random_hex(nbytes):
+    """Return nbytes random bytes as a unicode hex string
+
+    It will have length nbytes * 2
+    """
+    return binascii.hexlify(os.urandom(nbytes)).decode('ascii')
 
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):

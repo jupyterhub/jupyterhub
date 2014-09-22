@@ -60,7 +60,7 @@ class Spawner(LoggingConfigurable):
         env = os.environ.copy()
         for key in ['HOME', 'USER', 'USERNAME', 'LOGNAME', 'LNAME']:
             env.pop(key, None)
-        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret.decode('ascii'))
+        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret)
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     
@@ -103,7 +103,7 @@ class Spawner(LoggingConfigurable):
         state: dict
              a JSONable dict of state
         """
-        return {}
+        return dict(api_token=self.api_token)
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
@@ -211,10 +211,13 @@ class LocalProcessSpawner(Spawner):
             raise ValueError("This should be impossible")
     
     def load_state(self, state):
+        super(LocalProcessSpawner, self).load_state(state)
         self.pid = state['pid']
     
     def get_state(self):
-        return dict(pid=self.pid)
+        state = super(LocalProcessSpawner, self).get_state()
+        state['pid'] = self.pid
+        return state
     
     def sudo_cmd(self, user):
         return ['sudo', '-u', user.name] + self.sudo_args

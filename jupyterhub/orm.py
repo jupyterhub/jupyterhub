@@ -9,6 +9,7 @@ import socket
 import uuid
 
 from tornado import gen
+from tornado.log import app_log
 from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 
 from sqlalchemy.types import TypeDecorator, VARCHAR
@@ -71,7 +72,7 @@ class Server(Base):
     ip = Column(Unicode, default=u'localhost')
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode, default=u'/')
-    cookie_secret = Column(Binary, default=b'secret')
+    cookie_secret = Column(Unicode, default=u'')
     cookie_name = Column(Unicode, default=u'cookie')
     
     def __repr__(self):
@@ -103,12 +104,11 @@ class Server(Base):
             socket.create_connection((self.ip or 'localhost', self.port))
         except socket.error as e:
             if e.errno == errno.ECONNREFUSED:
-                return True
+                return False
             else:
                 raise
         else:
             return True
-        
 
 
 class Proxy(Base):
@@ -124,6 +124,7 @@ class Proxy(Base):
     public_server = relationship(Server, primaryjoin=_public_server_id == Server.id)
     _api_server_id = Column(Integer, ForeignKey('servers.id'))
     api_server = relationship(Server, primaryjoin=_api_server_id == Server.id)
+    log = app_log
     
     def __repr__(self):
         if self.public_server:
@@ -136,6 +137,9 @@ class Proxy(Base):
     @gen.coroutine
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
+        self.log.info("Adding user %s to proxy %s => %s",
+            user.name, user.server.base_url, user.server.host,
+        )
         client = client or AsyncHTTPClient()
         
         req = HTTPRequest(url_path_join(
@@ -155,6 +159,7 @@ class Proxy(Base):
     @gen.coroutine
     def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
+        self.log.info("Removing user %s from proxy", user.name)
         client = client or AsyncHTTPClient()
         req = HTTPRequest(url_path_join(
                 self.api_server.url,
@@ -262,6 +267,14 @@ class User(Base):
         """Return a new cookie token"""
         return self._new_token(CookieToken)
 
+    @classmethod
+    def find(cls, db, name):
+        """Find a user by name.
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name==name).first()
+
     @gen.coroutine
     def spawn(self, spawner_class, base_url='/', hub=None, config=None):
         db = inspect(self).session
@@ -321,6 +334,14 @@ class Token(object):
             u=self.user.name,
         )
 
+    @classmethod
+    def find(cls, db, token):
+        """Find a token object by value.
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.token==token).first()
+
 
 class APIToken(Token, Base):
     """An API token"""
@@ -332,13 +353,15 @@ class CookieToken(Token, Base):
     __tablename__ = 'cookie_tokens'
 
 
-def new_session(url="sqlite:///:memory:", **kwargs):
+def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
     """Create a new session at url"""
     kwargs.setdefault('connect_args', {'check_same_thread': False})
     kwargs.setdefault('poolclass', StaticPool)
     engine = create_engine(url, **kwargs)
     Session = sessionmaker(bind=engine)
     session = Session()
+    if reset:
+        Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     return session
 

@@ -73,7 +73,7 @@ class BaseHandler(RequestHandler):
         if not match:
             return None
         token = match.group(1)
-        orm_token = self.db.query(orm.APIToken).filter(orm.APIToken.token == token).first()
+        orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             return None
         else:
@@ -83,8 +83,7 @@ class BaseHandler(RequestHandler):
         """get_current_user from a cookie token"""
         token = self.get_cookie(self.hub.server.cookie_name, None)
         if token:
-            cookie_token = self.db.query(orm.CookieToken).filter(
-                orm.CookieToken.token==token).first()
+            cookie_token = orm.CookieToken.find(self.db, token)
             if cookie_token:
                 return cookie_token.user
             else:
@@ -103,7 +102,7 @@ class BaseHandler(RequestHandler):
         
         return None if no such user
         """
-        return self.db.query(orm.User).filter(orm.User.name==name).first()
+        return orm.User.find(self.db, name)
 
     def user_from_username(self, username):
         """Get ORM User for username"""
