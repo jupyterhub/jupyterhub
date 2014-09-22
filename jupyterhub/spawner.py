@@ -15,7 +15,7 @@ from tornado.ioloop import IOLoop
 
 from IPython.config import LoggingConfigurable
 from IPython.utils.traitlets import (
-    Any, Dict, Enum, Instance, Integer, List, Unicode,
+    Any, Bool, Dict, Enum, Instance, Integer, List, Unicode,
 )
 
 
@@ -38,6 +38,19 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     api_token = Unicode()
     
+    debug = Bool(False, config=True,
+        help="Enable debug-logging of the single-user server"
+    )
+    def _debug_changed(self, name, old, new):
+        try:
+            # remove --debug if False,
+            # and avoid doubling it if True
+            self.cmd.remove('--debug')
+        except ValueError:
+            pass
+        if new:
+            self.cmd.append('--debug')
+    
     env_prefix = Unicode('JPY_')
     def _env_key(self, d, key, value):
         d['%s%s' % (self.env_prefix, key)] = value
@@ -45,7 +58,9 @@ class Spawner(LoggingConfigurable):
     env = Dict()
     def _env_default(self):
         env = os.environ.copy()
-        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret)
+        for key in ['HOME', 'USER', 'USERNAME', 'LOGNAME', 'LNAME']:
+            env.pop(key, None)
+        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret.decode('ascii'))
         self._env_key(env, 'API_TOKEN', self.api_token)
         return env
     
@@ -129,15 +144,15 @@ def set_user_setuid(username):
     home = user.pw_dir
     
     def preexec():
-        # start in the user's home dir
-        os.chdir(home)
-        
         # don't forward signals
         os.setpgrp()
         
         # set the user and group
         os.setgid(gid)
         os.setuid(uid)
+
+        # start in the user's home dir
+        os.chdir(home)
     
     return preexec
 
@@ -203,19 +218,27 @@ class LocalProcessSpawner(Spawner):
     
     def sudo_cmd(self, user):
         return ['sudo', '-u', user.name] + self.sudo_args
+    
+    def user_env(self, env):
+        if self.set_user == 'setuid':
+            env['USER'] = self.user.name
+            env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
+        return env
 
     @gen.coroutine
     def start(self):
         """Start the process"""
         self.user.server.port = random_port()
         cmd = []
+        env = self.user_env(self.env)
         if self.set_user == 'sudo':
             cmd = self.sudo_cmd(self.user)
+        
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
         
         self.log.info("Spawning %r", cmd)
-        self.proc = Popen(cmd, env=self.env,
+        self.proc = Popen(cmd, env=env,
             preexec_fn=self.make_preexec_fn(self.user.name),
         )
         self.pid = self.proc.pid
