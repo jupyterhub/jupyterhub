@@ -56,11 +56,14 @@ class MockHubApp(JupyterHubApp):
     def _ip_default(self):
         return 'localhost'
     
-    def _authenticator_default(self):
-        return '%s.%s' % (__name__, 'MockPAMAuthenticator')
+    def _db_url_default(self):
+        return 'sqlite:///:memory:'
+
+    def _authenticator_class_default(self):
+        return MockPAMAuthenticator
     
     def _spawner_class_default(self):
-        return '%s.%s' % (__name__, 'MockSpawner')
+        return MockSpawner
     
     def _admin_users_default(self):
         return {'admin'}
