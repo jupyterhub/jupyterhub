@@ -169,7 +169,17 @@ class BaseHandler(RequestHandler):
             config=self.config,
         )
         yield self.proxy.add_user(user)
+        user.spawner.add_poll_callback(self.user_stopped, user)
         raise gen.Return(user)
+    
+    @gen.coroutine
+    def user_stopped(self, user):
+        status = yield user.spawner.poll()
+        self.log.warn("User %s server stopped, with exit code: %s",
+            user.name, status,
+        )
+        yield self.proxy.delete_user(user)
+        yield user.stop()
     
     @gen.coroutine
     def stop_single_user(self, user):

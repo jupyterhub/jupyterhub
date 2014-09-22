@@ -111,8 +111,8 @@ class JupyterHubApp(Application):
         Useful for daemonizing jupyterhub.
         """
     )
-    proxy_check_interval = Integer(int(1e4), config=True,
-        help="Interval (in ms) at which to check if the proxy is running."
+    proxy_check_interval = Integer(10, config=True,
+        help="Interval (in seconds) at which to check if the proxy is running."
     )
     
     data_files_path = Unicode(DATA_FILES_PATH, config=True,
@@ -414,7 +414,16 @@ class JupyterHubApp(Application):
             if user.server:
                 parts.append('running at %s' % user.server)
             return ' '.join(parts)
-
+            
+        @gen.coroutine
+        def user_stopped(user):
+            status = yield user.spawner.poll()
+            self.log.warn("User %s server stopped with exit code: %s",
+                user.name, status,
+            )
+            yield self.proxy.delete_user(user)
+            yield user.stop()
+        
         for user in db.query(orm.User):
             if not user.state:
                 user_summaries.append(_user_summary(user))
@@ -425,6 +434,8 @@ class JupyterHubApp(Application):
             if status is None:
                 self.log.info("User %s still running", user.name)
                 user.spawner = spawner
+                spawner.add_poll_callback(user_stopped, user)
+                spawner.start_polling()
             else:
                 self.log.warn("Failed to load state for %s, assuming server is not running.", user.name)
                 # not running, state is invalid
@@ -650,7 +661,7 @@ class JupyterHubApp(Application):
             # only check / restart the proxy if we started it in the first place.
             # this means a restarted Hub cannot restart a Proxy that its
             # predecessor started.
-            pc = PeriodicCallback(self.check_proxy, self.proxy_check_interval)
+            pc = PeriodicCallback(self.check_proxy, 1e3 * self.proxy_check_interval)
             pc.start()
         
         # start the webserver
