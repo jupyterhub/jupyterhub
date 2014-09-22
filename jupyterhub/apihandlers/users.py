@@ -133,9 +133,11 @@ class UserServerAPIHandler(BaseUserHandler):
     def post(self, name):
         user = self.find_user(name)
         if user.spawner:
-            raise web.HTTPError(400, "%s's server is already running" % name)
-        else:
-            yield self.spawn_single_user(user)
+            state = yield user.spawner.poll()
+            if state is None:
+                raise web.HTTPError(400, "%s's server is already running" % name)
+
+        yield self.spawn_single_user(user)
         self.set_status(201)
 
     @gen.coroutine

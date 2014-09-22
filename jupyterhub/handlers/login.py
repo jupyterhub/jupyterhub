@@ -51,7 +51,12 @@ class LoginHandler(BaseHandler):
         authorized = yield self.authenticate(data)
         if authorized:
             user = self.user_from_username(username)
-            yield self.spawn_single_user(user)
+            already_running = False
+            if user.spawner:
+                status = yield user.spawner.poll()
+                already_running = (status == None)
+            if not already_running:
+                yield self.spawn_single_user(user)
             self.set_login_cookie(user)
             next_url = self.get_argument('next', default='') or self.hub.server.base_url
             self.redirect(next_url)
