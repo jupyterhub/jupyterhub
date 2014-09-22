@@ -7,17 +7,15 @@ import errno
 import os
 import pwd
 import signal
-import time
 from subprocess import Popen
 
 from tornado import gen
-from tornado.ioloop import IOLoop
+from tornado.ioloop import IOLoop, PeriodicCallback
 
 from IPython.config import LoggingConfigurable
 from IPython.utils.traitlets import (
     Any, Bool, Dict, Enum, Instance, Integer, List, Unicode,
 )
-
 
 from .utils import random_port
 
@@ -37,6 +35,12 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     api_token = Unicode()
+    
+    poll_interval = Integer(30, config=True,
+        help="""Interval (in seconds) on which to poll the spawner."""
+    )
+    _callbacks = List()
+    _poll_callback = Any()
     
     debug = Bool(False, config=True,
         help="Enable debug-logging of the single-user server"
@@ -134,6 +138,60 @@ class Spawner(LoggingConfigurable):
         return None if it is, an exit status (0 if unknown) if it is not.
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
+    
+    def add_poll_callback(self, callback, *args, **kwargs):
+        """add a callback to fire when the subprocess stops
+        
+        as noticed by periodic poll_and_notify()
+        """
+        if args or kwargs:
+            cb = callback
+            callback = lambda : cb(*args, **kwargs)
+        self._callbacks.append(callback)
+    
+    def stop_polling(self):
+        """stop the periodic poll"""
+        if self._poll_callback:
+            self._poll_callback.stop()
+            self._poll_callback = None
+        
+    def start_polling(self):
+        """Start polling periodically
+        
+        callbacks registered via `add_poll_callback` will fire
+        if/when the process stops.
+        
+        Explicit termination via the stop method will not trigger the callbacks.
+        """
+        if self.poll_interval <= 0:
+            self.log.debug("Not polling subprocess")
+            return
+        else:
+            self.log.debug("Polling subprocess every %is", self.poll_interval)
+        
+        self.stop_polling()
+        
+        self._poll_callback = PeriodicCallback(
+            self.poll_and_notify,
+            1e3 * self.poll_interval
+        )
+        self._poll_callback.start()
+
+    @gen.coroutine
+    def poll_and_notify(self):
+        """Used as a callback to periodically poll the process,
+        and notify any watchers
+        """
+        status = yield self.poll()
+        if status is None:
+            # still running, nothing to do here
+            return
+        
+        self.stop_polling()
+        
+        add_callback = IOLoop.current().add_callback
+        for callback in self._callbacks:
+            add_callback(callback)
 
 
 def set_user_setuid(username):
@@ -245,6 +303,7 @@ class LocalProcessSpawner(Spawner):
             preexec_fn=self.make_preexec_fn(self.user.name),
         )
         self.pid = self.proc.pid
+        self.start_polling()
     
     @gen.coroutine
     def poll(self):
@@ -284,6 +343,7 @@ class LocalProcessSpawner(Spawner):
         
         if `now`, skip waiting for clean shutdown
         """
+        self.stop_polling()
         if not now:
             # SIGINT to request clean shutdown
             self.log.debug("Interrupting %i", self.pid)
