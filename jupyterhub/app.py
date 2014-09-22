@@ -26,10 +26,9 @@ from tornado import gen, web
 
 from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
-    DottedObjectName, Set,
+    Type, Set, Instance,
 )
 from IPython.config import Application, catch_config_error
-from IPython.utils.importstring import import_item
 
 here = os.path.dirname(__file__)
 
@@ -57,10 +56,13 @@ aliases = {
 }
 
 flags = {
-    'debug': ({'Application' : {'log_level' : logging.DEBUG}},
+    'debug': ({'Application' : {'log_level': logging.DEBUG}},
         "set log level to logging.DEBUG (maximize logging output)"),
-    'generate-config': ({'JupyterHubApp': {'generate_config' : True}},
-        "generate default config file")
+    'generate-config': ({'JupyterHubApp': {'generate_config': True}},
+        "generate default config file"),
+    'no-db': ({'JupyterHubApp': {'db_url': 'sqlite:///:memory:'}},
+        "disable persisting state database to disk"
+    ),
 }
 
 
@@ -150,10 +152,13 @@ class JupyterHubApp(Application):
         """
     )
     proxy_auth_token = Unicode(config=True,
-        help="The Proxy Auth token"
+        help="""The Proxy Auth token.
+
+        Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
+        """
     )
     def _proxy_auth_token_default(self):
-        return orm.new_token()
+        return os.environ.get('CONFIGPROXY_AUTH_TOKEN', orm.new_token())
     
     proxy_api_ip = Unicode('localhost', config=True,
         help="The ip for the proxy API handlers"
@@ -192,13 +197,14 @@ class JupyterHubApp(Application):
     
     cookie_secret = Unicode(config=True,
         help="""The cookie secret to use to encrypt cookies.
+
         Loaded from the JPY_COOKIE_SECRET env variable by default.
         """
     )
     def _cookie_secret_default(self):
         return os.environ.get('JPY_COOKIE_SECRET', random_hex(64))
     
-    authenticator = DottedObjectName("jupyterhub.auth.PAMAuthenticator", config=True,
+    authenticator_class = Type("jupyterhub.auth.PAMAuthenticator", config=True,
         help="""Class for authenticating users.
         
         This should be a class with the following form:
@@ -212,16 +218,38 @@ class JupyterHubApp(Application):
           and `data` is the POST form data from the login page.
         """
     )
+    authenticator = Instance(Authenticator)
+    def _authenticator_default(self):
+        return self.authenticator_class(config=self.config)
+
     # class for spawning single-user servers
-    spawner_class = DottedObjectName("jupyterhub.spawner.LocalProcessSpawner", config=True,
+    spawner_class = Type("jupyterhub.spawner.LocalProcessSpawner", config=True,
         help="""The class to use for spawning single-user servers.
         
         Should be a subclass of Spawner.
         """
     )
     
-    db_url = Unicode('sqlite:///:memory:', config=True)
-    debug_db = Bool(False)
+    db_url = Unicode('sqlite:///jupyterhub.sqlite', config=True,
+        help="url for the database. e.g. `sqlite:///jupyterhub.sqlite`"
+    )
+    def _db_url_changed(self, name, old, new):
+        if '://' not in new:
+            # assume sqlite, if given as a plain filename
+            self.db_url = 'sqlite:///%s' % new
+
+    db_kwargs = Dict(config=True,
+        help="""Include any kwargs to pass to the database connection.
+        See sqlalchemy.create_engine for details.
+        """
+    )
+
+    reset_db = Bool(False, config=True,
+        help="Purge and reset the database."
+    )
+    debug_db = Bool(False, config=True,
+        help="log all database transactions. This has A LOT of output"
+    )
     db = Any()
     
     admin_users = Set({getpass.getuser()}, config=True,
@@ -292,7 +320,6 @@ class JupyterHubApp(Application):
 
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
 
-
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
             (r"%s" % self.hub_prefix.rstrip('/'), web.RedirectHandler,
@@ -306,48 +333,139 @@ class JupyterHubApp(Application):
         ])
     
     def init_db(self):
-        # TODO: load state from db for resume
-        # TODO: if not resuming, clear existing db contents
-        self.db = orm.new_session(self.db_url, echo=self.debug_db)
-        for name in self.admin_users:
-            user = orm.User(name=name, admin=True)
-            self.db.add(user)
-        self.db.commit()
+        """Create the database connection"""
+        self.db = orm.new_session(self.db_url, reset=self.reset_db, echo=self.debug_db,
+            **self.db_kwargs
+        )
     
     def init_hub(self):
         """Load the Hub config into the database"""
-        self.hub = orm.Hub(
-            server=orm.Server(
-                ip=self.hub_ip,
-                port=self.hub_port,
-                base_url=self.hub_prefix,
-                cookie_secret=self.cookie_secret,
-                cookie_name='jupyter-hub-token',
+        self.hub = self.db.query(orm.Hub).first()
+        if self.hub is None:
+            self.hub = orm.Hub(
+                server=orm.Server(
+                    ip=self.hub_ip,
+                    port=self.hub_port,
+                    base_url=self.hub_prefix,
+                    cookie_secret=self.cookie_secret,
+                    cookie_name='jupyter-hub-token',
+                )
             )
-        )
-        self.db.add(self.hub)
+            self.db.add(self.hub)
+        else:
+            server = self.hub.server
+            server.ip = self.hub_ip
+            server.port = self.hub_port
+            server.base_url = self.hub_prefix
+
         self.db.commit()
     
+    def init_users(self):
+        """Load users into and from the database"""
+        db = self.db
+
+        for name in self.admin_users:
+            # ensure anyone specified as admin in config is admin in db
+            user = orm.User.find(db, name)
+            if user is None:
+                user = orm.User(name=name, admin=True)
+                db.add(user)
+            else:
+                user.admin = True
+
+        # the admin_users config variable will never be used after this point.
+        # only the database values will be referenced.
+
+        whitelist = self.authenticator.whitelist
+
+        if not whitelist:
+            self.log.info("Not using whitelist. Any authenticated user will be allowed.")
+
+        # add whitelisted users to the db
+        for name in whitelist:
+            user = orm.User.find(db, name)
+            if user is None:
+                user = orm.User(name=name)
+                db.add(user)
+
+        if whitelist:
+            # fill the whitelist with any users loaded from the db,
+            # so we are consistent in both directions.
+            # This lets whitelist be used to set up initial list,
+            # but changes to the whitelist can occur in the database,
+            # and persist across sessions.
+            for user in db.query(orm.User):
+                whitelist.add(user.name)
+
+        # The whitelist set and the users in the db are now the same.
+        # From this point on, any user changes should be done simultaneously
+        # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
+
+        db.commit()
+
+        # load any still-active spawners from JSON
+        run_sync = IOLoop().run_sync
+
+        user_summaries = ['']
+        def _user_summary(user):
+            parts = ['{0: >8}'.format(user.name)]
+            if user.admin:
+                parts.append('admin')
+            if user.server:
+                parts.append('running at %s' % user.server)
+            return ' '.join(parts)
+
+        for user in db.query(orm.User):
+            if not user.state:
+                user_summaries.append(_user_summary(user))
+                continue
+            self.log.debug("Loading state for %s from db", user.name)
+            spawner = self.spawner_class.fromJSON(user.state, user=user, hub=self.hub, config=self.config)
+            status = run_sync(spawner.poll)
+            if status is None:
+                self.log.info("User %s still running", user.name)
+                user.spawner = spawner
+            else:
+                self.log.warn("Failed to load state for %s, assuming server is not running.", user.name)
+                # not running, state is invalid
+                user.state = {}
+                user.server = None
+
+            user_summaries.append(_user_summary(user))
+
+        self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
+        db.commit()
+
     def init_proxy(self):
         """Load the Proxy config into the database"""
-        self.proxy = orm.Proxy(
-            public_server=orm.Server(
-                ip=self.ip,
-                port=self.port,
-            ),
-            api_server=orm.Server(
-                ip=self.proxy_api_ip,
-                port=self.proxy_api_port,
-                base_url='/api/routes/'
-            ),
-            auth_token = orm.new_token(),
-        )
-        self.db.add(self.proxy)
+        self.proxy = self.db.query(orm.Proxy).first()
+        if self.proxy is None:
+            self.proxy = orm.Proxy(
+                public_server=orm.Server(),
+                api_server=orm.Server(),
+                auth_token = self.proxy_auth_token,
+            )
+            self.db.add(self.proxy)
+            self.db.commit()
+
+        self.proxy.public_server.ip = self.ip
+        self.proxy.public_server.port = self.port
+        self.proxy.api_server.ip = self.proxy_api_ip
+        self.proxy.api_server.port = self.proxy_api_port
+        self.proxy.api_server.base_url = '/api/routes/'
+        if self.proxy.auth_token is None:
+            self.proxy.auth_token = self.proxy_auth_token
         self.db.commit()
     
     @gen.coroutine
     def start_proxy(self):
         """Actually start the configurable-http-proxy"""
+        if self.proxy.public_server.is_up() and \
+              self.proxy.api_server.is_up():
+           self.log.warn("Proxy already running at: %s", self.proxy.public_server.url)
+           self.proxy_process = None
+           return
+
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
         cmd = [self.proxy_cmd,
@@ -389,7 +507,9 @@ class JupyterHubApp(Application):
     def check_proxy(self):
         if self.proxy_process.poll() is None:
             return
-        self.log.error("Proxy stopped with exit code %i", self.proxy_process.poll())
+        self.log.error("Proxy stopped with exit code %r",
+            'unknown' if self.proxy_process is None else self.proxy_process.poll()
+        )
         yield self.start_proxy()
         self.log.info("Setting up routes on new proxy")
         yield self.proxy.add_all_users()
@@ -411,10 +531,10 @@ class JupyterHubApp(Application):
             proxy=self.proxy,
             hub=self.hub,
             admin_users=self.admin_users,
-            authenticator=import_item(self.authenticator)(config=self.config),
-            spawner_class=import_item(self.spawner_class),
+            authenticator=self.authenticator,
+            spawner_class=self.spawner_class,
             base_url=base_url,
-            cookie_secret=self.cookie_secret,
+            cookie_secret=self.hub.server.cookie_secret,
             login_url=url_path_join(self.hub.server.base_url, 'login'),
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
@@ -442,12 +562,13 @@ class JupyterHubApp(Application):
         if self.generate_config:
             return
         self.load_config_file(self.config_file)
-        self.write_pid_file()
         self.init_logging()
+        self.write_pid_file()
         self.init_ports()
         self.init_db()
         self.init_hub()
         self.init_proxy()
+        self.init_users()
         self.init_handlers()
         self.init_tornado_settings()
         self.init_tornado_application()
@@ -460,15 +581,24 @@ class JupyterHubApp(Application):
         futures = []
         for user in self.db.query(orm.User):
             if user.spawner is not None:
-                futures.append(user.spawner.stop())
+                futures.append(user.stop())
         
         # clean up proxy while SUS are shutting down
-        self.log.info("Cleaning up proxy[%i]..." % self.proxy_process.pid)
-        self.proxy_process.terminate()
+        if self.proxy_process and self.proxy_process.poll() is None:
+            self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
+            try:
+                self.proxy_process.terminate()
+            except Exception as e:
+                self.log.error("Failed to terminate proxy process: %s", e)
         
         # wait for the requests to stop finish:
         for f in futures:
-            yield f
+            try:
+                yield f
+            except Exception as e:
+                self.log.error("Failed to stop user: %s", e)
+
+        self.db.commit()
         
         if self.pid_file and os.path.exists(self.pid_file):
             self.log.info("Cleaning up PID file %s", self.pid_file)
@@ -478,6 +608,7 @@ class JupyterHubApp(Application):
         self.log.info("...done")
     
     def write_config_file(self):
+        """Write our default config to a .py config file"""
         if os.path.exists(self.config_file) and not self.answer_yes:
             answer = ''
             def ask():
@@ -514,8 +645,12 @@ class JupyterHubApp(Application):
         
         loop = IOLoop.current()
         
-        pc = PeriodicCallback(self.check_proxy, self.proxy_check_interval)
-        pc.start()
+        if self.proxy_process:
+            # only check / restart the proxy if we started it in the first place.
+            # this means a restarted Hub cannot restart a Proxy that its
+            # predecessor started.
+            pc = PeriodicCallback(self.check_proxy, self.proxy_check_interval)
+            pc.start()
         
         # start the webserver
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
