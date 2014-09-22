@@ -103,12 +103,11 @@ class Server(Base):
             socket.create_connection((self.ip or 'localhost', self.port))
         except socket.error as e:
             if e.errno == errno.ECONNREFUSED:
-                return True
+                return False
             else:
                 raise
         else:
             return True
-        
 
 
 class Proxy(Base):
