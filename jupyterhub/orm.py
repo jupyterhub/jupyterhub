@@ -337,7 +337,6 @@ class Token(object):
         return db.query(cls).filter(cls.token==token).first()
 
 
-
 class APIToken(Token, Base):
     """An API token"""
     __tablename__ = 'api_tokens'
@@ -348,13 +347,15 @@ class CookieToken(Token, Base):
     __tablename__ = 'cookie_tokens'
 
 
-def new_session(url="sqlite:///:memory:", **kwargs):
+def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
     """Create a new session at url"""
     kwargs.setdefault('connect_args', {'check_same_thread': False})
     kwargs.setdefault('poolclass', StaticPool)
     engine = create_engine(url, **kwargs)
     Session = sessionmaker(bind=engine)
     session = Session()
+    if reset:
+        Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
     return session
 
