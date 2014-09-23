@@ -210,7 +210,8 @@ class JupyterHubApp(Application):
     def _cookie_secret_default(self):
         return os.environ.get('JPY_COOKIE_SECRET', random_hex(64))
     
-    authenticator_class = Type("jupyterhub.auth.PAMAuthenticator", config=True,
+    authenticator_class = Type(PAMAuthenticator, Authenticator,
+        config=True,
         help="""Class for authenticating users.
         
         This should be a class with the following form:
@@ -224,12 +225,14 @@ class JupyterHubApp(Application):
           and `data` is the POST form data from the login page.
         """
     )
+    
     authenticator = Instance(Authenticator)
     def _authenticator_default(self):
         return self.authenticator_class(config=self.config)
 
     # class for spawning single-user servers
-    spawner_class = Type("jupyterhub.spawner.LocalProcessSpawner", config=True,
+    spawner_class = Type(LocalProcessSpawner, Spawner,
+        config=True,
         help="""The class to use for spawning single-user servers.
         
         Should be a subclass of Spawner.
@@ -323,6 +326,8 @@ class JupyterHubApp(Application):
         h = []
         h.extend(handlers.default_handlers)
         h.extend(apihandlers.default_handlers)
+        # load handlers from the authenticator
+        h.extend(self.authenticator.get_handlers(self))
 
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
 
@@ -534,12 +539,15 @@ class JupyterHubApp(Application):
     
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
-        base_url = self.base_url
+        base_url = self.hub.server.base_url
         template_path = os.path.join(self.data_files_path, 'templates'),
         jinja_env = Environment(
             loader=FileSystemLoader(template_path),
             **self.jinja_environment_options
         )
+        
+        login_url = self.authenticator.login_url(base_url)
+        logout_url = self.authenticator.logout_url(base_url)
         
         settings = dict(
             config=self.config,
@@ -550,9 +558,10 @@ class JupyterHubApp(Application):
             admin_users=self.admin_users,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
-            base_url=base_url,
+            base_url=self.base_url,
             cookie_secret=self.hub.server.cookie_secret,
-            login_url=url_path_join(self.hub.server.base_url, 'login'),
+            login_url=login_url,
+            logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
             template_path=template_path,

@@ -6,6 +6,9 @@
 {% block main %}
 
 <div id="login-main" class="container">
+{% if custom_html %}
+{{custom_html}}
+{% else %}
   <form action="{{login_url}}?next={{next}}" method="post" role="form">
         <div class="input-group">
           <span class="input-group-addon">Username:</span>
@@ -24,6 +27,7 @@
     </div>
   </div>
   {% endif %}
+{% endif %}
 <div/>
 
 {% endblock %}

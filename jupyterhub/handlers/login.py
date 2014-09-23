@@ -25,6 +25,7 @@ class LoginHandler(BaseHandler):
                 next=url_escape(self.get_argument('next', default='')),
                 username=username,
                 message=message,
+                custom_html=self.authenticator.custom_html,
         )
     
     def get(self):
