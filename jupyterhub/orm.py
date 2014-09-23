@@ -195,7 +195,7 @@ class Proxy(Base):
     @gen.coroutine
     def fetch_routes(self, client=None):
         """Fetch the proxy's routes"""
-        resp = yield self.api_request('/', client=client)
+        resp = yield self.api_request('', client=client)
         raise gen.Return(json.loads(resp.body.decode('utf8', 'replace')))
 
 
