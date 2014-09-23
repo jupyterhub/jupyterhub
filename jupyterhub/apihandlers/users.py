@@ -85,10 +85,11 @@ class UserAPIHandler(BaseUserHandler):
                 user.admin = data['admin']
                 self.db.commit()
         
-        # add to whitelist, if a whitelist is in use
-        
-        if self.authenticator and self.authenticator.whitelist:
-            self.authenticator.whitelist.add(user.name)
+        try:
+            self.authenticator.add_user(user)
+        except Exception:
+            self.db.delete(user)
+            self.db.commit()
         
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
@@ -104,9 +105,7 @@ class UserAPIHandler(BaseUserHandler):
         if user.spawner is not None:
             yield self.stop_single_user(user)
         
-        # remove the user from the whitelist, if there is one
-        if self.authenticator and user.name in self.authenticator.whitelist:
-            self.authenticator.whitelist.remove(user.name)
+        self.authenticator.delete_user(user)
         
         # remove from the db
         self.db.delete(user)
