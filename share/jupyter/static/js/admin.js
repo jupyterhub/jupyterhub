@@ -1,7 +1,7 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "bootstrap", "jhapi"], function ($, bs, JHAPI) {
+require(["jquery", "bootstrap", "moment", "jhapi"], function ($, bs, moment, JHAPI) {
     "use strict";
     
     var base_url = window.jhdata.base_url;
@@ -13,6 +13,12 @@ require(["jquery", "bootstrap", "jhapi"], function ($, bs, JHAPI) {
         }
         return element;
     };
+    
+    $(".time-col").map(function (i, el) {
+        // convert ISO datestamps to nice momentjs ones
+        el = $(el);
+        el.text(moment(new Date(el.text())).fromNow());
+    });
     
     $(".stop-server").click(function () {
         var el = $(this);
