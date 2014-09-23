@@ -55,17 +55,25 @@ class Spawner(LoggingConfigurable):
         if new:
             self.cmd.append('--debug')
     
-    env_prefix = Unicode('JPY_')
-    def _env_key(self, d, key, value):
-        d['%s%s' % (self.env_prefix, key)] = value
-    
+    env_keep = List([
+        'PATH',
+        'PYTHONPATH',
+        'CONDA_ROOT',
+        'CONDA_DEFAULT_ENV',
+        'VIRTUAL_ENV',
+        'LANG',
+        'LC_ALL',
+    ], config=True,
+        help="Whitelist of environment variables for the subprocess to inherit"
+    )
     env = Dict()
     def _env_default(self):
-        env = os.environ.copy()
-        for key in ['HOME', 'USER', 'USERNAME', 'LOGNAME', 'LNAME']:
-            env.pop(key, None)
-        self._env_key(env, 'COOKIE_SECRET', self.user.server.cookie_secret)
-        self._env_key(env, 'API_TOKEN', self.api_token)
+        env = {}
+        for key in self.env_keep:
+            if key in os.environ:
+                env[key] = os.environ[key]
+        env['JPY_COOKIE_SECRET'] = self.user.server.cookie_secret
+        env['JPY_API_TOKEN'] = self.api_token
         return env
     
     cmd = List(Unicode, default_value=['jupyterhub-singleuser'], config=True,
