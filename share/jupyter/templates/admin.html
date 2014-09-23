@@ -6,14 +6,16 @@
   <table class="table table-striped">
     <thead>
       <tr>
-        <th colspan="4">Users</th>
+        <th colspan="2">User</th>
+        <th colspan="3">Last Seen</th>
       </tr>
     </thead>
     <tbody>
   {% for u in users %}
     <tr class="user-row" data-user="{{u.name}}" data-admin="{{u.admin}}">
-      <td class="name-col col-sm-4">{{u.name}}</td>
-      <td class="admin-col col-sm-4">{% if u.admin %}admin{% endif %}</td>
+      <td class="name-col col-sm-2">{{u.name}}</td>
+      <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
+      <td class="time-col col-sm-4">{{u.last_activity.isoformat() + 'Z'}}</td>
       <td class="server-col col-sm-2 text-center">
       {% if u.server %}
         <span class="stop-server btn btn-xs btn-danger">stop server</span>
@@ -30,8 +32,8 @@
     </tr>
   {% endfor %}
     <tr class="user-row add-user-row">
-      <td colspan="4">
-        <a id="add-user" class="col-xs-12 btn btn-primary">Add User</a>
+      <td colspan="5">
+        <a id="add-user" class="col-xs-12 btn btn-default">Add User</a>
       </td>
     </tr>
   </tbody>

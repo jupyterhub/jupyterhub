@@ -28,6 +28,10 @@ def random_port():
     sock.close()
     return port
 
+# ISO8601 for strptime with/without milliseconds
+ISO8601_ms = '%Y-%m-%dT%H:%M:%S.%fZ'
+ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
+
 def random_hex(nbytes):
     """Return nbytes random bytes as a unicode hex string
 

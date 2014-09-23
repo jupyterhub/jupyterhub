@@ -8,6 +8,7 @@ import getpass
 import io
 import logging
 import os
+from datetime import datetime
 from subprocess import Popen
 
 try:
@@ -36,8 +37,10 @@ from . import handlers, apihandlers
 
 from . import orm
 from ._data import DATA_FILES_PATH
-from .utils import url_path_join, random_hex, TimeoutError
-
+from .utils import (
+    url_path_join, random_hex, TimeoutError,
+    ISO8601_ms, ISO8601_s,
+)
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
@@ -111,7 +114,10 @@ class JupyterHubApp(Application):
         Useful for daemonizing jupyterhub.
         """
     )
-    proxy_check_interval = Integer(10, config=True,
+    last_activity_interval = Integer(600, config=True,
+        help="Interval (in seconds) at which to update last-activity timestamps."
+    )
+    proxy_check_interval = Integer(30, config=True,
         help="Interval (in seconds) at which to check if the proxy is running."
     )
     
@@ -641,6 +647,23 @@ class JupyterHubApp(Application):
         with io.open(self.config_file, encoding='utf8', mode='w') as f:
             f.write(config_text)
     
+    @gen.coroutine
+    def update_last_activity(self):
+        """Update User.last_activity timestamps from the proxy"""
+        routes = yield self.proxy.fetch_routes()
+        for prefix, route in routes.items():
+            user = orm.User.find(self.db, route.get('user'))
+            if user is None:
+                self.log.warn("Found no user for route: %s", route)
+                continue
+            try:
+                dt = datetime.strptime(route['last_activity'], ISO8601_ms)
+            except Exception:
+                dt = datetime.strptime(route['last_activity'], ISO8601_s)
+            user.last_activity = max(user.last_activity, dt)
+
+        self.db.commit()
+
     def start(self):
         """Start the whole thing"""
         if self.generate_config:
@@ -664,6 +687,10 @@ class JupyterHubApp(Application):
             pc = PeriodicCallback(self.check_proxy, 1e3 * self.proxy_check_interval)
             pc.start()
         
+        if self.last_activity_interval:
+            pc = PeriodicCallback(self.update_last_activity, 1e3 * self.last_activity_interval)
+            pc.start()
+
         # start the webserver
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)

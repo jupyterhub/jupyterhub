@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from datetime import datetime
 import errno
 import json
 import socket
@@ -16,6 +17,7 @@ from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
     inspect,
     Column, Integer, String, ForeignKey, Unicode, Binary, Boolean,
+    DateTime,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
@@ -134,42 +136,46 @@ class Proxy(Base):
         else:
             return "<%s [unconfigured]>" % self.__class__.__name__
 
+    def api_request(self, path, method='GET', body=None, client=None):
+        """Make an authenticated API request of the proxy"""
+        client = client or AsyncHTTPClient()
+        url = url_path_join(self.api_server.url, path)
+
+        if isinstance(body, dict):
+            body = json.dumps(body)
+        self.log.debug("Fetching %s %s", method, url)
+        req = HTTPRequest(url,
+            method=method,
+            headers={'Authorization': 'token {}'.format(self.auth_token)},
+            body=body,
+        )
+
+        return client.fetch(req)
+
     @gen.coroutine
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
         self.log.info("Adding user %s to proxy %s => %s",
             user.name, user.server.base_url, user.server.host,
         )
-        client = client or AsyncHTTPClient()
         
-        req = HTTPRequest(url_path_join(
-                self.api_server.url,
-                user.server.base_url,
-            ),
-            method="POST",
-            headers={'Authorization': 'token {}'.format(self.auth_token)},
-            body=json.dumps(dict(
+        yield self.api_request(user.server.base_url,
+            method='POST',
+            body=dict(
                 target=user.server.host,
                 user=user.name,
-            )),
+            ),
+            client=client,
         )
-        
-        res = yield client.fetch(req)
     
     @gen.coroutine
     def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
-        client = client or AsyncHTTPClient()
-        req = HTTPRequest(url_path_join(
-                self.api_server.url,
-                user.server.base_url,
-            ),
-            method="DELETE",
-            headers={'Authorization': 'token {}'.format(self.auth_token)},
+        yield self.api_request(user.server.base_url,
+            method='DELETE',
+            client=client,
         )
-        
-        res = yield client.fetch(req)
     
     @gen.coroutine
     def add_all_users(self):
@@ -185,6 +191,12 @@ class Proxy(Base):
         # wait after submitting them all
         for f in futures:
             yield f
+
+    @gen.coroutine
+    def fetch_routes(self, client=None):
+        """Fetch the proxy's routes"""
+        resp = yield self.api_request('/', client=client)
+        raise gen.Return(json.loads(resp.body.decode('utf8', 'replace')))
 
 
 class Hub(Base):
@@ -235,6 +247,7 @@ class User(Base):
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     admin = Column(Boolean, default=False)
+    last_activity = Column(DateTime, default=datetime.utcnow)
     
     api_tokens = relationship("APIToken", backref="user")
     cookie_tokens = relationship("CookieToken", backref="user")
@@ -277,6 +290,7 @@ class User(Base):
 
     @gen.coroutine
     def spawn(self, spawner_class, base_url='/', hub=None, config=None):
+        """Start the user's spawner"""
         db = inspect(self).session
         if hub is None:
             hub = db.query(Hub).first()
@@ -302,6 +316,7 @@ class User(Base):
 
         # store state
         self.state = spawner.get_state()
+        self.last_activity = datetime.utcnow()
         db.commit()
     
         yield self.server.wait_up()
@@ -309,6 +324,7 @@ class User(Base):
 
     @gen.coroutine
     def stop(self):
+        """Stop the user's spawner"""
         if self.spawner is None:
             return
         status = yield self.spawner.poll()
