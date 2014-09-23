@@ -9,6 +9,8 @@ import simplepam
 from IPython.config import LoggingConfigurable
 from IPython.utils.traitlets import Unicode, Set
 
+from .utils import url_path_join
+
 class Authenticator(LoggingConfigurable):
     """A class for authentication.
     
@@ -22,6 +24,7 @@ class Authenticator(LoggingConfigurable):
         If empty, allow any user to attempt login.
         """
     )
+    custom_html = Unicode('')
     
     @gen.coroutine
     def authenticate(self, handler, data):
@@ -31,6 +34,22 @@ class Authenticator(LoggingConfigurable):
         It must return the username on successful authentication,
         and return None on failed authentication.
         """
+    
+    def login_url(self, base_url):
+        """Override to register a custom login handler"""
+        return url_path_join(base_url, 'login')
+    
+    def logout_url(self, base_url):
+        """Override to register a custom logout handler"""
+        return url_path_join(base_url, 'logout')
+    
+    def get_handlers(self, app):
+        """Return any custom handlers the authenticator needs to register
+        
+        (e.g. for OAuth)
+        """
+        return []
+
 
 class PAMAuthenticator(Authenticator):
     encoding = Unicode('utf8', config=True,

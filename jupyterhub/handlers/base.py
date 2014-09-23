@@ -206,6 +206,7 @@ class BaseHandler(RequestHandler):
             base_url=self.hub.server.base_url,
             user=user,
             login_url=self.settings['login_url'],
+            logout_url=self.settings['logout_url'],
             static_url=self.static_url,
         )
 
