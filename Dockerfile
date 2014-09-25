@@ -1,25 +1,32 @@
-FROM node:0.10.31
+# A base docker image that includes juptyerhub and IPython master
+#
+# Build your own derivative images starting with
+#
+# FROM jupyter/jupyterhub:latest
+#
 
-MAINTAINER IPython Project <ipython-dev@scipy.org>
+FROM ipython/ipython
 
-# System pre-requisites
-RUN apt-get update
-RUN apt-get -y install python3-dev python3-pip python3
-RUN alias python=python3
-RUN npm install -g bower less
+MAINTAINER Jupyter Project <ipython-dev@scipy.org>
 
-# Add sources for jupyterhub
-ADD . /srv/jupyterhub
-WORKDIR /srv/jupyterhub
-
-# Install the configurable http proxy, used by Jupyter Hub
+# install js dependencies
+RUN npm install -g bower
 RUN npm install -g jupyter/configurable-http-proxy
 
-# Install JupyterHub!
-RUN bower install --allow-root
+RUN mkdir -p /srv/
+
+# install jupyterhub
+WORKDIR /srv/
+ADD . /srv/jupyterhub
+WORKDIR /srv/jupyterhub/
+
+RUN pip3 install -r requirements.txt
 RUN pip3 install .
 
-# Default port for JupyterHub
-EXPOSE 8000
+WORKDIR /srv/jupyterhub/
 
-CMD ["jupyterhub"]
+# Derivative containers should add jupyterhub config,
+# which will be used when starting the application.
+
+ONBUILD ADD jupyter_hub_config.py /srv/jupyterhub/jupyter_hub_config.py
+CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyter_hub_config.py"]
