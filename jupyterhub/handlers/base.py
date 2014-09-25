@@ -4,7 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import re
-
+from datetime import datetime
 try:
     # py3
     from http.client import responses
@@ -77,7 +77,9 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
-            return orm_token.user
+            user = orm_token.user
+            user.last_activity = datetime.utcnow()
+            return user
 
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
