@@ -14,7 +14,7 @@ from IPython.utils.py3compat import unicode_type
 
 from ..spawner import LocalProcessSpawner
 from ..app import JupyterHubApp
-from ..auth import PAMAuthenticator
+from ..auth import PAMAuthenticator, Authenticator
 from .. import orm
 
 def mock_authenticate(username, password, service='login'):
@@ -46,6 +46,10 @@ class MockSpawner(LocalProcessSpawner):
 
 
 class MockPAMAuthenticator(PAMAuthenticator):
+    def system_user_exists(self, user):
+        # skip the add-system-user bit
+        return True
+    
     def authenticate(self, *args, **kwargs):
         with mock.patch('simplepam.authenticate', mock_authenticate):
             return super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
