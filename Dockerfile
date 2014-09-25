@@ -28,5 +28,7 @@ WORKDIR /srv/jupyterhub/
 # Derivative containers should add jupyterhub config,
 # which will be used when starting the application.
 
+EXPOSE 8000
+
 ONBUILD ADD jupyter_hub_config.py /srv/jupyterhub/jupyter_hub_config.py
 CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyter_hub_config.py"]
