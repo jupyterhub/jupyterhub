@@ -88,8 +88,10 @@ class UserAPIHandler(BaseUserHandler):
         try:
             self.authenticator.add_user(user)
         except Exception:
+            self.log.error("Failed to create user: %s" % name, exc_info=True)
             self.db.delete(user)
             self.db.commit()
+            raise web.HTTPError(400, "Failed to create user: %s" % name)
         
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)

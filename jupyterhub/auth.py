@@ -100,7 +100,8 @@ class LocalAuthenticator(Authenticator):
         
         super(LocalAuthenticator, self).add_user(user)
     
-    def system_user_exists(self, user):
+    @staticmethod
+    def system_user_exists(user):
         """Check if the user exists on the system"""
         try:
             pwd.getpwnam(user.name)
@@ -109,6 +110,7 @@ class LocalAuthenticator(Authenticator):
         else:
             return True
     
+    @staticmethod
     def add_system_user(user):
         """Create a new *ix user on the system. Works on FreeBSD and Linux, at least."""
         name = user.name

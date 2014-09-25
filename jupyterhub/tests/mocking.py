@@ -48,7 +48,7 @@ class MockSpawner(LocalProcessSpawner):
 class MockPAMAuthenticator(PAMAuthenticator):
     def system_user_exists(self, user):
         # skip the add-system-user bit
-        return True
+        return not user.name.startswith('dne')
     
     def authenticate(self, *args, **kwargs):
         with mock.patch('simplepam.authenticate', mock_authenticate):
