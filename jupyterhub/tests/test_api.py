@@ -102,6 +102,14 @@ def test_add_user(app):
     assert user.name == name
     assert not user.admin
 
+def test_add_user_bad(app):
+    db = app.db
+    name = 'dne_newuser'
+    r = api_request(app, 'users', name, method='post')
+    assert r.status_code == 400
+    user = find_user(db, name)
+    assert user is None
+
 def test_add_admin(app):
     db = app.db
     name = 'newadmin'
