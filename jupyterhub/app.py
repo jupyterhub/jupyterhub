@@ -661,7 +661,10 @@ class JupyterHubApp(Application):
         """Update User.last_activity timestamps from the proxy"""
         routes = yield self.proxy.fetch_routes()
         for prefix, route in routes.items():
-            user = orm.User.find(self.db, route.get('user'))
+            if 'user' not in route:
+                # not a user route, ignore it
+                continue
+            user = orm.User.find(self.db, route['user'])
             if user is None:
                 self.log.warn("Found no user for route: %s", route)
                 continue
