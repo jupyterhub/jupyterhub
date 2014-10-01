@@ -10,23 +10,46 @@
 {{custom_html}}
 {% else %}
   <form action="{{login_url}}?next={{next}}" method="post" role="form">
-        <div class="input-group">
-          <span class="input-group-addon">Username:</span>
-          <input type="username" class="form-control" name="username" id="username_input" val="{{username}}">
+        <div class="auth-form-header">
+            <h1>Sign in</h1>
         </div>
-        <div class="input-group pwd-group">
-          <span class="input-group-addon">Password:</span>
-          <input type="password" class="form-control" name="password" id="password_input">
-        </div>
-        <button type="submit" id="login_submit" class="btn btn-default">Log in</button>
-  </form>
-  {% if message %}
-  <div class="row">
-    <div class="message">
-      {{message}}
+        <div class='auth-form-body'>
+          {% if message %}
+            <div class="message">
+              {{message.error}}
+            </div>
+          {% endif %}
+          <label           for="username_input">Username:</label>
+          <input          
+                            id="username_input"
+                          type="username" 
+                autocapitalize="off" 
+                   autocorrect="off" 
+                         class="form-control"
+                          name="username"
+                           val="{{username}}"
+                      tabindex="1"
+                      autofocus="autofocus"
+                      />
+            <label 
+                            for='password_input'    >Password:
+                            <!--<a href="/password_reset">(forgot password)</a>-->
+            </label>
+            <input 
+                           type="password" 
+                          class="form-control"
+                           name="password"
+                            id="password_input"
+                      tabindex="2"/>
+
+             <input       type="submit"
+                           id="login_submit"
+                        class='btn btn-default btn-primary'
+                        value='Sign In'
+                      tabindex="3"
+                         />
     </div>
-  </div>
-  {% endif %}
+  </form>
 {% endif %}
 </div>
 
