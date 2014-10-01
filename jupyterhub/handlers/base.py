@@ -283,9 +283,10 @@ class UserSpawnHandler(BaseHandler):
                 yield self.spawn_single_user(current_user)
             # set login cookie anew
             self.set_login_cookie(current_user)
-            self.redirect(url_path_join(
-                self.base_url, 'user', name,
-            ))
+            without_prefix = self.request.path[len(self.hub.server.base_url):]
+            if not without_prefix.startswith('/'):
+                without_prefix = '/' + without_prefix
+            self.redirect(without_prefix)
         else:
             # not logged in to the right user,
             # clear any cookies and reload (will redirect to login)
@@ -293,7 +294,7 @@ class UserSpawnHandler(BaseHandler):
             self.redirect(url_concat(
                 self.settings['login_url'],
                 {'next': self.request.path,
-            }), permanent=False)
+            }))
 
 default_handlers = [
     (r'/user/([^/]+)/?.*', UserSpawnHandler),
