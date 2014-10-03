@@ -22,7 +22,7 @@ from jinja2 import Environment, FileSystemLoader
 import tornado.httpserver
 import tornado.options
 from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.log import LogFormatter
+from tornado.log import LogFormatter, app_log, access_log, gen_log
 from tornado import gen, web
 
 from IPython.utils.traitlets import (
@@ -71,6 +71,7 @@ flags = {
 
 class JupyterHubApp(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
+    name = 'jupyterhub'
     
     description = """Start a multi-user Jupyter Notebook server
     
@@ -298,6 +299,9 @@ class JupyterHubApp(Application):
         self.log.propagate = False
         
         # hook up tornado 3's loggers to our app handlers
+        for log in (app_log, access_log, gen_log):
+            # ensure all log statements identify the application they come from
+            log.name = self.log.name
         logger = logging.getLogger('tornado')
         logger.propagate = True
         logger.parent = self.log
