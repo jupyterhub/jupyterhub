@@ -4,3 +4,4 @@ jinja2
 simplepam
 sqlalchemy
 requests
+six
