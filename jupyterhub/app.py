@@ -263,8 +263,8 @@ class JupyterHubApp(Application):
     )
     db = Any()
     
-    admin_users = Set({getpass.getuser()}, config=True,
-        help="""list of usernames of admin users
+    admin_users = Set(config=True,
+        help="""set of usernames of admin users
 
         If unspecified, only the user that launches the server will be admin.
         """
@@ -379,7 +379,13 @@ class JupyterHubApp(Application):
     def init_users(self):
         """Load users into and from the database"""
         db = self.db
-
+        
+        if not self.admin_users:
+            # add current user as admin if there aren't any others
+            admins = db.query(orm.User).filter(orm.User.admin==True)
+            if admins.first() is None:
+                self.admin_users.add(getpass.getuser())
+        
         for name in self.admin_users:
             # ensure anyone specified as admin in config is admin in db
             user = orm.User.find(db, name)
