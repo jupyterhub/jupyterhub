@@ -313,6 +313,7 @@ class User(Base):
             api_token=api_token.token,
         )
         yield spawner.start()
+        spawner.start_polling()
 
         # store state
         self.state = spawner.get_state()
@@ -324,14 +325,18 @@ class User(Base):
 
     @gen.coroutine
     def stop(self):
-        """Stop the user's spawner"""
+        """Stop the user's spawner
+        
+        and cleanup after it.
+        """
         if self.spawner is None:
             return
+        self.spawner.stop_polling()
         status = yield self.spawner.poll()
         if status is None:
             yield self.spawner.stop()
-        self.state = {}
-        self.spawner = None
+        self.state = self.spawner.get_state()
+        self.last_activity = datetime.utcnow()
         self.server = None
         inspect(self).session.commit()
 

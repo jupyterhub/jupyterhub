@@ -155,6 +155,7 @@ def test_spawn(app, io_loop):
     user = add_user(db, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 201
+    assert 'pid' in user.state
     assert user.spawner is not None
     status = io_loop.run_sync(user.spawner.poll)
     assert status is None
@@ -173,5 +174,7 @@ def test_spawn(app, io_loop):
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204
     
-    assert user.spawner is None
+    assert 'pid' not in user.state
+    status = io_loop.run_sync(user.spawner.poll)
+    assert status == 0
     
