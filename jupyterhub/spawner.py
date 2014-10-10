@@ -80,15 +80,10 @@ class Spawner(LoggingConfigurable):
         help="""The command used for starting notebooks."""
     )
     
-    @classmethod
-    def fromJSON(cls, state, **kwargs):
-        """Create a new instance, and load its JSON state
-        
-        state will be a dict, loaded from JSON in the database.
-        """
-        inst = cls(**kwargs)
-        inst.load_state(state)
-        return inst
+    def __init__(self, **kwargs):
+        super(Spawner, self).__init__(**kwargs)
+        if self.user.state:
+            self.load_state(self.user.state)
     
     def load_state(self, state):
         """load state from the database
@@ -101,9 +96,10 @@ class Spawner(LoggingConfigurable):
         See Also
         --------
         
-        get_state
+        get_state, clear_state
         """
-        pass
+        if 'api_token' in state:
+            self.api_token = state['api_token']
     
     def get_state(self):
         """store the state necessary for load_state
@@ -117,7 +113,19 @@ class Spawner(LoggingConfigurable):
         state: dict
              a JSONable dict of state
         """
-        return dict(api_token=self.api_token)
+        state = {}
+        if self.api_token:
+            state['api_token'] = self.api_token
+        return state
+    
+    def clear_state(self):
+        """clear any state that should be cleared when the process stops
+        
+        State that should be preserved across server instances should not be cleared.
+        
+        Subclasses should call super, to ensure that state is properly cleared.
+        """
+        self.api_token = ''
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
@@ -208,7 +216,7 @@ class Spawner(LoggingConfigurable):
     def wait_for_death(self, timeout=10):
         """wait for the process to die, up to timeout seconds"""
         loop = IOLoop.current()
-        for i in range(int(timeout / self.poll_interval)):
+        for i in range(int(timeout / self.death_interval)):
             status = yield self.poll()
             if status is not None:
                 break
@@ -291,14 +299,22 @@ class LocalProcessSpawner(Spawner):
             raise ValueError("This should be impossible")
     
     def load_state(self, state):
+        """load pid from state"""
         super(LocalProcessSpawner, self).load_state(state)
-        self.pid = state['pid']
+        if 'pid' in state:
+            self.pid = state['pid']
     
     def get_state(self):
+        """add pid to state"""
         state = super(LocalProcessSpawner, self).get_state()
         if self.pid:
             state['pid'] = self.pid
         return state
+    
+    def clear_state(self):
+        """clear pid state"""
+        super(LocalProcessSpawner, self).clear_state()
+        self.pid = 0
     
     def sudo_cmd(self, user):
         return ['sudo', '-u', user.name] + self.sudo_args
@@ -335,38 +351,39 @@ class LocalProcessSpawner(Spawner):
             status = self.proc.poll()
             if status is not None:
                 # clear state if the process is done
-                self.pid = 0
+                self.clear_state()
             raise gen.Return(status)
         
         # if we resumed from stored state,
-        # we don't have the Popen handle anymore
+        # we don't have the Popen handle anymore, so rely on self.pid
+        
         if not self.pid:
             # no pid, not running
+            self.clear_state()
             raise gen.Return(0)
         
+        # send signal 0 to check if PID exists
         # this doesn't work on Windows, but that's okay because we don't support Windows.
-        try:
-            os.kill(self.pid, 0)
-        except OSError as e:
-            if e.errno == errno.ESRCH:
-                # no such process, return exitcode == 0, since we don't know the exit status
-                self.pid = 0
-                raise gen.Return(0)
-            else:
-                raise
+        alive = self._signal(0)
+        if not alive:
+            self.clear_state()
+            raise gen.Return(0)
         else:
-            # None indicates the process is running
             raise gen.Return(None)
     
     def _signal(self, sig):
-        """send a signal, and ignore ERSCH because it just means it already died"""
+        """send a signal, and ignore ERSCH because it just means it already died
+        
+        returns bool for whether the process existed to receive the signal.
+        """
         try:
             os.kill(self.pid, sig)
         except OSError as e:
             if e.errno == errno.ESRCH:
-                return
+                return False # process is gone
             else:
                 raise
+        return True # process exists
     
     @gen.coroutine
     def stop(self, now=False):
