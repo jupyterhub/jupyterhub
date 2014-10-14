@@ -8,7 +8,7 @@ import errno
 import os
 import socket
 from tornado import web, gen, ioloop
-from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
 from IPython.html.utils import url_path_join
@@ -81,6 +81,10 @@ def wait_for_http_server(url, timeout=10):
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return
+        except (OSError, socket.error) as e:
+            if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
+                app_log.warn("Failed to connect to %s (%s)", url, e)
+            yield gen.Task(loop.add_timeout, loop.time() + 0.25)
         else:
             return
     
