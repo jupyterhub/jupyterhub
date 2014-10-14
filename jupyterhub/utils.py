@@ -8,6 +8,7 @@ import errno
 import os
 import socket
 from tornado import web, gen, ioloop
+from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
 from IPython.html.utils import url_path_join
@@ -41,7 +42,7 @@ def random_hex(nbytes):
 
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):
-    """wait for a server to show up at ip:port"""
+    """wait for any server to show up at ip:port"""
     loop = ioloop.IOLoop.current()
     tic = loop.time()
     while loop.time() - tic < timeout:
@@ -55,6 +56,34 @@ def wait_for_server(ip, port, timeout=10):
             yield gen.Task(loop.add_timeout, loop.time() + 0.1)
         else:
             return
+    raise TimeoutError
+
+@gen.coroutine
+def wait_for_http_server(url, timeout=10):
+    """Wait for an HTTP Server to respond at url
+    
+    Any non-5XX response code will do, even 404.
+    """
+    loop = ioloop.IOLoop.current()
+    tic = loop.time()
+    client = AsyncHTTPClient()
+    while loop.time() - tic < timeout:
+        try:
+            r = yield client.fetch(url, follow_redirects=False)
+        except HTTPError as e:
+            if e.code >= 500:
+                # failed to respond properly, wait and try again
+                if e.code != 599:
+                    # we expect 599 for no connection,
+                    # but 502 or other proxy error is conceivable
+                    app_log.warn("Server at %s responded with error: %s", url, e.code)
+                yield gen.Task(loop.add_timeout, loop.time() + 0.25)
+            else:
+                app_log.debug("Server at %s responded with %s", url, e.code)
+                return
+        else:
+            return
+    
     raise TimeoutError
 
 def auth_decorator(check_auth):

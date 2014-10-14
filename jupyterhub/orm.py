@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 
 from IPython.utils.py3compat import str_to_unicode
 
-from .utils import random_port, url_path_join, wait_for_server
+from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
 
 
 def new_token(*args, **kwargs):
@@ -96,9 +96,12 @@ class Server(Base):
         )
     
     @gen.coroutine
-    def wait_up(self, timeout=10):
+    def wait_up(self, timeout=10, http=False):
         """Wait for this server to come up"""
-        yield wait_for_server(self.ip or 'localhost', self.port, timeout=timeout)
+        if http:
+            yield wait_for_http_server(self.url.replace('//*', '//localhost'), timeout=timeout)
+        else:
+            yield wait_for_server(self.ip or 'localhost', self.port, timeout=timeout)
     
     def is_up(self):
         """Is the server accepting connections?"""
@@ -323,8 +326,8 @@ class User(Base):
         self.state = spawner.get_state()
         self.last_activity = datetime.utcnow()
         db.commit()
-    
-        yield self.server.wait_up()
+        
+        yield self.server.wait_up(http=True)
         raise gen.Return(self)
 
     @gen.coroutine
