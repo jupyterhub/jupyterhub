@@ -448,20 +448,25 @@ class JupyterHubApp(Application):
         
         for user in db.query(orm.User):
             if not user.state:
+                # without spawner state, server isn't valid
+                user.server = None
                 user_summaries.append(_user_summary(user))
                 continue
             self.log.debug("Loading state for %s from db", user.name)
-            spawner = self.spawner_class.fromJSON(user.state, user=user, hub=self.hub, config=self.config)
+            user.spawner = spawner = self.spawner_class(
+                user=user, hub=self.hub, config=self.config,
+            )
             status = run_sync(spawner.poll)
             if status is None:
-                self.log.info("User %s still running", user.name)
-                user.spawner = spawner
+                self.log.info("%s still running", user.name)
                 spawner.add_poll_callback(user_stopped, user)
                 spawner.start_polling()
             else:
-                self.log.warn("Failed to load state for %s, assuming server is not running.", user.name)
-                # not running, state is invalid
-                user.state = {}
+                # user not running. This is expected if server is None,
+                # but indicates the user's server died while the Hub wasn't running
+                # if user.server is defined.
+                log = self.log.warn if user.server else self.log.debug
+                log("%s not running.", user.name)
                 user.server = None
 
             user_summaries.append(_user_summary(user))
@@ -508,7 +513,8 @@ class JupyterHubApp(Application):
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
         ]
-        if self.log_level == logging.DEBUG:
+        if False:
+        # if self.log_level == logging.DEBUG:
             cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])

@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import getpass
+import logging
 
 from pytest import fixture
 from tornado import ioloop
@@ -45,7 +46,7 @@ def io_loop():
 
 @fixture(scope='module')
 def app(request):
-    app = MockHubApp()
+    app = MockHubApp.instance(log_level=logging.DEBUG)
     app.start([])
     request.addfinalizer(app.stop)
     return app

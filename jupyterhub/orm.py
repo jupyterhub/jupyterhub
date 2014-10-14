@@ -305,14 +305,19 @@ class User(Base):
         api_token = self.new_api_token()
         db.add(api_token)
         db.commit()
-
+        
+        
         spawner = self.spawner = spawner_class(
             config=config,
             user=self,
             hub=hub,
             api_token=api_token.token,
         )
+        # we are starting a new server, make sure it doesn't restore state
+        spawner.clear_state()
+        
         yield spawner.start()
+        spawner.start_polling()
 
         # store state
         self.state = spawner.get_state()
@@ -324,14 +329,19 @@ class User(Base):
 
     @gen.coroutine
     def stop(self):
-        """Stop the user's spawner"""
+        """Stop the user's spawner
+        
+        and cleanup after it.
+        """
         if self.spawner is None:
             return
+        self.spawner.stop_polling()
         status = yield self.spawner.poll()
         if status is None:
             yield self.spawner.stop()
-        self.state = {}
-        self.spawner = None
+        self.spawner.clear_state()
+        self.state = self.spawner.get_state()
+        self.last_activity = datetime.utcnow()
         self.server = None
         inspect(self).session.commit()
 
