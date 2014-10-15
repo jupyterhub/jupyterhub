@@ -9,7 +9,6 @@ import io
 import logging
 import os
 from datetime import datetime
-from six import text_type
 from subprocess import Popen
 
 try:
@@ -667,8 +666,10 @@ class JupyterHubApp(Application):
                 answer = ask()
             if answer.startswith('n'):
                 return
-
-        config_text = text_type(self.generate_config_file(), 'utf8')
+        
+        config_text = self.generate_config_file()
+        if isinstance(config_text, bytes):
+            config_text = config_text.decode('utf8')
         print("Writing default config to: %s" % self.config_file)
         with io.open(self.config_file, encoding='utf8', mode='w') as f:
             f.write(config_text)

@@ -9,6 +9,8 @@ import json
 import socket
 import uuid
 
+from six import text_type
+
 from tornado import gen
 from tornado.log import app_log
 from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
@@ -24,8 +26,6 @@ from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 
-from IPython.utils.py3compat import str_to_unicode
-
 from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
 
 
@@ -34,7 +34,7 @@ def new_token(*args, **kwargs):
     
     For now, just UUIDs.
     """
-    return str_to_unicode(uuid.uuid4().hex)
+    return text_type(uuid.uuid4().hex)
 
 
 class JSONDict(TypeDecorator):

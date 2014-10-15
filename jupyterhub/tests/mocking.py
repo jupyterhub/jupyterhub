@@ -10,7 +10,7 @@ except ImportError:
 
 from tornado.ioloop import IOLoop
 
-from IPython.utils.py3compat import unicode_type
+from six import text_type
 
 from ..spawner import LocalProcessSpawner
 from ..app import JupyterHubApp
@@ -19,9 +19,9 @@ from .. import orm
 
 def mock_authenticate(username, password, service='login'):
     # mimic simplepam's failure to handle unicode
-    if isinstance(username, unicode_type):
+    if isinstance(username, text_type):
         return False
-    if isinstance(password, unicode_type):
+    if isinstance(password, text_type):
         return False
     
     # just use equality for testing
