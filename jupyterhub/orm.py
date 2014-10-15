@@ -314,10 +314,10 @@ class User(Base):
             config=config,
             user=self,
             hub=hub,
-            api_token=api_token.token,
         )
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
+        spawner.api_token = api_token.token
         
         yield spawner.start()
         spawner.start_polling()

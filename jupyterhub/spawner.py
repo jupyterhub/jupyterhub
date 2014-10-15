@@ -98,7 +98,7 @@ class Spawner(LoggingConfigurable):
         
         get_state, clear_state
         """
-        if 'api_token' in state:
+        if state.get('api_token'):
             self.api_token = state['api_token']
     
     def get_state(self):
