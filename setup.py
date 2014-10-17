@@ -133,7 +133,12 @@ class Bower(BaseCommand):
     user_options = []
     
     def run(self):
-        check_call(['bower', 'install', '--allow-root'])
+        try:
+            check_call(['bower', 'install', '--allow-root'])
+        except OSError as e:
+            print("Failed to run bower: %s" % e, file=sys.stderr)
+            print("You can install bower with `npm install -g bower`", file=sys.stderr)
+            raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
 
@@ -152,13 +157,18 @@ class CSS(BaseCommand):
         style_less = pjoin(static, 'less', 'style.less')
         style_css = pjoin(static, 'css', 'style.min.css')
         sourcemap = style_css + '.map'
-        check_call([
-            'lessc', '-x', '--verbose',
-            '--source-map-basepath={}'.format(static),
-            '--source-map={}'.format(sourcemap),
-            '--source-map-rootpath=../',
-            style_less, style_css,
-        ])
+        try:
+            check_call([
+                'lessc', '-x', '--verbose',
+                '--source-map-basepath={}'.format(static),
+                '--source-map={}'.format(sourcemap),
+                '--source-map-rootpath=../',
+                style_less, style_css,
+            ])
+        except OSError as e:
+            print("Failed to run lessc: %s" % e, file=sys.stderr)
+            print("You can install less with `npm install -g less`", file=sys.stderr)
+            raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
 
