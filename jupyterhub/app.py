@@ -19,6 +19,8 @@ except NameError:
 
 from jinja2 import Environment, FileSystemLoader
 
+from sqlalchemy.exc import OperationalError
+
 import tornado.httpserver
 import tornado.options
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -347,11 +349,31 @@ class JupyterHubApp(Application):
             (r'(.*)', handlers.Template404),
         ])
     
+    def _check_db_path(self, path):
+        """More informative log messages for failed filesystem access"""
+        path = os.path.abspath(path)
+        parent, fname = os.path.split(path)
+        user = getpass.getuser()
+        if not os.path.isdir(parent):
+            self.log.error("Directory %s does not exist", parent)
+        if os.path.exists(parent) and not os.access(parent, os.W_OK):
+            self.log.error("%s cannot create files in %s", user, parent)
+        if os.path.exists(path) and not os.access(path, os.W_OK):
+            self.log.error("%s cannot edit %s", user, path)
+    
     def init_db(self):
         """Create the database connection"""
-        self.db = orm.new_session(self.db_url, reset=self.reset_db, echo=self.debug_db,
-            **self.db_kwargs
-        )
+        self.log.debug("Connecting to db: %s", self.db_url)
+        try:
+            self.db = orm.new_session(self.db_url, reset=self.reset_db, echo=self.debug_db,
+                **self.db_kwargs
+            )
+        except OperationalError as e:
+            self.log.error("Failed to connect to db: %s", self.db_url)
+            self.log.debug("Database error was:", exc_info=True)
+            if self.db_url.startswith('sqlite:///'):
+                self._check_db_path(self.db_url.split(':///', 1)[1])
+            self.exit(1)
     
     def init_hub(self):
         """Load the Hub config into the database"""
