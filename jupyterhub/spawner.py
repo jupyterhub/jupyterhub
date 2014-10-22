@@ -6,8 +6,9 @@
 import errno
 import os
 import pwd
+import re
 import signal
-from subprocess import Popen
+from subprocess import Popen, check_output, PIPE, CalledProcessError
 
 from tornado import gen
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -19,6 +20,7 @@ from IPython.utils.traitlets import (
 
 from .utils import random_port
 
+NUM_PAT = re.compile(r'\d+')
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -45,15 +47,6 @@ class Spawner(LoggingConfigurable):
     debug = Bool(False, config=True,
         help="Enable debug-logging of the single-user server"
     )
-    def _debug_changed(self, name, old, new):
-        try:
-            # remove --debug if False,
-            # and avoid doubling it if True
-            self.cmd.remove('--debug')
-        except ValueError:
-            pass
-        if new:
-            self.cmd.append('--debug')
     
     env_keep = List([
         'PATH',
@@ -129,7 +122,7 @@ class Spawner(LoggingConfigurable):
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
-        return [
+        args = [
             '--user=%s' % self.user.name,
             '--port=%i' % self.user.server.port,
             '--cookie-name=%s' % self.user.server.cookie_name,
@@ -138,6 +131,9 @@ class Spawner(LoggingConfigurable):
             '--hub-prefix=%s' % self.hub.server.base_url,
             '--hub-api-url=%s' % self.hub.api_url,
             ]
+        if self.debug:
+            args.append('--debug')
+        return args
     
     @gen.coroutine
     def start(self):
@@ -324,7 +320,37 @@ class LocalProcessSpawner(Spawner):
             env['USER'] = self.user.name
             env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
         return env
-
+    
+    def _get_pg_pids(self, ppid):
+        """get pids in group excluding the group id itself
+        
+        used for getting actual process started by `sudo`
+        """
+        out = check_output(['pgrep', '-g', str(ppid)]).decode('utf8', 'replace')
+        self.log.debug("pgrep output: %r", out)
+        return [ int(ns) for ns in NUM_PAT.findall(out) if int(ns) != ppid ]
+    
+    @gen.coroutine
+    def get_sudo_pid(self):
+        """Get the actual process started with sudo
+        
+        use the output of `pgrep -g PPID` to get the child process ID
+        """
+        ppid = self.proc.pid
+        loop = IOLoop.current()
+        for i in range(100):
+            if self.proc.poll() is not None:
+                break
+            pids = self._get_pg_pids(ppid)
+            if pids:
+                raise gen.Return(pids[0])
+            else:
+                yield gen.Task(loop.add_timeout, loop.time() + 0.1)
+        self.log.error("Failed to get single-user PID")
+        # return sudo pid if we can't get the real PID
+        # this shouldn't happen
+        raise gen.Return(ppid)
+    
     @gen.coroutine
     def start(self):
         """Start the process"""
@@ -341,7 +367,11 @@ class LocalProcessSpawner(Spawner):
         self.proc = Popen(cmd, env=env,
             preexec_fn=self.make_preexec_fn(self.user.name),
         )
-        self.pid = self.proc.pid
+        if self.set_user == 'sudo':
+            self.pid = yield self.get_sudo_pid()
+            self.proc = None
+        else:
+            self.pid = self.proc.pid
     
     @gen.coroutine
     def poll(self):
@@ -364,18 +394,27 @@ class LocalProcessSpawner(Spawner):
         
         # send signal 0 to check if PID exists
         # this doesn't work on Windows, but that's okay because we don't support Windows.
-        alive = self._signal(0)
+        alive = yield self._signal(0)
         if not alive:
             self.clear_state()
             raise gen.Return(0)
         else:
             raise gen.Return(None)
     
+    @gen.coroutine
     def _signal(self, sig):
         """send a signal, and ignore ERSCH because it just means it already died
         
         returns bool for whether the process existed to receive the signal.
         """
+        if self.set_user == 'sudo':
+            rc = yield self._signal_sudo(sig)
+            raise gen.Return(rc)
+        else:
+            raise gen.Return(self._signal_setuid(sig))
+    
+    def _signal_setuid(self, sig):
+        """simple implementation of signal, which we can use when we are using setuid (we are root)"""
         try:
             os.kill(self.pid, sig)
         except OSError as e:
@@ -384,6 +423,29 @@ class LocalProcessSpawner(Spawner):
             else:
                 raise
         return True # process exists
+        
+    @gen.coroutine
+    def _signal_sudo(self, sig):
+        """use `sudo kill` to send signals"""
+        # check for existence with `ps -p` instead of `kill -0`
+        try:
+            check_output(['ps', '-p', str(self.pid)], stderr=PIPE)
+        except CalledProcessError:
+            raise gen.Return(False) # process is gone
+        else:
+            if sig == 0:
+                raise gen.Return(True) # process exists
+        
+        # build sudo -u user kill -SIG PID
+        cmd = self.sudo_cmd(self.user)
+        cmd.extend([
+            'kill', '-%i' % sig, str(self.pid),
+        ])
+        self.log.debug("Signaling: %s", cmd)
+        check_output(cmd,
+            preexec_fn=self.make_preexec_fn(self.user.name),
+        )
+        raise gen.Return(True) # process exists
     
     @gen.coroutine
     def stop(self, now=False):
@@ -396,7 +458,7 @@ class LocalProcessSpawner(Spawner):
             if status is not None:
                 return
             self.log.debug("Interrupting %i", self.pid)
-            self._signal(signal.SIGINT)
+            yield self._signal(signal.SIGINT)
             yield self.wait_for_death(self.INTERRUPT_TIMEOUT)
         
         # clean shutdown failed, use TERM
@@ -404,7 +466,7 @@ class LocalProcessSpawner(Spawner):
         if status is not None:
             return
         self.log.debug("Terminating %i", self.pid)
-        self._signal(signal.SIGTERM)
+        yield self._signal(signal.SIGTERM)
         yield self.wait_for_death(self.TERM_TIMEOUT)
         
         # TERM failed, use KILL
@@ -412,7 +474,7 @@ class LocalProcessSpawner(Spawner):
         if status is not None:
             return
         self.log.debug("Killing %i", self.pid)
-        self._signal(signal.SIGKILL)
+        yield self._signal(signal.SIGKILL)
         yield self.wait_for_death(self.KILL_TIMEOUT)
 
         status = yield self.poll()
