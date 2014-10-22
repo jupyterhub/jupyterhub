@@ -326,15 +326,15 @@ class LocalProcessSpawner(Spawner):
         
         used for getting actual process started by `sudo`
         """
-        out = check_output(['ps', '-g', str(ppid), '-o', 'pid=']).decode('utf8', 'replace')
-        self.log.debug("ps output: %r", out)
+        out = check_output(['pgrep', '-g', str(ppid)]).decode('utf8', 'replace')
+        self.log.debug("pgrep output: %r", out)
         return [ int(ns) for ns in NUM_PAT.findall(out) if int(ns) != ppid ]
     
     @gen.coroutine
     def get_sudo_pid(self):
         """Get the actual process started with sudo
         
-        use the output of `ps -g PPID` to get the child process ID
+        use the output of `pgrep -g PPID` to get the child process ID
         """
         ppid = self.proc.pid
         loop = IOLoop.current()
