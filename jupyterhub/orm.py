@@ -384,7 +384,8 @@ class CookieToken(Token, Base):
 
 def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
     """Create a new session at url"""
-    kwargs.setdefault('connect_args', {'check_same_thread': False})
+    if url.startswith('sqlite'):
+        kwargs.setdefault('connect_args', {'check_same_thread': False})
     kwargs.setdefault('poolclass', StaticPool)
     engine = create_engine(url, **kwargs)
     Session = sessionmaker(bind=engine)
