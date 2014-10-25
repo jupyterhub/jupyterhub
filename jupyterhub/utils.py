@@ -4,9 +4,12 @@
 # Distributed under the terms of the Modified BSD License.
 
 import binascii
+import getpass
 import errno
 import os
 import socket
+
+from six import text_type
 from tornado import web, gen, ioloop
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
@@ -20,6 +23,14 @@ except NameError:
     # python < 3.3
     class TimeoutError(Exception):
         pass
+
+
+def getuser_unicode():
+    """
+    Call getpass.getuser, ensuring that the output is returned as unicode.
+    """
+    return text_type(getpass.getuser())
+
 
 def random_port():
     """get a single random port"""

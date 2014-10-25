@@ -3,13 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import getpass
 import logging
 
 from pytest import fixture
 from tornado import ioloop
 
 from .. import orm
+from ..utils import getuser_unicode
 
 from .mocking import MockHubApp
 
@@ -24,7 +24,7 @@ def db():
     if _db is None:
         _db = orm.new_session('sqlite:///:memory:', echo=True)
         user = orm.User(
-            name=getpass.getuser(),
+            name=getuser_unicode(),
             server=orm.Server(),
         )
         hub = orm.Hub(
