@@ -48,23 +48,25 @@ def test_auth_api(app):
     
     # make a new cookie token
     user = db.query(orm.User).first()
+    api_token = user.new_api_token()
+    db.add(api_token)
     cookie_token = user.new_cookie_token()
     db.add(cookie_token)
     db.commit()
     
     # check success:
-    r = api_request(app, 'authorizations', cookie_token.token)
+    r = api_request(app, 'authorizations/token', api_token.token)
     assert r.status_code == 200
     reply = r.json()
     assert reply['user'] == user.name
     
     # check fail
-    r = api_request(app, 'authorizations', cookie_token.token,
+    r = api_request(app, 'authorizations/token', api_token.token,
         headers={'Authorization': 'no sir'},
     )
     assert r.status_code == 403
 
-    r = api_request(app, 'authorizations', cookie_token.token,
+    r = api_request(app, 'authorizations/token', api_token.token,
         headers={'Authorization': 'token: %s' % cookie_token.token},
     )
     assert r.status_code == 403

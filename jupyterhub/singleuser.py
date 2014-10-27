@@ -28,19 +28,20 @@ if V(IPython.__version__) < V('2.2'):
 # which authenticate via the central auth server.
 
 
-def verify_token(self, token):
+def verify_token(self, cookie_name, encrypted_cookie):
     """monkeypatch method for token verification"""
-    token_cache = self.settings['token_cache']
-    if token in token_cache:
+    cookie_cache = self.settings['cookie_cache']
+    if encrypted_cookie in cookie_cache:
         # we've seen this token before, don't ask upstream again
-        return token_cache[token]
+        return cookie_cache[encrypted_cookie]
     
     hub_api_url = self.settings['hub_api_url']
     hub_api_key = self.settings['hub_api_key']
     r = requests.get(url_path_join(
-        hub_api_url, "authorizations", token,
+        hub_api_url, "authorizations/cookie", cookie_name,
     ),
-        headers = {'Authorization' : 'token %s' % hub_api_key}
+        headers = {'Authorization' : 'token %s' % hub_api_key},
+        data=encrypted_cookie,
     )
     if r.status_code == 404:
         data = {'user' : ''}
@@ -49,17 +50,16 @@ def verify_token(self, token):
         data = None
     else:
         data = r.json()
-    token_cache[token] = data
+    cookie_cache[encrypted_cookie] = data
     return data
 
 
 def get_current_user(self):
     """alternative get_current_user to query the central server"""
     my_user = self.settings['user']
-    btoken = self.get_secure_cookie(self.cookie_name)
-    if btoken:
-        token = btoken.decode('utf8', 'replace')
-        auth_data = self.verify_token(token)
+    encrypted_cookie = self.get_cookie(self.cookie_name)
+    if encrypted_cookie:
+        auth_data = self.verify_token(self.cookie_name, encrypted_cookie)
         if not auth_data:
             # treat invalid token the same as no token
             return None
@@ -124,10 +124,9 @@ class SingleUserNotebookApp(NotebookApp):
         s = getattr(self, 'tornado_settings',
                 getattr(self, 'webapp_settings')
         )
-        s['token_cache'] = {}
+        s['cookie_cache'] = {}
         s['user'] = self.user
         s['hub_api_key'] = env.pop('JPY_API_TOKEN')
-        s['cookie_secret'] = env.pop('JPY_COOKIE_SECRET')
         s['cookie_name'] = self.cookie_name
         s['login_url'] = url_path_join(self.hub_prefix, 'login')
         s['hub_api_url'] = self.hub_api_url
