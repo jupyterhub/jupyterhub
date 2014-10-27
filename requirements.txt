@@ -3,5 +3,7 @@ tornado>=3.2
 jinja2
 simplepam
 sqlalchemy
+sqlalchemy-utils
+cryptography
 requests
 six

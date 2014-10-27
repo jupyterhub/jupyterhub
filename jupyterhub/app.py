@@ -4,6 +4,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import binascii
 import io
 import logging
 import os
@@ -16,6 +17,7 @@ except NameError:
     # py3
     raw_input = input
 
+from six import text_type
 from jinja2 import Environment, FileSystemLoader
 
 from sqlalchemy.exc import OperationalError
@@ -28,7 +30,7 @@ from tornado import gen, web
 
 from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
-    Type, Set, Instance,
+    Type, Set, Instance, Bytes,
 )
 from IPython.config import Application, catch_config_error
 
@@ -39,7 +41,7 @@ from . import handlers, apihandlers
 from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import (
-    url_path_join, random_hex, TimeoutError,
+    url_path_join, TimeoutError,
     ISO8601_ms, ISO8601_s, getuser_unicode,
 )
 # classes for config
@@ -68,6 +70,8 @@ flags = {
         "disable persisting state database to disk"
     ),
 }
+
+SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
 
 
 class JupyterHubApp(Application):
@@ -203,14 +207,27 @@ class JupyterHubApp(Application):
         if newnew != new:
             self.hub_prefix = newnew
     
-    cookie_secret = Unicode(config=True,
+    cookie_secret = Bytes(config=True, env='JPY_COOKIE_SECRET',
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
         """
     )
-    def _cookie_secret_default(self):
-        return os.environ.get('JPY_COOKIE_SECRET', random_hex(64))
+    
+    cookie_secret_file = Unicode('jupyterhub_cookie_secret', config=True,
+        help="""File in which to store the cookie secret."""
+    )
+    
+    db_secret = Bytes(config=True, env='JPY_DB_SECRET',
+        help="""The database secret to use to encrypt sensitive information in the database.
+
+        Loaded from the JPY_DB_SECRET env variable by default.
+        """
+    )
+    
+    db_secret_file = Unicode('jupyterhub_db_secret', config=True,
+        help="""File in which to store the database secret."""
+    )
     
     authenticator_class = Type(PAMAuthenticator, Authenticator,
         config=True,
@@ -360,11 +377,59 @@ class JupyterHubApp(Application):
         if os.path.exists(path) and not os.access(path, os.W_OK):
             self.log.error("%s cannot edit %s", user, path)
     
+    def init_secrets(self):
+        traits = self.traits()
+        for key in ('cookie', 'db'):
+            trait_name = '{}_secret'.format(key)
+            env_name = traits[trait_name].get_metadata('env')
+            file_attr_name = '{}_secret_file'.format(key)
+            secret_file = os.path.abspath(
+                os.path.expanduser(getattr(self, file_attr_name))
+            )
+            secret = getattr(self, trait_name)
+            secret_from = 'config'
+            # load priority: 1. config, 2. env, 3. file
+            if not secret and os.environ.get(env_name):
+                secret_from = 'env'
+                self.log.info("Loading %s from env[%s]", trait_name, env_name)
+                secret = binascii.a2b_hex(os.environ[env_name])
+            if not secret and os.path.exists(secret_file):
+                secret_from = 'file'
+                perm = os.stat(secret_file).st_mode
+                if perm & 0o077:
+                    self.log.error("Bad permissions on %s", secret_file)
+                else:
+                    self.log.info("Loading %s from %s", trait_name, secret_file)
+                    with io.open(secret_file) as f:
+                        b64_secret = f.read()
+                    try:
+                        secret = binascii.a2b_base64(b64_secret)
+                    except Exception as e:
+                        self.log.error("%s does not contain b64 key: %s", secret_file, e)
+            if not secret:
+                secret_from = 'new'
+                self.log.debug("Generating new %s", trait_name)
+                secret = os.urandom(SECRET_BYTES)
+            
+            if secret_file and secret_from == 'new':
+                # if we generated a new secret, store it in the secret_file
+                self.log.info("Writing %s to %s", trait_name, secret_file)
+                b64_secret = text_type(binascii.b2a_base64(secret))
+                with io.open(secret_file, 'w', encoding='utf8') as f:
+                    f.write(b64_secret)
+                try:
+                    os.chmod(secret_file, 0o600)
+                except OSError:
+                    self.log.warn("Failed to set permissions on %s", secret_file)
+            # store the loaded trait value
+            setattr(self, trait_name, secret)
+    
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
         try:
             self.db = orm.new_session(self.db_url, reset=self.reset_db, echo=self.debug_db,
+                crypto_key=self.db_secret,
                 **self.db_kwargs
             )
         except OperationalError as e:
@@ -383,7 +448,6 @@ class JupyterHubApp(Application):
                     ip=self.hub_ip,
                     port=self.hub_port,
                     base_url=self.hub_prefix,
-                    cookie_secret=self.cookie_secret,
                     cookie_name=u'jupyter-hub-token',
                 )
             )
@@ -596,7 +660,7 @@ class JupyterHubApp(Application):
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,
-            cookie_secret=self.hub.server.cookie_secret,
+            cookie_secret=self.cookie_secret,
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
@@ -628,6 +692,7 @@ class JupyterHubApp(Application):
         self.init_logging()
         self.write_pid_file()
         self.init_ports()
+        self.init_secrets()
         self.init_db()
         self.init_hub()
         self.init_proxy()

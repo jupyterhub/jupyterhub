@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from binascii import b2a_hex
 from datetime import datetime
 import errno
 import json
@@ -25,6 +26,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
+from sqlalchemy_utils.types import EncryptedType
 
 from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
 
@@ -74,7 +76,6 @@ class Server(Base):
     ip = Column(Unicode, default=u'localhost')
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode, default=u'/')
-    cookie_secret = Column(Unicode, default=u'')
     cookie_name = Column(Unicode, default=u'cookie')
     
     def __repr__(self):
@@ -124,7 +125,7 @@ class Proxy(Base):
     """
     __tablename__ = 'proxies'
     id = Column(Integer, primary_key=True)
-    auth_token = Column(Unicode, default=new_token)
+    auth_token = Column(EncryptedType(Unicode, key=b''), default=new_token)
     _public_server_id = Column(Integer, ForeignKey('servers.id'))
     public_server = relationship(Server, primaryjoin=_public_server_id == Server.id)
     _api_server_id = Column(Integer, ForeignKey('servers.id'))
@@ -350,7 +351,7 @@ class User(Base):
 
 class Token(object):
     """Mixin for token tables, since we have two"""
-    token = Column(String, primary_key=True)
+    token = Column(EncryptedType(Unicode, key=b''), primary_key=True)
     @declared_attr
     def user_id(cls):
         return Column(Integer, ForeignKey('users.id'))
@@ -381,7 +382,7 @@ class CookieToken(Token, Base):
     __tablename__ = 'cookie_tokens'
 
 
-def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
+def new_session(url="sqlite:///:memory:", reset=False, crypto_key=None, **kwargs):
     """Create a new session at url"""
     if url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -391,6 +392,12 @@ def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
     session = Session()
     if reset:
         Base.metadata.drop_all(engine)
+    # configure encryption key
+    if crypto_key:
+        for table in Base.metadata.tables.values():
+            for column in table.columns.values():
+                if isinstance(column.type, EncryptedType):
+                    column.type.key = crypto_key
     Base.metadata.create_all(engine)
     return session
 
