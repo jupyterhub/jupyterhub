@@ -56,8 +56,9 @@ def verify_token(self, token):
 def get_current_user(self):
     """alternative get_current_user to query the central server"""
     my_user = self.settings['user']
-    token = self.get_cookie(self.cookie_name, '')
-    if token:
+    btoken = self.get_secure_cookie(self.cookie_name)
+    if btoken:
+        token = btoken.decode('utf8', 'replace')
         auth_data = self.verify_token(token)
         if not auth_data:
             # treat invalid token the same as no token

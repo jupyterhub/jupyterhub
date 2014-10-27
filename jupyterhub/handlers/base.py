@@ -83,12 +83,15 @@ class BaseHandler(RequestHandler):
 
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
-        token = self.get_cookie(self.hub.server.cookie_name, None)
-        if token:
+        btoken = self.get_secure_cookie(self.hub.server.cookie_name)
+        if btoken:
+            token = btoken.decode('utf8', 'replace')
             cookie_token = orm.CookieToken.find(self.db, token)
             if cookie_token:
                 return cookie_token.user
             else:
+                # don't log the token itself
+                self.log.warn("Invalid cookie token")
                 # have cookie, but it's not valid. Clear it and start over.
                 self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
 
@@ -128,7 +131,7 @@ class BaseHandler(RequestHandler):
             cookie_token = user.new_cookie_token()
             self.db.add(cookie_token)
             self.db.commit()
-            self.set_cookie(
+            self.set_secure_cookie(
                 user.server.cookie_name,
                 cookie_token.token,
                 path=user.server.base_url,
@@ -139,7 +142,7 @@ class BaseHandler(RequestHandler):
             cookie_token = user.new_cookie_token()
             self.db.add(cookie_token)
             self.db.commit()
-            self.set_cookie(
+            self.set_secure_cookie(
                 self.hub.server.cookie_name,
                 cookie_token.token,
                 path=self.hub.server.base_url)
