@@ -25,7 +25,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
-from sqlalchemy_utils.types import EncryptedType, PasswordType
+from sqlalchemy_utils.types import PasswordType
 
 from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
 
@@ -125,7 +125,7 @@ class Proxy(Base):
     """
     __tablename__ = 'proxies'
     id = Column(Integer, primary_key=True)
-    auth_token = Column(EncryptedType(Unicode, key=b''), default=new_token)
+    auth_token = None
     _public_server_id = Column(Integer, ForeignKey('servers.id'))
     public_server = relationship(Server, primaryjoin=_public_server_id == Server.id)
     _api_server_id = Column(Integer, ForeignKey('servers.id'))
@@ -197,7 +197,7 @@ class Proxy(Base):
             yield f
 
     @gen.coroutine
-    def fetch_routes(self, client=None):
+    def get_routes(self, client=None):
         """Fetch the proxy's routes"""
         resp = yield self.api_request('', client=client)
         raise gen.Return(json.loads(resp.body.decode('utf8', 'replace')))
@@ -411,7 +411,7 @@ class CookieToken(Token, Base):
     __tablename__ = 'cookie_tokens'
 
 
-def new_session(url="sqlite:///:memory:", reset=False, crypto_key=None, **kwargs):
+def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
     """Create a new session at url"""
     if url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -421,12 +421,6 @@ def new_session(url="sqlite:///:memory:", reset=False, crypto_key=None, **kwargs
     session = Session()
     if reset:
         Base.metadata.drop_all(engine)
-    # configure encryption key
-    if crypto_key:
-        for table in Base.metadata.tables.values():
-            for column in table.columns.values():
-                if isinstance(column.type, EncryptedType):
-                    column.type.key = crypto_key
     Base.metadata.create_all(engine)
     return session
 
