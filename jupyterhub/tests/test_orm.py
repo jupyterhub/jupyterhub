@@ -81,17 +81,13 @@ def test_tokens(db):
     db.add(user)
     db.commit()
     token = user.new_cookie_token()
-    db.add(token)
-    db.commit()
-    assert token in user.cookie_tokens
-    db.add(user.new_cookie_token())
-    db.add(user.new_cookie_token())
-    db.add(user.new_api_token())
-    db.commit()
+    assert any(t.hashed == token for t in user.cookie_tokens)
+    user.new_cookie_token()
+    user.new_cookie_token()
+    user.new_api_token()
     assert len(user.api_tokens) == 1
     assert len(user.cookie_tokens) == 3
-    
-    found = orm.CookieToken.find(db, token=token.token)
-    assert found.token == token.token
-    found = orm.APIToken.find(db, token.token)
+    found = orm.CookieToken.find(db, token=token)
+    assert found.hashed == token
+    found = orm.APIToken.find(db, 'something else')
     assert found is None

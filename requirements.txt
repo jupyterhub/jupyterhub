@@ -5,5 +5,6 @@ simplepam
 sqlalchemy
 sqlalchemy-utils
 cryptography
+passlib
 requests
 six

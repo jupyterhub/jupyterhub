@@ -3,7 +3,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from binascii import b2a_hex
 from datetime import datetime
 import errno
 import json
@@ -19,14 +18,14 @@ from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
     inspect,
-    Column, Integer, String, ForeignKey, Unicode, Binary, Boolean,
+    Column, Integer, ForeignKey, Unicode, Binary, Boolean,
     DateTime,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
-from sqlalchemy_utils.types import EncryptedType
+from sqlalchemy_utils.types import EncryptedType, PasswordType
 
 from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
 
@@ -38,6 +37,7 @@ def new_token(*args, **kwargs):
     """
     return text_type(uuid.uuid4().hex)
 
+PASSWORD_SCHEMES = ['pbkdf2_sha512']
 
 class JSONDict(TypeDecorator):
     """Represents an immutable structure as a json-encoded string.
@@ -273,8 +273,15 @@ class User(Base):
             )
     
     def _new_token(self, cls):
+        """Create a new API or Cookie token"""
         assert self.id is not None
-        return cls(token=new_token(), user_id=self.id)
+        db = inspect(self).session
+        token = new_token()
+        orm_token = cls(user_id=self.id)
+        orm_token.token = token
+        db.add(orm_token)
+        db.commit()
+        return token
     
     def new_api_token(self):
         """Return a new API token"""
@@ -306,7 +313,6 @@ class User(Base):
         db.commit()
 
         api_token = self.new_api_token()
-        db.add(api_token)
         db.commit()
         
         
@@ -317,7 +323,7 @@ class User(Base):
         )
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
-        spawner.api_token = api_token.token
+        spawner.api_token = api_token
         
         yield spawner.start()
         spawner.start_polling()
@@ -351,15 +357,32 @@ class User(Base):
 
 class Token(object):
     """Mixin for token tables, since we have two"""
-    token = Column(EncryptedType(Unicode, key=b''), primary_key=True)
+    id = Column(Integer, primary_key=True)
+    hashed = Column(PasswordType(schemes=PASSWORD_SCHEMES))
+    prefix = Column(Unicode)
+    prefix_length = 4
+    _token = None
+    
+    @property
+    def token(self):
+        """plaintext tokens will only be accessible for tokens created during this session"""
+        return self._token
+    
+    @token.setter
+    def token(self, token):
+        """Store the hashed value and prefix for a token"""
+        self.prefix = token[:self.prefix_length]
+        self.hashed = token
+        self._token = token
+    
     @declared_attr
     def user_id(cls):
         return Column(Integer, ForeignKey('users.id'))
     
     def __repr__(self):
-        return "<{cls}('{t}', user='{u}')>".format(
+        return "<{cls}('{pre}...', user='{u}')>".format(
             cls=self.__class__.__name__,
-            t=self.token,
+            pre=self.prefix,
             u=self.user.name,
         )
 
@@ -369,7 +392,13 @@ class Token(object):
 
         Returns None if not found.
         """
-        return db.query(cls).filter(cls.token==token).first()
+        prefix = token[:cls.prefix_length]
+        # since we can't filter on hashed values, filter on prefix
+        # so we aren't comparing with all tokens
+        prefix_match = db.query(cls).filter(cls.prefix==prefix)
+        for orm_token in prefix_match:
+            if orm_token.hashed == token:
+                return orm_token
 
 
 class APIToken(Token, Base):

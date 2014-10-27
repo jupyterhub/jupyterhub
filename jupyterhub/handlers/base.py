@@ -129,22 +129,18 @@ class BaseHandler(RequestHandler):
         # create and set a new cookie token for the single-user server
         if user.server:
             cookie_token = user.new_cookie_token()
-            self.db.add(cookie_token)
-            self.db.commit()
             self.set_secure_cookie(
                 user.server.cookie_name,
-                cookie_token.token,
+                cookie_token,
                 path=user.server.base_url,
             )
         
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
             cookie_token = user.new_cookie_token()
-            self.db.add(cookie_token)
-            self.db.commit()
             self.set_secure_cookie(
                 self.hub.server.cookie_name,
-                cookie_token.token,
+                cookie_token,
                 path=self.hub.server.base_url)
     
     @gen.coroutine
