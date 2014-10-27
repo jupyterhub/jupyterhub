@@ -65,7 +65,6 @@ class Spawner(LoggingConfigurable):
         for key in self.env_keep:
             if key in os.environ:
                 env[key] = os.environ[key]
-        env['JPY_COOKIE_SECRET'] = self.user.server.cookie_secret
         env['JPY_API_TOKEN'] = self.api_token
         return env
     
