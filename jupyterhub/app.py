@@ -4,7 +4,6 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import getpass
 import io
 import logging
 import os
@@ -41,7 +40,7 @@ from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import (
     url_path_join, random_hex, TimeoutError,
-    ISO8601_ms, ISO8601_s,
+    ISO8601_ms, ISO8601_s, getuser_unicode,
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -353,7 +352,7 @@ class JupyterHubApp(Application):
         """More informative log messages for failed filesystem access"""
         path = os.path.abspath(path)
         parent, fname = os.path.split(path)
-        user = getpass.getuser()
+        user = getuser_unicode()
         if not os.path.isdir(parent):
             self.log.error("Directory %s does not exist", parent)
         if os.path.exists(parent) and not os.access(parent, os.W_OK):
@@ -385,7 +384,7 @@ class JupyterHubApp(Application):
                     port=self.hub_port,
                     base_url=self.hub_prefix,
                     cookie_secret=self.cookie_secret,
-                    cookie_name='jupyter-hub-token',
+                    cookie_name=u'jupyter-hub-token',
                 )
             )
             self.db.add(self.hub)
@@ -400,13 +399,13 @@ class JupyterHubApp(Application):
     def init_users(self):
         """Load users into and from the database"""
         db = self.db
-        
+
         if not self.admin_users:
             # add current user as admin if there aren't any others
             admins = db.query(orm.User).filter(orm.User.admin==True)
             if admins.first() is None:
-                self.admin_users.add(getpass.getuser())
-        
+                self.admin_users.add(getuser_unicode())
+
         for name in self.admin_users:
             # ensure anyone specified as admin in config is admin in db
             user = orm.User.find(db, name)
@@ -511,7 +510,7 @@ class JupyterHubApp(Application):
         self.proxy.public_server.port = self.port
         self.proxy.api_server.ip = self.proxy_api_ip
         self.proxy.api_server.port = self.proxy_api_port
-        self.proxy.api_server.base_url = '/api/routes/'
+        self.proxy.api_server.base_url = u'/api/routes/'
         if self.proxy.auth_token is None:
             self.proxy.auth_token = self.proxy_auth_token
         self.db.commit()
