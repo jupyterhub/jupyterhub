@@ -8,6 +8,7 @@ import getpass
 import errno
 import os
 import socket
+import uuid
 
 from six import text_type
 from tornado import web, gen, ioloop
@@ -30,6 +31,11 @@ def getuser_unicode():
     Call getpass.getuser, ensuring that the output is returned as unicode.
     """
     return text_type(getpass.getuser())
+
+
+def new_token(*args, **kwargs):
+    """generator for new random tokens"""
+    return text_type(uuid.uuid4().hex)
 
 
 def random_port():

@@ -13,6 +13,7 @@ except ImportError:
 
 from jinja2 import TemplateNotFound
 
+from six import text_type
 from tornado.log import app_log
 from tornado.httputil import url_concat
 from tornado.web import RequestHandler
@@ -20,10 +21,15 @@ from tornado import gen, web
 
 from .. import orm
 from ..spawner import LocalProcessSpawner
-from ..utils import url_path_join
+from ..utils import (
+    new_token,
+    url_path_join,
+)
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
+
+API_TOKEN_NAME = u'jupyterhub-auth'
 
 
 class BaseHandler(RequestHandler):
@@ -66,18 +72,39 @@ class BaseHandler(RequestHandler):
     def admin_users(self):
         return self.settings.setdefault('admin_users', set())
 
+    def _new_token_for_user(self, user):
+        return u':'.join([user.auth_id, new_token()])
+
+    def _user_from_token(self, decrypted_token):
+        """Identify a user from a decrypted token."""
+        return self.find_user_by_auth_id(decrypted_token.split(':')[0])
+
+    def new_api_token(self, user):
+        """Return a new API token"""
+        return self.create_signed_value(
+            API_TOKEN_NAME,
+            self._new_token_for_user(user)
+        )
+
+    def new_cookie_token(self, user):
+        """Return a new cookie token"""
+        return self._new_token_for_user(user)
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
         auth_header = self.request.headers.get('Authorization', '')
         match = auth_header_pat.match(auth_header)
         if not match:
             return None
-        token = match.group(1)
-        orm_token = orm.APIToken.find(self.db, token)
-        if orm_token is None:
+
+        token = text_type(match.group(1))
+        decrypted = self.get_secure_cookie(API_TOKEN_NAME, token)
+        if decrypted is None:
             return None
-        else:
-            user = orm_token.user
+
+
+        user = self._user_from_token(decrypted.decode('utf8', 'replace'))
+        if user is not None:
             user.last_activity = datetime.utcnow()
             return user
 
@@ -86,9 +113,9 @@ class BaseHandler(RequestHandler):
         btoken = self.get_secure_cookie(self.hub.server.cookie_name)
         if btoken:
             token = btoken.decode('utf8', 'replace')
-            cookie_token = orm.CookieToken.find(self.db, token)
-            if cookie_token:
-                return cookie_token.user
+            user = self._user_from_token(token.split(':')[0])
+            if user is not None:
+                return user
             else:
                 # don't log the token itself
                 self.log.warn("Invalid cookie token")
@@ -101,13 +128,20 @@ class BaseHandler(RequestHandler):
         if user is not None:
             return user
         return self.get_current_user_cookie()
-    
+
     def find_user(self, name):
         """Get a user by name
         
         return None if no such user
         """
         return orm.User.find(self.db, name)
+
+    def find_user_by_auth_id(self, auth_id):
+        """Get a user by auth_id
+
+        return None if no such user
+        """
+        return orm.User.find_by_auth_id(self.db, auth_id)
 
     def user_from_username(self, username):
         """Get ORM User for username"""
@@ -128,23 +162,19 @@ class BaseHandler(RequestHandler):
         """Set login cookies for the Hub and single-user server."""
         # create and set a new cookie token for the single-user server
         if user.server:
-            cookie_token = user.new_cookie_token()
-            self.db.add(cookie_token)
-            self.db.commit()
+            cookie_token = self.new_cookie_token(user)
             self.set_secure_cookie(
                 user.server.cookie_name,
-                cookie_token.token,
+                cookie_token,
                 path=user.server.base_url,
             )
         
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
-            cookie_token = user.new_cookie_token()
-            self.db.add(cookie_token)
-            self.db.commit()
+            cookie_token = self.new_cookie_token(user)
             self.set_secure_cookie(
                 self.hub.server.cookie_name,
-                cookie_token.token,
+                cookie_token,
                 path=self.hub.server.base_url)
     
     @gen.coroutine
@@ -169,6 +199,7 @@ class BaseHandler(RequestHandler):
     def spawn_single_user(self, user):
         yield user.spawn(
             spawner_class=self.spawner_class,
+            api_token=self.new_api_token(user),
             base_url=self.base_url,
             hub=self.hub,
             config=self.config,
