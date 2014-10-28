@@ -3,7 +3,5 @@ tornado>=3.2
 jinja2
 simplepam
 sqlalchemy
-sqlalchemy-utils
-passlib
 requests
 six

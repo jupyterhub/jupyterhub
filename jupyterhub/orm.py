@@ -7,9 +7,6 @@ from datetime import datetime
 import errno
 import json
 import socket
-import uuid
-
-from six import text_type
 
 from tornado import gen
 from tornado.log import app_log
@@ -18,26 +15,19 @@ from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
     inspect,
-    Column, Integer, ForeignKey, Unicode, Binary, Boolean,
+    Column, Integer, ForeignKey, Unicode, Boolean,
     DateTime,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
-from sqlalchemy_utils.types import PasswordType
 
-from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
+from .utils import (
+    random_port, url_path_join, wait_for_server, wait_for_http_server,
+    new_token, hash_token, compare_token,
+)
 
-
-def new_token(*args, **kwargs):
-    """generator for new random tokens
-    
-    For now, just UUIDs.
-    """
-    return text_type(uuid.uuid4().hex)
-
-PASSWORD_SCHEMES = ['pbkdf2_sha512']
 
 class JSONDict(TypeDecorator):
     """Represents an immutable structure as a json-encoded string.
@@ -358,9 +348,11 @@ class User(Base):
 class Token(object):
     """Mixin for token tables, since we have two"""
     id = Column(Integer, primary_key=True)
-    hashed = Column(PasswordType(schemes=PASSWORD_SCHEMES))
+    hashed = Column(Unicode)
     prefix = Column(Unicode)
     prefix_length = 4
+    algorithm = "sha512"
+    salt_bytes = 8
     _token = None
     
     @property
@@ -372,7 +364,7 @@ class Token(object):
     def token(self, token):
         """Store the hashed value and prefix for a token"""
         self.prefix = token[:self.prefix_length]
-        self.hashed = token
+        self.hashed = hash_token(token, salt=self.salt_bytes, algorithm=self.algorithm)
         self._token = token
     
     @declared_attr
@@ -397,7 +389,7 @@ class Token(object):
         # so we aren't comparing with all tokens
         prefix_match = db.query(cls).filter(cls.prefix==prefix)
         for orm_token in prefix_match:
-            if orm_token.hashed == token:
+            if compare_token(orm_token.hashed, token):
                 return orm_token
 
 

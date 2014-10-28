@@ -3,11 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import binascii
-import getpass
+from binascii import b2a_hex
 import errno
+import getpass
+import hashlib
 import os
 import socket
+import uuid
 
 from six import text_type
 from tornado import web, gen, ioloop
@@ -43,13 +45,6 @@ def random_port():
 # ISO8601 for strptime with/without milliseconds
 ISO8601_ms = '%Y-%m-%dT%H:%M:%S.%fZ'
 ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
-
-def random_hex(nbytes):
-    """Return nbytes random bytes as a unicode hex string
-
-    It will have length nbytes * 2
-    """
-    return binascii.hexlify(os.urandom(nbytes)).decode('ascii')
 
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):
@@ -101,6 +96,9 @@ def wait_for_http_server(url, timeout=10):
     
     raise TimeoutError
 
+
+# Decorators for authenticated Handlers
+
 def auth_decorator(check_auth):
     """Make an authentication decorator
 
@@ -140,3 +138,47 @@ def admin_only(self):
     user = self.get_current_user()
     if user is None or not user.admin:
         raise web.HTTPError(403)
+
+
+# Token utilities
+
+def new_token(*args, **kwargs):
+    """generator for new random tokens
+    
+    For now, just UUIDs.
+    """
+    return text_type(uuid.uuid4().hex)
+
+
+def hash_token(token, salt=8, algorithm='sha256'):
+    """hash a token, and return it as `algorithm:salt:hash`
+    
+    If `salt` is an integer, a random salt of that many bytes will be used.
+    """
+    h = hashlib.new(algorithm)
+    if isinstance(salt, int):
+        salt = b2a_hex(os.urandom(salt))
+    if isinstance(salt, bytes):
+        bsalt = salt
+        salt = salt.decode('utf8')
+    else:
+        bsalt = salt.encode('utf8')
+    btoken = token.encode('utf8', 'replace')
+    h.update(bsalt)
+    h.update(btoken)
+    digest = h.hexdigest()
+    
+    return u"{algorithm}:{salt}:{digest}".format(**locals())
+
+
+def compare_token(compare, token):
+    """compare a token with a hashed token
+    
+    uses the same algorithm and salt of the hashed token for comparison
+    """
+    algorithm, salt, _ = compare.split(':', 2)
+    hashed = hash_token(token, salt=salt, algorithm=algorithm)
+    if compare == hashed:
+        return True
+    return False
+    
