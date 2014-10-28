@@ -26,15 +26,11 @@ class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name):
         cookie_value = self.request.body
-        btoken = self.get_secure_cookie(cookie_name, cookie_value)
-        if not btoken:
-            raise web.HTTPError(404)
-        token = btoken.decode('utf8', 'replace')
-        orm_token = orm.CookieToken.find(self.db, token)
-        if orm_token is None:
+        user = self._user_for_cookie(cookie_name, cookie_value)
+        if user is None:
             raise web.HTTPError(404)
         self.write(json.dumps({
-            'user' : orm_token.user.name,
+            'user' : user.name,
         }))
 
 default_handlers = [

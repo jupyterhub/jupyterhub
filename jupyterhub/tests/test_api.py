@@ -44,7 +44,6 @@ def test_auth_api(app):
     # make a new cookie token
     user = db.query(orm.User).first()
     api_token = user.new_api_token()
-    cookie_token = user.new_cookie_token()
     
     # check success:
     r = api_request(app, 'authorizations/token', api_token)
@@ -59,7 +58,7 @@ def test_auth_api(app):
     assert r.status_code == 403
 
     r = api_request(app, 'authorizations/token', api_token,
-        headers={'Authorization': 'token: %s' % cookie_token},
+        headers={'Authorization': 'token: %s' % user.cookie_id},
     )
     assert r.status_code == 403
     

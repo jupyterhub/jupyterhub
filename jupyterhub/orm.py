@@ -227,9 +227,11 @@ class User(Base):
     and multiple tokens used for authorization.
     
     API tokens grant access to the Hub's REST API.
-    These are used by single-user servers to authenticate requests.
+    These are used by single-user servers to authenticate requests,
+    and external services to manipulate the Hub.
     
-    Cookie tokens are used to authenticate browser sessions.
+    Cookies are set with a single ID.
+    Resetting the Cookie ID invalidates all cookies, forcing user to login again.
     
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
@@ -244,7 +246,7 @@ class User(Base):
     last_activity = Column(DateTime, default=datetime.utcnow)
     
     api_tokens = relationship("APIToken", backref="user")
-    cookie_tokens = relationship("CookieToken", backref="user")
+    cookie_id = Column(Unicode, default=new_token)
     state = Column(JSONDict)
     spawner = None
     
@@ -262,25 +264,17 @@ class User(Base):
                 name=self.name,
             )
     
-    def _new_token(self, cls):
-        """Create a new API or Cookie token"""
+    def new_api_token(self):
+        """Create a new API token"""
         assert self.id is not None
         db = inspect(self).session
         token = new_token()
-        orm_token = cls(user_id=self.id)
+        orm_token = APIToken(user_id=self.id)
         orm_token.token = token
         db.add(orm_token)
         db.commit()
         return token
     
-    def new_api_token(self):
-        """Return a new API token"""
-        return self._new_token(APIToken)
-    
-    def new_cookie_token(self):
-        """Return a new cookie token"""
-        return self._new_token(CookieToken)
-
     @classmethod
     def find(cls, db, name):
         """Find a user by name.
@@ -345,8 +339,14 @@ class User(Base):
         inspect(self).session.commit()
 
 
-class Token(object):
-    """Mixin for token tables, since we have two"""
+class APIToken(Base):
+    """An API token"""
+    __tablename__ = 'api_tokens'
+    
+    @declared_attr
+    def user_id(cls):
+        return Column(Integer, ForeignKey('users.id'))
+
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode)
     prefix = Column(Unicode)
@@ -367,10 +367,6 @@ class Token(object):
         self.hashed = hash_token(token, salt=self.salt_bytes, algorithm=self.algorithm)
         self._token = token
     
-    @declared_attr
-    def user_id(cls):
-        return Column(Integer, ForeignKey('users.id'))
-    
     def __repr__(self):
         return "<{cls}('{pre}...', user='{u}')>".format(
             cls=self.__class__.__name__,
@@ -389,18 +385,12 @@ class Token(object):
         # so we aren't comparing with all tokens
         prefix_match = db.query(cls).filter(cls.prefix==prefix)
         for orm_token in prefix_match:
-            if compare_token(orm_token.hashed, token):
+            if orm_token.match(token):
                 return orm_token
-
-
-class APIToken(Token, Base):
-    """An API token"""
-    __tablename__ = 'api_tokens'
-
-
-class CookieToken(Token, Base):
-    """A cookie token"""
-    __tablename__ = 'cookie_tokens'
+    
+    def match(self, token):
+        """Is this my token?"""
+        return compare_token(self.hashed, token)
 
 
 def new_session(url="sqlite:///:memory:", reset=False, **kwargs):

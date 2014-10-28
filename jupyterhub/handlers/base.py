@@ -80,21 +80,26 @@ class BaseHandler(RequestHandler):
             user = orm_token.user
             user.last_activity = datetime.utcnow()
             return user
-
+    
+    def _user_for_cookie(self, cookie_name, cookie_value=None):
+        """Get the User for a given cookie, if there is one"""
+        cookie_id = self.get_secure_cookie(cookie_name, cookie_value)
+        if cookie_id is None:
+            return
+        cookie_id = cookie_id.decode('utf8', 'replace')
+        return self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
+    
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
-        btoken = self.get_secure_cookie(self.hub.server.cookie_name)
-        if btoken:
-            token = btoken.decode('utf8', 'replace')
-            cookie_token = orm.CookieToken.find(self.db, token)
-            if cookie_token:
-                return cookie_token.user
-            else:
-                # don't log the token itself
-                self.log.warn("Invalid cookie token")
-                # have cookie, but it's not valid. Clear it and start over.
-                self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
-
+        user = self._user_for_cookie(self.hub.server.cookie_name)
+        if user:
+            return user
+        else:
+            # don't log the token itself
+            self.log.warn("Invalid cookie token")
+            # have cookie, but it's not valid. Clear it and start over.
+            self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
+    
     def get_current_user(self):
         """get current username"""
         user = self.get_current_user_token()
@@ -128,19 +133,17 @@ class BaseHandler(RequestHandler):
         """Set login cookies for the Hub and single-user server."""
         # create and set a new cookie token for the single-user server
         if user.server:
-            cookie_token = user.new_cookie_token()
             self.set_secure_cookie(
                 user.server.cookie_name,
-                cookie_token,
+                user.cookie_id,
                 path=user.server.base_url,
             )
         
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
-            cookie_token = user.new_cookie_token()
             self.set_secure_cookie(
                 self.hub.server.cookie_name,
-                cookie_token,
+                user.cookie_id,
                 path=self.hub.server.base_url)
     
     @gen.coroutine
