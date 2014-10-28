@@ -73,11 +73,11 @@ class BaseHandler(RequestHandler):
         return self.settings.setdefault('admin_users', set())
 
     def _new_token_for_user(self, user):
-        return u':'.join([user.name, new_token()])
+        return u':'.join([user.auth_id, new_token()])
 
     def _user_from_token(self, decrypted_token):
         """Identify a user from a decrypted token."""
-        return self.find_user(decrypted_token.split(':')[0])
+        return self.find_user_by_auth_id(decrypted_token.split(':')[0])
 
     def new_api_token(self, user):
         """Return a new API token"""
@@ -113,7 +113,7 @@ class BaseHandler(RequestHandler):
         btoken = self.get_secure_cookie(self.hub.server.cookie_name)
         if btoken:
             token = btoken.decode('utf8', 'replace')
-            user = self.user_from_username(token.split(':')[0])
+            user = self._user_from_token(token.split(':')[0])
             if user is not None:
                 return user
             else:
@@ -135,6 +135,13 @@ class BaseHandler(RequestHandler):
         return None if no such user
         """
         return orm.User.find(self.db, name)
+
+    def find_user_by_auth_id(self, auth_id):
+        """Get a user by auth_id
+
+        return None if no such user
+        """
+        return orm.User.find_by_auth_id(self.db, auth_id)
 
     def user_from_username(self, username):
         """Get ORM User for username"""

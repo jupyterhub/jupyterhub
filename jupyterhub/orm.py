@@ -24,7 +24,13 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy import create_engine
 from sqlalchemy_utils.types import PasswordType
 
-from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
+from .utils import (
+    new_token,
+    random_port,
+    url_path_join,
+    wait_for_http_server,
+    wait_for_server,
+)
 
 
 PASSWORD_SCHEMES = ['pbkdf2_sha512']
@@ -230,6 +236,7 @@ class User(Base):
     """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
+    auth_id = Column(Unicode, unique=True, default=new_token)
     name = Column(Unicode)
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
@@ -261,6 +268,16 @@ class User(Base):
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name==name).first()
+
+
+    @classmethod
+    def find_by_auth_id(cls, db, auth_id):
+        """Find a user by auth_id
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.auth_id==auth_id).first()
+
 
     @gen.coroutine
     def spawn(self,
