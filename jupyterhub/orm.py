@@ -223,14 +223,8 @@ class Hub(Base):
 class User(Base):
     """The User table
     
-    Each user has a single server,
-    and multiple tokens used for authorization.
-    
-    API tokens grant access to the Hub's REST API.
-    These are used by single-user servers to authenticate requests.
-    
-    Cookie tokens are used to authenticate browser sessions.
-    
+    Each user has a single server.
+
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
     """
@@ -323,62 +317,6 @@ class User(Base):
         self.last_activity = datetime.utcnow()
         self.server = None
         inspect(self).session.commit()
-
-
-class Token(object):
-    """Mixin for token tables, since we have two"""
-    id = Column(Integer, primary_key=True)
-    hashed = Column(PasswordType(schemes=PASSWORD_SCHEMES))
-    prefix = Column(Unicode)
-    prefix_length = 4
-    _token = None
-    
-    @property
-    def token(self):
-        """plaintext tokens will only be accessible for tokens created during this session"""
-        return self._token
-    
-    @token.setter
-    def token(self, token):
-        """Store the hashed value and prefix for a token"""
-        self.prefix = token[:self.prefix_length]
-        self.hashed = token
-        self._token = token
-    
-    @declared_attr
-    def user_id(cls):
-        return Column(Integer, ForeignKey('users.id'))
-    
-    def __repr__(self):
-        return "<{cls}('{pre}...', user='{u}')>".format(
-            cls=self.__class__.__name__,
-            pre=self.prefix,
-            u=self.user.name,
-        )
-
-    @classmethod
-    def find(cls, db, token):
-        """Find a token object by value.
-
-        Returns None if not found.
-        """
-        prefix = token[:cls.prefix_length]
-        # since we can't filter on hashed values, filter on prefix
-        # so we aren't comparing with all tokens
-        prefix_match = db.query(cls).filter(cls.prefix==prefix)
-        for orm_token in prefix_match:
-            if orm_token.hashed == token:
-                return orm_token
-
-
-class APIToken(Token, Base):
-    """An API token"""
-    __tablename__ = 'api_tokens'
-
-
-class CookieToken(Token, Base):
-    """A cookie token"""
-    __tablename__ = 'cookie_tokens'
 
 
 def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
