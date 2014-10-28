@@ -11,17 +11,6 @@ from ..utils import token_authenticated
 from .base import APIHandler
 
 
-
-class TokenAPIHandler(APIHandler):
-    @token_authenticated
-    def get(self, token):
-        orm_token = orm.APIToken.find(self.db, token)
-        if orm_token is None:
-            raise web.HTTPError(404)
-        self.write(json.dumps({
-            'user' : orm_token.user.name,
-        }))
-
 class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name):
@@ -39,5 +28,4 @@ class CookieAPIHandler(APIHandler):
 
 default_handlers = [
     (r"/api/authorizations/cookie/([^/]+)", CookieAPIHandler),
-    (r"/api/authorizations/token/([^/]+)", TokenAPIHandler),
 ]
