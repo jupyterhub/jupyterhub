@@ -44,7 +44,7 @@ from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import (
     url_path_join, TimeoutError,
-    ISO8601_ms, ISO8601_s, getuser_unicode,
+    ISO8601_ms, ISO8601_s, getuser_unicode, new_token
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -180,7 +180,7 @@ class JupyterHubApp(Application):
                 "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHubApp.proxy_auth_token config to avoid this message.",
                 "",
             ]))
-            token = orm.new_token()
+            token = new_token()
         return token
     
     proxy_api_ip = Unicode('localhost', config=True,

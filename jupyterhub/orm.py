@@ -7,9 +7,6 @@ from datetime import datetime
 import errno
 import json
 import socket
-import uuid
-
-from six import text_type
 
 from tornado import gen
 from tornado.log import app_log
@@ -29,13 +26,6 @@ from sqlalchemy_utils.types import PasswordType
 
 from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
 
-
-def new_token(*args, **kwargs):
-    """generator for new random tokens
-    
-    For now, just UUIDs.
-    """
-    return text_type(uuid.uuid4().hex)
 
 PASSWORD_SCHEMES = ['pbkdf2_sha512']
 
@@ -252,12 +242,10 @@ class User(Base):
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     admin = Column(Boolean, default=False)
     last_activity = Column(DateTime, default=datetime.utcnow)
-    
-    api_tokens = relationship("APIToken", backref="user")
-    cookie_tokens = relationship("CookieToken", backref="user")
+
     state = Column(JSONDict)
     spawner = None
-    
+
     def __repr__(self):
         if self.server:
             return "<{cls}({name}@{ip}:{port})>".format(
@@ -271,25 +259,6 @@ class User(Base):
                 cls=self.__class__.__name__,
                 name=self.name,
             )
-    
-    def _new_token(self, cls):
-        """Create a new API or Cookie token"""
-        assert self.id is not None
-        db = inspect(self).session
-        token = new_token()
-        orm_token = cls(user_id=self.id)
-        orm_token.token = token
-        db.add(orm_token)
-        db.commit()
-        return token
-    
-    def new_api_token(self):
-        """Return a new API token"""
-        return self._new_token(APIToken)
-    
-    def new_cookie_token(self):
-        """Return a new cookie token"""
-        return self._new_token(CookieToken)
 
     @classmethod
     def find(cls, db, name):
@@ -300,7 +269,12 @@ class User(Base):
         return db.query(cls).filter(cls.name==name).first()
 
     @gen.coroutine
-    def spawn(self, spawner_class, base_url='/', hub=None, config=None):
+    def spawn(self,
+              spawner_class,
+              api_token,
+              base_url='/',
+              hub=None,
+              config=None):
         """Start the user's spawner"""
         db = inspect(self).session
         if hub is None:
@@ -312,10 +286,6 @@ class User(Base):
         db.add(self.server)
         db.commit()
 
-        api_token = self.new_api_token()
-        db.commit()
-        
-        
         spawner = self.spawner = spawner_class(
             config=config,
             user=self,
