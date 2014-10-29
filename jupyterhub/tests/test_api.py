@@ -28,13 +28,13 @@ def auth_header(db, name):
         token = user.api_tokens[0]
     return {'Authorization': 'token %s' % token.token}
 
-def api_request(app, *api_path, **kwargs):
+def api_request(app, db, *api_path, **kwargs):
     """Make an API request"""
     base_url = app.hub.server.url
     headers = kwargs.setdefault('headers', {})
 
     if 'Authorization' not in headers:
-        headers.update(auth_header(app.db, 'admin'))
+        headers.update(auth_header(db, 'admin'))
     
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
@@ -42,141 +42,145 @@ def api_request(app, *api_path, **kwargs):
     return f(url, **kwargs)
 
 def test_auth_api(app):
-    db = app.db
-    r = api_request(app, 'authorizations', 'gobbledygook')
-    assert r.status_code == 404
-    
-    # make a new cookie token
-    user = db.query(orm.User).first()
-    api_token = user.new_api_token()
-    db.add(api_token)
-    cookie_token = user.new_cookie_token()
-    db.add(cookie_token)
-    db.commit()
-    
-    # check success:
-    r = api_request(app, 'authorizations/token', api_token.token)
-    assert r.status_code == 200
-    reply = r.json()
-    assert reply['user'] == user.name
-    
-    # check fail
-    r = api_request(app, 'authorizations/token', api_token.token,
-        headers={'Authorization': 'no sir'},
-    )
-    assert r.status_code == 403
+    with app.new_db_session() as db:
+        r = api_request(app, db, 'authorizations', 'gobbledygook')
+        assert r.status_code == 404
 
-    r = api_request(app, 'authorizations/token', api_token.token,
-        headers={'Authorization': 'token: %s' % cookie_token.token},
-    )
-    assert r.status_code == 403
+        # make a new cookie token
+        user = db.query(orm.User).first()
+        api_token = user.new_api_token()
+        db.add(api_token)
+        cookie_token = user.new_cookie_token()
+        db.add(cookie_token)
+        db.commit()
+
+        # check success:
+        r = api_request(app, db, 'authorizations/token', api_token.token)
+        assert r.status_code == 200
+        reply = r.json()
+        assert reply['user'] == user.name
+
+        # check fail
+        r = api_request(app, db, 'authorizations/token', api_token.token,
+            headers={'Authorization': 'no sir'},
+        )
+        assert r.status_code == 403
+
+        r = api_request(app, db, 'authorizations/token', api_token.token,
+            headers={'Authorization': 'token: %s' % cookie_token.token},
+        )
+        assert r.status_code == 403
     
 
 def test_get_users(app):
-    db = app.db
-    r = api_request(app, 'users')
-    assert r.status_code == 200
-    assert sorted(r.json(), key=lambda d: d['name']) == [
-        {
-            'name': 'admin',
-            'admin': True,
-            'server': None,
-        },
-        {
-            'name': 'user',
-            'admin': False,
-            'server': None,
-        }
-    ]
+    with app.new_db_session() as db:
+        r = api_request(app, db, 'users')
+        assert r.status_code == 200
+        assert sorted(r.json(), key=lambda d: d['name']) == [
+            {
+                'name': 'admin',
+                'admin': True,
+                'server': None,
+            },
+            {
+                'name': 'user',
+                'admin': False,
+                'server': None,
+            }
+        ]
 
-    r = api_request(app, 'users',
-        headers=auth_header(db, 'user'),
-    )
-    assert r.status_code == 403
+        r = api_request(app, db, 'users',
+            headers=auth_header(db, 'user'),
+        )
+        assert r.status_code == 403
 
 def test_add_user(app):
-    db = app.db
-    name = 'newuser'
-    r = api_request(app, 'users', name, method='post')
-    assert r.status_code == 201
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
-    assert not user.admin
+    with app.new_db_session() as db:
+        name = 'newuser'
+        r = api_request(app, db, 'users', name, method='post')
+        assert r.status_code == 201
+        user = find_user(db, name)
+        assert user is not None
+        assert user.name == name
+        assert not user.admin
 
 def test_add_user_bad(app):
-    db = app.db
-    name = 'dne_newuser'
-    r = api_request(app, 'users', name, method='post')
-    assert r.status_code == 400
-    user = find_user(db, name)
-    assert user is None
+    with app.new_db_session() as db:
+        name = 'dne_newuser'
+        r = api_request(app, db, 'users', name, method='post')
+        assert r.status_code == 400
+        user = find_user(db, name)
+        assert user is None
 
 def test_add_admin(app):
-    db = app.db
-    name = 'newadmin'
-    r = api_request(app, 'users', name, method='post',
-        data=json.dumps({'admin': True}),
-    )
-    assert r.status_code == 201
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
-    assert user.admin
+    with app.new_db_session() as db:
+        name = 'newadmin'
+        r = api_request(app, db, 'users', name, method='post',
+            data=json.dumps({'admin': True}),
+        )
+        assert r.status_code == 201
+        user = find_user(db, name)
+        assert user is not None
+        assert user.name == name
+        assert user.admin
 
 def test_delete_user(app):
-    db = app.db
-    mal = add_user(db, name='mal')
-    r = api_request(app, 'users', 'mal', method='delete')
-    assert r.status_code == 204
-    
+    with app.new_db_session() as db:
+        mal = add_user(db, name='mal')
+        r = api_request(app, db, 'users', 'mal', method='delete')
+        assert r.status_code == 204
+
 
 def test_make_admin(app):
-    db = app.db
-    name = 'admin2'
-    r = api_request(app, 'users', name, method='post')
-    assert r.status_code == 201
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
-    assert not user.admin
 
-    r = api_request(app, 'users', name, method='patch',
-        data=json.dumps({'admin': True})
-    )
-    assert r.status_code == 200
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
-    assert user.admin
+    with app.new_db_session() as db:
+        name = 'admin2'
+        r = api_request(app, db, 'users', name, method='post')
+        assert r.status_code == 201
+        user = find_user(db, name)
+        assert user is not None
+        assert user.name == name
+        assert not user.admin
+
+        r = api_request(app, db, 'users', name, method='patch',
+            data=json.dumps({'admin': True})
+        )
+
+        assert r.status_code == 200
+        db.refresh(user)
+        assert user is not None
+        assert user.name == name
+        assert user.admin
 
 
 def test_spawn(app, io_loop):
-    db = app.db
-    name = 'wash'
-    user = add_user(db, name=name)
-    r = api_request(app, 'users', name, 'server', method='post')
-    assert r.status_code == 201
-    assert 'pid' in user.state
-    assert user.spawner is not None
-    status = io_loop.run_sync(user.spawner.poll)
-    assert status is None
-    
-    assert user.server.base_url == '/user/%s' % name
-    r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url))
-    assert r.status_code == 200
-    assert r.text == user.server.base_url
+    with app.new_db_session() as db:
+        name = 'wash'
+        user = add_user(db, name=name)
+        r = api_request(app, db, 'users', name, 'server', method='post')
 
-    r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url, 'args'))
-    assert r.status_code == 200
-    argv = r.json()
-    for expected in ['--user=%s' % name, '--base-url=%s' % user.server.base_url]:
-        assert expected in argv
-    
-    r = api_request(app, 'users', name, 'server', method='delete')
-    assert r.status_code == 204
-    
-    assert 'pid' not in user.state
-    status = io_loop.run_sync(user.spawner.poll)
-    assert status == 0
-    
+        db.refresh(user)
+        assert r.status_code == 201
+        assert 'pid' in user.state
+        assert user.spawner is not None
+        status = io_loop.run_sync(user.spawner.poll)
+        assert status is None
+
+        assert user.server.base_url == '/user/%s' % name
+        r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url))
+        assert r.status_code == 200
+        assert r.text == user.server.base_url
+
+        r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url, 'args'))
+        assert r.status_code == 200
+        argv = r.json()
+        for expected in ['--user=%s' % name, '--base-url=%s' % user.server.base_url]:
+            assert expected in argv
+
+        r = api_request(app, db, 'users', name, 'server', method='delete')
+        assert r.status_code == 204
+
+        assert 'pid' not in user.state
+        status = io_loop.run_sync(user.spawner.poll)
+        assert status == 0
+

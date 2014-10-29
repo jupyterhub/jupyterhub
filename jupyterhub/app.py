@@ -4,6 +4,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from contextlib import contextmanager, closing
 import io
 import logging
 import os
@@ -37,6 +38,7 @@ here = os.path.dirname(__file__)
 from . import handlers, apihandlers
 
 from . import orm
+from .orm import Proxy
 from ._data import DATA_FILES_PATH
 from .utils import (
     url_path_join, random_hex, TimeoutError,
@@ -261,7 +263,7 @@ class JupyterHubApp(Application):
     debug_db = Bool(False, config=True,
         help="log all database transactions. This has A LOT of output"
     )
-    db = Any()
+    session_factory = Any()
     
     admin_users = Set(config=True,
         help="""set of usernames of admin users
@@ -359,14 +361,33 @@ class JupyterHubApp(Application):
             self.log.error("%s cannot create files in %s", user, parent)
         if os.path.exists(path) and not os.access(path, os.W_OK):
             self.log.error("%s cannot edit %s", user, path)
+
+    @contextmanager
+    def new_db_session(self):
+        """
+        Context manager for db sessions.
+        """
+        session = self.session_factory()
+        yield session
+        session.close()
     
     def init_db(self):
-        """Create the database connection"""
+        """Create the database session_factory.
+
+        Returns a session object to be used by other init_* functions.
+        """
         self.log.debug("Connecting to db: %s", self.db_url)
         try:
-            self.db = orm.new_session(self.db_url, reset=self.reset_db, echo=self.debug_db,
+            self.session_factory = orm.new_session_factory(
+                self.db_url,
+                reset=self.reset_db,
+                echo=self.debug_db,
                 **self.db_kwargs
             )
+            # Return a session to be used for the remaining init_* methods.
+            # This has the useful side-effect of failing immediately if we
+            # can't connect.
+            return self.session_factory()
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)
@@ -374,9 +395,9 @@ class JupyterHubApp(Application):
                 self._check_db_path(self.db_url.split(':///', 1)[1])
             self.exit(1)
     
-    def init_hub(self):
+    def init_hub(self, db):
         """Load the Hub config into the database"""
-        self.hub = self.db.query(orm.Hub).first()
+        self.hub = db.query(orm.Hub).first()
         if self.hub is None:
             self.hub = orm.Hub(
                 server=orm.Server(
@@ -387,18 +408,17 @@ class JupyterHubApp(Application):
                     cookie_name=u'jupyter-hub-token',
                 )
             )
-            self.db.add(self.hub)
+            db.add(self.hub)
         else:
             server = self.hub.server
             server.ip = self.hub_ip
             server.port = self.hub_port
             server.base_url = self.hub_prefix
 
-        self.db.commit()
+        db.commit()
     
-    def init_users(self):
+    def init_users(self, db):
         """Load users into and from the database"""
-        db = self.db
 
         if not self.admin_users:
             # add current user as admin if there aren't any others
@@ -494,17 +514,18 @@ class JupyterHubApp(Application):
         self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
         db.commit()
 
-    def init_proxy(self):
+    def init_proxy(self, db):
         """Load the Proxy config into the database"""
-        self.proxy = self.db.query(orm.Proxy).first()
+        self.proxy = db.query(orm.Proxy).first()
         if self.proxy is None:
             self.proxy = orm.Proxy(
                 public_server=orm.Server(),
                 api_server=orm.Server(),
                 auth_token = self.proxy_auth_token,
             )
-            self.db.add(self.proxy)
-            self.db.commit()
+            db.add(self.proxy)
+            db.commit()
+
         self.proxy.log = self.log
         self.proxy.public_server.ip = self.ip
         self.proxy.public_server.port = self.port
@@ -513,67 +534,79 @@ class JupyterHubApp(Application):
         self.proxy.api_server.base_url = u'/api/routes/'
         if self.proxy.auth_token is None:
             self.proxy.auth_token = self.proxy_auth_token
-        self.db.commit()
-    
+
+        db.commit()
+
     @gen.coroutine
     def start_proxy(self):
         """Actually start the configurable-http-proxy"""
-        if self.proxy.public_server.is_up() and \
-              self.proxy.api_server.is_up():
-           self.log.warn("Proxy already running at: %s", self.proxy.public_server.url)
-           self.proxy_process = None
-           return
+        with self.new_db_session() as session:
+            self.proxy = session.merge(self.proxy)
 
-        env = os.environ.copy()
-        env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
-        cmd = [self.proxy_cmd,
-            '--ip', self.proxy.public_server.ip,
-            '--port', str(self.proxy.public_server.port),
-            '--api-ip', self.proxy.api_server.ip,
-            '--api-port', str(self.proxy.api_server.port),
-            '--default-target', self.hub.server.host,
-        ]
-        if False:
-        # if self.log_level == logging.DEBUG:
-            cmd.extend(['--log-level', 'debug'])
-        if self.ssl_key:
-            cmd.extend(['--ssl-key', self.ssl_key])
-        if self.ssl_cert:
-            cmd.extend(['--ssl-cert', self.ssl_cert])
-        self.log.info("Starting proxy: %s", cmd)
-        self.proxy_process = Popen(cmd, env=env)
-        def _check():
-            status = self.proxy_process.poll()
-            if status is not None:
-                e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                # py2-compatible `raise e from None`
-                e.__cause__ = None
-                raise e
-        
-        for server in (self.proxy.public_server, self.proxy.api_server):
-            for i in range(10):
-                _check()
-                try:
-                    yield server.wait_up(1)
-                except TimeoutError:
-                    continue
-                else:
-                    break
-            yield server.wait_up(1)
-        self.log.debug("Proxy started and appears to be up")
-    
+            if self.proxy.public_server.is_up() and \
+                  self.proxy.api_server.is_up():
+               self.log.warn("Proxy already running at: %s", self.proxy.public_server.url)
+               self.proxy_process = None
+               return
+
+            env = os.environ.copy()
+            env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
+            cmd = [self.proxy_cmd,
+                '--ip', self.proxy.public_server.ip,
+                '--port', str(self.proxy.public_server.port),
+                '--api-ip', self.proxy.api_server.ip,
+                '--api-port', str(self.proxy.api_server.port),
+                '--default-target', self.hub.server.host,
+            ]
+            if False:
+            # if self.log_level == logging.DEBUG:
+                cmd.extend(['--log-level', 'debug'])
+            if self.ssl_key:
+                cmd.extend(['--ssl-key', self.ssl_key])
+            if self.ssl_cert:
+                cmd.extend(['--ssl-cert', self.ssl_cert])
+            self.log.info("Starting proxy: %s", cmd)
+            self.proxy_process = Popen(cmd, env=env)
+            def _check():
+                status = self.proxy_process.poll()
+                if status is not None:
+                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
+                    # py2-compatible `raise e from None`
+                    e.__cause__ = None
+                    raise e
+
+            for server in (self.proxy.public_server, self.proxy.api_server):
+                for i in range(10):
+                    _check()
+                    try:
+                        yield server.wait_up(1)
+                    except TimeoutError:
+                        continue
+                    else:
+                        break
+                yield server.wait_up(1)
+            self.log.debug("Proxy started and appears to be up")
+
     @gen.coroutine
     def check_proxy(self):
-        if self.proxy_process.poll() is None:
-            return
-        self.log.error("Proxy stopped with exit code %r",
-            'unknown' if self.proxy_process is None else self.proxy_process.poll()
-        )
-        yield self.start_proxy()
-        self.log.info("Setting up routes on new proxy")
-        yield self.proxy.add_all_users()
-        self.log.info("New proxy back up, and good to go")
-    
+        with self.new_db_session() as session:
+            self.proxy = session.merge(self.proxy)
+            if self.proxy_process.poll() is None:
+                return
+            self.log.error("Proxy stopped with exit code %r",
+                'unknown' if self.proxy_process is None else self.proxy_process.poll()
+            )
+            yield self.start_proxy()
+            self.log.info("Setting up routes on new proxy")
+            yield self.add_proxy_users()
+            self.log.info("New proxy back up, and good to go")
+
+    @gen.coroutine
+    def add_proxy_users(self):
+        with self.new_db_session() as session:
+            self.proxy = session.merge(self.proxy)
+            yield self.proxy.add_all_users()
+
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.hub.server.base_url
@@ -589,7 +622,7 @@ class JupyterHubApp(Application):
         settings = dict(
             config=self.config,
             log=self.log,
-            db=self.db,
+            session_factory=self.session_factory,
             proxy=self.proxy,
             hub=self.hub,
             admin_users=self.admin_users,
@@ -628,48 +661,50 @@ class JupyterHubApp(Application):
         self.init_logging()
         self.write_pid_file()
         self.init_ports()
-        self.init_db()
-        self.init_hub()
-        self.init_proxy()
-        self.init_users()
-        self.init_handlers()
-        self.init_tornado_settings()
-        self.init_tornado_application()
+        session = self.init_db()
+        with closing(session):
+            self.init_hub(session)
+            self.init_proxy(session)
+            self.init_users(session)
+            self.init_handlers()
+            self.init_tornado_settings()
+            self.init_tornado_application()
     
     @gen.coroutine
     def cleanup(self):
         """Shutdown our various subprocesses and cleanup runtime files."""
         self.log.info("Cleaning up single-user servers...")
-        # request (async) process termination
-        futures = []
-        for user in self.db.query(orm.User):
-            if user.spawner is not None:
-                futures.append(user.stop())
-        
-        # clean up proxy while SUS are shutting down
-        if self.proxy_process and self.proxy_process.poll() is None:
-            self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
-            try:
-                self.proxy_process.terminate()
-            except Exception as e:
-                self.log.error("Failed to terminate proxy process: %s", e)
-        
-        # wait for the requests to stop finish:
-        for f in futures:
-            try:
-                yield f
-            except Exception as e:
-                self.log.error("Failed to stop user: %s", e)
+        with self.new_db_session() as db:
+            # request (async) process termination
+            futures = []
+            for user in db.query(orm.User):
+                if user.spawner is not None:
+                    futures.append(user.stop())
 
-        self.db.commit()
-        
-        if self.pid_file and os.path.exists(self.pid_file):
-            self.log.info("Cleaning up PID file %s", self.pid_file)
-            os.remove(self.pid_file)
-        
-        # finally stop the loop once we are all cleaned up
-        self.log.info("...done")
-    
+            # clean up proxy while SUS are shutting down
+            if self.proxy_process and self.proxy_process.poll() is None:
+                self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
+                try:
+                    self.proxy_process.terminate()
+                except Exception as e:
+                    self.log.error("Failed to terminate proxy process: %s", e)
+
+            # wait for the requests to stop finish:
+            for f in futures:
+                try:
+                    yield f
+                except Exception as e:
+                    self.log.error("Failed to stop user: %s", e)
+
+            db.commit()
+
+            if self.pid_file and os.path.exists(self.pid_file):
+                self.log.info("Cleaning up PID file %s", self.pid_file)
+                os.remove(self.pid_file)
+
+            # finally stop the loop once we are all cleaned up
+            self.log.info("...done")
+
     def write_config_file(self):
         """Write our default config to a .py config file"""
         if os.path.exists(self.config_file) and not self.answer_yes:
@@ -720,7 +755,7 @@ class JupyterHubApp(Application):
         if self.generate_config:
             self.write_config_file()
             return
-        
+
         # start the proxy
         try:
             IOLoop().run_sync(self.start_proxy)
@@ -729,7 +764,7 @@ class JupyterHubApp(Application):
             return
         
         loop = IOLoop.current()
-        loop.add_callback(self.proxy.add_all_users)
+        loop.add_callback(self.add_proxy_users)
         
         if self.proxy_process:
             # only check / restart the proxy if we started it in the first place.
