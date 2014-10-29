@@ -15,14 +15,19 @@ from .mocking import MockHubApp
 
 
 # global db session object
-_db = None
+_session_factory = None
 
 @fixture
 def db():
     """Get a db session"""
-    global _db
-    if _db is None:
-        _db = orm.new_session('sqlite:///:memory:', echo=True)
+
+    global _session_factory
+    if _session_factory is None:
+        session = _session_factory()
+        _session_factory = orm.new_session_factory(
+            'sqlite:///:memory:',
+            echo=True,
+        )
         user = orm.User(
             name=getuser_unicode(),
             server=orm.Server(),
@@ -30,10 +35,13 @@ def db():
         hub = orm.Hub(
             server=orm.Server(),
         )
-        _db.add(user)
-        _db.add(hub)
-        _db.commit()
-    return _db
+        session.add(user)
+        session.add(hub)
+        session.commit()
+        session.close()
+
+    session = _session_factory()
+    return session
 
 
 @fixture

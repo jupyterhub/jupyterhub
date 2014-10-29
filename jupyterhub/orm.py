@@ -381,17 +381,16 @@ class CookieToken(Token, Base):
     __tablename__ = 'cookie_tokens'
 
 
-def new_session(url="sqlite:///:memory:", reset=False, **kwargs):
+def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
     """Create a new session at url"""
     if url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
     kwargs.setdefault('poolclass', StaticPool)
+
     engine = create_engine(url, **kwargs)
-    Session = sessionmaker(bind=engine)
-    session = Session()
     if reset:
         Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
-    return session
 
-
+    session_factory = sessionmaker(bind=engine)
+    return session_factory

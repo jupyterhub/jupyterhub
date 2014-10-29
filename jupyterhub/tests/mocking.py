@@ -79,10 +79,12 @@ class MockHubApp(JupyterHubApp):
             # put initialize in start for SQLAlchemy threading reasons
             super(MockHubApp, self).initialize(argv=argv)
 
-            # add an initial user
-            user = orm.User(name='user')
-            self.db.add(user)
-            self.db.commit()
+            with self.new_db_session() as db:
+                # add an initial user
+                user = orm.User(name='user')
+                db.add(user)
+                db.commit()
+
             self.io_loop.add_callback(evt.set)
             super(MockHubApp, self).start()
         

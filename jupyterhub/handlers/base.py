@@ -28,6 +28,7 @@ auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
 
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
+    _session = None
 
     @property
     def log(self):
@@ -44,19 +45,38 @@ class BaseHandler(RequestHandler):
 
     @property
     def db(self):
-        return self.settings['db']
+        if self._session is None:
+            self._session = self.settings['session_factory']()
+        return self._session
 
     @property
     def hub(self):
-        return self.settings['hub']
+        return self.db.query(orm.Hub).first()
     
     @property
     def proxy(self):
-        return self.settings['proxy']
+        return self.db.query(orm.Proxy).first()
     
     @property
     def authenticator(self):
         return self.settings.get('authenticator', None)
+
+    #---------------------------------------------------------------
+    # Database Session Management
+    #---------------------------------------------------------------
+    def finish(self, chunk=None):
+        """
+        Called when a handler is finished.
+
+        Subclasses should call super when overriding this method.
+        """
+        # Sessions are created lazily only when a request needs access to the
+        # database.
+        if self._session is not None:
+            self._session.close()
+            self._session = None
+
+        super(BaseHandler, self).finish(chunk=chunk)
 
     #---------------------------------------------------------------
     # Login and cookie-related
