@@ -7,6 +7,30 @@ import requests
 from ..utils import url_path_join as ujoin
 from .. import orm
 
+
+def check_db_locks(func):
+    """
+    Decorator for test functions that verifies no locks are held on the
+    application's database upon exit by creating and dropping a dummy table.
+
+    Relies on an instance of JupyterhubApp being the first argument to the
+    decorated function.
+    """
+
+    def new_func(*args, **kwargs):
+        retval = func(*args, **kwargs)
+
+        app = args[0]
+        temp_session = app.session_factory()
+        temp_session.execute('CREATE TABLE dummy (foo INT)')
+        temp_session.execute('DROP TABLE dummy')
+        temp_session.close()
+
+        return retval
+
+    return new_func
+
+
 def find_user(db, name):
     return db.query(orm.User).filter(orm.User.name==name).first()
     
@@ -28,6 +52,7 @@ def auth_header(db, name):
         token = user.api_tokens[0]
     return {'Authorization': 'token %s' % token.token}
 
+@check_db_locks
 def api_request(app, *api_path, **kwargs):
     """Make an API request"""
     base_url = app.hub.server.url
@@ -70,7 +95,6 @@ def test_auth_api(app):
         headers={'Authorization': 'token: %s' % cookie_token.token},
     )
     assert r.status_code == 403
-    
 
 def test_get_users(app):
     db = app.db
@@ -179,4 +203,3 @@ def test_spawn(app, io_loop):
     assert 'pid' not in user.state
     status = io_loop.run_sync(user.spawner.poll)
     assert status == 0
-    

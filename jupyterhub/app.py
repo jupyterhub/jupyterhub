@@ -262,6 +262,7 @@ class JupyterHubApp(Application):
         help="log all database transactions. This has A LOT of output"
     )
     db = Any()
+    session_factory = Any()
     
     admin_users = Set(config=True,
         help="""set of usernames of admin users
@@ -364,9 +365,13 @@ class JupyterHubApp(Application):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
         try:
-            self.db = orm.new_session(self.db_url, reset=self.reset_db, echo=self.debug_db,
+            self.session_factory = orm.new_session_factory(
+                self.db_url,
+                reset=self.reset_db,
+                echo=self.debug_db,
                 **self.db_kwargs
             )
+            self.db = self.session_factory()
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)
