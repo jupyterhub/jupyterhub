@@ -36,7 +36,7 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('cmd', [sys.executable, '-c', _echo_sleep])
     kwargs.setdefault('user', db.query(orm.User).first())
     kwargs.setdefault('hub', db.query(orm.Hub).first())
-    kwargs.setdefault('INTERRUPT_TIMEOUT', 2)
+    kwargs.setdefault('INTERRUPT_TIMEOUT', 1)
     kwargs.setdefault('TERM_TIMEOUT', 1)
     kwargs.setdefault('KILL_TIMEOUT', 1)
     return LocalProcessSpawner(**kwargs)
