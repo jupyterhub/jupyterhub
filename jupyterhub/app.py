@@ -4,9 +4,11 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import binascii
 import io
 import logging
 import os
+import socket
 from datetime import datetime
 from subprocess import Popen
 
@@ -16,19 +18,21 @@ except NameError:
     # py3
     raw_input = input
 
+from six import text_type
 from jinja2 import Environment, FileSystemLoader
 
 from sqlalchemy.exc import OperationalError
 
 import tornado.httpserver
 import tornado.options
+from tornado.httpclient import HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import LogFormatter, app_log, access_log, gen_log
 from tornado import gen, web
 
 from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
-    Type, Set, Instance,
+    Type, Set, Instance, Bytes,
 )
 from IPython.config import Application, catch_config_error
 
@@ -39,7 +43,7 @@ from . import handlers, apihandlers
 from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import (
-    url_path_join, random_hex, TimeoutError,
+    url_path_join, TimeoutError,
     ISO8601_ms, ISO8601_s, getuser_unicode,
 )
 # classes for config
@@ -68,6 +72,8 @@ flags = {
         "disable persisting state database to disk"
     ),
 }
+
+SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
 
 
 class JupyterHubApp(Application):
@@ -166,7 +172,16 @@ class JupyterHubApp(Application):
         """
     )
     def _proxy_auth_token_default(self):
-        return os.environ.get('CONFIGPROXY_AUTH_TOKEN', orm.new_token())
+        token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', None)
+        if not token:
+            self.log.warn('\n'.join([
+                "",
+                "Generating CONFIGPROXY_AUTH_TOKEN. Restarting the Hub will require restarting the proxy.",
+                "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHubApp.proxy_auth_token config to avoid this message.",
+                "",
+            ]))
+            token = orm.new_token()
+        return token
     
     proxy_api_ip = Unicode('localhost', config=True,
         help="The ip for the proxy API handlers"
@@ -203,14 +218,16 @@ class JupyterHubApp(Application):
         if newnew != new:
             self.hub_prefix = newnew
     
-    cookie_secret = Unicode(config=True,
+    cookie_secret = Bytes(config=True, env='JPY_COOKIE_SECRET',
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
         """
     )
-    def _cookie_secret_default(self):
-        return os.environ.get('JPY_COOKIE_SECRET', random_hex(64))
+    
+    cookie_secret_file = Unicode('jupyterhub_cookie_secret', config=True,
+        help="""File in which to store the cookie secret."""
+    )
     
     authenticator_class = Type(PAMAuthenticator, Authenticator,
         config=True,
@@ -361,6 +378,51 @@ class JupyterHubApp(Application):
         if os.path.exists(path) and not os.access(path, os.W_OK):
             self.log.error("%s cannot edit %s", user, path)
     
+    def init_secrets(self):
+        trait_name = 'cookie_secret'
+        trait = self.traits()[trait_name]
+        env_name = trait.get_metadata('env')
+        secret_file = os.path.abspath(
+            os.path.expanduser(self.cookie_secret_file)
+        )
+        secret = self.cookie_secret
+        secret_from = 'config'
+        # load priority: 1. config, 2. env, 3. file
+        if not secret and os.environ.get(env_name):
+            secret_from = 'env'
+            self.log.info("Loading %s from env[%s]", trait_name, env_name)
+            secret = binascii.a2b_hex(os.environ[env_name])
+        if not secret and os.path.exists(secret_file):
+            secret_from = 'file'
+            perm = os.stat(secret_file).st_mode
+            if perm & 0o077:
+                self.log.error("Bad permissions on %s", secret_file)
+            else:
+                self.log.info("Loading %s from %s", trait_name, secret_file)
+                with io.open(secret_file) as f:
+                    b64_secret = f.read()
+                try:
+                    secret = binascii.a2b_base64(b64_secret)
+                except Exception as e:
+                    self.log.error("%s does not contain b64 key: %s", secret_file, e)
+        if not secret:
+            secret_from = 'new'
+            self.log.debug("Generating new %s", trait_name)
+            secret = os.urandom(SECRET_BYTES)
+        
+        if secret_file and secret_from == 'new':
+            # if we generated a new secret, store it in the secret_file
+            self.log.info("Writing %s to %s", trait_name, secret_file)
+            b64_secret = text_type(binascii.b2a_base64(secret))
+            with io.open(secret_file, 'w', encoding='utf8') as f:
+                f.write(b64_secret)
+            try:
+                os.chmod(secret_file, 0o600)
+            except OSError:
+                self.log.warn("Failed to set permissions on %s", secret_file)
+        # store the loaded trait value
+        self.cookie_secret = secret
+    
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
@@ -388,7 +450,6 @@ class JupyterHubApp(Application):
                     ip=self.hub_ip,
                     port=self.hub_port,
                     base_url=self.hub_prefix,
-                    cookie_secret=self.cookie_secret,
                     cookie_name=u'jupyter-hub-token',
                 )
             )
@@ -506,28 +567,39 @@ class JupyterHubApp(Application):
             self.proxy = orm.Proxy(
                 public_server=orm.Server(),
                 api_server=orm.Server(),
-                auth_token = self.proxy_auth_token,
             )
             self.db.add(self.proxy)
             self.db.commit()
+        self.proxy.auth_token = self.proxy_auth_token # not persisted
         self.proxy.log = self.log
         self.proxy.public_server.ip = self.ip
         self.proxy.public_server.port = self.port
         self.proxy.api_server.ip = self.proxy_api_ip
         self.proxy.api_server.port = self.proxy_api_port
         self.proxy.api_server.base_url = u'/api/routes/'
-        if self.proxy.auth_token is None:
-            self.proxy.auth_token = self.proxy_auth_token
         self.db.commit()
     
     @gen.coroutine
     def start_proxy(self):
         """Actually start the configurable-http-proxy"""
-        if self.proxy.public_server.is_up() and \
-              self.proxy.api_server.is_up():
-           self.log.warn("Proxy already running at: %s", self.proxy.public_server.url)
-           self.proxy_process = None
-           return
+        # check for proxy
+        if self.proxy.public_server.is_up() or self.proxy.api_server.is_up():
+            # check for *authenticated* access to the proxy (auth token can change)
+            try:
+                yield self.proxy.get_routes()
+            except (HTTPError, OSError, socket.error) as e:
+                if isinstance(e, HTTPError) and e.code == 403:
+                    msg = "Did CONFIGPROXY_AUTH_TOKEN change?"
+                else:
+                    msg = "Is something else using %s?" % self.proxy.public_server.url
+                self.log.error("Proxy appears to be running at %s, but I can't access it (%s)\n%s",
+                    self.proxy.public_server.url, e, msg)
+                self.exit(1)
+                return
+            else:
+                self.log.info("Proxy already running at: %s", self.proxy.public_server.url)
+            self.proxy_process = None
+            return
 
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
@@ -545,7 +617,8 @@ class JupyterHubApp(Application):
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
-        self.log.info("Starting proxy: %s", cmd)
+        self.log.info("Starting proxy @ %s", self.proxy.public_server.url)
+        self.log.debug("Proxy cmd: %s", cmd)
         self.proxy_process = Popen(cmd, env=env)
         def _check():
             status = self.proxy_process.poll()
@@ -601,7 +674,7 @@ class JupyterHubApp(Application):
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,
-            cookie_secret=self.hub.server.cookie_secret,
+            cookie_secret=self.cookie_secret,
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
@@ -633,6 +706,7 @@ class JupyterHubApp(Application):
         self.init_logging()
         self.write_pid_file()
         self.init_ports()
+        self.init_secrets()
         self.init_db()
         self.init_hub()
         self.init_proxy()
@@ -703,7 +777,7 @@ class JupyterHubApp(Application):
     @gen.coroutine
     def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
-        routes = yield self.proxy.fetch_routes()
+        routes = yield self.proxy.get_routes()
         for prefix, route in routes.items():
             if 'user' not in route:
                 # not a user route, ignore it

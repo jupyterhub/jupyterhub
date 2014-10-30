@@ -15,7 +15,7 @@ from .base import APIHandler
 class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
-        orm_token = self.db.query(orm.APIToken).filter(orm.APIToken.token == token).first()
+        orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             raise web.HTTPError(404)
         self.write(json.dumps({
@@ -26,15 +26,11 @@ class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name):
         cookie_value = self.request.body
-        btoken = self.get_secure_cookie(cookie_name, cookie_value)
-        if not btoken:
-            raise web.HTTPError(404)
-        token = btoken.decode('utf8', 'replace')
-        orm_token = self.db.query(orm.CookieToken).filter(orm.CookieToken.token == token).first()
-        if orm_token is None:
+        user = self._user_for_cookie(cookie_name, cookie_value)
+        if user is None:
             raise web.HTTPError(404)
         self.write(json.dumps({
-            'user' : orm_token.user.name,
+            'user' : user.name,
         }))
 
 default_handlers = [

@@ -90,8 +90,7 @@ class Spawner(LoggingConfigurable):
         
         get_state, clear_state
         """
-        if state.get('api_token'):
-            self.api_token = state['api_token']
+        pass
     
     def get_state(self):
         """store the state necessary for load_state
@@ -106,8 +105,6 @@ class Spawner(LoggingConfigurable):
              a JSONable dict of state
         """
         state = {}
-        if self.api_token:
-            state['api_token'] = self.api_token
         return state
     
     def clear_state(self):
@@ -117,7 +114,7 @@ class Spawner(LoggingConfigurable):
         
         Subclasses should call super, to ensure that state is properly cleared.
         """
-        self.api_token = ''
+        self.api_token = u''
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""

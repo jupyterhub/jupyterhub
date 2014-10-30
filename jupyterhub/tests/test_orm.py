@@ -21,7 +21,6 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, unicode)
-    assert isinstance(server.cookie_secret, unicode)
     assert server.url == 'http://localhost:%i/' % server.port
 
 
@@ -81,18 +80,11 @@ def test_tokens(db):
     user = orm.User(name=u'inara')
     db.add(user)
     db.commit()
-    token = user.new_cookie_token()
-    db.add(token)
-    db.commit()
-    assert token in user.cookie_tokens
-    db.add(user.new_cookie_token())
-    db.add(user.new_cookie_token())
-    db.add(user.new_api_token())
-    db.commit()
-    assert len(user.api_tokens) == 1
-    assert len(user.cookie_tokens) == 3
-    
-    found = orm.CookieToken.find(db, token=token.token)
-    assert found.token == token.token
-    found = orm.APIToken.find(db, token.token)
+    token = user.new_api_token()
+    assert any(t.match(token) for t in user.api_tokens)
+    user.new_api_token()
+    assert len(user.api_tokens) == 2
+    found = orm.APIToken.find(db, token=token)
+    assert found.match(token)
+    found = orm.APIToken.find(db, 'something else')
     assert found is None

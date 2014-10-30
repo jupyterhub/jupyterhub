@@ -7,9 +7,6 @@ from datetime import datetime
 import errno
 import json
 import socket
-import uuid
-
-from six import text_type
 
 from tornado import gen
 from tornado.log import app_log
@@ -18,23 +15,19 @@ from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
     inspect,
-    Column, Integer, String, ForeignKey, Unicode, Binary, Boolean,
+    Column, Integer, ForeignKey, Unicode, Boolean,
     DateTime,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine
 
-from .utils import random_port, url_path_join, wait_for_server, wait_for_http_server
-
-
-def new_token(*args, **kwargs):
-    """generator for new random tokens
-    
-    For now, just UUIDs.
-    """
-    return text_type(uuid.uuid4().hex)
+from .utils import (
+    random_port, url_path_join, wait_for_server, wait_for_http_server,
+    new_token, hash_token, compare_token,
+)
 
 
 class JSONDict(TypeDecorator):
@@ -74,7 +67,6 @@ class Server(Base):
     ip = Column(Unicode, default=u'localhost')
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode, default=u'/')
-    cookie_secret = Column(Unicode, default=u'')
     cookie_name = Column(Unicode, default=u'cookie')
     
     def __repr__(self):
@@ -124,7 +116,7 @@ class Proxy(Base):
     """
     __tablename__ = 'proxies'
     id = Column(Integer, primary_key=True)
-    auth_token = Column(Unicode, default=new_token)
+    auth_token = None
     _public_server_id = Column(Integer, ForeignKey('servers.id'))
     public_server = relationship(Server, primaryjoin=_public_server_id == Server.id)
     _api_server_id = Column(Integer, ForeignKey('servers.id'))
@@ -196,7 +188,7 @@ class Proxy(Base):
             yield f
 
     @gen.coroutine
-    def fetch_routes(self, client=None):
+    def get_routes(self, client=None):
         """Fetch the proxy's routes"""
         resp = yield self.api_request('', client=client)
         raise gen.Return(json.loads(resp.body.decode('utf8', 'replace')))
@@ -236,9 +228,11 @@ class User(Base):
     and multiple tokens used for authorization.
     
     API tokens grant access to the Hub's REST API.
-    These are used by single-user servers to authenticate requests.
+    These are used by single-user servers to authenticate requests,
+    and external services to manipulate the Hub.
     
-    Cookie tokens are used to authenticate browser sessions.
+    Cookies are set with a single ID.
+    Resetting the Cookie ID invalidates all cookies, forcing user to login again.
     
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
@@ -253,7 +247,7 @@ class User(Base):
     last_activity = Column(DateTime, default=datetime.utcnow)
     
     api_tokens = relationship("APIToken", backref="user")
-    cookie_tokens = relationship("CookieToken", backref="user")
+    cookie_id = Column(Unicode, default=new_token)
     state = Column(JSONDict)
     spawner = None
     
@@ -271,18 +265,17 @@ class User(Base):
                 name=self.name,
             )
     
-    def _new_token(self, cls):
-        assert self.id is not None
-        return cls(token=new_token(), user_id=self.id)
-    
     def new_api_token(self):
-        """Return a new API token"""
-        return self._new_token(APIToken)
+        """Create a new API token"""
+        assert self.id is not None
+        db = inspect(self).session
+        token = new_token()
+        orm_token = APIToken(user_id=self.id)
+        orm_token.token = token
+        db.add(orm_token)
+        db.commit()
+        return token
     
-    def new_cookie_token(self):
-        """Return a new cookie token"""
-        return self._new_token(CookieToken)
-
     @classmethod
     def find(cls, db, name):
         """Find a user by name.
@@ -305,7 +298,6 @@ class User(Base):
         db.commit()
 
         api_token = self.new_api_token()
-        db.add(api_token)
         db.commit()
         
         
@@ -316,7 +308,7 @@ class User(Base):
         )
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
-        spawner.api_token = api_token.token
+        spawner.api_token = api_token
         
         yield spawner.start()
         spawner.start_polling()
@@ -348,17 +340,36 @@ class User(Base):
         inspect(self).session.commit()
 
 
-class Token(object):
-    """Mixin for token tables, since we have two"""
-    token = Column(String, primary_key=True)
+class APIToken(Base):
+    """An API token"""
+    __tablename__ = 'api_tokens'
+    
     @declared_attr
     def user_id(cls):
         return Column(Integer, ForeignKey('users.id'))
+
+    id = Column(Integer, primary_key=True)
+    hashed = Column(Unicode)
+    prefix = Column(Unicode)
+    prefix_length = 4
+    algorithm = "sha512"
+    rounds = 16384
+    salt_bytes = 8
+    
+    @property
+    def token(self):
+        raise AttributeError("token is write-only")
+    
+    @token.setter
+    def token(self, token):
+        """Store the hashed value and prefix for a token"""
+        self.prefix = token[:self.prefix_length]
+        self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
     
     def __repr__(self):
-        return "<{cls}('{t}', user='{u}')>".format(
+        return "<{cls}('{pre}...', user='{u}')>".format(
             cls=self.__class__.__name__,
-            t=self.token,
+            pre=self.prefix,
             u=self.user.name,
         )
 
@@ -368,17 +379,17 @@ class Token(object):
 
         Returns None if not found.
         """
-        return db.query(cls).filter(cls.token==token).first()
-
-
-class APIToken(Token, Base):
-    """An API token"""
-    __tablename__ = 'api_tokens'
-
-
-class CookieToken(Token, Base):
-    """A cookie token"""
-    __tablename__ = 'cookie_tokens'
+        prefix = token[:cls.prefix_length]
+        # since we can't filter on hashed values, filter on prefix
+        # so we aren't comparing with all tokens
+        prefix_match = db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+        for orm_token in prefix_match:
+            if orm_token.match(token):
+                return orm_token
+    
+    def match(self, token):
+        """Is this my token?"""
+        return compare_token(self.hashed, token)
 
 
 def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
