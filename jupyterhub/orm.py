@@ -21,6 +21,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine
 
 from .utils import (
@@ -383,7 +384,7 @@ class APIToken(Base):
         prefix = token[:cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
-        prefix_match = db.query(cls).filter(cls.prefix==prefix)
+        prefix_match = db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
         for orm_token in prefix_match:
             if orm_token.match(token):
                 return orm_token
