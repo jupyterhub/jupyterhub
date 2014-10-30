@@ -128,7 +128,7 @@ class BaseCommand(Command):
 
 
 class Bower(BaseCommand):
-    description = "fetch static components with bower"
+    description = "fetch static client-side components with bower"
     
     user_options = []
     
@@ -173,11 +173,11 @@ class CSS(BaseCommand):
         self.distribution.data_files = get_data_files()
 
 # ensure bower is run as part of install
-install.sub_commands.insert(0, ('bower', None))
+install.sub_commands.insert(0, ('js', None))
 install.sub_commands.insert(1, ('css', None))
 
 setup_args['cmdclass'] = {
-    'bower': Bower,
+    'js': Bower,
     'css': CSS,
 }
 

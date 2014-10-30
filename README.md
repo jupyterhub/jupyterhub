@@ -18,29 +18,27 @@ Basic principles:
 
 ## Dependencies
 
-First install the configurable HTTP proxy package (-g for global install):
+You will need nodejs/npm, which you can get from your package manager:
 
-    npm install [-g] jupyter/configurable-http-proxy
+    sudo apt-get install npm nodejs-legacy
+    
+(The `nodejs-legacy` package installs the `node` executable,
+which is required for npm to work on Debian/Ubuntu at this point)
 
-Next install `bower` to fetch the JavaScript dependencies and `less` to compile CSS:
+Then install javascript dependencies:
 
-    npm install -g bower less
+    sudo npm install -g bower less jupyter/configurable-http-proxy
 
-Note on debian/ubuntu machines, you may need to install the `nodejs-legacy` package
-to get node executables to work:
-
-    sudo apt-get install nodejs-legacy
-
-This installs the traditional `node` executable, in addition to debian's renamed `nodejs`
-executable, with which the apt-get installed `npm` doesn't actually work.
 
 ## Installation
 
 Then you can install the Python package by doing:
 
     pip install .
-    
-This will fetch Javascript dependencies and compile CSS, and install these files to `sys.prefix`/share/jupyter.
+
+This will fetch client-side javascript dependencies and compile CSS,
+and install these files to `sys.prefix`/share/jupyter, as well as
+install any Python dependencies.
 
 
 ### Development install
@@ -51,7 +49,7 @@ For a development install:
 
 In which case you may need to manually update javascript and css after some updates, with:
 
-    python setup.py bower # fetch updated js (changes rarely)
+    python setup.py js    # fetch updated client-side js (changes rarely)
     python setup.py css   # recompile CSS from LESS sources
 
 
@@ -65,6 +63,8 @@ and then visit `http://localhost:8000`, and sign in with your unix credentials.
 
 If you want multiple users to be able to sign into the server, you will need to run the
 `jupyterhub` command as a privileged user, such as root.
+The [wiki](https://github.com/jupyter/jupyterhub/wiki/Using-sudo-to-run-the-server-as-non-root) describes how to run the server
+as a less privileged user, which requires more configuration of the system.
 
 ### Some examples
 
@@ -76,3 +76,9 @@ spawn the server on 10.0.1.2:443 with https:
 
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
 
+The authentication and process spawning mechanisms can be replaced,
+which should allow plugging into a variety of authentication or process control environments.
+Some examples, meant as illustration and testing of this concept:
+
+- Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyter/oauthenticator)
+- Spawning single-user servers with docker, using the [DockerSpawner](https://github.com/jupyter/dockerspawner)
