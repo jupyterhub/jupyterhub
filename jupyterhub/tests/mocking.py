@@ -1,6 +1,8 @@
 """mock utilities for testing"""
 
+import os
 import sys
+from tempfile import NamedTemporaryFile
 import threading
 
 try:
@@ -56,13 +58,12 @@ class MockPAMAuthenticator(PAMAuthenticator):
 
 class MockHubApp(JupyterHubApp):
     """HubApp with various mock bits"""
-    
+
+    db_file = None
+
     def _ip_default(self):
         return 'localhost'
     
-    def _db_url_default(self):
-        return 'sqlite:///:memory:'
-
     def _authenticator_class_default(self):
         return MockPAMAuthenticator
     
@@ -71,8 +72,10 @@ class MockHubApp(JupyterHubApp):
     
     def _admin_users_default(self):
         return {'admin'}
-    
+
     def start(self, argv=None):
+        self.db_file = NamedTemporaryFile()
+        self.db_url = 'sqlite:///' + self.db_file.name
         evt = threading.Event()
         def _start():
             self.io_loop = IOLoop.current()
@@ -91,6 +94,6 @@ class MockHubApp(JupyterHubApp):
         evt.wait(timeout=5)
     
     def stop(self):
+        self.db_file.close()
         self.io_loop.add_callback(self.io_loop.stop)
         self._thread.join()
-
