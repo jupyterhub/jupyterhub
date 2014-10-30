@@ -353,20 +353,18 @@ class APIToken(Base):
     prefix = Column(Unicode)
     prefix_length = 4
     algorithm = "sha512"
+    rounds = 16384
     salt_bytes = 8
-    _token = None
     
     @property
     def token(self):
-        """plaintext tokens will only be accessible for tokens created during this session"""
-        return self._token
+        raise AttributeError("token is write-only")
     
     @token.setter
     def token(self, token):
         """Store the hashed value and prefix for a token"""
         self.prefix = token[:self.prefix_length]
-        self.hashed = hash_token(token, salt=self.salt_bytes, algorithm=self.algorithm)
-        self._token = token
+        self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
     
     def __repr__(self):
         return "<{cls}('{pre}...', user='{u}')>".format(

@@ -150,7 +150,7 @@ def new_token(*args, **kwargs):
     return text_type(uuid.uuid4().hex)
 
 
-def hash_token(token, salt=8, algorithm='sha256'):
+def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
     """hash a token, and return it as `algorithm:salt:hash`
     
     If `salt` is an integer, a random salt of that many bytes will be used.
@@ -165,10 +165,11 @@ def hash_token(token, salt=8, algorithm='sha256'):
         bsalt = salt.encode('utf8')
     btoken = token.encode('utf8', 'replace')
     h.update(bsalt)
-    h.update(btoken)
+    for i in range(rounds):
+        h.update(btoken)
     digest = h.hexdigest()
     
-    return u"{algorithm}:{salt}:{digest}".format(**locals())
+    return u"{algorithm}:{rounds}:{salt}:{digest}".format(**locals())
 
 
 def compare_token(compare, token):
@@ -176,8 +177,8 @@ def compare_token(compare, token):
     
     uses the same algorithm and salt of the hashed token for comparison
     """
-    algorithm, salt, _ = compare.split(':', 2)
-    hashed = hash_token(token, salt=salt, algorithm=algorithm)
+    algorithm, srounds, salt, _ = compare.split(':')
+    hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm)
     if compare == hashed:
         return True
     return False
