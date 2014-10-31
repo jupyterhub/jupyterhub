@@ -190,7 +190,7 @@ if 'setuptools' in sys.modules:
     class develop_js_css(develop):
         def run(self):
             if not self.uninstall:
-                self.distribution.run_command('bower')
+                self.distribution.run_command('js')
                 self.distribution.run_command('css')
             develop.run(self)
     setup_args['cmdclass']['develop'] = develop_js_css
