@@ -39,3 +39,8 @@ instead of the default SQLite backend.
 
 4. Run the containerized hub with `docker run -it --link jpy-db:postgres
    jupyterhub-postgres-hub`.
+
+5. Log in as one of the users defined in the `examples/postgres/hub/`
+   Dockerfile.  By default `rhea` is the server's admin user, `io` and
+   `ganymede` are non-admin users, and all users' passwords are their
+   usernames.
