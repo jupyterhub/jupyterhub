@@ -5,48 +5,42 @@
 
 from .. import orm
 
-try:
-    unicode
-except NameError:
-    # py3
-    unicode = str
-
 
 def test_server(db):
     server = orm.Server()
     db.add(server)
     db.commit()
-    assert server.ip == u'localhost'
+    assert server.ip == 'localhost'
     assert server.base_url == '/'
     assert server.proto == 'http'
     assert isinstance(server.port, int)
-    assert isinstance(server.cookie_name, unicode)
+    assert isinstance(server.cookie_name, str)
     assert server.url == 'http://localhost:%i/' % server.port
 
 
 def test_proxy(db):
     proxy = orm.Proxy(
-        auth_token=u'abc-123',
+        auth_token='abc-123',
         public_server=orm.Server(
-            ip=u'192.168.1.1',
+            ip='192.168.1.1',
             port=8000,
         ),
         api_server=orm.Server(
-            ip=u'127.0.0.1',
+            ip='127.0.0.1',
             port=8001,
         ),
     )
     db.add(proxy)
     db.commit()
-    assert proxy.public_server.ip == u'192.168.1.1'
-    assert proxy.api_server.ip == u'127.0.0.1'
-    assert proxy.auth_token == u'abc-123'
+    assert proxy.public_server.ip == '192.168.1.1'
+    assert proxy.api_server.ip == '127.0.0.1'
+    assert proxy.auth_token == 'abc-123'
 
 
 def test_hub(db):
     hub = orm.Hub(
         server=orm.Server(
-            ip = u'1.2.3.4',
+            ip = '1.2.3.4',
             port = 1234,
             base_url='/hubtest/',
         ),
@@ -54,30 +48,30 @@ def test_hub(db):
     )
     db.add(hub)
     db.commit()
-    assert hub.server.ip == u'1.2.3.4'
+    assert hub.server.ip == '1.2.3.4'
     hub.server.port == 1234
-    assert hub.api_url == u'http://1.2.3.4:1234/hubtest/api'
+    assert hub.api_url == 'http://1.2.3.4:1234/hubtest/api'
 
 
 def test_user(db):
-    user = orm.User(name=u'kaylee',
+    user = orm.User(name='kaylee',
         server=orm.Server(),
         state={'pid': 4234},
     )
     db.add(user)
     db.commit()
-    assert user.name == u'kaylee'
-    assert user.server.ip == u'localhost'
+    assert user.name == 'kaylee'
+    assert user.server.ip == 'localhost'
     assert user.state == {'pid': 4234}
 
-    found = orm.User.find(db, u'kaylee')
+    found = orm.User.find(db, 'kaylee')
     assert found.name == user.name
-    found = orm.User.find(db, u'badger')
+    found = orm.User.find(db, 'badger')
     assert found is None
 
 
 def test_tokens(db):
-    user = orm.User(name=u'inara')
+    user = orm.User(name='inara')
     db.add(user)
     db.commit()
     token = user.new_api_token()

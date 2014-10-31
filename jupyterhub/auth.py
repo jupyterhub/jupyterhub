@@ -153,5 +153,5 @@ class PAMAuthenticator(LocalAuthenticator):
         busername = username.encode(self.encoding)
         bpassword = data['password'].encode(self.encoding)
         if simplepam.authenticate(busername, bpassword, service=self.service):
-            raise gen.Return(username)
+            return username
     

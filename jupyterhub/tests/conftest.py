@@ -4,12 +4,12 @@
 # Distributed under the terms of the Modified BSD License.
 
 import logging
+from getpass import getuser
 
 from pytest import fixture
 from tornado import ioloop
 
 from .. import orm
-from ..utils import getuser_unicode
 
 from .mocking import MockHubApp
 
@@ -24,7 +24,7 @@ def db():
     if _db is None:
         _db = orm.new_session_factory('sqlite:///:memory:', echo=True)()
         user = orm.User(
-            name=getuser_unicode(),
+            name=getuser(),
             server=orm.Server(),
         )
         hub = orm.Hub(

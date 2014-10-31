@@ -9,33 +9,33 @@ from .mocking import MockPAMAuthenticator
 def test_pam_auth(io_loop):
     authenticator = MockPAMAuthenticator()
     authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
-        u'username': u'match',
-        u'password': u'match',
+        'username': 'match',
+        'password': 'match',
     }))
-    assert authorized == u'match'
+    assert authorized == 'match'
     
     authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
-        u'username': u'match',
-        u'password': u'nomatch',
+        'username': 'match',
+        'password': 'nomatch',
     }))
     assert authorized is None
 
 def test_pam_auth_whitelist(io_loop):
     authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
     authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
-        u'username': u'kaylee',
-        u'password': u'kaylee',
+        'username': 'kaylee',
+        'password': 'kaylee',
     }))
-    assert authorized == u'kaylee'
+    assert authorized == 'kaylee'
     
     authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
-        u'username': u'wash',
-        u'password': u'nomatch',
+        'username': 'wash',
+        'password': 'nomatch',
     }))
     assert authorized is None
     
     authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
-        u'username': u'mal',
-        u'password': u'mal',
+        'username': 'mal',
+        'password': 'mal',
     }))
     assert authorized is None
