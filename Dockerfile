@@ -30,5 +30,5 @@ WORKDIR /srv/jupyterhub/
 
 EXPOSE 8000
 
-ONBUILD ADD jupyter_hub_config.py /srv/jupyterhub/jupyter_hub_config.py
-CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyter_hub_config.py"]
+ONBUILD ADD jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
+CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py"]

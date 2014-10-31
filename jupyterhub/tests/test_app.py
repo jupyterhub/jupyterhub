@@ -11,7 +11,7 @@ def test_help_all():
     assert '--JupyterHubApp.ip' in out
 
 def test_generate_config():
-    with NamedTemporaryFile(prefix='jupyter_hub_config', suffix='.py') as tf:
+    with NamedTemporaryFile(prefix='jupyterhub_config', suffix='.py') as tf:
         cfg_file = tf.name
     
     out = check_output([sys.executable, '-m', 'jupyterhub',

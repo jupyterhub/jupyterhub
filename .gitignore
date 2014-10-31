@@ -4,6 +4,11 @@ node_modules
 .DS_Store
 build
 dist
+# ignore config file at the top-level of the repo
+# but not sub-dirs
+/jupyterhub_config.py
+jupyterhub_cookie_secret
+jupyterhub.sqlite
 share/jupyter/static/components
 share/jupyter/static/css/style.min.css
 share/jupyter/static/css/style.min.css.map
