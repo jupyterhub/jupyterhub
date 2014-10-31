@@ -14,12 +14,12 @@ instead of the default SQLite backend.
    examples/postgres/db`.  This may take a minute or two the first time it's
    run.
 
-3. Run the db image with `docker run -d -p 5433:5432 jupyterhub-postgres`.
+3. Run the db image with `docker run -d -p 5433:5432 jupyterhub-postgres-db`.
    This will start a postgres daemon container in the background that's
    listening on your localhost port 5433.
 
 4. Run jupyterhub with
-   `jupyterhub--db=postgresql://jupyterhub:<password>@localhost:5433/jupyterhub`.
+   `jupyterhub --db=postgresql://jupyterhub:<password>@localhost:5433/jupyterhub`.
 
 ### Running Postgres with Containerized Jupyterhub.
 0. Replace `ENV JPY_PSQL_PASSWORD arglebargle` with your own password in the
