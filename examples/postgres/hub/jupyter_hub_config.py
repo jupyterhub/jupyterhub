@@ -6,9 +6,10 @@ c = get_config()
 c.JupyterHubApp.admin_users = {'rhea'}
 c.Authenticator.whitelist = {'ganymede', 'io', 'rhea'}
 
-# Set up the database url.
+# These environment variables are automatically supplied by the linked postgres
+# container.
 import os;
-pg_pass = os.getenv('JPY_PSQL_PASSWORD')
+pg_pass = os.getenv('POSTGRES_ENV_JPY_PSQL_PASSWORD')
 pg_host = os.getenv('POSTGRES_PORT_5432_TCP_ADDR')
 c.JupyterHubApp.db_url = 'postgresql://jupyterhub:{}@{}:5432/jupyterhub'.format(
     pg_pass,

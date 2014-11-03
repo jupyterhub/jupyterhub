@@ -6,5 +6,5 @@ RUN mkdir /docker-entrypoint-initdb.d
 # startup, prior to the the database being started.
 COPY initdb.sh /docker-entrypoint-initdb.d/init.sh
 
-# Replace this with your own password.
-ENV JPY_PSQL_PASSWORD arglebargle
+# Uncomment and replace this with your own password.
+# ENV JPY_PSQL_PASSWORD arglebargle
