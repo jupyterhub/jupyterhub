@@ -88,18 +88,17 @@ class BaseHandler(RequestHandler):
         if cookie_id is None:
             return
         cookie_id = cookie_id.decode('utf8', 'replace')
-        return self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
-    
-    def get_current_user_cookie(self):
-        """get_current_user from a cookie token"""
-        user = self._user_for_cookie(self.hub.server.cookie_name)
-        if user:
-            return user
-        else:
+        user = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
+        if user is None:
             # don't log the token itself
             self.log.warn("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
             self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
+        return user
+    
+    def get_current_user_cookie(self):
+        """get_current_user from a cookie token"""
+        return self._user_for_cookie(self.hub.server.cookie_name)
     
     def get_current_user(self):
         """get current username"""
