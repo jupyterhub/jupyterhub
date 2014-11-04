@@ -74,6 +74,13 @@ class Spawner(LoggingConfigurable):
         help="""The command used for starting notebooks."""
     )
     
+    notebook_dir = Unicode('', config=True,
+        help="""The notebook directory for the single-user server
+        
+        `~` will be expanded to the user's home directory
+        """
+    )
+    
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
@@ -129,6 +136,8 @@ class Spawner(LoggingConfigurable):
             '--hub-prefix=%s' % self.hub.server.base_url,
             '--hub-api-url=%s' % self.hub.api_url,
             ]
+        if self.notebook_dir:
+            args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
             args.append('--debug')
         return args
@@ -261,7 +270,7 @@ def set_user_sudo(username):
     def preexec():
         # don't forward signals
         os.setpgrp()
-
+        
         # start in the user's home dir
         _try_setcwd(home)
     return preexec
