@@ -93,7 +93,7 @@ class JupyterHubApp(Application):
     
     generate default config file:
     
-        jupyterhub --generate-config -f myconfig.py
+        jupyterhub --generate-config -f /etc/jupyterhub/jupyterhub.py
     
     spawn the server on 10.0.1.2:443 with https:
     
@@ -110,7 +110,7 @@ class JupyterHubApp(Application):
         PAMAuthenticator,
     ])
     
-    config_file = Unicode('jupyter_hub_config.py', config=True,
+    config_file = Unicode('jupyterhub_config.py', config=True,
         help="The config file to load",
     )
     generate_config = Bool(False, config=True,
