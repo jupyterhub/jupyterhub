@@ -114,7 +114,7 @@ class SingleUserNotebookApp(NotebookApp):
         
         # load the hub related settings into the tornado settings dict
         env = os.environ
-        s = self.webapp_settings
+        s = self.tornado_settings
         s['cookie_cache'] = {}
         s['user'] = self.user
         s['hub_api_key'] = env.pop('JPY_API_TOKEN')
