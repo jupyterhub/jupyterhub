@@ -5,33 +5,16 @@
 
 from binascii import b2a_hex
 import errno
-import getpass
 import hashlib
 import os
 import socket
 import uuid
 
-from six import text_type
 from tornado import web, gen, ioloop
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
 from IPython.html.utils import url_path_join
-
-try:
-    # make TimeoutError importable on Python >= 3.3
-    TimeoutError = TimeoutError
-except NameError:
-    # python < 3.3
-    class TimeoutError(Exception):
-        pass
-
-
-def getuser_unicode():
-    """
-    Call getpass.getuser, ensuring that the output is returned as unicode.
-    """
-    return text_type(getpass.getuser())
 
 
 def random_port():
@@ -147,7 +130,7 @@ def new_token(*args, **kwargs):
     
     For now, just UUIDs.
     """
-    return text_type(uuid.uuid4().hex)
+    return uuid.uuid4().hex
 
 
 def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
@@ -169,7 +152,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
         h.update(btoken)
     digest = h.hexdigest()
     
-    return u"{algorithm}:{rounds}:{salt}:{digest}".format(**locals())
+    return "{algorithm}:{rounds}:{salt}:{digest}".format(**locals())
 
 
 def compare_token(compare, token):

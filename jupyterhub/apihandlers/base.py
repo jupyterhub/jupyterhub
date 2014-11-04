@@ -4,11 +4,7 @@
 
 import json
 
-try:
-    # py3
-    from http.client import responses
-except ImportError:
-    from httplib import responses
+from http.client import responses
 
 from tornado import web
 
@@ -19,7 +15,7 @@ class APIHandler(BaseHandler):
         """Return the body of the request as JSON data."""
         if not self.request.body:
             return None
-        body = self.request.body.strip().decode(u'utf-8')
+        body = self.request.body.strip().decode('utf-8')
         try:
             model = json.loads(body)
         except Exception:

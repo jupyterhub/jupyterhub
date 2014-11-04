@@ -5,11 +5,7 @@
 
 import re
 from datetime import datetime
-try:
-    # py3
-    from http.client import responses
-except ImportError:
-    from httplib import responses
+from http.client import responses
 
 from jinja2 import TemplateNotFound
 
@@ -156,7 +152,7 @@ class BaseHandler(RequestHandler):
         auth = self.authenticator
         if auth is not None:
             result = yield auth.authenticate(self, data)
-            raise gen.Return(result)
+            return result
         else:
             self.log.error("No authentication function, login is impossible!")
 
@@ -179,7 +175,7 @@ class BaseHandler(RequestHandler):
         )
         yield self.proxy.add_user(user)
         user.spawner.add_poll_callback(self.user_stopped, user)
-        raise gen.Return(user)
+        return user
     
     @gen.coroutine
     def user_stopped(self, user):

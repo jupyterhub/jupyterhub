@@ -5,20 +5,18 @@
 # Distributed under the terms of the Modified BSD License.
 
 import binascii
-import io
 import logging
 import os
 import socket
+import sys
 from datetime import datetime
+from distutils.version import LooseVersion as V
+from getpass import getuser
 from subprocess import Popen
 
-try:
-    raw_input
-except NameError:
-    # py3
-    raw_input = input
+if sys.version_info[:2] < (3,3):
+    raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
-from six import text_type
 from jinja2 import Environment, FileSystemLoader
 
 from sqlalchemy.exc import OperationalError
@@ -29,6 +27,10 @@ from tornado.httpclient import HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import LogFormatter, app_log, access_log, gen_log
 from tornado import gen, web
+
+import IPython
+if V(IPython.__version__) < V('3.0'):
+    raise ImportError("JupyterHub Requires IPython >= 3.0, found %s" % IPython.__version__)
 
 from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
@@ -43,8 +45,8 @@ from . import handlers, apihandlers
 from . import orm
 from ._data import DATA_FILES_PATH
 from .utils import (
-    url_path_join, TimeoutError,
-    ISO8601_ms, ISO8601_s, getuser_unicode,
+    url_path_join,
+    ISO8601_ms, ISO8601_s,
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -299,18 +301,11 @@ class JupyterHubApp(Application):
     def _log_datefmt_default(self):
         """Exclude date from default date format"""
         return "%H:%M:%S"
-    
+
     def _log_format_default(self):
         """override default log format to include time"""
-        return u"%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
-    
-    def _log_format_changed(self, name, old, new):
-        """Change the log formatter when log_format is set."""
-        # FIXME: IPython < 3 compat
-        _log_handler = self.log.handlers[0]
-        _log_formatter = self._log_formatter_cls(fmt=new, datefmt=self.log_datefmt)
-        _log_handler.setFormatter(_log_formatter)
-    
+        return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
+
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
         # self.log is a child of. The logging module dipatches log messages to a log
@@ -325,8 +320,6 @@ class JupyterHubApp(Application):
         logger.propagate = True
         logger.parent = self.log
         logger.setLevel(self.log.level)
-        # FIXME: IPython < 3 compat
-        self._log_format_changed('', '', self.log_format)
     
     def init_ports(self):
         if self.hub_port == self.port:
@@ -370,7 +363,7 @@ class JupyterHubApp(Application):
         """More informative log messages for failed filesystem access"""
         path = os.path.abspath(path)
         parent, fname = os.path.split(path)
-        user = getuser_unicode()
+        user = getuser()
         if not os.path.isdir(parent):
             self.log.error("Directory %s does not exist", parent)
         if os.path.exists(parent) and not os.access(parent, os.W_OK):
@@ -399,7 +392,7 @@ class JupyterHubApp(Application):
                 self.log.error("Bad permissions on %s", secret_file)
             else:
                 self.log.info("Loading %s from %s", trait_name, secret_file)
-                with io.open(secret_file) as f:
+                with open(secret_file) as f:
                     b64_secret = f.read()
                 try:
                     secret = binascii.a2b_base64(b64_secret)
@@ -413,8 +406,8 @@ class JupyterHubApp(Application):
         if secret_file and secret_from == 'new':
             # if we generated a new secret, store it in the secret_file
             self.log.info("Writing %s to %s", trait_name, secret_file)
-            b64_secret = text_type(binascii.b2a_base64(secret))
-            with io.open(secret_file, 'w', encoding='utf8') as f:
+            b64_secret = binascii.b2a_base64(secret).decode('ascii')
+            with open(secret_file, 'w') as f:
                 f.write(b64_secret)
             try:
                 os.chmod(secret_file, 0o600)
@@ -450,7 +443,7 @@ class JupyterHubApp(Application):
                     ip=self.hub_ip,
                     port=self.hub_port,
                     base_url=self.hub_prefix,
-                    cookie_name=u'jupyter-hub-token',
+                    cookie_name='jupyter-hub-token',
                 )
             )
             self.db.add(self.hub)
@@ -470,7 +463,7 @@ class JupyterHubApp(Application):
             # add current user as admin if there aren't any others
             admins = db.query(orm.User).filter(orm.User.admin==True)
             if admins.first() is None:
-                self.admin_users.add(getuser_unicode())
+                self.admin_users.add(getuser())
 
         for name in self.admin_users:
             # ensure anyone specified as admin in config is admin in db
@@ -576,7 +569,7 @@ class JupyterHubApp(Application):
         self.proxy.public_server.port = self.port
         self.proxy.api_server.ip = self.proxy_api_ip
         self.proxy.api_server.port = self.proxy_api_port
-        self.proxy.api_server.base_url = u'/api/routes/'
+        self.proxy.api_server.base_url = '/api/routes/'
         self.db.commit()
     
     @gen.coroutine
@@ -694,8 +687,8 @@ class JupyterHubApp(Application):
         pid = os.getpid()
         if self.pid_file:
             self.log.debug("Writing PID %i to %s", pid, self.pid_file)
-            with io.open(self.pid_file, 'w') as f:
-                f.write(u'%i' % pid)
+            with open(self.pid_file, 'w') as f:
+                f.write('%i' % pid)
     
     @catch_config_error
     def initialize(self, *args, **kwargs):
@@ -756,7 +749,7 @@ class JupyterHubApp(Application):
             def ask():
                 prompt = "Overwrite %s with default config? [y/N]" % self.config_file
                 try:
-                    return raw_input(prompt).lower() or 'n'
+                    return input(prompt).lower() or 'n'
                 except KeyboardInterrupt:
                     print('') # empty line
                     return 'n'
@@ -771,7 +764,7 @@ class JupyterHubApp(Application):
         if isinstance(config_text, bytes):
             config_text = config_text.decode('utf8')
         print("Writing default config to: %s" % self.config_file)
-        with io.open(self.config_file, encoding='utf8', mode='w') as f:
+        with open(self.config_file, mode='w') as f:
             f.write(config_text)
     
     @gen.coroutine

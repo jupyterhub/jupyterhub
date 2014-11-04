@@ -1,29 +1,23 @@
 """mock utilities for testing"""
 
-import os
 import sys
 from tempfile import NamedTemporaryFile
 import threading
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 from tornado.ioloop import IOLoop
 
-from six import text_type
-
 from ..spawner import LocalProcessSpawner
 from ..app import JupyterHubApp
-from ..auth import PAMAuthenticator, Authenticator
+from ..auth import PAMAuthenticator
 from .. import orm
 
 def mock_authenticate(username, password, service='login'):
     # mimic simplepam's failure to handle unicode
-    if isinstance(username, text_type):
+    if isinstance(username, str):
         return False
-    if isinstance(password, text_type):
+    if isinstance(password, str):
         return False
     
     # just use equality for testing

@@ -63,11 +63,11 @@ class Server(Base):
     """
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
-    proto = Column(Unicode, default=u'http')
-    ip = Column(Unicode, default=u'localhost')
+    proto = Column(Unicode, default='http')
+    ip = Column(Unicode, default='localhost')
     port = Column(Integer, default=random_port)
-    base_url = Column(Unicode, default=u'/')
-    cookie_name = Column(Unicode, default=u'cookie')
+    base_url = Column(Unicode, default='/')
+    cookie_name = Column(Unicode, default='cookie')
     
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)

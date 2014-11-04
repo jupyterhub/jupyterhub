@@ -11,11 +11,6 @@ from .. import orm
 from ..utils import admin_only, authenticated_403
 from .base import APIHandler
 
-try:
-    basestring
-except NameError:
-    basestring = str # py3
-
 class BaseUserHandler(APIHandler):
     
     def user_model(self, user):
@@ -26,7 +21,7 @@ class BaseUserHandler(APIHandler):
         }
     
     _model_types = {
-        'name': basestring,
+        'name': str,
         'admin': bool,
     }
     

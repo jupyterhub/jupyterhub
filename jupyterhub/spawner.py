@@ -114,7 +114,7 @@ class Spawner(LoggingConfigurable):
         
         Subclasses should call super, to ensure that state is properly cleared.
         """
-        self.api_token = u''
+        self.api_token = ''
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
@@ -339,13 +339,13 @@ class LocalProcessSpawner(Spawner):
                 break
             pids = self._get_pg_pids(ppid)
             if pids:
-                raise gen.Return(pids[0])
+                return pids[0]
             else:
                 yield gen.Task(loop.add_timeout, loop.time() + 0.1)
         self.log.error("Failed to get single-user PID")
         # return sudo pid if we can't get the real PID
         # this shouldn't happen
-        raise gen.Return(ppid)
+        return ppid
     
     @gen.coroutine
     def start(self):
@@ -378,7 +378,7 @@ class LocalProcessSpawner(Spawner):
             if status is not None:
                 # clear state if the process is done
                 self.clear_state()
-            raise gen.Return(status)
+            return status
         
         # if we resumed from stored state,
         # we don't have the Popen handle anymore, so rely on self.pid
@@ -386,16 +386,16 @@ class LocalProcessSpawner(Spawner):
         if not self.pid:
             # no pid, not running
             self.clear_state()
-            raise gen.Return(0)
+            return 0
         
         # send signal 0 to check if PID exists
         # this doesn't work on Windows, but that's okay because we don't support Windows.
         alive = yield self._signal(0)
         if not alive:
             self.clear_state()
-            raise gen.Return(0)
+            return 0
         else:
-            raise gen.Return(None)
+            return None
     
     @gen.coroutine
     def _signal(self, sig):
@@ -405,9 +405,9 @@ class LocalProcessSpawner(Spawner):
         """
         if self.set_user == 'sudo':
             rc = yield self._signal_sudo(sig)
-            raise gen.Return(rc)
+            return rc
         else:
-            raise gen.Return(self._signal_setuid(sig))
+            return self._signal_setuid(sig)
     
     def _signal_setuid(self, sig):
         """simple implementation of signal, which we can use when we are using setuid (we are root)"""
@@ -427,10 +427,10 @@ class LocalProcessSpawner(Spawner):
         try:
             check_output(['ps', '-p', str(self.pid)], stderr=PIPE)
         except CalledProcessError:
-            raise gen.Return(False) # process is gone
+            return False # process is gone
         else:
             if sig == 0:
-                raise gen.Return(True) # process exists
+                return True # process exists
         
         # build sudo -u user kill -SIG PID
         cmd = self.sudo_cmd(self.user)
@@ -441,7 +441,7 @@ class LocalProcessSpawner(Spawner):
         check_output(cmd,
             preexec_fn=self.make_preexec_fn(self.user.name),
         )
-        raise gen.Return(True) # process exists
+        return True # process exists
     
     @gen.coroutine
     def stop(self, now=False):

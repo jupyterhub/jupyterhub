@@ -9,7 +9,6 @@ import os
 import requests
 
 from tornado import ioloop
-from tornado import web
 
 from IPython.utils.traitlets import Unicode
 
@@ -21,8 +20,8 @@ from IPython.html.utils import url_path_join
 from distutils.version import LooseVersion as V
 
 import IPython
-if V(IPython.__version__) < V('2.2'):
-    raise ImportError("JupyterHub Requires IPython >= 2.2, found %s" % IPython.__version__)
+if V(IPython.__version__) < V('3.0'):
+    raise ImportError("JupyterHub Requires IPython >= 3.0, found %s" % IPython.__version__)
 
 # Define two methods to attach to AuthenticatedHandler,
 # which authenticate via the central auth server.
@@ -97,11 +96,6 @@ class SingleUserNotebookApp(NotebookApp):
         # disable the exit confirmation for background notebook processes
         ioloop.IOLoop.instance().stop()
     
-    def init_kernel_argv(self):
-        """construct the kernel arguments"""
-        # FIXME: This is 2.x-compat, remove when 3.x is requred
-        self.kernel_argv = ["--profile-dir", self.profile_dir.location]
-    
     def init_webapp(self):
         # monkeypatch authentication to use the hub
         from IPython.html.base.handlers import AuthenticatedHandler
@@ -120,10 +114,7 @@ class SingleUserNotebookApp(NotebookApp):
         
         # load the hub related settings into the tornado settings dict
         env = os.environ
-        # FIXME: IPython < 3 compat
-        s = getattr(self, 'tornado_settings',
-                getattr(self, 'webapp_settings')
-        )
+        s = self.webapp_settings
         s['cookie_cache'] = {}
         s['user'] = self.user
         s['hub_api_key'] = env.pop('JPY_API_TOKEN')

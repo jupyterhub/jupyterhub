@@ -14,12 +14,11 @@ import os
 import sys
 
 v = sys.version_info
-if v[:2] < (2,7) or (v[0] >= 3 and v[:2] < (3,3)):
-    error = "ERROR: IPython requires Python version 2.7 or 3.3 or above."
+if v[:2] < (3,3):
+    error = "ERROR: Jupyter Hub requires Python version 3.3 or above."
     print(error, file=sys.stderr)
     sys.exit(1)
 
-PY3 = (sys.version_info[0] >= 3)
 
 if os.name in ('nt', 'dos'):
     error = "ERROR: Windows is not supported"
@@ -33,14 +32,6 @@ from glob import glob
 
 from distutils.core import setup
 from subprocess import check_call
-
-try:
-    execfile
-except NameError:
-    # py3
-    def execfile(fname, globs, locs=None):
-        locs = locs or globs
-        exec(compile(open(fname).read(), fname, "exec"), globs, locs)
 
 pjoin = os.path.join
 
@@ -67,7 +58,9 @@ def get_data_files():
 
 
 ns = {}
-execfile(pjoin(here, 'jupyterhub', 'version.py'), ns)
+with open(pjoin(here, 'jupyterhub', 'version.py')) as f:
+    exec(f.read(), {}, ns)
+
 
 packages = []
 for d, _, _ in os.walk('jupyterhub'):
@@ -92,13 +85,11 @@ setup_args = dict(
     keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
     classifiers         = [
         'Intended Audience :: Developers',
+        'Intended Audience :: System Administrators',
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Topic :: System :: Shells',
     ],
 )
 
@@ -194,11 +185,14 @@ if 'setuptools' in sys.modules:
                 self.distribution.run_command('css')
             develop.run(self)
     setup_args['cmdclass']['develop'] = develop_js_css
-
+    setup_args['install_requires'] = install_requires = []
 
     with open('requirements.txt') as f:
-        install_requires = [ line.strip() for line in f.readlines() ]
-    setup_args['install_requires'] = install_requires
+        for line in f.readlines():
+            req = line.strip()
+            if req.startswith('-e'):
+                req = line.split('#egg=', 1)[1]
+            install_requires.append(req)
 
 #---------------------------------------------------------------------------
 # setup

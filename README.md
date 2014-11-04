@@ -18,6 +18,8 @@ Basic principles:
 
 ## Dependencies
 
+JupyterHub requires IPython >= 3.0 (current master) and Python >= 3.3.
+
 You will need nodejs/npm, which you can get from your package manager:
 
     sudo apt-get install npm nodejs-legacy
