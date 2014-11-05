@@ -20,6 +20,9 @@ RUN rm /tmp/sudoers
 # add the regular users
 RUN for name in io ganymede; do useradd -m -p $(openssl passwd -1 $name) $name; done
 
+# make home directories private
+RUN chmod o-rwx /home/*
+
 # make the working dir owned by rhea, so she can create the state database
 RUN chown rhea .
 

@@ -8,7 +8,9 @@ import os
 import pwd
 import re
 import signal
+import sys
 from subprocess import Popen, check_output, PIPE, CalledProcessError
+from tempfile import TemporaryDirectory
 
 from tornado import gen
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -72,6 +74,13 @@ class Spawner(LoggingConfigurable):
         help="""The command used for starting notebooks."""
     )
     
+    notebook_dir = Unicode('', config=True,
+        help="""The notebook directory for the single-user server
+        
+        `~` will be expanded to the user's home directory
+        """
+    )
+    
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
@@ -127,6 +136,8 @@ class Spawner(LoggingConfigurable):
             '--hub-prefix=%s' % self.hub.server.base_url,
             '--hub-api-url=%s' % self.hub.api_url,
             ]
+        if self.notebook_dir:
+            args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
             args.append('--debug')
         return args
@@ -215,6 +226,20 @@ class Spawner(LoggingConfigurable):
             else:
                 yield gen.Task(loop.add_timeout, loop.time() + self.death_interval)
 
+def _try_setcwd(path):
+    """Try to set CWD, walking up and ultimately falling back to a temp dir"""
+    while path != '/':
+        try:
+            os.chdir(path)
+        except OSError as e:
+            print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
+            path, _ = os.path.split(path)
+        else:
+            return
+    print("Couldn't set CWD at all (%s), using temp dir" % e, file=sys.stderr)
+    td = TemporaryDirectory().name
+    os.chdir(td)
+
 
 def set_user_setuid(username):
     """return a preexec_fn for setting the user (via setuid) of a spawned process"""
@@ -232,7 +257,7 @@ def set_user_setuid(username):
         os.setuid(uid)
 
         # start in the user's home dir
-        os.chdir(home)
+        _try_setcwd(home)
     
     return preexec
 
@@ -245,9 +270,9 @@ def set_user_sudo(username):
     def preexec():
         # don't forward signals
         os.setpgrp()
+        
         # start in the user's home dir
-        os.chdir(home)
-
+        _try_setcwd(home)
     return preexec
 
 
