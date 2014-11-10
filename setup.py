@@ -190,8 +190,8 @@ if 'setuptools' in sys.modules:
     with open('requirements.txt') as f:
         for line in f.readlines():
             req = line.strip()
-            if req.startswith('-e'):
-                req = line.split('#egg=', 1)[1]
+            if not req or req.startswith(('-e', '#')):
+                continue
             install_requires.append(req)
 
 #---------------------------------------------------------------------------

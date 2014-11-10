@@ -20,7 +20,6 @@ WORKDIR /srv/
 ADD . /srv/jupyterhub
 WORKDIR /srv/jupyterhub/
 
-RUN pip3 install -r requirements.txt
 RUN pip3 install .
 
 WORKDIR /srv/jupyterhub/

@@ -36,6 +36,7 @@ Then install javascript dependencies:
 
 Then you can install the Python package by doing:
 
+    pip install -r requirements.txt
     pip install .
 
 This will fetch client-side javascript dependencies and compile CSS,
@@ -47,6 +48,7 @@ install any Python dependencies.
 
 For a development install:
 
+    pip install -r dev-requirements.txt
     pip install -e .
 
 In which case you may need to manually update javascript and css after some updates, with:
