@@ -1,6 +1,6 @@
 # JupyterHub: A multi-user server for Jupyter notebooks
 
-This repo hosts the development of a multi-user server to manage and proxy multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
+JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
 
 Three actors:
 
@@ -23,7 +23,7 @@ JupyterHub requires IPython >= 3.0 (current master) and Python >= 3.3.
 You will need nodejs/npm, which you can get from your package manager:
 
     sudo apt-get install npm nodejs-legacy
-    
+
 (The `nodejs-legacy` package installs the `node` executable,
 which is required for npm to work on Debian/Ubuntu at this point)
 
