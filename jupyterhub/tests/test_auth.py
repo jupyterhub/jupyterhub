@@ -3,6 +3,8 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from ..auth import DictionaryAuthenticator
+from IPython.lib.security import passwd
 from .mocking import MockPAMAuthenticator
 
 
@@ -39,3 +41,51 @@ def test_pam_auth_whitelist(io_loop):
         'password': 'mal',
     }))
     assert authorized is None
+
+def test_dictionary_auth(io_loop):
+    authenticator = DictionaryAuthenticator(
+        users={
+            'test_user1': passwd('test_password1'),
+            'test_user2': passwd('test_password2'),
+        }
+    )
+
+    bad_pass = 'incorrect'
+    for i in map(str, range(1, 3)):
+        username = 'test_user' + i
+        good_pass = 'test_password' + i
+
+        authorized = io_loop.run_sync(
+            lambda : authenticator.authenticate(
+                None,
+                {
+                    'username': username,
+                    'password': good_pass,
+                }
+            )
+        )
+        assert authorized == username
+
+        authorized = io_loop.run_sync(
+            lambda : authenticator.authenticate(
+                None,
+                {
+                    'username': username,
+                    'password': bad_pass,
+                }
+            )
+        )
+        assert authorized is None
+
+    # Verify handling of a non-existent user.
+    authorized = io_loop.run_sync(
+        lambda : authenticator.authenticate(
+            None,
+            {
+                'username': 'not_a_real_user',
+                'password': 'test_password1',
+            }
+        )
+    )
+    assert authorized is None
+
