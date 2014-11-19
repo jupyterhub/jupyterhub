@@ -81,11 +81,7 @@ class DictionaryAuthenticator(Authenticator):
     """
     users = Dict(
         config=True,
-        help="""Username whitelist.
-
-        Use this to restrict which users can login.
-        If empty, allow any user to attempt login.
-        """
+        help="Dictionary from username -> password hash."
     )
 
     def _whitelist_default(self):
