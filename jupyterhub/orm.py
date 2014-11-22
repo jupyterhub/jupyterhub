@@ -54,6 +54,7 @@ class JSONDict(TypeDecorator):
 
 
 Base = declarative_base()
+Base.log = app_log
 
 
 class Server(Base):
@@ -121,7 +122,6 @@ class Proxy(Base):
     public_server = relationship(Server, primaryjoin=_public_server_id == Server.id)
     _api_server_id = Column(Integer, ForeignKey('servers.id'))
     api_server = relationship(Server, primaryjoin=_api_server_id == Server.id)
-    log = app_log
     
     def __repr__(self):
         if self.public_server:
@@ -191,7 +191,7 @@ class Proxy(Base):
     def get_routes(self, client=None):
         """Fetch the proxy's routes"""
         resp = yield self.api_request('', client=client)
-        raise gen.Return(json.loads(resp.body.decode('utf8', 'replace')))
+        return json.loads(resp.body.decode('utf8', 'replace'))
 
 
 class Hub(Base):
@@ -317,9 +317,21 @@ class User(Base):
         self.state = spawner.get_state()
         self.last_activity = datetime.utcnow()
         db.commit()
-        
-        yield self.server.wait_up(http=True)
-        raise gen.Return(self)
+        try:
+            yield self.server.wait_up(http=True)
+        except TimeoutError as e:
+            self.log.warn("{user}'s server never started at {url}, giving up.".format(
+                user=self.name, url=self.server.url,
+            ))
+            try:
+                yield self.stop()
+            except Exception:
+                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
+                    user=self.name,
+                ), exc_info=True)
+            # raise original TimeoutError
+            raise e
+        return self
 
     @gen.coroutine
     def stop(self):
