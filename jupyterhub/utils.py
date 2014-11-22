@@ -45,7 +45,9 @@ def wait_for_server(ip, port, timeout=10):
             yield gen.Task(loop.add_timeout, loop.time() + 0.1)
         else:
             return
-    raise TimeoutError
+    raise TimeoutError("Server at {ip}:{port} didn't respond in {timeout} seconds".format(
+        **locals()
+    ))
 
 @gen.coroutine
 def wait_for_http_server(url, timeout=10):
@@ -77,7 +79,9 @@ def wait_for_http_server(url, timeout=10):
         else:
             return
     
-    raise TimeoutError
+    raise TimeoutError("Server at {url} didn't respond in {timeout} seconds".format(
+        **locals()
+    ))
 
 
 # Decorators for authenticated Handlers
@@ -166,3 +170,4 @@ def compare_token(compare, token):
         return True
     return False
     
+

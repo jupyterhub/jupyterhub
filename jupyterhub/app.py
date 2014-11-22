@@ -44,6 +44,7 @@ from . import handlers, apihandlers
 
 from . import orm
 from ._data import DATA_FILES_PATH
+from .traitlets import URLPrefix
 from .utils import (
     url_path_join,
     ISO8601_ms, ISO8601_s,
@@ -55,6 +56,7 @@ from .spawner import Spawner, LocalProcessSpawner
 aliases = {
     'log-level': 'Application.log_level',
     'f': 'JupyterHubApp.config_file',
+    'base-url': 'JupyterHubApp.base_url',
     'config': 'JupyterHubApp.config_file',
     'y': 'JupyterHubApp.answer_yes',
     'ssl-key': 'JupyterHubApp.ssl_key',
@@ -153,9 +155,10 @@ class JupyterHubApp(Application):
     port = Integer(8000, config=True,
         help="The public facing port of the proxy"
     )
-    base_url = Unicode('/', config=True,
+    base_url = URLPrefix('/', config=True,
         help="The base URL of the entire application"
     )
+    
     
     jinja_environment_options = Dict(config=True,
         help="Supply extra arguments that will be passed to Jinja environment."
@@ -201,7 +204,7 @@ class JupyterHubApp(Application):
         help="The ip for this process"
     )
     
-    hub_prefix = Unicode('/hub/', config=True,
+    hub_prefix = URLPrefix('/hub/', config=True,
         help="The prefix for the hub server. Must not be '/'"
     )
     def _hub_prefix_default(self):
@@ -210,15 +213,8 @@ class JupyterHubApp(Application):
     def _hub_prefix_changed(self, name, old, new):
         if new == '/':
             raise TraitError("'/' is not a valid hub prefix")
-        newnew = new
-        if not new.startswith('/'):
-            newnew = '/' + new
-        if not newnew.endswith('/'):
-            newnew = newnew + '/'
-        if not newnew.startswith(self.base_url):
-            newnew = url_path_join(self.base_url, newnew)
-        if newnew != new:
-            self.hub_prefix = newnew
+        if not new.startswith(self.base_url):
+            self.hub_prefix = url_path_join(self.base_url, new)
     
     cookie_secret = Bytes(config=True, env='JPY_COOKIE_SECRET',
         help="""The cookie secret to use to encrypt cookies.
