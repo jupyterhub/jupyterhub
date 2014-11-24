@@ -1,6 +1,8 @@
 include README.md
 include COPYING.md
 include setupegg.py
+include bower.json
+include *requirements.txt
 
 graft jupyterhub
 graft scripts
