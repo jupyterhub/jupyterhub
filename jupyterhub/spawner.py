@@ -300,7 +300,7 @@ class LocalProcessSpawner(Spawner):
 
     make_preexec_fn = Any(set_user_setuid)
 
-    set_user = Enum(['sudo', 'setuid'], default_value='setuid', config=True,
+    set_user = Enum(['sudo', 'setuid'], config=True,
         help="""scheme for setting the user of the spawned process
 
         'sudo' can be more prudently restricted,
@@ -314,6 +314,14 @@ class LocalProcessSpawner(Spawner):
             self.make_preexec_fn = set_user_setuid
         else:
             raise ValueError("This should be impossible")
+
+    def _set_user_default(self):
+        if os.getegid() == 0:
+            self.log.info('I seem to be root (not recommended), will use setuid to spawn single user servers')
+            return 'setuid'
+        else:
+            self.log.info("I seem not to be root, I'll try spawn server with sudo.")
+            return 'sudo'
     
     def load_state(self, state):
         """load pid from state"""
