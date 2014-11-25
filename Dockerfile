@@ -7,7 +7,7 @@
 
 FROM ipython/ipython
 
-MAINTAINER Jupyter Project <ipython-dev@scipy.org>
+MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 # install js dependencies
 RUN npm install -g bower less

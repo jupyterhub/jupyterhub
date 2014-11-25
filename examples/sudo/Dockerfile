@@ -3,7 +3,7 @@
 
 FROM jupyter/jupyterhub
 
-MAINTAINER Jupyter Project <ipython-dev@scipy.org>
+MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 # fix permissions on sudo executable (how did this get messed up?)
 RUN chmod 4755 /usr/bin/sudo

@@ -1,6 +1,6 @@
 FROM jupyter/jupyterhub
 
-MAINTAINER Jupyter Project <ipython-dev@scipy.org>
+MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 RUN apt-get install -y libpq-dev \
     && apt-get autoremove -y \
