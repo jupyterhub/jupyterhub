@@ -4,3 +4,5 @@ jinja2
 simplepam
 sqlalchemy
 requests
+pyzmq
+jsonschema
