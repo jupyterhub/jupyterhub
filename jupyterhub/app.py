@@ -55,32 +55,31 @@ from .spawner import Spawner, LocalProcessSpawner
 
 aliases = {
     'log-level': 'Application.log_level',
-    'f': 'JupyterHubApp.config_file',
-    'base-url': 'JupyterHubApp.base_url',
-    'config': 'JupyterHubApp.config_file',
-    'y': 'JupyterHubApp.answer_yes',
-    'ssl-key': 'JupyterHubApp.ssl_key',
-    'ssl-cert': 'JupyterHubApp.ssl_cert',
-    'ip': 'JupyterHubApp.ip',
-    'port': 'JupyterHubApp.port',
-    'db': 'JupyterHubApp.db_url',
-    'pid-file': 'JupyterHubApp.pid_file',
+    'f': 'JupyterHub.config_file',
+    'base-url': 'JupyterHub.base_url',
+    'config': 'JupyterHub.config_file',
+    'y': 'JupyterHub.answer_yes',
+    'ssl-key': 'JupyterHub.ssl_key',
+    'ssl-cert': 'JupyterHub.ssl_cert',
+    'ip': 'JupyterHub.ip',
+    'port': 'JupyterHub.port',
+    'db': 'JupyterHub.db_url',
+    'pid-file': 'JupyterHub.pid_file',
 }
 
 flags = {
     'debug': ({'Application' : {'log_level': logging.DEBUG}},
         "set log level to logging.DEBUG (maximize logging output)"),
-    'generate-config': ({'JupyterHubApp': {'generate_config': True}},
+    'generate-config': ({'JupyterHub': {'generate_config': True}},
         "generate default config file"),
-    'no-db': ({'JupyterHubApp': {'db_url': 'sqlite:///:memory:'}},
+    'no-db': ({'JupyterHub': {'db_url': 'sqlite:///:memory:'}},
         "disable persisting state database to disk"
     ),
 }
 
 SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
 
-
-class JupyterHubApp(Application):
+class JupyterHub(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
     name = 'jupyterhub'
     
@@ -182,7 +181,7 @@ class JupyterHubApp(Application):
             self.log.warn('\n'.join([
                 "",
                 "Generating CONFIGPROXY_AUTH_TOKEN. Restarting the Hub will require restarting the proxy.",
-                "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHubApp.proxy_auth_token config to avoid this message.",
+                "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHub.proxy_auth_token config to avoid this message.",
                 "",
             ]))
             token = orm.new_token()
@@ -688,11 +687,17 @@ class JupyterHubApp(Application):
     
     @catch_config_error
     def initialize(self, *args, **kwargs):
-        super(JupyterHubApp, self).initialize(*args, **kwargs)
+        super().initialize(*args, **kwargs)
         if self.generate_config:
             return
         self.load_config_file(self.config_file)
         self.init_logging()
+        if 'JupyterHubApp' in self.config:
+            self.log.warn("Use JupyterHub in config, not JupyterHubApp. Ignoring config:\n%s",
+                '\n'.join('JupyterHubApp.{key} = {value!r}'.format(key=key, value=value)
+                    for key, value in self.config.JupyterHubApp.items()
+                )
+            )
         self.write_pid_file()
         self.init_ports()
         self.init_secrets()
@@ -822,7 +827,7 @@ class JupyterHubApp(Application):
             # run the cleanup step (in a new loop, because the interrupted one is unclean)
             IOLoop().run_sync(self.cleanup)
 
-main = JupyterHubApp.launch_instance
+main = JupyterHub.launch_instance
 
 if __name__ == "__main__":
     main()

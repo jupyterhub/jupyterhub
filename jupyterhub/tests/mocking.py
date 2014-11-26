@@ -9,7 +9,7 @@ from unittest import mock
 from tornado.ioloop import IOLoop
 
 from ..spawner import LocalProcessSpawner
-from ..app import JupyterHubApp
+from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
 
@@ -50,8 +50,8 @@ class MockPAMAuthenticator(PAMAuthenticator):
         with mock.patch('simplepam.authenticate', mock_authenticate):
             return super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
 
-class MockHubApp(JupyterHubApp):
-    """HubApp with various mock bits"""
+class MockHub(JupyterHub):
+    """Hub with various mock bits"""
 
     db_file = None
 
@@ -74,14 +74,14 @@ class MockHubApp(JupyterHubApp):
         def _start():
             self.io_loop = IOLoop.current()
             # put initialize in start for SQLAlchemy threading reasons
-            super(MockHubApp, self).initialize(argv=argv)
+            super(MockHub, self).initialize(argv=argv)
 
             # add an initial user
             user = orm.User(name='user')
             self.db.add(user)
             self.db.commit()
             self.io_loop.add_callback(evt.set)
-            super(MockHubApp, self).start()
+            super(MockHub, self).start()
         
         self._thread = threading.Thread(target=_start)
         self._thread.start()

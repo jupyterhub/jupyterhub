@@ -1,4 +1,4 @@
-"""Test the JupyterHubApp entry point"""
+"""Test the JupyterHub entry point"""
 
 import os
 import sys
@@ -8,7 +8,7 @@ from tempfile import NamedTemporaryFile
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
     assert '--ip' in out
-    assert '--JupyterHubApp.ip' in out
+    assert '--JupyterHub.ip' in out
 
 def test_generate_config():
     with NamedTemporaryFile(prefix='jupyterhub_config', suffix='.py') as tf:
