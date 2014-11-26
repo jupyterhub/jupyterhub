@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """The multi-user notebook application"""
 
-# Copyright (c) IPython Development Team.
+# Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
 import binascii

@@ -1,5 +1,5 @@
 """extra traitlets"""
-# Copyright (c) IPython Development Team.
+# Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
 from IPython.utils.traitlets import Unicode

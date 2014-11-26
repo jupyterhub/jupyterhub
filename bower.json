@@ -1,5 +1,5 @@
 {
-  "name": "ipython-deps",
+  "name": "jupyterhub-deps",
   "version": "0.0.1",
   "dependencies": {
     "bootstrap": "components/bootstrap#~3.1",
