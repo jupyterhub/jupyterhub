@@ -693,11 +693,14 @@ class JupyterHub(Application):
         self.load_config_file(self.config_file)
         self.init_logging()
         if 'JupyterHubApp' in self.config:
-            self.log.warn("Use JupyterHub in config, not JupyterHubApp. Ignoring config:\n%s",
+            self.log.warn("Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
                 '\n'.join('JupyterHubApp.{key} = {value!r}'.format(key=key, value=value)
                     for key, value in self.config.JupyterHubApp.items()
                 )
             )
+            cfg = self.config.copy()
+            cfg.JupyterHub.merge(cfg.JupyterHubApp)
+            self.update_config(cfg)
         self.write_pid_file()
         self.init_ports()
         self.init_secrets()
