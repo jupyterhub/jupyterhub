@@ -54,15 +54,6 @@ def test_spawner(db, io_loop):
     assert status == -signal.SIGINT
 
 
-def test_preexec_switch(db):
-    spawner = new_spawner(db)
-    assert spawner.make_preexec_fn is spawnermod.set_user_setuid
-    spawner.set_user = 'sudo'
-    assert spawner.make_preexec_fn is spawnermod.set_user_sudo
-    spawner.set_user = 'setuid'
-    assert spawner.make_preexec_fn is spawnermod.set_user_setuid
-
-
 def test_stop_spawner_sigint_fails(db, io_loop):
     spawner = new_spawner(db, cmd=[sys.executable, '-c', _uninterruptible])
     io_loop.run_sync(spawner.start)
