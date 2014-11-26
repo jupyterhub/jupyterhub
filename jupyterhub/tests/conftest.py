@@ -11,7 +11,7 @@ from tornado import ioloop
 
 from .. import orm
 
-from .mocking import MockHubApp
+from .mocking import MockHub
 
 
 # global db session object
@@ -46,7 +46,7 @@ def io_loop():
 
 @fixture(scope='module')
 def app(request):
-    app = MockHubApp.instance(log_level=logging.DEBUG)
+    app = MockHub.instance(log_level=logging.DEBUG)
     app.start([])
     request.addfinalizer(app.stop)
     return app
