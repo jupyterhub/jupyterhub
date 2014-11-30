@@ -1,4 +1,4 @@
--e git+https://github.com/ipython/ipython.git#egg=ipython[notebook]
+git+https://github.com/ipython/ipython.git#egg=ipython[notebook]
 tornado>=4
 jinja2
 simplepam
