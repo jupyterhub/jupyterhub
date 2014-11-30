@@ -190,7 +190,7 @@ if 'setuptools' in sys.modules:
     with open('requirements.txt') as f:
         for line in f.readlines():
             req = line.strip()
-            if not req or req.startswith(('-e', '#')):
+            if not req or req.startswith('#') or '://' in req:
                 continue
             install_requires.append(req)
 
