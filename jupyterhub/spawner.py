@@ -5,6 +5,7 @@
 
 import errno
 import os
+import pipes
 import pwd
 import re
 import signal
@@ -262,20 +263,6 @@ def set_user_setuid(username):
     return preexec
 
 
-def set_user_sudo(username):
-    """return a preexec_fn for setting the user (assuming sudo is used for setting the user)"""
-    user = pwd.getpwnam(username)
-    home = user.pw_dir
-
-    def preexec():
-        # don't forward signals
-        os.setpgrp()
-        
-        # start in the user's home dir
-        _try_setcwd(home)
-    return preexec
-
-
 class LocalProcessSpawner(Spawner):
     """A Spawner that just uses Popen to start local processes."""
     
@@ -291,29 +278,9 @@ class LocalProcessSpawner(Spawner):
     
     proc = Instance(Popen)
     pid = Integer(0)
-    sudo_args = List(['-n'], config=True,
-        help="""arguments to be passed to sudo (in addition to -u [username])
-
-        only used if set_user = sudo
-        """
-    )
-
-    make_preexec_fn = Any(set_user_setuid)
-
-    set_user = Enum(['sudo', 'setuid'], default_value='setuid', config=True,
-        help="""scheme for setting the user of the spawned process
-
-        'sudo' can be more prudently restricted,
-        but 'setuid' is simpler for a server run as root
-        """
-    )
-    def _set_user_changed(self, name, old, new):
-        if new == 'sudo':
-            self.make_preexec_fn = set_user_sudo
-        elif new == 'setuid':
-            self.make_preexec_fn = set_user_setuid
-        else:
-            raise ValueError("This should be impossible")
+    
+    def make_preexec_fn(self, name):
+        return set_user_setuid(name)
     
     def load_state(self, state):
         """load pid from state"""
@@ -333,66 +300,30 @@ class LocalProcessSpawner(Spawner):
         super(LocalProcessSpawner, self).clear_state()
         self.pid = 0
     
-    def sudo_cmd(self, user):
-        return ['sudo', '-u', user.name] + self.sudo_args
-    
     def user_env(self, env):
-        if self.set_user == 'setuid':
-            env['USER'] = self.user.name
-            env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
+        env['USER'] = self.user.name
+        env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
         return env
     
-    def _get_pg_pids(self, ppid):
-        """get pids in group excluding the group id itself
-        
-        used for getting actual process started by `sudo`
-        """
-        out = check_output(['pgrep', '-g', str(ppid)]).decode('utf8', 'replace')
-        self.log.debug("pgrep output: %r", out)
-        return [ int(ns) for ns in NUM_PAT.findall(out) if int(ns) != ppid ]
-    
-    @gen.coroutine
-    def get_sudo_pid(self):
-        """Get the actual process started with sudo
-        
-        use the output of `pgrep -g PPID` to get the child process ID
-        """
-        ppid = self.proc.pid
-        loop = IOLoop.current()
-        for i in range(100):
-            if self.proc.poll() is not None:
-                break
-            pids = self._get_pg_pids(ppid)
-            if pids:
-                return pids[0]
-            else:
-                yield gen.Task(loop.add_timeout, loop.time() + 0.1)
-        self.log.error("Failed to get single-user PID")
-        # return sudo pid if we can't get the real PID
-        # this shouldn't happen
-        return ppid
+    def _env_default(self):
+        env = super()._env_default()
+        return self.user_env(env)
     
     @gen.coroutine
     def start(self):
         """Start the process"""
         self.user.server.port = random_port()
         cmd = []
-        env = self.user_env(self.env)
-        if self.set_user == 'sudo':
-            cmd = self.sudo_cmd(self.user)
+        env = self.env.copy()
         
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
         
-        self.log.info("Spawning %r", cmd)
+        self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
         self.proc = Popen(cmd, env=env,
             preexec_fn=self.make_preexec_fn(self.user.name),
         )
-        if self.set_user == 'sudo':
-            self.pid = yield self.get_sudo_pid()
-            self.proc = None
-        else:
-            self.pid = self.proc.pid
+        self.pid = self.proc.pid
     
     @gen.coroutine
     def poll(self):
@@ -424,17 +355,6 @@ class LocalProcessSpawner(Spawner):
     
     @gen.coroutine
     def _signal(self, sig):
-        """send a signal, and ignore ERSCH because it just means it already died
-        
-        returns bool for whether the process existed to receive the signal.
-        """
-        if self.set_user == 'sudo':
-            rc = yield self._signal_sudo(sig)
-            return rc
-        else:
-            return self._signal_setuid(sig)
-    
-    def _signal_setuid(self, sig):
         """simple implementation of signal, which we can use when we are using setuid (we are root)"""
         try:
             os.kill(self.pid, sig)
@@ -443,29 +363,6 @@ class LocalProcessSpawner(Spawner):
                 return False # process is gone
             else:
                 raise
-        return True # process exists
-        
-    @gen.coroutine
-    def _signal_sudo(self, sig):
-        """use `sudo kill` to send signals"""
-        # check for existence with `ps -p` instead of `kill -0`
-        try:
-            check_output(['ps', '-p', str(self.pid)], stderr=PIPE)
-        except CalledProcessError:
-            return False # process is gone
-        else:
-            if sig == 0:
-                return True # process exists
-        
-        # build sudo -u user kill -SIG PID
-        cmd = self.sudo_cmd(self.user)
-        cmd.extend([
-            'kill', '-%i' % sig, str(self.pid),
-        ])
-        self.log.debug("Signaling: %s", cmd)
-        check_output(cmd,
-            preexec_fn=self.make_preexec_fn(self.user.name),
-        )
         return True # process exists
     
     @gen.coroutine
