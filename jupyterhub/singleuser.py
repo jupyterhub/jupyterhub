@@ -102,8 +102,8 @@ class SingleUserNotebookApp(NotebookApp):
     hub_api_url = Unicode(config=True)
     aliases = aliases
     open_browser = False
-    login_handler = __name__ + '.JupyterHubLoginHandler'
-    logout_handler = __name__ + '.JupyterHubLogoutHandler'
+    login_handler_class = JupyterHubLoginHandler
+    logout_handler_class = JupyterHubLogoutHandler
     
     def _confirm_exit(self):
         # disable the exit confirmation for background notebook processes
