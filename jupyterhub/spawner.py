@@ -40,6 +40,14 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     api_token = Unicode()
+    start_timeout = Integer(60, config=True,
+        help="""Timeout (in seconds) before giving up on the spawner.
+        
+        This is the timeout for start to return, not the timeout for the server to respond.
+        Callers of spawner.start will assume that startup has failed if it takes longer than this.
+        start should return when the server process is started and its location is known.
+        """
+    )
     
     poll_interval = Integer(30, config=True,
         help="""Interval (in seconds) on which to poll the spawner."""
