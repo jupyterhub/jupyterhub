@@ -1,11 +1,15 @@
 """Tests for the REST API"""
 
 import json
+from datetime import timedelta
 
 import requests
 
+from tornado import gen
+
 from ..utils import url_path_join as ujoin
 from .. import orm
+from . import mocking
 
 
 def check_db_locks(func):
@@ -174,6 +178,7 @@ def test_spawn(app, io_loop):
     assert r.status_code == 201
     assert 'pid' in user.state
     assert user.spawner is not None
+    assert not user.spawn_pending
     status = io_loop.run_sync(user.spawner.poll)
     assert status is None
     
@@ -194,3 +199,47 @@ def test_spawn(app, io_loop):
     assert 'pid' not in user.state
     status = io_loop.run_sync(user.spawner.poll)
     assert status == 0
+
+def test_slow_spawn(app, io_loop):
+    app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
+    app.tornado_application.settings['slow_spawn_timeout'] = 0
+
+    db = app.db
+    name = 'zoe'
+    user = add_user(db, name=name)
+    r = api_request(app, 'users', name, 'server', method='post')
+    assert user.spawner is not None
+    assert user.spawn_pending
+    
+    dt = timedelta(seconds=0.1)
+    @gen.coroutine
+    def wait_pending():
+        while user.spawn_pending:
+            yield gen.Task(io_loop.add_timeout, dt)
+    
+    io_loop.run_sync(wait_pending)
+    assert not user.spawn_pending
+    status = io_loop.run_sync(user.spawner.poll)
+    assert status is None
+
+def test_never_spawn(app, io_loop):
+    app.tornado_application.settings['spawner_class'] = mocking.NeverSpawner
+    app.tornado_application.settings['slow_spawn_timeout'] = 0
+
+    db = app.db
+    name = 'badger'
+    user = add_user(db, name=name)
+    r = api_request(app, 'users', name, 'server', method='post')
+    assert user.spawner is not None
+    assert user.spawn_pending
+    
+    dt = timedelta(seconds=0.1)
+    @gen.coroutine
+    def wait_pending():
+        while user.spawn_pending:
+            yield gen.Task(io_loop.add_timeout, dt)
+    
+    io_loop.run_sync(wait_pending)
+    assert not user.spawn_pending
+    status = io_loop.run_sync(user.spawner.poll)
+    assert status is not None
