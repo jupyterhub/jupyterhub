@@ -3,7 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import errno
 import json
 import socket
@@ -250,6 +250,7 @@ class User(Base):
     cookie_id = Column(Unicode, default=new_token)
     state = Column(JSONDict)
     spawner = None
+    spawn_pending = False
     
     def __repr__(self):
         if self.server:
@@ -310,7 +311,23 @@ class User(Base):
         spawner.clear_state()
         spawner.api_token = api_token
         
-        yield spawner.start()
+        self.spawn_pending = True
+        f = spawner.start()
+        # wait for spawner.start to return
+        try:
+            yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+        except gen.TimeoutError as e:
+            self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
+                user=self.name, s=spawner.start_timeout,
+            ))
+            try:
+                yield self.stop()
+            except Exception:
+                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
+                    user=self.name,
+                ), exc_info=True)
+            # raise original TimeoutError
+            raise e
         spawner.start_polling()
 
         # store state
@@ -320,7 +337,7 @@ class User(Base):
         try:
             yield self.server.wait_up(http=True)
         except TimeoutError as e:
-            self.log.warn("{user}'s server never started at {url}, giving up.".format(
+            self.log.warn("{user}'s server never showed up at {url}, giving up".format(
                 user=self.name, url=self.server.url,
             ))
             try:
@@ -331,6 +348,7 @@ class User(Base):
                 ), exc_info=True)
             # raise original TimeoutError
             raise e
+        self.spawn_pending = False
         return self
 
     @gen.coroutine
@@ -339,6 +357,7 @@ class User(Base):
         
         and cleanup after it.
         """
+        self.spawn_pending = False
         if self.spawner is None:
             return
         self.spawner.stop_polling()

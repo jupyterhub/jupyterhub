@@ -1,11 +1,14 @@
 """mock utilities for testing"""
 
 import sys
+from datetime import timedelta
 from tempfile import NamedTemporaryFile
 import threading
 
 from unittest import mock
 
+from tornado import gen
+from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
 from ..spawner import LocalProcessSpawner
@@ -39,6 +42,26 @@ class MockSpawner(LocalProcessSpawner):
     
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
+
+
+class SlowSpawner(MockSpawner):
+    """A spawner that takes a few seconds to start"""
+    
+    @gen.coroutine
+    def start(self):
+        yield gen.Task(IOLoop.current().add_timeout, timedelta(seconds=5))
+        yield super().start()
+
+
+class NeverSpawner(MockSpawner):
+    """A spawner that will never start"""
+    
+    def _start_timeout_default(self):
+        return 1
+    
+    def start(self):
+        """Return a Future that will never finish"""
+        return Future()
 
 
 class MockPAMAuthenticator(PAMAuthenticator):

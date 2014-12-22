@@ -1,0 +1,28 @@
+{% extends "page.html" %}
+
+{% block main %}
+
+<div class="container">
+  <div class="row">
+    <div class="text-center">
+      <p>Your server is starting up.</p>
+      <p>You will be redirected automatically when it's ready for you.</p>
+      <a id="refresh" class="btn btn-lg btn-primary" href="#">refresh</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+require(["jquery"], function ($) {
+  $("#refresh").click(function () {
+    window.location.reload();
+  })
+  setTimeout(function () {
+    window.location.reload();
+  }, 5000);
+});
+</script>
+{% endblock %}

@@ -4,13 +4,14 @@
 # Distributed under the terms of the Modified BSD License.
 
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from http.client import responses
 
 from jinja2 import TemplateNotFound
 
 from tornado.log import app_log
 from tornado.httputil import url_concat
+from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler
 from tornado import gen, web
 
@@ -161,24 +162,53 @@ class BaseHandler(RequestHandler):
     #---------------------------------------------------------------
 
     @property
+    def slow_spawn_timeout(self):
+        return self.settings.get('slow_spawn_timeout', 10)
+
+    @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     @gen.coroutine
     def spawn_single_user(self, user):
-        yield user.spawn(
+        f = user.spawn(
             spawner_class=self.spawner_class,
             base_url=self.base_url,
             hub=self.hub,
             config=self.config,
         )
-        yield self.proxy.add_user(user)
-        user.spawner.add_poll_callback(self.user_stopped, user)
-        return user
+        @gen.coroutine
+        def finish_user_spawn(f=None):
+            """Finish the user spawn by registering listeners and notifying the proxy.
+            
+            If the spawner is slow to start, this is passed as an async callback,
+            otherwise it is called immediately.
+            """
+            if f and f.exception() is not None:
+                # failed, don't add to the proxy
+                return
+            yield self.proxy.add_user(user)
+            user.spawner.add_poll_callback(self.user_stopped, user)
+        
+        try:
+            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
+        except gen.TimeoutError:
+            if user.spawn_pending:
+                # hit timeout, but spawn is still pending
+                self.log.warn("User %s server is slow to start", user.name)
+                # schedule finish for when the user finishes spawning
+                IOLoop.current().add_future(f, finish_user_spawn)
+            else:
+                raise
+        else:
+            yield finish_user_spawn()
     
     @gen.coroutine
     def user_stopped(self, user):
+        """Callback that fires when the spawner has stopped"""
         status = yield user.spawner.poll()
+        if status is None:
+            status = 'unknown'
         self.log.warn("User %s server stopped, with exit code: %s",
             user.name, status,
         )
@@ -279,6 +309,13 @@ class UserSpawnHandler(BaseHandler):
         if current_user and current_user.name == name:
             # logged in, spawn the server
             if current_user.spawner:
+                if current_user.spawn_pending:
+                    # spawn has started, but not finished
+                    html = self.render_template("spawn_pending.html", user=current_user)
+                    self.finish(html)
+                    return
+                
+                # spawn has supposedly finished, check on the status
                 status = yield current_user.spawner.poll()
                 if status is not None:
                     yield self.spawn_single_user(current_user)
