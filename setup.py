@@ -36,7 +36,7 @@ from subprocess import check_call
 pjoin = os.path.join
 
 here = os.path.abspath(os.path.dirname(__file__))
-share_jupyter = pjoin(here, 'share', 'jupyter')
+share_jupyter = pjoin(here, 'share', 'jupyter', 'hub')
 static = pjoin(share_jupyter, 'static')
 
 #---------------------------------------------------------------------------

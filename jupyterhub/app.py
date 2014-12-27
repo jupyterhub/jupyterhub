@@ -133,7 +133,7 @@ class JupyterHub(Application):
     )
     
     data_files_path = Unicode(DATA_FILES_PATH, config=True,
-        help="The location of jupyter data files (e.g. /usr/local/share/jupyter)"
+        help="The location of jupyterhub data files (e.g. /usr/local/share/jupyter/hub)"
     )
     
     ssl_key = Unicode('', config=True,
