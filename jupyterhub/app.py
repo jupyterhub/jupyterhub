@@ -79,6 +79,38 @@ flags = {
 
 SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
 
+class NewToken(Application):
+    """Generate and print a new API token"""
+    name = 'jupyterhub-token'
+    description = """Generate and return new API token for a user."""
+    
+    examples = """
+        $> jupyterhub token myuser
+        ab01cd23ef45
+    """
+    
+    name = Unicode()
+    aliases = {}
+    flags = {}
+    
+    def parse_command_line(self, argv=None):
+        super().parse_command_line(argv=argv)
+        if len(self.extra_args) != 1:
+            print("Must specify exactly one username", file=sys.stderr)
+            self.exit(1)
+        self.name = self.extra_args[0]
+    
+    def start(self):
+        hub = JupyterHub(parent=self)
+        hub.init_db()
+        user = orm.User.find(hub.db, self.name)
+        if user is None:
+            print("No such user: %s" % self.name)
+            self.exit(1)
+        token = user.new_api_token()
+        print(token)
+
+
 class JupyterHub(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
     name = 'jupyterhub'
@@ -103,6 +135,10 @@ class JupyterHub(Application):
     
     aliases = Dict(aliases)
     flags = Dict(flags)
+    
+    subcommands = {
+        'token': (NewToken, "Generate an API token for a user")
+    }
     
     classes = List([
         Spawner,
@@ -688,7 +724,7 @@ class JupyterHub(Application):
     @catch_config_error
     def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)
-        if self.generate_config:
+        if self.generate_config or self.subapp:
             return
         self.load_config_file(self.config_file)
         self.init_logging()
@@ -793,6 +829,9 @@ class JupyterHub(Application):
 
     def start(self):
         """Start the whole thing"""
+        if self.subapp:
+            return self.subapp.start()
+        
         if self.generate_config:
             self.write_config_file()
             return
