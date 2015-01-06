@@ -82,20 +82,27 @@ SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
 class NewToken(Application):
     """Generate and print a new API token"""
     name = 'jupyterhub-token'
-    description = """Generate and return new API token for a user."""
+    description = """Generate and return new API token for a user.
+    
+    Usage:
+    
+        jupyterhub token [username]
+    """
     
     examples = """
-        $> jupyterhub token myuser
+        $> jupyterhub token kaylee
         ab01cd23ef45
     """
     
-    name = Unicode()
+    name = Unicode(getuser())
     aliases = {}
     flags = {}
     
     def parse_command_line(self, argv=None):
         super().parse_command_line(argv=argv)
-        if len(self.extra_args) != 1:
+        if not self.extra_args:
+            return
+        if len(self.extra_args) > 1:
             print("Must specify exactly one username", file=sys.stderr)
             self.exit(1)
         self.name = self.extra_args[0]
