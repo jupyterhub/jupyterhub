@@ -95,8 +95,6 @@ class NewToken(Application):
     """
     
     name = Unicode(getuser())
-    aliases = {}
-    flags = {}
     
     def parse_command_line(self, argv=None):
         super().parse_command_line(argv=argv)
@@ -110,6 +108,7 @@ class NewToken(Application):
     def start(self):
         hub = JupyterHub(parent=self)
         hub.init_db()
+        hub.init_users()
         user = orm.User.find(hub.db, self.name)
         if user is None:
             print("No such user: %s" % self.name)
