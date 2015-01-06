@@ -168,7 +168,7 @@ class JupyterHub(Application):
         Useful for daemonizing jupyterhub.
         """
     )
-    last_activity_interval = Integer(600, config=True,
+    last_activity_interval = Integer(300, config=True,
         help="Interval (in seconds) at which to update last-activity timestamps."
     )
     proxy_check_interval = Integer(30, config=True,
