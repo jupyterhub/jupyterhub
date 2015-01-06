@@ -5,7 +5,7 @@ import re
 import sys
 from getpass import getuser
 from subprocess import check_output
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
@@ -15,7 +15,8 @@ def test_help_all():
 def test_token_app():
     cmd = [sys.executable, '-m', 'jupyterhub', 'token']
     out = check_output(cmd + ['--help-all']).decode('utf8', 'replace')
-    out = check_output(cmd + [getuser()]).decode('utf8', 'replace').strip()
+    with TemporaryDirectory() as td:
+        out = check_output(cmd + [getuser()], cwd=td).decode('utf8', 'replace').strip()
     assert re.match(r'^[a-z0-9]+$', out)
 
 def test_generate_config():
