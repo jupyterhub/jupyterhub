@@ -84,6 +84,7 @@ class LocalAuthenticator(Authenticator):
         """
     )
     
+    @gen.coroutine
     def add_user(self, user):
         """Add a new user
         
@@ -92,13 +93,14 @@ class LocalAuthenticator(Authenticator):
         Subclasses may do more extensive things,
         such as adding actual unix users.
         """
-        if not self.system_user_exists(user):
+        user_exists = yield gen.maybe_future(self.system_user_exists(user))
+        if not user_exists:
             if self.create_system_users:
-                self.add_system_user(user)
+                yield gen.maybe_future(self.add_system_user(user))
             else:
                 raise KeyError("User %s does not exist." % user.name)
         
-        super(LocalAuthenticator, self).add_user(user)
+        yield gen.maybe_future(super().add_user(user))
     
     @staticmethod
     def system_user_exists(user):

@@ -68,6 +68,7 @@ class UserAPIHandler(BaseUserHandler):
         self.write(json.dumps(self.user_model(user)))
     
     @admin_only
+    @gen.coroutine
     def post(self, name):
         data = self.get_json_body()
         user = self.find_user(name)
@@ -82,7 +83,7 @@ class UserAPIHandler(BaseUserHandler):
                 self.db.commit()
         
         try:
-            self.authenticator.add_user(user)
+            yield gen.maybe_future(self.authenticator.add_user(user))
         except Exception:
             self.log.error("Failed to create user: %s" % name, exc_info=True)
             self.db.delete(user)
@@ -103,7 +104,7 @@ class UserAPIHandler(BaseUserHandler):
         if user.spawner is not None:
             yield self.stop_single_user(user)
         
-        self.authenticator.delete_user(user)
+        yield gen.maybe_future(self.authenticator.delete_user(user))
         
         # remove from the db
         self.db.delete(user)
