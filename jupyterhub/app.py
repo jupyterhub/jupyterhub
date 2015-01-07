@@ -459,12 +459,15 @@ class JupyterHub(Application):
             admins = db.query(orm.User).filter(orm.User.admin==True)
             if admins.first() is None:
                 self.admin_users.add(getuser())
+        
+        new_users = []
 
         for name in self.admin_users:
             # ensure anyone specified as admin in config is admin in db
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                new_users.append(user)
                 db.add(user)
             else:
                 user.admin = True
@@ -482,6 +485,7 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name)
+                new_users.append(user)
                 db.add(user)
 
         if whitelist:
@@ -498,7 +502,10 @@ class JupyterHub(Application):
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
         db.commit()
-
+        for user in new_users:
+            self.authenticator.add_user(user)
+        db.commit()
+        
         # load any still-active spawners from JSON
         run_sync = IOLoop().run_sync
 
