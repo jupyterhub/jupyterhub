@@ -95,7 +95,11 @@ def test_get_users(app):
     db = app.db
     r = api_request(app, 'users')
     assert r.status_code == 200
-    assert sorted(r.json(), key=lambda d: d['name']) == [
+    
+    users = sorted(r.json(), key=lambda d: d['name'])
+    for u in users:
+        u.pop('last_activity')
+    assert users == [
         {
             'name': 'admin',
             'admin': True,
