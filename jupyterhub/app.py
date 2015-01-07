@@ -544,11 +544,14 @@ class JupyterHub(Application):
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
         # load any still-active spawners from JSON
-        run_sync = IOLoop().run_sync
+        current = IOLoop.current()
+        loop = IOLoop()
+        loop.make_current()
+        run_sync = loop.run_sync
 
         db.commit()
         for user in new_users:
-            run_sync(lambda : self.authenticator.add_user(user))
+            loop.run_sync(lambda : self.authenticator.add_user(user))
         db.commit()
         
         user_summaries = ['']
@@ -596,6 +599,7 @@ class JupyterHub(Application):
 
         self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
         db.commit()
+        current.make_current()
 
     def init_proxy(self):
         """Load the Proxy config into the database"""
