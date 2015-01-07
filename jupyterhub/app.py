@@ -543,14 +543,14 @@ class JupyterHub(Application):
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
-        db.commit()
-        for user in new_users:
-            self.authenticator.add_user(user)
-        db.commit()
-        
         # load any still-active spawners from JSON
         run_sync = IOLoop().run_sync
 
+        db.commit()
+        for user in new_users:
+            run_sync(lambda : self.authenticator.add_user(user))
+        db.commit()
+        
         user_summaries = ['']
         def _user_summary(user):
             parts = ['{0: >8}'.format(user.name)]
