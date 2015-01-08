@@ -79,9 +79,7 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
-            user = orm_token.user
-            user.last_activity = datetime.utcnow()
-            return user
+            return orm_token.user
     
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""
