@@ -4,6 +4,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import atexit
 import binascii
 import logging
 import os
@@ -492,6 +493,7 @@ class JupyterHub(Application):
 
         self.db.commit()
     
+    @gen.coroutine
     def init_users(self):
         """Load users into and from the database"""
         db = self.db
@@ -543,15 +545,10 @@ class JupyterHub(Application):
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
-        # load any still-active spawners from JSON
-        current = IOLoop.current()
-        loop = IOLoop()
-        loop.make_current()
-        run_sync = loop.run_sync
-
         db.commit()
+        
         for user in new_users:
-            loop.run_sync(lambda : self.authenticator.add_user(user))
+            yield self.authenticator.add_user(user)
         db.commit()
         
         user_summaries = ['']
@@ -582,7 +579,7 @@ class JupyterHub(Application):
             user.spawner = spawner = self.spawner_class(
                 user=user, hub=self.hub, config=self.config,
             )
-            status = run_sync(spawner.poll)
+            status = yield spawner.poll()
             if status is None:
                 self.log.info("%s still running", user.name)
                 spawner.add_poll_callback(user_stopped, user)
@@ -599,7 +596,6 @@ class JupyterHub(Application):
 
         self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
         db.commit()
-        current.make_current()
 
     def init_proxy(self):
         """Load the Proxy config into the database"""
@@ -738,6 +734,7 @@ class JupyterHub(Application):
             with open(self.pid_file, 'w') as f:
                 f.write('%i' % pid)
     
+    @gen.coroutine
     @catch_config_error
     def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)
@@ -760,7 +757,7 @@ class JupyterHub(Application):
         self.init_db()
         self.init_hub()
         self.init_proxy()
-        self.init_users()
+        yield self.init_users()
         self.init_handlers()
         self.init_tornado_settings()
         self.init_tornado_application()
@@ -843,24 +840,30 @@ class JupyterHub(Application):
             user.last_activity = max(user.last_activity, dt)
 
         self.db.commit()
-
+    
+    @gen.coroutine
     def start(self):
         """Start the whole thing"""
+        loop = IOLoop.current()
+        
         if self.subapp:
-            return self.subapp.start()
+            self.subapp.start()
+            loop.stop()
+            return
         
         if self.generate_config:
             self.write_config_file()
+            loop.stop()
             return
         
         # start the proxy
         try:
-            IOLoop().run_sync(self.start_proxy)
+            yield self.start_proxy()
         except Exception as e:
             self.log.critical("Failed to start proxy", exc_info=True)
+            self.exit(1)
             return
         
-        loop = IOLoop.current()
         loop.add_callback(self.proxy.add_all_users)
         
         if self.proxy_process:
@@ -877,14 +880,24 @@ class JupyterHub(Application):
         # start the webserver
         http_server = tornado.httpserver.HTTPServer(self.tornado_application)
         http_server.listen(self.hub_port)
+        # run the cleanup step (in a new loop, because the interrupted one is unclean)
         
+        atexit.register(lambda : IOLoop().run_sync(self.cleanup))
+    
+    @gen.coroutine
+    def launch_instance_async(self, argv=None):
+        yield self.initialize(argv)
+        yield self.start()
+    
+    @classmethod
+    def launch_instance(cls, argv=None):
+        self = cls.instance(argv=argv)
+        loop = IOLoop.current()
+        loop.add_callback(self.launch_instance_async, argv)
         try:
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
-        finally:
-            # run the cleanup step (in a new loop, because the interrupted one is unclean)
-            IOLoop().run_sync(self.cleanup)
 
 main = JupyterHub.launch_instance
 
