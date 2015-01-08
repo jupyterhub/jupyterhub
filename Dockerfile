@@ -16,6 +16,9 @@ RUN npm install -g jupyter/configurable-http-proxy
 RUN mkdir -p /srv/
 
 # install jupyterhub
+ADD requirements.txt /tmp/requirements.txt
+RUN pip3 install -r /tmp/requirements.txt
+
 WORKDIR /srv/
 ADD . /srv/jupyterhub
 WORKDIR /srv/jupyterhub/
