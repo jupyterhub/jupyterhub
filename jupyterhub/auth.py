@@ -10,7 +10,8 @@ from tornado import gen
 import simplepam
 
 from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import Bool, Set, Unicode
+from IPython.lib.security import passwd_check
+from IPython.utils.traitlets import Bool, Set, Unicode, Dict
 
 from .utils import url_path_join
 
@@ -71,6 +72,37 @@ class Authenticator(LoggingConfigurable):
         (e.g. for OAuth)
         """
         return []
+
+
+class DictionaryAuthenticator(Authenticator):
+    """
+    An authenticator that uses a dictionary from username -> password hash to
+    authenticate.
+    """
+    users = Dict(
+        config=True,
+        help="Dictionary from username -> password hash."
+    )
+
+    def _whitelist_default(self):
+        return set(self.users.keys())
+
+    @gen.coroutine
+    def authenticate(self, handler, data):
+        """
+        Authenticate using stored hashes.
+        """
+        username = data['username']
+        password = data['password']
+        try:
+            password_hash = self.users[username]
+        except KeyError:
+            return None
+
+        if passwd_check(password_hash, password):
+            return username
+        else:
+            return None
 
 class LocalAuthenticator(Authenticator):
     """Base class for Authenticators that work with local *ix users
