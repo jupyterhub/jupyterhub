@@ -9,6 +9,7 @@ import os
 import requests
 
 from tornado import ioloop
+from tornado.web import HTTPError
 
 from IPython.utils.traitlets import Unicode
 
@@ -35,7 +36,7 @@ class JupyterHubLoginHandler(LoginHandler):
     
     @staticmethod
     def verify_token(self, cookie_name, encrypted_cookie):
-        """monkeypatch method for token verification"""
+        """method for token verification"""
         cookie_cache = self.settings['cookie_cache']
         if encrypted_cookie in cookie_cache:
             # we've seen this token before, don't ask upstream again
@@ -51,9 +52,15 @@ class JupyterHubLoginHandler(LoginHandler):
         )
         if r.status_code == 404:
             data = {'user' : ''}
+        if r.status_code == 403:
+            self.log.error("I don't have permission to verify cookies, my auth token may have expired: [%i] %s", r.status_code, r.reason)
+            raise HTTPError(500, "Permission failure checking authorization, I may need to be restarted")
+        elif r.status_code >= 500:
+            self.log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
+            raise HTTPError(502, "Failed to check authorization (upstream problem)")
         elif r.status_code >= 400:
             self.log.warn("Failed to check authorization: [%i] %s", r.status_code, r.reason)
-            data = None
+            raise HTTPError(500, "Failed to check authorization")
         else:
             data = r.json()
         cookie_cache[encrypted_cookie] = data
@@ -62,6 +69,13 @@ class JupyterHubLoginHandler(LoginHandler):
     @staticmethod
     def get_user(self):
         """alternative get_current_user to query the central server"""
+        # only allow this to be called once per handler
+        # avoids issues if an error is raised,
+        # since this may be called again when trying to render the error page
+        if hasattr(self, '_cached_user'):
+            return self._cached_user
+        
+        self._cached_user = None
         my_user = self.settings['user']
         encrypted_cookie = self.get_cookie(self.cookie_name)
         if encrypted_cookie:
@@ -71,6 +85,7 @@ class JupyterHubLoginHandler(LoginHandler):
                 return None
             user = auth_data['user']
             if user == my_user:
+                self._cached_user = user
                 return user
             else:
                 return None
