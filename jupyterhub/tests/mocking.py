@@ -89,28 +89,35 @@ class MockHub(JupyterHub):
     
     def _admin_users_default(self):
         return {'admin'}
-
+    
     def start(self, argv=None):
         self.db_file = NamedTemporaryFile()
         self.db_url = 'sqlite:///' + self.db_file.name
         evt = threading.Event()
-        def _start():
-            self.io_loop = IOLoop.current()
+        @gen.coroutine
+        def _start_co():
             # put initialize in start for SQLAlchemy threading reasons
-            super(MockHub, self).initialize(argv=argv)
-
+            yield super(MockHub, self).initialize(argv=argv)
             # add an initial user
             user = orm.User(name='user')
             self.db.add(user)
             self.db.commit()
+            yield super(MockHub, self).start()
             self.io_loop.add_callback(evt.set)
-            super(MockHub, self).start()
+        
+        def _start():
+            self.io_loop = IOLoop.current()
+            self.io_loop.add_callback(_start_co)
+            self.io_loop.start()
         
         self._thread = threading.Thread(target=_start)
         self._thread.start()
         evt.wait(timeout=5)
     
     def stop(self):
-        self.db_file.close()
         self.io_loop.add_callback(self.io_loop.stop)
         self._thread.join()
+        IOLoop().run_sync(self.cleanup)
+        # ignore the call that will fire in atexit
+        self.cleanup = lambda : None
+        self.db_file.close()
