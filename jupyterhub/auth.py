@@ -12,6 +12,7 @@ import simplepam
 from IPython.config import LoggingConfigurable
 from IPython.utils.traitlets import Bool, Set, Unicode
 
+from .handlers.login import LoginHandler
 from .utils import url_path_join
 
 class Authenticator(LoggingConfigurable):
@@ -70,7 +71,9 @@ class Authenticator(LoggingConfigurable):
         
         (e.g. for OAuth)
         """
-        return []
+        return [
+            ('/login', LoginHandler),
+        ]
 
 class LocalAuthenticator(Authenticator):
     """Base class for Authenticators that work with local *ix users

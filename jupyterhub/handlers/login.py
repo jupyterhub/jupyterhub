@@ -69,7 +69,8 @@ class LoginHandler(BaseHandler):
             )
             self.finish(html)
 
+
+# Only logout is a default handler.
 default_handlers = [
-    (r"/login", LoginHandler),
     (r"/logout", LogoutHandler),
 ]
