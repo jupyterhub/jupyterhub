@@ -10,7 +10,7 @@ from tornado import gen
 import simplepam
 
 from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import Bool, Set, Unicode
+from IPython.utils.traitlets import Bool, Set, Unicode, Any
 
 from .handlers.login import LoginHandler
 from .utils import url_path_join
@@ -21,6 +21,7 @@ class Authenticator(LoggingConfigurable):
     The API is one method, `authenticate`, a tornado gen.coroutine.
     """
     
+    db = Any()
     whitelist = Set(config=True,
         help="""Username whitelist.
         

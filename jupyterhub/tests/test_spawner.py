@@ -39,7 +39,7 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('INTERRUPT_TIMEOUT', 1)
     kwargs.setdefault('TERM_TIMEOUT', 1)
     kwargs.setdefault('KILL_TIMEOUT', 1)
-    return LocalProcessSpawner(**kwargs)
+    return LocalProcessSpawner(db=db, **kwargs)
 
 
 def test_spawner(db, io_loop):
