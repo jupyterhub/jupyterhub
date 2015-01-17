@@ -287,7 +287,7 @@ class JupyterHub(Application):
     
     authenticator = Instance(Authenticator)
     def _authenticator_default(self):
-        return self.authenticator_class(config=self.config)
+        return self.authenticator_class(parent=self, db=self.db)
 
     # class for spawning single-user servers
     spawner_class = Type(LocalProcessSpawner, Spawner,
@@ -577,7 +577,7 @@ class JupyterHub(Application):
                 continue
             self.log.debug("Loading state for %s from db", user.name)
             user.spawner = spawner = self.spawner_class(
-                user=user, hub=self.hub, config=self.config,
+                user=user, hub=self.hub, config=self.config, db=self.db,
             )
             status = yield spawner.poll()
             if status is None:

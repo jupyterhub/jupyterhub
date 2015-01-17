@@ -37,6 +37,7 @@ class Spawner(LoggingConfigurable):
     - poll
     """
     
+    db = Any()
     user = Any()
     hub = Any()
     api_token = Unicode()

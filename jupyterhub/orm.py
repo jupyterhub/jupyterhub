@@ -306,6 +306,7 @@ class User(Base):
             config=config,
             user=self,
             hub=hub,
+            db=db,
         )
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
