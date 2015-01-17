@@ -1,15 +1,13 @@
 # http://travis-ci.org/#!/jupyter/jupyterhub
 language: python
+sudo: false
 python:
     - 3.4
     - 3.3
 before_install:
-    # workaround for https://github.com/travis-ci/travis-cookbooks/issues/155
-    - sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm
-    - time npm install -g less bower jupyter/configurable-http-proxy
-    - time sudo apt-get install libzmq3-dev
-    - time pip install -f https://nipy.bic.berkeley.edu/wheelhouse/travis -r dev-requirements.txt
+    - npm install -g less bower jupyter/configurable-http-proxy
+    - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
 install:
-    - time pip install .
+    - pip install  -f travis-wheels/wheelhouse -r dev-requirements.txt .
 script:
     - py.test jupyterhub
