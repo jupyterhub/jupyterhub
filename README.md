@@ -67,7 +67,7 @@ and then visit `http://localhost:8000`, and sign in with your unix credentials.
 
 If you want multiple users to be able to sign into the server, you will need to run the
 `jupyterhub` command as a privileged user, such as root.
-The [wiki](https://github.com/jupyter/jupyterhub/wiki/Using-sudo-to-run-the-server-as-non-root) describes how to run the server
+The [wiki](https://github.com/jupyter/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges) describes how to run the server
 as a less privileged user, which requires more configuration of the system.
 
 ### Some examples
