@@ -41,7 +41,9 @@ from IPython.config import Application, catch_config_error
 
 here = os.path.dirname(__file__)
 
+import jupyterhub
 from . import handlers, apihandlers
+from .handlers.static import CacheControlStaticFilesHandler
 
 from . import orm
 from ._data import DATA_FILES_PATH
@@ -200,7 +202,6 @@ class JupyterHub(Application):
     base_url = URLPrefix('/', config=True,
         help="The base URL of the entire application"
     )
-    
     
     jinja_environment_options = Dict(config=True,
         help="Supply extra arguments that will be passed to Jinja environment."
@@ -701,6 +702,14 @@ class JupyterHub(Application):
         login_url = self.authenticator.login_url(base_url)
         logout_url = self.authenticator.logout_url(base_url)
         
+        # if running from git, disable caching of require.js
+        # otherwise cache based on server start time
+        parent = os.path.dirname(os.path.dirname(jupyterhub.__file__))
+        if os.path.isdir(os.path.join(parent, '.git')):
+            version_hash = ''
+        else:
+            version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
+        
         settings = dict(
             config=self.config,
             log=self.log,
@@ -716,8 +725,10 @@ class JupyterHub(Application):
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
+            static_handler_class=CacheControlStaticFilesHandler,
             template_path=template_path,
             jinja2_env=jinja_env,
+            version_hash=version_hash,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

@@ -38,7 +38,11 @@ class BaseHandler(RequestHandler):
     @property
     def base_url(self):
         return self.settings.get('base_url', '/')
-
+    
+    @property
+    def version_hash(self):
+        return self.settings.get('version_hash', '')
+    
     @property
     def db(self):
         return self.settings['db']
@@ -240,6 +244,7 @@ class BaseHandler(RequestHandler):
             login_url=self.settings['login_url'],
             logout_url=self.settings['logout_url'],
             static_url=self.static_url,
+            version_hash=self.version_hash,
         )
 
     def write_error(self, status_code, **kwargs):
