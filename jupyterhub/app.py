@@ -878,7 +878,7 @@ class JupyterHub(Application):
             pc.start()
 
         # start the webserver
-        http_server = tornado.httpserver.HTTPServer(self.tornado_application)
+        http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
         http_server.listen(self.hub_port)
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
         
