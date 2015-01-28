@@ -100,6 +100,19 @@ define(['jquery', 'utils'], function ($, utils) {
         );
     };
     
+    JHAPI.prototype.admin_access = function (user, options) {
+        options = options || {};
+        options = update(options, {
+            type: 'POST',
+            dataType: null,
+        });
+        
+        this.api_request(
+            utils.url_path_join('users', user, 'admin-access'),
+            options
+        );
+    };
+    
     JHAPI.prototype.delete_user = function (user, options) {
         options = options || {};
         options = update(options, {type: 'DELETE', dataType: null});

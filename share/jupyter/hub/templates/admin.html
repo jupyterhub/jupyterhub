@@ -15,10 +15,13 @@
     <tr class="user-row" data-user="{{u.name}}" data-admin="{{u.admin}}">
       <td class="name-col col-sm-2">{{u.name}}</td>
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
-      <td class="time-col col-sm-4">{{u.last_activity.isoformat() + 'Z'}}</td>
-      <td class="server-col col-sm-2 text-center">
+      <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
+      <td class="server-col col-sm-3 text-center">
       {% if u.server %}
         <span class="stop-server btn btn-xs btn-danger">stop server</span>
+        {% if admin_access %}
+        <span class="access-server btn btn-xs btn-success">access server</span>
+        {% endif %}
       {% else %}
         <span class="start-server btn btn-xs btn-success">start server</span>
       {% endif %}

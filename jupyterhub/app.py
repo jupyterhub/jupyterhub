@@ -321,6 +321,12 @@ class JupyterHub(Application):
     db = Any()
     session_factory = Any()
     
+    admin_access = Bool(False, config=True,
+        help="""Grant admin users permission to access single-user servers.
+        
+        Users should be properly informed if this is enabled.
+        """
+    )
     admin_users = Set(config=True,
         help="""set of usernames of admin users
 
@@ -708,6 +714,7 @@ class JupyterHub(Application):
             proxy=self.proxy,
             hub=self.hub,
             admin_users=self.admin_users,
+            admin_access=self.admin_access,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,

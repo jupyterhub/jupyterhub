@@ -244,6 +244,7 @@ class BaseHandler(RequestHandler):
         user = self.get_current_user()
         return dict(
             base_url=self.hub.server.base_url,
+            prefix=self.base_url,
             user=user,
             login_url=self.settings['login_url'],
             logout_url=self.settings['logout_url'],

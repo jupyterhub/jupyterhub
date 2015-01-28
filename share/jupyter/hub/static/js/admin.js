@@ -1,10 +1,12 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "bootstrap", "moment", "jhapi"], function ($, bs, moment, JHAPI) {
+require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, moment, JHAPI, utils) {
     "use strict";
     
     var base_url = window.jhdata.base_url;
+    var prefix = window.jhdata.prefix;
+    
     var api = new JHAPI(base_url);
     
     var get_row = function (element) {
@@ -31,7 +33,24 @@ require(["jquery", "bootstrap", "moment", "jhapi"], function ($, bs, moment, JHA
             }
         });
     });
-
+    
+    $(".access-server").click(function () {
+        var el = $(this);
+        var row = get_row(el);
+        var user = row.data('user');
+        var w = window.open();
+        api.admin_access(user, {
+            async: false,
+            success: function () {
+                w.location = utils.url_path_join(prefix, 'user', user);
+            },
+            error: function (xhr, err) {
+                w.close();
+                console.error("Failed to gain access to server", err);
+            }
+        });
+    });
+    
     $(".start-server").click(function () {
         var el = $(this);
         var row = get_row(el);

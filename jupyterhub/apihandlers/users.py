@@ -8,7 +8,7 @@ import json
 from tornado import gen, web
 
 from .. import orm
-from ..utils import admin_only, authenticated_403
+from ..utils import admin_only
 from .base import APIHandler
 
 class BaseUserHandler(APIHandler):
@@ -147,8 +147,30 @@ class UserServerAPIHandler(BaseUserHandler):
         yield self.stop_single_user(user)
         self.set_status(204)
 
+class UserAdminAccessAPIHandler(BaseUserHandler):
+    """Grant admins access to single-user servers
+    
+    This handler sets the necessary cookie for an admin to login to a single-user server.
+    """
+    @admin_only
+    def post(self, name):
+        current = self.get_current_user()
+        self.log.warn("Admin user %s has requested access to %s's server",
+            current.name, name,
+        )
+        if not self.settings.get('admin_access', False):
+            raise web.HTTPError(403, "admin access to user servers disabled")
+        user = self.find_user(name)
+        if user is None:
+            raise web.HTTPError(404)
+        if user.server is None:
+            raise web.HTTPError(400, "%s has no server running" % name)
+        self.set_server_cookie(user)
+
+
 default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
+    (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
