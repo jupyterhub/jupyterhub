@@ -49,8 +49,13 @@ class SlowSpawner(MockSpawner):
     
     @gen.coroutine
     def start(self):
-        yield gen.Task(IOLoop.current().add_timeout, timedelta(seconds=5))
+        yield gen.Task(IOLoop.current().add_timeout, timedelta(seconds=2))
         yield super().start()
+    
+    @gen.coroutine
+    def stop(self):
+        yield gen.Task(IOLoop.current().add_timeout, timedelta(seconds=2))
+        yield super().stop()
 
 
 class NeverSpawner(MockSpawner):

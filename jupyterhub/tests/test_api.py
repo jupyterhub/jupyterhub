@@ -207,24 +207,52 @@ def test_spawn(app, io_loop):
 def test_slow_spawn(app, io_loop):
     app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
     app.tornado_application.settings['slow_spawn_timeout'] = 0
+    app.tornado_application.settings['slow_stop_timeout'] = 0
 
     db = app.db
     name = 'zoe'
     user = add_user(db, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    assert r.status_code == 202
     assert user.spawner is not None
     assert user.spawn_pending
+    assert not user.stop_pending
     
     dt = timedelta(seconds=0.1)
     @gen.coroutine
-    def wait_pending():
+    def wait_spawn():
         while user.spawn_pending:
             yield gen.Task(io_loop.add_timeout, dt)
     
-    io_loop.run_sync(wait_pending)
+    io_loop.run_sync(wait_spawn)
     assert not user.spawn_pending
     status = io_loop.run_sync(user.spawner.poll)
     assert status is None
+
+    @gen.coroutine
+    def wait_stop():
+        while user.stop_pending:
+            yield gen.Task(io_loop.add_timeout, dt)
+
+    r = api_request(app, 'users', name, 'server', method='delete')
+    r.raise_for_status()
+    assert r.status_code == 202
+    assert user.spawner is not None
+    assert user.stop_pending
+
+    r = api_request(app, 'users', name, 'server', method='delete')
+    r.raise_for_status()
+    assert r.status_code == 202
+    assert user.spawner is not None
+    assert user.stop_pending
+    
+    io_loop.run_sync(wait_stop)
+    assert not user.stop_pending
+    assert user.spawner is not None
+    r = api_request(app, 'users', name, 'server', method='delete')
+    assert r.status_code == 400
+    
 
 def test_never_spawn(app, io_loop):
     app.tornado_application.settings['spawner_class'] = mocking.NeverSpawner
