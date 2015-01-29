@@ -1,13 +1,28 @@
 {% extends "page.html" %}
 
+{% macro th(key, label, order, colspan) %}
+<th data-sort="{{key}}" colspan="{{colspan}}">{{label}}
+  <a href="#"><i class="fa {% if order == 'asc' -%}
+                               fa-sort-asc
+                           {%- elif order == 'desc' -%}
+                               fa-sort-desc
+                           {%- else -%}
+                               fa-sort
+                           {%- endif %} sort-icon">
+  </i></a>
+</th>
+{% endmacro %}
+
 {% block main %}
 
 <div class="container">
   <table class="table table-striped">
     <thead>
       <tr>
-        <th colspan="2">User</th>
-        <th colspan="3">Last Seen</th>
+        {{ th('name', "User", sort.get('name'), 1) }}
+        {{ th('admin', "Admin", sort.get('admin'), 1) }}
+        {{ th('last_activity', "Last Seen", sort.get('last_activity'), 1) }}
+        {{ th('running', "Running", sort.get('running'), 2) }}
       </tr>
     </thead>
     <tbody>

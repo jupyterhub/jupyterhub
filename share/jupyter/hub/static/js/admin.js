@@ -9,12 +9,46 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
     
     var api = new JHAPI(base_url);
     
-    var get_row = function (element) {
+    function get_row (element) {
         while (!element.hasClass("user-row")) {
             element = element.parent();
         }
         return element;
-    };
+    }
+    
+    function resort (col, order) {
+        var query = window.location.search.slice(1).split('&');
+        // if col already present in args, remove it
+        var i = 0;
+        while (i < query.length) {
+            if (query[i] === 'sort=' + col) {
+                query.splice(i,1);
+                if (query[i] && query[i].substr(0, 6) === 'order=') {
+                    query.splice(i,1);
+                }
+            } else {
+                i += 1;
+            }
+        }
+        // add new order to the front
+        if (order) {
+            query.unshift('order=' + order);
+        }
+        query.unshift('sort=' + col);
+        // reload page with new order
+        window.location = window.location.pathname + '?' + query.join('&');
+    }
+    
+    $("th").map(function (i, th) {
+        th = $(th);
+        var col = th.data('sort');
+        var order = th.find('i').hasClass('fa-sort-desc') ? 'asc':'desc';
+        th.find('a').click(
+            function () {
+                resort(col, order);
+            }
+        )
+    });
     
     $(".time-col").map(function (i, el) {
         // convert ISO datestamps to nice momentjs ones

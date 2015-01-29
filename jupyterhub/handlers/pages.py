@@ -45,10 +45,47 @@ class AdminHandler(BaseHandler):
 
     @admin_only
     def get(self):
+        available = {'name', 'admin', 'running', 'last_activity'}
+        default_sort = ['admin', 'name']
+        mapping = {
+            'running': '_server_id'
+        }
+        default_order = {
+            'name': 'asc',
+            'last_activity': 'desc',
+            'admin': 'desc',
+            'running': 'desc',
+        }
+        sorts = self.get_arguments('sort') or default_sort
+        orders = self.get_arguments('order')
+        
+        for bad in set(sorts).difference(available):
+            self.log.warn("ignoring invalid sort: %r", bad)
+            sorts.remove(bad)
+        for bad in set(orders).difference({'asc', 'desc'}):
+            self.log.warn("ignoring invalid order: %r", bad)
+            orders.remove(bad)
+        
+        # add default sort as secondary
+        for s in default_sort:
+            if s not in sorts:
+                sorts.append(s)
+        if len(orders) < len(sorts):
+            for col in sorts[len(orders):]:
+                orders.append(default_order[col])
+        else:
+            orders = orders[:len(sorts)]
+        
+        # this could be one incomprehensible nested list comprehension
+        # get User columns
+        cols = [ getattr(orm.User, mapping.get(c, c)) for c in sorts ]
+        # get User.col.desc() order objects
+        ordered = [ getattr(c, o)() for c, o in zip(cols, orders) ]
         html = self.render_template('admin.html',
             user=self.get_current_user(),
-            users=self.db.query(orm.User),
+            users=self.db.query(orm.User).order_by(*ordered),
             admin_access=self.settings.get('admin_access', False),
+            sort={s:o for s,o in zip(sorts, orders)},
         )
         self.finish(html)
 
