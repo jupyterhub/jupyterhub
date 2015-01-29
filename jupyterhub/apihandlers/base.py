@@ -42,7 +42,7 @@ class APIHandler(BaseHandler):
             reason = getattr(exception, 'reason', '')
             if reason:
                 status_message = reason
-        
+        self.set_header('Content-Type', 'application/json')
         self.write(json.dumps({
             'status': status_code,
             'message': message or status_message,
