@@ -15,7 +15,7 @@ define(['jquery', 'utils'], function ($, utils) {
         dataType : "json",
         processData: false,
         success: null,
-        error: utils.log_jax_error,
+        error: utils.ajax_error_dialog,
     };
     
     var update = function (d1, d2) {

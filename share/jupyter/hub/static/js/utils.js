@@ -108,6 +108,15 @@ define(['jquery'], function($){
         console.log(jqXHR);
         msg += ajax_error_msg(jqXHR);
         console.log(msg);
+        return msg;
+    };
+    
+    var ajax_error_dialog = function (jqXHR, status, error) {
+        console.log("ajax dialog", arguments);
+        var msg = log_ajax_error(jqXHR, status, error);
+        var dialog = $("#error-dialog");
+        dialog.find(".ajax-error").text(msg);
+        dialog.modal();
     };
 
     var utils = {
@@ -121,6 +130,7 @@ define(['jquery'], function($){
         platform: platform,
         ajax_error_msg : ajax_error_msg,
         log_ajax_error : log_ajax_error,
+        ajax_error_dialog : ajax_error_dialog,
     };
     
     return utils;
