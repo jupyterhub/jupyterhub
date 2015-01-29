@@ -112,6 +112,8 @@ aliases.update({
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
     user = Unicode(config=True)
+    def _user_changed(self, name, old, new):
+        self.log.name = new
     cookie_name = Unicode(config=True)
     hub_prefix = Unicode(config=True)
     hub_api_url = Unicode(config=True)
@@ -120,6 +122,14 @@ class SingleUserNotebookApp(NotebookApp):
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
     
+    def _log_datefmt_default(self):
+        """Exclude date from default date format"""
+        return "%Y-%m-%d %H:%M:%S"
+
+    def _log_format_default(self):
+        """override default log format to include time"""
+        return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
+
     def _confirm_exit(self):
         # disable the exit confirmation for background notebook processes
         ioloop.IOLoop.instance().stop()

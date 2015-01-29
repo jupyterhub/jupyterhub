@@ -339,11 +339,11 @@ class JupyterHub(Application):
     
     def _log_datefmt_default(self):
         """Exclude date from default date format"""
-        return "%H:%M:%S"
+        return "%Y-%m-%d %H:%M:%S"
 
     def _log_format_default(self):
         """override default log format to include time"""
-        return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s]%(end_color)s %(message)s"
+        return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
