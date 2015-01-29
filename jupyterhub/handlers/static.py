@@ -8,6 +8,9 @@ class CacheControlStaticFilesHandler(StaticFileHandler):
     
     rather than relying on default browser cache behavior.
     """
+    def compute_etag(self):
+        return None
+    
     def set_extra_headers(self, path):
         if "v" not in self.request.arguments:
             self.add_header("Cache-Control", "no-cache")
