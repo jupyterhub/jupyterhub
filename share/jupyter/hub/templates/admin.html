@@ -19,10 +19,10 @@
   <table class="table table-striped">
     <thead>
       <tr>
-        {{ th('name', "User", sort.get('name'), 1) }}
+        {{ th('name', "User (%i)" % users.count(), sort.get('name'), 1) }}
         {{ th('admin', "Admin", sort.get('admin'), 1) }}
         {{ th('last_activity', "Last Seen", sort.get('last_activity'), 1) }}
-        {{ th('running', "Running", sort.get('running'), 2) }}
+        {{ th('running', "Running (%i)" % running.count(), sort.get('running'), 2) }}
       </tr>
     </thead>
     <tbody>

@@ -81,10 +81,15 @@ class AdminHandler(BaseHandler):
         cols = [ getattr(orm.User, mapping.get(c, c)) for c in sorts ]
         # get User.col.desc() order objects
         ordered = [ getattr(c, o)() for c, o in zip(cols, orders) ]
+        
+        users = self.db.query(orm.User).order_by(*ordered)
+        running = users.filter(orm.User.server != None)
+        
         html = self.render_template('admin.html',
             user=self.get_current_user(),
-            users=self.db.query(orm.User).order_by(*ordered),
             admin_access=self.settings.get('admin_access', False),
+            users=users,
+            running=running,
             sort={s:o for s,o in zip(sorts, orders)},
         )
         self.finish(html)
