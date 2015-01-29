@@ -63,7 +63,9 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         el.text("stopping...");
         api.stop_server(user, {
             success: function () {
-                window.location.reload();
+                el.text('stop server').addClass('hidden');
+                row.find('.access-server').addClass('hidden');
+                row.find('.start-server').removeClass('hidden');
             }
         });
     });
@@ -92,7 +94,9 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         el.text("starting...");
         api.start_server(user, {
             success: function () {
-                window.location.reload();
+                el.text('start server').addClass('hidden');
+                row.find('.stop-server').removeClass('hidden');
+                row.find('.access-server').removeClass('hidden');
             }
         });
     });
