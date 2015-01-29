@@ -11,6 +11,11 @@
       </tr>
     </thead>
     <tbody>
+      <tr class="user-row add-user-row">
+        <td colspan="5">
+          <a id="add-user" class="col-xs-12 btn btn-default">Add User</a>
+        </td>
+      </tr>
   {% for u in users %}
     <tr class="user-row" data-user="{{u.name}}" data-admin="{{u.admin}}">
       <td class="name-col col-sm-2">{{u.name}}</td>
@@ -34,11 +39,6 @@
       </td>
     </tr>
   {% endfor %}
-    <tr class="user-row add-user-row">
-      <td colspan="5">
-        <a id="add-user" class="col-xs-12 btn btn-default">Add User</a>
-      </td>
-    </tr>
   </tbody>
   </table>
 </div>
