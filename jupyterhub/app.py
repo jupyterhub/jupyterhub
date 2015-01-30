@@ -548,7 +548,7 @@ class JupyterHub(Application):
         db.commit()
         
         for user in new_users:
-            yield self.authenticator.add_user(user)
+            yield gen.maybe_future(self.authenticator.add_user(user))
         db.commit()
         
         user_summaries = ['']
