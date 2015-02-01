@@ -42,6 +42,9 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
     $("th").map(function (i, th) {
         th = $(th);
         var col = th.data('sort');
+        if (!col || col.length == 0) {
+            return;
+        }
         var order = th.find('i').hasClass('fa-sort-desc') ? 'asc':'desc';
         th.find('a').click(
             function () {
