@@ -251,6 +251,7 @@ class User(Base):
     state = Column(JSONDict)
     spawner = None
     spawn_pending = False
+    stop_pending = False
     
     def __repr__(self):
         if self.server:
@@ -362,14 +363,18 @@ class User(Base):
         if self.spawner is None:
             return
         self.spawner.stop_polling()
-        status = yield self.spawner.poll()
-        if status is None:
-            yield self.spawner.stop()
-        self.spawner.clear_state()
-        self.state = self.spawner.get_state()
-        self.last_activity = datetime.utcnow()
-        self.server = None
-        inspect(self).session.commit()
+        self.stop_pending = True
+        try:
+            status = yield self.spawner.poll()
+            if status is None:
+                yield self.spawner.stop()
+            self.spawner.clear_state()
+            self.state = self.spawner.get_state()
+            self.last_activity = datetime.utcnow()
+            self.server = None
+            inspect(self).session.commit()
+        finally:
+            self.stop_pending = False
 
 
 class APIToken(Base):

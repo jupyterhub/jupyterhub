@@ -17,7 +17,7 @@ class BaseUserHandler(APIHandler):
         return {
             'name': user.name,
             'admin': user.admin,
-            'server': user.server.base_url if user.server else None,
+            'server': user.server.base_url if user.server and not (user.spawn_pending or user.stop_pending) else None,
             'last_activity': user.last_activity.isoformat(),
         }
     
@@ -101,8 +101,12 @@ class UserAPIHandler(BaseUserHandler):
             raise web.HTTPError(404)
         if user.name == self.get_current_user().name:
             raise web.HTTPError(400, "Cannot delete yourself!")
+        if user.stop_pending:
+            raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
         if user.spawner is not None:
             yield self.stop_single_user(user)
+            if user.stop_pending:
+                raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
         
         yield gen.maybe_future(self.authenticator.delete_user(user))
         
@@ -136,16 +140,24 @@ class UserServerAPIHandler(BaseUserHandler):
                 raise web.HTTPError(400, "%s's server is already running" % name)
 
         yield self.spawn_single_user(user)
-        self.set_status(201)
+        status = 202 if user.spawn_pending else 201
+        self.set_status(status)
 
     @gen.coroutine
     @admin_or_self
     def delete(self, name):
         user = self.find_user(name)
+        if user.stop_pending:
+            self.set_status(202)
+            return
         if user.spawner is None:
             raise web.HTTPError(400, "%s's server is not running" % name)
+        status = yield user.spawner.poll()
+        if status is not None:
+            raise web.HTTPError(400, "%s's server is not running" % name)
         yield self.stop_single_user(user)
-        self.set_status(204)
+        status = 202 if user.stop_pending else 204
+        self.set_status(status)
 
 default_handlers = [
     (r"/api/users", UserListAPIHandler),

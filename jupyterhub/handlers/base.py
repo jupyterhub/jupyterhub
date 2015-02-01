@@ -168,11 +168,19 @@ class BaseHandler(RequestHandler):
         return self.settings.get('slow_spawn_timeout', 10)
 
     @property
+    def slow_stop_timeout(self):
+        return self.settings.get('slow_stop_timeout', 10)
+
+    @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     @gen.coroutine
     def spawn_single_user(self, user):
+        if user.spawn_pending:
+            raise RuntimeError("Spawn already pending for: %s" % user.name)
+        tic = IOLoop.current().time()
+        
         f = user.spawn(
             spawner_class=self.spawner_class,
             base_url=self.base_url,
@@ -189,6 +197,8 @@ class BaseHandler(RequestHandler):
             if f and f.exception() is not None:
                 # failed, don't add to the proxy
                 return
+            toc = IOLoop.current().time()
+            self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
             yield self.proxy.add_user(user)
             user.spawner.add_poll_callback(self.user_stopped, user)
         
@@ -219,8 +229,36 @@ class BaseHandler(RequestHandler):
     
     @gen.coroutine
     def stop_single_user(self, user):
+        if user.stop_pending:
+            raise RuntimeError("Stop already pending for: %s" % user.name)
+        tic = IOLoop.current().time()
+        f = user.stop()
         yield self.proxy.delete_user(user)
-        yield user.stop()
+        @gen.coroutine
+        def finish_stop(f=None):
+            """Finish the stop action by noticing that the user is stopped.
+            
+            If the spawner is slow to stop, this is passed as an async callback,
+            otherwise it is called immediately.
+            """
+            if f and f.exception() is not None:
+                # failed, don't do anything
+                return
+            toc = IOLoop.current().time()
+            self.log.info("User %s server took %.3f seconds to stop", user.name, toc-tic)
+        
+        try:
+            yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), f)
+        except gen.TimeoutError:
+            if user.stop_pending:
+                # hit timeout, but stop is still pending
+                self.log.warn("User %s server is slow to stop", user.name)
+                # schedule finish for when the server finishes stopping
+                IOLoop.current().add_future(f, finish_stop)
+            else:
+                raise
+        else:
+            yield finish_stop()
 
     #---------------------------------------------------------------
     # template rendering
