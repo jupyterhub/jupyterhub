@@ -48,6 +48,7 @@ class AdminHandler(BaseHandler):
         html = self.render_template('admin.html',
             user=self.get_current_user(),
             users=self.db.query(orm.User),
+            admin_access=self.settings.get('admin_access', False),
         )
         self.finish(html)
 

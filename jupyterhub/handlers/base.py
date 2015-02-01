@@ -131,23 +131,31 @@ class BaseHandler(RequestHandler):
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
-
+    
+    def set_server_cookie(self, user):
+        """set the login cookie for the single-user server"""
+        self.set_secure_cookie(
+            user.server.cookie_name,
+            user.cookie_id,
+            path=user.server.base_url,
+        )
+    
+    def set_hub_cookie(self, user):
+        """set the login cookie for the Hub"""
+        self.set_secure_cookie(
+            self.hub.server.cookie_name,
+            user.cookie_id,
+            path=self.hub.server.base_url)
+    
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
         # create and set a new cookie token for the single-user server
         if user.server:
-            self.set_secure_cookie(
-                user.server.cookie_name,
-                user.cookie_id,
-                path=user.server.base_url,
-            )
+            self.set_server_cookie(user)
         
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
-            self.set_secure_cookie(
-                self.hub.server.cookie_name,
-                user.cookie_id,
-                path=self.hub.server.base_url)
+            self.set_hub_cookie(user)
     
     @gen.coroutine
     def authenticate(self, data):
@@ -278,6 +286,7 @@ class BaseHandler(RequestHandler):
         user = self.get_current_user()
         return dict(
             base_url=self.hub.server.base_url,
+            prefix=self.base_url,
             user=user,
             login_url=self.settings['login_url'],
             logout_url=self.settings['logout_url'],
