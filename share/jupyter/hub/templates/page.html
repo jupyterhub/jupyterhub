@@ -19,6 +19,8 @@
   </div>
 </div>
 {% endmacro %}
+
+
 <!DOCTYPE HTML>
 <html>
 
@@ -101,6 +103,12 @@
 
 {% block main %}
 {% endblock %}
+
+{% call modal('Error', btn_label='OK') %}
+  <div class="ajax-error">
+    The error
+  </div>
+{% endcall %}
 
 {% block script %}
 {% endblock %}

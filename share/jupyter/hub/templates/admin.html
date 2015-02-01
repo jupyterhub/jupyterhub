@@ -1,30 +1,52 @@
 {% extends "page.html" %}
 
+{% macro th(label, key='', colspan=1) %}
+<th data-sort="{{key}}" colspan="{{colspan}}">{{label}}
+  {% if key %}
+  <a href="#"><i class="fa {% if sort.get(key) == 'asc' -%}
+                               fa-sort-asc
+                           {%- elif sort.get(key) == 'desc' -%}
+                               fa-sort-desc
+                           {%- else -%}
+                               fa-sort
+                           {%- endif %} sort-icon">
+  </i></a>
+  {% endif %}
+</th>
+{% endmacro %}
+
 {% block main %}
 
 <div class="container">
   <table class="table table-striped">
     <thead>
       <tr>
-        <th colspan="2">User</th>
-        <th colspan="3">Last Seen</th>
+        {% block thead %}
+        {{ th("User (%i)" % users.count(), 'name') }}
+        {{ th("Admin", 'admin') }}
+        {{ th("Last Seen", 'last_activity') }}
+        {{ th("Running (%i)" % running.count(), 'running', colspan=2) }}
+        {% endblock thead %}
       </tr>
     </thead>
     <tbody>
+      <tr class="user-row add-user-row">
+        <td colspan="5">
+          <a id="add-user" class="col-xs-12 btn btn-default">Add User</a>
+        </td>
+      </tr>
   {% for u in users %}
     <tr class="user-row" data-user="{{u.name}}" data-admin="{{u.admin}}">
+      {% block user_row scoped %}
       <td class="name-col col-sm-2">{{u.name}}</td>
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
       <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
       <td class="server-col col-sm-3 text-center">
-      {% if u.server %}
-        <span class="stop-server btn btn-xs btn-danger">stop server</span>
+        <span class="stop-server btn btn-xs btn-danger {% if not u.server %}hidden{% endif %}">stop server</span>
         {% if admin_access %}
-        <span class="access-server btn btn-xs btn-success">access server</span>
+        <span class="access-server btn btn-xs btn-success {% if not u.server %}hidden{% endif %}">access server</span>
         {% endif %}
-      {% else %}
-        <span class="start-server btn btn-xs btn-success">start server</span>
-      {% endif %}
+        <span class="start-server btn btn-xs btn-success {% if u.server %}hidden{% endif %}">start server</span>
       </td>
       <td class="edit-col col-sm-2">
         <span class="edit-user btn btn-xs btn-primary">edit</span>
@@ -32,13 +54,9 @@
         <span class="delete-user btn btn-xs btn-danger">delete</span>
         {% endif %}
       </td>
+      {% endblock user_row %}
     </tr>
   {% endfor %}
-    <tr class="user-row add-user-row">
-      <td colspan="5">
-        <a id="add-user" class="col-xs-12 btn btn-default">Add User</a>
-      </td>
-    </tr>
   </tbody>
   </table>
 </div>
