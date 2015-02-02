@@ -89,6 +89,7 @@
     <span id="login_widget">
       {% if user %}
         <a id="logout" class="btn navbar-btn btn-default pull-right" href="{{logout_url}}">Logout</a>
+        <a id="hub-home" class="btn navbar-btn btn-default pull-right" href="{{base_url}}">Hub</a>
       {% else %}
         <a id="login" class="btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
       {% endif %}
