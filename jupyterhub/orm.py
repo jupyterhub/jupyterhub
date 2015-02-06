@@ -322,9 +322,9 @@ class User(Base):
         spawner.api_token = api_token
         
         self.spawn_pending = True
-        f = spawner.start()
         # wait for spawner.start to return
         try:
+            f = spawner.start()
             yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
