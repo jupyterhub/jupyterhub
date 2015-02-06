@@ -56,19 +56,26 @@ from .utils import (
 from .auth import Authenticator, PAMAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
 
-aliases = {
+common_aliases = {
     'log-level': 'Application.log_level',
     'f': 'JupyterHub.config_file',
-    'base-url': 'JupyterHub.base_url',
     'config': 'JupyterHub.config_file',
+    'db': 'JupyterHub.db_url',
+}
+
+
+aliases = {
+    'base-url': 'JupyterHub.base_url',
     'y': 'JupyterHub.answer_yes',
     'ssl-key': 'JupyterHub.ssl_key',
     'ssl-cert': 'JupyterHub.ssl_cert',
     'ip': 'JupyterHub.ip',
     'port': 'JupyterHub.port',
-    'db': 'JupyterHub.db_url',
     'pid-file': 'JupyterHub.pid_file',
 }
+token_aliases = {}
+token_aliases.update(common_aliases)
+aliases.update(common_aliases)
 
 flags = {
     'debug': ({'Application' : {'log_level': logging.DEBUG}},
@@ -99,6 +106,9 @@ class NewToken(Application):
     
     name = Unicode(getuser())
     
+    aliases = token_aliases
+    classes = []
+    
     def parse_command_line(self, argv=None):
         super().parse_command_line(argv=argv)
         if not self.extra_args:
@@ -110,11 +120,12 @@ class NewToken(Application):
     
     def start(self):
         hub = JupyterHub(parent=self)
+        hub.load_config_file(hub.config_file)
         hub.init_db()
         hub.init_users()
         user = orm.User.find(hub.db, self.name)
         if user is None:
-            print("No such user: %s" % self.name)
+            print("No such user: %s" % self.name, file=sys.stderr)
             self.exit(1)
         token = user.new_api_token()
         print(token)
@@ -916,6 +927,8 @@ class JupyterHub(Application):
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
+
+NewToken.classes.append(JupyterHub)
 
 main = JupyterHub.launch_instance
 
