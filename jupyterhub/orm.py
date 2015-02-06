@@ -267,6 +267,15 @@ class User(Base):
                 name=self.name,
             )
     
+    @property
+    def running(self):
+        """property for whether a user has a running server"""
+        if self.spawner is None:
+            return False
+        if self.server is None:
+            return False
+        return True
+    
     def new_api_token(self):
         """Create a new API token"""
         assert self.id is not None

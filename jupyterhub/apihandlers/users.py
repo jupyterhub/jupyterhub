@@ -17,7 +17,7 @@ class BaseUserHandler(APIHandler):
         return {
             'name': user.name,
             'admin': user.admin,
-            'server': user.server.base_url if user.server and not (user.spawn_pending or user.stop_pending) else None,
+            'server': user.server.base_url if user.running and not (user.spawn_pending or user.stop_pending) else None,
             'last_activity': user.last_activity.isoformat(),
         }
     
@@ -150,7 +150,7 @@ class UserServerAPIHandler(BaseUserHandler):
         if user.stop_pending:
             self.set_status(202)
             return
-        if user.spawner is None:
+        if not user.running:
             raise web.HTTPError(400, "%s's server is not running" % name)
         status = yield user.spawner.poll()
         if status is not None:
@@ -175,8 +175,8 @@ class UserAdminAccessAPIHandler(BaseUserHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
-        if user.server is None:
-            raise web.HTTPError(400, "%s has no server running" % name)
+        if not user.running:
+            raise web.HTTPError(400, "%s's server is not running" % name)
         self.set_server_cookie(user)
 
 
