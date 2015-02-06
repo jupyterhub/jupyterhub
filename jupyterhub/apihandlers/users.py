@@ -14,12 +14,18 @@ from .base import APIHandler
 class BaseUserHandler(APIHandler):
     
     def user_model(self, user):
-        return {
+        model = {
             'name': user.name,
             'admin': user.admin,
-            'server': user.server.base_url if user.running and not (user.spawn_pending or user.stop_pending) else None,
+            'server': user.server.base_url if user.running else None,
+            'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
+        if user.spawn_pending:
+            model['pending'] = 'spawn'
+        elif user.stop_pending:
+            model['pending'] = 'stop'
+        return model
     
     _model_types = {
         'name': str,
