@@ -869,6 +869,7 @@ class JupyterHub(Application):
             user.last_activity = max(user.last_activity, dt)
 
         self.db.commit()
+        yield self.proxy.check_routes(routes)
     
     @gen.coroutine
     def start(self):

@@ -193,6 +193,23 @@ class Proxy(Base):
         resp = yield self.api_request('', client=client)
         return json.loads(resp.body.decode('utf8', 'replace'))
 
+    @gen.coroutine
+    def check_routes(self, routes=None):
+        """Check that all users are properly"""
+        if not routes:
+            routes = yield self.get_routes()
+
+        have_routes = { r['user'] for r in routes if 'user' in r }
+        futures = []
+        db = inspect(self).session
+        for user in db.query(User).filter(User.server != None):
+            if user.name not in have_routes:
+                self.log.warn("Adding missing route for %s", user.name)
+                futures.append(self.add_user(user))
+        for f in futures:
+            yield f
+
+
 
 class Hub(Base):
     """Bring it all together at the hub.
