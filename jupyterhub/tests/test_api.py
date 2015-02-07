@@ -275,3 +275,10 @@ def test_never_spawn(app, io_loop):
     assert not user.spawn_pending
     status = io_loop.run_sync(user.spawner.poll)
     assert status is not None
+
+
+def test_get_proxy(app, io_loop):
+    r = api_request(app, 'proxy')
+    r.raise_for_status()
+    reply = r.json()
+    assert list(reply.keys()) == ['/']
