@@ -350,6 +350,9 @@ class JupyterHub(Application):
     handlers = List()
     
     _log_formatter_cls = LogFormatter
+    http_server = None
+    proxy_process = None
+    io_loop = None
     
     def _log_level_default(self):
         return logging.INFO
@@ -874,7 +877,7 @@ class JupyterHub(Application):
     @gen.coroutine
     def start(self):
         """Start the whole thing"""
-        loop = IOLoop.current()
+        self.io_loop = loop = IOLoop.current()
         
         if self.subapp:
             self.subapp.start()
@@ -908,11 +911,18 @@ class JupyterHub(Application):
             pc.start()
 
         # start the webserver
-        http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
-        http_server.listen(self.hub_port)
+        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
+        self.http_server.listen(self.hub_port)
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
         
         atexit.register(lambda : IOLoop().run_sync(self.cleanup))
+    
+    def stop(self):
+        if not self.io_loop:
+            return
+        if self.http_server:
+            self.io_loop.add_callback(self.http_server.stop)
+        self.io_loop.add_callback(self.io_loop.stop)
     
     @gen.coroutine
     def launch_instance_async(self, argv=None):

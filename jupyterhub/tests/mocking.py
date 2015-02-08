@@ -120,7 +120,7 @@ class MockHub(JupyterHub):
         evt.wait(timeout=5)
     
     def stop(self):
-        self.io_loop.add_callback(self.io_loop.stop)
+        super().stop()
         self._thread.join()
         IOLoop().run_sync(self.cleanup)
         # ignore the call that will fire in atexit
