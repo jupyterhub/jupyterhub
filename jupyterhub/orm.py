@@ -267,6 +267,15 @@ class User(Base):
                 name=self.name,
             )
     
+    @property
+    def running(self):
+        """property for whether a user has a running server"""
+        if self.spawner is None:
+            return False
+        if self.server is None:
+            return False
+        return True
+    
     def new_api_token(self):
         """Create a new API token"""
         assert self.id is not None
@@ -285,7 +294,7 @@ class User(Base):
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name==name).first()
-
+    
     @gen.coroutine
     def spawn(self, spawner_class, base_url='/', hub=None, config=None):
         """Start the user's spawner"""
@@ -298,10 +307,9 @@ class User(Base):
         )
         db.add(self.server)
         db.commit()
-
+        
         api_token = self.new_api_token()
         db.commit()
-        
         
         spawner = self.spawner = spawner_class(
             config=config,
@@ -314,21 +322,26 @@ class User(Base):
         spawner.api_token = api_token
         
         self.spawn_pending = True
-        f = spawner.start()
         # wait for spawner.start to return
         try:
+            f = spawner.start()
             yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
-        except gen.TimeoutError as e:
-            self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
-                user=self.name, s=spawner.start_timeout,
-            ))
+        except Exception as e:
+            if isinstance(e, gen.TimeoutError):
+                self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
+                    user=self.name, s=spawner.start_timeout,
+                ))
+            else:
+                self.log.error("Unhandled error starting {user}'s server: {error}".format(
+                    user=self.name, error=e,
+                ))
             try:
                 yield self.stop()
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
                 ), exc_info=True)
-            # raise original TimeoutError
+            # raise original exception
             raise e
         spawner.start_polling()
 
@@ -338,10 +351,15 @@ class User(Base):
         db.commit()
         try:
             yield self.server.wait_up(http=True)
-        except TimeoutError as e:
-            self.log.warn("{user}'s server never showed up at {url}, giving up".format(
-                user=self.name, url=self.server.url,
-            ))
+        except Exception as e:
+            if isinstance(e, TimeoutError):
+                self.log.warn("{user}'s server never showed up at {url}, giving up".format(
+                    user=self.name, url=self.server.url,
+                ))
+            else:
+                self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
+                    user=self.name, url=self.server.url, error=e,
+                ))
             try:
                 yield self.stop()
             except Exception:

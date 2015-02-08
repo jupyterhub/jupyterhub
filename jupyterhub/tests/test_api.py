@@ -104,11 +104,13 @@ def test_get_users(app):
             'name': 'admin',
             'admin': True,
             'server': None,
+            'pending': None,
         },
         {
             'name': 'user',
             'admin': False,
             'server': None,
+            'pending': None,
         }
     ]
 

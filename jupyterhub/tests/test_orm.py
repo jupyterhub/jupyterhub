@@ -3,7 +3,11 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import pytest
+from tornado import gen
+
 from .. import orm
+from .mocking import MockSpawner
 
 
 def test_server(db):
@@ -82,3 +86,20 @@ def test_tokens(db):
     assert found.match(token)
     found = orm.APIToken.find(db, 'something else')
     assert found is None
+
+
+def test_spawn_fails(db, io_loop):
+    user = orm.User(name='aeofel')
+    db.add(user)
+    db.commit()
+    
+    class BadSpawner(MockSpawner):
+        @gen.coroutine
+        def start(self):
+            raise RuntimeError("Split the party")
+    
+    with pytest.raises(Exception) as exc:
+        io_loop.run_sync(lambda : user.spawn(BadSpawner))
+    assert user.server is None
+    assert not user.running
+
