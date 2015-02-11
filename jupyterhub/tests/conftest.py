@@ -47,7 +47,6 @@ def io_loop():
 @fixture(scope='module')
 def app(request):
     app = MockHub.instance(log_level=logging.DEBUG)
-    print(app)
     app.start([])
     def fin():
         MockHub.clear_instance()

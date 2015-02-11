@@ -199,7 +199,7 @@ class Proxy(Base):
         if not routes:
             routes = yield self.get_routes()
 
-        have_routes = { r['user'] for r in routes if 'user' in r }
+        have_routes = { r['user'] for r in routes.values() if 'user' in r }
         futures = []
         db = inspect(self).session
         for user in db.query(User).filter(User.server != None):

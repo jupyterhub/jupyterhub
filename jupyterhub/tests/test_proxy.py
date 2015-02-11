@@ -4,6 +4,7 @@ import json
 import os
 from subprocess import Popen
 
+from .. import orm
 from .mocking import MockHub
 from .test_api import api_request
 from ..utils import wait_for_http_server
@@ -19,7 +20,10 @@ def test_external_proxy(request, io_loop):
         proxy_api_port=proxy_port,
         proxy_auth_token=auth_token,
     )
-    request.addfinalizer(app.stop)
+    def fin():
+        MockHub.clear_instance()
+        app.stop()
+    request.addfinalizer(fin)
     env = os.environ.copy()
     env['CONFIGPROXY_AUTH_TOKEN'] = auth_token
     cmd = [app.proxy_cmd,
@@ -102,3 +106,21 @@ def test_external_proxy(request, io_loop):
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert sorted(routes.keys()) == ['/', '/user/river']
 
+def test_check_routes(app, io_loop):
+    proxy = app.proxy
+    r = api_request(app, 'users/zoe', method='post')
+    r.raise_for_status()
+    r = api_request(app, 'users/zoe/server', method='post')
+    r.raise_for_status()
+    zoe = orm.User.find(app.db, 'zoe')
+    assert zoe is not None
+    before = sorted(io_loop.run_sync(app.proxy.get_routes))
+    assert '/user/zoe' in before
+    io_loop.run_sync(app.proxy.check_routes)
+    io_loop.run_sync(lambda : proxy.delete_user(zoe))
+    during = sorted(io_loop.run_sync(app.proxy.get_routes))
+    assert '/user/zoe' not in during
+    io_loop.run_sync(app.proxy.check_routes)
+    after = sorted(io_loop.run_sync(app.proxy.get_routes))
+    assert '/user/zoe' in after
+    assert before == after
