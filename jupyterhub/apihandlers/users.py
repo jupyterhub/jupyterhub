@@ -109,7 +109,7 @@ class UserAPIHandler(BaseUserHandler):
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.stop_pending:
             raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
-        if user.spawner is not None:
+        if user.running:
             yield self.stop_single_user(user)
             if user.stop_pending:
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
