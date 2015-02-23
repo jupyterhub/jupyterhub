@@ -366,11 +366,19 @@ class JupyterHub(Application):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
-    extra_log_file = Unicode("", config=True)
+    extra_log_file = Unicode(
+        "",
+        config=True,
+        help="""Set a FileHandler on this file.
+
+        Ignored if extra_log_handler is explicitly set in config file.
+        """
+    )
     extra_log_handler = Instance(
         klass=logging.Handler,
         allow_none=True,
         config=True,
+        help="Extra handler to set on JupyterHub logger.",
     )
 
     def _extra_log_handler_default(self):
