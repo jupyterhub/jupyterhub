@@ -369,22 +369,13 @@ class JupyterHub(Application):
     extra_log_file = Unicode(
         "",
         config=True,
-        help="""Set a FileHandler on this file.
-
-        Ignored if extra_log_handler is explicitly set in config file.
-        """
+        help="Set a logging.FileHandler on this file."
     )
-    extra_log_handler = Instance(
-        klass=logging.Handler,
-        allow_none=True,
+    extra_log_handlers = List(
+        Instance(logging.Handler),
         config=True,
-        help="Extra handler to set on JupyterHub logger.",
+        help="Extra log handlers to set on JupyterHub logger",
     )
-
-    def _extra_log_handler_default(self):
-        if self.extra_log_file:
-            return logging.FileHandler(self.extra_log_file)
-        return None
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -392,14 +383,18 @@ class JupyterHub(Application):
         # and all of its ancenstors until propagate is set to False.
         self.log.propagate = False
 
-        if self.extra_log_handler:
-            self.extra_log_handler.setFormatter(
-                self._log_formatter_cls(
-                    fmt=self.log_format,
-                    datefmt=self.log_datefmt,
-                ),
+        if self.extra_log_file:
+            self.extra_log_handlers.append(
+                logging.FileHandler(self.extra_log_file)
             )
-            self.log.addHandler(self.extra_log_handler)
+
+        _formatter = self._log_formatter_cls(
+            fmt=self.log_format,
+            datefmt=self.log_datefmt,
+        )
+        for handler in self.extra_log_handlers:
+            handler.setFormatter(_formatter)
+            self.log.addHandler(handler)
 
         # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
