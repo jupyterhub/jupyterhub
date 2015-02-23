@@ -72,6 +72,7 @@ aliases = {
     'ip': 'JupyterHub.ip',
     'port': 'JupyterHub.port',
     'pid-file': 'JupyterHub.pid_file',
+    'log-file': 'JupyterHub.extra_log_file',
 }
 token_aliases = {}
 token_aliases.update(common_aliases)
@@ -365,12 +366,33 @@ class JupyterHub(Application):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
+    extra_log_file = Unicode("", config=True)
+    extra_log_handler = Instance(
+        klass=logging.Handler,
+        allow_none=True,
+        config=True,
+    )
+
+    def _extra_log_handler_default(self):
+        if self.extra_log_file:
+            return logging.FileHandler(self.extra_log_file)
+        return None
+
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
         # self.log is a child of. The logging module dipatches log messages to a log
         # and all of its ancenstors until propagate is set to False.
         self.log.propagate = False
-        
+
+        if self.extra_log_handler:
+            self.extra_log_handler.setFormatter(
+                self._log_formatter_cls(
+                    fmt=self.log_format,
+                    datefmt=self.log_datefmt,
+                ),
+            )
+            self.log.addHandler(self.extra_log_handler)
+
         # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
             # ensure all log statements identify the application they come from
@@ -379,7 +401,7 @@ class JupyterHub(Application):
         logger.propagate = True
         logger.parent = self.log
         logger.setLevel(self.log.level)
-    
+
     def init_ports(self):
         if self.hub_port == self.port:
             raise TraitError("The hub and proxy cannot both listen on port %i" % self.port)
