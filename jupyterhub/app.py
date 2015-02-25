@@ -393,7 +393,8 @@ class JupyterHub(Application):
             datefmt=self.log_datefmt,
         )
         for handler in self.extra_log_handlers:
-            handler.setFormatter(_formatter)
+            if handler.formatter is None:
+                handler.setFormatter(_formatter)
             self.log.addHandler(handler)
 
         # hook up tornado 3's loggers to our app handlers
