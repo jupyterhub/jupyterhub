@@ -854,14 +854,22 @@ class JupyterHub(Application):
             for user in self.db.query(orm.User):
                 if user.spawner is not None:
                     futures.append(user.stop())
+        else:
+            self.log.info("Leaving single-user servers running")
         
         # clean up proxy while SUS are shutting down
-        if self.cleanup_proxy and self.proxy_process and self.proxy_process.poll() is None:
-            self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
-            try:
-                self.proxy_process.terminate()
-            except Exception as e:
-                self.log.error("Failed to terminate proxy process: %s", e)
+        if self.cleanup_proxy:
+            if self.proxy_process and self.proxy_process.poll() is None:
+                self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
+                try:
+                    self.proxy_process.terminate()
+                except Exception as e:
+                    self.log.error("Failed to terminate proxy process: %s", e)
+            else:
+                self.log.info("I didn't start the proxy, I can't clean it up")
+        else:
+            self.log.info("Leaving proxy running")
+        
         
         # wait for the requests to stop finish:
         for f in futures:
