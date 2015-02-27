@@ -846,6 +846,7 @@ class JupyterHub(Application):
     @gen.coroutine
     def cleanup(self):
         """Shutdown our various subprocesses and cleanup runtime files."""
+        
         futures = []
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
@@ -868,7 +869,7 @@ class JupyterHub(Application):
                 yield f
             except Exception as e:
                 self.log.error("Failed to stop user: %s", e)
-
+        
         self.db.commit()
         
         if self.pid_file and os.path.exists(self.pid_file):
@@ -963,9 +964,16 @@ class JupyterHub(Application):
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
         self.http_server.listen(self.hub_port)
+        atexit.register(self.atexit)
+    
+    def atexit(self):
+        """atexit callback"""
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        IOLoop.clear_current()
+        loop = IOLoop()
+        loop.make_current()
+        loop.run_sync(self.cleanup)
         
-        atexit.register(lambda : IOLoop().run_sync(self.cleanup))
     
     def stop(self):
         if not self.io_loop:
