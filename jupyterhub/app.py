@@ -348,6 +348,29 @@ class JupyterHub(Application):
     )
     tornado_settings = Dict(config=True)
     
+    cleanup_servers = Bool(True, config=True,
+        help="""Whether to shutdown single-user servers when the Hub shuts down.
+        
+        Disable if you want to be able to teardown the Hub while leaving the single-user servers running.
+        
+        The Hub should be able to resume from database state.
+        """
+    )
+
+    cleanup_proxy = Bool(True, config=True,
+        help="""Whether to shutdown single-user servers when the Hub shuts down.
+        
+        Disable if you want to be able to teardown the Hub while leaving the proxy running.
+        
+        Only valid if the proxy was starting by the Hub process.
+        
+        If both this and cleanup_servers are False, sending SIGINT to the Hub will
+        only shutdown the Hub, leaving everything else running.
+        
+        The Hub should be able to resume from database state.
+        """
+    )
+    
     handlers = List()
     
     _log_formatter_cls = LogFormatter
@@ -823,15 +846,16 @@ class JupyterHub(Application):
     @gen.coroutine
     def cleanup(self):
         """Shutdown our various subprocesses and cleanup runtime files."""
-        self.log.info("Cleaning up single-user servers...")
-        # request (async) process termination
         futures = []
-        for user in self.db.query(orm.User):
-            if user.spawner is not None:
-                futures.append(user.stop())
+        if self.cleanup_servers:
+            self.log.info("Cleaning up single-user servers...")
+            # request (async) process termination
+            for user in self.db.query(orm.User):
+                if user.spawner is not None:
+                    futures.append(user.stop())
         
         # clean up proxy while SUS are shutting down
-        if self.proxy_process and self.proxy_process.poll() is None:
+        if self.cleanup_proxy and self.proxy_process and self.proxy_process.poll() is None:
             self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
             try:
                 self.proxy_process.terminate()
