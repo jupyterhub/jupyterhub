@@ -46,23 +46,25 @@ def test_spawner(db, io_loop):
     spawner = new_spawner(db)
     io_loop.run_sync(spawner.start)
     
+    # wait for the process to get to the while True: loop
+    time.sleep(1)
+    
     status = io_loop.run_sync(spawner.poll)
     assert status is None
-    
     io_loop.run_sync(spawner.stop)
     status = io_loop.run_sync(spawner.poll)
-    assert status == -signal.SIGINT
+    assert status == 1
 
 
 def test_stop_spawner_sigint_fails(db, io_loop):
     spawner = new_spawner(db, cmd=[sys.executable, '-c', _uninterruptible])
     io_loop.run_sync(spawner.start)
     
-    status = io_loop.run_sync(spawner.poll)
-    assert status is None
-    
     # wait for the process to get to the while True: loop
     time.sleep(1)
+    
+    status = io_loop.run_sync(spawner.poll)
+    assert status is None
     
     io_loop.run_sync(spawner.stop)
     status = io_loop.run_sync(spawner.poll)
@@ -72,6 +74,9 @@ def test_stop_spawner_sigint_fails(db, io_loop):
 def test_stop_spawner_stop_now(db, io_loop):
     spawner = new_spawner(db)
     io_loop.run_sync(spawner.start)
+    
+    # wait for the process to get to the while True: loop
+    time.sleep(1)
     
     status = io_loop.run_sync(spawner.poll)
     assert status is None
