@@ -3,6 +3,8 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import json
+
 from tornado import web
 from tornado.ioloop import IOLoop
 
@@ -15,31 +17,32 @@ class ShutdownAPIHandler(APIHandler):
     def post(self):
         """POST /api/shutdown triggers a clean shutdown
         
-        URL parameters:
+        POST (JSON) parameters:
         
         - servers: specify whether single-user servers should be terminated
         - proxy: specify whether the proxy should be terminated
         """
         from ..app import JupyterHub
         app = JupyterHub.instance()
-        proxy = self.get_argument('proxy', '').lower()
-        if proxy == 'false':
-            app.cleanup_proxy = False
-        elif proxy == 'true':
-            app.cleanup_proxy = True
-        elif proxy:
-            raise web.HTTPError(400, "proxy must be true or false, got %r" % proxy)
-        servers = self.get_argument('servers', '').lower()
-        if servers == 'false':
-            app.cleanup_servers = False
-        elif servers == 'true':
-            app.cleanup_servers = True
-        elif servers:
-            raise web.HTTPError(400, "servers must be true or false, got %r" % servers)
+        
+        data = self.get_json_body()
+        if data:
+            if 'proxy' in data:
+                proxy = data['proxy']
+                if proxy not in {True, False}:
+                    raise web.HTTPError(400, "proxy must be true or false, got %r" % proxy)
+                app.cleanup_proxy = proxy
+            if 'servers' in data:
+                servers = data['servers']
+                if servers not in {True, False}:
+                    raise web.HTTPError(400, "servers must be true or false, got %r" % servers)
+                app.cleanup_servers = servers
         
         # finish the request
         self.set_status(202)
-        self.finish()
+        self.finish(json.dumps({
+            "message": "Shutting down Hub"
+        }))
         
         # stop the eventloop, which will trigger cleanup
         loop = IOLoop.current()
