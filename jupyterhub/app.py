@@ -26,7 +26,7 @@ import tornado.httpserver
 import tornado.options
 from tornado.httpclient import HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.log import LogFormatter, app_log, access_log, gen_log
+from tornado.log import app_log, access_log, gen_log
 from tornado import gen, web
 
 import IPython
@@ -47,6 +47,7 @@ from .handlers.static import CacheControlStaticFilesHandler
 
 from . import orm
 from ._data import DATA_FILES_PATH
+from .log import CoroutineLogFormatter
 from .traitlets import URLPrefix
 from .utils import (
     url_path_join,
@@ -350,7 +351,7 @@ class JupyterHub(Application):
     
     handlers = List()
     
-    _log_formatter_cls = LogFormatter
+    _log_formatter_cls = CoroutineLogFormatter
     http_server = None
     proxy_process = None
     io_loop = None
