@@ -353,12 +353,15 @@ class JupyterHub(Application):
         
         Disable if you want to be able to teardown the Hub while leaving the single-user servers running.
         
+        If both this and cleanup_proxy are False, sending SIGINT to the Hub will
+        only shutdown the Hub, leaving everything else running.
+        
         The Hub should be able to resume from database state.
         """
     )
 
     cleanup_proxy = Bool(True, config=True,
-        help="""Whether to shutdown single-user servers when the Hub shuts down.
+        help="""Whether to shutdown the proxy when the Hub shuts down.
         
         Disable if you want to be able to teardown the Hub while leaving the proxy running.
         
