@@ -65,7 +65,7 @@ class Server(Base):
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
     proto = Column(Unicode, default='http')
-    ip = Column(Unicode, default='localhost')
+    ip = Column(Unicode, default='')
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode, default='/')
     cookie_name = Column(Unicode, default='cookie')
