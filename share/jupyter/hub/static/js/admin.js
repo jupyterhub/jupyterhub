@@ -169,5 +169,21 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         });
     });
+
+    $("#shutdown-hub").click(function () {
+        var dialog = $("#shutdown-hub-dialog");
+        dialog.find("input[type=checkbox]").prop("checked", true);
+        dialog.modal();
+    });
+
+    $("#shutdown-hub-dialog").find(".shutdown-button").click(function () {
+        var dialog = $("#shutdown-hub-dialog");
+        var servers = dialog.find(".shutdown-servers-checkbox").prop("checked");
+        var proxy = dialog.find(".shutdown-proxy-checkbox").prop("checked");
+        api.shutdown_hub({
+            proxy: proxy,
+            servers: servers,
+        });
+    });
     
 });

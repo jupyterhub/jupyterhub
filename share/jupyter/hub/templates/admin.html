@@ -32,7 +32,8 @@
     <tbody>
       <tr class="user-row add-user-row">
         <td colspan="5">
-          <a id="add-user" class="col-xs-12 btn btn-default">Add User</a>
+          <a id="add-user" class="col-xs-5 btn btn-default">Add User</a>
+          <a id="shutdown-hub" class="col-xs-4 col-xs-offset-3 btn btn-danger">Shutdown Hub</a>
         </td>
       </tr>
   {% for u in users %}
@@ -64,6 +65,21 @@
 {% call modal('Delete User', btn_class='btn-danger delete-button') %}
   Are you sure you want to delete user <span class="delete-username">USER</span>?
   This operation cannot be undone.
+{% endcall %}
+
+{% call modal('Shutdown Hub', btn_label='Shutdown', btn_class='btn-danger shutdown-button') %}
+  Are you sure you want to shutdown the Hub?
+  You can chose to leave the proxy and/or single-user servers running by unchecking the boxes below:
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" class="shutdown-proxy-checkbox">Shutdown proxy
+    </label>
+  </div>
+  <div class="checkbox">
+    <label>
+      <input type="checkbox" class="shutdown-servers-checkbox">Shutdown single-user-servers
+    </label>
+  </div>
 {% endcall %}
 
 {% macro user_modal(name) %}

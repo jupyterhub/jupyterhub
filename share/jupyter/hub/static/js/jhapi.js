@@ -10,7 +10,7 @@ define(['jquery', 'utils'], function ($, utils) {
     
     var default_options = {
         type: 'GET',
-        headers: {'Content-Type': 'application/json'},
+        contentType: "application/json",
         cache: false,
         dataType : "json",
         processData: false,
@@ -120,6 +120,15 @@ define(['jquery', 'utils'], function ($, utils) {
             utils.url_path_join('users', user),
             options
         );
+    };
+    
+    JHAPI.prototype.shutdown_hub = function (data, options) {
+        options = options || {};
+        options = update(options, {type: 'POST'});
+        if (data) {
+            options.data = JSON.stringify(data);
+        }
+        this.api_request('shutdown', options);
     };
     
     return JHAPI;

@@ -349,6 +349,32 @@ class JupyterHub(Application):
     )
     tornado_settings = Dict(config=True)
     
+    cleanup_servers = Bool(True, config=True,
+        help="""Whether to shutdown single-user servers when the Hub shuts down.
+        
+        Disable if you want to be able to teardown the Hub while leaving the single-user servers running.
+        
+        If both this and cleanup_proxy are False, sending SIGINT to the Hub will
+        only shutdown the Hub, leaving everything else running.
+        
+        The Hub should be able to resume from database state.
+        """
+    )
+
+    cleanup_proxy = Bool(True, config=True,
+        help="""Whether to shutdown the proxy when the Hub shuts down.
+        
+        Disable if you want to be able to teardown the Hub while leaving the proxy running.
+        
+        Only valid if the proxy was starting by the Hub process.
+        
+        If both this and cleanup_servers are False, sending SIGINT to the Hub will
+        only shutdown the Hub, leaving everything else running.
+        
+        The Hub should be able to resume from database state.
+        """
+    )
+    
     handlers = List()
     
     _log_formatter_cls = CoroutineLogFormatter
@@ -824,20 +850,30 @@ class JupyterHub(Application):
     @gen.coroutine
     def cleanup(self):
         """Shutdown our various subprocesses and cleanup runtime files."""
-        self.log.info("Cleaning up single-user servers...")
-        # request (async) process termination
+        
         futures = []
-        for user in self.db.query(orm.User):
-            if user.spawner is not None:
-                futures.append(user.stop())
+        if self.cleanup_servers:
+            self.log.info("Cleaning up single-user servers...")
+            # request (async) process termination
+            for user in self.db.query(orm.User):
+                if user.spawner is not None:
+                    futures.append(user.stop())
+        else:
+            self.log.info("Leaving single-user servers running")
         
         # clean up proxy while SUS are shutting down
-        if self.proxy_process and self.proxy_process.poll() is None:
-            self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
-            try:
-                self.proxy_process.terminate()
-            except Exception as e:
-                self.log.error("Failed to terminate proxy process: %s", e)
+        if self.cleanup_proxy:
+            if self.proxy_process and self.proxy_process.poll() is None:
+                self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
+                try:
+                    self.proxy_process.terminate()
+                except Exception as e:
+                    self.log.error("Failed to terminate proxy process: %s", e)
+            else:
+                self.log.info("I didn't start the proxy, I can't clean it up")
+        else:
+            self.log.info("Leaving proxy running")
+        
         
         # wait for the requests to stop finish:
         for f in futures:
@@ -845,7 +881,7 @@ class JupyterHub(Application):
                 yield f
             except Exception as e:
                 self.log.error("Failed to stop user: %s", e)
-
+        
         self.db.commit()
         
         if self.pid_file and os.path.exists(self.pid_file):
@@ -940,9 +976,16 @@ class JupyterHub(Application):
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
         self.http_server.listen(self.hub_port)
+        atexit.register(self.atexit)
+    
+    def atexit(self):
+        """atexit callback"""
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        IOLoop.clear_current()
+        loop = IOLoop()
+        loop.make_current()
+        loop.run_sync(self.cleanup)
         
-        atexit.register(lambda : IOLoop().run_sync(self.cleanup))
     
     def stop(self):
         if not self.io_loop:
