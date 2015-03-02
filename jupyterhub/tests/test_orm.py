@@ -14,12 +14,12 @@ def test_server(db):
     server = orm.Server()
     db.add(server)
     db.commit()
-    assert server.ip == 'localhost'
+    assert server.ip == ''
     assert server.base_url == '/'
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
-    assert server.url == 'http://localhost:%i/' % server.port
+    assert server.url == 'http://*:%i/' % server.port
 
 
 def test_proxy(db):
@@ -65,7 +65,7 @@ def test_user(db):
     db.add(user)
     db.commit()
     assert user.name == 'kaylee'
-    assert user.server.ip == 'localhost'
+    assert user.server.ip == ''
     assert user.state == {'pid': 4234}
 
     found = orm.User.find(db, 'kaylee')
