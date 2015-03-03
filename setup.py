@@ -150,7 +150,7 @@ class CSS(BaseCommand):
         sourcemap = style_css + '.map'
         try:
             check_call([
-                'lessc', '-x', '--verbose',
+                'lessc', '--clean-css', '--verbose',
                 '--source-map-basepath={}'.format(static),
                 '--source-map={}'.format(sourcemap),
                 '--source-map-rootpath=../',
@@ -158,7 +158,7 @@ class CSS(BaseCommand):
             ])
         except OSError as e:
             print("Failed to run lessc: %s" % e, file=sys.stderr)
-            print("You can install less with `npm install -g less`", file=sys.stderr)
+            print("You can install less with `npm install -g less less-plugin-clean-css`", file=sys.stderr)
             raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
