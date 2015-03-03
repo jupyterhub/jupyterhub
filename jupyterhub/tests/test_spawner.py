@@ -45,6 +45,7 @@ def new_spawner(db, **kwargs):
 def test_spawner(db, io_loop):
     spawner = new_spawner(db)
     io_loop.run_sync(spawner.start)
+    assert spawner.user.server.ip == 'localhost'
     
     # wait for the process to get to the while True: loop
     time.sleep(1)

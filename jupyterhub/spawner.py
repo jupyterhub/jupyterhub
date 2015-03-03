@@ -41,6 +41,9 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     api_token = Unicode()
+    ip = Unicode('localhost', config=True,
+        help="The IP address (or hostname) the single-user server should listen on"
+    )
     start_timeout = Integer(60, config=True,
         help="""Timeout (in seconds) before giving up on the spawner.
         
@@ -142,10 +145,11 @@ class Spawner(LoggingConfigurable):
             '--port=%i' % self.user.server.port,
             '--cookie-name=%s' % self.user.server.cookie_name,
             '--base-url=%s' % self.user.server.base_url,
-            
             '--hub-prefix=%s' % self.hub.server.base_url,
             '--hub-api-url=%s' % self.hub.api_url,
             ]
+        if self.ip:
+            args.append('--ip=%s' % self.ip)
         if self.notebook_dir:
             args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
@@ -321,6 +325,8 @@ class LocalProcessSpawner(Spawner):
     @gen.coroutine
     def start(self):
         """Start the process"""
+        if self.ip:
+            self.user.server.ip = self.ip
         self.user.server.port = random_port()
         cmd = []
         env = self.env.copy()
