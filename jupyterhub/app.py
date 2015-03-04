@@ -227,6 +227,7 @@ class JupyterHub(Application):
         Only override if configurable-http-proxy is not on your PATH
         """
     )
+    debug_proxy = Bool(False, config=True, help="show debug output in configurable-http-proxy")
     proxy_auth_token = Unicode(config=True,
         help="""The Proxy Auth token.
 
@@ -722,8 +723,7 @@ class JupyterHub(Application):
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
         ]
-        if False:
-        # if self.log_level == logging.DEBUG:
+        if self.debug_proxy:
             cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
             cmd.extend(['--ssl-key', self.ssl_key])
