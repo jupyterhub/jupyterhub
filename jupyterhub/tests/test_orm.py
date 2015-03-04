@@ -19,7 +19,11 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
-    assert server.url == 'http://*:%i/' % server.port
+    assert server.host == 'http://localhost:%i' % server.port
+    assert server.url == server.host + '/'
+    server.ip = '127.0.0.1'
+    assert server.host == 'http://127.0.0.1:%i' % server.port
+    assert server.url == server.host + '/'
 
 
 def test_proxy(db):

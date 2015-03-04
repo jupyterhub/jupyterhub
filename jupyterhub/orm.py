@@ -77,7 +77,7 @@ class Server(Base):
     def host(self):
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
-            ip=self.ip or '*',
+            ip=self.ip or 'localhost',
             port=self.port,
         )
     
@@ -92,7 +92,7 @@ class Server(Base):
     def wait_up(self, timeout=10, http=False):
         """Wait for this server to come up"""
         if http:
-            yield wait_for_http_server(self.url.replace('//*', '//localhost'), timeout=timeout)
+            yield wait_for_http_server(self.url, timeout=timeout)
         else:
             yield wait_for_server(self.ip or 'localhost', self.port, timeout=timeout)
     
