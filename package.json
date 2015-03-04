@@ -1,0 +1,19 @@
+{
+ "name": "jupyterhub-deps",
+ "version": "0.0.0",
+ "description": "JupyterHub nodejs dependencies",
+ "author": "Jupyter Developers",
+ "license": "BSD",
+ "repository": {
+  "type": "git",
+  "url": "https://github.com/jupyter/jupyterhub.git"
+ },
+ "dependencies": {
+  "configurable-http-proxy": "*"
+ },
+ "devDependencies": {
+  "bower": "*",
+  "less": "~2",
+  "less-plugin-clean-css": "*"
+ }
+}

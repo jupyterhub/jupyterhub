@@ -29,7 +29,7 @@ which is required for npm to work on Debian/Ubuntu at this point)
 
 Then install javascript dependencies:
 
-    sudo npm install -g bower less jupyter/configurable-http-proxy
+    sudo npm install -g
 
 
 ## Installation
