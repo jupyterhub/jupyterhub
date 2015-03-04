@@ -240,8 +240,8 @@ class BaseHandler(RequestHandler):
         if user.stop_pending:
             raise RuntimeError("Stop already pending for: %s" % user.name)
         tic = IOLoop.current().time()
-        f = user.stop()
         yield self.proxy.delete_user(user)
+        f = user.stop()
         @gen.coroutine
         def finish_stop(f=None):
             """Finish the stop action by noticing that the user is stopped.
