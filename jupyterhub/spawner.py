@@ -86,6 +86,9 @@ class Spawner(LoggingConfigurable):
     cmd = List(Unicode, default_value=['jupyterhub-singleuser'], config=True,
         help="""The command used for starting notebooks."""
     )
+    args = List(Unicode, config=True,
+        help="""Extra arguments to be passed to the single-user server"""
+    )
     
     notebook_dir = Unicode('', config=True,
         help="""The notebook directory for the single-user server
@@ -154,6 +157,7 @@ class Spawner(LoggingConfigurable):
             args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
             args.append('--debug')
+        args.extend(self.args)
         return args
     
     @gen.coroutine
