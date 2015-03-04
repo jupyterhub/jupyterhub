@@ -21,6 +21,7 @@ if sys.version_info[:2] < (3,3):
 from jinja2 import Environment, FileSystemLoader
 
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import scoped_session
 
 import tornado.httpserver
 import tornado.options
@@ -538,7 +539,7 @@ class JupyterHub(Application):
                 echo=self.debug_db,
                 **self.db_kwargs
             )
-            self.db = self.session_factory()
+            self.db = scoped_session(self.session_factory)()
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)

@@ -22,7 +22,7 @@ def db():
     """Get a db session"""
     global _db
     if _db is None:
-        _db = orm.new_session_factory('sqlite:///:memory:')()
+        _db = orm.new_session_factory('sqlite:///:memory:', echo=True)()
         user = orm.User(
             name=getuser(),
             server=orm.Server(),
