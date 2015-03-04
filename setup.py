@@ -39,9 +39,16 @@ here = os.path.abspath(os.path.dirname(__file__))
 share_jupyter = pjoin(here, 'share', 'jupyter', 'hub')
 static = pjoin(share_jupyter, 'static')
 
+is_repo = os.path.exists(pjoin(here, '.git'))
+
 #---------------------------------------------------------------------------
 # Build basic package data, etc.
 #---------------------------------------------------------------------------
+
+# setuptools for wheel, develop
+for cmd in ['bdist_wheel', 'develop']:
+    if cmd in sys.argv:
+        import setuptools
 
 def get_data_files():
     """Get data files in share/jupyter"""
@@ -99,7 +106,8 @@ setup_args = dict(
 
 # imports here, so they are after setuptools import if there was one
 from distutils.cmd import Command
-from distutils.command.install import install
+from distutils.command.build_py import build_py
+from distutils.command.sdist import sdist
 
 class BaseCommand(Command):
     """Dumb empty command because Command needs subclasses to override too much"""
@@ -163,13 +171,26 @@ class CSS(BaseCommand):
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
 
-# ensure bower is run as part of install
-install.sub_commands.insert(0, ('js', None))
-install.sub_commands.insert(1, ('css', None))
+def js_css_first(cls, strict=True):
+    class Command(cls):
+        def run(self):
+            try:
+                self.run_command('js')
+                self.run_command('css')
+            except Exception:
+                if strict:
+                    raise
+                else:
+                    pass
+            return super().run()
+    return Command
+
 
 setup_args['cmdclass'] = {
     'js': Bower,
     'css': CSS,
+    'build_py': js_css_first(build_py, strict=is_repo),
+    'sdist': js_css_first(sdist, strict=True),
 }
 
 
