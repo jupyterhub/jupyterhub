@@ -1,4 +1,4 @@
-ipython[notebook]>=3
+ipython>=3
 tornado>=4
 jinja2
 simplepam
