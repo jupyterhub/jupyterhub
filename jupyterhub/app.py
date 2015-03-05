@@ -8,6 +8,7 @@ import atexit
 import binascii
 import logging
 import os
+import signal
 import socket
 import sys
 from datetime import datetime
@@ -864,12 +865,13 @@ class JupyterHub(Application):
         
         # clean up proxy while SUS are shutting down
         if self.cleanup_proxy:
-            if self.proxy_process and self.proxy_process.poll() is None:
+            if self.proxy_process:
                 self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
-                try:
-                    self.proxy_process.terminate()
-                except Exception as e:
-                    self.log.error("Failed to terminate proxy process: %s", e)
+                if self.proxy_process.poll() is None:
+                    try:
+                        self.proxy_process.terminate()
+                    except Exception as e:
+                        self.log.error("Failed to terminate proxy process: %s", e)
             else:
                 self.log.info("I didn't start the proxy, I can't clean it up")
         else:
@@ -977,10 +979,22 @@ class JupyterHub(Application):
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
         self.http_server.listen(self.hub_port)
+        
+        # register cleanup on both TERM and INT
         atexit.register(self.atexit)
+        signal.signal(signal.SIGTERM, self.sigterm)
     
+    def sigterm(self, signum, frame):
+        self.log.critical("Received SIGTERM, shutting down")
+        self.io_loop.stop()
+        self.atexit()
+    
+    _atexit_ran = False
     def atexit(self):
         """atexit callback"""
+        if self._atexit_ran:
+            return
+        self._atexit_ran = True
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
         IOLoop.clear_current()
         loop = IOLoop()
