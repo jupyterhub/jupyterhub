@@ -52,7 +52,17 @@ class Spawner(LoggingConfigurable):
         start should return when the server process is started and its location is known.
         """
     )
-    
+
+    http_timeout = Integer(
+        10, config=True,
+        help="""Timeout (in seconds) before giving up on a spawned HTTP server
+
+        Once a server has successfully been spawned, this is the amount of time
+        we wait before assuming that the server is unable to accept
+        connections.
+        """
+    )
+
     poll_interval = Integer(30, config=True,
         help="""Interval (in seconds) on which to poll the spawner."""
     )
