@@ -367,12 +367,17 @@ class User(Base):
         self.last_activity = datetime.utcnow()
         db.commit()
         try:
-            yield self.server.wait_up(http=True)
+            yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
             if isinstance(e, TimeoutError):
-                self.log.warn("{user}'s server never showed up at {url}, giving up".format(
-                    user=self.name, url=self.server.url,
-                ))
+                self.log.warn(
+                    "{user}'s server never showed up at {url} "
+                    "after {http_timeout} seconds. Giving up".format(
+                        user=self.name,
+                        url=self.server.url,
+                        http_timeout=spawner.http_timeout,
+                    )
+                )
             else:
                 self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
                     user=self.name, url=self.server.url, error=e,
