@@ -11,7 +11,7 @@ MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 # install js dependencies
 RUN npm install
-RUN npm install -g
+RUN npm install -g configurable-http-proxy
 
 RUN mkdir -p /srv/
 
