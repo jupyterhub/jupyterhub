@@ -6,7 +6,7 @@ python:
     - 3.3
 before_install:
     - npm install
-    - npm install -g
+    - npm install -g configurable-http-proxy
     - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
 install:
     - pip install -f travis-wheels/wheelhouse -r dev-requirements.txt .
