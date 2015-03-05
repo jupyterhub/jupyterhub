@@ -10,8 +10,8 @@ FROM ipython/ipython
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 # install js dependencies
-RUN npm install -g bower less
-RUN npm install -g jupyter/configurable-http-proxy
+RUN npm install
+RUN npm install -g
 
 RUN mkdir -p /srv/
 

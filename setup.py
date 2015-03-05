@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # coding: utf-8
 
 # Copyright (c) Juptyer Development Team.
@@ -11,6 +11,7 @@
 from __future__ import print_function
 
 import os
+import shutil
 import sys
 
 v = sys.version_info
@@ -109,6 +110,22 @@ from distutils.cmd import Command
 from distutils.command.build_py import build_py
 from distutils.command.sdist import sdist
 
+
+def npm_path():
+    """PATH plus local npm package bins (less, bower)
+    
+    callable because `npm install` may not have been called yet
+    """
+    node_bins = glob(pjoin(here, 'node_modules', '*', 'bin'))
+    PATH = os.environ.get("PATH", os.defpath)
+    return ':'.join(node_bins + [PATH])
+
+
+def mtime(path):
+    """shorthand for mtime"""
+    return os.stat(path).st_mtime
+
+
 class BaseCommand(Command):
     """Dumb empty command because Command needs subclasses to override too much"""
     user_options = []
@@ -130,46 +147,103 @@ class Bower(BaseCommand):
     description = "fetch static client-side components with bower"
     
     user_options = []
+    bower_dir = pjoin(static, 'components')
+    node_modules = pjoin(here, 'node_modules')
+    
+    def should_run(self):
+        if not os.path.exists(self.bower_dir):
+            return True
+        return mtime(self.bower_dir) < mtime(pjoin(here, 'bower.json'))
+
+    def should_run_npm(self):
+        if not shutil.which('npm'):
+            print("npm unavailable", file=sys.stderr)
+            return False
+        if not os.path.exists(self.node_modules):
+            return True
+        return mtime(self.node_modules) < mtime(pjoin(here, 'package.json'))
     
     def run(self):
+        if not self.should_run():
+            print("bower dependencies up to date")
+            return
+        
+        if self.should_run_npm():
+            check_call(['npm', 'install'], cwd=here)
+            os.utime(self.node_modules)
+        
+        env = os.environ.copy()
+        env['PATH'] = npm_path()
+        
         try:
-            check_call(['bower', 'install', '--allow-root'])
+            check_call(
+                ['bower', 'install', '--allow-root', '--config.interactive=false'],
+                cwd=here,
+                env=env,
+            )
         except OSError as e:
             print("Failed to run bower: %s" % e, file=sys.stderr)
-            print("You can install bower with `npm install -g bower`", file=sys.stderr)
+            print("You can install js dependencies with `npm install`", file=sys.stderr)
             raise
+        os.utime(self.bower_dir)
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+
 
 class CSS(BaseCommand):
     description = "compile CSS from LESS"
     
-    user_options = []
+    def should_run(self):
+        """Does less need to run?"""
+        # from IPython.html.tasks.py
+        
+        css_targets = [pjoin(static, 'css', 'style.min.css')]
+        css_maps = [t + '.map' for t in css_targets]
+        targets = css_targets + css_maps
+        if not all(os.path.exists(t) for t in targets):
+            # some generated files don't exist
+            return True
+        earliest_target = sorted(mtime(t) for t in targets)[0]
     
-    def initialize_options(self):
-        pass
+        # check if any .less files are newer than the generated targets
+        for (dirpath, dirnames, filenames) in os.walk(static):
+            for f in filenames:
+                if f.endswith('.less'):
+                    path = pjoin(static, dirpath, f)
+                    timestamp = mtime(path)
+                    if timestamp > earliest_target:
+                        return True
     
-    def finalize_options(self):
-        pass
+        return False
     
     def run(self):
+        if not self.should_run():
+            print("CSS up-to-date")
+            return
+        
+        self.run_command('js')
+        
         style_less = pjoin(static, 'less', 'style.less')
         style_css = pjoin(static, 'css', 'style.min.css')
         sourcemap = style_css + '.map'
+        
+        env = os.environ.copy()
+        env['PATH'] = npm_path()
         try:
             check_call([
-                'lessc', '--clean-css', '--verbose',
+                'lessc', '--clean-css',
                 '--source-map-basepath={}'.format(static),
                 '--source-map={}'.format(sourcemap),
                 '--source-map-rootpath=../',
                 style_less, style_css,
-            ])
+            ], cwd=here, env=env)
         except OSError as e:
             print("Failed to run lessc: %s" % e, file=sys.stderr)
-            print("You can install less with `npm install -g less less-plugin-clean-css`", file=sys.stderr)
+            print("You can install js dependencies with `npm install`", file=sys.stderr)
             raise
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
+
 
 def js_css_first(cls, strict=True):
     class Command(cls):
