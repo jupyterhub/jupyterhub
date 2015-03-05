@@ -111,14 +111,10 @@ from distutils.command.build_py import build_py
 from distutils.command.sdist import sdist
 
 
-def npm_path():
-    """PATH plus local npm package bins (less, bower)
-    
-    callable because `npm install` may not have been called yet
-    """
-    node_bins = glob(pjoin(here, 'node_modules', '*', 'bin'))
-    PATH = os.environ.get("PATH", os.defpath)
-    return ':'.join(node_bins + [PATH])
+npm_path = ':'.join([
+    pjoin(here, 'node_modules', '.bin'),
+    os.environ.get("PATH", os.defpath),
+])
 
 
 def mtime(path):
@@ -173,7 +169,7 @@ class Bower(BaseCommand):
             os.utime(self.node_modules)
         
         env = os.environ.copy()
-        env['PATH'] = npm_path()
+        env['PATH'] = npm_path
         
         try:
             check_call(
@@ -228,7 +224,7 @@ class CSS(BaseCommand):
         sourcemap = style_css + '.map'
         
         env = os.environ.copy()
-        env['PATH'] = npm_path()
+        env['PATH'] = npm_path
         try:
             check_call([
                 'lessc', '--clean-css',
