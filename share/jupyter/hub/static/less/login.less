@@ -1,4 +1,5 @@
-@login-primary: #ff9000;
+@login-primary: #f8A52D;
+@login-secondary: #E25C24;
 
 #login-main {
     display: table;
@@ -31,11 +32,13 @@
     input[type=submit] {
         margin-top: 16px;
         background-color: @login-primary;
+        background: linear-gradient(to bottom,  @login-primary 0%, @login-secondary 100%); /* W3C */
         border-color: @login-primary;
         transition: all 0.1s;
             &:hover{
-                background-color: lighten(@login-primary, 8%);
-                border-color: lighten(@login-primary, 12%);
+                background-color: darken(@login-primary, 8%);
+                background: linear-gradient(to bottom,  darken(@login-primary, 5%) 0%, darken(@login-secondary, 5%) 100%); /* W3C */
+                border-color: darken(@login-primary, 12%);
             }
     }
     
@@ -62,7 +65,7 @@
     color: #fff;
 
     background: @login-primary; /* Old browsers */
-    background: linear-gradient(to bottom,  @login-primary 0%, darken(@login-primary, 5%) 100%); /* W3C */
+    background: linear-gradient(to bottom,  @login-primary 0%, @login-secondary 100%); /* W3C */
 
 
     border-radius: @border-radius-large @border-radius-large 0 0;
