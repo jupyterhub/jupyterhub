@@ -39,6 +39,11 @@ Then you can install the Python package by doing:
     pip install -r requirements.txt
     pip install .
 
+If you plan to run notebook servers locally, you may also need to install the IPython notebook:
+
+    pip install "ipython[notebook]"
+
+
 This will fetch client-side javascript dependencies and compile CSS,
 and install these files to `sys.prefix`/share/jupyter, as well as
 install any Python dependencies.
