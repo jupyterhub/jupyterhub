@@ -31,9 +31,9 @@
     </thead>
     <tbody>
       <tr class="user-row add-user-row">
-        <td colspan="5">
+        <td colspan="12">
           <a id="add-user" class="col-xs-5 btn btn-default">Add User</a>
-          <a id="shutdown-hub" class="col-xs-4 col-xs-offset-3 btn btn-danger">Shutdown Hub</a>
+          <a id="shutdown-hub" class="col-xs-5 col-xs-offset-2 btn btn-danger">Shutdown Hub</a>
         </td>
       </tr>
   {% for u in users %}
@@ -42,15 +42,19 @@
       <td class="name-col col-sm-2">{{u.name}}</td>
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
       <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
-      <td class="server-col col-sm-3 text-center">
+      <td class="server-col col-sm-2 text-center">
         <span class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
+        <span class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
+      </td>
+      <td class="server-col col-sm-1 text-center">
         {% if admin_access %}
         <span class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
         {% endif %}
-        <span class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
       </td>
-      <td class="edit-col col-sm-2">
+      <td class="edit-col col-sm-1 text-center">
         <span class="edit-user btn btn-xs btn-primary">edit</span>
+      </td>
+      <td class="edit-col col-sm-1 text-center">
         {% if u.name != user.name %}
         <span class="delete-user btn btn-xs btn-danger">delete</span>
         {% endif %}

@@ -54,6 +54,7 @@
             },
           }
       });
+      require(["bootstrap"])
     </script>
     
     <script type="text/javascript">
@@ -88,9 +89,21 @@
 
     <span id="login_widget">
       {% if user %}
-        <a id="logout" class="btn navbar-btn btn-default pull-right" href="{{logout_url}}">Logout</a>
+        <a id="logout" class="navbar-btn btn-sm btn btn-default pull-right" href="{{logout_url}}"> <i class="fa fa-sign-out"></i> Logout</a>
+        <div class="dropdown navbar-btn btn-sm pull-right">
+          <button class="btn-sm btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-expanded="true">
+            <i class="fa fa-cogs"></i>
+            <span class="caret"></span>
+          </button>
+              <ul class="dropdown-menu" role="menu" >
+            {% if user.admin %}
+                <li role="presentation"><a role="menuitem" tabindex="-1" href="{{base_url}}admin">Admin Panel</a></li>
+            {% endif %}
+            <li role="presentation"><a role="menuitem" tabindex="-1" href="{{base_url}}user/{{user.name}}/">My Server</a></li>
+          </ul>
+        </div>
       {% else %}
-        <a id="login" class="btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
+        <a id="login" class="btn-sm btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
       {% endif %}
     </span>
 
