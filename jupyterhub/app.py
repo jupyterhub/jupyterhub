@@ -1011,8 +1011,12 @@ class JupyterHub(Application):
     
     @gen.coroutine
     def launch_instance_async(self, argv=None):
-        yield self.initialize(argv)
-        yield self.start()
+        try:
+            yield self.initialize(argv)
+            yield self.start()
+        except Exception as e:
+            self.log.exception("")
+            self.exit(1)
     
     @classmethod
     def launch_instance(cls, argv=None):
