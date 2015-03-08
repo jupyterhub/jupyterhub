@@ -4,7 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from http.client import responses
 
 from jinja2 import TemplateNotFound
@@ -16,6 +16,7 @@ from tornado.web import RequestHandler
 from tornado import gen, web
 
 from .. import orm
+from ..user import User
 from ..spawner import LocalProcessSpawner
 from ..utils import url_path_join
 
@@ -53,7 +54,11 @@ class BaseHandler(RequestHandler):
     @property
     def db(self):
         return self.settings['db']
-
+    
+    @property
+    def users(self):
+        return self.settings.setdefault('users', {})
+    
     @property
     def hub(self):
         return self.settings['hub']
@@ -145,12 +150,19 @@ class BaseHandler(RequestHandler):
                 clear()
             return
         cookie_id = cookie_id.decode('utf8', 'replace')
-        user = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
+        u = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
+        user = self._user_from_orm(u)
         if user is None:
             self.log.warn("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
             clear()
         return user
+    
+    def _user_from_orm(self, orm_user):
+        """return User wrapper from orm.User object"""
+        if orm_user is None:
+            return
+        return self.users[orm_user]
     
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
@@ -168,15 +180,18 @@ class BaseHandler(RequestHandler):
         
         return None if no such user
         """
-        return orm.User.find(self.db, name)
+        orm_user = orm.User.find(db=self.db, name=name)
+        return self._user_from_orm(orm_user)
 
     def user_from_username(self, username):
-        """Get ORM User for username"""
+        """Get User for username, creating if it doesn't exist"""
         user = self.find_user(username)
         if user is None:
-            user = orm.User(name=username)
-            self.db.add(user)
+            # not found, create and register user
+            u = orm.User(name=username)
+            self.db.add(u)
             self.db.commit()
+            user = self._user_from_orm(u)
         return user
     
     def clear_login_cookie(self, name=None):
@@ -259,7 +274,7 @@ class BaseHandler(RequestHandler):
         if user.spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
         tic = IOLoop.current().time()
-        
+
         f = user.spawn(
             spawner_class=self.spawner_class,
             base_url=self.base_url,

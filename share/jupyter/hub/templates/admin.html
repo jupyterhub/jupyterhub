@@ -22,10 +22,10 @@
     <thead>
       <tr>
         {% block thead %}
-        {{ th("User (%i)" % users.count(), 'name') }}
+        {{ th("User (%i)" % users|length, 'name') }}
         {{ th("Admin", 'admin') }}
         {{ th("Last Seen", 'last_activity') }}
-        {{ th("Running (%i)" % running.count(), 'running', colspan=2) }}
+        {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
         {% endblock thead %}
       </tr>
     </thead>

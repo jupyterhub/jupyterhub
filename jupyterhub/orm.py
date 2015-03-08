@@ -3,15 +3,14 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import errno
 import json
 import socket
-from urllib.parse import quote
 
 from tornado import gen
 from tornado.log import app_log
-from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
+from tornado.httpclient import HTTPRequest, AsyncHTTPClient
 
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
@@ -271,7 +270,7 @@ class User(Base):
     used for restoring state of a Spawner.
     """
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode)
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
@@ -282,12 +281,9 @@ class User(Base):
     api_tokens = relationship("APIToken", backref="user")
     cookie_id = Column(Unicode, default=new_token)
     state = Column(JSONDict)
-    spawner = None
-    spawn_pending = False
-    stop_pending = False
 
     other_user_cookies = set([])
-    
+
     def __repr__(self):
         if self.server:
             return "<{cls}({name}@{ip}:{port})>".format(
@@ -302,20 +298,6 @@ class User(Base):
                 name=self.name,
             )
     
-    @property
-    def escaped_name(self):
-        """My name, escaped for use in URLs, cookies, etc."""
-        return quote(self.name, safe='@')
-    
-    @property
-    def running(self):
-        """property for whether a user has a running server"""
-        if self.spawner is None:
-            return False
-        if self.server is None:
-            return False
-        return True
-    
     def new_api_token(self):
         """Create a new API token"""
         assert self.id is not None
@@ -326,7 +308,7 @@ class User(Base):
         db.add(orm_token)
         db.commit()
         return token
-    
+
     @classmethod
     def find(cls, db, name):
         """Find a user by name.
@@ -334,125 +316,6 @@ class User(Base):
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name==name).first()
-    
-    @gen.coroutine
-    def spawn(self, spawner_class, base_url='/', hub=None, authenticator=None, config=None):
-        """Start the user's spawner"""
-        db = inspect(self).session
-        if hub is None:
-            hub = db.query(Hub).first()
-        
-        self.server = Server(
-            cookie_name='%s-%s' % (hub.server.cookie_name, quote(self.name, safe='')),
-            base_url=url_path_join(base_url, 'user', self.escaped_name),
-        )
-        db.add(self.server)
-        db.commit()
-        
-        api_token = self.new_api_token()
-        db.commit()
-        
-        spawner = self.spawner = spawner_class(
-            config=config,
-            user=self,
-            hub=hub,
-            db=db,
-            authenticator=authenticator,
-        )
-        # we are starting a new server, make sure it doesn't restore state
-        spawner.clear_state()
-        spawner.api_token = api_token
-        
-        # trigger pre-spawn hook on authenticator
-        if (authenticator):
-            yield gen.maybe_future(authenticator.pre_spawn_start(self, spawner))
-        self.spawn_pending = True
-        # wait for spawner.start to return
-        try:
-            f = spawner.start()
-            yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
-        except Exception as e:
-            if isinstance(e, gen.TimeoutError):
-                self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
-                    user=self.name, s=spawner.start_timeout,
-                ))
-                e.reason = 'timeout'
-            else:
-                self.log.error("Unhandled error starting {user}'s server: {error}".format(
-                    user=self.name, error=e,
-                ))
-                e.reason = 'error'
-            try:
-                yield self.stop()
-            except Exception:
-                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
-                    user=self.name,
-                ), exc_info=True)
-            # raise original exception
-            raise e
-        spawner.start_polling()
-
-        # store state
-        self.state = spawner.get_state()
-        self.last_activity = datetime.utcnow()
-        db.commit()
-        try:
-            yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
-        except Exception as e:
-            if isinstance(e, TimeoutError):
-                self.log.warn(
-                    "{user}'s server never showed up at {url} "
-                    "after {http_timeout} seconds. Giving up".format(
-                        user=self.name,
-                        url=self.server.url,
-                        http_timeout=spawner.http_timeout,
-                    )
-                )
-                e.reason = 'timeout'
-            else:
-                e.reason = 'error'
-                self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                    user=self.name, url=self.server.url, error=e,
-                ))
-            try:
-                yield self.stop()
-            except Exception:
-                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
-                    user=self.name,
-                ), exc_info=True)
-            # raise original TimeoutError
-            raise e
-        self.spawn_pending = False
-        return self
-
-    @gen.coroutine
-    def stop(self):
-        """Stop the user's spawner
-        
-        and cleanup after it.
-        """
-        self.spawn_pending = False
-        spawner = self.spawner
-        if spawner is None:
-            return
-        spawner.stop_polling()
-        self.stop_pending = True
-        try:
-            status = yield spawner.poll()
-            if status is None:
-                yield self.spawner.stop()
-            spawner.clear_state()
-            self.state = spawner.get_state()
-            self.server = None
-            inspect(self).session.commit()
-        finally:
-            self.stop_pending = False
-            # trigger post-spawner hook on authenticator
-            auth = spawner.authenticator
-            if auth:
-                yield gen.maybe_future(
-                    auth.post_spawn_stop(self, spawner)
-                )
 
 class APIToken(Base):
     """An API token"""
