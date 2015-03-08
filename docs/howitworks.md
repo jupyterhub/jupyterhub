@@ -59,6 +59,8 @@ which regular users typically do not have
 
 [More info on custom Authenticators](authenticators.md).
 
+See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Authenticators).
+
 
 ### Spawning
 
@@ -72,4 +74,4 @@ and needs to be able to take three actions:
 
 [More info on custom Spawners](spawners.md).
 
-[An example using Docker](https://github.com/jupyter/dockerspawner).
+See a list of custom Spawners [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners).

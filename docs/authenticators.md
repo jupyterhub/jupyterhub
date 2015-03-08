@@ -11,6 +11,8 @@ One such example is using [GitHub OAuth][].
 Because the username is passed from the Authenticator to the Spawner,
 a custom Authenticator and Spawner are often used together.
 
+See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Authenticators).
+
 
 ## Basics of Authenticators
 

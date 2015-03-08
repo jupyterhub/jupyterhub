@@ -8,6 +8,9 @@ and a custom Spawner needs to be able to take three actions:
 2. poll whether the process is still running
 3. stop the process
 
+See a list of custom Spawners [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners).
+
+
 ## Spawner.start
 
 `Spawner.start` should start the single-user server for a single user.
