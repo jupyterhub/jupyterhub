@@ -32,12 +32,10 @@
     input[type=submit] {
         margin-top: 16px;
         background-color: @login-primary;
-        background: linear-gradient(to bottom,  @login-primary 0%, @login-secondary 100%); /* W3C */
         border-color: @login-primary;
         transition: all 0.1s;
             &:hover{
                 background-color: darken(@login-primary, 8%);
-                background: linear-gradient(to bottom,  darken(@login-primary, 5%) 0%, darken(@login-secondary, 5%) 100%); /* W3C */
                 border-color: darken(@login-primary, 12%);
             }
     }
