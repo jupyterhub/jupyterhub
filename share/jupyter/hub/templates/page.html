@@ -88,9 +88,9 @@
 
     <span id="login_widget">
       {% if user %}
-        <a id="logout" class="btn navbar-btn btn-default pull-right" href="{{logout_url}}">Logout</a>
+        <a id="logout" class="navbar-btn btn-sm btn btn-default pull-right" href="{{logout_url}}"> <i class="fa fa-sign-out"></i> Logout</a>
       {% else %}
-        <a id="login" class="btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
+        <a id="login" class="btn-sm btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
       {% endif %}
     </span>
 
