@@ -11,13 +11,13 @@
 {% else %}
   <form action="{{login_url}}?next={{next}}" method="post" role="form">
         <div class="auth-form-header">
-            <h1>Sign in</h1>
+            Sign in
         </div>
         <div class='auth-form-body'>
           {% if message %}
-            <div class="message">
+            <p class="message">
               {{message.error}}
-            </div>
+            </p>
           {% endif %}
           <label           for="username_input">Username:</label>
           <input          
@@ -32,8 +32,7 @@
                       autofocus="autofocus"
                       />
             <label 
-                            for='password_input'    >Password:
-                            <!--<a href="/password_reset">(forgot password)</a>-->
+                            for='password_input'>Password:
             </label>
             <input 
                            type="password" 
@@ -44,7 +43,7 @@
 
              <input       type="submit"
                            id="login_submit"
-                        class='btn btn-default btn-primary'
+                        class='btn btn-jupyter'
                         value='Sign In'
                       tabindex="3"
                          />
