@@ -37,7 +37,7 @@ if V(IPython.__version__) < V('3.0'):
 
 from IPython.utils.traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
-    Type, Set, Instance, Bytes,
+    Type, Set, Instance, Bytes, Float,
 )
 from IPython.config import Application, catch_config_error
 
@@ -183,6 +183,11 @@ class JupyterHub(Application):
     pid_file = Unicode('', config=True,
         help="""File to write PID
         Useful for daemonizing jupyterhub.
+        """
+    )
+    cookie_max_age_days = Float(14, config=True,
+        help="""Number of days for a login cookie to be valid.
+        Default is two weeks.
         """
     )
     last_activity_interval = Integer(300, config=True,
@@ -797,6 +802,7 @@ class JupyterHub(Application):
             spawner_class=self.spawner_class,
             base_url=self.base_url,
             cookie_secret=self.cookie_secret,
+            cookie_max_age_days=self.cookie_max_age_days,
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),

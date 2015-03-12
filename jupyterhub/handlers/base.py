@@ -71,6 +71,10 @@ class BaseHandler(RequestHandler):
     @property
     def admin_users(self):
         return self.settings.setdefault('admin_users', set())
+    
+    @property
+    def cookie_max_age_days(self):
+        return self.settings.get('cookie_max_age_days', None)
 
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
@@ -87,16 +91,25 @@ class BaseHandler(RequestHandler):
     
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""
-        cookie_id = self.get_secure_cookie(cookie_name, cookie_value)
+        cookie_id = self.get_secure_cookie(
+            cookie_name,
+            cookie_value,
+            max_age_days=self.cookie_max_age_days,
+        )
+        def clear():
+            self.clear_cookie(cookie_name, path=self.hub.server.base_url)
+        
         if cookie_id is None:
+            if self.get_cookie(cookie_name):
+                self.log.warn("Invalid or expired cookie token")
+                clear()
             return
         cookie_id = cookie_id.decode('utf8', 'replace')
         user = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
         if user is None:
-            # don't log the token itself
             self.log.warn("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
-            self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
+            clear()
         return user
     
     def get_current_user_cookie(self):
