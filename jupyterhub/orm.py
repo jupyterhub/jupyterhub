@@ -348,10 +348,12 @@ class User(Base):
                 self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
                     user=self.name, s=spawner.start_timeout,
                 ))
+                e.reason = 'timeout'
             else:
                 self.log.error("Unhandled error starting {user}'s server: {error}".format(
                     user=self.name, error=e,
                 ))
+                e.reason = 'error'
             try:
                 yield self.stop()
             except Exception:
@@ -378,7 +380,9 @@ class User(Base):
                         http_timeout=spawner.http_timeout,
                     )
                 )
+                e.reason = 'timeout'
             else:
+                e.reason = 'error'
                 self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
                     user=self.name, url=self.server.url, error=e,
                 ))
