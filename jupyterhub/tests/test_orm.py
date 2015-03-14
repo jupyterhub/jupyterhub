@@ -21,6 +21,7 @@ def test_server(db):
     assert isinstance(server.cookie_name, str)
     assert server.host == 'http://localhost:%i' % server.port
     assert server.url == server.host + '/'
+    assert server.bind_url == 'http://*:%i/' % server.port
     server.ip = '127.0.0.1'
     assert server.host == 'http://127.0.0.1:%i' % server.port
     assert server.url == server.host + '/'

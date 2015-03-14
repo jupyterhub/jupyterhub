@@ -58,7 +58,7 @@ class ProxyAPIHandler(APIHandler):
         if 'auth_token' in model:
             self.proxy.auth_token = model['auth_token']
         self.db.commit()
-        self.log.info("Updated proxy at %s", server.url)
+        self.log.info("Updated proxy at %s", server.bind_url)
         yield self.proxy.check_routes()
         
 

@@ -705,13 +705,13 @@ class JupyterHub(Application):
                 if isinstance(e, HTTPError) and e.code == 403:
                     msg = "Did CONFIGPROXY_AUTH_TOKEN change?"
                 else:
-                    msg = "Is something else using %s?" % self.proxy.public_server.url
+                    msg = "Is something else using %s?" % self.proxy.public_server.bind_url
                 self.log.error("Proxy appears to be running at %s, but I can't access it (%s)\n%s",
-                    self.proxy.public_server.url, e, msg)
+                    self.proxy.public_server.bind_url, e, msg)
                 self.exit(1)
                 return
             else:
-                self.log.info("Proxy already running at: %s", self.proxy.public_server.url)
+                self.log.info("Proxy already running at: %s", self.proxy.public_server.bind_url)
             self.proxy_process = None
             return
 
@@ -730,7 +730,7 @@ class JupyterHub(Application):
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
-        self.log.info("Starting proxy @ %s", self.proxy.public_server.url)
+        self.log.info("Starting proxy @ %s", self.proxy.public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
         self.proxy_process = Popen(cmd, env=env)
         def _check():
@@ -978,7 +978,13 @@ class JupyterHub(Application):
 
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
-        self.http_server.listen(self.hub_port)
+        try:
+            self.http_server.listen(self.hub_port)
+        except Exception:
+            self.log.error("Failed to bind hub to %s" % self.hub.server.bind_url)
+            raise
+        else:
+            self.log.info("Hub API listening on %s" % self.hub.server.bind_url)
         
         # register cleanup on both TERM and INT
         atexit.register(self.atexit)

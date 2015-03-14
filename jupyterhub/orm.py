@@ -75,18 +75,33 @@ class Server(Base):
     
     @property
     def host(self):
+        ip = self.ip
+        if ip in {'', '0.0.0.0'}:
+            # when listening on all interfaces, connect to localhost
+            ip = 'localhost'
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
-            ip=self.ip or 'localhost',
+            ip=ip,
             port=self.port,
         )
-    
+
     @property
     def url(self):
         return "{host}{uri}".format(
             host=self.host,
             uri=self.base_url,
         )
+    
+    @property
+    def bind_url(self):
+        """representation of URL used for binding
+        
+        Never used in APIs, only logging,
+        since it can be non-connectable value, such as '', meaning all interfaces.
+        """
+        if self.ip in {'', '0.0.0.0'}:
+            return self.url.replace('localhost', self.ip or '*', 1)
+        return self.url
     
     @gen.coroutine
     def wait_up(self, timeout=10, http=False):
