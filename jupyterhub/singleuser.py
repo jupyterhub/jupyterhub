@@ -51,8 +51,8 @@ class JupyterHubLoginHandler(LoginHandler):
             data=encrypted_cookie,
         )
         if r.status_code == 404:
-            data = {'user' : ''}
-        if r.status_code == 403:
+            data = None
+        elif r.status_code == 403:
             self.log.error("I don't have permission to verify cookies, my auth token may have expired: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Permission failure checking authorization, I may need to be restarted")
         elif r.status_code >= 500:
