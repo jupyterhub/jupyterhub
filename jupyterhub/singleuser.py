@@ -11,7 +11,10 @@ import requests
 from tornado import ioloop
 from tornado.web import HTTPError
 
-from IPython.utils.traitlets import Unicode
+from IPython.utils.traitlets import (
+    Integer,
+    Unicode,
+)
 
 from IPython.html.notebookapp import NotebookApp
 from IPython.html.auth.login import LoginHandler
@@ -121,7 +124,17 @@ class SingleUserNotebookApp(NotebookApp):
     open_browser = False
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
-    
+
+    cookie_cache_lifetime = Integer(
+        config=True,
+        default_value=300,
+        allow_none=True,
+        help="""
+        Time, in seconds, that we cache a validated cookie before requiring
+        revalidation with the hub.
+        """,
+    )
+
     def _log_datefmt_default(self):
         """Exclude date from default date format"""
         return "%Y-%m-%d %H:%M:%S"
@@ -133,7 +146,23 @@ class SingleUserNotebookApp(NotebookApp):
     def _confirm_exit(self):
         # disable the exit confirmation for background notebook processes
         ioloop.IOLoop.instance().stop()
-    
+
+    def _clear_cookie_cache(self):
+        self.log.info("Clearing cookie cache")
+        self.tornado_settings['cookie_cache'].clear()
+
+    def initialize(self, argv=None):
+        super().initialize(argv=argv)
+
+        # Start a PeriodicCallback to clear cached cookies.  This forces us to
+        # revalidate our user with the Hub at least every
+        # `cookie_cache_lifetime` seconds.
+        if self.cookie_cache_lifetime:
+            ioloop.PeriodicCallback(
+                self._clear_cookie_cache,
+                self.cookie_cache_lifetime * 1e3,
+            ).start()
+
     def init_webapp(self):
         # load the hub related settings into the tornado settings dict
         env = os.environ
