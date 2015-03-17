@@ -732,7 +732,15 @@ class JupyterHub(Application):
             cmd.extend(['--ssl-cert', self.ssl_cert])
         self.log.info("Starting proxy @ %s", self.proxy.public_server.url)
         self.log.debug("Proxy cmd: %s", cmd)
-        self.proxy_process = Popen(cmd, env=env)
+        try:
+            self.proxy_process = Popen(cmd, env=env)
+        except FileNotFoundError as e:
+            self.log.error(
+                "Failed to find proxy %r\n"
+                "The proxy can be installed with `npm install -g configurable-http-proxy`"
+                 % self.proxy_cmd
+            )
+            self.exit(1)
         def _check():
             status = self.proxy_process.poll()
             if status is not None:
