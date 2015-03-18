@@ -3,6 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from grp import getgrnam
 import pwd
 from subprocess import check_call, check_output, CalledProcessError
 
@@ -39,7 +40,14 @@ class Authenticator(LoggingConfigurable):
         It must return the username on successful authentication,
         and return None on failed authentication.
         """
-    
+
+    def check_whitelist(self, user):
+        """
+        Return True if the whitelist is empty or user is in the whitelist.
+        """
+        # Parens aren't necessary here, but they make this easier to parse.
+        return (not self.whitelist) or (user in self.whitelist)
+
     def add_user(self, user):
         """Add a new user
         
@@ -56,8 +64,7 @@ class Authenticator(LoggingConfigurable):
         
         Removes the user from the whitelist.
         """
-        if user.name in self.whitelist:
-            self.whitelist.remove(user.name)
+        self.whitelist.discard(user.name)
     
     def login_url(self, base_url):
         """Override to register a custom login handler"""
@@ -87,7 +94,28 @@ class LocalAuthenticator(Authenticator):
         should I try to create the system user?
         """
     )
-    
+
+    whitelist_group = Unicode(
+        config=True,
+        help="Automatically whitelist anyone in this group.",
+    )
+
+    def check_whitelist(self, username):
+        return (
+            super().check_whitelist(username) or
+            self.check_whitelist_group(username)
+        )
+
+    def check_whitelist_group(self, username):
+        if not self.whitelist_group:
+            return False
+        try:
+            group = getgrnam(self.whitelist_group)
+        except KeyError:
+            self.log.error('No such group: [%s]' % self.whitelist_group)
+            return False
+        return username in group.gr_mem
+
     @gen.coroutine
     def add_user(self, user):
         """Add a new user
@@ -152,7 +180,7 @@ class PAMAuthenticator(LocalAuthenticator):
         Return None otherwise.
         """
         username = data['username']
-        if self.whitelist and username not in self.whitelist:
+        if not self.check_whitelist(username):
             return
         # simplepam wants bytes, not unicode
         # see simplepam#3
