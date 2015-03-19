@@ -95,24 +95,30 @@ class LocalAuthenticator(Authenticator):
         """
     )
 
-    whitelist_group = Unicode(
+    group_whitelist = Set(
         config=True,
         help="Automatically whitelist anyone in this group.",
     )
 
-    def check_whitelist(self, username):
-        return (
-            super().check_whitelist(username) or
-            self.check_whitelist_group(username)
-        )
+    def _group_whitelist_changed(self, name, old, new):
+        if self.whitelist:
+            self.log.warn(
+                "Ignoring username whitelist because group whitelist supplied!"
+            )
 
-    def check_whitelist_group(self, username):
-        if not self.whitelist_group:
+    def check_whitelist(self, username):
+        if self.group_whitelist:
+            return self.check_group_whitelist(username)
+        else:
+            return super().check_whitelist(username)
+
+    def check_group_whitelist(self, username):
+        if not self.group_whitelist:
             return False
         try:
-            group = getgrnam(self.whitelist_group)
+            group = getgrnam(self.group_whitelist)
         except KeyError:
-            self.log.error('No such group: [%s]' % self.whitelist_group)
+            self.log.error('No such group: [%s]' % self.group_whitelist)
             return False
         return username in group.gr_mem
 
