@@ -81,6 +81,7 @@ class Spawner(LoggingConfigurable):
         'VIRTUAL_ENV',
         'LANG',
         'LC_ALL',
+        'SHELL'
     ], config=True,
         help="Whitelist of environment variables for the subprocess to inherit"
     )
