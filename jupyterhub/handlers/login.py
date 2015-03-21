@@ -19,23 +19,27 @@ class LogoutHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     """Render the login page."""
 
-    def _render(self, message=None, username=None):
+    def _render(self, login_error=None, username=None):
         return self.render_template('login.html',
                 next=url_escape(self.get_argument('next', default='')),
                 username=username,
-                message=message,
-                custom_html=self.authenticator.custom_html,
+                login_error=login_error,
+                custom_login_form=self.authenticator.custom_html,
         )
     
     def get(self):
         next_url = self.get_argument('next', False)
-        if next_url and self.get_current_user():
+        user = self.get_current_user()
+        if user:
+            if not next_url:
+                if user.running:
+                    next_url = user.server.base_url
+                else:
+                    next_url = self.hub.server.base_url
             # set new login cookie
             # because single-user cookie may have been cleared or incorrect
             self.set_login_cookie(self.get_current_user())
             self.redirect(next_url, permanent=False)
-        elif not next_url and self.get_current_user():
-            self.redirect(self.hub.server.base_url, permanent=False)
         else:
             username = self.get_argument('username', default='')
             self.finish(self._render(username=username))
@@ -63,7 +67,7 @@ class LoginHandler(BaseHandler):
         else:
             self.log.debug("Failed login for %s", username)
             html = self._render(
-                message={'error': 'Invalid username or password'},
+                login_error='Invalid username or password',
                 username=username,
             )
             self.finish(html)

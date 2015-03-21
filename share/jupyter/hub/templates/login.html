@@ -5,18 +5,19 @@
 
 {% block main %}
 
+{% block login %}
 <div id="login-main" class="container">
 {% if custom_html %}
-{{custom_html}}
+{{ custom_html }}
 {% else %}
 <form action="{{login_url}}?next={{next}}" method="post" role="form">
   <div class="auth-form-header">
     Sign in
   </div>
   <div class='auth-form-body'>
-    {% if message %}
-    <p class="message">
-      {{message.error}}
+    {% if login_error %}
+    <p class="login_error">
+      {{login_error}}
     </p>
     {% endif %}
     <label for="username_input">Username:</label>
@@ -50,7 +51,9 @@
   </div>
 </form>
 {% endif %}
+{% endif %}
 </div>
+{% endblock login %}
 
 {% endblock %}
 
