@@ -1034,7 +1034,7 @@ class JupyterHub(Application):
     
     @classmethod
     def launch_instance(cls, argv=None):
-        self = cls.instance(argv=argv)
+        self = cls.instance()
         loop = IOLoop.current()
         loop.add_callback(self.launch_instance_async, argv)
         try:
