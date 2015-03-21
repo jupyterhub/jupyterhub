@@ -13,8 +13,7 @@ class LogoutHandler(BaseHandler):
     """Log a user out by clearing their login cookie."""
     def get(self):
         self.clear_login_cookie()
-        html = self.render_template('logout.html')
-        self.finish(html)
+        self.redirect(self.hub.server.base_url, permanent=False)
 
 
 class LoginHandler(BaseHandler):
