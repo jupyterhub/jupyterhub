@@ -115,12 +115,15 @@ class LocalAuthenticator(Authenticator):
     def check_group_whitelist(self, username):
         if not self.group_whitelist:
             return False
-        try:
-            group = getgrnam(self.group_whitelist)
-        except KeyError:
-            self.log.error('No such group: [%s]' % self.group_whitelist)
-            return False
-        return username in group.gr_mem
+        for group in self.group_whitelist:
+            try:
+                group = getgrnam(self.group_whitelist)
+            except KeyError:
+                self.log.error('No such group: [%s]' % self.group_whitelist)
+                continue
+            if username in group.gr_mem:
+                return True
+        return False
 
     @gen.coroutine
     def add_user(self, user):
