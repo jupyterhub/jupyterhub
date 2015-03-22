@@ -30,7 +30,18 @@ class Authenticator(LoggingConfigurable):
         If empty, allow any user to attempt login.
         """
     )
-    custom_html = Unicode('')
+    custom_html = Unicode('',
+        help="""HTML login form for custom handlers.
+        Override in form-based custom authenticators
+        that don't use username+password,
+        or need custom branding.
+        """
+    )
+    login_service = Unicode('',
+        help="""Name of the login service for external
+        login services (e.g. 'GitHub').
+        """
+    )
     
     @gen.coroutine
     def authenticate(self, handler, data):
