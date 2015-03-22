@@ -211,7 +211,7 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_api_key'] = env.pop('JPY_API_TOKEN')
         s['hub_prefix'] = self.hub_prefix
         s['cookie_name'] = self.cookie_name
-        s['login_url'] = url_path_join(self.hub_prefix, 'login')
+        s['login_url'] = self.hub_prefix
         s['hub_api_url'] = self.hub_api_url
         super(SingleUserNotebookApp, self).init_webapp()
 
