@@ -151,10 +151,8 @@ class SingleUserNotebookApp(NotebookApp):
     def _clear_cookie_cache(self):
         self.log.info("Clearing cookie cache")
         self.tornado_settings['cookie_cache'].clear()
-
-    def initialize(self, argv=None):
-        super().initialize(argv=argv)
-
+    
+    def start(self):
         # Start a PeriodicCallback to clear cached cookies.  This forces us to
         # revalidate our user with the Hub at least every
         # `cookie_cache_lifetime` seconds.
@@ -163,7 +161,47 @@ class SingleUserNotebookApp(NotebookApp):
                 self._clear_cookie_cache,
                 self.cookie_cache_lifetime * 1e3,
             ).start()
-
+        super().start()
+    
+    def initialize(self, argv=None):
+        self.monkeypatch_ipython()
+        return super().initialize(argv)
+    
+    def monkeypatch_ipython(self):
+        """monkeypatch IPython template rendering
+        
+        to inject hub links in the header without defining a template file
+        """
+        from IPython.html.base.handlers import IPythonHandler
+        
+        get_template = IPythonHandler.get_template
+        
+        def get_su_template(*a, **kw):
+            """get a template, and replace the headercontainer block with our version"""
+            tpl = get_template(*a, **kw)
+            
+            super_block = tpl.blocks.get('headercontainer')
+            
+            def headercontainer(context):
+                """in-line definition of headercontainer block"""
+                if super_block:
+                    for line in super_block(context):
+                        yield line
+                
+                yield (
+                    "<a href='{}' "
+                    " class='btn btn-default btn-sm navbar-btn pull-right'"
+                    " style='margin-right: 8px;'"
+                    ">"
+                    "Control Panel</a>".format(url_path_join(self.hub_prefix, 'home'))
+                )
+            
+            tpl.blocks['headercontainer'] = headercontainer
+            return tpl
+        
+        # apply monkeypatch
+        IPythonHandler.get_template = get_su_template
+    
     def init_webapp(self):
         # load the hub related settings into the tornado settings dict
         env = os.environ
