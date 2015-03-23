@@ -11,39 +11,8 @@ from .. import orm
 from ..utils import admin_only
 from .base import APIHandler
 
-class BaseUserHandler(APIHandler):
-    
-    def user_model(self, user):
-        model = {
-            'name': user.name,
-            'admin': user.admin,
-            'server': user.server.base_url if user.running else None,
-            'pending': None,
-            'last_activity': user.last_activity.isoformat(),
-        }
-        if user.spawn_pending:
-            model['pending'] = 'spawn'
-        elif user.stop_pending:
-            model['pending'] = 'stop'
-        return model
-    
-    _model_types = {
-        'name': str,
-        'admin': bool,
-    }
-    
-    def _check_user_model(self, model):
-        if not isinstance(model, dict):
-            raise web.HTTPError(400, "Invalid JSON data: %r" % model)
-        if not set(model).issubset(set(self._model_types)):
-            raise web.HTTPError(400, "Invalid JSON keys: %r" % model)
-        for key, value in model.items():
-            if not isinstance(value, self._model_types[key]):
-                raise web.HTTPError(400, "user.%s must be %s, not: %r" % (
-                    key, self._model_types[key], type(value)
-                ))
 
-class UserListAPIHandler(BaseUserHandler):
+class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
         users = self.db.query(orm.User)
@@ -66,7 +35,7 @@ def admin_or_self(method):
         return method(self, name)
     return m
 
-class UserAPIHandler(BaseUserHandler):
+class UserAPIHandler(APIHandler):
     
     @admin_or_self
     def get(self, name):
@@ -135,7 +104,7 @@ class UserAPIHandler(BaseUserHandler):
         self.write(json.dumps(self.user_model(user)))
 
 
-class UserServerAPIHandler(BaseUserHandler):
+class UserServerAPIHandler(APIHandler):
     @gen.coroutine
     @admin_or_self
     def post(self, name):
@@ -165,7 +134,7 @@ class UserServerAPIHandler(BaseUserHandler):
         status = 202 if user.stop_pending else 204
         self.set_status(status)
 
-class UserAdminAccessAPIHandler(BaseUserHandler):
+class UserAdminAccessAPIHandler(APIHandler):
     """Grant admins access to single-user servers
     
     This handler sets the necessary cookie for an admin to login to a single-user server.
