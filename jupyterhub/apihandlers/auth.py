@@ -11,7 +11,6 @@ from ..utils import token_authenticated
 from .base import APIHandler
 
 
-
 class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
@@ -22,10 +21,15 @@ class TokenAPIHandler(APIHandler):
             'user' : orm_token.user.name,
         }))
 
+
 class CookieAPIHandler(APIHandler):
     @token_authenticated
-    def get(self, cookie_name):
-        cookie_value = self.request.body
+    def get(self, cookie_name, cookie_value=None):
+        if cookie_value is None:
+            self.log.warn("Cookie values in request body is deprecated, use `/cookie_name/cookie_value`")
+            cookie_value = self.request.body
+        else:
+            cookie_value = cookie_value.encode('utf8')
         user = self._user_for_cookie(cookie_name, cookie_value)
         if user is None:
             raise web.HTTPError(404)
@@ -33,7 +37,8 @@ class CookieAPIHandler(APIHandler):
             'user' : user.name,
         }))
 
+
 default_handlers = [
-    (r"/api/authorizations/cookie/([^/]+)", CookieAPIHandler),
+    (r"/api/authorizations/cookie/([^/]+)(?:/([^/]+))?", CookieAPIHandler),
     (r"/api/authorizations/token/([^/]+)", TokenAPIHandler),
 ]
