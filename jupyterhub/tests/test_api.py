@@ -81,7 +81,7 @@ def test_auth_api(app):
     r = api_request(app, 'authorizations/token', api_token)
     assert r.status_code == 200
     reply = r.json()
-    assert reply['user'] == user.name
+    assert reply['name'] == user.name
     
     # check fail
     r = api_request(app, 'authorizations/token', api_token,
