@@ -49,7 +49,7 @@ from .handlers.static import CacheControlStaticFilesHandler
 
 from . import orm
 from ._data import DATA_FILES_PATH
-from .log import CoroutineLogFormatter
+from .log import CoroutineLogFormatter, log_request
 from .traitlets import URLPrefix
 from .utils import (
     url_path_join,
@@ -799,6 +799,7 @@ class JupyterHub(Application):
             version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
         
         settings = dict(
+            log_function=log_request,
             config=self.config,
             log=self.log,
             db=self.db,
