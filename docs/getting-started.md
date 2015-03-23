@@ -191,7 +191,7 @@ Admin users of JupyterHub have the ability to take actions on users' behalf, suc
 restarting their servers, and adding and removing new users from the whitelist. Any users in the admin list are automatically added to the whitelist, if they are not already present. The set of initial Admin users can configured as follows:
 
 ```python
-c.JupyterHub.admin_users = {'mal', 'zoe'}
+c.Authenticator.admin_users = {'mal', 'zoe'}
 ```
 
 If `JupyterHub.admin_access` is True (not default), then admin users have permission to log in *as other
@@ -314,7 +314,7 @@ c.LocalAuthenticator.create_system_users = True
 
 # specify users and admin
 c.Authenticator.whitelist = {'rgbkrk', 'minrk', 'jhamrick'}
-c.JupyterHub.admin_users = {'jhamrick', 'rgbkrk'}
+c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
 
 # start single-user notebook servers in ~/assignments,
 # with ~/assignments/Welcome.ipynb as the default landing page
