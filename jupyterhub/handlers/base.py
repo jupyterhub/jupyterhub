@@ -22,6 +22,13 @@ from ..utils import url_path_join
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
 
+# mapping of reason: reason_message
+reasons = {
+    'timeout': "Failed to reach your server."
+        "  Please try again later."
+        "  Contact admin if the issue persists.",
+    'error': "Failed to start your server.  Please contact admin.",
+}
 
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
@@ -323,7 +330,7 @@ class BaseHandler(RequestHandler):
             # construct the custom reason, if defined
             reason = getattr(exception, 'reason', '')
             if reason:
-                status_message = reason
+                message = reasons.get(reason, reason)
 
         # build template namespace
         ns = dict(
