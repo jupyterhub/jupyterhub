@@ -54,7 +54,7 @@ class Spawner(LoggingConfigurable):
     )
 
     http_timeout = Integer(
-        10, config=True,
+        30, config=True,
         help="""Timeout (in seconds) before giving up on a spawned HTTP server
 
         Once a server has successfully been spawned, this is the amount of time

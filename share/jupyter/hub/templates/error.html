@@ -6,17 +6,18 @@
 {% block main %}
 
 <div class="error">
-    {% block h1_error %}
-    <h1>{{status_code}} : {{status_message}}</h1>
-    {% endblock h1_error %}
-    {% block error_detail %}
-    {% if message %}
-    <p>The error was:</p>
-    <div class="traceback-wrapper">
-    <pre class="traceback">{{message}}</pre>
-    </div>
-    {% endif %}
-    {% endblock %}
+  {% block h1_error %}
+  <h1>
+    {{status_code}} : {{status_message}}
+  </h1>
+  {% endblock h1_error %}
+  {% block error_detail %}
+  {% if message %}
+  <p>
+    {{message}}
+  </p>
+  {% endif %}
+  {% endblock error_detail %}
 </div>
 
 {% endblock %}
