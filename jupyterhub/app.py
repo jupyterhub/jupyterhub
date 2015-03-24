@@ -994,7 +994,7 @@ class JupyterHub(Application):
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
         try:
-            self.http_server.listen(self.hub_port)
+            self.http_server.listen(self.hub_port, address=self.hub_ip)
         except Exception:
             self.log.error("Failed to bind hub to %s" % self.hub.server.bind_url)
             raise
