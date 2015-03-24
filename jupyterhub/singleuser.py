@@ -5,6 +5,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import os
+from urllib.parse import quote
 
 import requests
 
@@ -48,10 +49,9 @@ class JupyterHubLoginHandler(LoginHandler):
         hub_api_url = self.settings['hub_api_url']
         hub_api_key = self.settings['hub_api_key']
         r = requests.get(url_path_join(
-            hub_api_url, "authorizations/cookie", cookie_name,
+            hub_api_url, "authorizations/cookie", cookie_name, quote(encrypted_cookie, safe=''),
         ),
             headers = {'Authorization' : 'token %s' % hub_api_key},
-            data=encrypted_cookie,
         )
         if r.status_code == 404:
             data = None
