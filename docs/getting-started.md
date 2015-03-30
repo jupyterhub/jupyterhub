@@ -90,13 +90,13 @@ You can load a specific config file with:
 
 ## Networking
 
-In most situations you will want to change the main IP address and port of the Proxy. This address determines where JupyterHub is available to your users. The default is all network interfaces `''` on port 8000.
+In most situations you will want to change the main IP address and port of the Proxy. This address determines where JupyterHub is available to your users. The default is all network interfaces (`''`) on port 8000.
 
 This can be done with the following command line arguments:
 
     jupyterhub --ip=192.168.1.2 --port=443
 
-Or you can put the following lines in configuration file:
+Or you can put the following lines in a configuration file:
 
 ```python
 c.JupyterHub.ip = '192.168.1.2'
@@ -110,8 +110,8 @@ JupyterHub. However, for more customized scenarios, you can configure the follow
 details.
 
 The Hub service talks to the proxy via a REST API on a secondary port, whose network interface and port
-can be configured separately. By default, this REST API listens on localhost ponly. If you want to run the
-proxy separate from the Hub, you may need to configure this ip and port with:
+can be configured separately. By default, this REST API listens on localhost only. If you want to run the
+Proxy separate from the Hub, you may need to configure this IP and port with:
 
 ```python
 # ideally a private network address
@@ -131,7 +131,7 @@ c.JupyterHub.hub_port = 54321
 
 ## Security
 
-First of all, since JupyterHub includes authentication, you should not run it without SSL (HTTPS). This will require you to obtain an official SSL certificate or create a self-signed certificate. Once you have obtained a key and certificate you need to pass their locations to JupyterHub's configuration as follows:
+First of all, since JupyterHub includes authentication and allows arbitrary code execution, you should not run it without SSL (HTTPS). This will require you to obtain an official SSL certificate or create a self-signed certificate. Once you have obtained and installed a key and certificate you need to pass their locations to JupyterHub's configuration as follows:
 
 ```python
 c.JupyterHub.ssl_key = '/path/to/my.key'
@@ -179,9 +179,10 @@ automatically (this is the default configuration).
 
 ## Configuring Authentication
 
-The default Authenticator uses [PAM][] to authenticate system users with their username and password.
-The default behavior of this Authenticator is to allow any users with a password on the system to login.
-You can restrict which users are allowed to login with `Authenticator.whitelist`:
+The default Authenticator uses [PAM][] to authenticate system users with their username and password. The
+default behavior of this Authenticator is to allow any user with an account and password on the system to
+login. You can restrict which users are allowed to login with `Authenticator.whitelist`:
+
 
 ```python
 c.Authenticator.whitelist = {'mal', 'zoe', 'inara', 'kaylee'}
@@ -198,7 +199,7 @@ If `JupyterHub.admin_access` is True (not default), then admin users have permis
 users* on their respective machines, for debugging. **You should make sure your users know if admin_access
 is enabled.**
 
-### adding and removing users
+### Adding and removing users
 
 The default PAMAuthenticator is one case of a special kind of authenticator, called a LocalAuthenticator,
 indicating that it manages users on the local system. When you add a user to the Hub, a LocalAuthenticator
@@ -212,20 +213,22 @@ c.LocalAuthenticator.create_system_users = True
 
 however, adding a user to the Hub that doesn't already exist on the system will result in the Hub creating
 that user via the system `useradd` mechanism. This option is typically used on hosted deployments of
-JupyterHub, to avoid the need to manually create all your users before launching the service. It is not
-recommended when running JupyterHub on 'real' machines with regular users.
+JupyterHub (using Docker), to avoid the need to manually create all your users before launching the
+service. It is not recommended when running JupyterHub in situations where JupyterHub users maps directly
+onto UNIX users.
+
 
 
 ## Configuring single-user servers
 
 Since the single-user server is an instance of `ipython notebook`, an entire separate multi-process
-application, there is are many aspect of that server can configure, and a lot of ways to express that
+application, there are many aspect of that server can configure, and a lot of ways to express that
 configuration.
 
 At the JupyterHub level, you can set some values on the Spawner. The simplest of these is
 `Spawner.notebook_dir`, which lets you set the root directory for a user's server. This root notebook
-directory is the highest level directory users will be able to access in the notebook dashbard. In this
-example the root notebook directory is set to `~/notebooks`, where `~` is expanded to the user's home
+directory is the highest level directory users will be able to access in the notebook dashboard. In this
+example, the root notebook directory is set to `~/notebooks`, where `~` is expanded to the user's home
 directory.
 
 ```python
@@ -253,12 +256,14 @@ the `ipython_notebook_config.py` config file. Each user may have one of these fi
 - /etc/ipython
 - custom Spawner
 
-**Min, looks like you were going to add more content here...**
 
 ## File locations
 
-Let's add a section about best practices of where to put the various files described above, including the log files (and how to configure that)
+It is recommended to put all of the files used by JupyterHub into standard UNIX filesystem locations.
 
+* `/srv/jupyter` for all security and runtime files
+* `/etc/jupyter` for all configuration files
+* `/var/log` for log files
 
 ## Example
 
@@ -271,16 +276,18 @@ In the following example, we show a configuration files for a fairly standard Ju
 * You want users' notebooks to be served from `/home` to allow users to browse for notebooks within
   other users home directories
 * You want the landing page for each user to be `/tree/~` to show them only their own notebooks by default
+* All runtime files are put into `/srv/jupyter` and log files in `/var/log`.
 
 Let's start out with `jupyterhub_config.py`:
 
 ```python
+# jupyterhub_config.py
 c = get_config()
 
 import os
 pjoin = os.path.join
 
-runtime_dir = os.path.join('/var/run/jupyterhub')
+runtime_dir = os.path.join('/srv/jupyterhub')
 ssl_dir = pjoin(runtime_dir, 'ssl')
 if not os.path.exists(ssl_dir):
     os.makedirs(ssl_dir)
@@ -295,6 +302,9 @@ c.JupyterHub.ssl_cert = pjoin(ssl_dir, 'ssl.cert')
 # in /var/run/jupyterhub
 c.JupyterHub.cookie_secret_file = pjoin(runtime_dir, 'cookie_secret')
 c.JupyterHub.db_file = pjoin(runtime_dir, 'jupyterhub.sqlite')
+
+# put the log file in /var/log
+c.JupyterHub.log_file = '/var/log/jupyterhub.log'
 
 # use GitHub OAuthenticator for local users
 
