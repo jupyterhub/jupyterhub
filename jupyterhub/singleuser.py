@@ -15,6 +15,7 @@ from tornado.web import HTTPError
 from IPython.utils.traitlets import (
     Integer,
     Unicode,
+    CUnicode,
 )
 
 from IPython.html.notebookapp import NotebookApp
@@ -114,7 +115,7 @@ aliases.update({
 
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
-    user = Unicode(config=True)
+    user = CUnicode(config=True)
     def _user_changed(self, name, old, new):
         self.log.name = new
     cookie_name = Unicode(config=True)
