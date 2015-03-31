@@ -12,15 +12,13 @@ See [the readme](../README.md) for help installing JupyterHub.
 ## Overview
 
 JupyterHub is a set of processes that together provide a multiuser Jupyter Notebook server. There
-are four main categories of processes run by the `jupyterhub` command line program:
+are three main categories of processes run by the `jupyterhub` command line program:
 
 - *Single User Server*: a dedicated, single-user, Jupyter Notebook is started for each user on the system
-  when they log in.
+  when they log in. The object that starts these processes is called a *Spawner*.
 - *Proxy*: the public facing part of the server that uses a dynamic proxy to route HTTP requests
   to the *Hub* and *Single User Servers*.
-- *Hub*: manages user accounts and authentication and coordinates *Single Users Servers* and *Spawners*.
-- *Spawner*: starts *Single User Servers* when requested by the *Hub*.
-
+- *Hub*: manages user accounts and authentication and coordinates *Single Users Servers* using a *Spawner*.
 
 ## JupyterHub's default behavior
 
@@ -42,7 +40,7 @@ through:
 
 or any other public IP or domain pointing to your system.
 
-In their default configuration, the other services, the *Hub* and *Spawners*, all communicate with each
+In their default configuration, the other services, the *Hub* and *Single-User Servers*, all communicate with each
 other on localhost only.
 
 **NOTE:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS). You should not run
@@ -142,7 +140,7 @@ Some cert files also contain the key, in which case only the cert is needed. It 
 
 There are two other aspects of JupyterHub network security.
 
-The cookie secret is encryption key, used to encrypt the cookies used for authentication. If this value
+The cookie secret is an encryption key, used to encrypt the cookies used for authentication. If this value
 changes for the Hub, all single-user servers must also be restarted. Normally, this value is stored in the
 file `jupyterhub_cookie_secret`, which can be specified with:
 
@@ -161,6 +159,8 @@ variable:
 export JPY_COOKIE_SECRET=`openssl rand -hex 1024`
 ```
 
+For security reasons, this env variable should only be visible to the Hub.
+
 The Hub authenticates its requests to the Proxy via an environment variable, `CONFIGPROXY_AUTH_TOKEN`. If
 you want to be able to start or restart the proxy or Hub independently of each other (not always
 necessary), you must set this environment variable before starting the server:
@@ -170,11 +170,10 @@ necessary), you must set this environment variable before starting the server:
 export CONFIGPROXY_AUTH_TOKEN=`openssl rand -hex 32`
 ```
 
-If you don't set this, the Hub will generate a random key itself, which means that any time you restart
-the Hub you **must also restart the Proxy**. If the proxy is a subprocess of the Hub, this should happen
-automatically (this is the default configuration).
+This env variable needs to be visible to the Hub and Proxy. If you don't set this, the Hub will generate a
+random key itself, which means that any time you restart the Hub you **must also restart the Proxy**. If
+the proxy is a subprocess of the Hub, this should happen automatically (this is the default configuration).
 
-**(Min: does the cookie secret and auth token env vars need to be only visible by root?)** What if other users can see them?
 
 
 ## Configuring Authentication
@@ -213,7 +212,7 @@ c.LocalAuthenticator.create_system_users = True
 
 however, adding a user to the Hub that doesn't already exist on the system will result in the Hub creating
 that user via the system `useradd` mechanism. This option is typically used on hosted deployments of
-JupyterHub (using Docker), to avoid the need to manually create all your users before launching the
+JupyterHub, to avoid the need to manually create all your users before launching the
 service. It is not recommended when running JupyterHub in situations where JupyterHub users maps directly
 onto UNIX users.
 
@@ -301,7 +300,7 @@ c.JupyterHub.ssl_cert = pjoin(ssl_dir, 'ssl.cert')
 # put the JupyterHub cookie secret and state db
 # in /var/run/jupyterhub
 c.JupyterHub.cookie_secret_file = pjoin(runtime_dir, 'cookie_secret')
-c.JupyterHub.db_file = pjoin(runtime_dir, 'jupyterhub.sqlite')
+c.JupyterHub.db_url = pjoin(runtime_dir, 'jupyterhub.sqlite')
 
 # put the log file in /var/log
 c.JupyterHub.log_file = '/var/log/jupyterhub.log'
@@ -317,12 +316,12 @@ c.LocalAuthenticator.create_system_users = True
 c.Authenticator.whitelist = {'rgbkrk', 'minrk', 'jhamrick'}
 c.JupyterHub.admin_users = {'jhamrick', 'rgbkrk'}
 
-# start users in ~/assignments,
-# with Welcome.ipynb as the default landing page
+# start single-user notebook servers in ~/assignments,
+# with ~/assignments/Welcome.ipynb as the default landing page
 # this config could also be put in
 # /etc/ipython/ipython_notebook_config.py
-c.Spawner.notebook_dir = '/home'
-c.Spawner.args = ['--NotebookApp.default_url=/tree/~']
+c.Spawner.notebook_dir = '~/assignments'
+c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
 Using the GitHub Authenticator requires a few env variables,
