@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Extend regular notebook server to be aware of multiuser things."""
 
 # Copyright (c) Jupyter Development Team.
