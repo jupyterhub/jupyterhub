@@ -8,6 +8,7 @@ import os
 from urllib.parse import quote
 
 import requests
+from jinja2 import ChoiceLoader, FunctionLoader
 
 from tornado import ioloop
 from tornado.web import HTTPError
@@ -113,6 +114,20 @@ aliases.update({
     'base-url': 'SingleUserNotebookApp.base_url',
 })
 
+page_template = """
+{% extends "templates/page.html" %}
+
+{% block header_buttons %}
+{{super()}}
+
+<a href='{{hub_control_panel_url}}'
+ class='btn btn-default btn-sm navbar-btn pull-right'
+ style='margin-right: 4px; margin-left: 2px;'
+>
+Control Panel</a>
+{% endblock %}
+"""
+
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
     user = CUnicode(config=True)
@@ -163,45 +178,6 @@ class SingleUserNotebookApp(NotebookApp):
             ).start()
         super().start()
     
-    def initialize(self, argv=None):
-        self.monkeypatch_ipython()
-        return super().initialize(argv)
-    
-    def monkeypatch_ipython(self):
-        """monkeypatch IPython template rendering
-        
-        to inject hub links in the header without defining a template file
-        """
-        from IPython.html.base.handlers import IPythonHandler
-        
-        get_template = IPythonHandler.get_template
-        
-        def get_su_template(*a, **kw):
-            """get a template, and replace the headercontainer block with our version"""
-            tpl = get_template(*a, **kw)
-            
-            super_block = tpl.blocks.get('headercontainer')
-            
-            def headercontainer(context):
-                """in-line definition of headercontainer block"""
-                if super_block:
-                    for line in super_block(context):
-                        yield line
-                
-                yield (
-                    "<a href='{}' "
-                    " class='btn btn-default btn-sm navbar-btn pull-right'"
-                    " style='margin-right: 8px;'"
-                    ">"
-                    "Control Panel</a>".format(url_path_join(self.hub_prefix, 'home'))
-                )
-            
-            tpl.blocks['headercontainer'] = headercontainer
-            return tpl
-        
-        # apply monkeypatch
-        IPythonHandler.get_template = get_su_template
-    
     def init_webapp(self):
         # load the hub related settings into the tornado settings dict
         env = os.environ
@@ -213,7 +189,27 @@ class SingleUserNotebookApp(NotebookApp):
         s['cookie_name'] = self.cookie_name
         s['login_url'] = self.hub_prefix
         s['hub_api_url'] = self.hub_api_url
+        
         super(SingleUserNotebookApp, self).init_webapp()
+        self.patch_templates()
+    
+    def patch_templates(self):
+        """Patch page templates to add Hub-related buttons"""
+        env = self.web_app.settings['jinja2_env']
+        
+        env.globals['hub_control_panel_url'] = \
+            url_path_join(self.hub_prefix, 'home')
+        
+        # patch jinja env loading to modify page template
+        def get_page(name):
+            if name == 'page.html':
+                return page_template
+        
+        orig_loader = env.loader
+        env.loader = ChoiceLoader([
+            FunctionLoader(get_page),
+            orig_loader,
+        ])
 
 
 def main():
