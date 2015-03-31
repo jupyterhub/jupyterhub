@@ -303,7 +303,7 @@ class LocalProcessSpawner(Spawner):
         help="Seconds to wait for process to halt after SIGKILL before giving up"
     )
     
-    proc = Instance(Popen)
+    proc = Instance(Popen, allow_none=True)
     pid = Integer(0)
     
     def make_preexec_fn(self, name):
