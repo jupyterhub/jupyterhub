@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """The multi-user notebook application"""
 
 # Copyright (c) Jupyter Development Team.
