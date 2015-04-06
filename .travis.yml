@@ -12,4 +12,6 @@ install:
     - pip install -f travis-wheels/wheelhouse -r dev-requirements.txt .
     - pip install -f travis-wheels/wheelhouse ipython[notebook]
 script:
-    - py.test jupyterhub
+    - py.test --cov jupyterhub jupyterhub/tests
+after_success:
+    - coveralls

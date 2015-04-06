@@ -7,6 +7,8 @@ import threading
 
 from unittest import mock
 
+import requests
+
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
@@ -126,3 +128,15 @@ class MockHub(JupyterHub):
         # ignore the call that will fire in atexit
         self.cleanup = lambda : None
         self.db_file.close()
+    
+    def login_user(self, name):
+        r = requests.post(self.proxy.public_server.url + 'hub/login',
+            data={
+                'username': name,
+                'password': name,
+            },
+            allow_redirects=False,
+        )
+        assert r.cookies
+        return r.cookies
+

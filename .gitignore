@@ -14,3 +14,6 @@ share/jupyter/hub/static/css/style.min.css
 share/jupyter/hub/static/css/style.min.css.map
 *.egg-info
 MANIFEST
+.coverage
+htmlcov
+

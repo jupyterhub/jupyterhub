@@ -1,2 +1,4 @@
 -r requirements.txt
+coveralls
+pytest-cov
 pytest
