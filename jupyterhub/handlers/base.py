@@ -309,6 +309,7 @@ class BaseHandler(RequestHandler):
             prefix=self.base_url,
             user=user,
             login_url=self.settings['login_url'],
+            login_service=self.authenticator.login_service,
             logout_url=self.settings['logout_url'],
             static_url=self.static_url,
             version_hash=self.version_hash,

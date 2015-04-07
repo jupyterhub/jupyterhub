@@ -8,6 +8,7 @@ import os
 from urllib.parse import quote
 
 import requests
+from jinja2 import ChoiceLoader, FunctionLoader
 
 from tornado import ioloop
 from tornado.web import HTTPError
@@ -113,6 +114,20 @@ aliases.update({
     'base-url': 'SingleUserNotebookApp.base_url',
 })
 
+page_template = """
+{% extends "templates/page.html" %}
+
+{% block header_buttons %}
+{{super()}}
+
+<a href='{{hub_control_panel_url}}'
+ class='btn btn-default btn-sm navbar-btn pull-right'
+ style='margin-right: 4px; margin-left: 2px;'
+>
+Control Panel</a>
+{% endblock %}
+"""
+
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
     user = CUnicode(config=True)
@@ -151,10 +166,8 @@ class SingleUserNotebookApp(NotebookApp):
     def _clear_cookie_cache(self):
         self.log.info("Clearing cookie cache")
         self.tornado_settings['cookie_cache'].clear()
-
-    def initialize(self, argv=None):
-        super().initialize(argv=argv)
-
+    
+    def start(self):
         # Start a PeriodicCallback to clear cached cookies.  This forces us to
         # revalidate our user with the Hub at least every
         # `cookie_cache_lifetime` seconds.
@@ -163,7 +176,8 @@ class SingleUserNotebookApp(NotebookApp):
                 self._clear_cookie_cache,
                 self.cookie_cache_lifetime * 1e3,
             ).start()
-
+        super().start()
+    
     def init_webapp(self):
         # load the hub related settings into the tornado settings dict
         env = os.environ
@@ -173,9 +187,29 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_api_key'] = env.pop('JPY_API_TOKEN')
         s['hub_prefix'] = self.hub_prefix
         s['cookie_name'] = self.cookie_name
-        s['login_url'] = url_path_join(self.hub_prefix, 'login')
+        s['login_url'] = self.hub_prefix
         s['hub_api_url'] = self.hub_api_url
+        
         super(SingleUserNotebookApp, self).init_webapp()
+        self.patch_templates()
+    
+    def patch_templates(self):
+        """Patch page templates to add Hub-related buttons"""
+        env = self.web_app.settings['jinja2_env']
+        
+        env.globals['hub_control_panel_url'] = \
+            url_path_join(self.hub_prefix, 'home')
+        
+        # patch jinja env loading to modify page template
+        def get_page(name):
+            if name == 'page.html':
+                return page_template
+        
+        orig_loader = env.loader
+        env.loader = ChoiceLoader([
+            FunctionLoader(get_page),
+            orig_loader,
+        ])
 
 
 def main():

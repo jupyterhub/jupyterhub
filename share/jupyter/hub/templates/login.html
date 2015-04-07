@@ -5,18 +5,25 @@
 
 {% block main %}
 
+{% block login %}
 <div id="login-main" class="container">
 {% if custom_html %}
-{{custom_html}}
+{{ custom_html }}
+{% elif login_service %}
+<div class="service-login">
+  <a class='btn btn-jupyter btn-lg' href='{{login_url}}'>
+    Sign in with {{login_service}}
+  </a>
+</div>
 {% else %}
 <form action="{{login_url}}?next={{next}}" method="post" role="form">
   <div class="auth-form-header">
     Sign in
   </div>
   <div class='auth-form-body'>
-    {% if message %}
-    <p class="message">
-      {{message.error}}
+    {% if login_error %}
+    <p class="login_error">
+      {{login_error}}
     </p>
     {% endif %}
     <label for="username_input">Username:</label>
@@ -51,6 +58,7 @@
 </form>
 {% endif %}
 </div>
+{% endblock login %}
 
 {% endblock %}
 

@@ -13,19 +13,25 @@ from .base import BaseHandler
 class RootHandler(BaseHandler):
     """Render the Hub root page.
     
-    Currently redirects to home if logged in,
-    shows big fat login button otherwise.
+    If logged in, redirects to:
+    
+    - single-user server if running
+    - hub home, otherwise
+    
+    Otherwise, renders login page.
     """
     def get(self):
-        if self.get_current_user():
-            self.redirect(
-                url_path_join(self.hub.server.base_url, 'home'),
-                permanent=False,
-            )
+        user = self.get_current_user()
+        if user:
+            if user.running:
+                url = user.server.base_url
+            else:
+                url = url_path_join(self.hub.server.base_url, 'home')
+            self.redirect(url, permanent=False)
             return
-        
-        html = self.render_template('index.html',
+        html = self.render_template('login.html',
             login_url=self.settings['login_url'],
+            custom_html=self.authenticator.custom_html,
         )
         self.finish(html)
 
