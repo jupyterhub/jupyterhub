@@ -1003,6 +1003,9 @@ class JupyterHub(Application):
         
         # register cleanup on both TERM and INT
         atexit.register(self.atexit)
+        self.init_signal()
+
+    def init_signal(self):
         signal.signal(signal.SIGTERM, self.sigterm)
     
     def sigterm(self, signum, frame):
@@ -1027,7 +1030,10 @@ class JupyterHub(Application):
         if not self.io_loop:
             return
         if self.http_server:
-            self.io_loop.add_callback(self.http_server.stop)
+            if self.io_loop._running:
+                self.io_loop.add_callback(self.http_server.stop)
+            else:
+                self.http_server.stop()
         self.io_loop.add_callback(self.io_loop.stop)
     
     @gen.coroutine

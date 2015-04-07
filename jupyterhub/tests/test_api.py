@@ -1,6 +1,7 @@
 """Tests for the REST API"""
 
 import json
+import time
 from datetime import timedelta
 
 import requests
@@ -284,3 +285,18 @@ def test_get_proxy(app, io_loop):
     r.raise_for_status()
     reply = r.json()
     assert list(reply.keys()) == ['/']
+
+
+def test_shutdown(app):
+    r = api_request(app, 'shutdown', method='post', data=json.dumps({
+        'servers': True,
+        'proxy': True,
+    }))
+    r.raise_for_status()
+    reply = r.json()
+    for i in range(100):
+        if app.io_loop._running:
+            time.sleep(0.1)
+        else:
+            break
+    assert not app.io_loop._running
