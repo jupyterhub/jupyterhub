@@ -84,7 +84,7 @@ class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
     db_file = None
-
+    
     def _ip_default(self):
         return 'localhost'
     
@@ -97,12 +97,18 @@ class MockHub(JupyterHub):
     def _admin_users_default(self):
         return {'admin'}
     
+    def init_signal(self):
+        pass
+    
     def start(self, argv=None):
         self.db_file = NamedTemporaryFile()
         self.db_url = 'sqlite:///' + self.db_file.name
+        
         evt = threading.Event()
+        
         @gen.coroutine
         def _start_co():
+            assert self.io_loop._running
             # put initialize in start for SQLAlchemy threading reasons
             yield super(MockHub, self).initialize(argv=argv)
             # add an initial user
@@ -110,16 +116,19 @@ class MockHub(JupyterHub):
             self.db.add(user)
             self.db.commit()
             yield super(MockHub, self).start()
+            yield self.hub.server.wait_up(http=True)
             self.io_loop.add_callback(evt.set)
         
         def _start():
-            self.io_loop = IOLoop.current()
+            self.io_loop = IOLoop()
+            self.io_loop.make_current()
             self.io_loop.add_callback(_start_co)
             self.io_loop.start()
         
         self._thread = threading.Thread(target=_start)
         self._thread.start()
-        evt.wait(timeout=5)
+        ready = evt.wait(timeout=10)
+        assert ready
     
     def stop(self):
         super().stop()
