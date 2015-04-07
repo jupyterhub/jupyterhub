@@ -88,7 +88,8 @@ def test_wont_add_system_user(io_loop):
     authenticator.create_system_users = False
     with pytest.raises(KeyError):
         io_loop.run_sync(lambda : authenticator.add_user(user))
-    
+
+
 def test_cant_add_system_user(io_loop):
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
@@ -100,6 +101,7 @@ def test_cant_add_system_user(io_loop):
     with mock.patch.object(auth, 'check_output', check_output):
         with pytest.raises(RuntimeError):
             io_loop.run_sync(lambda : authenticator.add_user(user))
+
 
 def test_add_system_user(io_loop):
     user = orm.User(name='lioness4321')
@@ -118,5 +120,30 @@ def test_add_system_user(io_loop):
         io_loop.run_sync(lambda : authenticator.add_user(user))
     
     assert user.name in record['cmd']
+
+
+def test_delete_user(io_loop):
+    user = orm.User(name='zoe')
+    a = MockPAMAuthenticator(whitelist={'mal'})
     
-    
+    assert 'zoe' not in a.whitelist
+    a.add_user(user)
+    assert 'zoe' in a.whitelist
+    a.delete_user(user)
+    assert 'zoe' not in a.whitelist
+
+
+def test_urls():
+    a = auth.PAMAuthenticator()
+    logout = a.logout_url('/base/url/')
+    login = a.login_url('/base/url')
+    assert logout == '/base/url/logout'
+    assert login == '/base/url/login'
+
+
+def test_handlers(app):
+    a = auth.PAMAuthenticator()
+    handlers = a.get_handlers(app)
+    assert handlers[0][0] == '/login'
+
+
