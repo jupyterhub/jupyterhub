@@ -3,10 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from .mocking import MockPAMAuthenticator
+from subprocess import CalledProcessError
 from unittest import mock
 
-from jupyterhub import auth
+import pytest
+from .mocking import MockPAMAuthenticator
+
+from jupyterhub import auth, orm
 
 def test_pam_auth(io_loop):
     authenticator = MockPAMAuthenticator()
@@ -78,3 +81,42 @@ def test_pam_auth_no_such_group(io_loop):
     }))
     assert authorized is None
 
+
+def test_wont_add_system_user(io_loop):
+    user = orm.User(name='lioness4321')
+    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator.create_system_users = False
+    with pytest.raises(KeyError):
+        io_loop.run_sync(lambda : authenticator.add_user(user))
+    
+def test_cant_add_system_user(io_loop):
+    user = orm.User(name='lioness4321')
+    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator.create_system_users = True
+    
+    def check_output(cmd, *a, **kw):
+        raise CalledProcessError(1, cmd)
+    
+    with mock.patch.object(auth, 'check_output', check_output):
+        with pytest.raises(RuntimeError):
+            io_loop.run_sync(lambda : authenticator.add_user(user))
+
+def test_add_system_user(io_loop):
+    user = orm.User(name='lioness4321')
+    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator.create_system_users = True
+    
+    def check_output(*a, **kw):
+        return
+    
+    record = {}
+    def check_call(cmd, *a, **kw):
+        record['cmd'] = cmd
+    
+    with mock.patch.object(auth, 'check_output', check_output), \
+             mock.patch.object(auth, 'check_call', check_call):
+        io_loop.run_sync(lambda : authenticator.add_user(user))
+    
+    assert user.name in record['cmd']
+    
+    
