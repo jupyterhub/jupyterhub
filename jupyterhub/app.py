@@ -126,6 +126,7 @@ class NewToken(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         hub.init_db()
+        hub.hub = hub.db.query(orm.Hub).first()
         hub.init_users()
         user = orm.User.find(hub.db, self.name)
         if user is None:
@@ -632,6 +633,10 @@ class JupyterHub(Application):
         for user in new_users:
             yield gen.maybe_future(self.authenticator.add_user(user))
         db.commit()
+    
+    @gen.coroutine
+    def init_spawners(self):
+        db = self.db
         
         user_summaries = ['']
         def _user_summary(user):
@@ -860,6 +865,7 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         yield self.init_users()
+        yield self.init_spawners()
         self.init_handlers()
         self.init_tornado_settings()
         self.init_tornado_application()
