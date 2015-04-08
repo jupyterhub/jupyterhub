@@ -429,7 +429,6 @@ class User(Base):
                 yield self.spawner.stop()
             self.spawner.clear_state()
             self.state = self.spawner.get_state()
-            self.last_activity = datetime.utcnow()
             self.server = None
             inspect(self).session.commit()
         finally:
