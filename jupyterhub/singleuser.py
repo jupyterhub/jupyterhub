@@ -164,7 +164,7 @@ class SingleUserNotebookApp(NotebookApp):
         ioloop.IOLoop.instance().stop()
 
     def _clear_cookie_cache(self):
-        self.log.info("Clearing cookie cache")
+        self.log.debug("Clearing cookie cache")
         self.tornado_settings['cookie_cache'].clear()
     
     def start(self):
