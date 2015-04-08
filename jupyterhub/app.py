@@ -126,6 +126,7 @@ class NewToken(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         hub.init_db()
+        hub.hub = hub.db.query(orm.Hub).first()
         hub.init_users()
         user = orm.User.find(hub.db, self.name)
         if user is None:
