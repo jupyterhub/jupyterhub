@@ -329,8 +329,14 @@ class LocalProcessSpawner(Spawner):
     
     def user_env(self, env):
         env['USER'] = self.user.name
-        env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
-        env['SHELL'] = pwd.getpwnam(self.user.name).pw_shell
+        home = pwd.getpwnam(self.user.name).pw_dir
+        shell = pwd.getpwnam(self.user.name).pw_shell
+        # These will be empty if undefined,
+        # in which case don't set the env:
+        if home:
+            env['HOME'] = home
+        if shell:
+            env['SHELL'] = shell
         return env
     
     def _env_default(self):
