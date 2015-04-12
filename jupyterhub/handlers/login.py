@@ -12,6 +12,9 @@ from .base import BaseHandler
 class LogoutHandler(BaseHandler):
     """Log a user out by clearing their login cookie."""
     def get(self):
+        user = self.get_current_user()
+        if user:
+            self.log.info("User logged out: %s", user.name)
         self.clear_login_cookie()
         self.redirect(self.hub.server.base_url, permanent=False)
 
@@ -64,6 +67,7 @@ class LoginHandler(BaseHandler):
             self.set_login_cookie(user)
             next_url = self.get_argument('next', default='') or self.hub.server.base_url
             self.redirect(next_url)
+            self.log.info("User logged in: %s", username)
         else:
             self.log.debug("Failed login for %s", username)
             html = self._render(
