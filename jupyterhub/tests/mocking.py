@@ -72,6 +72,9 @@ class NeverSpawner(MockSpawner):
 
 
 class MockPAMAuthenticator(PAMAuthenticator):
+    def _admin_users_default(self):
+        return {'admin'}
+    
     def system_user_exists(self, user):
         # skip the add-system-user bit
         return not user.name.startswith('dne')
@@ -93,9 +96,6 @@ class MockHub(JupyterHub):
     
     def _spawner_class_default(self):
         return MockSpawner
-    
-    def _admin_users_default(self):
-        return {'admin'}
     
     def init_signal(self):
         pass

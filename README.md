@@ -75,6 +75,10 @@ If you want multiple users to be able to sign into the server, you will need to 
 The [wiki](https://github.com/jupyter/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges) describes how to run the server
 as a less privileged user, which requires more configuration of the system.
 
+## Getting started
+
+see the [getting started doc](docs/getting-started.md) for some of the basics of configuring your JupyterHub deployment.
+
 ### Some examples
 
 generate a default config file:

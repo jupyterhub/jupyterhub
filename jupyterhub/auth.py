@@ -23,6 +23,12 @@ class Authenticator(LoggingConfigurable):
     """
     
     db = Any()
+    admin_users = Set(config=True,
+        help="""set of usernames of admin users
+
+        If unspecified, only the user that launches the server will be admin.
+        """
+    )
     whitelist = Set(config=True,
         help="""Username whitelist.
         

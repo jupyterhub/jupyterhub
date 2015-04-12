@@ -351,11 +351,9 @@ class JupyterHub(Application):
         """
     )
     admin_users = Set(config=True,
-        help="""set of usernames of admin users
-
-        If unspecified, only the user that launches the server will be admin.
-        """
+        help="""DEPRECATED, use Authenticator.admin_users instead."""
     )
+    
     tornado_settings = Dict(config=True)
     
     cleanup_servers = Bool(True, config=True,
@@ -580,16 +578,24 @@ class JupyterHub(Application):
     def init_users(self):
         """Load users into and from the database"""
         db = self.db
-
-        if not self.admin_users:
+        
+        if self.admin_users and not self.authenticator.admin_users:
+            self.log.warn(
+                "\nJupyterHub.admin_users is deprecated."
+                "\nUse Authenticator.admin_users instead."
+            )
+            self.authenticator.admin_users = self.admin_users
+        admin_users = self.authenticator.admin_users
+        
+        if not admin_users:
             # add current user as admin if there aren't any others
             admins = db.query(orm.User).filter(orm.User.admin==True)
             if admins.first() is None:
-                self.admin_users.add(getuser())
+                admin_users.add(getuser())
         
         new_users = []
 
-        for name in self.admin_users:
+        for name in admin_users:
             # ensure anyone specified as admin in config is admin in db
             user = orm.User.find(db, name)
             if user is None:
@@ -810,7 +816,7 @@ class JupyterHub(Application):
             db=self.db,
             proxy=self.proxy,
             hub=self.hub,
-            admin_users=self.admin_users,
+            admin_users=self.authenticator.admin_users,
             admin_access=self.admin_access,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
