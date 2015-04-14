@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import errno
 import json
 import socket
+import base64
 
 from tornado import gen
 from tornado.log import app_log
@@ -333,8 +334,10 @@ class User(Base):
         db = inspect(self).session
         if hub is None:
             hub = db.query(Hub).first()
+
+        cookiesafe_username = base64.b64encode(bytes(self.name, "utf8")).decode("utf8").strip("=")
         self.server = Server(
-            cookie_name='%s-%s' % (hub.server.cookie_name, self.name),
+            cookie_name='%s-%s' % (hub.server.cookie_name, cookiesafe_username),
             base_url=url_path_join(base_url, 'user', self.name),
         )
         db.add(self.server)
