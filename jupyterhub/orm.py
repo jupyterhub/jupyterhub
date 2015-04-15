@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from datetime import datetime, timedelta
+import base64
 import errno
 import json
 import socket
@@ -153,6 +154,7 @@ class Proxy(Base):
 
         if isinstance(body, dict):
             body = json.dumps(body)
+        self.log.debug("Fetching %s %s", method, url)
         req = HTTPRequest(url,
             method=method,
             headers={'Authorization': 'token {}'.format(self.auth_token)},
@@ -271,7 +273,6 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     name = Column(Unicode)
-    b64_name = Column(Unicode)
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
@@ -299,6 +300,10 @@ class User(Base):
                 name=self.name,
             )
     
+    @property
+    def b64_name(self):
+        return base64.b64encode(bytes(self.name, "utf8")).decode("utf8").strip("=")
+
     @property
     def running(self):
         """property for whether a user has a running server"""
@@ -333,7 +338,6 @@ class User(Base):
         db = inspect(self).session
         if hub is None:
             hub = db.query(Hub).first()
-
         self.server = Server(
             cookie_name='%s-%s' % (hub.server.cookie_name, self.b64_name),
             base_url=url_path_join(base_url, 'user', self.b64_name),
