@@ -7,8 +7,6 @@ from datetime import datetime, timedelta
 import errno
 import json
 import socket
-import base64
-import urllib.parse
 
 from tornado import gen
 from tornado.log import app_log
