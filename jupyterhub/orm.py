@@ -8,6 +8,7 @@ import errno
 import json
 import socket
 import base64
+import urllib.parse
 
 from tornado import gen
 from tornado.log import app_log
@@ -154,7 +155,6 @@ class Proxy(Base):
 
         if isinstance(body, dict):
             body = json.dumps(body)
-        self.log.debug("Fetching %s %s", method, url)
         req = HTTPRequest(url,
             method=method,
             headers={'Authorization': 'token {}'.format(self.auth_token)},
@@ -273,6 +273,7 @@ class User(Base):
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True)
     name = Column(Unicode)
+    b64_name = Column(Unicode)
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
@@ -335,10 +336,9 @@ class User(Base):
         if hub is None:
             hub = db.query(Hub).first()
 
-        cookiesafe_username = base64.b64encode(bytes(self.name, "utf8")).decode("utf8").strip("=")
         self.server = Server(
-            cookie_name='%s-%s' % (hub.server.cookie_name, cookiesafe_username),
-            base_url=url_path_join(base_url, 'user', self.name),
+            cookie_name='%s-%s' % (hub.server.cookie_name, self.b64_name),
+            base_url=url_path_join(base_url, 'user', self.b64_name),
         )
         db.add(self.server)
         db.commit()

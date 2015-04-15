@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import re
+import base64
 from datetime import datetime, timedelta
 from http.client import responses
 
@@ -141,7 +142,10 @@ class BaseHandler(RequestHandler):
         """Get ORM User for username"""
         user = self.find_user(username)
         if user is None:
-            user = orm.User(name=username)
+            user = orm.User(
+                name=username, 
+                b64_name=base64.b64encode(bytes(username, "utf8")).decode("utf8").strip("=")
+            )
             self.db.add(user)
             self.db.commit()
         return user
@@ -375,9 +379,9 @@ class UserSpawnHandler(BaseHandler):
     being redirected to the original.
     """
     @gen.coroutine
-    def get(self, name):
+    def get(self, b64_name):
         current_user = self.get_current_user()
-        if current_user and current_user.name == name:
+        if current_user and current_user.b64_name == b64_name:
             # logged in, spawn the server
             if current_user.spawner:
                 if current_user.spawn_pending:
@@ -396,6 +400,7 @@ class UserSpawnHandler(BaseHandler):
             self.set_login_cookie(current_user)
             without_prefix = self.request.path[len(self.hub.server.base_url):]
             target = url_path_join(self.base_url, without_prefix)
+            self.log.warn(target)
             self.redirect(target)
         else:
             # not logged in to the right user,
