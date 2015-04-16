@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+from urllib.parse import quote
 
 from tornado import web
 from .. import orm
@@ -25,6 +26,7 @@ class TokenAPIHandler(APIHandler):
 class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name, cookie_value=None):
+        cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
             self.log.warn("Cookie values in request body is deprecated, use `/cookie_name/cookie_value`")
             cookie_value = self.request.body
