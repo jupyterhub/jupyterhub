@@ -154,18 +154,33 @@ class BaseHandler(RequestHandler):
     
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
+        # tornado <4.2 have a bug that consider secure==True as soon as
+        # 'secure' kwarg is passed to set_secure_cookie
+        if  self.request.protocol == 'https':
+            kwargs = {'secure':True}
+        else:
+            kwargs = {}
         self.set_secure_cookie(
             user.server.cookie_name,
             user.cookie_id,
             path=user.server.base_url,
+            **kwargs
         )
     
     def set_hub_cookie(self, user):
         """set the login cookie for the Hub"""
+        # tornado <4.2 have a bug that consider secure==True as soon as
+        # 'secure' kwarg is passed to set_secure_cookie
+        if  self.request.protocol == 'https':
+            kwargs = {'secure':True}
+        else:
+            kwargs = {}
         self.set_secure_cookie(
             self.hub.server.cookie_name,
             user.cookie_id,
-            path=self.hub.server.base_url)
+            path=self.hub.server.base_url,
+            **kwargs
+        )
     
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
