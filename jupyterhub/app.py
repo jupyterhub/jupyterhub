@@ -982,6 +982,16 @@ class JupyterHub(Application):
             loop.stop()
             return
         
+        # start the webserver
+        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
+        try:
+            self.http_server.listen(self.hub_port, address=self.hub_ip)
+        except Exception:
+            self.log.error("Failed to bind hub to %s", self.hub.server.bind_url)
+            raise
+        else:
+            self.log.info("Hub API listening on %s", self.hub.server.bind_url)
+        
         # start the proxy
         try:
             yield self.start_proxy()
@@ -1003,16 +1013,7 @@ class JupyterHub(Application):
             pc = PeriodicCallback(self.update_last_activity, 1e3 * self.last_activity_interval)
             pc.start()
 
-        # start the webserver
-        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
-        try:
-            self.http_server.listen(self.hub_port, address=self.hub_ip)
-        except Exception:
-            self.log.error("Failed to bind hub to %s" % self.hub.server.bind_url)
-            raise
-        else:
-            self.log.info("Hub API listening on %s" % self.hub.server.bind_url)
-        
+        self.log.info("JupyterHub is now running at %s", self.proxy.public_server.url)
         # register cleanup on both TERM and INT
         atexit.register(self.atexit)
         self.init_signal()
