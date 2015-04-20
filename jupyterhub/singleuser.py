@@ -5,7 +5,11 @@
 # Distributed under the terms of the Modified BSD License.
 
 import os
-from urllib.parse import quote
+try:
+    from urllib.parse import quote
+except ImportError:
+    # PY2 Compat
+    from urllib import quote
 
 import requests
 from jinja2 import ChoiceLoader, FunctionLoader
@@ -177,7 +181,7 @@ class SingleUserNotebookApp(NotebookApp):
                 self._clear_cookie_cache,
                 self.cookie_cache_lifetime * 1e3,
             ).start()
-        super().start()
+        super(SingleUserNotebookApp, self).start()
     
     def init_webapp(self):
         # load the hub related settings into the tornado settings dict
