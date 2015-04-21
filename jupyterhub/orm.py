@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from datetime import datetime, timedelta
+import base64
 import errno
 import json
 import socket
@@ -300,6 +301,10 @@ class User(Base):
             )
     
     @property
+    def b64_name(self):
+        return base64.b64encode(bytes(self.name, "utf8")).decode("utf8").strip("=")
+
+    @property
     def running(self):
         """property for whether a user has a running server"""
         if self.spawner is None:
@@ -334,8 +339,8 @@ class User(Base):
         if hub is None:
             hub = db.query(Hub).first()
         self.server = Server(
-            cookie_name='%s-%s' % (hub.server.cookie_name, self.name),
-            base_url=url_path_join(base_url, 'user', self.name),
+            cookie_name='%s-%s' % (hub.server.cookie_name, self.b64_name),
+            base_url=url_path_join(base_url, 'user', self.b64_name),
         )
         db.add(self.server)
         db.commit()

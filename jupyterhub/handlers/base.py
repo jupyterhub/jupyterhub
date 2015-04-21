@@ -390,9 +390,9 @@ class UserSpawnHandler(BaseHandler):
     being redirected to the original.
     """
     @gen.coroutine
-    def get(self, name):
+    def get(self, b64_name):
         current_user = self.get_current_user()
-        if current_user and current_user.name == name:
+        if current_user and current_user.b64_name == b64_name:
             # logged in, spawn the server
             if current_user.spawner:
                 if current_user.spawn_pending:
