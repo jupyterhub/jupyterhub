@@ -835,7 +835,7 @@ class JupyterHub(Application):
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
-            template_path=template_path,
+            template_path=self.template_paths,
             jinja2_env=jinja_env,
             version_hash=version_hash,
         )
