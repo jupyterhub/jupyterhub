@@ -71,6 +71,17 @@ class BaseHandler(RequestHandler):
         self.db.rollback()
         super(BaseHandler, self).finish(*args, **kwargs)
 
+    def set_default_headers(self):
+        """
+        Set any headers passed as tornado_settings['headers'].
+
+        By default sets Content-Security-Policy of frame-ancestors 'self'.
+        """
+        headers = self.settings.get('headers', {})
+        headers.setdefault('Content-Security-Policy', "frame-ancestors 'self'")
+        for header_name, header_content in headers.items():
+            self.set_header(header_name, header_content)
+
     #---------------------------------------------------------------
     # Login and cookie-related
     #---------------------------------------------------------------
