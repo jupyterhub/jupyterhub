@@ -201,7 +201,15 @@ class JupyterHub(Application):
     data_files_path = Unicode(DATA_FILES_PATH, config=True,
         help="The location of jupyterhub data files (e.g. /usr/local/share/jupyter/hub)"
     )
-    
+
+    template_paths = List(
+        config=True,
+        help="Paths to search for jinja templates.",
+    )
+
+    def _template_paths_default(self):
+        return [os.path.join(self.data_files_path, 'templates')]
+
     ssl_key = Unicode('', config=True,
         help="""Path to SSL key file for the public facing interface of the proxy
         
@@ -792,9 +800,8 @@ class JupyterHub(Application):
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.hub.server.base_url
-        template_path = os.path.join(self.data_files_path, 'templates'),
         jinja_env = Environment(
-            loader=FileSystemLoader(template_path),
+            loader=FileSystemLoader(self.template_paths),
             **self.jinja_environment_options
         )
         
