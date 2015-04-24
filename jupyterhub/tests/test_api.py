@@ -60,11 +60,13 @@ def api_request(app, *api_path, **kwargs):
 
     if 'Authorization' not in headers:
         headers.update(auth_header(app.db, 'admin'))
-    
+
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
     f = getattr(requests, method)
-    return f(url, **kwargs)
+    resp = f(url, **kwargs)
+    assert resp.headers['Content-Security-Policy'] == "frame-ancestors 'self'"
+    return resp
 
 def test_auth_api(app):
     db = app.db
