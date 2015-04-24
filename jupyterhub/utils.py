@@ -14,7 +14,10 @@ from tornado import web, gen, ioloop
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
-from IPython.html.utils import url_path_join
+try:
+    from jupyter_notebook.utils import url_path_join
+except:
+    from IPython.html.utils import url_path_join
 
 
 def random_port():
