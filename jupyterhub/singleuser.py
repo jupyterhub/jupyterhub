@@ -92,7 +92,7 @@ class JupyterHubLoginHandler(LoginHandler):
             if not auth_data:
                 # treat invalid token the same as no token
                 return None
-            user = auth_data['user']
+            user = auth_data['name']
             if user == my_user:
                 self._cached_user = user
                 return user
