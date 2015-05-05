@@ -1,5 +1,7 @@
 # JupyterHub: A multi-user server for Jupyter notebooks
 
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyter/jupyterhub?utm_source=badge&utm_medium=badge)
+
 JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
 
 Three actors:
