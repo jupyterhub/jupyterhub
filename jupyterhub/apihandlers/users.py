@@ -27,8 +27,10 @@ class UserListAPIHandler(APIHandler):
             raise web.HTTPError(400, "Must specify at least one user to create")
         
         usernames = data.pop('usernames')
-        admin = data.get('admin', False)
         self._check_user_model(data)
+        # admin is set for all users
+        # to create admin and non-admin users requires at least two API requests
+        admin = data.get('admin', False)
         
         to_create = []
         for name in usernames:
