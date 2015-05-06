@@ -86,10 +86,17 @@
   </div>
 {% endcall %}
 
-{% macro user_modal(name) %}
+{% macro user_modal(name, multi=False) %}
 {% call modal(name, btn_class='btn-primary save-button') %}
 <div class="form-group">
-  <input type="text" class="form-control username-input" placeholder="username">
+  <{%- if multi -%}
+    textarea
+    {%- else -%}
+    input type="text"
+    {%- endif %}
+    class="form-control username-input"
+    placeholder="{%- if multi -%} usernames separated by lines{%- else -%} username {%-endif-%}">
+  {%- if multi -%}</textarea>{%- endif -%}
 </div>
 <div class="checkbox">
   <label>
@@ -101,7 +108,7 @@
 
 {{ user_modal('Edit User') }}
 
-{{ user_modal('Add User') }}
+{{ user_modal('Add User', multi=True) }}
 
 {% endblock %}
 
