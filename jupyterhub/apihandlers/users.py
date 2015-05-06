@@ -23,11 +23,11 @@ class UserListAPIHandler(APIHandler):
     @gen.coroutine
     def post(self):
         data = self.get_json_body()
-        print(data)
         if not data or not isinstance(data, dict) or not data.get('usernames'):
             raise web.HTTPError(400, "Must specify at least one user to create")
         
         usernames = data.pop('usernames')
+        admin = data.get('admin', False)
         self._check_user_model(data)
         
         for name in usernames:
@@ -38,11 +38,9 @@ class UserListAPIHandler(APIHandler):
         created = []
         for name in usernames:
             user = self.user_from_username(name)
-            if data:
-                self._check_user_model(data)
-                if 'admin' in data:
-                    user.admin = data['admin']
-                    self.db.commit()
+            if admin:
+                user.admin = True
+                self.db.commit()
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
