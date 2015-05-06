@@ -177,6 +177,17 @@ def test_add_multi_user(app):
         data=json.dumps({'usernames': names}),
     )
     assert r.status_code == 400
+    
+    names = ['a', 'b', 'ab']
+    
+    # try to create the same users again
+    r = api_request(app, 'users', method='post',
+        data=json.dumps({'usernames': names}),
+    )
+    assert r.status_code == 201
+    reply = r.json()
+    r_names = [ user['name'] for user in reply ]
+    assert r_names == ['ab']
 
 
 def test_add_multi_user_admin(app):

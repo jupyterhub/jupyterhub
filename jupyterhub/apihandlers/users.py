@@ -30,13 +30,19 @@ class UserListAPIHandler(APIHandler):
         admin = data.get('admin', False)
         self._check_user_model(data)
         
+        to_create = []
         for name in usernames:
             user = self.find_user(name)
             if user is not None:
-                raise web.HTTPError(400, "User %s already exists" % name)
+                self.log.warn("User %s already exists" % name)
+            else:
+                to_create.append(name)
+        
+        if not to_create:
+            raise web.HTTPError(400, "All %i users already exist" % len(usernames))
         
         created = []
-        for name in usernames:
+        for name in to_create:
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
