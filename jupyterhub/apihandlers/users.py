@@ -18,6 +18,43 @@ class UserListAPIHandler(APIHandler):
         users = self.db.query(orm.User)
         data = [ self.user_model(u) for u in users ]
         self.write(json.dumps(data))
+    
+    @admin_only
+    @gen.coroutine
+    def post(self):
+        data = self.get_json_body()
+        print(data)
+        if not data or not isinstance(data, dict) or not data.get('usernames'):
+            raise web.HTTPError(400, "Must specify at least one user to create")
+        
+        usernames = data.pop('usernames')
+        self._check_user_model(data)
+        
+        for name in usernames:
+            user = self.find_user(name)
+            if user is not None:
+                raise web.HTTPError(400, "User %s already exists" % name)
+        
+        created = []
+        for name in usernames:
+            user = self.user_from_username(name)
+            if data:
+                self._check_user_model(data)
+                if 'admin' in data:
+                    user.admin = data['admin']
+                    self.db.commit()
+            try:
+                yield gen.maybe_future(self.authenticator.add_user(user))
+            except Exception:
+                self.log.error("Failed to create user: %s" % name, exc_info=True)
+                self.db.delete(user)
+                self.db.commit()
+                raise web.HTTPError(400, "Failed to create user: %s" % name)
+            else:
+                created.append(user)
+        
+        self.write(json.dumps([ self.user_model(u) for u in created ]))
+        self.set_status(201)
 
 
 def admin_or_self(method):
