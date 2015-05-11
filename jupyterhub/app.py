@@ -139,6 +139,7 @@ class NewToken(Application):
 class JupyterHub(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
     name = 'jupyterhub'
+    version = jupyterhub.__version__
     
     description = """Start a multi-user Jupyter Notebook server
     
