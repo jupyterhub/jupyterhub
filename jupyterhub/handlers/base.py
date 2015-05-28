@@ -390,7 +390,7 @@ class PrefixRedirectHandler(BaseHandler):
     Redirects /foo to /prefix/foo, etc.
     """
     def get(self):
-        path = self.request.path[len(self.base_url):]
+        path = self.request.uri[len(self.base_url):]
         self.redirect(url_path_join(
             self.hub.server.base_url, path,
         ), permanent=False)
@@ -420,7 +420,7 @@ class UserSpawnHandler(BaseHandler):
                 yield self.spawn_single_user(current_user)
             # set login cookie anew
             self.set_login_cookie(current_user)
-            without_prefix = self.request.path[len(self.hub.server.base_url):]
+            without_prefix = self.request.uri[len(self.hub.server.base_url):]
             target = url_path_join(self.base_url, without_prefix)
             self.redirect(target)
         else:
@@ -429,7 +429,7 @@ class UserSpawnHandler(BaseHandler):
             self.clear_login_cookie()
             self.redirect(url_concat(
                 self.settings['login_url'],
-                {'next': self.request.path,
+                {'next': self.request.uri,
             }))
 
 default_handlers = [
