@@ -33,8 +33,33 @@ Then install javascript dependencies:
 
     sudo npm install -g configurable-http-proxy
 
+### Optional
+
+- A note on `pip` command used in the below installation sections is worth mentioning. Given that JupyterHub now requires Python >= 3.3 it may be required on some machines to use `pip3` instead of `pip` (especially when you have both Python 2 and Python 3 installed on your machine). 
+If `pip3` is not found on your machine, you can get it by doing:
+````
+    sudo apt-get install python3-pip
+````
+- If you see JupyterHub complaining about `zmq not found` error, resolve it by doing:
+````
+    sudo apt-get install python3.4-dev
+    sudo pip3 install zmq
+````
+- If you see JupyterHub complaining about `jsonSchema` missing, resolve it by doing:
+````
+    sudo pip3 install jsonschema
+````
+- If you are not seeing `Terminal` option in the notebooks, you can enable it by doing:
+````
+    sudo pip3 install terminado
+````
 
 ## Installation
+
+As usual start with cloning the code:
+
+    git clone https://github.com/jupyter/jupyterhub.git
+    cd jupyterhub
 
 Then you can install the Python package by doing:
 
