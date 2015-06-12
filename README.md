@@ -1,6 +1,8 @@
 # JupyterHub: A multi-user server for Jupyter notebooks
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyter/jupyterhub?utm_source=badge&utm_medium=badge)
+Questions, comments? Visit our Google Group:
+
+[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
 
 JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
 
@@ -117,3 +119,13 @@ Some examples, meant as illustration and testing of this concept:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyter/oauthenticator)
 - Spawning single-user servers with docker, using the [DockerSpawner](https://github.com/jupyter/dockerspawner)
+
+# Getting help
+
+We encourage you to ask questions on the mailing list:
+
+[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
+
+but you can participate in development discussions or get live help on Gitter:
+
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyter/jupyterhub?utm_source=badge&utm_medium=badge)
