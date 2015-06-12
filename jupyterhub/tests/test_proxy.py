@@ -26,7 +26,7 @@ def test_external_proxy(request, io_loop):
     request.addfinalizer(fin)
     env = os.environ.copy()
     env['CONFIGPROXY_AUTH_TOKEN'] = auth_token
-    cmd = [app.proxy_cmd,
+    cmd = app.proxy_cmd + [
         '--ip', app.ip,
         '--port', str(app.port),
         '--api-ip', proxy_ip,
@@ -82,7 +82,7 @@ def test_external_proxy(request, io_loop):
     new_auth_token = 'different!'
     env['CONFIGPROXY_AUTH_TOKEN'] = new_auth_token
     proxy_port = 55432
-    cmd = [app.proxy_cmd,
+    cmd = app.proxy_cmd + [
         '--ip', app.ip,
         '--port', str(app.port),
         '--api-ip', app.proxy_api_ip,
