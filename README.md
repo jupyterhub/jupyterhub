@@ -39,17 +39,12 @@ Then install javascript dependencies:
 
 - Notes on `pip` command used in the below installation sections:
   - `sudo` may be needed for `pip install`, depending on filesystem permissions.
-  - Given that JupyterHub now requires Python >= 3.3 it may be required on some machines to use `pip3` instead     of `pip` (especially when you have both Python 2 and Python 3 installed on your machine). 
+  - JupyterHub requires Python >= 3.3, so it may be required on some machines to use `pip3` instead
+    of `pip` (especially when you have both Python 2 and Python 3 installed on your machine).
     If `pip3` is not found on your machine, you can get it by doing:
-````
-        sudo apt-get install python3-pip
-````
 
-- If you see JupyterHub complaining about `zmq not found` error, resolve it by doing:
-````
-    sudo apt-get install python3.4-dev
-    pip install zmq
-````
+        sudo apt-get install python3-pip
+
 
 ## Installation
 
@@ -60,12 +55,12 @@ As usual start with cloning the code:
 
 Then you can install the Python package by doing:
 
-    pip install -r requirements.txt
-    pip install .
+    pip3 install -r requirements.txt
+    pip3 install .
 
 If you plan to run notebook servers locally, you may also need to install the IPython notebook:
 
-    pip install "ipython[notebook]"
+    pip3 install "ipython[notebook]"
 
 
 This will fetch client-side javascript dependencies and compile CSS,
@@ -77,13 +72,12 @@ install any Python dependencies.
 
 For a development install:
 
-    pip install -r dev-requirements.txt
-    pip install -e .
+    pip3 install -r dev-requirements.txt -e .
 
 In which case you may need to manually update javascript and css after some updates, with:
 
-    python setup.py js    # fetch updated client-side js (changes rarely)
-    python setup.py css   # recompile CSS from LESS sources
+    python3 setup.py js    # fetch updated client-side js (changes rarely)
+    python3 setup.py css   # recompile CSS from LESS sources
 
 
 ## Running the server
