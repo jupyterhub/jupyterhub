@@ -50,7 +50,7 @@ from .handlers.static import CacheControlStaticFilesHandler
 from . import orm
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
-from .traitlets import URLPrefix
+from .traitlets import URLPrefix, Command
 from .utils import (
     url_path_join,
     ISO8601_ms, ISO8601_s,
@@ -237,7 +237,7 @@ class JupyterHub(Application):
         help="Supply extra arguments that will be passed to Jinja environment."
     )
     
-    proxy_cmd = Unicode('configurable-http-proxy', config=True,
+    proxy_cmd = Command('configurable-http-proxy', config=True,
         help="""The command to start the http proxy.
         
         Only override if configurable-http-proxy is not on your PATH
@@ -742,7 +742,7 @@ class JupyterHub(Application):
 
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
-        cmd = [self.proxy_cmd,
+        cmd = self.proxy_cmd + [
             '--ip', self.proxy.public_server.ip,
             '--port', str(self.proxy.public_server.port),
             '--api-ip', self.proxy.api_server.ip,
