@@ -16,8 +16,8 @@ from tempfile import TemporaryDirectory
 from tornado import gen
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import (
+from traitlets.config import LoggingConfigurable
+from traitlets import (
     Any, Bool, Dict, Enum, Instance, Integer, Float, List, Unicode,
 )
 

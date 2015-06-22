@@ -17,7 +17,7 @@ from jinja2 import ChoiceLoader, FunctionLoader
 from tornado import ioloop
 from tornado.web import HTTPError
 
-from IPython.utils.traitlets import (
+from traitlets import (
     Integer,
     Unicode,
     CUnicode,

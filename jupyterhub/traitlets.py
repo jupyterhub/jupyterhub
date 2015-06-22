@@ -2,7 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from IPython.utils.traitlets import List, Unicode
+from traitlets import List, Unicode
 
 class URLPrefix(Unicode):
     def validate(self, obj, value):

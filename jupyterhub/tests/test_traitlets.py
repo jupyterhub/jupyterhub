@@ -1,7 +1,4 @@
-try:
-    from traitlets import HasTraits
-except ImportError:
-    from IPython.utils.traitlets import HasTraits
+from traitlets import HasTraits
 
 from jupyterhub.traitlets import URLPrefix, Command
 
