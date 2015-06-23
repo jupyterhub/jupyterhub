@@ -31,15 +31,11 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
 from tornado import gen, web
 
-import IPython
-if V(IPython.__version__) < V('3.0'):
-    raise ImportError("JupyterHub Requires IPython >= 3.0, found %s" % IPython.__version__)
-
-from IPython.utils.traitlets import (
+from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
     Type, Set, Instance, Bytes, Float,
 )
-from IPython.config import Application, catch_config_error
+from traitlets.config import Application, catch_config_error
 
 here = os.path.dirname(__file__)
 

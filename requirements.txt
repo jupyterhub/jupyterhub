@@ -1,4 +1,4 @@
-ipython>=3
+traitlets>=4
 tornado>=4
 jinja2
 simplepam
