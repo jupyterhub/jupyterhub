@@ -10,6 +10,7 @@ import pwd
 import re
 import signal
 import sys
+import grp
 from subprocess import Popen, check_output, PIPE, CalledProcessError
 from tempfile import TemporaryDirectory
 
@@ -282,6 +283,8 @@ def set_user_setuid(username):
         
         # set the user and group
         os.setgid(gid)
+        gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
+        os.setgroups(gids)
         os.setuid(uid)
 
         # start in the user's home dir
