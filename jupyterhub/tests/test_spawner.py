@@ -56,6 +56,30 @@ def test_spawner(db, io_loop):
     status = io_loop.run_sync(spawner.poll)
     assert status == 1
 
+def test_single_user_spawner(db, io_loop):
+    spawner = new_spawner(db, cmd=[sys.executable, '-m', 'jupyterhub.singleuser'])
+    io_loop.run_sync(spawner.start)
+    assert spawner.user.server.ip == 'localhost'
+    # wait for http server to come up,
+    # checking for early termination every 1s
+    def wait():
+        return spawner.user.server.wait_up(timeout=1, http=True)
+    for i in range(30):
+        status = io_loop.run_sync(spawner.poll)
+        assert status is None
+        try:
+            io_loop.run_sync(wait)
+        except TimeoutError:
+            continue
+        else:
+            break
+    io_loop.run_sync(wait)
+    status = io_loop.run_sync(spawner.poll)
+    assert status == None
+    io_loop.run_sync(spawner.stop)
+    status = io_loop.run_sync(spawner.poll)
+    assert status == 0
+
 
 def test_stop_spawner_sigint_fails(db, io_loop):
     spawner = new_spawner(db, cmd=[sys.executable, '-c', _uninterruptible])
