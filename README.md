@@ -33,6 +33,7 @@ which is required for npm to work on Debian/Ubuntu at this point)
 
 Then install javascript dependencies:
 
+    sudo npm install
     sudo npm install -g configurable-http-proxy
 
 ### Optional
