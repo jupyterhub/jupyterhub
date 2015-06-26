@@ -130,7 +130,7 @@ c.JupyterHub.proxy_api_ip = '10.0.1.4'
 c.JupyterHub.proxy_api_port = 5432
 ```
 
-The Hub service also listens only on localhost by default.
+The Hub service also listens only on localhost (port 8080) by default.
 The Hub needs needs to be accessible from both the proxy and all Spawners.
 When spawning local servers localhost is fine,
 but if *either* the Proxy or (more likely) the Spawners will be remote or isolated in containers,

@@ -57,6 +57,10 @@ Then you can install the Python package by doing:
 
     pip3 install -r requirements.txt
     pip3 install .
+    
+If the `pip3 install .` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional javascript dependencies:
+
+    npm install
 
 If you plan to run notebook servers locally, you may also need to install the IPython notebook:
 
