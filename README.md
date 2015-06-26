@@ -31,9 +31,8 @@ You will need nodejs/npm, which you can get from your package manager:
 (The `nodejs-legacy` package installs the `node` executable,
 which is required for npm to work on Debian/Ubuntu at this point)
 
-Then install javascript dependencies (note that the first `npm install` should *not* be run with sudo):
+Then install javascript dependencies:
 
-    npm install
     sudo npm install -g configurable-http-proxy
 
 ### Optional
@@ -58,6 +57,10 @@ Then you can install the Python package by doing:
 
     pip3 install -r requirements.txt
     pip3 install .
+    
+If the `pip3 install .` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional javascript dependencies:
+
+    npm install
 
 If you plan to run notebook servers locally, you may also need to install the IPython notebook:
 
