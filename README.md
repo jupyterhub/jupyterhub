@@ -31,9 +31,9 @@ You will need nodejs/npm, which you can get from your package manager:
 (The `nodejs-legacy` package installs the `node` executable,
 which is required for npm to work on Debian/Ubuntu at this point)
 
-Then install javascript dependencies:
+Then install javascript dependencies (note that the first `npm install` should *not* be run with sudo):
 
-    sudo npm install
+    npm install
     sudo npm install -g configurable-http-proxy
 
 ### Optional
