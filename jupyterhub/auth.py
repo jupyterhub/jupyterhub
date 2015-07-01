@@ -10,8 +10,8 @@ from subprocess import check_call, check_output, CalledProcessError
 from tornado import gen
 import simplepam
 
-from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import Bool, Set, Unicode, Any
+from traitlets.config import LoggingConfigurable
+from traitlets import Bool, Set, Unicode, Any
 
 from .handlers.login import LoginHandler
 from .utils import url_path_join

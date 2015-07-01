@@ -23,7 +23,7 @@ from IPython.utils.traitlets import (
     CUnicode,
 )
 
-from IPython.html.notebookapp import NotebookApp
+from IPython.html.notebookapp import NotebookApp, aliases as notebook_aliases
 from IPython.html.auth.login import LoginHandler
 from IPython.html.auth.logout import LogoutHandler
 
@@ -109,7 +109,7 @@ class JupyterHubLogoutHandler(LogoutHandler):
 
 
 # register new hub related command-line aliases
-aliases = NotebookApp.aliases.get_default_value()
+aliases = dict(notebook_aliases)
 aliases.update({
     'user' : 'SingleUserNotebookApp.user',
     'cookie-name': 'SingleUserNotebookApp.cookie_name',

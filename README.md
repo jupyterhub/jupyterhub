@@ -1,6 +1,8 @@
 # JupyterHub: A multi-user server for Jupyter notebooks
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyter/jupyterhub?utm_source=badge&utm_medium=badge)
+Questions, comments? Visit our Google Group:
+
+[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
 
 JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
 
@@ -35,24 +37,14 @@ Then install javascript dependencies:
 
 ### Optional
 
-- A note on `pip` command used in the below installation sections is worth mentioning. Given that JupyterHub now requires Python >= 3.3 it may be required on some machines to use `pip3` instead of `pip` (especially when you have both Python 2 and Python 3 installed on your machine). 
-If `pip3` is not found on your machine, you can get it by doing:
-````
-    sudo apt-get install python3-pip
-````
-- If you see JupyterHub complaining about `zmq not found` error, resolve it by doing:
-````
-    sudo apt-get install python3.4-dev
-    sudo pip3 install zmq
-````
-- If you see JupyterHub complaining about `jsonSchema` missing, resolve it by doing:
-````
-    sudo pip3 install jsonschema
-````
-- If you are not seeing `Terminal` option in the notebooks, you can enable it by doing:
-````
-    sudo pip3 install terminado
-````
+- Notes on `pip` command used in the below installation sections:
+  - `sudo` may be needed for `pip install`, depending on filesystem permissions.
+  - JupyterHub requires Python >= 3.3, so it may be required on some machines to use `pip3` instead
+    of `pip` (especially when you have both Python 2 and Python 3 installed on your machine).
+    If `pip3` is not found on your machine, you can get it by doing:
+
+        sudo apt-get install python3-pip
+
 
 ## Installation
 
@@ -63,12 +55,16 @@ As usual start with cloning the code:
 
 Then you can install the Python package by doing:
 
-    pip install -r requirements.txt
-    pip install .
+    pip3 install -r requirements.txt
+    pip3 install .
+    
+If the `pip3 install .` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional javascript dependencies:
+
+    npm install
 
 If you plan to run notebook servers locally, you may also need to install the IPython notebook:
 
-    pip install "ipython[notebook]"
+    pip3 install "ipython[notebook]"
 
 
 This will fetch client-side javascript dependencies and compile CSS,
@@ -80,13 +76,12 @@ install any Python dependencies.
 
 For a development install:
 
-    pip install -r dev-requirements.txt
-    pip install -e .
+    pip3 install -r dev-requirements.txt -e .
 
 In which case you may need to manually update javascript and css after some updates, with:
 
-    python setup.py js    # fetch updated client-side js (changes rarely)
-    python setup.py css   # recompile CSS from LESS sources
+    python3 setup.py js    # fetch updated client-side js (changes rarely)
+    python3 setup.py css   # recompile CSS from LESS sources
 
 
 ## Running the server
@@ -122,3 +117,13 @@ Some examples, meant as illustration and testing of this concept:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyter/oauthenticator)
 - Spawning single-user servers with docker, using the [DockerSpawner](https://github.com/jupyter/dockerspawner)
+
+# Getting help
+
+We encourage you to ask questions on the mailing list:
+
+[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
+
+but you can participate in development discussions or get live help on Gitter:
+
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyter/jupyterhub?utm_source=badge&utm_medium=badge)

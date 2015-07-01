@@ -16,11 +16,12 @@ from tempfile import TemporaryDirectory
 from tornado import gen
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import (
+from traitlets.config import LoggingConfigurable
+from traitlets import (
     Any, Bool, Dict, Enum, Instance, Integer, Float, List, Unicode,
 )
 
+from .traitlets import Command
 from .utils import random_port
 
 NUM_PAT = re.compile(r'\d+')
@@ -93,7 +94,7 @@ class Spawner(LoggingConfigurable):
         env['JPY_API_TOKEN'] = self.api_token
         return env
     
-    cmd = List(Unicode, default_value=['jupyterhub-singleuser'], config=True,
+    cmd = Command(['jupyterhub-singleuser'], config=True,
         help="""The command used for starting notebooks."""
     )
     args = List(Unicode, config=True,
