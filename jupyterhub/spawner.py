@@ -10,6 +10,7 @@ import pwd
 import re
 import signal
 import sys
+import grp
 from subprocess import Popen, check_output, PIPE, CalledProcessError
 from tempfile import TemporaryDirectory
 
@@ -276,6 +277,7 @@ def set_user_setuid(username):
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
+    gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
     
     def preexec():
         # don't forward signals
@@ -283,6 +285,10 @@ def set_user_setuid(username):
         
         # set the user and group
         os.setgid(gid)
+        try:
+            os.setgroups(gids)
+        except Exception as e:
+            print('Failed to set groups %s' % e, file=sys.stderr)
         os.setuid(uid)
 
         # start in the user's home dir
