@@ -31,7 +31,10 @@ class LoginHandler(BaseHandler):
         )
     
     def get(self):
-        next_url = self.get_argument('next', False)
+        next_url = self.get_argument('next', '')
+        if not next_url.startswith('/'):
+            # disallow non-absolute next URLs (e.g. full URLs)
+            next_url = ''
         user = self.get_current_user()
         if user:
             if not next_url:
@@ -65,7 +68,10 @@ class LoginHandler(BaseHandler):
             if not already_running:
                 yield self.spawn_single_user(user)
             self.set_login_cookie(user)
-            next_url = self.get_argument('next', default='') or self.hub.server.base_url
+            next_url = self.get_argument('next', default='')
+            if not next_url.startswith('/'):
+                next_url = ''
+            next_url = next_url or self.hub.server.base_url
             self.redirect(next_url)
             self.log.info("User logged in: %s", username)
         else:
