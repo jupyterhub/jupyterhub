@@ -17,6 +17,7 @@ from jinja2 import ChoiceLoader, FunctionLoader
 from tornado import ioloop
 from tornado.web import HTTPError
 
+
 from IPython.utils.traitlets import (
     Integer,
     Unicode,
@@ -194,6 +195,7 @@ class SingleUserNotebookApp(NotebookApp):
         s['cookie_name'] = self.cookie_name
         s['login_url'] = self.hub_prefix
         s['hub_api_url'] = self.hub_api_url
+        s['csp_report_uri'] = url_path_join(self.hub_prefix, 'security/csp-report')
         
         super(SingleUserNotebookApp, self).init_webapp()
         self.patch_templates()
