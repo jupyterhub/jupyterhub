@@ -4,6 +4,7 @@ import json
 import time
 from datetime import timedelta
 from queue import Queue
+from urllib.parse import urlparse
 
 import requests
 
@@ -96,6 +97,51 @@ def test_auth_api(app):
         headers={'Authorization': 'token: %s' % user.cookie_id},
     )
     assert r.status_code == 403
+
+
+def test_referer_check(app, io_loop):
+    url = app.hub.server.url
+    host = urlparse(url).netloc
+    user = find_user(app.db, 'admin')
+    if user is None:
+        user = add_user(app.db, name='admin', admin=True)
+    cookies = app.login_user('admin')
+    app_user = get_app_user(app, 'admin')
+    # stop the admin's server so we don't mess up future tests
+    io_loop.run_sync(lambda : app.proxy.delete_user(app_user))
+    io_loop.run_sync(app_user.stop)
+    
+    r = api_request(app, 'users',
+        headers={
+            'Authorization': '',
+            'Referer': 'null',
+        }, cookies=cookies,
+    )
+    assert r.status_code == 403
+    r = api_request(app, 'users',
+        headers={
+            'Authorization': '',
+            'Referer': 'http://attack.com/csrf/vulnerability',
+        }, cookies=cookies,
+    )
+    assert r.status_code == 403
+    r = api_request(app, 'users',
+        headers={
+            'Authorization': '',
+            'Referer': url,
+            'Host': host,
+        }, cookies=cookies,
+    )
+    assert r.status_code == 200
+    r = api_request(app, 'users',
+        headers={
+            'Authorization': '',
+            'Referer': ujoin(url, 'foo/bar/baz/bat'),
+            'Host': host,
+        }, cookies=cookies,
+    )
+    assert r.status_code == 200
+
 
 def test_get_users(app):
     db = app.db
