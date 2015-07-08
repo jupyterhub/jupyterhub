@@ -66,7 +66,9 @@ def api_request(app, *api_path, **kwargs):
     method = kwargs.pop('method', 'get')
     f = getattr(requests, method)
     resp = f(url, **kwargs)
-    assert resp.headers['Content-Security-Policy'] == "frame-ancestors 'self'"
+    assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
+    assert ujoin(app.hub.server.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
+    assert 'http' not in resp.headers['Content-Security-Policy']
     return resp
 
 def test_auth_api(app):
