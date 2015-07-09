@@ -11,6 +11,7 @@ import os
 import signal
 import socket
 import sys
+import threading
 from datetime import datetime
 from distutils.version import LooseVersion as V
 from getpass import getuser
@@ -540,9 +541,18 @@ class JupyterHub(Application):
         # store the loaded trait value
         self.cookie_secret = secret
     
+    _db_local = None
+    @property
+    def db(self):
+        if not hasattr(self._db_local, 'db'):
+            print("Making new connection", self)
+            self._db_local.db = scoped_session(self.session_factory)()
+        return self._db_local.db
+    
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
+        self._db_local = threading.local()
         try:
             self.session_factory = orm.new_session_factory(
                 self.db_url,
@@ -550,7 +560,8 @@ class JupyterHub(Application):
                 echo=self.debug_db,
                 **self.db_kwargs
             )
-            self.db = scoped_session(self.session_factory)()
+            # trigger constructing thread local db property
+            _ = self.db
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)
