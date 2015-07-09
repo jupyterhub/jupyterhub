@@ -11,6 +11,7 @@ import os
 import signal
 import socket
 import sys
+import threading
 from datetime import datetime
 from distutils.version import LooseVersion as V
 from getpass import getuser
@@ -346,7 +347,6 @@ class JupyterHub(Application):
     debug_db = Bool(False, config=True,
         help="log all database transactions. This has A LOT of output"
     )
-    db = Any()
     session_factory = Any()
     
     admin_access = Bool(False, config=True,
@@ -540,6 +540,40 @@ class JupyterHub(Application):
         # store the loaded trait value
         self.cookie_secret = secret
     
+    # thread-local storage of db objects
+    _local = Instance(threading.local, ())
+    @property
+    def db(self):
+        if not hasattr(self._local, 'db'):
+            self._local.db = scoped_session(self.session_factory)()
+        return self._local.db
+    
+    @property
+    def hub(self):
+        if not getattr(self._local, 'hub', None):
+            q = self.db.query(orm.Hub)
+            assert q.count() <= 1
+            self._local.hub = q.first()
+        return self._local.hub
+    
+    @hub.setter
+    def hub(self, hub):
+        self._local.hub = hub
+    
+    @property
+    def proxy(self):
+        if not getattr(self._local, 'proxy', None):
+            q = self.db.query(orm.Proxy)
+            assert q.count() <= 1
+            p = self._local.proxy = q.first()
+            if p:
+                p.auth_token = self.proxy_auth_token
+        return self._local.proxy
+    
+    @proxy.setter
+    def proxy(self, proxy):
+        self._local.proxy = proxy
+    
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
@@ -550,7 +584,8 @@ class JupyterHub(Application):
                 echo=self.debug_db,
                 **self.db_kwargs
             )
-            self.db = scoped_session(self.session_factory)()
+            # trigger constructing thread local db property
+            _ = self.db
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)

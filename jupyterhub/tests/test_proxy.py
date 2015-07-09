@@ -2,6 +2,7 @@
 
 import json
 import os
+from queue import Queue
 from subprocess import Popen
 
 from .. import orm
@@ -100,7 +101,15 @@ def test_external_proxy(request, io_loop):
     }))
     r.raise_for_status()
     assert app.proxy.api_server.port == proxy_port
-    assert app.proxy.auth_token == new_auth_token
+    
+    # get updated auth token from main thread
+    def get_app_proxy_token():
+        q = Queue()
+        app.io_loop.add_callback(lambda : q.put(app.proxy.auth_token))
+        return q.get(timeout=2)
+        
+    assert get_app_proxy_token() == new_auth_token
+    app.proxy.auth_token = new_auth_token
     
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_routes)
