@@ -5,7 +5,7 @@
 # FROM jupyter/jupyterhub:latest
 #
 
-FROM ipython/ipython
+FROM jupyter/notebook
 
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
