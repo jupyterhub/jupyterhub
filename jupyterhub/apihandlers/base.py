@@ -77,3 +77,8 @@ class APIHandler(BaseHandler):
                 raise web.HTTPError(400, "user.%s must be %s, not: %r" % (
                     key, self._model_types[key], type(value)
                 ))
+
+    def options(self, *args, **kwargs):
+        self.set_header('Access-Control-Allow-Headers', 'accept, content-type')
+        self.finish()
+    
