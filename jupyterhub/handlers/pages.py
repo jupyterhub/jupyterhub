@@ -24,16 +24,17 @@ class RootHandler(BaseHandler):
         user = self.get_current_user()
         if user:
             if user.running:
-                url = user.server.base_url
+                url = url_path_join(self.hub.server.base_url, user.server.base_url)
+                self.log.warn("User is running: %s", url)
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
+                self.log.warn("User is not running: %s", url)
             self.redirect(url, permanent=False)
             return
-        html = self.render_template('login.html',
-            login_url=self.settings['login_url'],
-            custom_html=self.authenticator.custom_html,
-        )
-        self.finish(html)
+        # Redirect to the system login page
+        url = self.authenticator.login_url(self.hub.server.base_url)
+        self.log.warn("No user logged in: %s", url)
+        self.redirect(url, permanent=False)
 
 class HomeHandler(BaseHandler):
     """Render the user's home page."""
