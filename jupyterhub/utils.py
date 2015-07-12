@@ -9,6 +9,7 @@ import hashlib
 import os
 import socket
 import uuid
+from hmac import compare_digest
 
 from tornado import web, gen, ioloop
 from tornado.httpclient import AsyncHTTPClient, HTTPError
@@ -163,8 +164,9 @@ def compare_token(compare, token):
     uses the same algorithm and salt of the hashed token for comparison
     """
     algorithm, srounds, salt, _ = compare.split(':')
-    hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm)
-    if compare == hashed:
+    hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm).encode('utf8')
+    compare = compare.encode('utf8')
+    if compare_digest(compare, hashed):
         return True
     return False
 

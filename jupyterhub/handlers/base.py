@@ -69,8 +69,29 @@ class BaseHandler(RequestHandler):
     def finish(self, *args, **kwargs):
         """Roll back any uncommitted transactions from the handler."""
         self.db.rollback()
-        super(BaseHandler, self).finish(*args, **kwargs)
-
+        super().finish(*args, **kwargs)
+    
+    #---------------------------------------------------------------
+    # Security policies
+    #---------------------------------------------------------------
+    
+    @property
+    def csp_report_uri(self):
+        return self.settings.get('csp_report_uri',
+            url_path_join(self.hub.server.base_url, 'security/csp-report')
+        )
+    
+    @property
+    def content_security_policy(self):
+        """The default Content-Security-Policy header
+        
+        Can be overridden by defining Content-Security-Policy in settings['headers']
+        """
+        return '; '.join([
+            "frame-ancestors 'self'",
+            "report-uri " + self.csp_report_uri,
+        ])
+    
     def set_default_headers(self):
         """
         Set any headers passed as tornado_settings['headers'].
@@ -78,7 +99,8 @@ class BaseHandler(RequestHandler):
         By default sets Content-Security-Policy of frame-ancestors 'self'.
         """
         headers = self.settings.get('headers', {})
-        headers.setdefault('Content-Security-Policy', "frame-ancestors 'self'")
+        headers.setdefault("Content-Security-Policy", self.content_security_policy)
+        
         for header_name, header_content in headers.items():
             self.set_header(header_name, header_content)
 
@@ -395,6 +417,7 @@ class PrefixRedirectHandler(BaseHandler):
             self.hub.server.base_url, path,
         ), permanent=False)
 
+
 class UserSpawnHandler(BaseHandler):
     """Requests to /user/name handled by the Hub
     should result in spawning the single-user server and
@@ -432,6 +455,15 @@ class UserSpawnHandler(BaseHandler):
                 {'next': self.request.uri,
             }))
 
+class CSPReportHandler(BaseHandler):
+    '''Accepts a content security policy violation report'''
+    @web.authenticated
+    def post(self):
+        '''Log a content security policy violation report'''
+        self.log.warn("Content security violation: %s",
+                      self.request.body.decode('utf8', 'replace'))
+
 default_handlers = [
     (r'/user/([^/]+)/?.*', UserSpawnHandler),
+    (r'/security/csp-report', CSPReportHandler),
 ]
