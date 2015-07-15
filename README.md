@@ -48,16 +48,10 @@ Then install javascript dependencies:
 
 ## Installation
 
-As usual start with cloning the code:
+JupyterHub can be installed with pip:
 
-    git clone https://github.com/jupyter/jupyterhub.git
-    cd jupyterhub
+    pip3 install jupyterhub
 
-Then you can install the Python package by doing:
-
-    pip3 install -r requirements.txt
-    pip3 install .
-    
 If the `pip3 install .` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional javascript dependencies:
 
     npm install
@@ -66,7 +60,6 @@ If you plan to run notebook servers locally, you may also need to install the IP
 
     pip3 install "ipython[notebook]"
 
-
 This will fetch client-side javascript dependencies and compile CSS,
 and install these files to `sys.prefix`/share/jupyter, as well as
 install any Python dependencies.
@@ -74,8 +67,10 @@ install any Python dependencies.
 
 ### Development install
 
-For a development install:
+For a development install, clone the repository and then install from source:
 
+    git clone https://github.com/jupyter/jupyterhub
+    cd jupyterhub
     pip3 install -r dev-requirements.txt -e .
 
 In which case you may need to manually update javascript and css after some updates, with:
