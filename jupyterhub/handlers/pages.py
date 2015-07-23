@@ -25,15 +25,16 @@ class RootHandler(BaseHandler):
         if user:
             if user.running:
                 url = url_path_join(self.hub.server.base_url, user.server.base_url)
-                self.log.warn("User is running: %s", url)
+                self.log.debug("User is running: %s", url)
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
-                self.log.warn("User is not running: %s", url)
+                self.log.debug("User is not running: %s", url)
             self.redirect(url, permanent=False)
             return
-        # Redirect to the system login page
+        # Redirect to the authenticator login page instead of rendering the
+        # login html page
         url = self.authenticator.login_url(self.hub.server.base_url)
-        self.log.warn("No user logged in: %s", url)
+        self.log.debug("No user logged in: %s", url)
         self.redirect(url, permanent=False)
 
 class HomeHandler(BaseHandler):
