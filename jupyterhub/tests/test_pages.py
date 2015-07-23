@@ -18,7 +18,7 @@ def test_root_no_auth(app, io_loop):
     print(app.hub.server)
     r = requests.get(app.proxy.public_server.host)
     r.raise_for_status()
-    assert r.url == ujoin(app.proxy.public_server.host, app.hub.server.base_url)
+    assert r.url == ujoin(app.proxy.public_server.host, app.hub.server.base_url, 'login')
 
 def test_root_auth(app):
     cookies = app.login_user('river')
