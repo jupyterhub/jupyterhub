@@ -24,7 +24,7 @@ class RootHandler(BaseHandler):
         user = self.get_current_user()
         if user:
             if user.running:
-                url = url_path_join(self.hub.server.base_url, user.server.base_url)
+                url = user.server.base_url
                 self.log.debug("User is running: %s", url)
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
