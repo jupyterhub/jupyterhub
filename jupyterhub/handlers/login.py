@@ -28,6 +28,7 @@ class LoginHandler(BaseHandler):
                 username=username,
                 login_error=login_error,
                 custom_login_form=self.authenticator.custom_html,
+                login_url=self.settings['login_url'],
         )
     
     def get(self):
@@ -85,5 +86,6 @@ class LoginHandler(BaseHandler):
 
 # Only logout is a default handler.
 default_handlers = [
+    (r"/login", LoginHandler),
     (r"/logout", LogoutHandler),
 ]

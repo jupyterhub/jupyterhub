@@ -8,6 +8,7 @@ from tornado import web
 from .. import orm
 from ..utils import admin_only, url_path_join
 from .base import BaseHandler
+from .login import LoginHandler
 
 
 class RootHandler(BaseHandler):
@@ -29,13 +30,11 @@ class RootHandler(BaseHandler):
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
-            self.redirect(url, permanent=False)
+            self.redirect(url)
             return
-        # Redirect to the authenticator login page instead of rendering the
-        # login html page
-        url = self.authenticator.login_url(self.hub.server.base_url)
-        self.log.debug("No user logged in: %s", url)
-        self.redirect(url, permanent=False)
+        url = url_path_join(self.hub.server.base_url, 'login')
+        self.redirect(url)
+
 
 class HomeHandler(BaseHandler):
     """Render the user's home page."""
