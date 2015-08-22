@@ -285,6 +285,8 @@ class User(Base):
     spawner = None
     spawn_pending = False
     stop_pending = False
+
+    other_user_cookies = set([])
     
     def __repr__(self):
         if self.server:

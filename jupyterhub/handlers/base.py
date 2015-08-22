@@ -179,8 +179,11 @@ class BaseHandler(RequestHandler):
             self.db.commit()
         return user
     
-    def clear_login_cookie(self):
-        user = self.get_current_user()
+    def clear_login_cookie(self, name=None):
+        if name is None:
+            user = self.get_current_user()
+        else:
+            user = self.find_user(name)
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)

@@ -196,6 +196,7 @@ class UserAdminAccessAPIHandler(APIHandler):
         if not user.running:
             raise web.HTTPError(400, "%s's server is not running" % name)
         self.set_server_cookie(user)
+        current.other_user_cookies.add(name)
 
 
 default_handlers = [
