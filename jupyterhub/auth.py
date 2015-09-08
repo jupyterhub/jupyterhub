@@ -8,7 +8,7 @@ import pwd
 from subprocess import check_call, check_output, CalledProcessError
 
 from tornado import gen
-import simplepam
+import pamela
 
 from traitlets.config import LoggingConfigurable
 from traitlets import Bool, Set, Unicode, Any
@@ -208,10 +208,11 @@ class PAMAuthenticator(LocalAuthenticator):
         username = data['username']
         if not self.check_whitelist(username):
             return
-        # simplepam wants bytes, not unicode
-        # see simplepam#3
-        busername = username.encode(self.encoding)
-        bpassword = data['password'].encode(self.encoding)
-        if simplepam.authenticate(busername, bpassword, service=self.service):
+        try:
+            pamela.authenticate(username, data['password'], service=self.service)
+            pamela.open_session(username, service=self.service)
+        except pamela.PAMError as e:
+            self.log.warn("PAM Authentication failed: %s", e)
+        else:
             return username
     
