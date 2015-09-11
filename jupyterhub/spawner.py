@@ -39,6 +39,7 @@ class Spawner(LoggingConfigurable):
     db = Any()
     user = Any()
     hub = Any()
+    authenticator = Any()
     api_token = Unicode()
     ip = Unicode('localhost', config=True,
         help="The IP address (or hostname) the single-user server should listen on"

@@ -265,6 +265,7 @@ class BaseHandler(RequestHandler):
             base_url=self.base_url,
             hub=self.hub,
             config=self.config,
+            authenticator=self.authenticator,
         )
         @gen.coroutine
         def finish_user_spawn(f=None):
