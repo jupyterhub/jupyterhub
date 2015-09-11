@@ -7,11 +7,10 @@ import errno
 import os
 import pipes
 import pwd
-import re
 import signal
 import sys
 import grp
-from subprocess import Popen, check_output, PIPE, CalledProcessError
+from subprocess import Popen
 from tempfile import TemporaryDirectory
 
 from tornado import gen
@@ -19,13 +18,11 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
-    Any, Bool, Dict, Enum, Instance, Integer, Float, List, Unicode,
+    Any, Bool, Dict, Instance, Integer, Float, List, Unicode,
 )
 
 from .traitlets import Command
 from .utils import random_port
-
-NUM_PAT = re.compile(r'\d+')
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
