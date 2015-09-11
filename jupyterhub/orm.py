@@ -336,7 +336,7 @@ class User(Base):
         return db.query(cls).filter(cls.name==name).first()
     
     @gen.coroutine
-    def spawn(self, spawner_class, base_url='/', hub=None, config=None):
+    def spawn(self, spawner_class, base_url='/', hub=None, authenticator=None, config=None):
         """Start the user's spawner"""
         db = inspect(self).session
         if hub is None:
@@ -357,6 +357,7 @@ class User(Base):
             user=self,
             hub=hub,
             db=db,
+            authenticator=authenticator,
         )
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
