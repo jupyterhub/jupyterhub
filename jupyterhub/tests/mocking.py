@@ -18,16 +18,18 @@ from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
 
+from pamela import PAMError
+
 def mock_authenticate(username, password, service='login'):
-    # mimic simplepam's failure to handle unicode
-    if isinstance(username, str):
-        return False
-    if isinstance(password, str):
-        return False
-    
     # just use equality for testing
     if password == username:
         return True
+    else:
+        raise PAMError("Fake")
+
+
+def mock_open_session(username, service):
+    pass
 
 
 class MockSpawner(LocalProcessSpawner):
@@ -80,7 +82,9 @@ class MockPAMAuthenticator(PAMAuthenticator):
         return not user.name.startswith('dne')
     
     def authenticate(self, *args, **kwargs):
-        with mock.patch('simplepam.authenticate', mock_authenticate):
+        with mock.patch.multiple('pamela',
+                authenticate=mock_authenticate,
+                open_session=mock_open_session):
             return super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
 
 class MockHub(JupyterHub):
