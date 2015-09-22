@@ -628,10 +628,8 @@ class JupyterHub(Application):
         admin_users = self.authenticator.admin_users
         
         if not admin_users:
-            # add current user as admin if there aren't any others
-            admins = db.query(orm.User).filter(orm.User.admin==True)
-            if admins.first() is None:
-                admin_users.add(getuser())
+            self.log.warning("No admin users, admin interface will be unavailable.")
+            self.log.warning("Add any administrative users to `c.Authenticator.admin_users` in config.")
         
         new_users = []
 
