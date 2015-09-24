@@ -41,7 +41,7 @@ def wait_for_server(ip, port, timeout=10):
                 app_log.error("Unexpected error waiting for %s:%i %s",
                     ip, port, e
                 )
-            yield gen.Task(loop.add_timeout, loop.time() + 0.1)
+            yield gen.sleep(0.1)
         else:
             return
     raise TimeoutError("Server at {ip}:{port} didn't respond in {timeout} seconds".format(
@@ -67,14 +67,14 @@ def wait_for_http_server(url, timeout=10):
                     # we expect 599 for no connection,
                     # but 502 or other proxy error is conceivable
                     app_log.warn("Server at %s responded with error: %s", url, e.code)
-                yield gen.Task(loop.add_timeout, loop.time() + 0.25)
+                yield gen.sleep(0.1)
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return
         except (OSError, socket.error) as e:
             if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
                 app_log.warn("Failed to connect to %s (%s)", url, e)
-            yield gen.Task(loop.add_timeout, loop.time() + 0.25)
+            yield gen.sleep(0.1)
         else:
             return
     

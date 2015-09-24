@@ -252,7 +252,7 @@ class Spawner(LoggingConfigurable):
             if status is not None:
                 break
             else:
-                yield gen.Task(loop.add_timeout, loop.time() + self.death_interval)
+                yield gen.sleep(self.death_interval)
 
 def _try_setcwd(path):
     """Try to set CWD, walking up and ultimately falling back to a temp dir"""

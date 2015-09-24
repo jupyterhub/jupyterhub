@@ -363,11 +363,10 @@ def test_slow_spawn(app, io_loop):
     assert app_user.spawn_pending
     assert not app_user.stop_pending
     
-    dt = timedelta(seconds=0.1)
     @gen.coroutine
     def wait_spawn():
         while app_user.spawn_pending:
-            yield gen.Task(io_loop.add_timeout, dt)
+            yield gen.sleep(0.1)
     
     io_loop.run_sync(wait_spawn)
     assert not app_user.spawn_pending
@@ -377,7 +376,7 @@ def test_slow_spawn(app, io_loop):
     @gen.coroutine
     def wait_stop():
         while app_user.stop_pending:
-            yield gen.Task(io_loop.add_timeout, dt)
+            yield gen.sleep(0.1)
 
     r = api_request(app, 'users', name, 'server', method='delete')
     r.raise_for_status()
@@ -410,11 +409,10 @@ def test_never_spawn(app, io_loop):
     assert app_user.spawner is not None
     assert app_user.spawn_pending
     
-    dt = timedelta(seconds=0.1)
     @gen.coroutine
     def wait_pending():
         while app_user.spawn_pending:
-            yield gen.Task(io_loop.add_timeout, dt)
+            yield gen.sleep(0.1)
     
     io_loop.run_sync(wait_pending)
     assert not app_user.spawn_pending
