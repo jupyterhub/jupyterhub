@@ -24,18 +24,28 @@ from IPython.utils.traitlets import (
     CUnicode,
 )
 
-from IPython.html.notebookapp import NotebookApp, aliases as notebook_aliases
-from IPython.html.auth.login import LoginHandler
-from IPython.html.auth.logout import LogoutHandler
+try:
+    import notebook
+    # 4.x
+except ImportError:
+    from IPython.html.notebookapp import NotebookApp, aliases as notebook_aliases
+    from IPython.html.auth.login import LoginHandler
+    from IPython.html.auth.logout import LogoutHandler
 
-from IPython.html.utils import url_path_join
+    from IPython.html.utils import url_path_join
 
+    from distutils.version import LooseVersion as V
 
-from distutils.version import LooseVersion as V
+    import IPython
+    if V(IPython.__version__) < V('3.0'):
+        raise ImportError("JupyterHub Requires IPython >= 3.0, found %s" % IPython.__version__)
+else:
+    from notebook.notebookapp import NotebookApp, aliases as notebook_aliases
+    from notebook.auth.login import LoginHandler
+    from notebook.auth.logout import LogoutHandler
 
-import IPython
-if V(IPython.__version__) < V('3.0'):
-    raise ImportError("JupyterHub Requires IPython >= 3.0, found %s" % IPython.__version__)
+    from notebook.utils import url_path_join
+
 
 # Define two methods to attach to AuthenticatedHandler,
 # which authenticate via the central auth server.
