@@ -61,9 +61,8 @@ class LoginHandler(BaseHandler):
         for arg in self.request.arguments:
             data[arg] = self.get_argument(arg)
 
-        username = data['username']
-        authorized = yield self.authenticate(data)
-        if authorized:
+        username = yield self.authenticate(data)
+        if username:
             user = self.user_from_username(username)
             already_running = False
             if user.spawner:
