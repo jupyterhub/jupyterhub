@@ -363,6 +363,9 @@ class User(Base):
         spawner.clear_state()
         spawner.api_token = api_token
         
+        # trigger pre-spawn hook on authenticator
+        if (authenticator):
+            yield gen.maybe_future(authenticator.pre_spawn_start(self, spawner))
         self.spawn_pending = True
         # wait for spawner.start to return
         try:
@@ -429,21 +432,27 @@ class User(Base):
         and cleanup after it.
         """
         self.spawn_pending = False
-        if self.spawner is None:
+        spawner = self.spawner
+        if spawner is None:
             return
-        self.spawner.stop_polling()
+        spawner.stop_polling()
         self.stop_pending = True
         try:
-            status = yield self.spawner.poll()
+            status = yield spawner.poll()
             if status is None:
                 yield self.spawner.stop()
-            self.spawner.clear_state()
-            self.state = self.spawner.get_state()
+            spawner.clear_state()
+            self.state = spawner.get_state()
             self.server = None
             inspect(self).session.commit()
         finally:
             self.stop_pending = False
-
+            # trigger post-spawner hook on authenticator
+            auth = spawner.authenticator
+            if auth:
+                yield gen.maybe_future(
+                    auth.post_spawn_stop(self, spawner)
+                )
 
 class APIToken(Base):
     """An API token"""
