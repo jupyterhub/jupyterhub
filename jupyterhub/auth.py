@@ -58,6 +58,18 @@ class Authenticator(LoggingConfigurable):
         and return None on failed authentication.
         """
 
+    def pre_spawn_start(self, user, spawner):
+        """Hook called before spawning a user's server.
+        
+        Can be used to do auth-related startup, e.g. opening PAM sessions.
+        """
+    
+    def post_spawn_stop(self, user, spawner):
+        """Hook called after stopping a user container.
+        
+        Can be used to do auth-related cleanup, e.g. closing PAM sessions.
+        """
+    
     def check_whitelist(self, user):
         """
         Return True if the whitelist is empty or user is in the whitelist.
@@ -210,9 +222,22 @@ class PAMAuthenticator(LocalAuthenticator):
             return
         try:
             pamela.authenticate(username, data['password'], service=self.service)
-            pamela.open_session(username, service=self.service)
         except pamela.PAMError as e:
             self.log.warn("PAM Authentication failed: %s", e)
         else:
             return username
+    
+    def pre_spawn_start(self, user, spawner):
+        """Open PAM session for user"""
+        try:
+            pamela.open_session(user.name, service=self.service)
+        except pamela.PAMError as e:
+            self.log.warn("Failed to open PAM session for %s: %s", user.name, e)
+    
+    def post_spawn_stop(self, user, spawner):
+        """Close PAM session for user"""
+        try:
+            pamela.close_session(user.name, service=self.service)
+        except pamela.PAMError as e:
+            self.log.warn("Failed to close PAM session for %s: %s", user.name, e)
     
