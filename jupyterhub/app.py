@@ -464,13 +464,12 @@ class JupyterHub(Application):
     
     def init_handlers(self):
         h = []
-        h.extend(handlers.default_handlers)
-        h.extend(apihandlers.default_handlers)
         # load handlers from the authenticator
         h.extend(self.authenticator.get_handlers(self))
-
+        # set default handlers
+        h.extend(handlers.default_handlers)
+        h.extend(apihandlers.default_handlers)
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
-
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
             (r"%s" % self.hub_prefix.rstrip('/'), web.RedirectHandler,
