@@ -53,7 +53,7 @@ from .utils import (
     ISO8601_ms, ISO8601_s,
 )
 # classes for config
-from .auth import Authenticator, PAMAuthenticator
+from .auth import Authenticator, PAMAuthenticator, LDAPAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
 
 common_aliases = {
@@ -168,6 +168,7 @@ class JupyterHub(Application):
         LocalProcessSpawner,
         Authenticator,
         PAMAuthenticator,
+        LDAPAuthenticator
     ])
     
     config_file = Unicode('jupyterhub_config.py', config=True,
