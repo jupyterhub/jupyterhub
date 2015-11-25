@@ -9,13 +9,9 @@ FROM jupyter/notebook
 
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
+# install nodejs
 ENV DEBIAN_FRONTEND noninteractive
-
-# Update and upgrade apt-get for the latest packages and security updates	
-RUN apt-get update && apt-get -y upgrade
-
-RUN apt-get -y install npm nodejs
-RUN ln -s /usr/bin/nodejs /usr/bin/node
+RUN apt-get -y update && apt-get -y upgrade && apt-get -y install npm nodejs nodejs-legacy
 
 # install js dependencies
 RUN npm install -g configurable-http-proxy
