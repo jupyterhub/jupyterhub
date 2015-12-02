@@ -123,6 +123,17 @@ class LocalAuthenticator(Authenticator):
         should I try to create the system user?
         """
     )
+    system_user_home = Unicode('', config=True,
+        help="""Specify root home directory for users if different from system default.
+        
+        Passed to `useradd -b`.
+        If specified, when system users are created their home directories will be created in
+        
+            system_user_home/username
+        
+        Only has an effect when users are created with `create_system_users=True`.
+        """
+    )
 
     group_whitelist = Set(
         config=True,
@@ -182,8 +193,7 @@ class LocalAuthenticator(Authenticator):
         else:
             return True
     
-    @staticmethod
-    def add_system_user(user):
+    def add_system_user(self, user):
         """Create a new *ix user on the system. Works on FreeBSD and Linux, at least."""
         name = user.name
         for useradd in (
@@ -198,8 +208,11 @@ class LocalAuthenticator(Authenticator):
                 break
         else:
             raise RuntimeError("I don't know how to add users on this system.")
-    
-        check_call(useradd + [name])
+        
+        cmd = useradd
+        if self.system_user_home:
+            cmd = cmd + ['-b', self.system_user_home]
+        check_call(cmd + [name])
 
 
 class PAMAuthenticator(LocalAuthenticator):
