@@ -10,8 +10,9 @@ import requests
 
 from tornado import gen
 
-from ..utils import url_path_join as ujoin
 from .. import orm
+from ..user import User
+from ..utils import url_path_join as ujoin
 from . import mocking
 
 
@@ -41,11 +42,15 @@ def check_db_locks(func):
 def find_user(db, name):
     return db.query(orm.User).filter(orm.User.name==name).first()
     
-def add_user(db, **kwargs):
-    user = orm.User(**kwargs)
-    db.add(user)
+def add_user(db, app=None, **kwargs):
+    orm_user = orm.User(**kwargs)
+    db.add(orm_user)
     db.commit()
-    return user
+    if app:
+        user = app.users[orm_user.id] = User(orm_user)
+        return user
+    else:
+        return orm_user
 
 def auth_header(db, name):
     user = find_user(db, name)
@@ -310,16 +315,18 @@ def get_app_user(app, name):
     No ORM methods should be called on the result.
     """
     q = Queue()
-    def get_user():
+    def get_user_id():
         user = find_user(app.db, name)
-        q.put(user)
-    app.io_loop.add_callback(get_user)
-    return q.get(timeout=2)
+        q.put(user.id)
+    app.io_loop.add_callback(get_user_id)
+    user_id = q.get(timeout=2)
+    return app.users[user_id]
 
 def test_spawn(app, io_loop):
     db = app.db
     name = 'wash'
-    user = add_user(db, name=name)
+    user = add_user(db, app=app, name=name)
+    
     r = api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 201
     assert 'pid' in user.state
@@ -354,7 +361,7 @@ def test_slow_spawn(app, io_loop):
 
     db = app.db
     name = 'zoe'
-    user = add_user(db, name=name)
+    user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     assert r.status_code == 202
@@ -403,7 +410,7 @@ def test_never_spawn(app, io_loop):
 
     db = app.db
     name = 'badger'
-    user = add_user(db, name=name)
+    user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None

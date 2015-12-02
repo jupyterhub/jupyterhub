@@ -7,6 +7,7 @@ import pytest
 from tornado import gen
 
 from .. import orm
+from ..user import User
 from .mocking import MockSpawner
 
 
@@ -94,9 +95,10 @@ def test_tokens(db):
 
 
 def test_spawn_fails(db, io_loop):
-    user = orm.User(name='aeofel')
-    db.add(user)
+    orm_user = orm.User(name='aeofel')
+    db.add(orm_user)
     db.commit()
+    user = User(orm_user)
     
     class BadSpawner(MockSpawner):
         @gen.coroutine

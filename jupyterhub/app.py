@@ -45,6 +45,7 @@ from . import handlers, apihandlers
 from .handlers.static import CacheControlStaticFilesHandler
 
 from . import orm
+from .user import User, UserDict
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .traitlets import URLPrefix, Command
@@ -348,6 +349,10 @@ class JupyterHub(Application):
         help="log all database transactions. This has A LOT of output"
     )
     session_factory = Any()
+    
+    users = Instance(UserDict)
+    def _users_default(self):
+        return UserDict(db_factory=lambda : self.db)
     
     admin_access = Bool(False, config=True,
         help="""Grant admin users permission to access single-user servers.
@@ -699,7 +704,8 @@ class JupyterHub(Application):
             yield self.proxy.delete_user(user)
             yield user.stop()
         
-        for user in db.query(orm.User):
+        for orm_user in db.query(orm.User):
+            self.users[orm_user.id] = user = User(orm_user)
             if not user.state:
                 # without spawner state, server isn't valid
                 user.server = None
@@ -854,6 +860,7 @@ class JupyterHub(Application):
             proxy=self.proxy,
             hub=self.hub,
             admin_users=self.authenticator.admin_users,
+            users=self.users,
             admin_access=self.admin_access,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
@@ -921,7 +928,7 @@ class JupyterHub(Application):
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
-            for user in self.db.query(orm.User):
+            for uid, user in self.users.items():
                 if user.spawner is not None:
                     futures.append(user.stop())
         else:

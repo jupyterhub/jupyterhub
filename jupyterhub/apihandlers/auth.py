@@ -18,7 +18,7 @@ class TokenAPIHandler(APIHandler):
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             raise web.HTTPError(404)
-        self.write(json.dumps(self.user_model(orm_token.user)))
+        self.write(json.dumps(self.user_model(self.users[orm_token.user])))
 
 
 class CookieAPIHandler(APIHandler):

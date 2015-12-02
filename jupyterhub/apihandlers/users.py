@@ -15,7 +15,7 @@ from .base import APIHandler
 class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
-        users = self.db.query(orm.User)
+        users = [ self._user_from_orm(u) for u in self.db.query(orm.User) ]
         data = [ self.user_model(u) for u in users ]
         self.write(json.dumps(data))
     
@@ -104,6 +104,8 @@ class UserAPIHandler(APIHandler):
             yield gen.maybe_future(self.authenticator.add_user(user))
         except Exception:
             self.log.error("Failed to create user: %s" % name, exc_info=True)
+            # remove from registry
+            self.users.pop(user.id, None)
             self.db.delete(user)
             self.db.commit()
             raise web.HTTPError(400, "Failed to create user: %s" % name)
@@ -127,7 +129,8 @@ class UserAPIHandler(APIHandler):
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
         
         yield gen.maybe_future(self.authenticator.delete_user(user))
-        
+        # remove from registry
+        self.users.pop(user.id, None)
         # remove from the db
         self.db.delete(user)
         self.db.commit()
