@@ -139,8 +139,10 @@ class Spawner(LoggingConfigurable):
         state: dict
              a JSONable dict of state
         """
-        state = {}
-        return state
+        if self.user.state:
+            return self.user.state
+        else:
+            return {}
     
     def clear_state(self):
         """clear any state that should be cleared when the process stops
