@@ -236,7 +236,10 @@ class PAMAuthenticator(LocalAuthenticator):
         try:
             pamela.authenticate(username, data['password'], service=self.service)
         except pamela.PAMError as e:
-            self.log.warn("PAM Authentication failed: %s", e)
+            if handler is not None:
+                self.log.warn("PAM Authentication failed (@%s): %s", handler.request.remote_ip, e)
+            else:
+                self.log.warn("PAM Authentication failed: %s", e)
         else:
             return username
     
