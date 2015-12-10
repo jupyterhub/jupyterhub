@@ -93,13 +93,14 @@ def test_wont_add_system_user(io_loop):
 def test_cant_add_system_user(io_loop):
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator.add_user_cmd = ['jupyterhub-fake-command']
     authenticator.create_system_users = True
     
-    def check_output(cmd, *a, **kw):
+    def check_call(cmd, *a, **kw):
         raise CalledProcessError(1, cmd)
     
-    with mock.patch.object(auth, 'check_output', check_output):
-        with pytest.raises(RuntimeError):
+    with mock.patch.object(auth, 'check_call', check_call):
+        with pytest.raises(CalledProcessError):
             io_loop.run_sync(lambda : authenticator.add_user(user))
 
 
@@ -107,19 +108,15 @@ def test_add_system_user(io_loop):
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.create_system_users = True
-    
-    def check_output(*a, **kw):
-        return
+    authenticator.add_user_cmd = ['echo', '/home/USERNAME']
     
     record = {}
     def check_call(cmd, *a, **kw):
         record['cmd'] = cmd
     
-    with mock.patch.object(auth, 'check_output', check_output), \
-             mock.patch.object(auth, 'check_call', check_call):
+    with mock.patch.object(auth, 'check_call', check_call):
         io_loop.run_sync(lambda : authenticator.add_user(user))
-    
-    assert user.name in record['cmd']
+    assert record['cmd'] == ['echo', '/home/lioness4321', 'lioness4321']
 
 
 def test_delete_user(io_loop):

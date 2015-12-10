@@ -4,8 +4,11 @@
 # Distributed under the terms of the Modified BSD License.
 
 from grp import getgrnam
+import pipes
 import pwd
-from subprocess import check_call, check_output, CalledProcessError
+from shutil import which
+import sys
+from subprocess import check_call
 
 from tornado import gen
 import pamela
@@ -15,6 +18,7 @@ from traitlets import Bool, Set, Unicode, Any
 
 from .handlers.login import LoginHandler
 from .utils import url_path_join
+from .traitlets import Command
 
 class Authenticator(LoggingConfigurable):
     """A class for authentication.
@@ -123,17 +127,32 @@ class LocalAuthenticator(Authenticator):
         should I try to create the system user?
         """
     )
-    system_user_home = Unicode('', config=True,
-        help="""Specify root home directory for users if different from system default.
+    add_user_cmd = Command(config=True,
+        help="""add user command
         
-        Passed to `useradd -b`.
-        If specified, when system users are created their home directories will be created in
+        USERNAME will be replaced with the user's name.
+        The user's name will be used as the last argument, e.g.
         
-            system_user_home/username
+        You may want to consult the difference between adduser and useradd.
         
-        Only has an effect when users are created with `create_system_users=True`.
+        useradd -d /home/USERNAME -s /bin/bash
+        
+        will call
+        
+        useradd -d /home/river -s /bin/bash river
+        
+        when the user 'river' is created
         """
     )
+    def _add_user_cmd_default(self):
+        if sys.platform == 'darwin':
+            raise ValueError("I don't know how to create users on OS X")
+        elif which('pw'):
+            # Probably BSD
+            return ['pw', 'useradd', '-m']
+        else:
+            # This appears to be the Linux non-interactive adduser command:
+            return ['adduser', '-q', '--gecos', '', '--disable-password']
 
     group_whitelist = Set(
         config=True,
@@ -196,23 +215,9 @@ class LocalAuthenticator(Authenticator):
     def add_system_user(self, user):
         """Create a new *ix user on the system. Works on FreeBSD and Linux, at least."""
         name = user.name
-        for useradd in (
-            ['pw', 'useradd', '-m'],
-            ['useradd', '-m'],
-        ):
-            try:
-                check_output(['which', useradd[0]])
-            except CalledProcessError:
-                continue
-            else:
-                break
-        else:
-            raise RuntimeError("I don't know how to add users on this system.")
-        
-        cmd = useradd
-        if self.system_user_home:
-            cmd = cmd + ['-b', self.system_user_home]
-        check_call(cmd + [name])
+        cmd = [ arg.replace('USERNAME', name) for arg in self.add_user_cmd ] + [name]
+        self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
+        check_call(cmd)
 
 
 class PAMAuthenticator(LocalAuthenticator):
