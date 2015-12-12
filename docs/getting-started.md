@@ -217,7 +217,7 @@ This environment variable needs to be visible to the Hub and Proxy.
 Or you can set the value in the configuration file:
 
 ```python
-c.JupyterHub.proxy_auth_token = 'thevalueofthesecretgoeshere'
+c.JupyterHub.proxy_auth_token = '0bc02bede919e99a26de1e2a7a5aadfaf6228de836ec39a05a6c6942831d8fe5'
 ```
 
 If you don't set the Proxy authentication token, the Hub will generate a random key itself, which
