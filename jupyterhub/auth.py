@@ -128,20 +128,24 @@ class LocalAuthenticator(Authenticator):
         """
     )
     add_user_cmd = Command(config=True,
-        help="""add user command
+        help="""The command to use for creating users as a list of strings.
         
-        USERNAME will be replaced with the user's name.
-        The user's name will be used as the last argument, e.g.
+        For each element in the list, the string USERNAME will be replaced with
+        the user's username. The username will also be appended as the final argument.
         
-        You may want to consult the difference between adduser and useradd.
+        For Linux, the default value is:
         
-        useradd -d /home/USERNAME -s /bin/bash
+            ['adduser', '-q', '--gecos', '""', '--disabled-password']
+            
+        To specify a custom home directory, set this to:
         
-        will call
+            ['adduser', '-q', '--gecos', '""', '--home', '/customhome/USERNAME', '--disabled-password']
+
+        This will run the command:
+
+        adduser -q --gecos "" --home /customhome/river --disabled-password river
         
-        useradd -d /home/river -s /bin/bash river
-        
-        when the user 'river' is created
+        when the user 'river' is created.
         """
     )
     def _add_user_cmd_default(self):
@@ -152,7 +156,7 @@ class LocalAuthenticator(Authenticator):
             return ['pw', 'useradd', '-m']
         else:
             # This appears to be the Linux non-interactive adduser command:
-            return ['adduser', '-q', '--gecos', '', '--disable-password']
+            return ['adduser', '-q', '--gecos', '""', '--disabled-password']
 
     group_whitelist = Set(
         config=True,
