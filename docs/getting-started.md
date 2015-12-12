@@ -85,9 +85,8 @@ You can create an empty configuration file with
 
     jupyterhub --generate-config
 
-This empty configuration file has descriptions of all configuration variables and their default values.
-You can load a specific config file with:
-
+This empty configuration file has descriptions of all configuration variables and their default
+values. You can load a specific config file with:
 
     jupyterhub -f /path/to/jupyterhub_config.py
 
@@ -143,63 +142,91 @@ c.JupyterHub.hub_port = 54321
 
 ## Security
 
-First of all, since JupyterHub includes authentication and allows arbitrary code execution,
-you should not run it without SSL (HTTPS).
-This will require you to obtain an official SSL certificate or create a self-signed certificate.
-Once you have obtained and installed a key and certificate
-you need to pass their locations to JupyterHub's configuration as follows:
+Security is the most important aspect of configuring Jupyter. There are three main aspects of the
+security configuration:
+
+1. SSL encryption (to enable HTTPS)
+2. Cookie secret (a key for encrypting browser cookies)
+3. Proxy authentication token (used for the Hub and other services to authenticate to the Proxy)
+
+## SSL encryption
+
+Since JupyterHub includes authentication and allows arbitrary code execution, you should not run
+it without SSL (HTTPS). This will require you to obtain an official, trusted SSL certificate or
+create a self-signed certificate. Once you have obtained and installed a key and certificate you
+need to specify their locations in the configuration file as follows:
 
 ```python
 c.JupyterHub.ssl_key = '/path/to/my.key'
 c.JupyterHub.ssl_cert = '/path/to/my.cert'
 ```
 
-Some cert files also contain the key, in which case only the cert is needed.
-It is important that these files be put in a secure location on your server.
-
-There are two other aspects of JupyterHub network security.
-
-The cookie secret is an encryption key, used to encrypt the cookies used for authentication.
-If this value changes for the Hub,
-all single-user servers must also be restarted.
-Normally, this value is stored in the file `jupyterhub_cookie_secret`,
-which can be specified with:
+It is also possible to use letsencrypt (https://letsencrypt.org/) to obtain a free, trusted SSL
+certificate. If you run letsencrypt using the default options, the needed configuration is (replace `your.domain.com` by your fully qualified domain name):
 
 ```python
-c.JupyterHub.cookie_secret_file = '/path/to/jupyterhub_cookie_secret'
+c.JupyterHub.ssl_key = '/etc/letsencrypt/live/your.domain.com/privkey.pem'
+c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/your.domain.com/fullchain.pem'
 ```
 
-In most deployments of JupyterHub, you should point this to a secure location on the file system.
-If the cookie secret file doesn't exist when the Hub starts,
-a new cookie secret is generated and stored in the file.
+Some cert files also contain the key, in which case only the cert is needed. It is important that
+these files be put in a secure location on your server, where they are not readable by regular
+users.
 
-If you would like to avoid the need for files,
-the value can be loaded in the Hub process from the `JPY_COOKIE_SECRET` env variable:
+## Cookie secret
+
+The cookie secret is an encryption key, used to encrypt the browser cookies used for
+authentication. If this value changes for the Hub, all single-user servers must also be restarted.
+Normally, this value is stored in a file, the location of which can be specified in a config file
+as follows:
+
+```python
+c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/cookie_secret'
+```
+
+The content of this file should be a long random string. An example would be to generate this
+file as:
+
+```bash
+openssl rand -hex 1024 > /srv/jupyterhub/cookie_secret
+```
+
+In most deployments of JupyterHub, you should point this to a secure location on the file
+system, such as `/srv/jupyterhub/cookie_secret`. If the cookie secret file doesn't exist when
+the Hub starts, a new cookie secret is generated and stored in the file.
+
+If you would like to avoid the need for files, the value can be loaded in the Hub process from
+the `JPY_COOKIE_SECRET` environment variable:
 
 ```bash
 export JPY_COOKIE_SECRET=`openssl rand -hex 1024`
 ```
 
-For security reasons, this env variable should only be visible to the Hub.
+For security reasons, this environment variable should only be visible to the Hub.
 
-The Hub authenticates its requests to the Proxy via an environment variable, `CONFIGPROXY_AUTH_TOKEN`.
-If you want to be able to start or restart the proxy or Hub independently of each other (not always necessary),
-you must set this environment variable before starting the server (for both the Hub and Proxy):
+## Proxy authentication token
 
+The Hub authenticates its requests to the Proxy using a secret token that the Hub and Proxy agree upon. The value of this string should be a random string (for example, generated by `openssl rand -hex 32`). You can pass this value to the Hub and Proxy using either the `CONFIGPROXY_AUTH_TOKEN` environment variable:
 
 ```bash
 export CONFIGPROXY_AUTH_TOKEN=`openssl rand -hex 32`
 ```
 
-This env variable needs to be visible to the Hub and Proxy.
-If you don't set this, the Hub will generate a random key itself,
-which means that any time you restart the Hub you **must also restart the Proxy**.
-If the proxy is a subprocess of the Hub,
-this should happen automatically (this is the default configuration).
+This environment variable needs to be visible to the Hub and Proxy.
 
+Or you can set the value in the configuration file:
 
+```python
+c.JupyterHub.proxy_auth_token = '0bc02bede919e99a26de1e2a7a5aadfaf6228de836ec39a05a6c6942831d8fe5'
+```
 
-## Configuring Authentication
+If you don't set the Proxy authentication token, the Hub will generate a random key itself, which
+means that any time you restart the Hub you **must also restart the Proxy**. If the proxy is a
+subprocess of the Hub, this should happen automatically (this is the default configuration).
+
+Another time you must set the Proxy authentication token yourself is if you want other services, such as [nbgrader](https://github.com/jupyter/nbgrader) to also be able to connect to the Proxy.
+
+## Configuring authentication
 
 The default Authenticator uses [PAM][] to authenticate system users with their username and password.
 The default behavior of this Authenticator is to allow any user with an account and password on the system to login.
@@ -227,47 +254,39 @@ then admin users have permission to log in *as other users* on their respective 
 
 ### Adding and removing users
 
-Users can be added and removed to the Hub via the admin panel or REST API.
-These users will be added to the whitelist and database.
-Restarting the Hub will not require manually updating the whitelist in your config file,
-as the users will be loaded from the database.
-This means that after starting the Hub once,
-it is not sufficient to remove users from the whitelist in your config file.
-You must also remove them from the database, either by discarding the database file,
+Users can be added and removed to the Hub via the admin panel or REST API. These users will be
+added to the whitelist and database. Restarting the Hub will not require manually updating the
+whitelist in your config file, as the users will be loaded from the database. This means that
+after starting the Hub once, it is not sufficient to remove users from the whitelist in your
+config file. You must also remove them from the database, either by discarding the database file,
 or via the admin UI.
 
-The default PAMAuthenticator is one case of a special kind of authenticator,
-called a LocalAuthenticator,
-indicating that it manages users on the local system.
-When you add a user to the Hub, a LocalAuthenticator checks if that user already exists.
-Normally, there will be an error telling you that the user doesn't exist.
-If you set the configuration value
-
+The default `PAMAuthenticator` is one case of a special kind of authenticator, called a
+`LocalAuthenticator`, indicating that it manages users on the local system. When you add a user to
+the Hub, a `LocalAuthenticator` checks if that user already exists. Normally, there will be an
+error telling you that the user doesn't exist. If you set the configuration value
 
 ```python
 c.LocalAuthenticator.create_system_users = True
 ```
 
-however, adding a user to the Hub that doesn't already exist on the system
-will result in the Hub creating that user via the system `useradd` mechanism.
-This option is typically used on hosted deployments of JupyterHub,
-to avoid the need to manually create all your users before launching the service.
-It is not recommended when running JupyterHub in situations where JupyterHub users maps directly onto UNIX users.
-
+however, adding a user to the Hub that doesn't already exist on the system will result in the Hub
+creating that user via the system `adduser` command line tool. This option is typically used on
+hosted deployments of JupyterHub, to avoid the need to manually create all your users before
+launching the service. It is not recommended when running JupyterHub in situations where
+JupyterHub users maps directly onto UNIX users.
 
 ## Configuring single-user servers
 
-Since the single-user server is an instance of `ipython notebook`,
-an entire separate multi-process application,
-there are many aspect of that server can configure,
-and a lot of ways to express that configuration.
+Since the single-user server is an instance of `jupyter notebook`, an entire separate
+multi-process application, there are many aspect of that server can configure, and a lot of ways
+to express that configuration.
 
-At the JupyterHub level, you can set some values on the Spawner.
-The simplest of these is `Spawner.notebook_dir`,
-which lets you set the root directory for a user's server.
-This root notebook directory is the highest level directory users will be able to access in the notebook dashboard.
-In this example, the root notebook directory is set to `~/notebooks`,
-where `~` is expanded to the user's home directory.
+At the JupyterHub level, you can set some values on the Spawner. The simplest of these is
+`Spawner.notebook_dir`, which lets you set the root directory for a user's server. This root
+notebook directory is the highest level directory users will be able to access in the notebook
+dashboard. In this example, the root notebook directory is set to `~/notebooks`, where `~` is
+expanded to the user's home directory.
 
 ```python
 c.Spawner.notebook_dir = '~/notebooks'
@@ -375,7 +394,6 @@ export OAUTH_CALLBACK_URL=https://example.com/hub/oauth_callback
 export CONFIGPROXY_AUTH_TOKEN=super-secret
 jupyterhub -f /path/to/aboveconfig.py
 ```
-
 
 # Further reading
 
