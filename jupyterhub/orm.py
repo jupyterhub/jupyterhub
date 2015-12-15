@@ -116,7 +116,17 @@ class Server(Base):
         try:
             socket.create_connection((self.ip or 'localhost', self.port))
         except socket.error as e:
-            if e.errno == errno.ECONNREFUSED:
+            if e.errno == errno.ENETUNREACH:
+                try:
+                    socket.create_connection((self.ip or '127.0.0.1', self.port))
+                except socket.error as e:
+                    if e.errno == errno.ECONNREFUSED:
+                        return False
+                    else:
+                       	raise
+                else:
+                    return True
+            elif e.errno == errno.ECONNREFUSED:
                 return False
             else:
                 raise
