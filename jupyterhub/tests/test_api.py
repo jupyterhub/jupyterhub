@@ -326,12 +326,16 @@ def test_spawn(app, io_loop):
     db = app.db
     name = 'wash'
     user = add_user(db, app=app, name=name)
-    
-    r = api_request(app, 'users', name, 'server', method='post')
+    options = {
+        's': ['value'],
+        'i': 5,
+    }
+    r = api_request(app, 'users', name, 'server', method='post', data=json.dumps(options))
     assert r.status_code == 201
     assert 'pid' in user.state
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
+    assert app_user.spawner.user_options == options
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
