@@ -73,6 +73,29 @@ class Spawner(LoggingConfigurable):
         help="Enable debug-logging of the single-user server"
     )
     
+    # options_form is a class attribute, defining an HTML form snippet,
+    # which can be used to specify whether
+    # (i.e. just the <input> elements, not submit button or the <form> tag).
+    # This is **not** a configurable, 
+    options_form = ""
+    @classmethod
+    def options_from_form(cls, form_data):
+        """Interpret HTTP form data
+        
+        Form data will always arrive as a dict of lists of strings.
+        Override this function to understand single-values, numbers, etc.
+        
+        This should coerce form data into the structure expected by self.options,
+        which must be a dict.
+        
+        Instances will receive this data on self.user_options, after passing through this function.
+        
+        This must be a @classmethod.
+        """
+        return form_data
+    
+    user_options = Dict(help="This is where form-specified options ultimately end up.")
+    
     env_keep = List([
         'PATH',
         'PYTHONPATH',

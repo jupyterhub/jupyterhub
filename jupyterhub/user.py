@@ -107,7 +107,8 @@ class User(HasTraits):
         return quote(self.name, safe='@')
     
     @gen.coroutine
-    def spawn(self, spawner_class, base_url='/', hub=None, config=None, authenticator=None):
+    def spawn(self, spawner_class, base_url='/', hub=None, config=None,
+              authenticator=None, options=None):
         """Start the user's spawner"""
         db = self.db
         if hub is None:
@@ -129,6 +130,7 @@ class User(HasTraits):
             hub=hub,
             db=db,
             authenticator=authenticator,
+            user_options=options or {},
         )
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()

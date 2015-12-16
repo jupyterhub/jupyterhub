@@ -9,8 +9,15 @@
       <a id="stop" class="btn btn-lg btn-danger">Stop My Server</a>
       {% endif %}
       <a id="start" class="btn btn-lg btn-success"
+      {% if user.running %}
         href="{{base_url}}user/{{user.name}}/"
+      {% else %}
+        href="{{base_url}}spawn"
+      {% endif %}
       >
+      {% if not user.running %}
+      Start
+      {% endif %}
         My Server
       </a>
       {% if user.admin %}
