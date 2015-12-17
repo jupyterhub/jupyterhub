@@ -275,14 +275,8 @@ class BaseHandler(RequestHandler):
             raise RuntimeError("Spawn already pending for: %s" % user.name)
         tic = IOLoop.current().time()
 
-        f = user.spawn(
-            spawner_class=self.spawner_class,
-            base_url=self.base_url,
-            hub=self.hub,
-            config=self.config,
-            authenticator=self.authenticator,
-            options=options,
-        )
+        f = user.spawn(options)
+
         @gen.coroutine
         def finish_user_spawn(f=None):
             """Finish the user spawn by registering listeners and notifying the proxy.

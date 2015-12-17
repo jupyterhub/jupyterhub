@@ -12,15 +12,18 @@ from sqlalchemy import inspect
 from .utils import url_path_join
 
 from . import orm
-from traitlets import HasTraits, Any
+from traitlets import HasTraits, Any, Dict
+from .spawner import LocalProcessSpawner
+
 
 class UserDict(dict):
     """Like defaultdict, but for users
     
     Getting by a user id OR an orm.User instance returns a User wrapper around the orm user.
     """
-    def __init__(self, db_factory):
+    def __init__(self, db_factory, settings):
         self.db_factory = db_factory
+        self.settings = settings
         super().__init__()
     
     @property
@@ -32,7 +35,7 @@ class UserDict(dict):
             # users[orm_user] returns User(orm_user)
             orm_user = key
             if orm_user.id not in self:
-                user = self[orm_user.id] = User(orm_user)
+                user = self[orm_user.id] = User(orm_user, self.settings)
                 return user
             user = dict.__getitem__(self, orm_user.id)
             user.db = self.db
@@ -43,7 +46,7 @@ class UserDict(dict):
                 orm_user = self.db.query(orm.User).filter(orm.User.id==id).first()
                 if orm_user is None:
                     raise KeyError("No such user: %s" % id)
-                user = self[id] = User(orm_user)
+                user = self[id] = User(orm_user, self.settings)
             return dict.__getitem__(self, id)
         else:
             raise KeyError(repr(key))
@@ -53,6 +56,8 @@ class User(HasTraits):
     
     def _log_default(self):
         return app_log
+    
+    settings = Dict()
     
     db = Any(allow_none=True)
     def _db_default(self):
@@ -71,9 +76,32 @@ class User(HasTraits):
     spawn_pending = False
     stop_pending = False
     
-    def __init__(self, orm_user, **kwargs):
+    @property
+    def authenticator(self):
+        return self.settings.get('authenticator', None)
+    
+    @property
+    def spawner_class(self):
+        return self.settings.get('spawner_class', LocalProcessSpawner)
+    
+    def __init__(self, orm_user, settings, **kwargs):
         self.orm_user = orm_user
+        self.settings = settings
         super().__init__(**kwargs)
+        
+        hub = self.db.query(orm.Hub).first()
+        
+        self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
+        self.base_url = url_path_join(
+            self.settings.get('base_url', '/'), 'user', self.escaped_name)
+        
+        self.spawner = self.spawner_class(
+            user=self,
+            db=self.db,
+            hub=hub,
+            authenticator=self.authenticator,
+            config=self.settings.get('config'),
+        )
     
     # pass get/setattr to ORM user
     
@@ -95,8 +123,6 @@ class User(HasTraits):
     @property
     def running(self):
         """property for whether a user has a running server"""
-        if self.spawner is None:
-            return False
         if self.server is None:
             return False
         return True
@@ -107,16 +133,13 @@ class User(HasTraits):
         return quote(self.name, safe='@')
     
     @gen.coroutine
-    def spawn(self, spawner_class, base_url='/', hub=None, config=None,
-              authenticator=None, options=None):
+    def spawn(self, options=None):
         """Start the user's spawner"""
         db = self.db
-        if hub is None:
-            hub = db.query(orm.Hub).first()
         
         self.server = orm.Server(
-            cookie_name='%s-%s' % (hub.server.cookie_name, quote(self.name, safe='')),
-            base_url=url_path_join(base_url, 'user', self.escaped_name),
+            cookie_name=self.cookie_name,
+            base_url=self.base_url,
         )
         db.add(self.server)
         db.commit()
@@ -124,19 +147,14 @@ class User(HasTraits):
         api_token = self.new_api_token()
         db.commit()
         
-        spawner = self.spawner = spawner_class(
-            config=config,
-            user=self,
-            hub=hub,
-            db=db,
-            authenticator=authenticator,
-            user_options=options or {},
-        )
+        spawner = self.spawner
+        spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
         spawner.api_token = api_token
 
         # trigger pre-spawn hook on authenticator
+        authenticator = self.authenticator
         if (authenticator):
             yield gen.maybe_future(authenticator.pre_spawn_start(self, spawner))
 
@@ -207,8 +225,6 @@ class User(HasTraits):
         """
         self.spawn_pending = False
         spawner = self.spawner
-        if spawner is None:
-            return
         self.spawner.stop_polling()
         self.stop_pending = True
         try:

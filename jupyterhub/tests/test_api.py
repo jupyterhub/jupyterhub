@@ -47,7 +47,7 @@ def add_user(db, app=None, **kwargs):
     db.add(orm_user)
     db.commit()
     if app:
-        user = app.users[orm_user.id] = User(orm_user)
+        user = app.users[orm_user.id] = User(orm_user, app.tornado_settings)
         return user
     else:
         return orm_user
@@ -409,7 +409,7 @@ def test_slow_spawn(app, io_loop):
     
 
 def test_never_spawn(app, io_loop):
-    app.tornado_application.settings['spawner_class'] = mocking.NeverSpawner
+    app.tornado_settings['spawner_class'] = mocking.NeverSpawner
     app.tornado_application.settings['slow_spawn_timeout'] = 0
 
     db = app.db
