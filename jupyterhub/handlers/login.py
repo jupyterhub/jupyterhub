@@ -68,7 +68,7 @@ class LoginHandler(BaseHandler):
             if user.spawner:
                 status = yield user.spawner.poll()
                 already_running = (status == None)
-            if not already_running and not self.spawner_class.options_form:
+            if not already_running and not user.spawner.options_form:
                 yield self.spawn_single_user(user)
             self.set_login_cookie(user)
             next_url = self.get_argument('next', default='')

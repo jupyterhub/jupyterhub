@@ -76,8 +76,7 @@ class NeverSpawner(MockSpawner):
 class FormSpawner(MockSpawner):
     options_form = "IMAFORM"
     
-    @classmethod
-    def options_from_form(cls, form_data):
+    def options_from_form(self, form_data):
         options = {}
         options['notspecified'] = 5
         if 'bounds' in form_data:

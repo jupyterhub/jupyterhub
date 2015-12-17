@@ -73,24 +73,33 @@ class Spawner(LoggingConfigurable):
         help="Enable debug-logging of the single-user server"
     )
     
-    # options_form is a class attribute, defining an HTML form snippet,
-    # which can be used to specify whether
-    # (i.e. just the <input> elements, not submit button or the <form> tag).
-    # This is **not** a configurable, 
-    options_form = ""
-    @classmethod
-    def options_from_form(cls, form_data):
+    options_form = Unicode("", config=True, help="""
+        An HTML form for options a user can specify on launching their server.
+        The surrounding `<form>` element and the submit button are already provided.
+        
+        For example:
+        
+            Set your key:
+            <input name="key" val="default_key"></input>
+            <br>
+            Choose a letter:
+            <select name="letter" multiple="true">
+              <option value="A">The letter A</option>
+              <option value="B">The letter B</option>
+            </select>
+    """)
+
+    def options_from_form(self, form_data):
         """Interpret HTTP form data
         
         Form data will always arrive as a dict of lists of strings.
         Override this function to understand single-values, numbers, etc.
         
-        This should coerce form data into the structure expected by self.options,
+        This should coerce form data into the structure expected by self.user_options,
         which must be a dict.
         
-        Instances will receive this data on self.user_options, after passing through this function.
-        
-        This must be a @classmethod.
+        Instances will receive this data on self.user_options, after passing through this function,
+        prior to `Spawner.start`.
         """
         return form_data
     

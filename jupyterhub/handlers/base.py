@@ -452,12 +452,12 @@ class UserSpawnHandler(BaseHandler):
                 # spawn has supposedly finished, check on the status
                 status = yield current_user.spawner.poll()
                 if status is not None:
-                    if self.spawner_class.options_form:
+                    if current_user.spawner.options_form:
                         self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
                     else:
                         yield self.spawn_single_user(current_user)
             else:
-                if self.spawner_class.options_form:
+                if current_user.spawner.options_form:
                     self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
                 else:
                     yield self.spawn_single_user(current_user)

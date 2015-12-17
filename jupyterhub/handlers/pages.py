@@ -63,10 +63,10 @@ class SpawnHandler(BaseHandler):
             self.log.debug("User is running: %s", url)
             self.redirect(url)
             return
-        if self.spawner_class.options_form:
+        if user.spawner.options_form:
             html = self.render_template('spawn.html',
                 user=self.get_current_user(),
-                spawner_options_form=self.spawner_class.options_form,
+                spawner_options_form=user.spawner.options_form,
             )
             self.finish(html)
         else:
@@ -87,7 +87,7 @@ class SpawnHandler(BaseHandler):
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
-        options = self.spawner_class.options_from_form(form_options)
+        options = user.spawner.options_from_form(form_options)
         yield self.spawn_single_user(user, options=options)
         url = user.server.base_url
         self.redirect(url)

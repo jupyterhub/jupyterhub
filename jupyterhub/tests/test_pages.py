@@ -65,14 +65,14 @@ def test_spawn_redirect(app):
     assert r.url.endswith('/wash')
 
 def test_spawn_page(app):
-    with mock.patch.dict(app.tornado_application.settings, {'spawner_class': FormSpawner}):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         cookies = app.login_user('jones')
         r = get_page('spawn', app, cookies=cookies)
         assert r.url.endswith('/spawn')
         assert FormSpawner.options_form in r.text
 
 def test_spawn_form(app, io_loop):
-    with mock.patch.dict(app.tornado_application.settings, {'spawner_class': FormSpawner}):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(app.proxy.public_server.host, app.hub.server.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
