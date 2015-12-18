@@ -456,11 +456,6 @@ class UserSpawnHandler(BaseHandler):
                         self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
                     else:
                         yield self.spawn_single_user(current_user)
-            else:
-                if current_user.spawner.options_form:
-                    self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
-                else:
-                    yield self.spawn_single_user(current_user)
             # set login cookie anew
             self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.server.base_url):]
