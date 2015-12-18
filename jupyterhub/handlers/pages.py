@@ -89,6 +89,7 @@ class SpawnHandler(BaseHandler):
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
         options = user.spawner.options_from_form(form_options)
         yield self.spawn_single_user(user, options=options)
+        self.set_login_cookie(user)
         url = user.server.base_url
         self.redirect(url)
 
