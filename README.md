@@ -25,7 +25,7 @@ Basic principles:
 
 ## Dependencies
 
-JupyterHub requires [IPython](https://ipython.org/install.html) >= 3.0 (current master) and [Python](https://www.python.org/downloads/) >= 3.3.
+JupyterHub itself requires [Python](https://www.python.org/downloads/) ≥ 3.3. To run the single-user servers (which may be on the same system as the Hub or not), [Jupyter Notebook](https://jupyter.readthedocs.org/en/latest/install.html) ≥ 4 is required.
 
 Install [nodejs/npm](https://www.npmjs.com/), which is available from your
 package manager. For example, install on Linux (Debian/Ubuntu) using:
@@ -50,14 +50,15 @@ Notes on the `pip` command used in the installation directions below:
 
 ## Installation
 
-JupyterHub can be installed with pip:
+JupyterHub can be installed with pip, and the proxy with npm:
 
+    npm install -g configurable-http-proxy
     pip3 install jupyterhub
 
 If you plan to run notebook servers locally, you may also need to install the
 Jupyter ~~IPython~~ notebook:
 
-    pip3 install notebook
+    pip3 install --upgrade notebook
 
 
 ### Development install
