@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 from .utils import url_path_join
 
 from . import orm
-from IPython.utils.traitlets import HasTraits, Any
+from traitlets import HasTraits, Any
 
 class UserDict(dict):
     """Like defaultdict, but for users
