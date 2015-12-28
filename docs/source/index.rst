@@ -8,46 +8,51 @@ JupyterHub
 
 This is the **official** documentation for JupyterHub.
 
-.. important:: What's JupyterHub?
+.. important:: **What is JupyterHub?**
 
    At the simplest level, JupyterHub is the ...
 
    JupyterHub ...
 
 .. sidebar:: What's New in JupyterHub
-   :subtitle: :ref:`release-0.3.0`
+   :subtitle: Release :ref:`release-0.3.0`
 
-   - PROJECT feature
-   - PROJECT feature
-   - PROJECT feature
-   - PROJECT feature
-   - PROJECT feature
+   -  No longer make the user starting the Hub an admin
+   -  Start PAM sessions on login
+   -  Add hooks for Authenticators to fire before spawners start and after they
+      stop, allowing deeper interaction between Spawner/Authenticator
+      pairs.
+   -  Login redirect fixes
 
-   To install latest JupyterHub development release:
-   ``python -m pip install jupyterhub --pre --upgrade``
+   To install the latest JupyterHub stable release:
+   ``python -m pip install jupyterhub``
 
 
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: User Documentation
 
-   getting-started
+   installation
+   howitworks
+
 
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Configuration
 
-   howitworks
+   getting-started
+   config-topics
    authenticators
    spawners
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Developer Documentation
 
+   dev-installation
 
 .. toctree::
    :maxdepth: 1
@@ -59,7 +64,6 @@ Contents:
    :caption: About JupyterHub
 
    changelog
-
 
 .. toctree::
    :maxdepth: 1
