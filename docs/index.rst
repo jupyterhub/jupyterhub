@@ -15,7 +15,7 @@ This is the **official** documentation for JupyterHub.
    JupyterHub ...
 
 .. sidebar:: What's New in JupyterHub
-   :subtitle: :ref:`release-x.x.x`
+   :subtitle: :ref:`release-0.3.0`
 
    - PROJECT feature
    - PROJECT feature

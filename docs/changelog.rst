@@ -3,6 +3,8 @@ Summary of changes in JupyterHub
 
 See ``git log`` for a more detailed summary.
 
+.. _release-0.3.0:
+
 0.3.0
 -----
 
