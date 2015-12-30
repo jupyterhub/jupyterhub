@@ -160,7 +160,8 @@ class UserServerAPIHandler(APIHandler):
             if state is None:
                 raise web.HTTPError(400, "%s's server is already running" % name)
 
-        yield self.spawn_single_user(user)
+        options = self.get_json_body()
+        yield self.spawn_single_user(user, options=options)
         status = 202 if user.spawn_pending else 201
         self.set_status(status)
 

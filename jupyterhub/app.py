@@ -352,7 +352,8 @@ class JupyterHub(Application):
     
     users = Instance(UserDict)
     def _users_default(self):
-        return UserDict(db_factory=lambda : self.db)
+        assert self.tornado_settings
+        return UserDict(db_factory=lambda : self.db, settings=self.tornado_settings)
     
     admin_access = Bool(False, config=True,
         help="""Grant admin users permission to access single-user servers.
@@ -705,17 +706,14 @@ class JupyterHub(Application):
             yield user.stop()
         
         for orm_user in db.query(orm.User):
-            self.users[orm_user.id] = user = User(orm_user)
+            self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             if not user.state:
                 # without spawner state, server isn't valid
                 user.server = None
                 user_summaries.append(_user_summary(user))
                 continue
             self.log.debug("Loading state for %s from db", user.name)
-            user.spawner = spawner = self.spawner_class(
-                user=user, hub=self.hub, config=self.config, db=self.db,
-                authenticator=self.authenticator,
-            )
+            spawner = user.spawner
             status = yield spawner.poll()
             if status is None:
                 self.log.info("%s still running", user.name)
@@ -860,7 +858,6 @@ class JupyterHub(Application):
             proxy=self.proxy,
             hub=self.hub,
             admin_users=self.authenticator.admin_users,
-            users=self.users,
             admin_access=self.admin_access,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
@@ -879,6 +876,8 @@ class JupyterHub(Application):
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
         self.tornado_settings = settings
+        # constructing users requires access to tornado_settings
+        self.tornado_settings['users'] = self.users
     
     def init_tornado_application(self):
         """Instantiate the tornado Application object"""
@@ -915,9 +914,9 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         yield self.init_users()
+        self.init_tornado_settings()
         yield self.init_spawners()
         self.init_handlers()
-        self.init_tornado_settings()
         self.init_tornado_application()
     
     @gen.coroutine

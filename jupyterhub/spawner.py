@@ -73,6 +73,38 @@ class Spawner(LoggingConfigurable):
         help="Enable debug-logging of the single-user server"
     )
     
+    options_form = Unicode("", config=True, help="""
+        An HTML form for options a user can specify on launching their server.
+        The surrounding `<form>` element and the submit button are already provided.
+        
+        For example:
+        
+            Set your key:
+            <input name="key" val="default_key"></input>
+            <br>
+            Choose a letter:
+            <select name="letter" multiple="true">
+              <option value="A">The letter A</option>
+              <option value="B">The letter B</option>
+            </select>
+    """)
+
+    def options_from_form(self, form_data):
+        """Interpret HTTP form data
+        
+        Form data will always arrive as a dict of lists of strings.
+        Override this function to understand single-values, numbers, etc.
+        
+        This should coerce form data into the structure expected by self.user_options,
+        which must be a dict.
+        
+        Instances will receive this data on self.user_options, after passing through this function,
+        prior to `Spawner.start`.
+        """
+        return form_data
+    
+    user_options = Dict(help="This is where form-specified options ultimately end up.")
+    
     env_keep = List([
         'PATH',
         'PYTHONPATH',
@@ -150,6 +182,14 @@ class Spawner(LoggingConfigurable):
         Subclasses should call super, to ensure that state is properly cleared.
         """
         self.api_token = ''
+    
+    def get_env(self):
+        """Return the environment we should use
+        
+        Default returns a copy of self.env.
+        Use this to access the env in Spawner.start to allow extension in subclasses.
+        """
+        return self.env.copy()
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
@@ -344,9 +384,11 @@ class LocalProcessSpawner(Spawner):
             env['SHELL'] = shell
         return env
     
-    def _env_default(self):
-        env = super()._env_default()
-        return self.user_env(env)
+    def get_env(self):
+        """Add user environment variables"""
+        env = super().get_env()
+        env = self.user_env(env)
+        return env
     
     @gen.coroutine
     def start(self):
@@ -355,7 +397,7 @@ class LocalProcessSpawner(Spawner):
             self.user.server.ip = self.ip
         self.user.server.port = random_port()
         cmd = []
-        env = self.env.copy()
+        env = self.get_env()
         
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())

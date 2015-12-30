@@ -98,15 +98,19 @@ def test_spawn_fails(db, io_loop):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
-    user = User(orm_user)
     
     class BadSpawner(MockSpawner):
         @gen.coroutine
         def start(self):
             raise RuntimeError("Split the party")
     
+    user = User(orm_user, {
+        'spawner_class': BadSpawner,
+        'config': None,
+    })
+    
     with pytest.raises(Exception) as exc:
-        io_loop.run_sync(lambda : user.spawn(BadSpawner))
+        io_loop.run_sync(user.spawn)
     assert user.server is None
     assert not user.running
 

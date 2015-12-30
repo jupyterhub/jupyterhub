@@ -3,7 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from tornado import web
+from tornado import web, gen
 
 from .. import orm
 from ..utils import admin_only, url_path_join
@@ -46,6 +46,52 @@ class HomeHandler(BaseHandler):
         )
         self.finish(html)
 
+
+class SpawnHandler(BaseHandler):
+    """Handle spawning of single-user servers via form.
+    
+    GET renders the form, POST handles form submission.
+    
+    Only enabled when Spawner.options_form is defined.
+    """
+    @web.authenticated
+    def get(self):
+        """GET renders form for spawning with user-specified options"""
+        user = self.get_current_user()
+        if user.running:
+            url = user.server.base_url
+            self.log.debug("User is running: %s", url)
+            self.redirect(url)
+            return
+        if user.spawner.options_form:
+            html = self.render_template('spawn.html',
+                user=self.get_current_user(),
+                spawner_options_form=user.spawner.options_form,
+            )
+            self.finish(html)
+        else:
+            # not running, no form. Trigger spawn.
+            url = url_path_join(self.base_url, 'users', user.name)
+            self.redirect(url)
+    
+    @web.authenticated
+    @gen.coroutine
+    def post(self):
+        """POST spawns with user-specified options"""
+        user = self.get_current_user()
+        if user.running:
+            url = user.server.base_url
+            self.log.warning("User is already running: %s", url)
+            self.redirect(url)
+            return
+        form_options = {}
+        for key, byte_list in self.request.body_arguments.items():
+            form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
+        options = user.spawner.options_from_form(form_options)
+        yield self.spawn_single_user(user, options=options)
+        self.set_login_cookie(user)
+        url = user.server.base_url
+        self.redirect(url)
 
 class AdminHandler(BaseHandler):
     """Render the admin page."""
@@ -107,4 +153,5 @@ default_handlers = [
     (r'/', RootHandler),
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
+    (r'/spawn', SpawnHandler),
 ]

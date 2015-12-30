@@ -268,20 +268,15 @@ class BaseHandler(RequestHandler):
     @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
-
+    
     @gen.coroutine
-    def spawn_single_user(self, user):
+    def spawn_single_user(self, user, options=None):
         if user.spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
         tic = IOLoop.current().time()
 
-        f = user.spawn(
-            spawner_class=self.spawner_class,
-            base_url=self.base_url,
-            hub=self.hub,
-            config=self.config,
-            authenticator=self.authenticator,
-        )
+        f = user.spawn(options)
+
         @gen.coroutine
         def finish_user_spawn(f=None):
             """Finish the user spawn by registering listeners and notifying the proxy.
@@ -457,9 +452,10 @@ class UserSpawnHandler(BaseHandler):
                 # spawn has supposedly finished, check on the status
                 status = yield current_user.spawner.poll()
                 if status is not None:
-                    yield self.spawn_single_user(current_user)
-            else:
-                yield self.spawn_single_user(current_user)
+                    if current_user.spawner.options_form:
+                        self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
+                    else:
+                        yield self.spawn_single_user(current_user)
             # set login cookie anew
             self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.server.base_url):]

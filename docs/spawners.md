@@ -84,6 +84,64 @@ def clear_state(self):
     self.pid = 0
 ```
 
+## Spawner options form
+
+(new in 0.4)
+
+Some deployments may want to offer options to users to influence how their servers are started.
+This may include cluster-based deployments, where users specify what resources should be available,
+or docker-based deployments where users can select from a list of base images.
+
+This feature is enabled by setting `Spawner.options_form`, which is an HTML form snippet
+inserted unmodified into the spawn form.
+If the `Spawner.options_form` is defined, when a user would start their server, they will be directed to a form page, like this:
+
+![spawn-form](images/spawn-form.png)
+
+If `Spawner.options_form` is undefined, the users server is spawned directly, and no spawn page is rendered.
+
+See [this example](../examples/spawn-form/jupyterhub_config.py) for a form that allows custom CLI args for the local spawner.
+
+
+### `Spawner.options_from_form`
+
+Options from this form will always be a dictionary of lists of strings, e.g.:
+
+```python
+{
+  'integer': ['5'],
+  'text': ['some text'],
+  'select': ['a', 'b'],
+}
+```
+
+When formdata arrives, it is passed through `Spawner.options_from_form(formdata)`,
+which is a method to turn the form data into the correct structure.
+This method must return a dictionary, and is meant to interpret the lists-of-strings into the correct types, e.g. for the above form it would look like:
+
+```python
+def options_from_form(self, formdata):
+    options = {}
+    options['integer'] = int(formdata['integer'][0]) # single integer value
+    options['text'] = formdata['text'][0] # single string value
+    options['select'] = formdata['select'] # list already correct
+    options['notinform'] = 'extra info' # not in the form at all
+    return options
+```
+
+which would return:
+
+```python
+{
+  'integer': 5,
+  'text': 'some text',
+  'select': ['a', 'b'],
+  'notinform': 'extra info',
+}
+```
+
+When `Spawner.spawn` is called, this dict is accessible as `self.user_options`.
+
 
 
 [Spawner]: ../jupyterhub/spawner.py

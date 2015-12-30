@@ -73,6 +73,19 @@ class NeverSpawner(MockSpawner):
         return Future()
 
 
+class FormSpawner(MockSpawner):
+    options_form = "IMAFORM"
+    
+    def options_from_form(self, form_data):
+        options = {}
+        options['notspecified'] = 5
+        if 'bounds' in form_data:
+            options['bounds'] = [int(i) for i in form_data['bounds']]
+        if 'energy' in form_data:
+            options['energy'] = form_data['energy'][0]
+        return options
+
+
 class MockPAMAuthenticator(PAMAuthenticator):
     def _admin_users_default(self):
         return {'admin'}
