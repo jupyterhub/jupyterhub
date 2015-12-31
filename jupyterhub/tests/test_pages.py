@@ -1,5 +1,7 @@
 """Tests for HTML pages"""
 
+from urllib.parse import urlparse
+
 import requests
 
 from ..utils import url_path_join as ujoin
@@ -7,6 +9,7 @@ from .. import orm
 
 import mock
 from .mocking import FormSpawner
+from .test_api import api_request
 
 
 def get_page(path, app, **kw):
@@ -59,10 +62,34 @@ def test_admin(app):
     r.raise_for_status()
     assert r.url.endswith('/admin')
 
-def test_spawn_redirect(app):
-    cookies = app.login_user('wash')
+def test_spawn_redirect(app, io_loop):
+    name = 'wash'
+    cookies = app.login_user(name)
+    u = app.users[orm.User.find(app.db, name)]
+    
+    # ensure wash's server isn't running:
+    r = api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
+    r.raise_for_status()
+    status = io_loop.run_sync(u.spawner.poll)
+    assert status is not None
+    
+    # test spawn page when no server is running
     r = get_page('spawn', app, cookies=cookies)
-    assert r.url.endswith('/wash')
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/user/%s' % name
+    
+    # should have started server
+    status = io_loop.run_sync(u.spawner.poll)
+    assert status is None
+    
+    # test spawn page when server is already running (just redirect)
+    r = get_page('spawn', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/user/%s' % name
 
 def test_spawn_page(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
