@@ -71,7 +71,7 @@ class SpawnHandler(BaseHandler):
             self.finish(html)
         else:
             # not running, no form. Trigger spawn.
-            url = url_path_join(self.base_url, 'users', user.name)
+            url = url_path_join(self.base_url, 'user', user.name)
             self.redirect(url)
     
     @web.authenticated
