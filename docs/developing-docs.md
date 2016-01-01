@@ -5,6 +5,7 @@
 Our goal when creating documentation is to give the developers and the
 users of JupyterHub straightforward, accurate, and timely information. To be clear,
 we define:
+
 * straightforward as "enough text to be helpful but not so much as to
 overwhelm the reader";
 * accurate as "the information reflects the actual functioning of the project
@@ -23,7 +24,9 @@ documentation and help future users.
 Thanks and happy creating!
 
 ## Reading the documentation on the web
+
 You have two options to read the docs on the web:
+
 * read the files in the ``docs`` directory of the JupyterHub
 repo on GitHub, or
 * read the docs on "Read The Docs"
