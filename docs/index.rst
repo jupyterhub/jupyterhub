@@ -29,6 +29,12 @@ Contents:
    developing-docs
 
 .. toctree::
+   :maxdepth: 1
+   :caption: Community documentation
+
+   examples
+
+.. toctree::
    :maxdepth: 2
    :caption: About JupyterHub
 
