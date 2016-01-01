@@ -1,5 +1,4 @@
 -r dev-requirements.txt
 
 sphinx
-recommonmark
-CommonMark
+sphinxcontrib-markdown

@@ -16,7 +16,6 @@
 import sys
 import os
 import shlex
-import recommonmark
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -40,12 +39,12 @@ extensions = [
 templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
+# You can specify multiple suffix as a list of strings:
 # Jupyter modifies this to allow markdown and restructured text files
 source_suffix = ['.rst', '.md']
-
+# Jupyter uses sphinxcontrib-markdown (https://github.com/tk0miya/sphinxcontrib-markdown)
 source_parsers = {
-  '.md': 'recommonmark.parser.CommonMarkParser',
+    '.md': 'sphinxcontrib.markdown.MarkdownParser'
 }
 
 # The encoding of source files.
