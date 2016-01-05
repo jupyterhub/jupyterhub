@@ -454,6 +454,7 @@ class UserSpawnHandler(BaseHandler):
                 if status is not None:
                     if current_user.spawner.options_form:
                         self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
+                        return
                     else:
                         yield self.spawn_single_user(current_user)
             # set login cookie anew
