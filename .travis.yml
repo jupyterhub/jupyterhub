@@ -11,8 +11,7 @@ before_install:
     - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
 install:
     - pip install -f travis-wheels/wheelhouse -r dev-requirements.txt .
-    - pip install -f travis-wheels/wheelhouse notebook
 script:
     - py.test --cov jupyterhub jupyterhub/tests -v
 after_success:
-    - coveralls
+    - codecov
