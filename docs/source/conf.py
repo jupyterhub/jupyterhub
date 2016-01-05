@@ -15,7 +15,8 @@
 import sys
 import os
 import shlex
-from recommonmark.parser import CommonMarkParser
+from CommonMark import Parser, HtmlRenderer
+import recommonmark.parser
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
