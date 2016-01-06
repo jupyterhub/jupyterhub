@@ -359,7 +359,8 @@ def test_spawn(app, io_loop):
     assert status == 0
 
 def test_slow_spawn(app, io_loop):
-    app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
+    # app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
+    app.tornado_settings['spawner_class'] = mocking.SlowSpawner
     app.tornado_application.settings['slow_spawn_timeout'] = 0
     app.tornado_application.settings['slow_stop_timeout'] = 0
 
