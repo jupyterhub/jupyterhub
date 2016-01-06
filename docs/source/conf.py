@@ -15,7 +15,8 @@
 import sys
 import os
 import shlex
-from CommonMark import Parser, HtmlRenderer
+
+# Needed for conversion from markdown to html
 import recommonmark.parser
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -40,13 +41,14 @@ extensions = [
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
-# The suffix(es) of source filenames.
-# You can specify multiple suffix as a list of string:
-# source_suffix = ['.rst', '.md']
+# Jupyter uses recommonmark's parser to convert markdown
 source_parsers = {
     '.md': 'recommonmark.parser.CommonMarkParser',
 }
 
+# The suffix(es) of source filenames.
+# You can specify multiple suffix as a list of string:
+# source_suffix = ['.rst', '.md']
 source_suffix = ['.rst', '.md']
 
 # The encoding of source files.
