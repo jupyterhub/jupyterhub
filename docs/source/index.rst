@@ -33,7 +33,7 @@ Contents:
    :caption: User Documentation
 
    getting-started
-   how-it-works
+   howitworks
 
 .. toctree::
    :maxdepth: 2
