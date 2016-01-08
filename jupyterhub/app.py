@@ -630,7 +630,10 @@ class JupyterHub(Application):
                 "\nUse Authenticator.admin_users instead."
             )
             self.authenticator.admin_users = self.admin_users
-        admin_users = self.authenticator.admin_users
+        admin_users = [
+            self.authenticator.normalize_username(name)
+            for name in self.authenticator.admin_users
+        ]
         
         if not admin_users:
             self.log.warning("No admin users, admin interface will be unavailable.")
@@ -651,7 +654,10 @@ class JupyterHub(Application):
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
-        whitelist = self.authenticator.whitelist
+        whitelist = [
+            self.authenticator.normalize_username(name)
+            for name in self.authenticator.whitelist
+        ]
 
         if not whitelist:
             self.log.info("Not using whitelist. Any authenticated user will be allowed.")
@@ -671,7 +677,7 @@ class JupyterHub(Application):
             # but changes to the whitelist can occur in the database,
             # and persist across sessions.
             for user in db.query(orm.User):
-                whitelist.add(user.name)
+                self.authenticator.whitelist.add(user.name)
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously

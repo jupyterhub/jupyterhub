@@ -34,6 +34,7 @@ class UserListAPIHandler(APIHandler):
         
         to_create = []
         for name in usernames:
+            name = self.authenticator.normalize_username(name)
             user = self.find_user(name)
             if user is not None:
                 self.log.warn("User %s already exists" % name)

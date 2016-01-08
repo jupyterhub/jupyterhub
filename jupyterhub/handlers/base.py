@@ -247,7 +247,7 @@ class BaseHandler(RequestHandler):
     def authenticate(self, data):
         auth = self.authenticator
         if auth is not None:
-            result = yield auth.authenticate(self, data)
+            result = yield auth.get_authenticated_user(self, data)
             return result
         else:
             self.log.error("No authentication function, login is impossible!")

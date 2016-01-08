@@ -53,6 +53,56 @@ class Authenticator(LoggingConfigurable):
         """
     )
     
+    def normalize_username(self, username):
+        """Normalize a username.
+        
+        Override in subclasses if usernames should have some normalization.
+        Default: cast to lowercase, lookup in username_map.
+        """
+        username = username.lower()
+        return username
+    
+    def check_whitelist(self, username):
+        """Check a username against our whitelist.
+        
+        Return True if username is allowed, False otherwise.
+        No whitelist means any username should be allowed.
+        
+        Names are normalized *before* being checked against the whitelist.
+        """
+        if not self.whitelist:
+            # No whitelist means any name is allowed
+            return True
+        return username in self.whitelist
+    
+    @gen.coroutine
+    def get_authenticated_user(self, handler, data):
+        """This is the outer API for authenticating a user.
+        
+        This calls `authenticate`, which should be overridden in subclasses,
+        normalizes the username if any normalization should be done,
+        and then validates the name in the whitelist.
+        
+        Subclasses should not need to override this method.
+        The various stages can be overridden separately:
+        
+        - authenticate turns formdata into a username
+        - normalize_username normalizes the username
+        - check_whitelist checks against the user whitelist
+        """
+        username = yield self.authenticate(handler, data)
+        if username is None:
+            return
+        username = self.normalize_username(username)
+        if not self.validate_username(username):
+            self.log.warning("Disallowing invalid username %r.", username)
+            return
+        if self.check_whitelist(username):
+            return username
+        else:
+            self.log.warning("User %r not in whitelist.", username)
+            return
+    
     @gen.coroutine
     def authenticate(self, handler, data):
         """Authenticate a user with login form data.
@@ -60,6 +110,8 @@ class Authenticator(LoggingConfigurable):
         This must be a tornado gen.coroutine.
         It must return the username on successful authentication,
         and return None on failed authentication.
+        
+        Checking the whitelist is handled separately by the caller.
         """
 
     def pre_spawn_start(self, user, spawner):
@@ -74,13 +126,6 @@ class Authenticator(LoggingConfigurable):
         Can be used to do auth-related cleanup, e.g. closing PAM sessions.
         """
     
-    def check_whitelist(self, user):
-        """
-        Return True if the whitelist is empty or user is in the whitelist.
-        """
-        # Parens aren't necessary here, but they make this easier to parse.
-        return (not self.whitelist) or (user in self.whitelist)
-
     def add_user(self, user):
         """Add a new user
         
@@ -240,8 +285,6 @@ class PAMAuthenticator(LocalAuthenticator):
         Return None otherwise.
         """
         username = data['username']
-        if not self.check_whitelist(username):
-            return
         try:
             pamela.authenticate(username, data['password'], service=self.service)
         except pamela.PAMError as e:

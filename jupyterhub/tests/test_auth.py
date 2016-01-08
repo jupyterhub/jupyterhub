@@ -13,13 +13,13 @@ from jupyterhub import auth, orm
 
 def test_pam_auth(io_loop):
     authenticator = MockPAMAuthenticator()
-    authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'match',
         'password': 'match',
     }))
     assert authorized == 'match'
     
-    authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'match',
         'password': 'nomatch',
     }))
@@ -27,19 +27,19 @@ def test_pam_auth(io_loop):
 
 def test_pam_auth_whitelist(io_loop):
     authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
-    authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'kaylee',
         'password': 'kaylee',
     }))
     assert authorized == 'kaylee'
     
-    authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'wash',
         'password': 'nomatch',
     }))
     assert authorized is None
     
-    authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'mal',
         'password': 'mal',
     }))
@@ -59,14 +59,14 @@ def test_pam_auth_group_whitelist(io_loop):
     authenticator = MockPAMAuthenticator(group_whitelist={'group'})
     
     with mock.patch.object(auth, 'getgrnam', getgrnam):
-        authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+        authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
             'username': 'kaylee',
             'password': 'kaylee',
         }))
     assert authorized == 'kaylee'
 
     with mock.patch.object(auth, 'getgrnam', getgrnam):
-        authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+        authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
             'username': 'mal',
             'password': 'mal',
         }))
@@ -75,7 +75,7 @@ def test_pam_auth_group_whitelist(io_loop):
 
 def test_pam_auth_no_such_group(io_loop):
     authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
-    authorized = io_loop.run_sync(lambda : authenticator.authenticate(None, {
+    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'kaylee',
         'password': 'kaylee',
     }))
@@ -142,5 +142,14 @@ def test_handlers(app):
     a = auth.PAMAuthenticator()
     handlers = a.get_handlers(app)
     assert handlers[0][0] == '/login'
+
+
+def test_normalize_names(io_loop):
+    a = MockPAMAuthenticator()
+    authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
+        'username': 'ZOE',
+        'password': 'ZOE',
+    }))
+    assert authorized == 'zoe'
 
 
