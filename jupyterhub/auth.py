@@ -6,9 +6,10 @@
 from grp import getgrnam
 import pipes
 import pwd
+import re
 from shutil import which
 import sys
-from subprocess import check_call
+from subprocess import Popen, PIPE, STDOUT
 
 from tornado import gen
 import pamela
@@ -271,10 +272,7 @@ class LocalAuthenticator(Authenticator):
     def add_user(self, user):
         """Add a new user
         
-        By default, this just adds the user to the whitelist.
-        
-        Subclasses may do more extensive things,
-        such as adding actual unix users.
+        If self.create_system_users, the user will attempt to be created.
         """
         user_exists = yield gen.maybe_future(self.system_user_exists(user))
         if not user_exists:
@@ -300,7 +298,11 @@ class LocalAuthenticator(Authenticator):
         name = user.name
         cmd = [ arg.replace('USERNAME', name) for arg in self.add_user_cmd ] + [name]
         self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
-        check_call(cmd)
+        p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
+        p.wait()
+        if p.returncode:
+            err = p.stdout.read().decode('utf8', 'replace')
+            raise RuntimeError("Failed to create system user %s: %s" % (name, err))
 
 
 class PAMAuthenticator(LocalAuthenticator):

@@ -63,10 +63,10 @@ class UserListAPIHandler(APIHandler):
                 self.db.commit()
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
-            except Exception:
+            except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 del self.users[user]
-                raise web.HTTPError(400, "Failed to create user: %s" % name)
+                raise web.HTTPError(400, "Failed to create user %s: %s" % (name, str(e)))
             else:
                 created.append(user)
         
