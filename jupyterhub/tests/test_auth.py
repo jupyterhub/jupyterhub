@@ -153,3 +153,19 @@ def test_normalize_names(io_loop):
     assert authorized == 'zoe'
 
 
+def test_username_map(io_loop):
+    a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
+    authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
+        'username': 'WASH',
+        'password': 'WASH',
+    }))
+
+    assert authorized == 'alpha'
+
+    authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
+        'username': 'Inara',
+        'password': 'Inara',
+    }))
+    assert authorized == 'inara'
+
+

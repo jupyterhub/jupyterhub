@@ -53,6 +53,15 @@ class Authenticator(LoggingConfigurable):
         """
     )
     
+    username_map = Dict(config=True,
+        help="""Dictionary mapping authenticator usernames to JupyterHub users.
+        
+        Can be used to map OAuth service names to local users, for instance.
+        
+        Used in normalize_username.
+        """
+    )
+    
     def normalize_username(self, username):
         """Normalize a username.
         
@@ -60,6 +69,7 @@ class Authenticator(LoggingConfigurable):
         Default: cast to lowercase, lookup in username_map.
         """
         username = username.lower()
+        username = self.username_map.get(username, username)
         return username
     
     def check_whitelist(self, username):
