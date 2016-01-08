@@ -33,13 +33,24 @@ class UserListAPIHandler(APIHandler):
         admin = data.get('admin', False)
         
         to_create = []
+        invalid_names = []
         for name in usernames:
             name = self.authenticator.normalize_username(name)
+            if not self.authenticator.validate_username(name):
+                invalid_names.append(name)
+                continue
             user = self.find_user(name)
             if user is not None:
                 self.log.warn("User %s already exists" % name)
             else:
                 to_create.append(name)
+        
+        if invalid_names:
+            if len(invalid_names) == 1:
+                msg = "Invalid username: %s" % invalid_names[0]
+            else:
+                msg = "Invalid usernames: %s" % ', '.join(invalid_names)
+            raise web.HTTPError(400, msg)
         
         if not to_create:
             raise web.HTTPError(400, "All %i users already exist" % len(usernames))

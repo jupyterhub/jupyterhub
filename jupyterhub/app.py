@@ -634,6 +634,9 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.admin_users
         ]
+        for username in admin_users:
+            if not self.authenticator.validate_username(username):
+                raise ValueError("username %r is not valid" % username)
         
         if not admin_users:
             self.log.warning("No admin users, admin interface will be unavailable.")
@@ -658,6 +661,9 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.whitelist
         ]
+        for username in whitelist:
+            if not self.authenticator.validate_username(username):
+                raise ValueError("username %r is not valid" % username)
 
         if not whitelist:
             self.log.info("Not using whitelist. Any authenticated user will be allowed.")

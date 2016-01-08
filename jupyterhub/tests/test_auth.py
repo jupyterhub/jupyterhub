@@ -169,3 +169,12 @@ def test_username_map(io_loop):
     assert authorized == 'inara'
 
 
+def test_validate_names(io_loop):
+    a = auth.PAMAuthenticator()
+    assert a.validate_username('willow')
+    assert a.validate_username('giles')
+    a = auth.PAMAuthenticator(username_pattern='w.*')
+    assert not a.validate_username('xander')
+    assert a.validate_username('willow')
+
+

@@ -14,7 +14,7 @@ from tornado import gen
 import pamela
 
 from traitlets.config import LoggingConfigurable
-from traitlets import Bool, Set, Unicode, Any
+from traitlets import Bool, Set, Unicode, Dict, Any
 
 from .handlers.login import LoginHandler
 from .utils import url_path_join
@@ -52,6 +52,28 @@ class Authenticator(LoggingConfigurable):
         login services (e.g. 'GitHub').
         """
     )
+    
+    username_pattern = Unicode(config=True,
+        help="""Regular expression pattern for validating usernames.
+        
+        If not defined: allow any username.
+        """
+    )
+    def _username_pattern_changed(self, name, old, new):
+        if not new:
+            self.username_regex = None
+        self.username_regex = re.compile(new)
+    
+    username_regex = Any()
+    
+    def validate_username(self, username):
+        """Validate a (normalized) username.
+        
+        Return True if username is valid, False otherwise.
+        """
+        if not self.username_regex:
+            return True
+        return bool(self.username_regex.match(username))
     
     username_map = Dict(config=True,
         help="""Dictionary mapping authenticator usernames to JupyterHub users.
@@ -144,6 +166,8 @@ class Authenticator(LoggingConfigurable):
         Subclasses may do more extensive things,
         such as adding actual unix users.
         """
+        if not self.validate_username(user.name):
+            raise ValueError("Invalid username: %s" % user.name)
         if self.whitelist:
             self.whitelist.add(user.name)
     
