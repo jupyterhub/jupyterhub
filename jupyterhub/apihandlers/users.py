@@ -53,8 +53,7 @@ class UserListAPIHandler(APIHandler):
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
-                self.db.delete(user)
-                self.db.commit()
+                del self.users[user]
                 raise web.HTTPError(400, "Failed to create user: %s" % name)
             else:
                 created.append(user)
@@ -105,9 +104,7 @@ class UserAPIHandler(APIHandler):
         except Exception:
             self.log.error("Failed to create user: %s" % name, exc_info=True)
             # remove from registry
-            self.users.pop(user.id, None)
-            self.db.delete(user)
-            self.db.commit()
+            del self.users[user]
             raise web.HTTPError(400, "Failed to create user: %s" % name)
         
         self.write(json.dumps(self.user_model(user)))
@@ -130,10 +127,7 @@ class UserAPIHandler(APIHandler):
         
         yield gen.maybe_future(self.authenticator.delete_user(user))
         # remove from registry
-        self.users.pop(user.id, None)
-        # remove from the db
-        self.db.delete(user)
-        self.db.commit()
+        del self.users[user]
         
         self.set_status(204)
     
