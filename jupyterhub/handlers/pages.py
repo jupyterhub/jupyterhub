@@ -87,6 +87,8 @@ class SpawnHandler(BaseHandler):
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
+        for key, byte_list in self.request.files.items():
+            form_options["%s_file"%key] = byte_list
         options = user.spawner.options_from_form(form_options)
         yield self.spawn_single_user(user, options=options)
         self.set_login_cookie(user)

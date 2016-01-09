@@ -83,6 +83,8 @@ class FormSpawner(MockSpawner):
             options['bounds'] = [int(i) for i in form_data['bounds']]
         if 'energy' in form_data:
             options['energy'] = form_data['energy'][0]
+        if 'hello_file' in form_data:
+            options['hello'] = form_data['hello_file'][0]
         return options
 
 

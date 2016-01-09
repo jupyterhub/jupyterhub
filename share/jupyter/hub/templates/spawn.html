@@ -7,7 +7,7 @@
     <h1>Spawner options</h1>
   </div>
   <div class="row col-sm-offset-2 col-sm-8">
-    <form id="spawn_form" action="{{base_url}}spawn" method="post" role="form">
+    <form enctype="multipart/form-data" id="spawn_form" action="{{base_url}}spawn" method="post" role="form">
       {{spawner_options_form}}
       <br>
       <input type="submit" value="Spawn" class="btn btn-jupyter">
