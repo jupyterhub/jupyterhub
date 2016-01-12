@@ -38,7 +38,7 @@ Next, install JavaScript dependencies:
 
     sudo npm install -g configurable-http-proxy
 
-### Optional Installation Prerequisite (pip)
+### (Optional) Installation Prerequisite (pip)
 
 Notes on `pip` command used in the below installation sections:
 - `sudo` may be needed for `pip install`, depending on the user's filesystem permissions.
