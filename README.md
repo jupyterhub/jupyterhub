@@ -40,11 +40,11 @@ Next, install JavaScript dependencies:
 
 ### (Optional) Installation Prerequisite (pip)
 
-Notes on `pip` command used in the below installation sections:
+Notes on the `pip` command used in the installation directions below:
 - `sudo` may be needed for `pip install`, depending on the user's filesystem permissions.
 - JupyterHub requires Python >= 3.3, so `pip3` may be required on some machines for package installation instead of `pip` (especially when both Python 2 and Python 3 are installed on a machine). If `pip3` is not found, install it using (on Linux Debian/Ubuntu):
 
-      sudo apt-get install python3-pip
+        sudo apt-get install python3-pip
 
 
 ## Installation
@@ -60,7 +60,7 @@ If the `pip3 install` command fails and complains about `lessc` being unavailabl
 If you plan to run notebook servers locally, you may also need to install the
 Jupyter ~~IPython~~ notebook:
 
-      pip3 install jupyter
+    pip3 install jupyter
 
 This will fetch client-side JavaScript dependencies and compile CSS,
 and install these files to `<sys.prefix>/share/jupyter`, as well as
@@ -97,7 +97,7 @@ configuration of the system.
 
 ## Getting started
 
-See the [getting started document](docs/source/getting-started.md) for some of the
+See the [getting started document](docs/source/getting-started.md) for the
 basics of configuring your JupyterHub deployment.
 
 ### Some examples
