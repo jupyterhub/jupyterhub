@@ -51,7 +51,7 @@ Authentication is customizable via the Authenticator class.
 Authentication can be replaced by any mechanism,
 such as OAuth, Kerberos, etc.
 
-JupyterHub only ships with [PAM](http://en.wikipedia.org/wiki/Pluggable_authentication_module) authentication,
+JupyterHub only ships with [PAM](https://en.wikipedia.org/wiki/Pluggable_authentication_module) authentication,
 which requires the server to be run as root,
 or at least with access to the PAM service,
 which regular users typically do not have

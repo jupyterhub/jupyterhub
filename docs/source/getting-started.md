@@ -6,7 +6,7 @@ JupyterHub is highly customizable, so there's a lot to cover.
 
 ## Installation
 
-See [the readme](../README.md) for help installing JupyterHub.
+See [the readme](https://github.com/jupyter/jupyterhub/blob/master/README.md) for help installing JupyterHub.
 
 
 ## Overview
@@ -404,4 +404,4 @@ jupyterhub -f /path/to/aboveconfig.py
 
 [oauth-setup]: https://github.com/jupyter/oauthenticator#setup
 [oauthenticator]: https://github.com/jupyter/oauthenticator
-[PAM]: http://en.wikipedia.org/wiki/Pluggable_authentication_module
+[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module

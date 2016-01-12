@@ -72,9 +72,9 @@ You can see an example implementation of an Authenticator that uses [GitHub OAut
 at [OAuthenticator][].
 
 
-[Authenticator]: ../jupyterhub/auth.py
-[PAM]: http://en.wikipedia.org/wiki/Pluggable_authentication_module
-[OAuth]: http://en.wikipedia.org/wiki/OAuth 
+[Authenticator]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/auth.py
+[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[OAuth]: https://en.wikipedia.org/wiki/OAuth 
 [GitHub OAuth]: https://developer.github.com/v3/oauth/
 [OAuthenticator]: https://github.com/jupyter/oauthenticator
 
