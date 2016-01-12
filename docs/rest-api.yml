@@ -1,0 +1,259 @@
+# see me at: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default
+swagger: '2.0'
+info:
+  title: JupyterHub
+  description: The REST API for JupyterHub
+  version: 0.4.0
+schemes:
+  - http
+securityDefinitions:
+  token:
+    type: apiKey
+    name: Authorization
+    in: header
+security:
+  - token: []
+basePath: /hub/api/
+produces:
+  - application/json
+consumes:
+  - application/json
+paths:
+  /users:
+    get:
+      summary: List users
+      responses:
+        '200':
+          description: The user list
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/User'
+    post:
+      summary: Create multiple users
+      parameters:
+        - name: data
+          in: body
+          required: true
+          schema:
+            type: object
+            properties:
+              usernames:
+                type: array
+                description: list of usernames to create
+                items:
+                  type: string
+              admin:
+                description: whether the created users should be admins
+                type: boolean
+      responses:
+        '201':
+          description: The users have been created
+          schema:
+            type: array
+            description: The created users
+            items:
+              $ref: '#/definitions/User'
+  /users/{name}:
+    get:
+      summary: Get a user by name
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The User model
+          schema:
+            $ref: '#/definitions/User'
+    post:
+      summary: Create a single user
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The user has been created
+          schema:
+            $ref: '#/definitions/User'
+    delete:
+      summary: Delete a user
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The user has been deleted
+    patch:
+      summary: Modify a user
+      description: Change a user's name or admin status
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+        - name: data
+          in: body
+          required: true
+          description: Updated user info. At least one of name and admin is required.
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: the new name (optional)
+              admin:
+                type: boolean
+                description: update admin (optional)
+      responses:
+        '200':
+          description: The updated user info
+          schema:
+            $ref: '#/definitions/User'
+  /users/{name}/server:
+    post:
+      summary: Start a user's server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The server has started
+        '202':
+          description: The server has been requested, but has not yet started
+    delete:
+      summary: Stop a user's server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The server has stopped
+        '202':
+          description: The server has been asked to stop, but is taking a while
+  /users/{name}/admin-access:
+    post:
+      summary: Grant an admin access to this user's server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: Sets a cookie granting the requesting admin access to the user's server
+  /proxy:
+    get:
+      summary: Get the proxy's routing table
+      description: A convenience alias for getting the info directly from the proxy
+      responses:
+        '200':
+          description: Routing table
+          schema:
+            type: object
+            description: configurable-http-proxy routing table (see CHP docs for details)
+    post:
+      summary: Force the Hub to sync with the proxy
+      responses:
+        '200':
+          description: Success
+    patch:
+      summary: Tell the Hub about a new proxy
+      description: If you have started a new proxy and would like the Hub to switch over to it, this allows you to notify the Hub of the new proxy.
+      parameters:
+        - name: data
+          in: body
+          required: true
+          description: Any values that have changed for the new proxy. All keys are optional.
+          schema:
+            type: object
+            properties:
+              ip:
+                type: string
+                description: IP address of the new proxy
+              port:
+                type: string
+                description: Port of the new proxy
+              protocol:
+                type: string
+                description: Protocol of new proxy, if changed
+              auth_token:
+                type: string
+                description: CONFIGPROXY_AUTH_TOKEN for the new proxy
+      responses:
+        '200':
+          description: Success
+  /authorizations/token/{token}:
+    get:
+      summary: Identify a user from an API token
+      parameters:
+      - name: token
+        in: path
+        required: true
+        type: string
+      responses:
+        '200':
+          description: The user identified by the API token
+          schema:
+            $ref: '#!/definitions/User'
+  /authorizations/cookie/{cookie_name}/{cookie_value}:
+    get:
+      summary: Identify a user from a cookie
+      description: Used by single-user servers to hand off cookie authentication to the Hub
+      parameters:
+      - name: cookie_name
+        in: path
+        required: true
+        type: string
+      - name: cookie_value
+        in: path
+        required: true
+        type: string
+      responses:
+        '200':
+          description: The user identified by the cookie
+          schema:
+            $ref: '#!/definitions/User'
+  /shutdown:
+    post:
+      summary: Shutdown the Hub
+      responses:
+        '200':
+          description: Hub has shutdown
+definitions:
+  User:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The user's name
+      admin:
+        type: boolean
+        description: Whether the user is an admin
+      server:
+        type: string
+        description: The user's server's base URL, if running; null if not.
+      pending:
+        type: string
+        enum: ["spawn", "stop"]
+        description: The currently pending action, if any
+      last_activity:
+        type: string
+        format: ISO8601 Timestamp
+        description: Timestamp of last-seen activity from the user
