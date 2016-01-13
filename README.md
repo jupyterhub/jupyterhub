@@ -53,18 +53,10 @@ JupyterHub can be installed with pip:
 
     pip3 install jupyterhub
 
-If the `pip3 install` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional JavaScript dependencies:
-
-    npm install
-
 If you plan to run notebook servers locally, you may also need to install the
 Jupyter ~~IPython~~ notebook:
 
-    pip3 install jupyter
-
-This will fetch client-side JavaScript dependencies and compile CSS,
-and install these files to `<sys.prefix>/share/jupyter`, as well as
-install any Python dependencies.
+    pip3 install notebook
 
 
 ### Development install
@@ -74,6 +66,12 @@ For a development install, clone the repository and then install from source:
     git clone https://github.com/jupyter/jupyterhub
     cd jupyterhub
     pip3 install -r dev-requirements.txt -e .
+
+If the `pip3 install` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional JavaScript dependencies:
+
+    npm install
+
+This will fetch client-side JavaScript dependencies necessary to compile CSS.
 
 You may also need to manually update JavaScript and CSS after some development updates, with:
 
