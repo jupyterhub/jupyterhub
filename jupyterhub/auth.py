@@ -1,4 +1,4 @@
-"""Simple PAM authenticator"""
+"""Base Authenticator class and the default PAM Authenticator"""
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -24,7 +24,8 @@ from .traitlets import Command
 class Authenticator(LoggingConfigurable):
     """A class for authentication.
     
-    The API is one method, `authenticate`, a tornado gen.coroutine.
+    The primary API is one method, `authenticate`, a tornado coroutine
+    for authenticating users.
     """
     
     db = Any()
@@ -145,6 +146,14 @@ class Authenticator(LoggingConfigurable):
         and return None on failed authentication.
         
         Checking the whitelist is handled separately by the caller.
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
+            data (dict): The formdata of the login form.
+                         The default form has 'username' and 'password' fields.
+        Return:
+            str: the username of the authenticated user
+            None: Authentication failed
         """
 
     def pre_spawn_start(self, user, spawner):
@@ -165,7 +174,11 @@ class Authenticator(LoggingConfigurable):
         By default, this just adds the user to the whitelist.
         
         Subclasses may do more extensive things,
-        such as adding actual unix users.
+        such as adding actual unix users,
+        but they should call super to ensure the whitelist is updated.
+
+        Args:
+            user (User): The User wrapper object
         """
         if not self.validate_username(user.name):
             raise ValueError("Invalid username: %s" % user.name)
@@ -176,21 +189,52 @@ class Authenticator(LoggingConfigurable):
         """Triggered when a user is deleted.
         
         Removes the user from the whitelist.
+        Subclasses should call super to ensure the whitelist is updated.
+        
+        Args:
+            user (User): The User wrapper object
         """
         self.whitelist.discard(user.name)
     
     def login_url(self, base_url):
-        """Override to register a custom login handler"""
+        """Override to register a custom login handler
+        
+        Generally used in combination with get_handlers.
+        
+        Args:
+            base_url (str): the base URL of the Hub (e.g. /hub/)
+        
+        Returns:
+            str: The login URL, e.g. '/hub/login'
+        
+        """
         return url_path_join(base_url, 'login')
     
     def logout_url(self, base_url):
-        """Override to register a custom logout handler"""
+        """Override to register a custom logout handler.
+        
+        Generally used in combination with get_handlers.
+        
+        Args:
+            base_url (str): the base URL of the Hub (e.g. /hub/)
+        
+        Returns:
+            str: The logout URL, e.g. '/hub/logout'
+        """
         return url_path_join(base_url, 'logout')
     
     def get_handlers(self, app):
         """Return any custom handlers the authenticator needs to register
         
-        (e.g. for OAuth)
+        (e.g. for OAuth).
+        
+        Args:
+            app (JupyterHub Application):
+                the application object, in case it needs to be accessed for info.
+        Returns:
+            list: list of ``('/url', Handler)`` tuples passed to tornado.
+                The Hub prefix is added to any URLs.
+        
         """
         return [
             ('/login', LoginHandler),

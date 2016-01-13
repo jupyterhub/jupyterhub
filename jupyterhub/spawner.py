@@ -163,7 +163,7 @@ class Spawner(LoggingConfigurable):
         """store the state necessary for load_state
         
         A black box of extra state for custom spawners.
-        Should call `super`.
+        Subclasses should call `super`.
         
         Returns
         -------
@@ -333,7 +333,12 @@ def set_user_setuid(username):
 
 
 class LocalProcessSpawner(Spawner):
-    """A Spawner that just uses Popen to start local processes."""
+    """A Spawner that just uses Popen to start local processes as users.
+    
+    Requires users to exist on the local system.
+    
+    This is the default spawner for JupyterHub.
+    """
     
     INTERRUPT_TIMEOUT = Integer(10, config=True,
         help="Seconds to wait for process to halt after SIGINT before proceeding to SIGTERM"
