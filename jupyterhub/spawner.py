@@ -318,9 +318,6 @@ def set_user_setuid(username):
     gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
     
     def preexec():
-        # don't forward signals
-        os.setpgrp()
-        
         # set the user and group
         os.setgid(gid)
         try:
@@ -405,6 +402,7 @@ class LocalProcessSpawner(Spawner):
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
         self.proc = Popen(cmd, env=env,
             preexec_fn=self.make_preexec_fn(self.user.name),
+            start_new_session=True, # don't forward signals
         )
         self.pid = self.proc.pid
     
