@@ -17,6 +17,7 @@ from ..spawner import LocalProcessSpawner
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
+from ..utils import localhost
 
 from pamela import PAMError
 
@@ -108,7 +109,7 @@ class MockHub(JupyterHub):
     db_file = None
     
     def _ip_default(self):
-        return 'localhost'
+        return localhost()
     
     def _authenticator_class_default(self):
         return MockPAMAuthenticator
