@@ -5,28 +5,33 @@
 # FROM jupyter/jupyterhub:latest
 #
 
-FROM jupyter/notebook
+FROM debian:jessie
 
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 # install nodejs
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -y update && apt-get -y upgrade && apt-get -y install npm nodejs nodejs-legacy
+RUN apt-get -y update && apt-get -y upgrade && apt-get -y install npm nodejs nodejs-legacy wget
+
+# install Python with conda
+RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-3.9.1-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+    bash /tmp/miniconda.sh -f -b -p /opt/conda && \
+    /opt/conda/bin/conda install --yes python=3.5 sqlalchemy tornado jinja2 traitlets requests pip && \
+    rm /tmp/miniconda.sh
+ENV PATH=/opt/conda/bin:$PATH
+
+# install any pip dependencies not already installed by conda
+ADD requirements.txt /tmp/requirements.txt
+RUN pip install -r /tmp/requirements.txt
 
 # install js dependencies
 RUN npm install -g configurable-http-proxy
-
-RUN mkdir -p /srv/
-
-# install jupyterhub
-ADD requirements.txt /tmp/requirements.txt
-RUN pip3 install -r /tmp/requirements.txt
 
 WORKDIR /srv/
 ADD . /srv/jupyterhub
 WORKDIR /srv/jupyterhub/
 
-RUN pip3 install .
+RUN pip install .
 
 WORKDIR /srv/jupyterhub/
 
