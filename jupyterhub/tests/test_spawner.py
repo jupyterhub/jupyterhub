@@ -57,7 +57,7 @@ def test_spawner(db, io_loop):
     assert status == 1
 
 def test_single_user_spawner(db, io_loop):
-    spawner = new_spawner(db, cmd=[sys.executable, '-m', 'jupyterhub.singleuser'])
+    spawner = new_spawner(db, cmd=['jupyterhub-singleuser'])
     io_loop.run_sync(spawner.start)
     assert spawner.user.server.ip == 'localhost'
     # wait for http server to come up,
