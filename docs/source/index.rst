@@ -45,7 +45,8 @@ Contents:
 .. toctree::
    :maxdepth: 1
    :caption: Developer Documentation
-
+   
+   api/index
 
 
 .. toctree::
