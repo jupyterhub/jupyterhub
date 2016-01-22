@@ -241,8 +241,8 @@ class Authenticator(LoggingConfigurable):
         ]
 
 class LocalAuthenticator(Authenticator):
-    """Base class for Authenticators that work with local *ix users
-    
+    """Base class for Authenticators that work with local Linux/UNIX users
+
     Checks for local users, and can attempt to create them if they exist.
     """
     
@@ -336,9 +336,9 @@ class LocalAuthenticator(Authenticator):
             return False
         else:
             return True
-    
+
     def add_system_user(self, user):
-        """Create a new *ix user on the system. Works on FreeBSD and Linux, at least."""
+        """Create a new Linux/UNIX user on the system. Works on FreeBSD and Linux, at least."""
         name = user.name
         cmd = [ arg.replace('USERNAME', name) for arg in self.add_user_cmd ] + [name]
         self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
@@ -350,7 +350,7 @@ class LocalAuthenticator(Authenticator):
 
 
 class PAMAuthenticator(LocalAuthenticator):
-    """Authenticate local *ix users with PAM"""
+    """Authenticate local Linux/UNIX users with PAM"""
     encoding = Unicode('utf8', config=True,
         help="""The encoding to use for PAM"""
     )
