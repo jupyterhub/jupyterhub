@@ -846,9 +846,13 @@ class JupyterHub(Application):
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.hub.server.base_url
+        jinja_options = dict(
+            autoescape=True,
+        )
+        jinja_options.update(self.jinja_environment_options)
         jinja_env = Environment(
             loader=FileSystemLoader(self.template_paths),
-            **self.jinja_environment_options
+            **jinja_options
         )
         
         login_url = self.authenticator.login_url(base_url)

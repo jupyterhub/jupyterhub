@@ -13,7 +13,7 @@
         </p>
       {% endif %}
     <form enctype="multipart/form-data" id="spawn_form" action="{{base_url}}spawn" method="post" role="form">
-      {{spawner_options_form}}
+      {{spawner_options_form | safe}}
       <br>
       <input type="submit" value="Spawn" class="btn btn-jupyter">
     </form>
