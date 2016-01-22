@@ -136,6 +136,7 @@ class Spawner(LoggingConfigurable):
         help="""The notebook directory for the single-user server
         
         `~` will be expanded to the user's home directory
+        `%U` will be expanded to the user's username
         """
     )
     
@@ -204,6 +205,7 @@ class Spawner(LoggingConfigurable):
         if self.ip:
             args.append('--ip=%s' % self.ip)
         if self.notebook_dir:
+            self.notebook_dir = self.notebook_dir.replace("%U",self.user.name)
             args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
             args.append('--debug')
