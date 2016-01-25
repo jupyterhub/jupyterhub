@@ -296,10 +296,14 @@ class BaseHandler(RequestHandler):
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
         except gen.TimeoutError:
             if user.spawn_pending:
-                # hit timeout, but spawn is still pending
-                self.log.warn("User %s server is slow to start", user.name)
-                # schedule finish for when the user finishes spawning
-                IOLoop.current().add_future(f, finish_user_spawn)
+                status = yield user.spawner.poll()
+                if status is None:
+                    # hit timeout, but spawn is still pending
+                    self.log.warn("User %s server is slow to start", user.name)
+                    # schedule finish for when the user finishes spawning
+                    IOLoop.current().add_future(f, finish_user_spawn)
+                else:
+                    raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
             else:
                 raise
         else:
