@@ -54,6 +54,14 @@ class SpawnHandler(BaseHandler):
     
     Only enabled when Spawner.options_form is defined.
     """
+    def _render_form(self, message=''):
+        user = self.get_current_user()
+        return self.render_template('spawn.html',
+            user=user,
+            spawner_options_form=user.spawner.options_form,
+            error_message=message,
+        )
+
     @web.authenticated
     def get(self):
         """GET renders form for spawning with user-specified options"""
@@ -64,11 +72,7 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
         if user.spawner.options_form:
-            html = self.render_template('spawn.html',
-                user=self.get_current_user(),
-                spawner_options_form=user.spawner.options_form,
-            )
-            self.finish(html)
+            self.finish(self._render_form())
         else:
             # not running, no form. Trigger spawn.
             url = url_path_join(self.base_url, 'user', user.name)
@@ -90,7 +94,12 @@ class SpawnHandler(BaseHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
         options = user.spawner.options_from_form(form_options)
-        yield self.spawn_single_user(user, options=options)
+        try:
+            yield self.spawn_single_user(user, options=options)
+        except Exception as e:
+            self.log.error("Failed to spawn single-user server with form", exc_info=True)
+            self.finish(self._render_form(str(e)))
+            return
         self.set_login_cookie(user)
         url = user.server.base_url
         self.redirect(url)
