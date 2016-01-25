@@ -54,8 +54,8 @@ class SlowSpawner(MockSpawner):
     
     @gen.coroutine
     def start(self):
-        yield gen.sleep(2)
         yield super().start()
+        yield gen.sleep(2)
     
     @gen.coroutine
     def stop(self):
@@ -100,7 +100,9 @@ class MockPAMAuthenticator(PAMAuthenticator):
     def authenticate(self, *args, **kwargs):
         with mock.patch.multiple('pamela',
                 authenticate=mock_authenticate,
-                open_session=mock_open_session):
+                open_session=mock_open_session,
+                close_session=mock_open_session,
+                ):
             return super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
 
 class MockHub(JupyterHub):
