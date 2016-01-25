@@ -85,6 +85,7 @@ class User(HasTraits):
         if self.orm_user:
             id = self.orm_user.id
             self.orm_user = new.query(orm.User).filter(orm.User.id==id).first()
+        self.spawner.db = self.db
     
     orm_user = None
     spawner = None
@@ -177,6 +178,8 @@ class User(HasTraits):
         # wait for spawner.start to return
         try:
             f = spawner.start()
+            # commit any changes in spawner.start (always commit db changes before yield)
+            db.commit()
             yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
         except Exception as e:
             if isinstance(e, gen.TimeoutError):

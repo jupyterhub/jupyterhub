@@ -123,7 +123,7 @@ class Server(Base):
                     if e.errno == errno.ECONNREFUSED:
                         return False
                     else:
-                       	raise
+                        raise
                 else:
                     return True
             elif e.errno == errno.ECONNREFUSED:
