@@ -23,6 +23,7 @@ except ImportError:
     raise ImportError("JupyterHub single-user server requires notebook >= 4.0")
 
 from traitlets import (
+    Bool,
     Integer,
     Unicode,
     CUnicode,
@@ -137,6 +138,30 @@ Control Panel</a>
 {% endblock logo %}
 """
 
+def _check_writable(path):
+    """Check if a path is writable by the current user."""
+    while path != '/':
+        print("checking %s" % path)
+        if not os.path.exists(path):
+            path = os.path.dirname(path)
+            continue
+        # path exists
+        if os.access(path, os.W_OK):
+            # we can edit directly, not ok
+            return path
+        # path exists and is not writable
+        if os.path.isdir(path):
+            if len(os.listdir(path)) == 0:
+                # empty dirs can be deleted and recreated if their parent is writable
+                return _check_writable(os.path.dirname(path))
+            else:
+                return False
+        else:
+            # if it's a file, check parent to see if it can be deleted
+            return _check_writable(os.path.dirname(path))
+    return os.access(path, os.W_OK)
+
+
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
     user = CUnicode(config=True)
@@ -152,6 +177,14 @@ class SingleUserNotebookApp(NotebookApp):
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
     port_retries = 0 # disable port-retries, since the Spawner will tell us what port to use
+
+    disable_user_config = Bool(False, config=True,
+        help="""Disable user configuration of single-user server.
+
+        Prevents user-writable files that normally configure the single-user server
+        from being loaded, ensuring admins have full control of configuration.
+        """
+    )
 
     cookie_cache_lifetime = Integer(
         config=True,
@@ -178,6 +211,52 @@ class SingleUserNotebookApp(NotebookApp):
     def _clear_cookie_cache(self):
         self.log.debug("Clearing cookie cache")
         self.tornado_settings['cookie_cache'].clear()
+    
+    def migrate_config(self):
+        if self.disable_user_config:
+            # disable config-migration when user config is disabled
+            return
+        else:
+            super(SingleUserNotebookApp, self).migrate_config()
+    
+    def _filter_writable(self, path_list):
+        """Filter out any entries in a path list are writable
+
+        Used to verify that user config is truly disabled
+        """
+        for p in path_list:
+            writable = _check_writable(p)
+            if writable:
+                log = self.log.warning if os.path.exists(p) else self.log.debug
+                if writable == p:
+                    msg = p
+                else:
+                    msg = "%s (writable: %s)" % (p, writable)
+                log("User config is disabled, omitting %s", msg)
+            else:
+                yield p
+    @property
+    def config_file_paths(self):
+        path = super(SingleUserNotebookApp, self).config_file_paths
+        
+        if self.disable_user_config:
+            # filter out user-writable config dirs if user config is disabled
+            path = list(self._filter_writable(path))
+        return path
+    
+    @property
+    def nbextensions_path(self):
+        path = super(SingleUserNotebookApp, self).nbextensions_path
+        
+        if self.disable_user_config:
+            path = list(self._filter_writable(path))
+        return path
+    
+    def _static_custom_path_default(self):
+        path = super(SingleUserNotebookApp, self)._static_custom_path_default()
+        if self.disable_user_config:
+            path = list(self._filter_writable(path))
+        return path
     
     def start(self):
         # Start a PeriodicCallback to clear cached cookies.  This forces us to
