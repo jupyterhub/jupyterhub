@@ -1,6 +1,6 @@
 # Writing a custom Spawner
 
-[Spawner][] starts each single-user notebook server.
+A [Spawner][] starts each single-user notebook server.
 The Spawner represents an abstract interface to a process,
 and a custom Spawner needs to be able to take three actions:
 
