@@ -30,10 +30,10 @@ class LoginHandler(BaseHandler):
                 next=url_escape(self.get_argument('next', default='')),
                 username=username,
                 login_error=login_error,
-                custom_login_form=self.authenticator.custom_html,
+                custom_html=self.authenticator.custom_html,
                 login_url=self.settings['login_url'],
         )
-    
+
     def get(self):
         next_url = self.get_argument('next', '')
         if not next_url.startswith('/'):
