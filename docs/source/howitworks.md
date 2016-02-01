@@ -5,7 +5,7 @@ JupyterHub is a multi-user server that manages and proxies multiple instances of
 There are three basic processes involved:
 
 - multi-user Hub (Python/Tornado)
-- configurable http proxy (nodejs)
+- [configurable http proxy](https://github.com/jupyter/configurable-http-proxy) (node-http-proxy)
 - multiple single-user IPython notebook servers (Python/IPython/Tornado)
 
 The proxy is the only process that listens on a public interface.

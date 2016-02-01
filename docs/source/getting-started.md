@@ -14,11 +14,11 @@ See [the readme](https://github.com/jupyter/jupyterhub/blob/master/README.md) fo
 JupyterHub is a set of processes that together provide a multiuser Jupyter Notebook server.
 There are three main categories of processes run by the `jupyterhub` command line program:
 
-- *Single User Server*: a dedicated, single-user, Jupyter Notebook is started for each user on the system
-  when they log in. The object that starts these processes is called a *Spawner*.
-- *Proxy*: the public facing part of the server that uses a dynamic proxy to route HTTP requests
-  to the *Hub* and *Single User Servers*.
-- *Hub*: manages user accounts and authentication and coordinates *Single Users Servers* using a *Spawner*.
+- **Single User Server**: a dedicated, single-user, Jupyter Notebook is started for each user on the system
+  when they log in. The object that starts these processes is called a Spawner.
+- **Proxy**: the public facing part of the server that uses a dynamic proxy to route HTTP requests
+  to the Hub and Single User Servers.
+- **Hub**: manages user accounts and authentication and coordinates Single Users Servers using a Spawner.
 
 ## JupyterHub's default behavior
 
@@ -34,29 +34,29 @@ Any user on the system with a password will be allowed to start a single-user no
 The default Spawner starts servers locally as each user, one dedicated server per user.
 These servers listen on localhost, and start in the given user's home directory.
 
-By default, the *Proxy* listens on all public interfaces on port 8000.
-Thus you can reach JupyterHub through:
+By default, the **Proxy** listens on all public interfaces on port 8000.
+Thus you can reach JupyterHub through either:
 
     http://localhost:8000
 
 or any other public IP or domain pointing to your system.
 
-In their default configuration, the other services, the *Hub* and *Single-User Servers*,
+In their default configuration, the other services, the **Hub** and **Single-User Servers**,
 all communicate with each other on localhost only.
 
 **NOTE:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS).
 You should not run JupyterHub without SSL encryption on a public network.
-See [below](#Security) for how to configure JupyterHub to use SSL.
+See [Security documentation](#Security) for how to configure JupyterHub to use SSL.
 
 By default, starting JupyterHub will write two files to disk in the current working directory:
 
-- `jupyterhub.sqlite` is the sqlite database containing all of the state of the *Hub*.
-  This file allows the *Hub* to remember what users are running and where,
+- `jupyterhub.sqlite` is the sqlite database containing all of the state of the **Hub**.
+  This file allows the **Hub** to remember what users are running and where,
   as well as other information enabling you to restart parts of JupyterHub separately.
 - `jupyterhub_cookie_secret` is the encryption key used for securing cookies.
   This file needs to persist in order for restarting the Hub server to avoid invalidating cookies.
   Conversely, deleting this file and restarting the server effectively invalidates all login cookies.
-  The cookie secret file is discussed [below](#Security).
+  The cookie secret file is discussed in the [Cookie Secret documentation](#Cookie secret).
 
 The location of these files can be specified via configuration, discussed below.
 
@@ -96,32 +96,38 @@ on the config system Jupyter uses.
 
 ## Networking
 
-In most situations you will want to change the main IP address and port of the Proxy.
-This address determines where JupyterHub is available to your users.
-The default is all network interfaces (`''`) on port 8000.
+### Configuring the Proxy's IP address and port
+Most use cases will require a change of the Proxy's main IP address and port.
+The main IP address setting determines where JupyterHub is available to users.
+By default, JupyterHub is configured to be available on all network interfaces
+(`''`) on port 8000. **Note**: Use of `'*'` is discouraged for IP configuration;
+instead, use of `'0.0.0.0'` is preferred.
 
-This can be done with the following command line arguments:
+Changing the IP address and port can be done with the following command line
+arguments:
 
     jupyterhub --ip=192.168.1.2 --port=443
 
-Or you can put the following lines in a configuration file:
+Or by placing the following lines in a configuration file:
 
 ```python
 c.JupyterHub.ip = '192.168.1.2'
 c.JupyterHub.port = 443
 ```
 
-Port 443 is used in these examples as it is the default port for SSL/HTTPS.
+Port 443 is used as an example since 443 is the default port for SSL/HTTPS.
 
 Configuring only the main IP and port of JupyterHub should be sufficient for most deployments of JupyterHub.
-However, for more customized scenarios,
-you can configure the following additional networking details.
+However, more customized scenarios may need additional networking details to
+be configured.
 
+### Configuring the Proxy's REST API communication IP address and port (optional)
 The Hub service talks to the proxy via a REST API on a secondary port,
 whose network interface and port can be configured separately.
 By default, this REST API listens on port 8081 of localhost only.
-If you want to run the Proxy separate from the Hub,
-you may need to configure this IP and port with:
+
+If running the Proxy separate from the Hub,
+configure the REST API communication IP address and port with:
 
 ```python
 # ideally a private network address
@@ -129,11 +135,12 @@ c.JupyterHub.proxy_api_ip = '10.0.1.4'
 c.JupyterHub.proxy_api_port = 5432
 ```
 
+### Configuring the Hub if Spawners or Proxy are remote or isolated in containers
 The Hub service also listens only on localhost (port 8080) by default.
 The Hub needs needs to be accessible from both the proxy and all Spawners.
-When spawning local servers localhost is fine,
-but if *either* the Proxy or (more likely) the Spawners will be remote or isolated in containers,
-the Hub must listen on an IP that is accessible.
+When spawning local servers, an IP address setting of localhost is fine.
+If *either* the Proxy *or* (more likely) the Spawners will be remote or
+isolated in containers, the Hub must listen on an IP that is accessible.
 
 ```python
 c.JupyterHub.hub_ip = '10.0.1.4'
@@ -193,7 +200,8 @@ openssl rand -hex 1024 > /srv/jupyterhub/cookie_secret
 
 In most deployments of JupyterHub, you should point this to a secure location on the file
 system, such as `/srv/jupyterhub/cookie_secret`. If the cookie secret file doesn't exist when
-the Hub starts, a new cookie secret is generated and stored in the file.
+the Hub starts, a new cookie secret is generated and stored in the file. The recommended
+permissions for the cookie secret file should be 600 (owner-only rw).
 
 If you would like to avoid the need for files, the value can be loaded in the Hub process from
 the `JPY_COOKIE_SECRET` environment variable:
