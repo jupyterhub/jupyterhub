@@ -29,7 +29,7 @@ Basic principles:
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: User Documentation
 
    getting-started
@@ -41,6 +41,7 @@ Contents:
 
    authenticators
    spawners
+   troubleshooting
 
 .. toctree::
    :maxdepth: 1

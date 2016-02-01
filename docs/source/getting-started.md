@@ -97,8 +97,7 @@ on the config system Jupyter uses.
 ## Networking
 
 ### Configuring the Proxy's IP address and port
-Most use cases will require a change of the Proxy's main IP address and port.
-The main IP address setting determines where JupyterHub is available to users.
+The Proxy's main IP address setting determines where JupyterHub is available to users.
 By default, JupyterHub is configured to be available on all network interfaces
 (`''`) on port 8000. **Note**: Use of `'*'` is discouraged for IP configuration;
 instead, use of `'0.0.0.0'` is preferred.
@@ -405,9 +404,9 @@ jupyterhub -f /path/to/aboveconfig.py
 
 # Further reading
 
-- TODO: troubleshooting
 - [Custom Authenticators](./authenticators.html)
 - [Custom Spawners](./spawners.html)
+- [Troubleshooting](./troubleshooting.html)
 
 
 [oauth-setup]: https://github.com/jupyter/oauthenticator#setup
