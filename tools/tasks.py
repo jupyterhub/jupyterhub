@@ -165,15 +165,13 @@ def make_env(*packages):
     return py
 
 
-def build_sdist(py, upload=False):
+def build_sdist(py):
     """Build sdists
     
     Returns the path to the tarball
     """
     with cd(repo_root):
         cmd = [py, 'setup.py', 'sdist', '--formats=zip,gztar']
-        if upload:
-            cmd.append('upload')
         run(cmd)
     
     return glob.glob(pjoin(repo_root, 'dist', '*.tar.gz'))[0]
@@ -184,7 +182,12 @@ def sdist(vs, upload=False):
     clone_repo()
     tag(vs, push=upload)
     py = make_env()
-    tarball = build_sdist(py, upload=upload)
+    tarball = build_sdist(py)
+    if upload:
+        with cd(repo_root):
+            install(py, 'twine')
+            run([py, '-m', 'twine', 'upload', 'dist/*'])
+    
     untag(vs, push=upload)
     return untar(tarball)
 
@@ -214,14 +217,10 @@ def untar(tarball):
     return glob.glob(pjoin(sdist_root, '*'))[0]
 
 
-def bdist(upload=False):
+def bdist():
     """build a wheel, optionally uploading it"""
     py = make_env('wheel')
-    cmd = [py, 'setup.py', 'bdist_wheel']
-    if upload:
-        cmd.append('upload')
-    
-    run(cmd)
+    run([py, 'setup.py', 'bdist_wheel'])
 
 
 @task
@@ -233,7 +232,10 @@ def release(vs, upload=False):
         shutil.rmtree(env_root)
     
     path = sdist(vs, upload=upload)
-    
+    print("Working in %r" % path)
     with cd(path):
-        bdist(upload=upload)
+        bdist()
+        if upload:
+            py = make_env('twine')
+            run([py, '-m', 'twine', 'upload', 'dist/*'])
 
