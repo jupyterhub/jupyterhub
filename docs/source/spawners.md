@@ -157,4 +157,4 @@ When `Spawner.spawn` is called, this dictionary is accessible as `self.user_opti
 
 
 
-[Spawner]: ../jupyterhub/spawner.py
+[Spawner]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/spawner.py
