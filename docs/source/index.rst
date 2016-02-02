@@ -15,7 +15,7 @@ of the single-user Jupyter notebook server.
 Three actors:
 
 * multi-user Hub (tornado process)
-* configurable http proxy (node-http-proxy)
+* `configurable http proxy <https://github.com/jupyter/configurable-http-proxy>`_ (node-http-proxy)
 * multiple single-user IPython notebook servers (Python/IPython/tornado)
 
 Basic principles:
@@ -29,7 +29,7 @@ Basic principles:
 Contents:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: User Documentation
 
    getting-started
@@ -41,6 +41,7 @@ Contents:
 
    authenticators
    spawners
+   troubleshooting
 
 .. toctree::
    :maxdepth: 1
