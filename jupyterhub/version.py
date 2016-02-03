@@ -5,9 +5,8 @@
 
 version_info = (
     0,
-    5,
-    0,
-    'dev',
+    4,
+    1,
 )
 
 __version__ = '.'.join(map(str, version_info))
