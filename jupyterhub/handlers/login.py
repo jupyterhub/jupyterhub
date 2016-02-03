@@ -86,7 +86,9 @@ class LoginHandler(BaseHandler):
             self.finish(html)
 
 
-# Only logout is a default handler.
+# /login renders the login page or the "Login with..." link,
+# so it should always be registered.
+# /logout clears cookies.
 default_handlers = [
     (r"/login", LoginHandler),
     (r"/logout", LogoutHandler),
