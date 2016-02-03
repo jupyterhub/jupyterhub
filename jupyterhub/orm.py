@@ -26,7 +26,7 @@ from sqlalchemy import create_engine
 
 from .utils import (
     random_port, url_path_join, wait_for_server, wait_for_http_server,
-    new_token, hash_token, compare_token, localhost,
+    new_token, hash_token, compare_token,
 )
 
 
@@ -78,7 +78,7 @@ class Server(Base):
         ip = self.ip
         if ip in {'', '0.0.0.0'}:
             # when listening on all interfaces, connect to localhost
-            ip = localhost()
+            ip = '127.0.0.1'
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
             ip=ip,
@@ -100,7 +100,7 @@ class Server(Base):
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
         if self.ip in {'', '0.0.0.0'}:
-            return self.url.replace('localhost', self.ip or '*', 1)
+            return self.url.replace('127.0.0.1', self.ip or '*', 1)
         return self.url
     
     @gen.coroutine
@@ -109,12 +109,12 @@ class Server(Base):
         if http:
             yield wait_for_http_server(self.url, timeout=timeout)
         else:
-            yield wait_for_server(self.ip or localhost(), self.port, timeout=timeout)
+            yield wait_for_server(self.ip or '127.0.0.1', self.port, timeout=timeout)
     
     def is_up(self):
         """Is the server accepting connections?"""
         try:
-            socket.create_connection((self.ip or localhost(), self.port))
+            socket.create_connection((self.ip or '127.0.0.1', self.port))
         except socket.error as e:
             if e.errno == errno.ENETUNREACH:
                 try:
