@@ -4,6 +4,12 @@ See `git log` for a more detailed summary.
 
 ## 0.4
 
+### 0.4.1
+
+Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
+
+### 0.4.0
+
 - Add `Spawner.user_options_form` for specifying an HTML form to present to users,
   allowing users to influence the spawning of their own servers.
 - Add `Authenticator.pre_spawn_start` and `Authenticator.post_spawn_stop` hooks,
