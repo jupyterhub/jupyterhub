@@ -88,5 +88,6 @@ class LoginHandler(BaseHandler):
 
 # Only logout is a default handler.
 default_handlers = [
+    (r"/login", LoginHandler),
     (r"/logout", LogoutHandler),
 ]
