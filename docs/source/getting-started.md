@@ -22,6 +22,9 @@ There are three main categories of processes run by the `jupyterhub` command lin
 
 ## JupyterHub's default behavior
 
+**IMPORTANT:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS).
+**You should not run JupyterHub without SSL encryption on a public network.**
+See [Security documentation](#Security) for how to configure JupyterHub to use SSL.
 
 To start JupyterHub in its default configuration, type the following at the command line:
 
@@ -43,10 +46,6 @@ or any other public IP or domain pointing to your system.
 
 In their default configuration, the other services, the **Hub** and **Single-User Servers**,
 all communicate with each other on localhost only.
-
-**NOTE:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS).
-You should not run JupyterHub without SSL encryption on a public network.
-See [Security documentation](#Security) for how to configure JupyterHub to use SSL.
 
 By default, starting JupyterHub will write two files to disk in the current working directory:
 
@@ -147,6 +146,9 @@ c.JupyterHub.hub_port = 54321
 ```
 
 ## Security
+
+**IMPORTANT:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS).
+**You should not run JupyterHub without SSL encryption on a public network.**
 
 Security is the most important aspect of configuring Jupyter. There are three main aspects of the
 security configuration:
