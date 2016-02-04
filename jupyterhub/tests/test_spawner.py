@@ -45,7 +45,7 @@ def new_spawner(db, **kwargs):
 def test_spawner(db, io_loop):
     spawner = new_spawner(db)
     io_loop.run_sync(spawner.start)
-    assert spawner.user.server.ip == 'localhost'
+    assert spawner.user.server.ip == '127.0.0.1'
     
     # wait for the process to get to the while True: loop
     time.sleep(1)
@@ -59,7 +59,7 @@ def test_spawner(db, io_loop):
 def test_single_user_spawner(db, io_loop):
     spawner = new_spawner(db, cmd=['jupyterhub-singleuser'])
     io_loop.run_sync(spawner.start)
-    assert spawner.user.server.ip == 'localhost'
+    assert spawner.user.server.ip == '127.0.0.1'
     # wait for http server to come up,
     # checking for early termination every 1s
     def wait():

@@ -50,7 +50,7 @@ from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .traitlets import URLPrefix, Command
 from .utils import (
-    url_path_join, localhost,
+    url_path_join,
     ISO8601_ms, ISO8601_s,
 )
 # classes for config
@@ -260,7 +260,7 @@ class JupyterHub(Application):
             token = orm.new_token()
         return token
     
-    proxy_api_ip = Unicode(localhost(), config=True,
+    proxy_api_ip = Unicode('127.0.0.1', config=True,
         help="The ip for the proxy API handlers"
     )
     proxy_api_port = Integer(config=True,
@@ -272,7 +272,7 @@ class JupyterHub(Application):
     hub_port = Integer(8081, config=True,
         help="The port for this process"
     )
-    hub_ip = Unicode(localhost(), config=True,
+    hub_ip = Unicode('127.0.0.1', config=True,
         help="The ip for this process"
     )
     

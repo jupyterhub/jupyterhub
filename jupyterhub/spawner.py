@@ -22,7 +22,7 @@ from traitlets import (
 )
 
 from .traitlets import Command
-from .utils import random_port, localhost
+from .utils import random_port
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -41,7 +41,7 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     authenticator = Any()
     api_token = Unicode()
-    ip = Unicode(localhost(), config=True,
+    ip = Unicode('127.0.0.1', config=True,
         help="The IP address (or hostname) the single-user server should listen on"
     )
     start_timeout = Integer(60, config=True,

@@ -195,35 +195,3 @@ def url_path_join(*pieces):
 
     return result
 
-def localhost():
-    """Return localhost or 127.0.0.1"""
-    if hasattr(localhost, '_localhost'):
-        return localhost._localhost
-    binder = connector = None
-    try:
-        binder = socket.socket()
-        binder.bind(('localhost', 0))
-        binder.listen(1)
-        port = binder.getsockname()[1]
-        def accept():
-            try:
-                conn, addr = binder.accept()
-            except ConnectionAbortedError:
-                pass
-            else:
-                conn.close()
-        t = Thread(target=accept)
-        t.start()
-        connector = socket.create_connection(('localhost', port), timeout=10)
-        t.join(timeout=10)
-    except (socket.error, socket.gaierror) as e:
-        warnings.warn("localhost doesn't appear to work, using 127.0.0.1\n%s" % e, RuntimeWarning)
-        localhost._localhost = '127.0.0.1'
-    else:
-        localhost._localhost = 'localhost'
-    finally:
-        if binder:
-            binder.close()
-        if connector:
-            connector.close()
-    return localhost._localhost
