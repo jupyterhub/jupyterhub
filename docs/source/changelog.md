@@ -2,6 +2,12 @@
 
 See `git log` for a more detailed summary.
 
+## 0.5
+
+- Single-user server must be run with Jupyter Notebook ≥ 4.0
+- Require `--no-ssl` confirmation to allow the Hub to be run without SSL (e.g. behind SSL termination in nginx)
+
+
 ## 0.4
 
 ### 0.4.1
