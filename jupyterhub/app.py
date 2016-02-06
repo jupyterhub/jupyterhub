@@ -87,6 +87,9 @@ flags = {
     'no-db': ({'JupyterHub': {'db_url': 'sqlite:///:memory:'}},
         "disable persisting state database to disk"
     ),
+    'no-ssl': ({'JupyterHub': {'confirm_no_ssl': True}},
+        "Allow JupyterHub to run without SSL (SSL termination should be happening elsewhere)."
+    ),
 }
 
 SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
@@ -208,7 +211,12 @@ class JupyterHub(Application):
 
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
-
+    
+    confirm_no_ssl = Bool(False, config=True,
+        help="""Confirm that JupyterHub should be run without SSL.
+        This is **NOT RECOMMENDED** unless SSL termination is being handled by another layer.
+        """
+    )
     ssl_key = Unicode('', config=True,
         help="""Path to SSL key file for the public facing interface of the proxy
         
@@ -800,6 +808,18 @@ class JupyterHub(Application):
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
+        # Require SSL to be used or `--no-ssl` to confirm no SSL on 
+        if ' --ssl' not in ' '.join(cmd):
+            if self.confirm_no_ssl:
+                self.log.warning("Running JupyterHub without SSL."
+                    " There better be SSL termination happening somewhere else...")
+            else:
+                self.log.error(
+                    "Refusing to run JuptyterHub without SSL."
+                    " If you are terminating SSL in another layer,"
+                    " pass --no-ssl to tell JupyterHub to allow the proxy to listen on HTTP."
+                )
+                self.exit(1)
         self.log.info("Starting proxy @ %s", self.proxy.public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
         try:

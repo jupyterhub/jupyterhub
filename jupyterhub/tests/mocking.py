@@ -108,6 +108,7 @@ class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
     db_file = None
+    confirm_no_ssl = True
     
     def _ip_default(self):
         return '127.0.0.1'
