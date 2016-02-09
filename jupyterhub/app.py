@@ -42,7 +42,7 @@ here = os.path.dirname(__file__)
 
 import jupyterhub
 from . import handlers, apihandlers
-from .handlers.static import CacheControlStaticFilesHandler
+from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 
 from . import orm
 from .user import User, UserDict
@@ -238,6 +238,11 @@ class JupyterHub(Application):
     base_url = URLPrefix('/', config=True,
         help="The base URL of the entire application"
     )
+    logo_file = Unicode('', config=True,
+        help="Specify path to a logo image to override the Jupyter logo in the banner."
+    )
+    def _logo_file_default(self):
+        return os.path.join(self.data_files_path, 'static', 'images', 'jupyter.png')
     
     jinja_environment_options = Dict(config=True,
         help="Supply extra arguments that will be passed to Jinja environment."
@@ -483,6 +488,8 @@ class JupyterHub(Application):
         # set default handlers
         h.extend(handlers.default_handlers)
         h.extend(apihandlers.default_handlers)
+        
+        h.append((r'/logo', LogoHandler, {'path': self.logo_file}))
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
