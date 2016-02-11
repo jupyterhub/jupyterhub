@@ -147,3 +147,18 @@ def test_spawn_form_with_file(app, io_loop):
                       'content_type': 'application/unknown'},
         }
 
+
+def test_static_files(app):
+    base_url = ujoin(app.proxy.public_server.url, app.hub.server.base_url)
+    print(base_url)
+    r = requests.get(ujoin(base_url, 'logo'))
+    r.raise_for_status()
+    assert r.headers['content-type'] == 'image/png'
+    r = requests.get(ujoin(base_url, 'static', 'images', 'jupyter.png'))
+    r.raise_for_status()
+    assert r.headers['content-type'] == 'image/png'
+    r = requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
+    r.raise_for_status()
+    assert r.headers['content-type'] == 'text/css'
+
+     

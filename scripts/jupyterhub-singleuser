@@ -129,6 +129,9 @@ page_template = """
 >
 Control Panel</a>
 {% endblock %}
+{% block logo %}
+<img src='{{logo_url}}' alt='Jupyter Notebook'/>
+{% endblock logo %}
 """
 
 class SingleUserNotebookApp(NotebookApp):
@@ -200,6 +203,8 @@ class SingleUserNotebookApp(NotebookApp):
     
     def patch_templates(self):
         """Patch page templates to add Hub-related buttons"""
+        
+        self.jinja_template_vars['logo_url'] = url_path_join(self.hub_prefix, 'logo')
         env = self.web_app.settings['jinja2_env']
         
         env.globals['hub_control_panel_url'] = \
