@@ -19,7 +19,7 @@ allow users to sign in with e.g. a Github account, or with any single-sign-on
 system your organisation has.
 
 Next, :doc:`spawners <spawners>` control how JupyterHub starts
-the individual notebook server for each users. The default spawner will use
+the individual notebook server for each user. The default spawner will
 start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
 using Docker.
