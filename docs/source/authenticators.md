@@ -77,6 +77,7 @@ For simple mappings, a configurable dict `Authenticator.username_map` is used to
 c.Authenticator.username_map  = {
   'service-name': 'localname'
 }
+```
 
 ### Validating usernames
 

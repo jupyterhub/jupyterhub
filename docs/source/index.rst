@@ -1,22 +1,34 @@
-.. JupyterHub documentation master file, created by
-   sphinx-quickstart on Mon Jan  4 16:31:09 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 JupyterHub
 ==========
 
-.. note:: This is the official documentation for JupyterHub. This project is
-          under active development.
+JupyterHub is a server that gives multiple users access to Jupyter notebooks,
+running an independent Jupyter notebook server for each user.
 
-JupyterHub is a multi-user server that manages and proxies multiple instances
-of the single-user Jupyter notebook server.
+To use JupyterHub, you need a Unix server (typically Linux) running
+somewhere that is accessible to your team on the network. The JupyterHub server
+can be on an internal network at your organisation, or it can run on the public
+internet (in which case, take care with `security <getting-started.html#security>`__).
+Users access JupyterHub in a web browser, by going to the IP address or
+domain name of the server.
 
-Three actors:
+Different :doc:`authenticators <authenticators>` control access
+to JupyterHub. The default one (pam) uses the user accounts on the server where
+JupyterHub is running. If you use this, you will need to create a user account
+on the system for each user on your team. Using other authenticators, you can
+allow users to sign in with e.g. a Github account, or with any single-sign-on
+system your organisation has.
 
-* multi-user Hub (tornado process)
-* `configurable http proxy <https://github.com/jupyter/configurable-http-proxy>`_ (node-http-proxy)
-* multiple single-user IPython notebook servers (Python/IPython/tornado)
+Next, :doc:`spawners <spawners>` control how JupyterHub starts
+the individual notebook server for each user. The default spawner will
+start a notebook server on the same machine running under their system username.
+The other main option is to start each server in a separate container, often
+using Docker.
+
+JupyterHub runs as three separate parts:
+
+* The multi-user Hub (Python & Tornado)
+* A `configurable http proxy <https://github.com/jupyter/configurable-http-proxy>`_ (NodeJS)
+* Multiple single-user Jupyter notebook servers (Python & Tornado)
 
 Basic principles:
 
