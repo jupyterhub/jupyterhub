@@ -5,23 +5,24 @@ JupyterHub is a server that gives multiple users access to Jupyter notebooks,
 running an independent Jupyter notebook server for each user.
 
 To use JupyterHub, you need a Unix server (typically Linux) running
-somewhere that is accessible to your team on the network. It might be on an
-internal network at your organisation, or it can run on the public internet (in
-which case, take care with `security <getting-started.html#security>`__). It
-runs as an HTTP server. You can get users to go directly to the IP address of
-the server in their browser, or provide it with a domain name.
+somewhere that is accessible to your team on the network. The JupyterHub server
+can be on an internal network at your organisation, or it can run on the public
+internet (in which case, take care with `security <getting-started.html#security>`__).
+Users access JupyterHub in a web browser, by going to the IP address or
+domain name of the server.
 
-There are different :doc:`authenticators <authenticators>` which control access
+Different :doc:`authenticators <authenticators>` control access
 to JupyterHub. The default one (pam) uses the user accounts on the server where
 JupyterHub is running. If you use this, you will need to create a user account
 on the system for each user on your team. Using other authenticators, you can
 allow users to sign in with e.g. a Github account, or with any single-sign-on
 system your organisation has.
 
-Then there are :doc:`spawners <spawners>`, which control how JupyterHub starts
-the notebook servers for individual users. The default spawner will use their
-system username to start a notebook server for that user. The other main option
-is to start each server in a separate container, often using Docker.
+Next, :doc:`spawners <spawners>` control how JupyterHub starts
+the individual notebook server for each users. The default spawner will use
+start a notebook server on the same machine running under their system username.
+The other main option is to start each server in a separate container, often
+using Docker.
 
 JupyterHub runs as three separate parts:
 
