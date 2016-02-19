@@ -117,6 +117,22 @@ Some examples, meant as illustration and testing of this concept:
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyter/oauthenticator)
 - Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyter/dockerspawner)
 
+### Docker
+
+There is a ready to go [docker image](https://hub.docker.com/r/jupyter/jupyterhub/).
+It can be started with the following command:
+
+    docker run -d --name jupyter.cont [-v /home/jupyter-home:/home] jupyter/jupyterhub jupyterhub --no-ssl
+
+This command will create a container that you can stop and resume with `docker stop/start`.
+It will be listening on all interfaces at port 8000. So this is perfect to test docker on your desktop or laptop.
+If you want to run docker on a computer that has a public IP then you should (as in MUST) secure it with ssl by
+adding ssl options to your docker configuration or using a ssl enabled proxy. The `-v/--volume` option will
+allow you to store data outside the docker image (host system) so it will be persistent, even when you start
+a new image. The command `docker exec -it jupyter.container bash` will spawn a root shell in your started docker
+container. You can use it to create system users in the container. These accounts will be used for authentication
+in jupyterhub's default configuration.
+
 # Getting help
 
 We encourage you to ask questions on the mailing list:
