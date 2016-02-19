@@ -122,7 +122,7 @@ Some examples, meant as illustration and testing of this concept:
 There is a ready to go [docker image](https://hub.docker.com/r/jupyter/jupyterhub/).
 It can be started with the following command:
 
-    docker run -d --name jupyter.cont [-v /home/jupyter-home:/home] jupyter/jupyterhub jupyterhub --no-ssl
+    docker run -d --name jupyter.cont [-v /home/jupyter-home:/home] jupyter/jupyterhub jupyterhub
 
 This command will create a container that you can stop and resume with `docker stop/start`.
 It will be listening on all interfaces at port 8000. So this is perfect to test docker on your desktop or laptop.
@@ -131,7 +131,7 @@ adding ssl options to your docker configuration or using a ssl enabled proxy. Th
 allow you to store data outside the docker image (host system) so it will be persistent, even when you start
 a new image. The command `docker exec -it jupyter.container bash` will spawn a root shell in your started docker
 container. You can use it to create system users in the container. These accounts will be used for authentication
-in jupyterhub's default configuration.
+in jupyterhub's default configuration. In order to run without SSL, you'll need to set `--no-ssl` explicitly.
 
 # Getting help
 
