@@ -228,8 +228,13 @@ class Proxy(Base):
         futures = []
         db = inspect(self).session
         for user in db.query(User).filter(User.server != None):
+            if user.server is None:
+                # This should never be True, but seems to be on rare occasion.
+                # catch filter bug, either in sqlalchemy or my understanding of its behavior
+                self.log.error("User %s has no server, but wasn't filtered out.", user)
+                continue
             if user.name not in have_routes:
-                self.log.warn("Adding missing route for %s", user.name)
+                self.log.warning("Adding missing route for %s (%s)", user.name, user.server)
                 futures.append(self.add_user(user))
         for f in futures:
             yield f
