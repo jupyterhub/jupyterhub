@@ -148,6 +148,39 @@ class User(HasTraits):
         """My name, escaped for use in URLs, cookies, etc."""
         return quote(self.name, safe='')
     
+    @property
+    def proxy_path(self):
+        if self.settings.get('use_subdomains'):
+            return url_path_join('/' + self.domain, self.server.base_url)
+        else:
+            return self.server.base_url
+    
+    @property
+    def domain(self):
+        """Get the domain for my server."""
+        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
+        return self.escaped_name + '.' + self.settings['domain']
+    
+    @property
+    def host(self):
+        """Get the *host* for my server (domain[:port])"""
+        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
+        return self.escaped_name + '.' + self.settings['subdomain_host']
+    
+    @property
+    def url(self):
+        """My URL
+        
+        Full name.domain/path if using subdomains, otherwise just my /base/url
+        """
+        if self.settings.get('use_subdomains'):
+            return '//{host}{path}'.format(
+                host=self.host,
+                path=self.server.base_url,
+            )
+        else:
+            return self.server.base_url
+    
     @gen.coroutine
     def spawn(self, options=None):
         """Start the user's spawner"""

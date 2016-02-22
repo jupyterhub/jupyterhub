@@ -52,6 +52,14 @@ class BaseHandler(RequestHandler):
         return self.settings.get('version_hash', '')
     
     @property
+    def use_subdomains(self):
+        return self.settings.get('use_subdomains', False)
+    
+    @property
+    def domain(self):
+        return self.settings['domain']
+    
+    @property
     def db(self):
         return self.settings['db']
     
@@ -199,18 +207,30 @@ class BaseHandler(RequestHandler):
             user = self.get_current_user()
         else:
             user = self.find_user(name)
+        kwargs = {}
+        if self.use_subdomains:
+            # is domain required here? Does clear without domain still clear it?
+            # set cookie for all subdomains
+            kwargs['domain'] = self.domain
         if user and user.server:
-            self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
-        self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
+            self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
+        self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
     
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
         if  self.request.protocol == 'https':
-            kwargs = {'secure':True}
+            kwargs = {'secure': True}
         else:
             kwargs = {}
+        if self.use_subdomains:
+            kwargs['domain'] = self.domain
+            if not self.request.host.startswith(self.domain):
+                self.log.warning(
+                    "Possibly setting cookie on wrong domain: %s != %s",
+                    self.request.host, self.domain)
+        self.log.debug("Setting cookie for %s: %s, %s", user.name, user.server.cookie_name, kwargs)
         self.set_secure_cookie(
             user.server.cookie_name,
             user.cookie_id,
@@ -223,9 +243,15 @@ class BaseHandler(RequestHandler):
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
         if  self.request.protocol == 'https':
-            kwargs = {'secure':True}
+            kwargs = {'secure': True}
         else:
             kwargs = {}
+        if self.use_subdomains:
+            kwargs['domain'] = self.settings['domain']
+            self.log.warning(
+                "Possibly setting cookie on wrong domain: %s != %s",
+                self.request.host, self.domain)
+        self.log.debug("Setting cookie for %s: %s, %s", user.name, self.hub.server.cookie_name, kwargs)
         self.set_secure_cookie(
             self.hub.server.cookie_name,
             user.cookie_id,
@@ -465,6 +491,8 @@ class UserSpawnHandler(BaseHandler):
             self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.server.base_url):]
             target = url_path_join(self.base_url, without_prefix)
+            if self.use_subdomains:
+                target = '//' + current_user.host + target
             self.redirect(target)
         else:
             # not logged in to the right user,

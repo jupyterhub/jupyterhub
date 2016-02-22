@@ -176,10 +176,10 @@ class Proxy(Base):
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
         self.log.info("Adding user %s to proxy %s => %s",
-            user.name, user.server.base_url, user.server.host,
+            user.name, user.proxy_path, user.server.host,
         )
         
-        yield self.api_request(user.server.base_url,
+        yield self.api_request(user.proxy_path,
             method='POST',
             body=dict(
                 target=user.server.host,
@@ -192,7 +192,7 @@ class Proxy(Base):
     def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
-        yield self.api_request(user.server.base_url,
+        yield self.api_request(user.proxy_path,
             method='DELETE',
             client=client,
         )
