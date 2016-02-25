@@ -93,8 +93,8 @@ class SpawnHandler(BaseHandler):
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
-        options = user.spawner.options_from_form(form_options)
         try:
+            options = user.spawner.options_from_form(form_options)
             yield self.spawn_single_user(user, options=options)
         except Exception as e:
             self.log.error("Failed to spawn single-user server with form", exc_info=True)
