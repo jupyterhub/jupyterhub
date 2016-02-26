@@ -239,10 +239,6 @@ class JupyterHub(Application):
         Only used when subdomains are involved.
         """
     )
-    def _subdomain_host_default(self):
-        # FIXME: use xip.io for debugging
-        return (self.ip or '127.0.0.1') + '.xip.io:%i' % self.port
-    
     
     port = Integer(8000, config=True,
         help="The public facing port of the proxy"
@@ -312,7 +308,6 @@ class JupyterHub(Application):
     hub_ip = Unicode('127.0.0.1', config=True,
         help="The ip for this process"
     )
-    
     hub_prefix = URLPrefix('/hub/', config=True,
         help="The prefix for the hub server. Must not be '/'"
     )
@@ -598,11 +593,15 @@ class JupyterHub(Application):
             q = self.db.query(orm.Hub)
             assert q.count() <= 1
             self._local.hub = q.first()
+            if self.use_subdomains:
+                self._local.hub.host = self.subdomain_host
         return self._local.hub
     
     @hub.setter
     def hub(self, hub):
         self._local.hub = hub
+        if self.use_subdomains:
+            hub.host = self.subdomain_host
     
     @property
     def proxy(self):
@@ -655,6 +654,10 @@ class JupyterHub(Application):
             server.ip = self.hub_ip
             server.port = self.hub_port
             server.base_url = self.hub_prefix
+        if self.use_subdomains:
+            if not self.subdomain_host:
+                raise ValueError("Must specify subdomain_host when using subdomains."
+                " This should be the public domain[:port] of the Hub.")
 
         self.db.commit()
     
@@ -793,9 +796,6 @@ class JupyterHub(Application):
             )
             self.db.add(self.proxy)
             self.db.commit()
-        if self.use_subdomains:
-            # assert not ip-address (self.ip)
-            assert self.subdomain_host
         self.proxy.auth_token = self.proxy_auth_token # not persisted
         self.proxy.log = self.log
         self.proxy.public_server.ip = self.ip

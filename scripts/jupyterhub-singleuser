@@ -104,7 +104,9 @@ class JupyterHubLoginHandler(LoginHandler):
 
 class JupyterHubLogoutHandler(LogoutHandler):
     def get(self):
-        self.redirect(url_path_join(self.settings['hub_prefix'], 'logout'))
+        self.redirect(
+            self.settings['hub_host'] +
+            url_path_join(self.settings['hub_prefix'], 'logout'))
 
 
 # register new hub related command-line aliases
@@ -113,6 +115,7 @@ aliases.update({
     'user' : 'SingleUserNotebookApp.user',
     'cookie-name': 'SingleUserNotebookApp.cookie_name',
     'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
+    'hub-host': 'SingleUserNotebookApp.hub_host',
     'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
     'base-url': 'SingleUserNotebookApp.base_url',
 })
@@ -141,6 +144,7 @@ class SingleUserNotebookApp(NotebookApp):
         self.log.name = new
     cookie_name = Unicode(config=True)
     hub_prefix = Unicode(config=True)
+    hub_host = Unicode(config=True)
     hub_api_url = Unicode(config=True)
     aliases = aliases
     open_browser = False
@@ -194,22 +198,22 @@ class SingleUserNotebookApp(NotebookApp):
         s['user'] = self.user
         s['hub_api_key'] = env.pop('JPY_API_TOKEN')
         s['hub_prefix'] = self.hub_prefix
+        s['hub_host'] = self.hub_host
         s['cookie_name'] = self.cookie_name
-        s['login_url'] = self.hub_prefix
+        s['login_url'] = self.hub_host + self.hub_prefix
         s['hub_api_url'] = self.hub_api_url
-        s['csp_report_uri'] = url_path_join(self.hub_prefix, 'security/csp-report')
-        
+        s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
         super(SingleUserNotebookApp, self).init_webapp()
         self.patch_templates()
     
     def patch_templates(self):
         """Patch page templates to add Hub-related buttons"""
         
-        self.jinja_template_vars['logo_url'] = url_path_join(self.hub_prefix, 'logo')
+        self.jinja_template_vars['logo_url'] = self.hub_host + url_path_join(self.hub_prefix, 'logo')
         env = self.web_app.settings['jinja2_env']
         
         env.globals['hub_control_panel_url'] = \
-            url_path_join(self.hub_prefix, 'home')
+            self.hub_host + url_path_join(self.hub_prefix, 'home')
         
         # patch jinja env loading to modify page template
         def get_page(name):

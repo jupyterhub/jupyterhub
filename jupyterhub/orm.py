@@ -253,6 +253,7 @@ class Hub(Base):
     id = Column(Integer, primary_key=True)
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
+    host = ''
     
     @property
     def api_url(self):
