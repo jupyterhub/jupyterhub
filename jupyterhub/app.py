@@ -16,6 +16,7 @@ from datetime import datetime
 from distutils.version import LooseVersion as V
 from getpass import getuser
 from subprocess import Popen
+from urllib.parse import urlparse
 
 if sys.version_info[:2] < (3,3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
@@ -239,6 +240,11 @@ class JupyterHub(Application):
         Only used when subdomains are involved.
         """
     )
+    def _subdomain_host_changed(self, name, old, new):
+        if new and '://' not in new:
+            # host should include '://'
+            # if not specified, assume https: You have to be really explicit about HTTP!
+            self.subdomain_host = 'https://' + new
     
     port = Integer(8000, config=True,
         help="The public facing port of the proxy"
@@ -923,7 +929,7 @@ class JupyterHub(Application):
             version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
         
         subdomain_host = self.subdomain_host
-        domain = subdomain_host.rsplit(':', 1)[0]
+        domain = urlparse(subdomain_host).hostname
         settings = dict(
             log_function=log_request,
             config=self.config,

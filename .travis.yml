@@ -15,3 +15,7 @@ script:
     - py.test --cov jupyterhub jupyterhub/tests -v
 after_success:
     - codecov
+matrix:
+  include:
+    - python: 3.5
+      env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://127.0.0.1.xip.io:8000

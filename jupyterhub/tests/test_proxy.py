@@ -4,6 +4,7 @@ import json
 import os
 from queue import Queue
 from subprocess import Popen
+from urllib.parse import urlparse
 
 from .. import orm
 from .mocking import MockHub
@@ -64,7 +65,7 @@ def test_external_proxy(request, io_loop):
     routes = io_loop.run_sync(app.proxy.get_routes)
     user_path = '/user/river'
     if app.use_subdomains:
-        domain = app.subdomain_host.rsplit(':', 1)[0]
+        domain = urlparse(app.subdomain_host).hostname
         user_path = '/%s.%s' % (name, domain) + user_path
     assert sorted(routes.keys()) == ['/', user_path]
     

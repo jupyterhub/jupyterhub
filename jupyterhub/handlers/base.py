@@ -476,7 +476,7 @@ class UserSpawnHandler(BaseHandler):
             without_prefix = self.request.uri[len(self.hub.server.base_url):]
             target = url_path_join(self.base_url, without_prefix)
             if self.use_subdomains:
-                target = '//' + current_user.host + target
+                target = current_user.host + target
             self.redirect(target)
         else:
             # not logged in to the right user,

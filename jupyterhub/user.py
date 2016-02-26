@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from datetime import datetime, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from tornado import gen
 from tornado.log import app_log
@@ -171,7 +171,9 @@ class User(HasTraits):
     def host(self):
         """Get the *host* for my server (domain[:port])"""
         # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
-        return self.escaped_name + '.' + self.settings['subdomain_host']
+        parsed = urlparse(self.settings['subdomain_host'])
+        h = '%s://%s.%s' % (parsed.scheme, self.escaped_name, parsed.netloc)
+        return h
     
     @property
     def url(self):
@@ -180,7 +182,7 @@ class User(HasTraits):
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
         if self.settings.get('use_subdomains'):
-            return '//{host}{path}'.format(
+            return '{host}{path}'.format(
                 host=self.host,
                 path=self.server.base_url,
             )

@@ -168,10 +168,7 @@ class MockHub(JupyterHub):
         self.db_file.close()
     
     def login_user(self, name):
-        if self.subdomain_host:
-            base_url = 'http://' + self.subdomain_host + self.proxy.public_server.base_url
-        else:
-            base_url = self.proxy.public_server.url
+        base_url = public_url(self)
         r = requests.post(base_url + 'hub/login',
             data={
                 'username': name,
@@ -191,13 +188,12 @@ def public_host(app):
 
 
 def public_url(app):
-    return 'http://%s%s' % (public_host(app), app.proxy.public_server.base_url)
+    return public_host(app) + app.proxy.public_server.base_url
 
 
 def user_url(user, app):
-    print(user.host)
     if app.use_subdomains:
         host = user.host
     else:
         host = public_host(app)
-    return url_path_join('http://%s' % host, user.server.base_url)
+    return host + user.server.base_url

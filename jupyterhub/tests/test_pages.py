@@ -22,6 +22,7 @@ def test_root_no_auth(app, io_loop):
     print(routes)
     print(app.hub.server)
     url = public_url(app)
+    print(url)
     r = requests.get(url)
     r.raise_for_status()
     assert r.url == ujoin(url, app.hub.server.base_url, 'login')
