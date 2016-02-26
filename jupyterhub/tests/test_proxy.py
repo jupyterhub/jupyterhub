@@ -123,13 +123,14 @@ def test_check_routes(app, io_loop):
     r.raise_for_status()
     zoe = orm.User.find(app.db, 'zoe')
     assert zoe is not None
+    zoe = app.users[zoe]
     before = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert '/user/zoe' in before
-    io_loop.run_sync(app.proxy.check_routes)
+    io_loop.run_sync(lambda : app.proxy.check_routes(app.users))
     io_loop.run_sync(lambda : proxy.delete_user(zoe))
     during = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert '/user/zoe' not in during
-    io_loop.run_sync(app.proxy.check_routes)
+    io_loop.run_sync(lambda : app.proxy.check_routes(app.users))
     after = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert '/user/zoe' in after
     assert before == after

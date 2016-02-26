@@ -198,14 +198,21 @@ class Proxy(Base):
         )
     
     @gen.coroutine
-    def add_all_users(self):
+    def get_routes(self, client=None):
+        """Fetch the proxy's routes"""
+        resp = yield self.api_request('', client=client)
+        return json.loads(resp.body.decode('utf8', 'replace'))
+
+    @gen.coroutine
+    def add_all_users(self, user_dict):
         """Update the proxy table from the database.
         
         Used when loading up a new proxy.
         """
         db = inspect(self).session
         futures = []
-        for user in db.query(User):
+        for orm_user in db.query(User):
+            user = user_dict[orm_user]
             if (user.server):
                 futures.append(self.add_user(user))
         # wait after submitting them all
@@ -213,21 +220,16 @@ class Proxy(Base):
             yield f
 
     @gen.coroutine
-    def get_routes(self, client=None):
-        """Fetch the proxy's routes"""
-        resp = yield self.api_request('', client=client)
-        return json.loads(resp.body.decode('utf8', 'replace'))
-
-    @gen.coroutine
-    def check_routes(self, routes=None):
-        """Check that all users are properly"""
+    def check_routes(self, user_dict, routes=None):
+        """Check that all users are properly routed on the proxy"""
         if not routes:
             routes = yield self.get_routes()
 
         have_routes = { r['user'] for r in routes.values() if 'user' in r }
         futures = []
         db = inspect(self).session
-        for user in db.query(User).filter(User.server != None):
+        for orm_user in db.query(User).filter(User.server != None):
+            user = user_dict[orm_user]
             if user.server is None:
                 # This should never be True, but seems to be on rare occasion.
                 # catch filter bug, either in sqlalchemy or my understanding of its behavior

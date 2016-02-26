@@ -896,7 +896,7 @@ class JupyterHub(Application):
         )
         yield self.start_proxy()
         self.log.info("Setting up routes on new proxy")
-        yield self.proxy.add_all_users()
+        yield self.proxy.add_all_users(self.users)
         self.log.info("New proxy back up, and good to go")
     
     def init_tornado_settings(self):
@@ -1085,7 +1085,7 @@ class JupyterHub(Application):
             user.last_activity = max(user.last_activity, dt)
 
         self.db.commit()
-        yield self.proxy.check_routes(routes)
+        yield self.proxy.check_routes(routes, self.users)
     
     @gen.coroutine
     def start(self):
@@ -1120,7 +1120,7 @@ class JupyterHub(Application):
             self.exit(1)
             return
         
-        loop.add_callback(self.proxy.add_all_users)
+        loop.add_callback(self.proxy.add_all_users, self.users)
         
         if self.proxy_process:
             # only check / restart the proxy if we started it in the first place.
