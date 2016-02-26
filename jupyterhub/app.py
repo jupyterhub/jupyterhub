@@ -593,14 +593,14 @@ class JupyterHub(Application):
             q = self.db.query(orm.Hub)
             assert q.count() <= 1
             self._local.hub = q.first()
-            if self.use_subdomains:
+            if self.use_subdomains and self._local.hub:
                 self._local.hub.host = self.subdomain_host
         return self._local.hub
     
     @hub.setter
     def hub(self, hub):
         self._local.hub = hub
-        if self.use_subdomains:
+        if hub and self.use_subdomains:
             hub.host = self.subdomain_host
     
     @property

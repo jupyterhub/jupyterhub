@@ -1,7 +1,7 @@
 """mock utilities for testing"""
 
+import os
 import sys
-from datetime import timedelta
 from tempfile import NamedTemporaryFile
 import threading
 
@@ -13,10 +13,11 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from ..spawner import LocalProcessSpawner
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
+from ..spawner import LocalProcessSpawner
+from ..utils import url_path_join
 
 from pamela import PAMError
 
@@ -110,6 +111,12 @@ class MockHub(JupyterHub):
     db_file = None
     confirm_no_ssl = True
     
+    def _subdomain_host_default(self):
+        return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
+    
+    def _use_subdomains_default(self):
+        return bool(self.subdomain_host)
+    
     def _ip_default(self):
         return '127.0.0.1'
     
@@ -161,7 +168,11 @@ class MockHub(JupyterHub):
         self.db_file.close()
     
     def login_user(self, name):
-        r = requests.post(self.proxy.public_server.url + 'hub/login',
+        if self.subdomain_host:
+            base_url = 'http://' + self.subdomain_host + self.proxy.public_server.base_url
+        else:
+            base_url = self.proxy.public_server.url
+        r = requests.post(base_url + 'hub/login',
             data={
                 'username': name,
                 'password': name,
@@ -171,3 +182,22 @@ class MockHub(JupyterHub):
         assert r.cookies
         return r.cookies
 
+
+def public_host(app):
+    if app.use_subdomains:
+        return app.subdomain_host
+    else:
+        return app.proxy.public_server.host
+
+
+def public_url(app):
+    return 'http://%s%s' % (public_host(app), app.proxy.public_server.base_url)
+
+
+def user_url(user, app):
+    print(user.host)
+    if app.use_subdomains:
+        host = user.host
+    else:
+        host = public_host(app)
+    return url_path_join('http://%s' % host, user.server.base_url)
