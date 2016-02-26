@@ -256,7 +256,7 @@ class JupyterHub(Application):
         help="Supply extra arguments that will be passed to Jinja environment."
     )
     
-    use_subdomains = Bool(True, config=True,
+    use_subdomains = Bool(False, config=True,
         help="""Run single-user servers on subdomains.
         
         Provides additional cross-site protections for client-side js.
