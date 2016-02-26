@@ -209,15 +209,12 @@ class BaseHandler(RequestHandler):
             user = self.find_user(name)
         kwargs = {}
         if self.use_subdomains:
-            # is domain required here? Does clear without domain still clear it?
-            # set cookie for all subdomains
             kwargs['domain'] = self.domain
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
     
-    def set_server_cookie(self, user):
-        """set the login cookie for the single-user server"""
+    def _set_user_cookie(self, user, server):
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
         if  self.request.protocol == 'https':
@@ -226,41 +223,28 @@ class BaseHandler(RequestHandler):
             kwargs = {}
         if self.use_subdomains:
             kwargs['domain'] = self.domain
-            if not self.request.host.startswith(self.domain):
-                self.log.warning(
-                    "Possibly setting cookie on wrong domain: %s != %s",
-                    self.request.host, self.domain)
-        self.log.debug("Setting cookie for %s: %s, %s", user.name, user.server.cookie_name, kwargs)
+        self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
         self.set_secure_cookie(
-            user.server.cookie_name,
+            server.cookie_name,
             user.cookie_id,
-            path=user.server.base_url,
+            path=server.base_url,
             **kwargs
         )
+    
+    def set_server_cookie(self, user):
+        """set the login cookie for the single-user server"""
+        self._set_user_cookie(user, user.server)
     
     def set_hub_cookie(self, user):
         """set the login cookie for the Hub"""
-        # tornado <4.2 have a bug that consider secure==True as soon as
-        # 'secure' kwarg is passed to set_secure_cookie
-        if  self.request.protocol == 'https':
-            kwargs = {'secure': True}
-        else:
-            kwargs = {}
-        if self.use_subdomains:
-            kwargs['domain'] = self.settings['domain']
-            self.log.warning(
-                "Possibly setting cookie on wrong domain: %s != %s",
-                self.request.host, self.domain)
-        self.log.debug("Setting cookie for %s: %s, %s", user.name, self.hub.server.cookie_name, kwargs)
-        self.set_secure_cookie(
-            self.hub.server.cookie_name,
-            user.cookie_id,
-            path=self.hub.server.base_url,
-            **kwargs
-        )
+        self._set_user_cookie(user, self.hub.server)
     
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
+        if self.use_subdomains and not self.request.host.startswith(self.domain):
+            self.log.warning(
+                "Possibly setting cookie on wrong domain: %s != %s",
+                self.request.host, self.domain)
         # create and set a new cookie token for the single-user server
         if user.server:
             self.set_server_cookie(user)
