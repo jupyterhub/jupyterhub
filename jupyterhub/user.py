@@ -38,6 +38,12 @@ class UserDict(dict):
     def __getitem__(self, key):
         if isinstance(key, User):
             key = key.id
+        elif isinstance(key, str):
+            orm_user = self.db.query(orm.User).filter(orm.User.name==key).first()
+            if orm_user is None:
+                raise KeyError("No such user: %s" % name)
+            else:
+                key = orm_user
         if isinstance(key, orm.User):
             # users[orm_user] returns User(orm_user)
             orm_user = key
