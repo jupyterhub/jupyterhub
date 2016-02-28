@@ -25,7 +25,7 @@ class RootHandler(BaseHandler):
         user = self.get_current_user()
         if user:
             if user.running:
-                url = user.server.base_url
+                url = user.url
                 self.log.debug("User is running: %s", url)
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
@@ -67,7 +67,7 @@ class SpawnHandler(BaseHandler):
         """GET renders form for spawning with user-specified options"""
         user = self.get_current_user()
         if user.running:
-            url = user.server.base_url
+            url = user.url
             self.log.debug("User is running: %s", url)
             self.redirect(url)
             return
@@ -84,7 +84,7 @@ class SpawnHandler(BaseHandler):
         """POST spawns with user-specified options"""
         user = self.get_current_user()
         if user.running:
-            url = user.server.base_url
+            url = user.url
             self.log.warning("User is already running: %s", url)
             self.redirect(url)
             return
@@ -101,7 +101,7 @@ class SpawnHandler(BaseHandler):
             self.finish(self._render_form(str(e)))
             return
         self.set_login_cookie(user)
-        url = user.server.base_url
+        url = user.url
         self.redirect(url)
 
 class AdminHandler(BaseHandler):

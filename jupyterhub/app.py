@@ -16,6 +16,7 @@ from datetime import datetime
 from distutils.version import LooseVersion as V
 from getpass import getuser
 from subprocess import Popen
+from urllib.parse import urlparse
 
 if sys.version_info[:2] < (3,3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
@@ -230,8 +231,21 @@ class JupyterHub(Application):
         """
     )
     ip = Unicode('', config=True,
-        help="The public facing ip of the proxy"
+        help="The public facing ip of the whole application (the proxy)"
     )
+    
+    subdomain_host = Unicode('', config=True,
+        help="""The public-facing host (domain[:port]) on which the Hub will run.
+        
+        Only used when subdomains are involved.
+        """
+    )
+    def _subdomain_host_changed(self, name, old, new):
+        if new and '://' not in new:
+            # host should include '://'
+            # if not specified, assume https: You have to be really explicit about HTTP!
+            self.subdomain_host = 'https://' + new
+    
     port = Integer(8000, config=True,
         help="The public facing port of the proxy"
     )
@@ -247,6 +261,18 @@ class JupyterHub(Application):
     jinja_environment_options = Dict(config=True,
         help="Supply extra arguments that will be passed to Jinja environment."
     )
+    
+    use_subdomains = Bool(False, config=True,
+        help="""Run single-user servers on subdomains.
+        
+        Provides additional cross-site protections for client-side js.
+        
+        Requires <username>.hub.domain.tld to resolve to the same host as hub.domain.tld.
+        
+        In general, this is most easily achieved with wildcard DNS.
+        
+        When using SSL (i.e. always) this also requires a wildcard cert.
+        """)
     
     proxy_cmd = Command('configurable-http-proxy', config=True,
         help="""The command to start the http proxy.
@@ -288,7 +314,6 @@ class JupyterHub(Application):
     hub_ip = Unicode('127.0.0.1', config=True,
         help="The ip for this process"
     )
-    
     hub_prefix = URLPrefix('/hub/', config=True,
         help="The prefix for the hub server. Must not be '/'"
     )
@@ -574,11 +599,15 @@ class JupyterHub(Application):
             q = self.db.query(orm.Hub)
             assert q.count() <= 1
             self._local.hub = q.first()
+            if self.use_subdomains and self._local.hub:
+                self._local.hub.host = self.subdomain_host
         return self._local.hub
     
     @hub.setter
     def hub(self, hub):
         self._local.hub = hub
+        if hub and self.use_subdomains:
+            hub.host = self.subdomain_host
     
     @property
     def proxy(self):
@@ -631,6 +660,10 @@ class JupyterHub(Application):
             server.ip = self.hub_ip
             server.port = self.hub_port
             server.base_url = self.hub_prefix
+        if self.use_subdomains:
+            if not self.subdomain_host:
+                raise ValueError("Must specify subdomain_host when using subdomains."
+                " This should be the public domain[:port] of the Hub.")
 
         self.db.commit()
     
@@ -809,6 +842,8 @@ class JupyterHub(Application):
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
         ]
+        if self.use_subdomains:
+            cmd.append('--host-routing')
         if self.debug_proxy:
             cmd.extend(['--log-level', 'debug'])
         if self.ssl_key:
@@ -867,7 +902,7 @@ class JupyterHub(Application):
         )
         yield self.start_proxy()
         self.log.info("Setting up routes on new proxy")
-        yield self.proxy.add_all_users()
+        yield self.proxy.add_all_users(self.users)
         self.log.info("New proxy back up, and good to go")
     
     def init_tornado_settings(self):
@@ -893,6 +928,8 @@ class JupyterHub(Application):
         else:
             version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
         
+        subdomain_host = self.subdomain_host
+        domain = urlparse(subdomain_host).hostname
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -915,6 +952,9 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             jinja2_env=jinja_env,
             version_hash=version_hash,
+            use_subdomains=self.use_subdomains,
+            subdomain_host=subdomain_host,
+            domain=domain,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1051,7 +1091,7 @@ class JupyterHub(Application):
             user.last_activity = max(user.last_activity, dt)
 
         self.db.commit()
-        yield self.proxy.check_routes(routes)
+        yield self.proxy.check_routes(routes, self.users)
     
     @gen.coroutine
     def start(self):
@@ -1086,7 +1126,7 @@ class JupyterHub(Application):
             self.exit(1)
             return
         
-        loop.add_callback(self.proxy.add_all_users)
+        loop.add_callback(self.proxy.add_all_users, self.users)
         
         if self.proxy_process:
             # only check / restart the proxy if we started it in the first place.

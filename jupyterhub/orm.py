@@ -176,10 +176,10 @@ class Proxy(Base):
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
         self.log.info("Adding user %s to proxy %s => %s",
-            user.name, user.server.base_url, user.server.host,
+            user.name, user.proxy_path, user.server.host,
         )
         
-        yield self.api_request(user.server.base_url,
+        yield self.api_request(user.proxy_path,
             method='POST',
             body=dict(
                 target=user.server.host,
@@ -192,26 +192,11 @@ class Proxy(Base):
     def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
-        yield self.api_request(user.server.base_url,
+        yield self.api_request(user.proxy_path,
             method='DELETE',
             client=client,
         )
     
-    @gen.coroutine
-    def add_all_users(self):
-        """Update the proxy table from the database.
-        
-        Used when loading up a new proxy.
-        """
-        db = inspect(self).session
-        futures = []
-        for user in db.query(User):
-            if (user.server):
-                futures.append(self.add_user(user))
-        # wait after submitting them all
-        for f in futures:
-            yield f
-
     @gen.coroutine
     def get_routes(self, client=None):
         """Fetch the proxy's routes"""
@@ -219,15 +204,32 @@ class Proxy(Base):
         return json.loads(resp.body.decode('utf8', 'replace'))
 
     @gen.coroutine
-    def check_routes(self, routes=None):
-        """Check that all users are properly"""
+    def add_all_users(self, user_dict):
+        """Update the proxy table from the database.
+        
+        Used when loading up a new proxy.
+        """
+        db = inspect(self).session
+        futures = []
+        for orm_user in db.query(User):
+            user = user_dict[orm_user]
+            if (user.server):
+                futures.append(self.add_user(user))
+        # wait after submitting them all
+        for f in futures:
+            yield f
+
+    @gen.coroutine
+    def check_routes(self, user_dict, routes=None):
+        """Check that all users are properly routed on the proxy"""
         if not routes:
             routes = yield self.get_routes()
 
         have_routes = { r['user'] for r in routes.values() if 'user' in r }
         futures = []
         db = inspect(self).session
-        for user in db.query(User).filter(User.server != None):
+        for orm_user in db.query(User).filter(User.server != None):
+            user = user_dict[orm_user]
             if user.server is None:
                 # This should never be True, but seems to be on rare occasion.
                 # catch filter bug, either in sqlalchemy or my understanding of its behavior
@@ -253,6 +255,7 @@ class Hub(Base):
     id = Column(Integer, primary_key=True)
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
+    host = ''
     
     @property
     def api_url(self):

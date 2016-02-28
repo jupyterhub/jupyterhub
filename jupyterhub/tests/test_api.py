@@ -2,7 +2,6 @@
 
 import json
 import time
-from datetime import timedelta
 from queue import Queue
 from urllib.parse import urlparse
 
@@ -14,6 +13,7 @@ from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
 from . import mocking
+from .mocking import public_url, user_url
 
 
 def check_db_locks(func):
@@ -105,7 +105,7 @@ def test_auth_api(app):
 
 
 def test_referer_check(app, io_loop):
-    url = app.hub.server.url
+    url = ujoin(public_url(app), app.hub.server.base_url)
     host = urlparse(url).netloc
     user = find_user(app.db, 'admin')
     if user is None:
@@ -352,15 +352,19 @@ def test_spawn(app, io_loop):
     assert status is None
     
     assert user.server.base_url == '/user/%s' % name
-    r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url))
+    url = user_url(user, app)
+    print(url)
+    r = requests.get(url)
     assert r.status_code == 200
     assert r.text == user.server.base_url
 
-    r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url, 'args'))
+    r = requests.get(ujoin(url, 'args'))
     assert r.status_code == 200
     argv = r.json()
     for expected in ['--user=%s' % name, '--base-url=%s' % user.server.base_url]:
         assert expected in argv
+    if app.use_subdomains:
+        assert '--hub-host=%s' % app.subdomain_host in argv
     
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204

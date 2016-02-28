@@ -199,6 +199,7 @@ class Spawner(LoggingConfigurable):
             '--port=%i' % self.user.server.port,
             '--cookie-name=%s' % self.user.server.cookie_name,
             '--base-url=%s' % self.user.server.base_url,
+            '--hub-host=%s' % self.hub.host,
             '--hub-prefix=%s' % self.hub.server.base_url,
             '--hub-api-url=%s' % self.hub.api_url,
             ]

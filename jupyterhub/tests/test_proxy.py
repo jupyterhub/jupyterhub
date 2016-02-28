@@ -4,6 +4,7 @@ import json
 import os
 from queue import Queue
 from subprocess import Popen
+from urllib.parse import urlparse
 
 from .. import orm
 from .mocking import MockHub
@@ -34,6 +35,8 @@ def test_external_proxy(request, io_loop):
         '--api-port', str(proxy_port),
         '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
+    if app.use_subdomains:
+        cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
     def _cleanup_proxy():
         if proxy.poll() is None:
@@ -60,7 +63,11 @@ def test_external_proxy(request, io_loop):
     r.raise_for_status()
     
     routes = io_loop.run_sync(app.proxy.get_routes)
-    assert sorted(routes.keys()) == ['/', '/user/river']
+    user_path = '/user/river'
+    if app.use_subdomains:
+        domain = urlparse(app.subdomain_host).hostname
+        user_path = '/%s.%s' % (name, domain) + user_path
+    assert sorted(routes.keys()) == ['/', user_path]
     
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
@@ -76,7 +83,7 @@ def test_external_proxy(request, io_loop):
     
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_routes)
-    assert sorted(routes.keys()) == ['/', '/user/river']
+    assert sorted(routes.keys()) == ['/', user_path]
     
     # teardown the proxy again, and start a new one with different auth and port
     proxy.terminate()
@@ -90,7 +97,8 @@ def test_external_proxy(request, io_loop):
         '--api-port', str(proxy_port),
         '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
-    
+    if app.use_subdomains:
+        cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
     
@@ -113,7 +121,7 @@ def test_external_proxy(request, io_loop):
     
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_routes)
-    assert sorted(routes.keys()) == ['/', '/user/river']
+    assert sorted(routes.keys()) == ['/', user_path]
 
 def test_check_routes(app, io_loop):
     proxy = app.proxy
@@ -123,13 +131,14 @@ def test_check_routes(app, io_loop):
     r.raise_for_status()
     zoe = orm.User.find(app.db, 'zoe')
     assert zoe is not None
+    zoe = app.users[zoe]
     before = sorted(io_loop.run_sync(app.proxy.get_routes))
-    assert '/user/zoe' in before
-    io_loop.run_sync(app.proxy.check_routes)
+    assert zoe.proxy_path in before
+    io_loop.run_sync(lambda : app.proxy.check_routes(app.users))
     io_loop.run_sync(lambda : proxy.delete_user(zoe))
     during = sorted(io_loop.run_sync(app.proxy.get_routes))
-    assert '/user/zoe' not in during
-    io_loop.run_sync(app.proxy.check_routes)
+    assert zoe.proxy_path not in during
+    io_loop.run_sync(lambda : app.proxy.check_routes(app.users))
     after = sorted(io_loop.run_sync(app.proxy.get_routes))
-    assert '/user/zoe' in after
+    assert zoe.proxy_path in after
     assert before == after

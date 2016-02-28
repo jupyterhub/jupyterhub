@@ -2,7 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from datetime import datetime, timedelta
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from tornado import gen
 from tornado.log import app_log
@@ -38,6 +38,12 @@ class UserDict(dict):
     def __getitem__(self, key):
         if isinstance(key, User):
             key = key.id
+        elif isinstance(key, str):
+            orm_user = self.db.query(orm.User).filter(orm.User.name==key).first()
+            if orm_user is None:
+                raise KeyError("No such user: %s" % name)
+            else:
+                key = orm_user
         if isinstance(key, orm.User):
             # users[orm_user] returns User(orm_user)
             orm_user = key
@@ -147,6 +153,41 @@ class User(HasTraits):
     def escaped_name(self):
         """My name, escaped for use in URLs, cookies, etc."""
         return quote(self.name, safe='@')
+    
+    @property
+    def proxy_path(self):
+        if self.settings.get('use_subdomains'):
+            return url_path_join('/' + self.domain, self.server.base_url)
+        else:
+            return self.server.base_url
+    
+    @property
+    def domain(self):
+        """Get the domain for my server."""
+        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
+        return self.escaped_name + '.' + self.settings['domain']
+    
+    @property
+    def host(self):
+        """Get the *host* for my server (domain[:port])"""
+        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
+        parsed = urlparse(self.settings['subdomain_host'])
+        h = '%s://%s.%s' % (parsed.scheme, self.escaped_name, parsed.netloc)
+        return h
+    
+    @property
+    def url(self):
+        """My URL
+        
+        Full name.domain/path if using subdomains, otherwise just my /base/url
+        """
+        if self.settings.get('use_subdomains'):
+            return '{host}{path}'.format(
+                host=self.host,
+                path=self.server.base_url,
+            )
+        else:
+            return self.server.base_url
     
     @gen.coroutine
     def spawn(self, options=None):
