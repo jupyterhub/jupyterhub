@@ -178,6 +178,9 @@ class Proxy(Base):
         self.log.info("Adding user %s to proxy %s => %s",
             user.name, user.proxy_path, user.server.host,
         )
+        if user.spawn_pending:
+            raise RuntimeError(
+                "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
         
         yield self.api_request(user.proxy_path,
             method='POST',
@@ -213,7 +216,7 @@ class Proxy(Base):
         futures = []
         for orm_user in db.query(User):
             user = user_dict[orm_user]
-            if (user.server):
+            if user.running:
                 futures.append(self.add_user(user))
         # wait after submitting them all
         for f in futures:
@@ -230,6 +233,9 @@ class Proxy(Base):
         db = inspect(self).session
         for orm_user in db.query(User).filter(User.server != None):
             user = user_dict[orm_user]
+            if not user.running:
+                # Don't add users to the proxy that haven't finished starting
+                continue
             if user.server is None:
                 # This should never be True, but seems to be on rare occasion.
                 # catch filter bug, either in sqlalchemy or my understanding of its behavior
