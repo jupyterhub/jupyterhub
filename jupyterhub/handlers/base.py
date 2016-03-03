@@ -461,6 +461,7 @@ class UserSpawnHandler(BaseHandler):
     redirect her to /user/alice/notebooks/mynotebook.ipynb, which should
     in turn call this function.
     """
+
     @gen.coroutine
     def get(self, name, user_path):
         current_user = self.get_current_user()
@@ -488,11 +489,18 @@ class UserSpawnHandler(BaseHandler):
             if self.use_subdomains:
                 target = current_user.host + target
             self.redirect(target)
-        else:
+        elif current_user:
             # logged in as a different user, redirect
             target = url_path_join(self.base_url, 'user', current_user.name,
                                    user_path or '')
             self.redirect(target)
+        else:
+            # not logged in, clear any cookies and reload
+            self.clear_login_cookie()
+            self.redirect(url_concat(
+                self.settings['login_url'],
+                {'next': self.request.uri},
+            ))
 
 
 class CSPReportHandler(BaseHandler):

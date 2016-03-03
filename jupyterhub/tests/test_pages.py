@@ -1,6 +1,6 @@
 """Tests for HTML pages"""
 
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import requests
 
@@ -164,6 +164,14 @@ def test_user_redirect(app):
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == '/user/%s/test.ipynb' % name
+
+    r = get_page('/user/baduser/test.ipynb', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/hub/login'
+    query = urlparse(r.url).query
+    assert query == urlencode({'next': '/hub/user/baduser/test.ipynb'})
 
 
 def test_static_files(app):
