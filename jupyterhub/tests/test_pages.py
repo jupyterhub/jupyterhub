@@ -149,6 +149,23 @@ def test_spawn_form_with_file(app, io_loop):
         }
 
 
+def test_user_redirect(app):
+    name = 'wash'
+    cookies = app.login_user(name)
+
+    r = get_page('/user/baduser', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/user/%s' % name
+
+    r = get_page('/user/baduser/test.ipynb', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/user/%s/test.ipynb' % name
+
+
 def test_static_files(app):
     base_url = ujoin(public_url(app), app.hub.server.base_url)
     print(base_url)
