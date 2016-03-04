@@ -363,7 +363,7 @@ def test_spawn(app, io_loop):
     argv = r.json()
     for expected in ['--user=%s' % name, '--base-url=%s' % user.server.base_url]:
         assert expected in argv
-    if app.use_subdomains:
+    if app.subdomain_host:
         assert '--hub-host=%s' % app.subdomain_host in argv
     
     r = api_request(app, 'users', name, 'server', method='delete')

@@ -235,11 +235,18 @@ class JupyterHub(Application):
     )
     
     subdomain_host = Unicode('', config=True,
-        help="""The public-facing host (domain[:port]) on which the Hub will run.
-        
-        Only used when subdomains are involved.
-        """
-    )
+        help="""Run single-user servers on subdomains of this host.
+
+        This should be the full https://hub.domain.tld[:port]
+
+        Provides additional cross-site protections for javascript served by single-user servers.
+
+        Requires <username>.hub.domain.tld to resolve to the same host as hub.domain.tld.
+
+        In general, this is most easily achieved with wildcard DNS.
+
+        When using SSL (i.e. always) this also requires a wildcard SSL certificate.
+        """)
     def _subdomain_host_changed(self, name, old, new):
         if new and '://' not in new:
             # host should include '://'
@@ -261,18 +268,6 @@ class JupyterHub(Application):
     jinja_environment_options = Dict(config=True,
         help="Supply extra arguments that will be passed to Jinja environment."
     )
-    
-    use_subdomains = Bool(False, config=True,
-        help="""Run single-user servers on subdomains.
-        
-        Provides additional cross-site protections for client-side js.
-        
-        Requires <username>.hub.domain.tld to resolve to the same host as hub.domain.tld.
-        
-        In general, this is most easily achieved with wildcard DNS.
-        
-        When using SSL (i.e. always) this also requires a wildcard cert.
-        """)
     
     proxy_cmd = Command('configurable-http-proxy', config=True,
         help="""The command to start the http proxy.
@@ -599,14 +594,14 @@ class JupyterHub(Application):
             q = self.db.query(orm.Hub)
             assert q.count() <= 1
             self._local.hub = q.first()
-            if self.use_subdomains and self._local.hub:
+            if self.subdomain_host and self._local.hub:
                 self._local.hub.host = self.subdomain_host
         return self._local.hub
     
     @hub.setter
     def hub(self, hub):
         self._local.hub = hub
-        if hub and self.use_subdomains:
+        if hub and self.subdomain_host:
             hub.host = self.subdomain_host
     
     @property
@@ -660,7 +655,7 @@ class JupyterHub(Application):
             server.ip = self.hub_ip
             server.port = self.hub_port
             server.base_url = self.hub_prefix
-        if self.use_subdomains:
+        if self.subdomain_host:
             if not self.subdomain_host:
                 raise ValueError("Must specify subdomain_host when using subdomains."
                 " This should be the public domain[:port] of the Hub.")
@@ -842,7 +837,7 @@ class JupyterHub(Application):
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
         ]
-        if self.use_subdomains:
+        if self.subdomain_host:
             cmd.append('--host-routing')
         if self.debug_proxy:
             cmd.extend(['--log-level', 'debug'])
@@ -952,7 +947,6 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             jinja2_env=jinja_env,
             version_hash=version_hash,
-            use_subdomains=self.use_subdomains,
             subdomain_host=subdomain_host,
             domain=domain,
         )

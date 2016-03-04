@@ -158,7 +158,7 @@ class User(HasTraits):
     
     @property
     def proxy_path(self):
-        if self.settings.get('use_subdomains'):
+        if self.settings.get('subdomain_host'):
             return url_path_join('/' + self.domain, self.server.base_url)
         else:
             return self.server.base_url
@@ -183,7 +183,7 @@ class User(HasTraits):
         
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
-        if self.settings.get('use_subdomains'):
+        if self.settings.get('subdomain_host'):
             return '{host}{path}'.format(
                 host=self.host,
                 path=self.server.base_url,
