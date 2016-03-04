@@ -454,22 +454,26 @@ class PrefixRedirectHandler(BaseHandler):
 
 
 class UserSpawnHandler(BaseHandler):
-    """Requests to /user/name handled by the Hub
-    should result in spawning the single-user server and
-    being redirected to the original.
+    """Redirect requests to /user/name/* handled by the Hub.
+
+    If logged in, spawn a single-user server and redirect request.
+    If a user, alice, requests /user/bob/notebooks/mynotebook.ipynb,
+    redirect her to /user/alice/notebooks/mynotebook.ipynb, which should
+    in turn call this function.
     """
+
     @gen.coroutine
-    def get(self, name):
+    def get(self, name, user_path):
         current_user = self.get_current_user()
         if current_user and current_user.name == name:
-            # logged in, spawn the server
+            # logged in as correct user, spawn the server
             if current_user.spawner:
                 if current_user.spawn_pending:
                     # spawn has started, but not finished
                     html = self.render_template("spawn_pending.html", user=current_user)
                     self.finish(html)
                     return
-                
+
                 # spawn has supposedly finished, check on the status
                 status = yield current_user.spawner.poll()
                 if status is not None:
@@ -485,14 +489,19 @@ class UserSpawnHandler(BaseHandler):
             if self.use_subdomains:
                 target = current_user.host + target
             self.redirect(target)
+        elif current_user:
+            # logged in as a different user, redirect
+            target = url_path_join(self.base_url, 'user', current_user.name,
+                                   user_path or '')
+            self.redirect(target)
         else:
-            # not logged in to the right user,
-            # clear any cookies and reload (will redirect to login)
+            # not logged in, clear any cookies and reload
             self.clear_login_cookie()
             self.redirect(url_concat(
                 self.settings['login_url'],
-                {'next': self.request.uri,
-            }))
+                {'next': self.request.uri},
+            ))
+
 
 class CSPReportHandler(BaseHandler):
     '''Accepts a content security policy violation report'''
@@ -503,6 +512,6 @@ class CSPReportHandler(BaseHandler):
                       self.request.body.decode('utf8', 'replace'))
 
 default_handlers = [
-    (r'/user/([^/]+)/?.*', UserSpawnHandler),
+    (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
     (r'/security/csp-report', CSPReportHandler),
 ]

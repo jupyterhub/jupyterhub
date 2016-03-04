@@ -1,6 +1,6 @@
 """Tests for HTML pages"""
 
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import requests
 
@@ -147,6 +147,31 @@ def test_spawn_form_with_file(app, io_loop):
                       'body': b'hello world\n',
                       'content_type': 'application/unknown'},
         }
+
+
+def test_user_redirect(app):
+    name = 'wash'
+    cookies = app.login_user(name)
+
+    r = get_page('/user/baduser', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/user/%s' % name
+
+    r = get_page('/user/baduser/test.ipynb', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/user/%s/test.ipynb' % name
+
+    r = get_page('/user/baduser/test.ipynb', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == '/hub/login'
+    query = urlparse(r.url).query
+    assert query == urlencode({'next': '/hub/user/baduser/test.ipynb'})
 
 
 def test_static_files(app):
