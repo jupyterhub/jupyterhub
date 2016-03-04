@@ -138,29 +138,15 @@ Control Panel</a>
 {% endblock logo %}
 """
 
-def _check_writable(path):
-    """Check if a path is writable by the current user."""
-    while path != '/':
-        print("checking %s" % path)
-        if not os.path.exists(path):
-            path = os.path.dirname(path)
-            continue
-        # path exists
-        if os.access(path, os.W_OK):
-            # we can edit directly, not ok
-            return path
-        # path exists and is not writable
-        if os.path.isdir(path):
-            if len(os.listdir(path)) == 0:
-                # empty dirs can be deleted and recreated if their parent is writable
-                return _check_writable(os.path.dirname(path))
-            else:
-                return False
-        else:
-            # if it's a file, check parent to see if it can be deleted
-            return _check_writable(os.path.dirname(path))
-    return os.access(path, os.W_OK)
+def _exclude_home(path_list):
+    """Filter out any entries in a path list that are in my home directory.
 
+    Used to disable per-user configuration.
+    """
+    home = os.path.expanduser('~')
+    for p in path_list:
+        if not p.startswith(home):
+            yield p
 
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
@@ -219,29 +205,13 @@ class SingleUserNotebookApp(NotebookApp):
         else:
             super(SingleUserNotebookApp, self).migrate_config()
     
-    def _filter_writable(self, path_list):
-        """Filter out any entries in a path list are writable
-
-        Used to verify that user config is truly disabled
-        """
-        for p in path_list:
-            writable = _check_writable(p)
-            if writable:
-                log = self.log.warning if os.path.exists(p) else self.log.debug
-                if writable == p:
-                    msg = p
-                else:
-                    msg = "%s (writable: %s)" % (p, writable)
-                log("User config is disabled, omitting %s", msg)
-            else:
-                yield p
     @property
     def config_file_paths(self):
         path = super(SingleUserNotebookApp, self).config_file_paths
         
         if self.disable_user_config:
             # filter out user-writable config dirs if user config is disabled
-            path = list(self._filter_writable(path))
+            path = list(_exclude_home(path))
         return path
     
     @property
@@ -249,13 +219,13 @@ class SingleUserNotebookApp(NotebookApp):
         path = super(SingleUserNotebookApp, self).nbextensions_path
         
         if self.disable_user_config:
-            path = list(self._filter_writable(path))
+            path = list(_exclude_home(path))
         return path
     
     def _static_custom_path_default(self):
         path = super(SingleUserNotebookApp, self)._static_custom_path_default()
         if self.disable_user_config:
-            path = list(self._filter_writable(path))
+            path = list(_exclude_home(path))
         return path
     
     def start(self):
