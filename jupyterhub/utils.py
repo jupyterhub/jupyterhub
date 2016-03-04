@@ -38,7 +38,7 @@ def can_connect(ip, port):
     try:
         socket.create_connection((ip, port))
     except socket.error as e:
-        if e.errno != errno.ECONNREFUSED:
+        if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s",
                 ip, port, e
             )
