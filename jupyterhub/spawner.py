@@ -140,6 +140,14 @@ class Spawner(LoggingConfigurable):
         """
     )
     
+    disable_user_config = Bool(False, config=True,
+        help="""Disable per-user configuration of single-user servers.
+        
+        This prevents any config in users' $HOME directories
+        from having an effect on their server.
+        """
+    )
+    
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
@@ -210,6 +218,8 @@ class Spawner(LoggingConfigurable):
             args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
             args.append('--debug')
+        if self.disable_user_config:
+            args.append('--disable-user-config')
         args.extend(self.args)
         return args
     

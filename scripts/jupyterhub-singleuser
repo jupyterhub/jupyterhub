@@ -29,7 +29,11 @@ from traitlets import (
     CUnicode,
 )
 
-from notebook.notebookapp import NotebookApp, aliases as notebook_aliases
+from notebook.notebookapp import (
+    NotebookApp,
+    aliases as notebook_aliases,
+    flags as notebook_flags,
+)
 from notebook.auth.login import LoginHandler
 from notebook.auth.logout import LogoutHandler
 
@@ -120,6 +124,14 @@ aliases.update({
     'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
     'base-url': 'SingleUserNotebookApp.base_url',
 })
+flags = dict(notebook_flags)
+flags.update({
+    'disable-user-config': ({
+        'SingleUserNotebookApp': {
+            'disable_user_config': True
+        }
+    }, "Disable user-controlled configuration of the notebook server.")
+})
 
 page_template = """
 {% extends "templates/page.html" %}
@@ -158,6 +170,7 @@ class SingleUserNotebookApp(NotebookApp):
     hub_host = Unicode(config=True)
     hub_api_url = Unicode(config=True)
     aliases = aliases
+    flags = flags
     open_browser = False
     trust_xheaders = True
     login_handler_class = JupyterHubLoginHandler
