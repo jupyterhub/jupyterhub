@@ -30,22 +30,32 @@ def random_port():
 ISO8601_ms = '%Y-%m-%dT%H:%M:%S.%fZ'
 ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
 
+def can_connect(ip, port):
+    """Check if we can connect to an ip:port
+    
+    return True if we can connect, False otherwise.
+    """
+    try:
+        socket.create_connection((ip, port))
+    except socket.error as e:
+        if e.errno != errno.ECONNREFUSED:
+            app_log.error("Unexpected error connecting to %s:%i %s",
+                ip, port, e
+            )
+        return False
+    else:
+        return True
+
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):
     """wait for any server to show up at ip:port"""
     loop = ioloop.IOLoop.current()
     tic = loop.time()
     while loop.time() - tic < timeout:
-        try:
-            socket.create_connection((ip, port))
-        except socket.error as e:
-            if e.errno != errno.ECONNREFUSED:
-                app_log.error("Unexpected error waiting for %s:%i %s",
-                    ip, port, e
-                )
-            yield gen.sleep(0.1)
-        else:
+        if can_connect(ip, port):
             return
+        else:
+            yield gen.sleep(0.1)
     raise TimeoutError("Server at {ip}:{port} didn't respond in {timeout} seconds".format(
         **locals()
     ))
