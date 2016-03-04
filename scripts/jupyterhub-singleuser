@@ -23,12 +23,17 @@ except ImportError:
     raise ImportError("JupyterHub single-user server requires notebook >= 4.0")
 
 from traitlets import (
+    Bool,
     Integer,
     Unicode,
     CUnicode,
 )
 
-from notebook.notebookapp import NotebookApp, aliases as notebook_aliases
+from notebook.notebookapp import (
+    NotebookApp,
+    aliases as notebook_aliases,
+    flags as notebook_flags,
+)
 from notebook.auth.login import LoginHandler
 from notebook.auth.logout import LogoutHandler
 
@@ -119,6 +124,14 @@ aliases.update({
     'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
     'base-url': 'SingleUserNotebookApp.base_url',
 })
+flags = dict(notebook_flags)
+flags.update({
+    'disable-user-config': ({
+        'SingleUserNotebookApp': {
+            'disable_user_config': True
+        }
+    }, "Disable user-controlled configuration of the notebook server.")
+})
 
 page_template = """
 {% extends "templates/page.html" %}
@@ -137,6 +150,16 @@ Control Panel</a>
 {% endblock logo %}
 """
 
+def _exclude_home(path_list):
+    """Filter out any entries in a path list that are in my home directory.
+
+    Used to disable per-user configuration.
+    """
+    home = os.path.expanduser('~')
+    for p in path_list:
+        if not p.startswith(home):
+            yield p
+
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
     user = CUnicode(config=True)
@@ -147,11 +170,20 @@ class SingleUserNotebookApp(NotebookApp):
     hub_host = Unicode(config=True)
     hub_api_url = Unicode(config=True)
     aliases = aliases
+    flags = flags
     open_browser = False
     trust_xheaders = True
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
     port_retries = 0 # disable port-retries, since the Spawner will tell us what port to use
+
+    disable_user_config = Bool(False, config=True,
+        help="""Disable user configuration of single-user server.
+
+        Prevents user-writable files that normally configure the single-user server
+        from being loaded, ensuring admins have full control of configuration.
+        """
+    )
 
     cookie_cache_lifetime = Integer(
         config=True,
@@ -178,6 +210,36 @@ class SingleUserNotebookApp(NotebookApp):
     def _clear_cookie_cache(self):
         self.log.debug("Clearing cookie cache")
         self.tornado_settings['cookie_cache'].clear()
+    
+    def migrate_config(self):
+        if self.disable_user_config:
+            # disable config-migration when user config is disabled
+            return
+        else:
+            super(SingleUserNotebookApp, self).migrate_config()
+    
+    @property
+    def config_file_paths(self):
+        path = super(SingleUserNotebookApp, self).config_file_paths
+        
+        if self.disable_user_config:
+            # filter out user-writable config dirs if user config is disabled
+            path = list(_exclude_home(path))
+        return path
+    
+    @property
+    def nbextensions_path(self):
+        path = super(SingleUserNotebookApp, self).nbextensions_path
+        
+        if self.disable_user_config:
+            path = list(_exclude_home(path))
+        return path
+    
+    def _static_custom_path_default(self):
+        path = super(SingleUserNotebookApp, self)._static_custom_path_default()
+        if self.disable_user_config:
+            path = list(_exclude_home(path))
+        return path
     
     def start(self):
         # Start a PeriodicCallback to clear cached cookies.  This forces us to
