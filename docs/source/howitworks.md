@@ -5,7 +5,7 @@ JupyterHub is a multi-user server that manages and proxies multiple instances of
 There are three basic processes involved:
 
 - multi-user Hub (Python/Tornado)
-- configurable http proxy (nodejs)
+- [configurable http proxy](https://github.com/jupyter/configurable-http-proxy) (node-http-proxy)
 - multiple single-user IPython notebook servers (Python/IPython/Tornado)
 
 The proxy is the only process that listens on a public interface.
@@ -51,7 +51,7 @@ Authentication is customizable via the Authenticator class.
 Authentication can be replaced by any mechanism,
 such as OAuth, Kerberos, etc.
 
-JupyterHub only ships with [PAM](http://en.wikipedia.org/wiki/Pluggable_authentication_module) authentication,
+JupyterHub only ships with [PAM](https://en.wikipedia.org/wiki/Pluggable_authentication_module) authentication,
 which requires the server to be run as root,
 or at least with access to the PAM service,
 which regular users typically do not have

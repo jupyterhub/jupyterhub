@@ -3,14 +3,14 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from datetime import datetime, timedelta
+from datetime import datetime
 import errno
 import json
 import socket
 
 from tornado import gen
 from tornado.log import app_log
-from tornado.httpclient import HTTPRequest, AsyncHTTPClient, HTTPError
+from tornado.httpclient import HTTPRequest, AsyncHTTPClient
 
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy import (
@@ -78,7 +78,7 @@ class Server(Base):
         ip = self.ip
         if ip in {'', '0.0.0.0'}:
             # when listening on all interfaces, connect to localhost
-            ip = 'localhost'
+            ip = '127.0.0.1'
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
             ip=ip,
@@ -100,7 +100,7 @@ class Server(Base):
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
         if self.ip in {'', '0.0.0.0'}:
-            return self.url.replace('localhost', self.ip or '*', 1)
+            return self.url.replace('127.0.0.1', self.ip or '*', 1)
         return self.url
     
     @gen.coroutine
@@ -109,14 +109,24 @@ class Server(Base):
         if http:
             yield wait_for_http_server(self.url, timeout=timeout)
         else:
-            yield wait_for_server(self.ip or 'localhost', self.port, timeout=timeout)
+            yield wait_for_server(self.ip or '127.0.0.1', self.port, timeout=timeout)
     
     def is_up(self):
         """Is the server accepting connections?"""
         try:
-            socket.create_connection((self.ip or 'localhost', self.port))
+            socket.create_connection((self.ip or '127.0.0.1', self.port))
         except socket.error as e:
-            if e.errno == errno.ECONNREFUSED:
+            if e.errno == errno.ENETUNREACH:
+                try:
+                    socket.create_connection((self.ip or '127.0.0.1', self.port))
+                except socket.error as e:
+                    if e.errno == errno.ECONNREFUSED:
+                        return False
+                    else:
+                        raise
+                else:
+                    return True
+            elif e.errno == errno.ECONNREFUSED:
                 return False
             else:
                 raise
@@ -145,7 +155,7 @@ class Proxy(Base):
             )
         else:
             return "<%s [unconfigured]>" % self.__class__.__name__
-
+    
     def api_request(self, path, method='GET', body=None, client=None):
         """Make an authenticated API request of the proxy"""
         client = client or AsyncHTTPClient()
@@ -166,10 +176,13 @@ class Proxy(Base):
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
         self.log.info("Adding user %s to proxy %s => %s",
-            user.name, user.server.base_url, user.server.host,
+            user.name, user.proxy_path, user.server.host,
         )
+        if user.spawn_pending:
+            raise RuntimeError(
+                "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
         
-        yield self.api_request(user.server.base_url,
+        yield self.api_request(user.proxy_path,
             method='POST',
             body=dict(
                 target=user.server.host,
@@ -182,26 +195,11 @@ class Proxy(Base):
     def delete_user(self, user, client=None):
         """Remove a user's server to the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
-        yield self.api_request(user.server.base_url,
+        yield self.api_request(user.proxy_path,
             method='DELETE',
             client=client,
         )
     
-    @gen.coroutine
-    def add_all_users(self):
-        """Update the proxy table from the database.
-        
-        Used when loading up a new proxy.
-        """
-        db = inspect(self).session
-        futures = []
-        for user in db.query(User):
-            if (user.server):
-                futures.append(self.add_user(user))
-        # wait after submitting them all
-        for f in futures:
-            yield f
-
     @gen.coroutine
     def get_routes(self, client=None):
         """Fetch the proxy's routes"""
@@ -209,17 +207,42 @@ class Proxy(Base):
         return json.loads(resp.body.decode('utf8', 'replace'))
 
     @gen.coroutine
-    def check_routes(self, routes=None):
-        """Check that all users are properly"""
+    def add_all_users(self, user_dict):
+        """Update the proxy table from the database.
+        
+        Used when loading up a new proxy.
+        """
+        db = inspect(self).session
+        futures = []
+        for orm_user in db.query(User):
+            user = user_dict[orm_user]
+            if user.running:
+                futures.append(self.add_user(user))
+        # wait after submitting them all
+        for f in futures:
+            yield f
+
+    @gen.coroutine
+    def check_routes(self, user_dict, routes=None):
+        """Check that all users are properly routed on the proxy"""
         if not routes:
             routes = yield self.get_routes()
 
         have_routes = { r['user'] for r in routes.values() if 'user' in r }
         futures = []
         db = inspect(self).session
-        for user in db.query(User).filter(User.server != None):
+        for orm_user in db.query(User).filter(User.server != None):
+            user = user_dict[orm_user]
+            if not user.running:
+                # Don't add users to the proxy that haven't finished starting
+                continue
+            if user.server is None:
+                # This should never be True, but seems to be on rare occasion.
+                # catch filter bug, either in sqlalchemy or my understanding of its behavior
+                self.log.error("User %s has no server, but wasn't filtered out.", user)
+                continue
             if user.name not in have_routes:
-                self.log.warn("Adding missing route for %s", user.name)
+                self.log.warning("Adding missing route for %s (%s)", user.name, user.server)
                 futures.append(self.add_user(user))
         for f in futures:
             yield f
@@ -238,6 +261,7 @@ class Hub(Base):
     id = Column(Integer, primary_key=True)
     _server_id = Column(Integer, ForeignKey('servers.id'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
+    host = ''
     
     @property
     def api_url(self):
@@ -270,7 +294,7 @@ class User(Base):
     used for restoring state of a Spawner.
     """
     __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode)
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id'))
@@ -281,10 +305,9 @@ class User(Base):
     api_tokens = relationship("APIToken", backref="user")
     cookie_id = Column(Unicode, default=new_token)
     state = Column(JSONDict)
-    spawner = None
-    spawn_pending = False
-    stop_pending = False
-    
+
+    other_user_cookies = set([])
+
     def __repr__(self):
         if self.server:
             return "<{cls}({name}@{ip}:{port})>".format(
@@ -299,15 +322,6 @@ class User(Base):
                 name=self.name,
             )
     
-    @property
-    def running(self):
-        """property for whether a user has a running server"""
-        if self.spawner is None:
-            return False
-        if self.server is None:
-            return False
-        return True
-    
     def new_api_token(self):
         """Create a new API token"""
         assert self.id is not None
@@ -318,7 +332,7 @@ class User(Base):
         db.add(orm_token)
         db.commit()
         return token
-    
+
     @classmethod
     def find(cls, db, name):
         """Find a user by name.
@@ -326,115 +340,6 @@ class User(Base):
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name==name).first()
-    
-    @gen.coroutine
-    def spawn(self, spawner_class, base_url='/', hub=None, config=None):
-        """Start the user's spawner"""
-        db = inspect(self).session
-        if hub is None:
-            hub = db.query(Hub).first()
-        self.server = Server(
-            cookie_name='%s-%s' % (hub.server.cookie_name, self.name),
-            base_url=url_path_join(base_url, 'user', self.name),
-        )
-        db.add(self.server)
-        db.commit()
-        
-        api_token = self.new_api_token()
-        db.commit()
-        
-        spawner = self.spawner = spawner_class(
-            config=config,
-            user=self,
-            hub=hub,
-            db=db,
-        )
-        # we are starting a new server, make sure it doesn't restore state
-        spawner.clear_state()
-        spawner.api_token = api_token
-        
-        self.spawn_pending = True
-        # wait for spawner.start to return
-        try:
-            f = spawner.start()
-            yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
-        except Exception as e:
-            if isinstance(e, gen.TimeoutError):
-                self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
-                    user=self.name, s=spawner.start_timeout,
-                ))
-                e.reason = 'timeout'
-            else:
-                self.log.error("Unhandled error starting {user}'s server: {error}".format(
-                    user=self.name, error=e,
-                ))
-                e.reason = 'error'
-            try:
-                yield self.stop()
-            except Exception:
-                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
-                    user=self.name,
-                ), exc_info=True)
-            # raise original exception
-            raise e
-        spawner.start_polling()
-
-        # store state
-        self.state = spawner.get_state()
-        self.last_activity = datetime.utcnow()
-        db.commit()
-        try:
-            yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
-        except Exception as e:
-            if isinstance(e, TimeoutError):
-                self.log.warn(
-                    "{user}'s server never showed up at {url} "
-                    "after {http_timeout} seconds. Giving up".format(
-                        user=self.name,
-                        url=self.server.url,
-                        http_timeout=spawner.http_timeout,
-                    )
-                )
-                e.reason = 'timeout'
-            else:
-                e.reason = 'error'
-                self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                    user=self.name, url=self.server.url, error=e,
-                ))
-            try:
-                yield self.stop()
-            except Exception:
-                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
-                    user=self.name,
-                ), exc_info=True)
-            # raise original TimeoutError
-            raise e
-        self.spawn_pending = False
-        return self
-
-    @gen.coroutine
-    def stop(self):
-        """Stop the user's spawner
-        
-        and cleanup after it.
-        """
-        self.spawn_pending = False
-        if self.spawner is None:
-            return
-        self.spawner.stop_polling()
-        self.stop_pending = True
-        try:
-            status = yield self.spawner.poll()
-            if status is None:
-                yield self.spawner.stop()
-            self.spawner.clear_state()
-            self.state = self.spawner.get_state()
-            self.last_activity = datetime.utcnow()
-            self.server = None
-            inspect(self).session.commit()
-        finally:
-            self.stop_pending = False
-
 
 class APIToken(Base):
     """An API token"""

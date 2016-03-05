@@ -3,31 +3,38 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from tornado import web
+from tornado import web, gen
 
 from .. import orm
 from ..utils import admin_only, url_path_join
 from .base import BaseHandler
+from .login import LoginHandler
 
 
 class RootHandler(BaseHandler):
     """Render the Hub root page.
     
-    Currently redirects to home if logged in,
-    shows big fat login button otherwise.
+    If logged in, redirects to:
+    
+    - single-user server if running
+    - hub home, otherwise
+    
+    Otherwise, renders login page.
     """
     def get(self):
-        if self.get_current_user():
-            self.redirect(
-                url_path_join(self.hub.server.base_url, 'home'),
-                permanent=False,
-            )
+        user = self.get_current_user()
+        if user:
+            if user.running:
+                url = user.url
+                self.log.debug("User is running: %s", url)
+            else:
+                url = url_path_join(self.hub.server.base_url, 'home')
+                self.log.debug("User is not running: %s", url)
+            self.redirect(url)
             return
-        
-        html = self.render_template('index.html',
-            login_url=self.settings['login_url'],
-        )
-        self.finish(html)
+        url = url_path_join(self.hub.server.base_url, 'login')
+        self.redirect(url)
+
 
 class HomeHandler(BaseHandler):
     """Render the user's home page."""
@@ -39,6 +46,63 @@ class HomeHandler(BaseHandler):
         )
         self.finish(html)
 
+
+class SpawnHandler(BaseHandler):
+    """Handle spawning of single-user servers via form.
+    
+    GET renders the form, POST handles form submission.
+    
+    Only enabled when Spawner.options_form is defined.
+    """
+    def _render_form(self, message=''):
+        user = self.get_current_user()
+        return self.render_template('spawn.html',
+            user=user,
+            spawner_options_form=user.spawner.options_form,
+            error_message=message,
+        )
+
+    @web.authenticated
+    def get(self):
+        """GET renders form for spawning with user-specified options"""
+        user = self.get_current_user()
+        if user.running:
+            url = user.url
+            self.log.debug("User is running: %s", url)
+            self.redirect(url)
+            return
+        if user.spawner.options_form:
+            self.finish(self._render_form())
+        else:
+            # not running, no form. Trigger spawn.
+            url = url_path_join(self.base_url, 'user', user.name)
+            self.redirect(url)
+    
+    @web.authenticated
+    @gen.coroutine
+    def post(self):
+        """POST spawns with user-specified options"""
+        user = self.get_current_user()
+        if user.running:
+            url = user.url
+            self.log.warning("User is already running: %s", url)
+            self.redirect(url)
+            return
+        form_options = {}
+        for key, byte_list in self.request.body_arguments.items():
+            form_options[key] = [ bs.decode('utf8') for bs in byte_list ]
+        for key, byte_list in self.request.files.items():
+            form_options["%s_file"%key] = byte_list
+        try:
+            options = user.spawner.options_from_form(form_options)
+            yield self.spawn_single_user(user, options=options)
+        except Exception as e:
+            self.log.error("Failed to spawn single-user server with form", exc_info=True)
+            self.finish(self._render_form(str(e)))
+            return
+        self.set_login_cookie(user)
+        url = user.url
+        self.redirect(url)
 
 class AdminHandler(BaseHandler):
     """Render the admin page."""
@@ -83,7 +147,8 @@ class AdminHandler(BaseHandler):
         ordered = [ getattr(c, o)() for c, o in zip(cols, orders) ]
         
         users = self.db.query(orm.User).order_by(*ordered)
-        running = users.filter(orm.User.server != None)
+        users = [ self._user_from_orm(u) for u in users ]
+        running = [ u for u in users if u.running ]
         
         html = self.render_template('admin.html',
             user=self.get_current_user(),
@@ -99,4 +164,5 @@ default_handlers = [
     (r'/', RootHandler),
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
+    (r'/spawn', SpawnHandler),
 ]

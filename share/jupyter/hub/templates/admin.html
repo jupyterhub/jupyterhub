@@ -22,10 +22,10 @@
     <thead>
       <tr>
         {% block thead %}
-        {{ th("User (%i)" % users.count(), 'name') }}
+        {{ th("User (%i)" % users|length, 'name') }}
         {{ th("Admin", 'admin') }}
         {{ th("Last Seen", 'last_activity') }}
-        {{ th("Running (%i)" % running.count(), 'running', colspan=2) }}
+        {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
         {% endblock thead %}
       </tr>
     </thead>
@@ -73,7 +73,7 @@
 
 {% call modal('Shutdown Hub', btn_label='Shutdown', btn_class='btn-danger shutdown-button') %}
   Are you sure you want to shutdown the Hub?
-  You can chose to leave the proxy and/or single-user servers running by unchecking the boxes below:
+  You can choose to leave the proxy and/or single-user servers running by unchecking the boxes below:
   <div class="checkbox">
     <label>
       <input type="checkbox" class="shutdown-proxy-checkbox">Shutdown proxy
@@ -86,10 +86,17 @@
   </div>
 {% endcall %}
 
-{% macro user_modal(name) %}
+{% macro user_modal(name, multi=False) %}
 {% call modal(name, btn_class='btn-primary save-button') %}
 <div class="form-group">
-  <input type="text" class="form-control username-input" placeholder="username">
+  <{%- if multi -%}
+    textarea
+    {%- else -%}
+    input type="text"
+    {%- endif %}
+    class="form-control username-input"
+    placeholder="{%- if multi -%} usernames separated by lines{%- else -%} username {%-endif-%}">
+  {%- if multi -%}</textarea>{%- endif -%}
 </div>
 <div class="checkbox">
   <label>
@@ -101,7 +108,7 @@
 
 {{ user_modal('Edit User') }}
 
-{{ user_modal('Add User') }}
+{{ user_modal('Add User', multi=True) }}
 
 {% endblock %}
 

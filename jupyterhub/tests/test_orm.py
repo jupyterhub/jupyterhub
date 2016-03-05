@@ -7,6 +7,7 @@ import pytest
 from tornado import gen
 
 from .. import orm
+from ..user import User
 from .mocking import MockSpawner
 
 
@@ -19,7 +20,7 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
-    assert server.host == 'http://localhost:%i' % server.port
+    assert server.host == 'http://127.0.0.1:%i' % server.port
     assert server.url == server.host + '/'
     assert server.bind_url == 'http://*:%i/' % server.port
     server.ip = '127.0.0.1'
@@ -94,8 +95,8 @@ def test_tokens(db):
 
 
 def test_spawn_fails(db, io_loop):
-    user = orm.User(name='aeofel')
-    db.add(user)
+    orm_user = orm.User(name='aeofel')
+    db.add(orm_user)
     db.commit()
     
     class BadSpawner(MockSpawner):
@@ -103,8 +104,13 @@ def test_spawn_fails(db, io_loop):
         def start(self):
             raise RuntimeError("Split the party")
     
+    user = User(orm_user, {
+        'spawner_class': BadSpawner,
+        'config': None,
+    })
+    
     with pytest.raises(Exception) as exc:
-        io_loop.run_sync(lambda : user.spawn(BadSpawner))
+        io_loop.run_sync(user.spawn)
     assert user.server is None
     assert not user.running
 

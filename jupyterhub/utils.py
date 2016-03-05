@@ -6,15 +6,16 @@
 from binascii import b2a_hex
 import errno
 import hashlib
+from hmac import compare_digest
 import os
 import socket
+from threading import Thread
 import uuid
+import warnings
 
 from tornado import web, gen, ioloop
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
-
-from IPython.html.utils import url_path_join
 
 
 def random_port():
@@ -42,7 +43,7 @@ def wait_for_server(ip, port, timeout=10):
                 app_log.error("Unexpected error waiting for %s:%i %s",
                     ip, port, e
                 )
-            yield gen.Task(loop.add_timeout, loop.time() + 0.1)
+            yield gen.sleep(0.1)
         else:
             return
     raise TimeoutError("Server at {ip}:{port} didn't respond in {timeout} seconds".format(
@@ -68,14 +69,14 @@ def wait_for_http_server(url, timeout=10):
                     # we expect 599 for no connection,
                     # but 502 or other proxy error is conceivable
                     app_log.warn("Server at %s responded with error: %s", url, e.code)
-                yield gen.Task(loop.add_timeout, loop.time() + 0.25)
+                yield gen.sleep(0.1)
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return
         except (OSError, socket.error) as e:
             if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
                 app_log.warn("Failed to connect to %s (%s)", url, e)
-            yield gen.Task(loop.add_timeout, loop.time() + 0.25)
+            yield gen.sleep(0.1)
         else:
             return
     
@@ -165,9 +166,32 @@ def compare_token(compare, token):
     uses the same algorithm and salt of the hashed token for comparison
     """
     algorithm, srounds, salt, _ = compare.split(':')
-    hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm)
-    if compare == hashed:
+    hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm).encode('utf8')
+    compare = compare.encode('utf8')
+    if compare_digest(compare, hashed):
         return True
     return False
+
+
+def url_path_join(*pieces):
+    """Join components of url into a relative url
+
+    Use to prevent double slash when joining subpath. This will leave the
+    initial and final / in place
     
+    Copied from notebook.utils.url_path_join
+    """
+    initial = pieces[0].startswith('/')
+    final = pieces[-1].endswith('/')
+    stripped = [ s.strip('/') for s in pieces ]
+    result = '/'.join(s for s in stripped if s)
+
+    if initial:
+        result = '/' + result
+    if final:
+        result = result + '/'
+    if result == '//':
+        result = '/'
+
+    return result
 

@@ -1,0 +1,11 @@
+machine:
+  services:
+    - docker
+
+dependencies:
+  override:
+    - ls
+
+test:
+  override:
+    - docker build -t jupyter/jupyterhub .

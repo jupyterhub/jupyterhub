@@ -4,7 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import re
-from datetime import datetime, timedelta
+from datetime import timedelta
 from http.client import responses
 
 from jinja2 import TemplateNotFound
@@ -16,6 +16,7 @@ from tornado.web import RequestHandler
 from tornado import gen, web
 
 from .. import orm
+from ..user import User
 from ..spawner import LocalProcessSpawner
 from ..utils import url_path_join
 
@@ -51,9 +52,21 @@ class BaseHandler(RequestHandler):
         return self.settings.get('version_hash', '')
     
     @property
+    def subdomain_host(self):
+        return self.settings.get('subdomain_host', '')
+    
+    @property
+    def domain(self):
+        return self.settings['domain']
+    
+    @property
     def db(self):
         return self.settings['db']
-
+    
+    @property
+    def users(self):
+        return self.settings.setdefault('users', {})
+    
     @property
     def hub(self):
         return self.settings['hub']
@@ -69,7 +82,40 @@ class BaseHandler(RequestHandler):
     def finish(self, *args, **kwargs):
         """Roll back any uncommitted transactions from the handler."""
         self.db.rollback()
-        super(BaseHandler, self).finish(*args, **kwargs)
+        super().finish(*args, **kwargs)
+    
+    #---------------------------------------------------------------
+    # Security policies
+    #---------------------------------------------------------------
+    
+    @property
+    def csp_report_uri(self):
+        return self.settings.get('csp_report_uri',
+            url_path_join(self.hub.server.base_url, 'security/csp-report')
+        )
+    
+    @property
+    def content_security_policy(self):
+        """The default Content-Security-Policy header
+        
+        Can be overridden by defining Content-Security-Policy in settings['headers']
+        """
+        return '; '.join([
+            "frame-ancestors 'self'",
+            "report-uri " + self.csp_report_uri,
+        ])
+    
+    def set_default_headers(self):
+        """
+        Set any headers passed as tornado_settings['headers'].
+
+        By default sets Content-Security-Policy of frame-ancestors 'self'.
+        """
+        headers = self.settings.get('headers', {})
+        headers.setdefault("Content-Security-Policy", self.content_security_policy)
+        
+        for header_name, header_content in headers.items():
+            self.set_header(header_name, header_content)
 
     #---------------------------------------------------------------
     # Login and cookie-related
@@ -112,12 +158,19 @@ class BaseHandler(RequestHandler):
                 clear()
             return
         cookie_id = cookie_id.decode('utf8', 'replace')
-        user = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
+        u = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
+        user = self._user_from_orm(u)
         if user is None:
             self.log.warn("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
             clear()
         return user
+    
+    def _user_from_orm(self, orm_user):
+        """return User wrapper from orm.User object"""
+        if orm_user is None:
+            return
+        return self.users[orm_user]
     
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
@@ -135,40 +188,63 @@ class BaseHandler(RequestHandler):
         
         return None if no such user
         """
-        return orm.User.find(self.db, name)
+        orm_user = orm.User.find(db=self.db, name=name)
+        return self._user_from_orm(orm_user)
 
     def user_from_username(self, username):
-        """Get ORM User for username"""
+        """Get User for username, creating if it doesn't exist"""
         user = self.find_user(username)
         if user is None:
-            user = orm.User(name=username)
-            self.db.add(user)
+            # not found, create and register user
+            u = orm.User(name=username)
+            self.db.add(u)
             self.db.commit()
+            user = self._user_from_orm(u)
         return user
     
-    def clear_login_cookie(self):
-        user = self.get_current_user()
+    def clear_login_cookie(self, name=None):
+        if name is None:
+            user = self.get_current_user()
+        else:
+            user = self.find_user(name)
+        kwargs = {}
+        if self.subdomain_host:
+            kwargs['domain'] = self.domain
         if user and user.server:
-            self.clear_cookie(user.server.cookie_name, path=user.server.base_url)
-        self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url)
+            self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
+        self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
+    
+    def _set_user_cookie(self, user, server):
+        # tornado <4.2 have a bug that consider secure==True as soon as
+        # 'secure' kwarg is passed to set_secure_cookie
+        if  self.request.protocol == 'https':
+            kwargs = {'secure': True}
+        else:
+            kwargs = {}
+        if self.subdomain_host:
+            kwargs['domain'] = self.domain
+        self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
+        self.set_secure_cookie(
+            server.cookie_name,
+            user.cookie_id,
+            path=server.base_url,
+            **kwargs
+        )
     
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
-        self.set_secure_cookie(
-            user.server.cookie_name,
-            user.cookie_id,
-            path=user.server.base_url,
-        )
+        self._set_user_cookie(user, user.server)
     
     def set_hub_cookie(self, user):
         """set the login cookie for the Hub"""
-        self.set_secure_cookie(
-            self.hub.server.cookie_name,
-            user.cookie_id,
-            path=self.hub.server.base_url)
+        self._set_user_cookie(user, self.hub.server)
     
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
+        if self.subdomain_host and not self.request.host.startswith(self.domain):
+            self.log.warning(
+                "Possibly setting cookie on wrong domain: %s != %s",
+                self.request.host, self.domain)
         # create and set a new cookie token for the single-user server
         if user.server:
             self.set_server_cookie(user)
@@ -181,7 +257,7 @@ class BaseHandler(RequestHandler):
     def authenticate(self, data):
         auth = self.authenticator
         if auth is not None:
-            result = yield auth.authenticate(self, data)
+            result = yield auth.get_authenticated_user(self, data)
             return result
         else:
             self.log.error("No authentication function, login is impossible!")
@@ -202,19 +278,15 @@ class BaseHandler(RequestHandler):
     @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
-
+    
     @gen.coroutine
-    def spawn_single_user(self, user):
+    def spawn_single_user(self, user, options=None):
         if user.spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
         tic = IOLoop.current().time()
-        
-        f = user.spawn(
-            spawner_class=self.spawner_class,
-            base_url=self.base_url,
-            hub=self.hub,
-            config=self.config,
-        )
+
+        f = user.spawn(options)
+
         @gen.coroutine
         def finish_user_spawn(f=None):
             """Finish the user spawn by registering listeners and notifying the proxy.
@@ -234,12 +306,23 @@ class BaseHandler(RequestHandler):
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
         except gen.TimeoutError:
             if user.spawn_pending:
-                # hit timeout, but spawn is still pending
+                # still in Spawner.start, which is taking a long time
+                # we shouldn't poll while spawn_pending is True
                 self.log.warn("User %s server is slow to start", user.name)
                 # schedule finish for when the user finishes spawning
                 IOLoop.current().add_future(f, finish_user_spawn)
             else:
-                raise
+                # start has finished, but the server hasn't come up
+                # check if the server died while we were waiting
+                status = yield user.spawner.poll()
+                if status is None:
+                    # hit timeout, but server's running. Hope that it'll show up soon enough,
+                    # though it's possible that it started at the wrong URL
+                    self.log.warn("User %s server is slow to become responsive", user.name)
+                    # schedule finish for when the user finishes spawning
+                    IOLoop.current().add_future(f, finish_user_spawn)
+                else:
+                    raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
         else:
             yield finish_user_spawn()
     
@@ -309,6 +392,7 @@ class BaseHandler(RequestHandler):
             prefix=self.base_url,
             user=user,
             login_url=self.settings['login_url'],
+            login_service=self.authenticator.login_service,
             logout_url=self.settings['logout_url'],
             static_url=self.static_url,
             version_hash=self.version_hash,
@@ -363,48 +447,71 @@ class PrefixRedirectHandler(BaseHandler):
     Redirects /foo to /prefix/foo, etc.
     """
     def get(self):
-        path = self.request.path[len(self.base_url):]
+        path = self.request.uri[len(self.base_url):]
         self.redirect(url_path_join(
             self.hub.server.base_url, path,
         ), permanent=False)
 
+
 class UserSpawnHandler(BaseHandler):
-    """Requests to /user/name handled by the Hub
-    should result in spawning the single-user server and
-    being redirected to the original.
+    """Redirect requests to /user/name/* handled by the Hub.
+
+    If logged in, spawn a single-user server and redirect request.
+    If a user, alice, requests /user/bob/notebooks/mynotebook.ipynb,
+    redirect her to /user/alice/notebooks/mynotebook.ipynb, which should
+    in turn call this function.
     """
+
     @gen.coroutine
-    def get(self, name):
+    def get(self, name, user_path):
         current_user = self.get_current_user()
         if current_user and current_user.name == name:
-            # logged in, spawn the server
+            # logged in as correct user, spawn the server
             if current_user.spawner:
                 if current_user.spawn_pending:
                     # spawn has started, but not finished
                     html = self.render_template("spawn_pending.html", user=current_user)
                     self.finish(html)
                     return
-                
+
                 # spawn has supposedly finished, check on the status
                 status = yield current_user.spawner.poll()
                 if status is not None:
-                    yield self.spawn_single_user(current_user)
-            else:
-                yield self.spawn_single_user(current_user)
+                    if current_user.spawner.options_form:
+                        self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
+                        return
+                    else:
+                        yield self.spawn_single_user(current_user)
             # set login cookie anew
             self.set_login_cookie(current_user)
-            without_prefix = self.request.path[len(self.hub.server.base_url):]
+            without_prefix = self.request.uri[len(self.hub.server.base_url):]
             target = url_path_join(self.base_url, without_prefix)
+            if self.subdomain_host:
+                target = current_user.host + target
+            self.redirect(target)
+        elif current_user:
+            # logged in as a different user, redirect
+            target = url_path_join(self.base_url, 'user', current_user.name,
+                                   user_path or '')
             self.redirect(target)
         else:
-            # not logged in to the right user,
-            # clear any cookies and reload (will redirect to login)
+            # not logged in, clear any cookies and reload
             self.clear_login_cookie()
             self.redirect(url_concat(
                 self.settings['login_url'],
-                {'next': self.request.path,
-            }))
+                {'next': self.request.uri},
+            ))
+
+
+class CSPReportHandler(BaseHandler):
+    '''Accepts a content security policy violation report'''
+    @web.authenticated
+    def post(self):
+        '''Log a content security policy violation report'''
+        self.log.warn("Content security violation: %s",
+                      self.request.body.decode('utf8', 'replace'))
 
 default_handlers = [
-    (r'/user/([^/]+)/?.*', UserSpawnHandler),
+    (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
+    (r'/security/csp-report', CSPReportHandler),
 ]

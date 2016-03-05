@@ -63,6 +63,37 @@ For local user authentication (e.g. PAM), this lets you limit which users
 can login.
 
 
+## Normalizing and validating usernames
+
+Since the Authenticator and Spawner both use the same username,
+sometimes you want to transform the name coming from the authentication service
+(e.g. turning email addresses into local system usernames) before adding them to the Hub service.
+Authenticators can define `normalize_username`, which takes a username.
+The default normalization is to cast names to lowercase
+
+For simple mappings, a configurable dict `Authenticator.username_map` is used to turn one name into another:
+
+```python
+c.Authenticator.username_map  = {
+  'service-name': 'localname'
+}
+```
+
+### Validating usernames
+
+In most cases, there is a very limited set of acceptable usernames.
+Authenticators can define `validate_username(username)`,
+which should return True for a valid username and False for an invalid one.
+The primary effect this has is improving error messages during user creation.
+
+The default behavior is to use configurable `Authenticator.username_pattern`,
+which is a regular expression string for validation.
+
+To only allow usernames that start with 'w':
+
+    c.Authenticator.username_pattern = r'w.*'
+
+
 ## OAuth and other non-password logins
 
 Some login mechanisms, such as [OAuth][], don't map onto username+password.
@@ -72,9 +103,9 @@ You can see an example implementation of an Authenticator that uses [GitHub OAut
 at [OAuthenticator][].
 
 
-[Authenticator]: ../jupyterhub/auth.py
-[PAM]: http://en.wikipedia.org/wiki/Pluggable_authentication_module
-[OAuth]: http://en.wikipedia.org/wiki/OAuth 
+[Authenticator]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/auth.py
+[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[OAuth]: https://en.wikipedia.org/wiki/OAuth 
 [GitHub OAuth]: https://developer.github.com/v3/oauth/
 [OAuthenticator]: https://github.com/jupyter/oauthenticator
 

@@ -2,6 +2,7 @@
 language: python
 sudo: false
 python:
+    - 3.5
     - 3.4
     - 3.3
 before_install:
@@ -10,6 +11,11 @@ before_install:
     - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
 install:
     - pip install -f travis-wheels/wheelhouse -r dev-requirements.txt .
-    - pip install -f travis-wheels/wheelhouse ipython[notebook]
 script:
-    - py.test jupyterhub
+    - py.test --cov jupyterhub jupyterhub/tests -v
+after_success:
+    - codecov
+matrix:
+  include:
+    - python: 3.5
+      env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://127.0.0.1.xip.io:8000

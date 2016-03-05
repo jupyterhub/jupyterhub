@@ -1,6 +1,6 @@
-ipython>=3
-tornado>=4
+traitlets>=4
+tornado>=4.1
 jinja2
-simplepam
-sqlalchemy
+pamela
+sqlalchemy>=1.0
 requests

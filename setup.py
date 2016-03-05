@@ -83,8 +83,8 @@ setup_args = dict(
                         # this will be overridden when bower is run anyway
     data_files          = get_data_files() or ['dummy'],
     version             = ns['__version__'],
-    description         = """JupyterHub: A multi-user server for Jupyter notebooks""",
-    long_description    = "",
+    description         = "JupyterHub: A multi-user server for Jupyter notebooks",
+    long_description    = "See https://jupyterhub.readthedocs.org for more info.",
     author              = "Jupyter Development Team",
     author_email        = "jupyter@googlegroups.com",
     url                 = "http://jupyter.org",

@@ -7,24 +7,22 @@ import errno
 import os
 import pipes
 import pwd
-import re
 import signal
 import sys
 import grp
-from subprocess import Popen, check_output, PIPE, CalledProcessError
+from subprocess import Popen
 from tempfile import TemporaryDirectory
 
 from tornado import gen
 from tornado.ioloop import IOLoop, PeriodicCallback
 
-from IPython.config import LoggingConfigurable
-from IPython.utils.traitlets import (
-    Any, Bool, Dict, Enum, Instance, Integer, Float, List, Unicode,
+from traitlets.config import LoggingConfigurable
+from traitlets import (
+    Any, Bool, Dict, Instance, Integer, Float, List, Unicode,
 )
 
+from .traitlets import Command
 from .utils import random_port
-
-NUM_PAT = re.compile(r'\d+')
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -41,8 +39,9 @@ class Spawner(LoggingConfigurable):
     db = Any()
     user = Any()
     hub = Any()
+    authenticator = Any()
     api_token = Unicode()
-    ip = Unicode('localhost', config=True,
+    ip = Unicode('127.0.0.1', config=True,
         help="The IP address (or hostname) the single-user server should listen on"
     )
     start_timeout = Integer(60, config=True,
@@ -74,6 +73,38 @@ class Spawner(LoggingConfigurable):
         help="Enable debug-logging of the single-user server"
     )
     
+    options_form = Unicode("", config=True, help="""
+        An HTML form for options a user can specify on launching their server.
+        The surrounding `<form>` element and the submit button are already provided.
+        
+        For example:
+        
+            Set your key:
+            <input name="key" val="default_key"></input>
+            <br>
+            Choose a letter:
+            <select name="letter" multiple="true">
+              <option value="A">The letter A</option>
+              <option value="B">The letter B</option>
+            </select>
+    """)
+
+    def options_from_form(self, form_data):
+        """Interpret HTTP form data
+        
+        Form data will always arrive as a dict of lists of strings.
+        Override this function to understand single-values, numbers, etc.
+        
+        This should coerce form data into the structure expected by self.user_options,
+        which must be a dict.
+        
+        Instances will receive this data on self.user_options, after passing through this function,
+        prior to `Spawner.start`.
+        """
+        return form_data
+    
+    user_options = Dict(help="This is where form-specified options ultimately end up.")
+    
     env_keep = List([
         'PATH',
         'PYTHONPATH',
@@ -94,7 +125,7 @@ class Spawner(LoggingConfigurable):
         env['JPY_API_TOKEN'] = self.api_token
         return env
     
-    cmd = List(Unicode, default_value=['jupyterhub-singleuser'], config=True,
+    cmd = Command(['jupyterhub-singleuser'], config=True,
         help="""The command used for starting notebooks."""
     )
     args = List(Unicode, config=True,
@@ -105,6 +136,15 @@ class Spawner(LoggingConfigurable):
         help="""The notebook directory for the single-user server
         
         `~` will be expanded to the user's home directory
+        `%U` will be expanded to the user's username
+        """
+    )
+    
+    disable_user_config = Bool(False, config=True,
+        help="""Disable per-user configuration of single-user servers.
+        
+        This prevents any config in users' $HOME directories
+        from having an effect on their server.
         """
     )
     
@@ -132,7 +172,7 @@ class Spawner(LoggingConfigurable):
         """store the state necessary for load_state
         
         A black box of extra state for custom spawners.
-        Should call `super`.
+        Subclasses should call `super`.
         
         Returns
         -------
@@ -152,6 +192,14 @@ class Spawner(LoggingConfigurable):
         """
         self.api_token = ''
     
+    def get_env(self):
+        """Return the environment we should use
+        
+        Default returns a copy of self.env.
+        Use this to access the env in Spawner.start to allow extension in subclasses.
+        """
+        return self.env.copy()
+    
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
         args = [
@@ -159,15 +207,19 @@ class Spawner(LoggingConfigurable):
             '--port=%i' % self.user.server.port,
             '--cookie-name=%s' % self.user.server.cookie_name,
             '--base-url=%s' % self.user.server.base_url,
+            '--hub-host=%s' % self.hub.host,
             '--hub-prefix=%s' % self.hub.server.base_url,
             '--hub-api-url=%s' % self.hub.api_url,
             ]
         if self.ip:
             args.append('--ip=%s' % self.ip)
         if self.notebook_dir:
+            self.notebook_dir = self.notebook_dir.replace("%U",self.user.name)
             args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.debug:
             args.append('--debug')
+        if self.disable_user_config:
+            args.append('--disable-user-config')
         args.extend(self.args)
         return args
     
@@ -253,7 +305,7 @@ class Spawner(LoggingConfigurable):
             if status is not None:
                 break
             else:
-                yield gen.Task(loop.add_timeout, loop.time() + self.death_interval)
+                yield gen.sleep(self.death_interval)
 
 def _try_setcwd(path):
     """Try to set CWD, walking up and ultimately falling back to a temp dir"""
@@ -276,15 +328,15 @@ def set_user_setuid(username):
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
+    gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
     
     def preexec():
-        # don't forward signals
-        os.setpgrp()
-        
         # set the user and group
         os.setgid(gid)
-        gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
-        os.setgroups(gids)
+        try:
+            os.setgroups(gids)
+        except Exception as e:
+            print('Failed to set groups %s' % e, file=sys.stderr)
         os.setuid(uid)
 
         # start in the user's home dir
@@ -294,7 +346,12 @@ def set_user_setuid(username):
 
 
 class LocalProcessSpawner(Spawner):
-    """A Spawner that just uses Popen to start local processes."""
+    """A Spawner that just uses Popen to start local processes as users.
+    
+    Requires users to exist on the local system.
+    
+    This is the default spawner for JupyterHub.
+    """
     
     INTERRUPT_TIMEOUT = Integer(10, config=True,
         help="Seconds to wait for process to halt after SIGINT before proceeding to SIGTERM"
@@ -332,13 +389,21 @@ class LocalProcessSpawner(Spawner):
     
     def user_env(self, env):
         env['USER'] = self.user.name
-        env['HOME'] = pwd.getpwnam(self.user.name).pw_dir
-        env['SHELL'] = pwd.getpwnam(self.user.name).pw_shell
+        home = pwd.getpwnam(self.user.name).pw_dir
+        shell = pwd.getpwnam(self.user.name).pw_shell
+        # These will be empty if undefined,
+        # in which case don't set the env:
+        if home:
+            env['HOME'] = home
+        if shell:
+            env['SHELL'] = shell
         return env
     
-    def _env_default(self):
-        env = super()._env_default()
-        return self.user_env(env)
+    def get_env(self):
+        """Add user environment variables"""
+        env = super().get_env()
+        env = self.user_env(env)
+        return env
     
     @gen.coroutine
     def start(self):
@@ -347,7 +412,7 @@ class LocalProcessSpawner(Spawner):
             self.user.server.ip = self.ip
         self.user.server.port = random_port()
         cmd = []
-        env = self.env.copy()
+        env = self.get_env()
         
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
@@ -355,6 +420,7 @@ class LocalProcessSpawner(Spawner):
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
         self.proc = Popen(cmd, env=env,
             preexec_fn=self.make_preexec_fn(self.user.name),
+            start_new_session=True, # don't forward signals
         )
         self.pid = self.proc.pid
     
