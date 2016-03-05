@@ -141,8 +141,12 @@ class Spawner(LoggingConfigurable):
     )
 
     default_url = Unicode('', config=True,
-        help="""The default URL for the single-user server
-        
+        help="""The default URL for the single-user server. 
+
+        Can be used in conjection with --notebook-dir=/ to enable 
+        full filesystem traversal, while preserving user's homedir as
+        landing page for notebook
+
         `%U` will be expanded to the user's username
         """
     )
