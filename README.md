@@ -129,7 +129,7 @@ It will be listening on all interfaces at port 8000. So this is perfect to test 
 If you want to run docker on a computer that has a public IP then you should (as in MUST) secure it with ssl by
 adding ssl options to your docker configuration or using a ssl enabled proxy. The `-v/--volume` option will
 allow you to store data outside the docker image (host system) so it will be persistent, even when you start
-a new image. The command `docker exec -it jupyter.container bash` will spawn a root shell in your started docker
+a new image. The command `docker exec -it jupyter.cont bash` will spawn a root shell in your started docker
 container. You can use it to create system users in the container. These accounts will be used for authentication
 in jupyterhub's default configuration. In order to run without SSL, you'll need to set `--no-ssl` explicitly.
 
