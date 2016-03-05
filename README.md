@@ -124,7 +124,7 @@ It can be started with the following command:
 
     docker run -d --name jupyter.cont [-v /home/jupyter-home:/home] jupyter/jupyterhub jupyterhub
 
-This command will create a container that you can stop and resume with `docker stop/start`.
+This command will create a named container, `jupyter.cont`, that you can stop and resume with `docker stop/start`.
 It will be listening on all interfaces at port 8000. So this is perfect to test docker on your desktop or laptop.
 If you want to run docker on a computer that has a public IP then you should (as in MUST) secure it with ssl by
 adding ssl options to your docker configuration or using a ssl enabled proxy. The `-v/--volume` option will
