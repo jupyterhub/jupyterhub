@@ -114,9 +114,6 @@ class MockHub(JupyterHub):
     def _subdomain_host_default(self):
         return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
     
-    def _use_subdomains_default(self):
-        return bool(self.subdomain_host)
-    
     def _ip_default(self):
         return '127.0.0.1'
     
@@ -181,7 +178,7 @@ class MockHub(JupyterHub):
 
 
 def public_host(app):
-    if app.use_subdomains:
+    if app.subdomain_host:
         return app.subdomain_host
     else:
         return app.proxy.public_server.host
@@ -192,7 +189,7 @@ def public_url(app):
 
 
 def user_url(user, app):
-    if app.use_subdomains:
+    if app.subdomain_host:
         host = user.host
     else:
         host = public_host(app)

@@ -52,8 +52,8 @@ class BaseHandler(RequestHandler):
         return self.settings.get('version_hash', '')
     
     @property
-    def use_subdomains(self):
-        return self.settings.get('use_subdomains', False)
+    def subdomain_host(self):
+        return self.settings.get('subdomain_host', '')
     
     @property
     def domain(self):
@@ -208,7 +208,7 @@ class BaseHandler(RequestHandler):
         else:
             user = self.find_user(name)
         kwargs = {}
-        if self.use_subdomains:
+        if self.subdomain_host:
             kwargs['domain'] = self.domain
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
@@ -221,7 +221,7 @@ class BaseHandler(RequestHandler):
             kwargs = {'secure': True}
         else:
             kwargs = {}
-        if self.use_subdomains:
+        if self.subdomain_host:
             kwargs['domain'] = self.domain
         self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
         self.set_secure_cookie(
@@ -241,7 +241,7 @@ class BaseHandler(RequestHandler):
     
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
-        if self.use_subdomains and not self.request.host.startswith(self.domain):
+        if self.subdomain_host and not self.request.host.startswith(self.domain):
             self.log.warning(
                 "Possibly setting cookie on wrong domain: %s != %s",
                 self.request.host, self.domain)
@@ -486,7 +486,7 @@ class UserSpawnHandler(BaseHandler):
             self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.server.base_url):]
             target = url_path_join(self.base_url, without_prefix)
-            if self.use_subdomains:
+            if self.subdomain_host:
                 target = current_user.host + target
             self.redirect(target)
         elif current_user:

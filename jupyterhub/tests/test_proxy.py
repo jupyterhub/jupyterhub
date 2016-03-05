@@ -35,7 +35,7 @@ def test_external_proxy(request, io_loop):
         '--api-port', str(proxy_port),
         '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
-    if app.use_subdomains:
+    if app.subdomain_host:
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
     def _cleanup_proxy():
@@ -64,7 +64,7 @@ def test_external_proxy(request, io_loop):
     
     routes = io_loop.run_sync(app.proxy.get_routes)
     user_path = '/user/river'
-    if app.use_subdomains:
+    if app.subdomain_host:
         domain = urlparse(app.subdomain_host).hostname
         user_path = '/%s.%s' % (name, domain) + user_path
     assert sorted(routes.keys()) == ['/', user_path]
@@ -97,7 +97,7 @@ def test_external_proxy(request, io_loop):
         '--api-port', str(proxy_port),
         '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
-    if app.use_subdomains:
+    if app.subdomain_host:
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
