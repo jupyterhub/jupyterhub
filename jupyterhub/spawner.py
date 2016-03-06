@@ -139,6 +139,17 @@ class Spawner(LoggingConfigurable):
         `%U` will be expanded to the user's username
         """
     )
+
+    default_url = Unicode('', config=True,
+        help="""The default URL for the single-user server. 
+
+        Can be used in conjunction with --notebook-dir=/ to enable 
+        full filesystem traversal, while preserving user's homedir as
+        landing page for notebook
+
+        `%U` will be expanded to the user's username
+        """
+    )
     
     disable_user_config = Bool(False, config=True,
         help="""Disable per-user configuration of single-user servers.
@@ -216,6 +227,10 @@ class Spawner(LoggingConfigurable):
         if self.notebook_dir:
             self.notebook_dir = self.notebook_dir.replace("%U",self.user.name)
             args.append('--notebook-dir=%s' % self.notebook_dir)
+        if self.default_url:
+            self.default_url = self.default_url.replace("%U",self.user.name)
+            args.append('--NotebookApp.default_url=%s' % self.default_url)
+
         if self.debug:
             args.append('--debug')
         if self.disable_user_config:
