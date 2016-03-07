@@ -4,9 +4,15 @@ See `git log` for a more detailed summary.
 
 ## 0.5
 
+
 - Single-user server must be run with Jupyter Notebook ≥ 4.0
 - Require `--no-ssl` confirmation to allow the Hub to be run without SSL (e.g. behind SSL termination in nginx)
-
+- Add lengths to text fields for MySQL support
+- Add `Spawner.disable_user_config` for preventing user-owned configuration from modifying single-user servers.
+- Fixes for MySQL support.
+- Add ability to run each user's server on its own subdomain. Requires wildcard DNS and wildcard SSL to be feasible. Enable subdomains by setting `JupyterHub.subdomain_host = 'https://jupyterhub.domain.tld[:port]'`.
+- Use `127.0.0.1` for local communication instead of `localhost`, avoiding issues with DNS on some systems.
+- Fix race that could add users to proxy prematurely if spawning is slow.
 
 ## 0.4
 
