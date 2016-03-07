@@ -4,9 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from datetime import datetime
-import errno
 import json
-import socket
 
 from tornado import gen
 from tornado.log import app_log
@@ -26,7 +24,7 @@ from sqlalchemy import create_engine
 
 from .utils import (
     random_port, url_path_join, wait_for_server, wait_for_http_server,
-    new_token, hash_token, compare_token,
+    new_token, hash_token, compare_token, can_connect,
 )
 
 
@@ -113,25 +111,7 @@ class Server(Base):
     
     def is_up(self):
         """Is the server accepting connections?"""
-        try:
-            socket.create_connection((self.ip or '127.0.0.1', self.port))
-        except socket.error as e:
-            if e.errno == errno.ENETUNREACH:
-                try:
-                    socket.create_connection((self.ip or '127.0.0.1', self.port))
-                except socket.error as e:
-                    if e.errno == errno.ECONNREFUSED:
-                        return False
-                    else:
-                        raise
-                else:
-                    return True
-            elif e.errno == errno.ECONNREFUSED:
-                return False
-            else:
-                raise
-        else:
-            return True
+        return can_connect(self.ip or '127.0.0.1', self.port)
 
 
 class Proxy(Base):
