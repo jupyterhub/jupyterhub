@@ -111,6 +111,8 @@ class MockHub(JupyterHub):
     db_file = None
     confirm_no_ssl = True
     
+    last_activity_interval = 2
+    
     def _subdomain_host_default(self):
         return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
     
@@ -128,7 +130,8 @@ class MockHub(JupyterHub):
     
     def start(self, argv=None):
         self.db_file = NamedTemporaryFile()
-        self.db_url = 'sqlite:///' + self.db_file.name
+        self.pid_file = NamedTemporaryFile(delete=False).name
+        self.db_url = self.db_file.name
         
         evt = threading.Event()
         
@@ -173,6 +176,7 @@ class MockHub(JupyterHub):
             },
             allow_redirects=False,
         )
+        r.raise_for_status()
         assert r.cookies
         return r.cookies
 

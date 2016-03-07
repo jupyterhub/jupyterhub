@@ -3,8 +3,9 @@
 import os
 import re
 import sys
-from subprocess import check_output
+from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from .mocking import MockHub
 
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
@@ -23,10 +24,23 @@ def test_token_app():
 def test_generate_config():
     with NamedTemporaryFile(prefix='jupyterhub_config', suffix='.py') as tf:
         cfg_file = tf.name
-    
-    out = check_output([sys.executable, '-m', 'jupyterhub',
-        '--generate-config', '-f', cfg_file]
-    ).decode('utf8', 'replace')
+    with open(cfg_file, 'w') as f:
+        f.write("c.A = 5")
+    p = Popen([sys.executable, '-m', 'jupyterhub',
+        '--generate-config', '-f', cfg_file],
+        stdout=PIPE, stdin=PIPE)
+    out, _ = p.communicate(b'n')
+    out = out.decode('utf8', 'replace')
+    assert os.path.exists(cfg_file)
+    with open(cfg_file) as f:
+        cfg_text = f.read()
+    assert cfg_text == 'c.A = 5'
+
+    p = Popen([sys.executable, '-m', 'jupyterhub',
+        '--generate-config', '-f', cfg_file],
+        stdout=PIPE, stdin=PIPE)
+    out, _ = p.communicate(b'x\ny')
+    out = out.decode('utf8', 'replace')
     assert os.path.exists(cfg_file)
     with open(cfg_file) as f:
         cfg_text = f.read()

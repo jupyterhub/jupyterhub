@@ -105,6 +105,8 @@ def test_external_proxy(request, io_loop):
     # tell the hub where the new proxy is
     r = api_request(app, 'proxy', method='patch', data=json.dumps({
         'port': proxy_port,
+        'protocol': 'http',
+        'ip': app.ip,
         'auth_token': new_auth_token,
     }))
     r.raise_for_status()
@@ -122,6 +124,7 @@ def test_external_proxy(request, io_loop):
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert sorted(routes.keys()) == ['/', user_path]
+
 
 def test_check_routes(app, io_loop):
     proxy = app.proxy
@@ -142,3 +145,13 @@ def test_check_routes(app, io_loop):
     after = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert zoe.proxy_path in after
     assert before == after
+
+
+def test_patch_proxy_bad_req(app):
+    r = api_request(app, 'proxy', method='patch')
+    assert r.status_code == 400
+    r = api_request(app, 'proxy', method='patch', data='notjson')
+    assert r.status_code == 400
+    r = api_request(app, 'proxy', method='patch', data=json.dumps([]))
+    assert r.status_code == 400
+    

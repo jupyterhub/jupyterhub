@@ -63,6 +63,7 @@ def test_admin(app):
     r.raise_for_status()
     assert r.url.endswith('/admin')
 
+
 def test_spawn_redirect(app, io_loop):
     name = 'wash'
     cookies = app.login_user(name)
@@ -174,6 +175,53 @@ def test_user_redirect(app):
     assert query == urlencode({'next': '/hub/user/baduser/test.ipynb'})
 
 
+def test_login_fail(app):
+    name = 'wash'
+    base_url = public_url(app)
+    r = requests.post(base_url + 'hub/login',
+        data={
+            'username': name,
+            'password': 'wrong',
+        },
+        allow_redirects=False,
+    )
+    assert not r.cookies
+
+
+def test_login_redirect(app, io_loop):
+    cookies = app.login_user('river')
+    user = app.users['river']
+    # no next_url, server running
+    io_loop.run_sync(user.spawn)
+    r = get_page('login', app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 302
+    assert '/user/river' in r.headers['Location']
+    
+    # no next_url, server not running
+    io_loop.run_sync(user.stop)
+    r = get_page('login', app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 302
+    assert '/hub/' in r.headers['Location']
+    
+    # next URL given, use it
+    r = get_page('login?next=/hub/admin', app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 302
+    assert r.headers['Location'].endswith('/hub/admin')
+
+
+def test_logout(app):
+    name = 'wash'
+    cookies = app.login_user(name)
+    r = requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
+    r.raise_for_status()
+    login_url = public_host(app) + app.tornado_settings['login_url']
+    assert r.url == login_url
+    assert r.cookies == {}
+
+
 def test_static_files(app):
     base_url = ujoin(public_url(app), app.hub.server.base_url)
     print(base_url)
@@ -186,5 +234,3 @@ def test_static_files(app):
     r = requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'text/css'
-
-     

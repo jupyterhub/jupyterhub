@@ -145,8 +145,8 @@ class User(HasTraits):
     @property
     def running(self):
         """property for whether a user has a running server"""
-        if self.spawn_pending:
-            return False # server is not running if spawn is still pending
+        if self.spawn_pending or self.stop_pending:
+            return False # server is not running if spawn or stop is still pending
         if self.server is None:
             return False
         return True

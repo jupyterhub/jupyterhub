@@ -3,7 +3,7 @@
 import json
 import time
 from queue import Queue
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 import requests
 
@@ -383,6 +383,7 @@ def test_slow_spawn(app, io_loop):
     name = 'zoe'
     user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
+    app.tornado_settings['spawner_class'] = mocking.MockSpawner
     r.raise_for_status()
     assert r.status_code == 202
     app_user = get_app_user(app, name)
@@ -432,6 +433,7 @@ def test_never_spawn(app, io_loop):
     name = 'badger'
     user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
+    app.tornado_settings['spawner_class'] = mocking.MockSpawner
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
     assert app_user.spawn_pending
@@ -452,6 +454,55 @@ def test_get_proxy(app, io_loop):
     r.raise_for_status()
     reply = r.json()
     assert list(reply.keys()) == ['/']
+
+
+def test_cookie(app):
+    db = app.db
+    name = 'patience'
+    user = add_user(db, app=app, name=name)
+    r = api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 201
+    assert 'pid' in user.state
+    app_user = get_app_user(app, name)
+    
+    cookies = app.login_user(name)
+    # cookie jar gives '"cookie-value"', we want 'cookie-value'
+    cookie = cookies[user.server.cookie_name][1:-1]
+    r = api_request(app, 'authorizations/cookie', user.server.cookie_name, "nothintoseehere")
+    assert r.status_code == 404
+
+    r = api_request(app, 'authorizations/cookie', user.server.cookie_name, quote(cookie, safe=''))
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+    
+    # deprecated cookie in body:
+    r = api_request(app, 'authorizations/cookie', user.server.cookie_name, data=cookie)
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+
+def test_token(app):
+    name = 'book'
+    user = add_user(app.db, app=app, name=name)
+    token = user.new_api_token()
+    r = api_request(app, 'authorizations/token', token)
+    r.raise_for_status()
+    user_model = r.json()
+    assert user_model['name'] == name
+    r = api_request(app, 'authorizations/token', 'notauthorized')
+    assert r.status_code == 404
+
+
+def test_options(app):
+    r = api_request(app, 'users', method='options')
+    r.raise_for_status()
+    assert 'Access-Control-Allow-Headers' in r.headers
+
+
+def test_bad_json_body(app):
+    r = api_request(app, 'users', method='post', data='notjson')
+    assert r.status_code == 400
 
 
 def test_shutdown(app):

@@ -11,7 +11,7 @@ import signal
 import sys
 import grp
 from subprocess import Popen
-from tempfile import TemporaryDirectory
+from tempfile import mkdtemp
 
 from tornado import gen
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -328,12 +328,13 @@ def _try_setcwd(path):
         try:
             os.chdir(path)
         except OSError as e:
+            exc = e # break exception instance out of except scope
             print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
             path, _ = os.path.split(path)
         else:
             return
-    print("Couldn't set CWD at all (%s), using temp dir" % e, file=sys.stderr)
-    td = TemporaryDirectory().name
+    print("Couldn't set CWD at all (%s), using temp dir" % exc, file=sys.stderr)
+    td = mkdtemp()
     os.chdir(td)
 
 
