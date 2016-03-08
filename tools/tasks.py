@@ -133,6 +133,7 @@ def untag(vs, push=False):
     v2 = parse_vs(vs)
     v2.append('dev')
     v2[1] += 1
+    v2[2] = 0
     vs2 = unparse_vs(v2)
     patch_version(vs2, repo_root)
     with cd(repo_root):
