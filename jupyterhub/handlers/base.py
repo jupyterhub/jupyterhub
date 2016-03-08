@@ -200,6 +200,7 @@ class BaseHandler(RequestHandler):
             self.db.add(u)
             self.db.commit()
             user = self._user_from_orm(u)
+            self.authenticator.add_user(user)
         return user
     
     def clear_login_cookie(self, name=None):
