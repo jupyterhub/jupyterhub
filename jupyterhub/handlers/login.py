@@ -43,7 +43,7 @@ class LoginHandler(BaseHandler):
         if user:
             if not next_url:
                 if user.running:
-                    next_url = user.server.base_url
+                    next_url = user.url
                 else:
                     next_url = self.hub.server.base_url
             # set new login cookie
