@@ -46,35 +46,35 @@ class BaseHandler(RequestHandler):
     @property
     def base_url(self):
         return self.settings.get('base_url', '/')
-    
+
     @property
     def version_hash(self):
         return self.settings.get('version_hash', '')
-    
+
     @property
     def subdomain_host(self):
         return self.settings.get('subdomain_host', '')
-    
+
     @property
     def domain(self):
         return self.settings['domain']
-    
+
     @property
     def db(self):
         return self.settings['db']
-    
+
     @property
     def users(self):
         return self.settings.setdefault('users', {})
-    
+
     @property
     def hub(self):
         return self.settings['hub']
-    
+
     @property
     def proxy(self):
         return self.settings['proxy']
-    
+
     @property
     def authenticator(self):
         return self.settings.get('authenticator', None)
@@ -83,28 +83,28 @@ class BaseHandler(RequestHandler):
         """Roll back any uncommitted transactions from the handler."""
         self.db.rollback()
         super().finish(*args, **kwargs)
-    
+
     #---------------------------------------------------------------
     # Security policies
     #---------------------------------------------------------------
-    
+
     @property
     def csp_report_uri(self):
         return self.settings.get('csp_report_uri',
             url_path_join(self.hub.server.base_url, 'security/csp-report')
         )
-    
+
     @property
     def content_security_policy(self):
         """The default Content-Security-Policy header
-        
+
         Can be overridden by defining Content-Security-Policy in settings['headers']
         """
         return '; '.join([
             "frame-ancestors 'self'",
             "report-uri " + self.csp_report_uri,
         ])
-    
+
     def set_default_headers(self):
         """
         Set any headers passed as tornado_settings['headers'].
@@ -113,7 +113,7 @@ class BaseHandler(RequestHandler):
         """
         headers = self.settings.get('headers', {})
         headers.setdefault("Content-Security-Policy", self.content_security_policy)
-        
+
         for header_name, header_content in headers.items():
             self.set_header(header_name, header_content)
 
@@ -124,7 +124,7 @@ class BaseHandler(RequestHandler):
     @property
     def admin_users(self):
         return self.settings.setdefault('admin_users', set())
-    
+
     @property
     def cookie_max_age_days(self):
         return self.settings.get('cookie_max_age_days', None)
@@ -141,7 +141,7 @@ class BaseHandler(RequestHandler):
             return None
         else:
             return orm_token.user
-    
+
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""
         cookie_id = self.get_secure_cookie(
@@ -151,7 +151,7 @@ class BaseHandler(RequestHandler):
         )
         def clear():
             self.clear_cookie(cookie_name, path=self.hub.server.base_url)
-        
+
         if cookie_id is None:
             if self.get_cookie(cookie_name):
                 self.log.warn("Invalid or expired cookie token")
@@ -165,27 +165,27 @@ class BaseHandler(RequestHandler):
             # have cookie, but it's not valid. Clear it and start over.
             clear()
         return user
-    
+
     def _user_from_orm(self, orm_user):
         """return User wrapper from orm.User object"""
         if orm_user is None:
             return
         return self.users[orm_user]
-    
+
     def get_current_user_cookie(self):
         """get_current_user from a cookie token"""
         return self._user_for_cookie(self.hub.server.cookie_name)
-    
+
     def get_current_user(self):
         """get current username"""
         user = self.get_current_user_token()
         if user is not None:
             return user
         return self.get_current_user_cookie()
-    
+
     def find_user(self, name):
         """Get a user by name
-        
+
         return None if no such user
         """
         orm_user = orm.User.find(db=self.db, name=name)
@@ -201,7 +201,7 @@ class BaseHandler(RequestHandler):
             self.db.commit()
             user = self._user_from_orm(u)
         return user
-    
+
     def clear_login_cookie(self, name=None):
         if name is None:
             user = self.get_current_user()
@@ -213,7 +213,7 @@ class BaseHandler(RequestHandler):
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
-    
+
     def _set_user_cookie(self, user, server):
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
@@ -230,15 +230,15 @@ class BaseHandler(RequestHandler):
             path=server.base_url,
             **kwargs
         )
-    
+
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
         self._set_user_cookie(user, user.server)
-    
+
     def set_hub_cookie(self, user):
         """set the login cookie for the Hub"""
         self._set_user_cookie(user, self.hub.server)
-    
+
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
         if self.subdomain_host and not self.request.host.startswith(self.domain):
@@ -248,11 +248,11 @@ class BaseHandler(RequestHandler):
         # create and set a new cookie token for the single-user server
         if user.server:
             self.set_server_cookie(user)
-        
+
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
             self.set_hub_cookie(user)
-    
+
     @gen.coroutine
     def authenticate(self, data):
         auth = self.authenticator
@@ -278,7 +278,7 @@ class BaseHandler(RequestHandler):
     @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
-    
+
     @gen.coroutine
     def spawn_single_user(self, user, options=None):
         if user.spawn_pending:
@@ -290,7 +290,7 @@ class BaseHandler(RequestHandler):
         @gen.coroutine
         def finish_user_spawn(f=None):
             """Finish the user spawn by registering listeners and notifying the proxy.
-            
+
             If the spawner is slow to start, this is passed as an async callback,
             otherwise it is called immediately.
             """
@@ -301,7 +301,7 @@ class BaseHandler(RequestHandler):
             self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
             yield self.proxy.add_user(user)
             user.spawner.add_poll_callback(self.user_stopped, user)
-        
+
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
         except gen.TimeoutError:
@@ -325,7 +325,7 @@ class BaseHandler(RequestHandler):
                     raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
         else:
             yield finish_user_spawn()
-    
+
     @gen.coroutine
     def user_stopped(self, user):
         """Callback that fires when the spawner has stopped"""
@@ -337,7 +337,7 @@ class BaseHandler(RequestHandler):
         )
         yield self.proxy.delete_user(user)
         yield user.stop()
-    
+
     @gen.coroutine
     def stop_single_user(self, user):
         if user.stop_pending:
@@ -348,7 +348,7 @@ class BaseHandler(RequestHandler):
         @gen.coroutine
         def finish_stop(f=None):
             """Finish the stop action by noticing that the user is stopped.
-            
+
             If the spawner is slow to stop, this is passed as an async callback,
             otherwise it is called immediately.
             """
@@ -357,7 +357,7 @@ class BaseHandler(RequestHandler):
                 return
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc-tic)
-        
+
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), f)
         except gen.TimeoutError:
@@ -443,7 +443,7 @@ class Template404(BaseHandler):
 
 class PrefixRedirectHandler(BaseHandler):
     """Redirect anything outside a prefix inside.
-    
+
     Redirects /foo to /prefix/foo, etc.
     """
     def get(self):
