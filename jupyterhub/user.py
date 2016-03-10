@@ -186,10 +186,10 @@ class User(HasTraits):
         if self.settings.get('subdomain_host'):
             return '{host}{path}'.format(
                 host=self.host,
-                path=self.server.base_url,
+                path=self.base_url,
             )
         else:
-            return self.server.base_url
+            return self.base_url
     
     @gen.coroutine
     def spawn(self, options=None):

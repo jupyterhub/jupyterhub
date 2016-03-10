@@ -10,7 +10,7 @@
       {% endif %}
       <a id="start" class="btn btn-lg btn-success"
       {% if user.running %}
-        href="{{ user.server.base_url }}"
+        href="{{ user.url }}"
       {% else %}
         href="{{base_url}}spawn"
       {% endif %}
