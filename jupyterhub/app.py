@@ -677,6 +677,7 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.admin_users
         ]
+        self.authenticator.admin_users = set(admin_users) # force normalization
         for username in admin_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
@@ -704,6 +705,7 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.whitelist
         ]
+        self.authenticator.whitelist = set(whitelist) # force normalization
         for username in whitelist:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
@@ -719,24 +721,21 @@ class JupyterHub(Application):
                 new_users.append(user)
                 db.add(user)
 
-        if whitelist:
-            # fill the whitelist with any users loaded from the db,
-            # so we are consistent in both directions.
-            # This lets whitelist be used to set up initial list,
-            # but changes to the whitelist can occur in the database,
-            # and persist across sessions.
-            for user in db.query(orm.User):
-                self.authenticator.whitelist.add(user.name)
+        db.commit()
+
+        # Notify authenticator of all users.
+        # This ensures Auth whitelist is up-to-date with the database.
+        # This lets whitelist be used to set up initial list,
+        # but changes to the whitelist can occur in the database,
+        # and persist across sessions.
+        for user in db.query(orm.User):
+            yield gen.maybe_future(self.authenticator.add_user(user))
+        db.commit() # can add_user touch the db?
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
-        db.commit()
-        
-        for user in new_users:
-            yield gen.maybe_future(self.authenticator.add_user(user))
-        db.commit()
     
     @gen.coroutine
     def init_spawners(self):

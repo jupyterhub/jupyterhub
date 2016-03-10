@@ -222,6 +222,16 @@ def test_logout(app):
     assert r.cookies == {}
 
 
+def test_login_no_whitelist_adds_user(app):
+    auth = app.authenticator
+    mock_add_user = mock.Mock()
+    with mock.patch.object(auth, 'add_user', mock_add_user):
+        cookies = app.login_user('jubal')
+
+    user = app.users['jubal']
+    assert mock_add_user.mock_calls == [mock.call(user)]
+
+
 def test_static_files(app):
     base_url = ujoin(public_url(app), app.hub.server.base_url)
     print(base_url)
