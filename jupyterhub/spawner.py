@@ -116,14 +116,9 @@ class Spawner(LoggingConfigurable):
     ], config=True,
         help="Whitelist of environment variables for the subprocess to inherit"
     )
-    env = Dict()
-    def _env_default(self):
-        env = {}
-        for key in self.env_keep:
-            if key in os.environ:
-                env[key] = os.environ[key]
-        env['JPY_API_TOKEN'] = self.api_token
-        return env
+    env = Dict(config=True,
+        help="Environment variables to load into the Spawner environment."
+    )
     
     cmd = Command(['jupyterhub-singleuser'], config=True,
         help="""The command used for starting notebooks."""
@@ -204,12 +199,19 @@ class Spawner(LoggingConfigurable):
         self.api_token = ''
     
     def get_env(self):
-        """Return the environment we should use
-        
-        Default returns a copy of self.env.
+        """Return the environment dict to use for the Spawner.
+
+        This applies things like `env_keep`, anything defined in `Spawner.env`,
+        and adds the API token to the env.
+
         Use this to access the env in Spawner.start to allow extension in subclasses.
         """
-        return self.env.copy()
+        env = self.env.copy()
+        for key in self.env_keep:
+            if key in os.environ:
+                env[key] = os.environ[key]
+        env['JPY_API_TOKEN'] = self.api_token
+        return env
     
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
