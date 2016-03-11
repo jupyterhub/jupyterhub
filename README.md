@@ -119,8 +119,9 @@ Some examples, meant as illustration and testing of this concept:
 
 ### Docker
 
-There is a ready to go [docker image](https://hub.docker.com/r/jupyter/jupyterhub/).
-It can be started with the following command:
+There is a ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyter/jupyterhub/). [Note: This `jupyter/jupyterhub` docker image is only an image for running the Hub service itself. It does not require the other Jupyter components, which are needed by the single-user servers. To run the single-user servers, which may be on the same system as the Hub or not, installation of Jupyter Notebook ≥ 4 is required.]
+
+The JupyterHub docker image can be started with the following command:
 
     docker run -d --name jupyter.cont [-v /home/jupyter-home:/home] jupyter/jupyterhub jupyterhub
 
