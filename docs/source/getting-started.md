@@ -24,10 +24,9 @@ There are three main categories of processes run by the `jupyterhub` command lin
 
 **IMPORTANT:** In its default configuration, JupyterHub requires SSL encryption (HTTPS) to run.
 **You should not run JupyterHub without SSL encryption on a public network.**
-See [Security documentation](#Security) for how to configure JupyterHub to use SSL and, in
-certain cases, e.g. behind SSL termination in nginx, allowing no SSL on the hub
-by requiring `--no-ssl` confirmation to allow the Hub to be run without SSL
-as of [version 5.0](./changelog.html).
+See [Security documentation](#Security) for how to configure JupyterHub to use SSL, and in
+certain cases, e.g. behind SSL termination in nginx, allowing the hub to run with no SSL
+by requiring `--no-ssl` (as of [version 5.0](./changelog.html)).
 
 To start JupyterHub in its default configuration, type the following at the command line:
 
