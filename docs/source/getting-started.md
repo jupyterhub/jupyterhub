@@ -64,23 +64,13 @@ The location of these files can be specified via configuration, discussed below.
 
 JupyterHub is configured in two ways:
 
-1. Command-line arguments
-2. Configuration files
+1. Configuration file
+2. Command-line arguments
 
-Type the following for brief information about the command line arguments:
-
-    jupyterhub -h
-
-or:
-
-    jupyterhub --help-all
-
-for the full command line help.
-
-By default, JupyterHub will look for a configuration file (can be missing)
+### Configuration file
+By default, JupyterHub will look for a configuration file (which may not be created yet)
 named `jupyterhub_config.py` in the current working directory.
-You can create an empty configuration file with
-
+You can create an empty configuration file with:
 
     jupyterhub --generate-config
 
@@ -92,6 +82,23 @@ values. You can load a specific config file with:
 See also: [general docs](http://ipython.org/ipython-doc/dev/development/config.html)
 on the config system Jupyter uses.
 
+### Command-line arguments
+Type the following for brief information about the command-line arguments:
+
+    jupyterhub -h
+
+or:
+
+    jupyterhub --help-all
+
+for the full command line help.
+
+All configurable options are technically configurable on the command-line,
+even if some are really inconvenient to type. Just replace the desired option,
+c.Class.trait, with --Class.trait. For example, to configure 
+c.Spawner.notebook_dir = '~/assignments' from the command-line:
+
+    jupyterhub --Spawner.notebook_dir='~/assignments'
 
 ## Networking
 
