@@ -22,9 +22,11 @@ There are three main categories of processes run by the `jupyterhub` command lin
 
 ## JupyterHub's default behavior
 
-**IMPORTANT:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS).
+**IMPORTANT:** In its default configuration, JupyterHub requires SSL encryption (HTTPS) to run.
 **You should not run JupyterHub without SSL encryption on a public network.**
-See [Security documentation](#Security) for how to configure JupyterHub to use SSL.
+See [Security documentation](#Security) for how to configure JupyterHub to use SSL, and in
+certain cases, e.g. behind SSL termination in nginx, allowing the hub to run with no SSL
+by requiring `--no-ssl` (as of [version 0.5](./changelog.html)).
 
 To start JupyterHub in its default configuration, type the following at the command line:
 
@@ -154,7 +156,7 @@ c.JupyterHub.hub_port = 54321
 
 ## Security
 
-**IMPORTANT:** In its default configuration, JupyterHub runs without SSL encryption (HTTPS).
+**IMPORTANT:** In its default configuration, JupyterHub requires SSL encryption (HTTPS) to run.
 **You should not run JupyterHub without SSL encryption on a public network.**
 
 Security is the most important aspect of configuring Jupyter. There are three main aspects of the
@@ -187,6 +189,10 @@ c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/your.domain.com/fullchain.pem'
 Some cert files also contain the key, in which case only the cert is needed. It is important that
 these files be put in a secure location on your server, where they are not readable by regular
 users.
+
+Note: In certain cases, e.g. behind SSL termination in nginx, allowing no SSL 
+running on the hub may be desired. To run the Hub without SSL, you must opt
+in by configuring and confirming the `--no-ssl` option, added as of [version 0.5](./changelog.html).
 
 ## Cookie secret
 
