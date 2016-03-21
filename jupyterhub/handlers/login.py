@@ -78,7 +78,7 @@ class LoginHandler(BaseHandler):
             self.redirect(next_url)
             self.log.info("User logged in: %s", username)
         else:
-            self.log.debug("Failed login for %s", username)
+            self.log.debug("Failed login for %s", data.get('username', 'unknown user'))
             html = self._render(
                 login_error='Invalid username or password',
                 username=username,
