@@ -116,8 +116,14 @@ class Spawner(LoggingConfigurable):
     ], config=True,
         help="Whitelist of environment variables for the subprocess to inherit"
     )
-    env = Dict(config=True,
-        help="Environment variables to load into the Spawner environment."
+    env = Dict(help="""Deprecated: use Spawner.get_env or Spawner.environment
+    
+    - extend Spawner.get_env for adding required env in Spawner subclasses
+    - Spawner.environment for config-specified env
+    """)
+    
+    environment = Dict(config=True,
+        help="Environment variables to load for the Spawner."
     )
     
     cmd = Command(['jupyterhub-singleuser'], config=True,
@@ -201,15 +207,23 @@ class Spawner(LoggingConfigurable):
     def get_env(self):
         """Return the environment dict to use for the Spawner.
 
-        This applies things like `env_keep`, anything defined in `Spawner.env`,
+        This applies things like `env_keep`, anything defined in `Spawner.environment`,
         and adds the API token to the env.
 
         Use this to access the env in Spawner.start to allow extension in subclasses.
         """
-        env = self.env.copy()
+        env = {}
+        if self.env:
+            warnings.warn("Spawner.env is deprecated, found %s" % self.env, DeprecationWarning)
+            env.update(self.env)
+        
         for key in self.env_keep:
             if key in os.environ:
                 env[key] = os.environ[key]
+        
+        # config overrides
+        env.update(self.environment)
+        
         env['JPY_API_TOKEN'] = self.api_token
         return env
     
