@@ -357,6 +357,18 @@ class PAMAuthenticator(LocalAuthenticator):
     service = Unicode('login', config=True,
         help="""The PAM service to use for authentication."""
     )
+    open_sessions = Bool(True, config=True,
+        help="""Whether to open PAM sessions when spawners are started.
+        
+        This may trigger things like mounting shared filsystems,
+        loading credentials, etc. depending on system configuration,
+        but it does not always work.
+        
+        It can be disabled with::
+        
+            c.PAMAuthenticator.open_sessions = False
+        """
+    )
     
     @gen.coroutine
     def authenticate(self, handler, data):
@@ -369,7 +381,7 @@ class PAMAuthenticator(LocalAuthenticator):
             pamela.authenticate(username, data['password'], service=self.service)
         except pamela.PAMError as e:
             if handler is not None:
-                self.log.warn("PAM Authentication failed (@%s): %s", handler.request.remote_ip, e)
+                self.log.warn("PAM Authentication failed (%s@%s): %s", username, handler.request.remote_ip, e)
             else:
                 self.log.warn("PAM Authentication failed: %s", e)
         else:
@@ -377,15 +389,23 @@ class PAMAuthenticator(LocalAuthenticator):
     
     def pre_spawn_start(self, user, spawner):
         """Open PAM session for user"""
+        if not self.open_sessions:
+            return
         try:
             pamela.open_session(user.name, service=self.service)
         except pamela.PAMError as e:
             self.log.warn("Failed to open PAM session for %s: %s", user.name, e)
+            self.log.warn("Disabling PAM sessions from now on.")
+            self.open_sessions = False
     
     def post_spawn_stop(self, user, spawner):
         """Close PAM session for user"""
+        if not self.open_sessions:
+            return
         try:
             pamela.close_session(user.name, service=self.service)
         except pamela.PAMError as e:
             self.log.warn("Failed to close PAM session for %s: %s", user.name, e)
+            self.log.warn("Disabling PAM sessions from now on.")
+            self.open_sessions = False
     
