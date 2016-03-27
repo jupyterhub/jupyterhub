@@ -41,39 +41,38 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     authenticator = Any()
     api_token = Unicode()
-    ip = Unicode('127.0.0.1', config=True,
+    ip = Unicode('127.0.0.1',
         help="The IP address (or hostname) the single-user server should listen on"
-    )
-    start_timeout = Integer(60, config=True,
+    ).tag(config=True)
+    start_timeout = Integer(60,
         help="""Timeout (in seconds) before giving up on the spawner.
         
         This is the timeout for start to return, not the timeout for the server to respond.
         Callers of spawner.start will assume that startup has failed if it takes longer than this.
         start should return when the server process is started and its location is known.
         """
-    )
+    ).tag(config=True)
 
-    http_timeout = Integer(
-        30, config=True,
+    http_timeout = Integer(30,
         help="""Timeout (in seconds) before giving up on a spawned HTTP server
 
         Once a server has successfully been spawned, this is the amount of time
         we wait before assuming that the server is unable to accept
         connections.
         """
-    )
+    ).tag(config=True)
 
-    poll_interval = Integer(30, config=True,
+    poll_interval = Integer(30,
         help="""Interval (in seconds) on which to poll the spawner."""
-    )
+    ).tag(config=True)
     _callbacks = List()
     _poll_callback = Any()
     
-    debug = Bool(False, config=True,
+    debug = Bool(False,
         help="Enable debug-logging of the single-user server"
-    )
+    ).tag(config=True)
     
-    options_form = Unicode("", config=True, help="""
+    options_form = Unicode("", help="""
         An HTML form for options a user can specify on launching their server.
         The surrounding `<form>` element and the submit button are already provided.
         
@@ -87,7 +86,7 @@ class Spawner(LoggingConfigurable):
               <option value="A">The letter A</option>
               <option value="B">The letter B</option>
             </select>
-    """)
+    """).tag(config=True)
 
     def options_from_form(self, form_data):
         """Interpret HTTP form data
@@ -113,35 +112,35 @@ class Spawner(LoggingConfigurable):
         'VIRTUAL_ENV',
         'LANG',
         'LC_ALL',
-    ], config=True,
+    ],
         help="Whitelist of environment variables for the subprocess to inherit"
-    )
+    ).tag(config=True)
     env = Dict(help="""Deprecated: use Spawner.get_env or Spawner.environment
     
     - extend Spawner.get_env for adding required env in Spawner subclasses
     - Spawner.environment for config-specified env
     """)
     
-    environment = Dict(config=True,
+    environment = Dict(
         help="Environment variables to load for the Spawner."
-    )
+    ).tag(config=True)
     
-    cmd = Command(['jupyterhub-singleuser'], config=True,
+    cmd = Command(['jupyterhub-singleuser'],
         help="""The command used for starting notebooks."""
-    )
-    args = List(Unicode, config=True,
+    ).tag(config=True)
+    args = List(Unicode,
         help="""Extra arguments to be passed to the single-user server"""
-    )
+    ).tag(config=True)
     
-    notebook_dir = Unicode('', config=True,
+    notebook_dir = Unicode('',
         help="""The notebook directory for the single-user server
         
         `~` will be expanded to the user's home directory
         `%U` will be expanded to the user's username
         """
-    )
+    ).tag(config=True)
 
-    default_url = Unicode('', config=True,
+    default_url = Unicode('',
         help="""The default URL for the single-user server. 
 
         Can be used in conjunction with --notebook-dir=/ to enable 
@@ -150,15 +149,15 @@ class Spawner(LoggingConfigurable):
 
         `%U` will be expanded to the user's username
         """
-    )
+    ).tag(config=True)
     
-    disable_user_config = Bool(False, config=True,
+    disable_user_config = Bool(False,
         help="""Disable per-user configuration of single-user servers.
         
         This prevents any config in users' $HOME directories
         from having an effect on their server.
         """
-    )
+    ).tag(config=True)
     
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
@@ -385,15 +384,15 @@ class LocalProcessSpawner(Spawner):
     This is the default spawner for JupyterHub.
     """
     
-    INTERRUPT_TIMEOUT = Integer(10, config=True,
+    INTERRUPT_TIMEOUT = Integer(10,
         help="Seconds to wait for process to halt after SIGINT before proceeding to SIGTERM"
-    )
-    TERM_TIMEOUT = Integer(5, config=True,
+    ).tag(config=True)
+    TERM_TIMEOUT = Integer(5,
         help="Seconds to wait for process to halt after SIGTERM before proceeding to SIGKILL"
-    )
-    KILL_TIMEOUT = Integer(5, config=True,
+    ).tag(config=True)
+    KILL_TIMEOUT = Integer(5,
         help="Seconds to wait for process to halt after SIGKILL before giving up"
-    )
+    ).tag(config=True)
     
     proc = Instance(Popen, allow_none=True)
     pid = Integer(0)

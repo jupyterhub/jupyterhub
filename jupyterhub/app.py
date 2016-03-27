@@ -175,66 +175,65 @@ class JupyterHub(Application):
         PAMAuthenticator,
     ])
     
-    config_file = Unicode('jupyterhub_config.py', config=True,
+    config_file = Unicode('jupyterhub_config.py',
         help="The config file to load",
-    )
-    generate_config = Bool(False, config=True,
+    ).tag(config=True)
+    generate_config = Bool(False,
         help="Generate default config file",
-    )
-    answer_yes = Bool(False, config=True,
+    ).tag(config=True)
+    answer_yes = Bool(False,
         help="Answer yes to any questions (e.g. confirm overwrite)"
-    )
-    pid_file = Unicode('', config=True,
+    ).tag(config=True)
+    pid_file = Unicode('',
         help="""File to write PID
         Useful for daemonizing jupyterhub.
         """
-    )
-    cookie_max_age_days = Float(14, config=True,
+    ).tag(config=True)
+    cookie_max_age_days = Float(14,
         help="""Number of days for a login cookie to be valid.
         Default is two weeks.
         """
-    )
-    last_activity_interval = Integer(300, config=True,
+    ).tag(config=True)
+    last_activity_interval = Integer(300,
         help="Interval (in seconds) at which to update last-activity timestamps."
-    )
-    proxy_check_interval = Integer(30, config=True,
+    ).tag(config=True)
+    proxy_check_interval = Integer(30,
         help="Interval (in seconds) at which to check if the proxy is running."
-    )
+    ).tag(config=True)
     
-    data_files_path = Unicode(DATA_FILES_PATH, config=True,
+    data_files_path = Unicode(DATA_FILES_PATH,
         help="The location of jupyterhub data files (e.g. /usr/local/share/jupyter/hub)"
-    )
+    ).tag(config=True)
 
     template_paths = List(
-        config=True,
         help="Paths to search for jinja templates.",
-    )
+    ).tag(config=True)
 
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
     
-    confirm_no_ssl = Bool(False, config=True,
+    confirm_no_ssl = Bool(False,
         help="""Confirm that JupyterHub should be run without SSL.
         This is **NOT RECOMMENDED** unless SSL termination is being handled by another layer.
         """
-    )
-    ssl_key = Unicode('', config=True,
+    ).tag(config=True)
+    ssl_key = Unicode('',
         help="""Path to SSL key file for the public facing interface of the proxy
         
         Use with ssl_cert
         """
-    )
-    ssl_cert = Unicode('', config=True,
+    ).tag(config=True)
+    ssl_cert = Unicode('',
         help="""Path to SSL certificate file for the public facing interface of the proxy
         
         Use with ssl_key
         """
-    )
-    ip = Unicode('', config=True,
+    ).tag(config=True)
+    ip = Unicode('',
         help="The public facing ip of the whole application (the proxy)"
-    )
+    ).tag(config=True)
     
-    subdomain_host = Unicode('', config=True,
+    subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
 
         This should be the full https://hub.domain.tld[:port]
@@ -246,42 +245,45 @@ class JupyterHub(Application):
         In general, this is most easily achieved with wildcard DNS.
 
         When using SSL (i.e. always) this also requires a wildcard SSL certificate.
-        """)
+        """
+    ).tag(config=True)
     def _subdomain_host_changed(self, name, old, new):
         if new and '://' not in new:
             # host should include '://'
             # if not specified, assume https: You have to be really explicit about HTTP!
             self.subdomain_host = 'https://' + new
     
-    port = Integer(8000, config=True,
+    port = Integer(8000,
         help="The public facing port of the proxy"
-    )
-    base_url = URLPrefix('/', config=True,
+    ).tag(config=True)
+    base_url = URLPrefix('/',
         help="The base URL of the entire application"
-    )
-    logo_file = Unicode('', config=True,
+    ).tag(config=True)
+    logo_file = Unicode('',
         help="Specify path to a logo image to override the Jupyter logo in the banner."
-    )
+    ).tag(config=True)
     def _logo_file_default(self):
         return os.path.join(self.data_files_path, 'static', 'images', 'jupyter.png')
     
-    jinja_environment_options = Dict(config=True,
+    jinja_environment_options = Dict(
         help="Supply extra arguments that will be passed to Jinja environment."
-    )
+    ).tag(config=True)
     
-    proxy_cmd = Command('configurable-http-proxy', config=True,
+    proxy_cmd = Command('configurable-http-proxy',
         help="""The command to start the http proxy.
         
         Only override if configurable-http-proxy is not on your PATH
         """
-    )
-    debug_proxy = Bool(False, config=True, help="show debug output in configurable-http-proxy")
-    proxy_auth_token = Unicode(config=True,
+    ).tag(config=True)
+    debug_proxy = Bool(False,
+        help="show debug output in configurable-http-proxy"
+    ).tag(config=True)
+    proxy_auth_token = Unicode(
         help="""The Proxy Auth token.
 
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
         """
-    )
+    ).tag(config=True)
     def _proxy_auth_token_default(self):
         token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', None)
         if not token:
@@ -294,24 +296,24 @@ class JupyterHub(Application):
             token = orm.new_token()
         return token
     
-    proxy_api_ip = Unicode('127.0.0.1', config=True,
+    proxy_api_ip = Unicode('127.0.0.1',
         help="The ip for the proxy API handlers"
-    )
-    proxy_api_port = Integer(config=True,
+    ).tag(config=True)
+    proxy_api_port = Integer(
         help="The port for the proxy API handlers"
-    )
+    ).tag(config=True)
     def _proxy_api_port_default(self):
         return self.port + 1
     
-    hub_port = Integer(8081, config=True,
+    hub_port = Integer(8081,
         help="The port for this process"
-    )
-    hub_ip = Unicode('127.0.0.1', config=True,
+    ).tag(config=True)
+    hub_ip = Unicode('127.0.0.1',
         help="The ip for this process"
-    )
-    hub_prefix = URLPrefix('/hub/', config=True,
+    ).tag(config=True)
+    hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server. Must not be '/'"
-    )
+    ).tag(config=True)
     def _hub_prefix_default(self):
         return url_path_join(self.base_url, '/hub/')
     
@@ -321,19 +323,18 @@ class JupyterHub(Application):
         if not new.startswith(self.base_url):
             self.hub_prefix = url_path_join(self.base_url, new)
     
-    cookie_secret = Bytes(config=True, env='JPY_COOKIE_SECRET',
+    cookie_secret = Bytes(env='JPY_COOKIE_SECRET',
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
         """
-    )
+    ).tag(config=True)
     
-    cookie_secret_file = Unicode('jupyterhub_cookie_secret', config=True,
+    cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
-    )
+    ).tag(config=True)
     
     authenticator_class = Type(PAMAuthenticator, Authenticator,
-        config=True,
         help="""Class for authenticating users.
         
         This should be a class with the following form:
@@ -346,7 +347,7 @@ class JupyterHub(Application):
           where `handler` is the calling web.RequestHandler,
           and `data` is the POST form data from the login page.
         """
-    )
+    ).tag(config=True)
     
     authenticator = Instance(Authenticator)
     def _authenticator_default(self):
@@ -354,33 +355,32 @@ class JupyterHub(Application):
 
     # class for spawning single-user servers
     spawner_class = Type(LocalProcessSpawner, Spawner,
-        config=True,
         help="""The class to use for spawning single-user servers.
         
         Should be a subclass of Spawner.
         """
-    )
+    ).tag(config=True)
     
-    db_url = Unicode('sqlite:///jupyterhub.sqlite', config=True,
+    db_url = Unicode('sqlite:///jupyterhub.sqlite',
         help="url for the database. e.g. `sqlite:///jupyterhub.sqlite`"
-    )
+    ).tag(config=True)
     def _db_url_changed(self, name, old, new):
         if '://' not in new:
             # assume sqlite, if given as a plain filename
             self.db_url = 'sqlite:///%s' % new
 
-    db_kwargs = Dict(config=True,
+    db_kwargs = Dict(
         help="""Include any kwargs to pass to the database connection.
         See sqlalchemy.create_engine for details.
         """
-    )
+    ).tag(config=True)
 
-    reset_db = Bool(False, config=True,
+    reset_db = Bool(False,
         help="Purge and reset the database."
-    )
-    debug_db = Bool(False, config=True,
+    ).tag(config=True)
+    debug_db = Bool(False,
         help="log all database transactions. This has A LOT of output"
-    )
+    ).tag(config=True)
     session_factory = Any()
     
     users = Instance(UserDict)
@@ -388,19 +388,21 @@ class JupyterHub(Application):
         assert self.tornado_settings
         return UserDict(db_factory=lambda : self.db, settings=self.tornado_settings)
     
-    admin_access = Bool(False, config=True,
+    admin_access = Bool(False,
         help="""Grant admin users permission to access single-user servers.
         
         Users should be properly informed if this is enabled.
         """
-    )
-    admin_users = Set(config=True,
+    ).tag(config=True)
+    admin_users = Set(
         help="""DEPRECATED, use Authenticator.admin_users instead."""
-    )
+    ).tag(config=True)
     
-    tornado_settings = Dict(config=True)
+    tornado_settings = Dict(
+        help="Extra settings overrides to pass to the tornado application."
+    ).tag(config=True)
     
-    cleanup_servers = Bool(True, config=True,
+    cleanup_servers = Bool(True,
         help="""Whether to shutdown single-user servers when the Hub shuts down.
         
         Disable if you want to be able to teardown the Hub while leaving the single-user servers running.
@@ -410,9 +412,9 @@ class JupyterHub(Application):
         
         The Hub should be able to resume from database state.
         """
-    )
+    ).tag(config=True)
 
-    cleanup_proxy = Bool(True, config=True,
+    cleanup_proxy = Bool(True,
         help="""Whether to shutdown the proxy when the Hub shuts down.
         
         Disable if you want to be able to teardown the Hub while leaving the proxy running.
@@ -424,7 +426,7 @@ class JupyterHub(Application):
         
         The Hub should be able to resume from database state.
         """
-    )
+    ).tag(config=True)
     
     handlers = List()
     
@@ -445,15 +447,12 @@ class JupyterHub(Application):
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
     extra_log_file = Unicode(
-        "",
-        config=True,
         help="Set a logging.FileHandler on this file."
-    )
+    ).tag(config=True)
     extra_log_handlers = List(
         Instance(logging.Handler),
-        config=True,
         help="Extra log handlers to set on JupyterHub logger",
-    )
+    ).tag(config=True)
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that

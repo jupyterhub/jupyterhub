@@ -29,19 +29,19 @@ class Authenticator(LoggingConfigurable):
     """
     
     db = Any()
-    admin_users = Set(config=True,
+    admin_users = Set(
         help="""set of usernames of admin users
 
         If unspecified, only the user that launches the server will be admin.
         """
-    )
-    whitelist = Set(config=True,
+    ).tag(config=True)
+    whitelist = Set(
         help="""Username whitelist.
         
         Use this to restrict which users can login.
         If empty, allow any user to attempt login.
         """
-    )
+    ).tag(config=True)
     custom_html = Unicode('',
         help="""HTML login form for custom handlers.
         Override in form-based custom authenticators
@@ -55,12 +55,12 @@ class Authenticator(LoggingConfigurable):
         """
     )
     
-    username_pattern = Unicode(config=True,
+    username_pattern = Unicode(
         help="""Regular expression pattern for validating usernames.
         
         If not defined: allow any username.
         """
-    )
+    ).tag(config=True)
     def _username_pattern_changed(self, name, old, new):
         if not new:
             self.username_regex = None
@@ -77,14 +77,14 @@ class Authenticator(LoggingConfigurable):
             return True
         return bool(self.username_regex.match(username))
     
-    username_map = Dict(config=True,
+    username_map = Dict(
         help="""Dictionary mapping authenticator usernames to JupyterHub users.
         
         Can be used to map OAuth service names to local users, for instance.
         
         Used in normalize_username.
         """
-    )
+    ).tag(config=True)
     
     def normalize_username(self, username):
         """Normalize a username.
@@ -246,12 +246,12 @@ class LocalAuthenticator(Authenticator):
     Checks for local users, and can attempt to create them if they exist.
     """
     
-    create_system_users = Bool(False, config=True,
+    create_system_users = Bool(False,
         help="""If a user is added that doesn't exist on the system,
         should I try to create the system user?
         """
-    )
-    add_user_cmd = Command(config=True,
+    ).tag(config=True)
+    add_user_cmd = Command(
         help="""The command to use for creating users as a list of strings.
         
         For each element in the list, the string USERNAME will be replaced with
@@ -271,7 +271,7 @@ class LocalAuthenticator(Authenticator):
         
         when the user 'river' is created.
         """
-    )
+    ).tag(config=True)
     def _add_user_cmd_default(self):
         if sys.platform == 'darwin':
             raise ValueError("I don't know how to create users on OS X")
@@ -283,9 +283,8 @@ class LocalAuthenticator(Authenticator):
             return ['adduser', '-q', '--gecos', '""', '--disabled-password']
 
     group_whitelist = Set(
-        config=True,
         help="Automatically whitelist anyone in this group.",
-    )
+    ).tag(config=True)
 
     def _group_whitelist_changed(self, name, old, new):
         if self.whitelist:
@@ -351,13 +350,13 @@ class LocalAuthenticator(Authenticator):
 
 class PAMAuthenticator(LocalAuthenticator):
     """Authenticate local Linux/UNIX users with PAM"""
-    encoding = Unicode('utf8', config=True,
+    encoding = Unicode('utf8',
         help="""The encoding to use for PAM"""
-    )
-    service = Unicode('login', config=True,
+    ).tag(config=True)
+    service = Unicode('login',
         help="""The PAM service to use for authentication."""
-    )
-    open_sessions = Bool(True, config=True,
+    ).tag(config=True)
+    open_sessions = Bool(True,
         help="""Whether to open PAM sessions when spawners are started.
         
         This may trigger things like mounting shared filsystems,
@@ -368,7 +367,7 @@ class PAMAuthenticator(LocalAuthenticator):
         
             c.PAMAuthenticator.open_sessions = False
         """
-    )
+    ).tag(config=True)
     
     @gen.coroutine
     def authenticate(self, handler, data):
