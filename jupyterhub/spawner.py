@@ -128,7 +128,7 @@ class Spawner(LoggingConfigurable):
     cmd = Command(['jupyterhub-singleuser'],
         help="""The command used for starting notebooks."""
     ).tag(config=True)
-    args = List(Unicode,
+    args = List(Unicode(),
         help="""Extra arguments to be passed to the single-user server"""
     ).tag(config=True)
     

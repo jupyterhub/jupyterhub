@@ -36,6 +36,7 @@ from tornado import gen, web
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
     Type, Set, Instance, Bytes, Float,
+    observe, default,
 )
 from traitlets.config import Application, catch_config_error
 
@@ -209,6 +210,7 @@ class JupyterHub(Application):
         help="Paths to search for jinja templates.",
     ).tag(config=True)
 
+    @default('template_paths')
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
     
@@ -262,6 +264,8 @@ class JupyterHub(Application):
     logo_file = Unicode('',
         help="Specify path to a logo image to override the Jupyter logo in the banner."
     ).tag(config=True)
+
+    @default('logo_file')
     def _logo_file_default(self):
         return os.path.join(self.data_files_path, 'static', 'images', 'jupyter.png')
     
@@ -284,6 +288,8 @@ class JupyterHub(Application):
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
         """
     ).tag(config=True)
+    
+    @default('proxy_auth_token')
     def _proxy_auth_token_default(self):
         token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', None)
         if not token:
@@ -302,6 +308,8 @@ class JupyterHub(Application):
     proxy_api_port = Integer(
         help="The port for the proxy API handlers"
     ).tag(config=True)
+    
+    @default('proxy_api_port')
     def _proxy_api_port_default(self):
         return self.port + 1
     
@@ -314,21 +322,27 @@ class JupyterHub(Application):
     hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server. Must not be '/'"
     ).tag(config=True)
+    
+    @default('hub_prefix')
     def _hub_prefix_default(self):
         return url_path_join(self.base_url, '/hub/')
     
+    @observe('hub_prefix')
     def _hub_prefix_changed(self, name, old, new):
         if new == '/':
             raise TraitError("'/' is not a valid hub prefix")
         if not new.startswith(self.base_url):
             self.hub_prefix = url_path_join(self.base_url, new)
     
-    cookie_secret = Bytes(env='JPY_COOKIE_SECRET',
+    cookie_secret = Bytes(
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
         """
-    ).tag(config=True)
+    ).tag(
+        config=True,
+        env='JPY_COOKIE_SECRET',
+    )
     
     cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
@@ -350,6 +364,8 @@ class JupyterHub(Application):
     ).tag(config=True)
     
     authenticator = Instance(Authenticator)
+
+    @default('authenticator')
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
 
@@ -364,7 +380,10 @@ class JupyterHub(Application):
     db_url = Unicode('sqlite:///jupyterhub.sqlite',
         help="url for the database. e.g. `sqlite:///jupyterhub.sqlite`"
     ).tag(config=True)
-    def _db_url_changed(self, name, old, new):
+
+    @observe('db_url')
+    def _db_url_changed(self, change):
+        new = change['new']
         if '://' not in new:
             # assume sqlite, if given as a plain filename
             self.db_url = 'sqlite:///%s' % new
@@ -384,6 +403,8 @@ class JupyterHub(Application):
     session_factory = Any()
     
     users = Instance(UserDict)
+    
+    @default('users')
     def _users_default(self):
         assert self.tornado_settings
         return UserDict(db_factory=lambda : self.db, settings=self.tornado_settings)
@@ -435,13 +456,16 @@ class JupyterHub(Application):
     proxy_process = None
     io_loop = None
     
+    @default('log_level')
     def _log_level_default(self):
         return logging.INFO
     
+    @default('log_datefmt')
     def _log_datefmt_default(self):
         """Exclude date from default date format"""
         return "%Y-%m-%d %H:%M:%S"
 
+    @default('log_format')
     def _log_format_default(self):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
@@ -537,7 +561,7 @@ class JupyterHub(Application):
     def init_secrets(self):
         trait_name = 'cookie_secret'
         trait = self.traits()[trait_name]
-        env_name = trait.get_metadata('env')
+        env_name = trait.metadata.get('env')
         secret_file = os.path.abspath(
             os.path.expanduser(self.cookie_secret_file)
         )

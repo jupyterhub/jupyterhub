@@ -12,7 +12,7 @@ from sqlalchemy import inspect
 from .utils import url_path_join
 
 from . import orm
-from traitlets import HasTraits, Any, Dict
+from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
 
 
@@ -41,7 +41,7 @@ class UserDict(dict):
         elif isinstance(key, str):
             orm_user = self.db.query(orm.User).filter(orm.User.name==key).first()
             if orm_user is None:
-                raise KeyError("No such user: %s" % name)
+                raise KeyError("No such user: %s" % key)
             else:
                 key = orm_user
         if isinstance(key, orm.User):
@@ -75,22 +75,24 @@ class UserDict(dict):
 
 class User(HasTraits):
     
+    @default('log')
     def _log_default(self):
         return app_log
     
     settings = Dict()
     
     db = Any(allow_none=True)
+    @default('db')
     def _db_default(self):
         if self.orm_user:
             return inspect(self.orm_user).session
-    
-    def _db_changed(self, name, old, new):
+    @observe('db')
+    def _db_changed(self, change):
         """Changing db session reacquires ORM User object"""
         # db session changed, re-get orm User
         if self.orm_user:
             id = self.orm_user.id
-            self.orm_user = new.query(orm.User).filter(orm.User.id==id).first()
+            self.orm_user = change['new'].query(orm.User).filter(orm.User.id==id).first()
         self.spawner.db = self.db
     
     orm_user = None

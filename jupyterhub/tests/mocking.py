@@ -13,6 +13,8 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
+from traitlets import default
+
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
@@ -44,7 +46,7 @@ class MockSpawner(LocalProcessSpawner):
     
     def user_env(self, env):
         return env
-    
+    @default('cmd')
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
@@ -66,6 +68,7 @@ class SlowSpawner(MockSpawner):
 class NeverSpawner(MockSpawner):
     """A spawner that will never start"""
     
+    @default('start_timeout')
     def _start_timeout_default(self):
         return 1
     
@@ -90,6 +93,7 @@ class FormSpawner(MockSpawner):
 
 
 class MockPAMAuthenticator(PAMAuthenticator):
+    @default('admin_users')
     def _admin_users_default(self):
         return {'admin'}
     
@@ -113,15 +117,19 @@ class MockHub(JupyterHub):
     
     last_activity_interval = 2
     
+    @default('subdomain_host')
     def _subdomain_host_default(self):
         return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
     
+    @default('ip')
     def _ip_default(self):
         return '127.0.0.1'
     
+    @default('authenticator_class')
     def _authenticator_class_default(self):
         return MockPAMAuthenticator
     
+    @default('spawner_class')
     def _spawner_class_default(self):
         return MockSpawner
     
