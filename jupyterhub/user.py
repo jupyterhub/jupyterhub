@@ -228,7 +228,7 @@ class User(HasTraits):
             yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
-                self.log.warn("{user}'s server failed to start in {s} seconds, giving up".format(
+                self.log.warning("{user}'s server failed to start in {s} seconds, giving up".format(
                     user=self.name, s=spawner.start_timeout,
                 ))
                 e.reason = 'timeout'
@@ -256,7 +256,7 @@ class User(HasTraits):
             yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
             if isinstance(e, TimeoutError):
-                self.log.warn(
+                self.log.warning(
                     "{user}'s server never showed up at {url} "
                     "after {http_timeout} seconds. Giving up".format(
                         user=self.name,

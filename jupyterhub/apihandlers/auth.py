@@ -26,7 +26,7 @@ class CookieAPIHandler(APIHandler):
     def get(self, cookie_name, cookie_value=None):
         cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
-            self.log.warn("Cookie values in request body is deprecated, use `/cookie_name/cookie_value`")
+            self.log.warning("Cookie values in request body is deprecated, use `/cookie_name/cookie_value`")
             cookie_value = self.request.body
         else:
             cookie_value = cookie_value.encode('utf8')

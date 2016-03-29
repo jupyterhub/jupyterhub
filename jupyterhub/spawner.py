@@ -528,5 +528,5 @@ class LocalProcessSpawner(Spawner):
         status = yield self.poll()
         if status is None:
             # it all failed, zombie process
-            self.log.warn("Process %i never died", self.pid)
+            self.log.warning("Process %i never died", self.pid)
     

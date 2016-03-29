@@ -78,14 +78,14 @@ def wait_for_http_server(url, timeout=10):
                 if e.code != 599:
                     # we expect 599 for no connection,
                     # but 502 or other proxy error is conceivable
-                    app_log.warn("Server at %s responded with error: %s", url, e.code)
+                    app_log.warning("Server at %s responded with error: %s", url, e.code)
                 yield gen.sleep(0.1)
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return
         except (OSError, socket.error) as e:
             if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
-                app_log.warn("Failed to connect to %s (%s)", url, e)
+                app_log.warning("Failed to connect to %s (%s)", url, e)
             yield gen.sleep(0.1)
         else:
             return

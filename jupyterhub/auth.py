@@ -383,9 +383,9 @@ class PAMAuthenticator(LocalAuthenticator):
             pamela.authenticate(username, data['password'], service=self.service)
         except pamela.PAMError as e:
             if handler is not None:
-                self.log.warn("PAM Authentication failed (%s@%s): %s", username, handler.request.remote_ip, e)
+                self.log.warning("PAM Authentication failed (%s@%s): %s", username, handler.request.remote_ip, e)
             else:
-                self.log.warn("PAM Authentication failed: %s", e)
+                self.log.warning("PAM Authentication failed: %s", e)
         else:
             return username
     
@@ -396,8 +396,8 @@ class PAMAuthenticator(LocalAuthenticator):
         try:
             pamela.open_session(user.name, service=self.service)
         except pamela.PAMError as e:
-            self.log.warn("Failed to open PAM session for %s: %s", user.name, e)
-            self.log.warn("Disabling PAM sessions from now on.")
+            self.log.warning("Failed to open PAM session for %s: %s", user.name, e)
+            self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
     
     def post_spawn_stop(self, user, spawner):
@@ -407,7 +407,7 @@ class PAMAuthenticator(LocalAuthenticator):
         try:
             pamela.close_session(user.name, service=self.service)
         except pamela.PAMError as e:
-            self.log.warn("Failed to close PAM session for %s: %s", user.name, e)
-            self.log.warn("Disabling PAM sessions from now on.")
+            self.log.warning("Failed to close PAM session for %s: %s", user.name, e)
+            self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
     

@@ -293,7 +293,7 @@ class JupyterHub(Application):
     def _proxy_auth_token_default(self):
         token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', None)
         if not token:
-            self.log.warn('\n'.join([
+            self.log.warning('\n'.join([
                 "",
                 "Generating CONFIGPROXY_AUTH_TOKEN. Restarting the Hub will require restarting the proxy.",
                 "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHub.proxy_auth_token config to avoid this message.",
@@ -599,7 +599,7 @@ class JupyterHub(Application):
             try:
                 os.chmod(secret_file, 0o600)
             except OSError:
-                self.log.warn("Failed to set permissions on %s", secret_file)
+                self.log.warning("Failed to set permissions on %s", secret_file)
         # store the loaded trait value
         self.cookie_secret = secret
     
@@ -691,7 +691,7 @@ class JupyterHub(Application):
         db = self.db
         
         if self.admin_users and not self.authenticator.admin_users:
-            self.log.warn(
+            self.log.warning(
                 "\nJupyterHub.admin_users is deprecated."
                 "\nUse Authenticator.admin_users instead."
             )
@@ -776,7 +776,7 @@ class JupyterHub(Application):
         @gen.coroutine
         def user_stopped(user):
             status = yield user.spawner.poll()
-            self.log.warn("User %s server stopped with exit code: %s",
+            self.log.warning("User %s server stopped with exit code: %s",
                 user.name, status,
             )
             yield self.proxy.delete_user(user)
@@ -800,7 +800,7 @@ class JupyterHub(Application):
                 # user not running. This is expected if server is None,
                 # but indicates the user's server died while the Hub wasn't running
                 # if user.server is defined.
-                log = self.log.warn if user.server else self.log.debug
+                log = self.log.warning if user.server else self.log.debug
                 log("%s not running.", user.name)
                 user.server = None
 
@@ -998,7 +998,7 @@ class JupyterHub(Application):
         self.load_config_file(self.config_file)
         self.init_logging()
         if 'JupyterHubApp' in self.config:
-            self.log.warn("Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
+            self.log.warning("Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
                 '\n'.join('JupyterHubApp.{key} = {value!r}'.format(key=key, value=value)
                     for key, value in self.config.JupyterHubApp.items()
                 )
@@ -1098,7 +1098,7 @@ class JupyterHub(Application):
                 continue
             user = orm.User.find(self.db, route['user'])
             if user is None:
-                self.log.warn("Found no user for route: %s", route)
+                self.log.warning("Found no user for route: %s", route)
                 continue
             try:
                 dt = datetime.strptime(route['last_activity'], ISO8601_ms)

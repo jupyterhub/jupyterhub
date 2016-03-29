@@ -123,10 +123,10 @@ class AdminHandler(BaseHandler):
         orders = self.get_arguments('order')
 
         for bad in set(sorts).difference(available):
-            self.log.warn("ignoring invalid sort: %r", bad)
+            self.log.warning("ignoring invalid sort: %r", bad)
             sorts.remove(bad)
         for bad in set(orders).difference({'asc', 'desc'}):
-            self.log.warn("ignoring invalid order: %r", bad)
+            self.log.warning("ignoring invalid order: %r", bad)
             orders.remove(bad)
 
         # add default sort as secondary
