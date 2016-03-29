@@ -26,16 +26,16 @@ class APIHandler(BaseHandler):
         # If no header is provided, assume it comes from a script/curl.
         # We are only concerned with cross-site browser stuff here.
         if not host:
-            self.log.warn("Blocking API request with no host")
+            self.log.warning("Blocking API request with no host")
             return False
         if not referer:
-            self.log.warn("Blocking API request with no referer")
+            self.log.warning("Blocking API request with no referer")
             return False
         
         host_path = url_path_join(host, self.hub.server.base_url)
         referer_path = referer.split('://', 1)[-1]
         if not (referer_path + '/').startswith(host_path):
-            self.log.warn("Blocking Cross Origin API request.  Referer: %s, Host: %s",
+            self.log.warning("Blocking Cross Origin API request.  Referer: %s, Host: %s",
                 referer, host_path)
             return False
         return True

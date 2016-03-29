@@ -154,14 +154,14 @@ class BaseHandler(RequestHandler):
 
         if cookie_id is None:
             if self.get_cookie(cookie_name):
-                self.log.warn("Invalid or expired cookie token")
+                self.log.warning("Invalid or expired cookie token")
                 clear()
             return
         cookie_id = cookie_id.decode('utf8', 'replace')
         u = self.db.query(orm.User).filter(orm.User.cookie_id==cookie_id).first()
         user = self._user_from_orm(u)
         if user is None:
-            self.log.warn("Invalid cookie token")
+            self.log.warning("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
             clear()
         return user
@@ -309,7 +309,7 @@ class BaseHandler(RequestHandler):
             if user.spawn_pending:
                 # still in Spawner.start, which is taking a long time
                 # we shouldn't poll while spawn_pending is True
-                self.log.warn("User %s server is slow to start", user.name)
+                self.log.warning("User %s server is slow to start", user.name)
                 # schedule finish for when the user finishes spawning
                 IOLoop.current().add_future(f, finish_user_spawn)
             else:
@@ -319,7 +319,7 @@ class BaseHandler(RequestHandler):
                 if status is None:
                     # hit timeout, but server's running. Hope that it'll show up soon enough,
                     # though it's possible that it started at the wrong URL
-                    self.log.warn("User %s server is slow to become responsive", user.name)
+                    self.log.warning("User %s server is slow to become responsive", user.name)
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
@@ -333,7 +333,7 @@ class BaseHandler(RequestHandler):
         status = yield user.spawner.poll()
         if status is None:
             status = 'unknown'
-        self.log.warn("User %s server stopped, with exit code: %s",
+        self.log.warning("User %s server stopped, with exit code: %s",
             user.name, status,
         )
         yield self.proxy.delete_user(user)
@@ -364,7 +364,7 @@ class BaseHandler(RequestHandler):
         except gen.TimeoutError:
             if user.stop_pending:
                 # hit timeout, but stop is still pending
-                self.log.warn("User %s server is slow to stop", user.name)
+                self.log.warning("User %s server is slow to stop", user.name)
                 # schedule finish for when the server finishes stopping
                 IOLoop.current().add_future(f, finish_stop)
             else:
@@ -509,7 +509,7 @@ class CSPReportHandler(BaseHandler):
     @web.authenticated
     def post(self):
         '''Log a content security policy violation report'''
-        self.log.warn("Content security violation: %s",
+        self.log.warning("Content security violation: %s",
                       self.request.body.decode('utf8', 'replace'))
 
 default_handlers = [

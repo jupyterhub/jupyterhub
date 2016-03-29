@@ -21,7 +21,7 @@ class Command(List):
         kwargs.setdefault('minlen', 1)
         if isinstance(default_value, str):
             default_value = [default_value]
-        super().__init__(Unicode, default_value, **kwargs)
+        super().__init__(Unicode(), default_value, **kwargs)
         
     def validate(self, obj, value):
         if isinstance(value, str):

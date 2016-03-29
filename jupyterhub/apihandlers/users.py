@@ -41,7 +41,7 @@ class UserListAPIHandler(APIHandler):
                 continue
             user = self.find_user(name)
             if user is not None:
-                self.log.warn("User %s already exists" % name)
+                self.log.warning("User %s already exists" % name)
             else:
                 to_create.append(name)
         
@@ -195,7 +195,7 @@ class UserAdminAccessAPIHandler(APIHandler):
     @admin_only
     def post(self, name):
         current = self.get_current_user()
-        self.log.warn("Admin user %s has requested access to %s's server",
+        self.log.warning("Admin user %s has requested access to %s's server",
             current.name, name,
         )
         if not self.settings.get('admin_access', False):
