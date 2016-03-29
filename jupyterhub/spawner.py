@@ -10,6 +10,7 @@ import pwd
 import signal
 import sys
 import grp
+import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
