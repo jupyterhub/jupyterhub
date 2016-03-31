@@ -461,7 +461,7 @@ class JupyterHub(Application):
     statsd_prefix = Unicode(
         'jupyterhub',
         help="Prefix to use for all metrics sent by jupyterhub to statsd"
-    )
+    ).tag(config=True)
 
     handlers = List()
 
