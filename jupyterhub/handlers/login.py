@@ -20,6 +20,7 @@ class LogoutHandler(BaseHandler):
             self.clear_login_cookie(name)
         user.other_user_cookies = set([])
         self.redirect(self.hub.server.base_url, permanent=False)
+        self.statsd.incr('logout')
 
 
 class LoginHandler(BaseHandler):
@@ -35,6 +36,7 @@ class LoginHandler(BaseHandler):
         )
 
     def get(self):
+        self.statsd.incr('login.request')
         next_url = self.get_argument('next', '')
         if not next_url.startswith('/'):
             # disallow non-absolute next URLs (e.g. full URLs)
@@ -61,8 +63,13 @@ class LoginHandler(BaseHandler):
         for arg in self.request.arguments:
             data[arg] = self.get_argument(arg)
 
+        auth_timer = self.statsd.timer('login.authenticate')
         username = yield self.authenticate(data)
+        auth_timer.stop(send=False)
+
         if username:
+            self.statsd.incr('login.success')
+            self.statsd.timing('login.authenticate.success', auth_timer.ms)
             user = self.user_from_username(username)
             already_running = False
             if user.spawner:
@@ -78,6 +85,8 @@ class LoginHandler(BaseHandler):
             self.redirect(next_url)
             self.log.info("User logged in: %s", username)
         else:
+            self.statsd.incr('login.failure')
+            self.statsd.timing('login.authenticate.failure', auth_timer.ms)
             self.log.debug("Failed login for %s", data.get('username', 'unknown user'))
             html = self._render(
                 login_error='Invalid username or password',
