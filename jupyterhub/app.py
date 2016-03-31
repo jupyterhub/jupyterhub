@@ -1012,6 +1012,7 @@ class JupyterHub(Application):
             version_hash=version_hash,
             subdomain_host=subdomain_host,
             domain=domain,
+            statsd=self.statsd,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

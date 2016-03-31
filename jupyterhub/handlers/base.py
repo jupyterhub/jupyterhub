@@ -76,6 +76,10 @@ class BaseHandler(RequestHandler):
         return self.settings['proxy']
 
     @property
+    def statsd(self):
+        return self.settings['statsd']
+
+    @property
     def authenticator(self):
         return self.settings.get('authenticator', None)
 
