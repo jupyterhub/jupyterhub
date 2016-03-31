@@ -884,7 +884,7 @@ class JupyterHub(Application):
         if self.statsd_host:
             cmd.extend([
                 '--statsd-host', self.statsd_host,
-                '--statsd-port', self.statsd_port,
+                '--statsd-port', str(self.statsd_port),
                 '--statsd-prefix', self.statsd_prefix + '.chp'
             ])
         # Require SSL to be used or `--no-ssl` to confirm no SSL on
