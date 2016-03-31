@@ -2,5 +2,6 @@ traitlets>=4.1
 tornado>=4.1
 jinja2
 pamela
+statsd
 sqlalchemy>=1.0
 requests

@@ -12,6 +12,7 @@ import signal
 import socket
 import sys
 import threading
+import statsd
 from datetime import datetime
 from distutils.version import LooseVersion as V
 from getpass import getuser
@@ -58,6 +59,10 @@ from .utils import (
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
+
+# For faking stats
+from .emptyclass import EmptyClass
+
 
 common_aliases = {
     'log-level': 'Application.log_level',
@@ -491,6 +496,22 @@ class JupyterHub(Application):
         Instance(logging.Handler),
         help="Extra log handlers to set on JupyterHub logger",
     ).tag(config=True)
+
+    @property
+    def statsd(self):
+        if hasattr(self, '_statsd'):
+            return self._statsd
+        if self.statsd_host:
+            self._statsd = statsd.StatsClient(
+                self.statsd_host,
+                self.statsd_port,
+                self.statsd_prefix
+            )
+            return self._statsd
+        else:
+            # return an empty mock object!
+            self._statsd = EmptyClass()
+            return self._statsd
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
