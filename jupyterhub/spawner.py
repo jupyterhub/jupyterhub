@@ -220,10 +220,17 @@ class Spawner(LoggingConfigurable):
         for key in self.env_keep:
             if key in os.environ:
                 env[key] = os.environ[key]
-        
-        # config overrides
-        env.update(self.environment)
-        
+
+        # config overrides. If the value is a callable, it will be called with
+        # one parameter - the current spawner instance - and the return value
+        # will be assigned to the environment variable. This will be called at
+        # spawn time.
+        for key, value in self.environment.items():
+            if callable(value):
+                env[key] = value(self)
+            else:
+                env[key] = value
+
         env['JPY_API_TOKEN'] = self.api_token
         return env
     
