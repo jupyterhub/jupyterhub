@@ -512,8 +512,12 @@ class CSPReportHandler(BaseHandler):
     @web.authenticated
     def post(self):
         '''Log a content security policy violation report'''
-        self.log.warning("Content security violation: %s",
-                      self.request.body.decode('utf8', 'replace'))
+        self.log.warning(
+            "Content security violation: %s",
+            self.request.body.decode('utf8', 'replace')
+        )
+        # Report it to statsd as well
+        self.statsd.incr('csp_report')
 
 default_handlers = [
     (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
