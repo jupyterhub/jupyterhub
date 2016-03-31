@@ -453,7 +453,7 @@ class JupyterHub(Application):
         help="Host to send statds metrics to"
     ).tag(config=True)
 
-    statsd_port = Int(
+    statsd_port = Integer(
         8125,
         help="Port on which to send statsd metrics about the hub"
     ).tag(config=True)
