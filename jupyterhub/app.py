@@ -1134,6 +1134,8 @@ class JupyterHub(Application):
     def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
         routes = yield self.proxy.get_routes()
+        users_count = 0
+        active_users_count = 0
         for prefix, route in routes.items():
             if 'user' not in route:
                 # not a user route, ignore it
@@ -1147,6 +1149,12 @@ class JupyterHub(Application):
             except Exception:
                 dt = datetime.strptime(route['last_activity'], ISO8601_s)
             user.last_activity = max(user.last_activity, dt)
+            # FIXME: Make this configurable duration. 30 minutes for now!
+            if (datetime.now() - user.last_activity).total_seconds() < 30 * 60:
+                active_users_count += 1
+            users_count += 1
+        self.statsd.gauge('users.running', users_count)
+        self.statsd.gauge('users.active', active_users_count)
 
         self.db.commit()
         yield self.proxy.check_routes(self.users, routes)
