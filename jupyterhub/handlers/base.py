@@ -492,8 +492,7 @@ class UserSpawnHandler(BaseHandler):
             self.redirect(target)
         elif current_user:
             # logged in as a different user, redirect
-            target = url_path_join(self.base_url, 'user', current_user.name,
-                                   user_path or '')
+            target = url_path_join(current_user.url, user_path or '')
             self.redirect(target)
         else:
             # not logged in, clear any cookies and reload
