@@ -123,7 +123,13 @@ class Spawner(LoggingConfigurable):
     """)
     
     environment = Dict(
-        help="Environment variables to load for the Spawner."
+        help="""Environment variables to load for the Spawner.
+
+        Value could be a string or a callable. If it is a callable, it will
+        be called with one parameter, which will be the instance of the spawner
+        in use. It should quickly (without doing much blocking operations) return
+        a string that will be used as the value for the environment variable.
+        """
     ).tag(config=True)
     
     cmd = Command(['jupyterhub-singleuser'],
