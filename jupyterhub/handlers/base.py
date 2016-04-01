@@ -304,6 +304,7 @@ class BaseHandler(RequestHandler):
                 return
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
+            self.statsd.timing('spawner.success', (toc - tic) * 1000)
             yield self.proxy.add_user(user)
             user.spawner.add_poll_callback(self.user_stopped, user)
 
@@ -327,6 +328,8 @@ class BaseHandler(RequestHandler):
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
+                    toc = IOLoop.current().time()
+                    self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                     raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
         else:
             yield finish_user_spawn()
