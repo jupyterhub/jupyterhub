@@ -478,6 +478,7 @@ class UserSpawnHandler(BaseHandler):
             if current_user.spawner:
                 if current_user.spawn_pending:
                     # spawn has started, but not finished
+                    self.statsd.incr('redirects.user_spawn_pending', 1)
                     html = self.render_template("spawn_pending.html", user=current_user)
                     self.finish(html)
                     return
@@ -497,12 +498,15 @@ class UserSpawnHandler(BaseHandler):
             if self.subdomain_host:
                 target = current_user.host + target
             self.redirect(target)
+            self.statsd.incr('redirects.user_after_login')
         elif current_user:
             # logged in as a different user, redirect
+            self.statsd.incr('redirects.user_to_user', 1)
             target = url_path_join(current_user.url, user_path or '')
             self.redirect(target)
         else:
             # not logged in, clear any cookies and reload
+            self.statsd.incr('redirects.user_to_login', 1)
             self.clear_login_cookie()
             self.redirect(url_concat(
                 self.settings['login_url'],
