@@ -63,7 +63,7 @@ class LoginHandler(BaseHandler):
         for arg in self.request.arguments:
             data[arg] = self.get_argument(arg)
 
-        auth_timer = self.statsd.timer('login.authenticate')
+        auth_timer = self.statsd.timer('login.authenticate').start()
         username = yield self.authenticate(data)
         auth_timer.stop(send=False)
 
