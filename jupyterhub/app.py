@@ -12,6 +12,7 @@ import signal
 import socket
 import sys
 import threading
+import statsd
 from datetime import datetime
 from distutils.version import LooseVersion as V
 from getpass import getuser
@@ -58,6 +59,10 @@ from .utils import (
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
+
+# For faking stats
+from .emptyclass import EmptyClass
+
 
 common_aliases = {
     'log-level': 'Application.log_level',
@@ -491,6 +496,22 @@ class JupyterHub(Application):
         Instance(logging.Handler),
         help="Extra log handlers to set on JupyterHub logger",
     ).tag(config=True)
+
+    @property
+    def statsd(self):
+        if hasattr(self, '_statsd'):
+            return self._statsd
+        if self.statsd_host:
+            self._statsd = statsd.StatsClient(
+                self.statsd_host,
+                self.statsd_port,
+                self.statsd_prefix
+            )
+            return self._statsd
+        else:
+            # return an empty mock object!
+            self._statsd = EmptyClass()
+            return self._statsd
 
     def init_logging(self):
         # This prevents double log messages because tornado use a root logger that
@@ -991,6 +1012,7 @@ class JupyterHub(Application):
             version_hash=version_hash,
             subdomain_host=subdomain_host,
             domain=domain,
+            statsd=self.statsd,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1112,6 +1134,8 @@ class JupyterHub(Application):
     def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
         routes = yield self.proxy.get_routes()
+        users_count = 0
+        active_users_count = 0
         for prefix, route in routes.items():
             if 'user' not in route:
                 # not a user route, ignore it
@@ -1125,6 +1149,12 @@ class JupyterHub(Application):
             except Exception:
                 dt = datetime.strptime(route['last_activity'], ISO8601_s)
             user.last_activity = max(user.last_activity, dt)
+            # FIXME: Make this configurable duration. 30 minutes for now!
+            if (datetime.now() - user.last_activity).total_seconds() < 30 * 60:
+                active_users_count += 1
+            users_count += 1
+        self.statsd.gauge('users.running', users_count)
+        self.statsd.gauge('users.active', active_users_count)
 
         self.db.commit()
         yield self.proxy.check_routes(self.users, routes)

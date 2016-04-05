@@ -76,6 +76,10 @@ class BaseHandler(RequestHandler):
         return self.settings['proxy']
 
     @property
+    def statsd(self):
+        return self.settings['statsd']
+
+    @property
     def authenticator(self):
         return self.settings.get('authenticator', None)
 
@@ -300,6 +304,7 @@ class BaseHandler(RequestHandler):
                 return
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
+            self.statsd.timing('spawner.success', (toc - tic) * 1000)
             yield self.proxy.add_user(user)
             user.spawner.add_poll_callback(self.user_stopped, user)
 
@@ -323,6 +328,8 @@ class BaseHandler(RequestHandler):
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
+                    toc = IOLoop.current().time()
+                    self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                     raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
         else:
             yield finish_user_spawn()
@@ -471,6 +478,7 @@ class UserSpawnHandler(BaseHandler):
             if current_user.spawner:
                 if current_user.spawn_pending:
                     # spawn has started, but not finished
+                    self.statsd.incr('redirects.user_spawn_pending', 1)
                     html = self.render_template("spawn_pending.html", user=current_user)
                     self.finish(html)
                     return
@@ -490,12 +498,15 @@ class UserSpawnHandler(BaseHandler):
             if self.subdomain_host:
                 target = current_user.host + target
             self.redirect(target)
+            self.statsd.incr('redirects.user_after_login')
         elif current_user:
             # logged in as a different user, redirect
+            self.statsd.incr('redirects.user_to_user', 1)
             target = url_path_join(current_user.url, user_path or '')
             self.redirect(target)
         else:
             # not logged in, clear any cookies and reload
+            self.statsd.incr('redirects.user_to_login', 1)
             self.clear_login_cookie()
             self.redirect(url_concat(
                 self.settings['login_url'],
@@ -508,8 +519,12 @@ class CSPReportHandler(BaseHandler):
     @web.authenticated
     def post(self):
         '''Log a content security policy violation report'''
-        self.log.warning("Content security violation: %s",
-                      self.request.body.decode('utf8', 'replace'))
+        self.log.warning(
+            "Content security violation: %s",
+            self.request.body.decode('utf8', 'replace')
+        )
+        # Report it to statsd as well
+        self.statsd.incr('csp_report')
 
 default_handlers = [
     (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
