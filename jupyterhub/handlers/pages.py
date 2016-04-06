@@ -27,6 +27,7 @@ class RootHandler(BaseHandler):
             if user.running:
                 url = user.url
                 self.log.debug("User is running: %s", url)
+                self.set_login_cookie(user) # set cookie
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
