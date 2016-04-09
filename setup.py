@@ -166,7 +166,7 @@ class Bower(BaseCommand):
         
         if self.should_run_npm():
             print("installing build dependencies with npm")
-            check_call(['npm', 'install'], cwd=here)
+            check_call(['npm', 'install', '--progress=false'], cwd=here)
             os.utime(self.node_modules)
         
         env = os.environ.copy()
