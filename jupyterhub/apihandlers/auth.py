@@ -19,10 +19,11 @@ class TokenAPIHandler(APIHandler):
         if orm_token is None:
             raise web.HTTPError(404)
         self.write(json.dumps(self.user_model(self.users[orm_token.user])))
+
     @gen.coroutine
     def post(self):
-        data = self.get_json_body()
         if self.authenticator is not None:
+          data = self.get_json_body()
           username = yield self.authenticator.authenticate(self, data)
           if username is None:
             raise web.HTTPError(403)
