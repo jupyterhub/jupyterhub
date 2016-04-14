@@ -121,20 +121,24 @@ Some examples, meant as illustration and testing of this concept:
 
 ### Docker
 
-There is a ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyter/jupyterhub/). [Note: This `jupyter/jupyterhub` docker image is only an image for running the Hub service itself. It does not require the other Jupyter components, which are needed by the single-user servers. To run the single-user servers, which may be on the same system as the Hub or not, installation of Jupyter Notebook ≥ 4 is required.]
+There is a ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyter/jupyterhub/).
+[Note: This `jupyter/jupyterhub` docker image is only an image for running the Hub service itself.
+It does not require the other Jupyter components, which are needed by the single-user servers.
+To run the single-user servers, which may be on the same system as the Hub or not, installation of Jupyter Notebook ≥ 4 is required.]
 
 The JupyterHub docker image can be started with the following command:
 
-    docker run -d --name jupyter.cont [-v /home/jupyter-home:/home] jupyter/jupyterhub jupyterhub
+    docker run -d --name jupyterhub jupyter/jupyterhub jupyterhub
 
-This command will create a container named `jupyter.cont` that you can stop and resume with `docker stop/start`.
-It will be listening on all interfaces at port 8000. So this is perfect to test docker on your desktop or laptop.
+This command will create a container named `jupyterhub` that you can stop and resume with `docker stop/start`.
+It will be listening on all interfaces at port 8000, so this is perfect to test JupyterHub on your desktop or laptop.
 If you want to run docker on a computer that has a public IP then you should (as in MUST) secure it with ssl by
-adding ssl options to your docker configuration or using a ssl enabled proxy. The `-v/--volume` option will
+adding ssl options to your docker configuration or using a ssl enabled proxy.
+[Mounting volumes](https://docs.docker.com/engine/userguide/containers/dockervolumes/) will
 allow you to store data outside the docker image (host system) so it will be persistent, even when you start
-a new image. The command `docker exec -it jupyter.cont bash` will spawn a root shell in your started docker
+a new image. The command `docker exec -it jupyterhub bash` will spawn a root shell in your docker
 container. You can use it to create system users in the container. These accounts will be used for authentication
-in jupyterhub's default configuration. In order to run without SSL, you'll need to set `--no-ssl` explicitly.
+in jupyterhub's default configuration. In order to run without SSL (for testing purposes only), you'll need to set `--no-ssl` explicitly.
 
 # Getting help
 
