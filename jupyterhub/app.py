@@ -352,6 +352,13 @@ class JupyterHub(Application):
     cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
     ).tag(config=True)
+    
+    api_tokens = Dict(Unicode(),
+        help="""Dict of token:username to be loaded into the database.
+        
+        Allows ahead-of-time generation of API tokens for use by services.
+        """
+    ).tag(config=True)
 
     authenticator_class = Type(PAMAuthenticator, Authenticator,
         help="""Class for authenticating users.
@@ -794,6 +801,28 @@ class JupyterHub(Application):
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
+    def init_api_tokens(self):
+        """Load predefined API tokens (for services) into database"""
+        db = self.db
+        for token, username in self.api_tokens.items():
+            username = self.authenticator.normalize_username(username)
+            if not self.authenticator.check_whitelist(username):
+                raise ValueError("Token username %r is not in whitelist" % username)
+            if not self.authenticator.validate_username(username):
+                raise ValueError("Token username %r is not valid" % username)
+            orm_token = orm.APIToken.find(db, token)
+            if orm_token is None:
+                user = orm.User.find(db, username)
+                if user is None:
+                    self.log.debug("Adding user %r to database", username)
+                    user = orm.User(name=username)
+                    db.add(user)
+                    db.commit()
+                self.log.info("Adding API token for %s", username)
+                user.new_api_token(token)
+            else:
+                self.log.debug("Not duplicating token %s", orm_token)
+        db.commit()
 
     @gen.coroutine
     def init_spawners(self):
@@ -1055,6 +1084,7 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         yield self.init_users()
+        self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
         self.init_handlers()

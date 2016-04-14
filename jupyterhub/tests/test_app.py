@@ -6,6 +6,7 @@ import sys
 from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from .mocking import MockHub
+from .. import orm
 
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
@@ -48,3 +49,30 @@ def test_generate_config():
     assert cfg_file in out
     assert 'Spawner.cmd' in cfg_text
     assert 'Authenticator.whitelist' in cfg_text
+
+def test_init_tokens():
+    with TemporaryDirectory() as td:
+        db_file = os.path.join(td, 'jupyterhub.sqlite')
+        tokens = {
+            'super-secret-token': 'alyx',
+            'also-super-secret': 'gordon',
+            'boagasdfasdf': 'chell',
+        }
+        app = MockHub(db_file=db_file, api_tokens=tokens)
+        app.initialize([])
+        db = app.db
+        for token, username in tokens.items():
+            api_token = orm.APIToken.find(db, token)
+            assert api_token is not None
+            user = api_token.user
+            assert user.name == username
+        
+        # simulate second startup, reloading same tokens:
+        app = MockHub(db_file=db_file, api_tokens=tokens)
+        app.initialize([])
+        db = app.db
+        for token, username in tokens.items():
+            api_token = orm.APIToken.find(db, token)
+            assert api_token is not None
+            user = api_token.user
+            assert user.name == username
