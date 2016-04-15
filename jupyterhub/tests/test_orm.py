@@ -93,6 +93,16 @@ def test_tokens(db):
     found = orm.APIToken.find(db, 'something else')
     assert found is None
 
+    secret = 'super-secret-preload-token'
+    token = user.new_api_token(secret)
+    assert token == secret
+    assert len(user.api_tokens) == 3
+
+    # raise ValueError on collision
+    with pytest.raises(ValueError):
+        user.new_api_token(token)
+    assert len(user.api_tokens) == 3
+
 
 def test_spawn_fails(db, io_loop):
     orm_user = orm.User(name='aeofel')

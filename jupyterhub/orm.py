@@ -303,11 +303,21 @@ class User(Base):
                 name=self.name,
             )
 
-    def new_api_token(self):
-        """Create a new API token"""
+    def new_api_token(self, token=None):
+        """Create a new API token
+        
+        If `token` is given, load that token.
+        """
         assert self.id is not None
         db = inspect(self).session
-        token = new_token()
+        if token is None:
+            token = new_token()
+        else:
+            if len(token) < 8:
+                raise ValueError("Tokens must be at least 8 characters, got %r" % token)
+            found = APIToken.find(db, token)
+            if found:
+                raise ValueError("Collision on token: %s..." % token[:4])
         orm_token = APIToken(user_id=self.id)
         orm_token.token = token
         db.add(orm_token)
