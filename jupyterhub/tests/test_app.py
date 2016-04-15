@@ -5,6 +5,9 @@ import re
 import sys
 from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+
+import pytest
+
 from .mocking import MockHub
 from .. import orm
 
@@ -50,6 +53,7 @@ def test_generate_config():
     assert 'Spawner.cmd' in cfg_text
     assert 'Authenticator.whitelist' in cfg_text
 
+
 def test_init_tokens():
     with TemporaryDirectory() as td:
         db_file = os.path.join(td, 'jupyterhub.sqlite')
@@ -76,3 +80,10 @@ def test_init_tokens():
             assert api_token is not None
             user = api_token.user
             assert user.name == username
+        
+        # don't allow failed token insertion to create users:
+        tokens['short'] = 'gman'
+        app = MockHub(db_file=db_file, api_tokens=tokens)
+        # with pytest.raises(ValueError):
+        app.initialize([])
+        assert orm.User.find(app.db, 'gman') is None

@@ -313,6 +313,8 @@ class User(Base):
         if token is None:
             token = new_token()
         else:
+            if len(token) < 8:
+                raise ValueError("Tokens must be at least 8 characters, got %r" % token)
             found = APIToken.find(db, token)
             if found:
                 raise ValueError("Collision on token: %s..." % token[:4])

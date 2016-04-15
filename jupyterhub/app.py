@@ -813,13 +813,22 @@ class JupyterHub(Application):
             orm_token = orm.APIToken.find(db, token)
             if orm_token is None:
                 user = orm.User.find(db, username)
+                user_created = False
                 if user is None:
+                    user_created = True
                     self.log.debug("Adding user %r to database", username)
                     user = orm.User(name=username)
                     db.add(user)
                     db.commit()
                 self.log.info("Adding API token for %s", username)
-                user.new_api_token(token)
+                try:
+                    user.new_api_token(token)
+                except Exception:
+                    if user_created:
+                        # don't allow bad tokens to create users
+                        db.delete(user)
+                        db.commit()
+                        raise
             else:
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
