@@ -419,9 +419,9 @@ jupyterhub -f /path/to/aboveconfig.py
 
 # Further reading
 
-- [Custom Authenticators](./authenticators.html)
-- [Custom Spawners](./spawners.html)
-- [Troubleshooting](./troubleshooting.html)
+- [Custom Authenticators](./authenticators.md)
+- [Custom Spawners](./spawners.md)
+- [Troubleshooting](./troubleshooting.md)
 
 
 [oauth-setup]: https://github.com/jupyter/oauthenticator#setup
