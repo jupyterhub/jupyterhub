@@ -41,7 +41,7 @@ def check_db_locks(func):
 
 def find_user(db, name):
     return db.query(orm.User).filter(orm.User.name==name).first()
-    
+
 def add_user(db, app=None, **kwargs):
     orm_user = orm.User(**kwargs)
     db.add(orm_user)
@@ -81,17 +81,17 @@ def test_auth_api(app):
     db = app.db
     r = api_request(app, 'authorizations', 'gobbledygook')
     assert r.status_code == 404
-    
+
     # make a new cookie token
     user = db.query(orm.User).first()
     api_token = user.new_api_token()
-    
+
     # check success:
     r = api_request(app, 'authorizations/token', api_token)
     assert r.status_code == 200
     reply = r.json()
     assert reply['name'] == user.name
-    
+
     # check fail
     r = api_request(app, 'authorizations/token', api_token,
         headers={'Authorization': 'no sir'},
@@ -115,7 +115,7 @@ def test_referer_check(app, io_loop):
     # stop the admin's server so we don't mess up future tests
     io_loop.run_sync(lambda : app.proxy.delete_user(app_user))
     io_loop.run_sync(app_user.stop)
-    
+
     r = api_request(app, 'users',
         headers={
             'Authorization': '',
@@ -152,7 +152,7 @@ def test_get_users(app):
     db = app.db
     r = api_request(app, 'users')
     assert r.status_code == 200
-    
+
     users = sorted(r.json(), key=lambda d: d['name'])
     for u in users:
         u.pop('last_activity')
@@ -230,21 +230,21 @@ def test_add_multi_user(app):
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
     assert names == r_names
-    
+
     for name in names:
         user = find_user(db, name)
         assert user is not None
         assert user.name == name
         assert not user.admin
-    
+
     # try to create the same users again
     r = api_request(app, 'users', method='post',
         data=json.dumps({'usernames': names}),
     )
     assert r.status_code == 400
-    
+
     names = ['a', 'b', 'ab']
-    
+
     # try to create the same users again
     r = api_request(app, 'users', method='post',
         data=json.dumps({'usernames': names}),
@@ -265,7 +265,7 @@ def test_add_multi_user_admin(app):
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
     assert names == r_names
-    
+
     for name in names:
         user = find_user(db, name)
         assert user is not None
@@ -298,7 +298,7 @@ def test_delete_user(app):
     mal = add_user(db, name='mal')
     r = api_request(app, 'users', 'mal', method='delete')
     assert r.status_code == 204
-    
+
 
 def test_make_admin(app):
     db = app.db
@@ -321,7 +321,7 @@ def test_make_admin(app):
 
 def get_app_user(app, name):
     """Get the User object from the main thread
-    
+
     Needed for access to the Spawner.
     No ORM methods should be called on the result.
     """
@@ -350,7 +350,7 @@ def test_spawn(app, io_loop):
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
-    
+
     assert user.server.base_url == '/user/%s' % name
     url = user_url(user, app)
     print(url)
@@ -365,10 +365,10 @@ def test_spawn(app, io_loop):
         assert expected in argv
     if app.subdomain_host:
         assert '--hub-host=%s' % app.subdomain_host in argv
-    
+
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204
-    
+
     assert 'pid' not in user.state
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status == 0
@@ -390,12 +390,12 @@ def test_slow_spawn(app, io_loop):
     assert app_user.spawner is not None
     assert app_user.spawn_pending
     assert not app_user.stop_pending
-    
+
     @gen.coroutine
     def wait_spawn():
         while app_user.spawn_pending:
             yield gen.sleep(0.1)
-    
+
     io_loop.run_sync(wait_spawn)
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
@@ -417,13 +417,13 @@ def test_slow_spawn(app, io_loop):
     assert r.status_code == 202
     assert app_user.spawner is not None
     assert app_user.stop_pending
-    
+
     io_loop.run_sync(wait_stop)
     assert not app_user.stop_pending
     assert app_user.spawner is not None
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 400
-    
+
 
 def test_never_spawn(app, io_loop):
     app.tornado_settings['spawner_class'] = mocking.NeverSpawner
@@ -437,12 +437,12 @@ def test_never_spawn(app, io_loop):
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
     assert app_user.spawn_pending
-    
+
     @gen.coroutine
     def wait_pending():
         while app_user.spawn_pending:
             yield gen.sleep(0.1)
-    
+
     io_loop.run_sync(wait_pending)
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
@@ -464,7 +464,7 @@ def test_cookie(app):
     assert r.status_code == 201
     assert 'pid' in user.state
     app_user = get_app_user(app, name)
-    
+
     cookies = app.login_user(name)
     # cookie jar gives '"cookie-value"', we want 'cookie-value'
     cookie = cookies[user.server.cookie_name][1:-1]
@@ -475,7 +475,7 @@ def test_cookie(app):
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
-    
+
     # deprecated cookie in body:
     r = api_request(app, 'authorizations/cookie', user.server.cookie_name, data=cookie)
     r.raise_for_status()
@@ -493,6 +493,27 @@ def test_token(app):
     r = api_request(app, 'authorizations/token', 'notauthorized')
     assert r.status_code == 404
 
+def test_get_token(app):
+    name = 'user'
+    user = add_user(app.db, app=app, name=name)
+    r = api_request(app, 'authorizations/token', method='post', data=json.dumps({
+        'username': name,
+        'password': name,
+    }))
+    assert r.status_code == 200
+    data = r.content.decode("utf-8")
+    token = json.loads(data)
+    assert not token['Authentication'] is None
+
+def test_bad_get_token(app):
+    name = 'user'
+    password = 'fake'
+    user = add_user(app.db, app=app, name=name)
+    r = api_request(app, 'authorizations/token', method='post', data=json.dumps({
+        'username': name,
+        'password': password,
+    }))
+    assert r.status_code == 403
 
 def test_options(app):
     r = api_request(app, 'users', method='options')
