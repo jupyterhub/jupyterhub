@@ -627,8 +627,8 @@ class JupyterHub(Application):
                 secret = binascii.a2b_base64(b64_secret)
             except Exception as e:
                 self.log.error(
-                    'Refusing to run JuptyterHub with invalid cookie_secret_file.',
-                    '%s error was: %s',
+                    "Refusing to run JuptyterHub with invalid cookie_secret_file. "
+                    "%s error was: %s",
                     secret_file, e)
                 sys.exit(1)
         if not secret:
