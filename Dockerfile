@@ -1,12 +1,16 @@
-# A base docker image that includes juptyerhub and IPython master
+# An incomplete base docker image for running JupyterHub
 #
 # Build your own derivative images starting with
 #
 # FROM jupyter/jupyterhub:latest
 #
+# And put your jupyterhub_config.py in /srv/jupyterhub/jupyterhub_config.py.
+#
+# If you base on jupyter/jupyterhub-onbuild
+# your jupyterhub_config.py will be added automatically
+# from your docker directory.
 
 FROM debian:jessie
-
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
 # install nodejs, utf8 locale
@@ -32,21 +36,14 @@ ENV PATH=/opt/conda/bin:$PATH
 # install js dependencies
 RUN npm install -g configurable-http-proxy && rm -rf ~/.npm
 
-WORKDIR /srv/
 ADD . /srv/jupyterhub
 WORKDIR /srv/jupyterhub/
 
 RUN python setup.py js && pip install . && \
     rm -rf node_modules ~/.cache ~/.npm
 
-WORKDIR /srv/jupyterhub/
-
-# Derivative containers should add jupyterhub config,
-# which will be used when starting the application.
-
 EXPOSE 8000
 
 LABEL org.jupyter.service="jupyterhub"
 
-ONBUILD ADD jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
-CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py"]
+CMD ["jupyterhub"]
