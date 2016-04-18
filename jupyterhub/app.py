@@ -352,10 +352,10 @@ class JupyterHub(Application):
     cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
     ).tag(config=True)
-    
+
     api_tokens = Dict(Unicode(),
         help="""Dict of token:username to be loaded into the database.
-        
+
         Allows ahead-of-time generation of API tokens for use by services.
         """
     ).tag(config=True)
@@ -617,7 +617,7 @@ class JupyterHub(Application):
         if not secret and os.path.exists(secret_file):
             secret_from = 'file'
             perm = os.stat(secret_file).st_mode
-            if perm & 0o077:
+            if perm & 0o07:
                 self.log.error("Bad permissions on %s", secret_file)
             else:
                 self.log.info("Loading %s from %s", trait_name, secret_file)
