@@ -6,6 +6,10 @@
 #
 # And put your jupyterhub_config.py in /srv/jupyterhub/jupyterhub_config.py.
 #
+# Or you can create your jupyterhub config and database on the host machine, and mount it with:
+#
+# docker run -v $PWD:/srv/jupyterhub -t jupyter/jupyterhub
+#
 # If you base on jupyter/jupyterhub-onbuild
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
@@ -26,7 +30,8 @@ RUN apt-get -y update && \
 ENV LANG C.UTF-8
 
 # install Python with conda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-3.9.1-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.0.5-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+    echo 'a7bcd0425d8b6688753946b59681572f63c2241aed77bf0ec6de4c5edc5ceeac */tmp/miniconda.sh' | shasum -a 256 -c - && \
     bash /tmp/miniconda.sh -f -b -p /opt/conda && \
     /opt/conda/bin/conda install --yes python=3.5 sqlalchemy tornado jinja2 traitlets requests pip && \
     /opt/conda/bin/pip install --upgrade pip && \
@@ -36,12 +41,14 @@ ENV PATH=/opt/conda/bin:$PATH
 # install js dependencies
 RUN npm install -g configurable-http-proxy && rm -rf ~/.npm
 
-ADD . /srv/jupyterhub
-WORKDIR /srv/jupyterhub/
+ADD . /src/jupyterhub
+WORKDIR /src/jupyterhub
 
 RUN python setup.py js && pip install . && \
-    rm -rf node_modules ~/.cache ~/.npm
+    rm -rf $PWD ~/.cache ~/.npm
 
+RUN mkdir -p /srv/jupyterhub/
+WORKDIR /srv/jupyterhub/
 EXPOSE 8000
 
 LABEL org.jupyter.service="jupyterhub"
