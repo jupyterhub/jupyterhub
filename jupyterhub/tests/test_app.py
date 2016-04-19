@@ -1,10 +1,12 @@
 """Test the JupyterHub entry point"""
 
+import binascii
 import os
 import re
 import sys
 from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from unittest.mock import patch
 
 import pytest
 
@@ -87,3 +89,54 @@ def test_init_tokens():
         # with pytest.raises(ValueError):
         app.initialize([])
         assert orm.User.find(app.db, 'gman') is None
+
+
+def test_write_cookie_secret(tmpdir):
+    secret_path = str(tmpdir.join('cookie_secret'))
+    hub = MockHub(cookie_secret_file=secret_path)
+    hub.init_secrets()
+    assert os.path.exists(secret_path)
+    assert os.stat(secret_path).st_mode & 0o600
+    assert not os.stat(secret_path).st_mode & 0o177
+
+
+def test_cookie_secret_permissions(tmpdir):
+    secret_file = tmpdir.join('cookie_secret')
+    secret_path = str(secret_file)
+    secret = os.urandom(1024)
+    secret_file.write(binascii.b2a_base64(secret))
+    hub = MockHub(cookie_secret_file=secret_path)
+
+    # raise with public secret file
+    os.chmod(secret_path, 0o664)
+    with pytest.raises(SystemExit):
+        hub.init_secrets()
+
+    # ok with same file, proper permissions
+    os.chmod(secret_path, 0o660)
+    hub.init_secrets()
+    assert hub.cookie_secret == secret
+
+
+def test_cookie_secret_content(tmpdir):
+    secret_file = tmpdir.join('cookie_secret')
+    secret_file.write('not base 64: uñiço∂e')
+    secret_path = str(secret_file)
+    os.chmod(secret_path, 0o660)
+    hub = MockHub(cookie_secret_file=secret_path)
+    with pytest.raises(SystemExit):
+        hub.init_secrets()
+
+
+def test_cookie_secret_env(tmpdir):
+    hub = MockHub(cookie_secret_file=str(tmpdir.join('cookie_secret')))
+
+    with patch.dict(os.environ, {'JPY_COOKIE_SECRET': 'not hex'}):
+        with pytest.raises(ValueError):
+            hub.init_secrets()
+
+    with patch.dict(os.environ, {'JPY_COOKIE_SECRET': 'abc123'}):
+        hub.init_secrets()
+    assert hub.cookie_secret == binascii.a2b_hex('abc123')
+    assert not os.path.exists(hub.cookie_secret_file)
+
