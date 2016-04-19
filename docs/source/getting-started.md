@@ -205,7 +205,7 @@ as follows:
 c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/cookie_secret'
 ```
 
-The content of this file should be a long random string encoded in MIME Base64. An example would be to generate thisfile as:
+The content of this file should be a long random string encoded in MIME Base64. An example would be to generate this file as:
 
 ```bash
 openssl rand -base64 2048 > /srv/jupyterhub/cookie_secret
@@ -215,7 +215,7 @@ In most deployments of JupyterHub, you should point this to a secure location on
 system, such as `/srv/jupyterhub/cookie_secret`. If the cookie secret file doesn't exist when
 the Hub starts, a new cookie secret is generated and stored in the file. The
 file must not be readable by group or other or the server won't start.
-The recommended -permissions for the cookie secret file should be 600 (owner-only rw).
+The recommended permissions for the cookie secret file are 600 (owner-only rw).
 
 
 If you would like to avoid the need for files, the value can be loaded in the Hub process from
