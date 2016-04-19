@@ -97,7 +97,7 @@ for the full command line help.
 
 All configurable options are technically configurable on the command-line,
 even if some are really inconvenient to type. Just replace the desired option,
-c.Class.trait, with --Class.trait. For example, to configure 
+c.Class.trait, with --Class.trait. For example, to configure
 c.Spawner.notebook_dir = '~/assignments' from the command-line:
 
     jupyterhub --Spawner.notebook_dir='~/assignments'
@@ -190,7 +190,7 @@ Some cert files also contain the key, in which case only the cert is needed. It 
 these files be put in a secure location on your server, where they are not readable by regular
 users.
 
-Note: In certain cases, e.g. behind SSL termination in nginx, allowing no SSL 
+Note: In certain cases, e.g. behind SSL termination in nginx, allowing no SSL
 running on the hub may be desired. To run the Hub without SSL, you must opt
 in by configuring and confirming the `--no-ssl` option, added as of [version 0.5](./changelog.html).
 
@@ -205,26 +205,36 @@ as follows:
 c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/cookie_secret'
 ```
 
-The content of this file should be a long random string. An example would be to generate this
-file as:
+The content of this file should be a long random string encoded in MIME Base64. An example would be to generate thisfile as:
 
 ```bash
-openssl rand -hex 1024 > /srv/jupyterhub/cookie_secret
+openssl rand -base64 2048 > /srv/jupyterhub/cookie_secret
 ```
 
 In most deployments of JupyterHub, you should point this to a secure location on the file
 system, such as `/srv/jupyterhub/cookie_secret`. If the cookie secret file doesn't exist when
-the Hub starts, a new cookie secret is generated and stored in the file. The recommended
-permissions for the cookie secret file should be 600 (owner-only rw).
+the Hub starts, a new cookie secret is generated and stored in the file. The
+file must not be readable by group or other or the server won't start.
+The recommended -permissions for the cookie secret file should be 600 (owner-only rw).
+
 
 If you would like to avoid the need for files, the value can be loaded in the Hub process from
-the `JPY_COOKIE_SECRET` environment variable:
+the `JPY_COOKIE_SECRET` environment variable, which is a hex-encoded string. You
+can set it this way:
 
 ```bash
 export JPY_COOKIE_SECRET=`openssl rand -hex 1024`
 ```
 
 For security reasons, this environment variable should only be visible to the Hub.
+If you set it dynamically as above, all users will be logged out each time the
+Hub starts.
+
+You can also set the secret in the configuration file itself as a binary string:
+
+```python
+c.JupyterHub.cookie_secret = bytes.fromhex('VERY LONG SECRET HEX STRING')
+```
 
 ## Proxy authentication token
 

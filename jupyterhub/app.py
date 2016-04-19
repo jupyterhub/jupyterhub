@@ -352,10 +352,10 @@ class JupyterHub(Application):
     cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
     ).tag(config=True)
-    
+
     api_tokens = Dict(Unicode(),
         help="""Dict of token:username to be loaded into the database.
-        
+
         Allows ahead-of-time generation of API tokens for use by services.
         """
     ).tag(config=True)
@@ -610,23 +610,27 @@ class JupyterHub(Application):
         secret = self.cookie_secret
         secret_from = 'config'
         # load priority: 1. config, 2. env, 3. file
-        if not secret and os.environ.get(env_name):
+        secret_env = os.environ.get(env_name)
+        if not secret and secret_env:
             secret_from = 'env'
             self.log.info("Loading %s from env[%s]", trait_name, env_name)
-            secret = binascii.a2b_hex(os.environ[env_name])
+            secret = binascii.a2b_hex(secret_env)
         if not secret and os.path.exists(secret_file):
             secret_from = 'file'
-            perm = os.stat(secret_file).st_mode
-            if perm & 0o077:
-                self.log.error("Bad permissions on %s", secret_file)
-            else:
-                self.log.info("Loading %s from %s", trait_name, secret_file)
+            self.log.info("Loading %s from %s", trait_name, secret_file)
+            try:
+                perm = os.stat(secret_file).st_mode
+                assert not perm & 0o07, \
+                    "cookie_secret_file can be read or written by anybody"
                 with open(secret_file) as f:
                     b64_secret = f.read()
-                try:
-                    secret = binascii.a2b_base64(b64_secret)
-                except Exception as e:
-                    self.log.error("%s does not contain b64 key: %s", secret_file, e)
+                secret = binascii.a2b_base64(b64_secret)
+            except Exception as e:
+                self.log.error(
+                    "Refusing to run JuptyterHub with invalid cookie_secret_file. "
+                    "%s error was: %s",
+                    secret_file, e)
+                sys.exit(1)
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
