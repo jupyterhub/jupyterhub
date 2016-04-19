@@ -620,17 +620,17 @@ class JupyterHub(Application):
             self.log.info("Loading %s from %s", trait_name, secret_file)
             try:
                 perm = os.stat(secret_file).st_mode
-                assert not perm & 0o07, \
-                    "cookie_secret_file can be read or written by anybody"
+                if perm & 0o07:
+                    raise ValueError("cookie_secret_file can be read or written by anybody")
                 with open(secret_file) as f:
                     b64_secret = f.read()
                 secret = binascii.a2b_base64(b64_secret)
             except Exception as e:
                 self.log.error(
-                    "Refusing to run JuptyterHub with invalid cookie_secret_file. "
+                    "Refusing to run JupyterHub with invalid cookie_secret_file. "
                     "%s error was: %s",
                     secret_file, e)
-                sys.exit(1)
+                self.exit(1)
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
