@@ -497,7 +497,11 @@ class JupyterHub(Application):
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
     extra_log_file = Unicode(
-        help="Set a logging.FileHandler on this file."
+        help="""Send JupyterHub's logs to this file.
+
+        This will *only* include the logs of the Hub itself,
+        not the logs of the proxy or any single-user servers.
+        """
     ).tag(config=True)
     extra_log_handlers = List(
         Instance(logging.Handler),
