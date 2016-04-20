@@ -2,15 +2,15 @@
 #
 # Build your own derivative images starting with
 #
-# FROM jupyter/jupyterhub:latest
+# FROM jupyterhub/jupyterhub:latest
 #
 # And put your jupyterhub_config.py in /srv/jupyterhub/jupyterhub_config.py.
 #
 # Or you can create your jupyterhub config and database on the host machine, and mount it with:
 #
-# docker run -v $PWD:/srv/jupyterhub -t jupyter/jupyterhub
+# docker run -v $PWD:/srv/jupyterhub -t jupyterhub/jupyterhub
 #
-# If you base on jupyter/jupyterhub-onbuild
+# If you base on jupyterhub/jupyterhub-onbuild
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
