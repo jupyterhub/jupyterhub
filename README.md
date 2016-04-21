@@ -3,8 +3,8 @@
 Questions, comments? Visit our Google Group:
 
 [![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
-[![Build Status](https://travis-ci.org/jupyter/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyter/jupyterhub)
-[![Circle CI](https://circleci.com/gh/jupyter/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyter/jupyterhub)
+[![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
+[![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
 [![codecov.io](https://codecov.io/github/jupyter/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyter/jupyterhub?branch=master)
 
