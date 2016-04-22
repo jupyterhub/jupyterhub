@@ -2,6 +2,20 @@
 
 See `git log` for a more detailed summary.
 
+## 0.6
+
+- JupyterHub has moved to a new `jupyterhub` namespace on GitHub and Docker. What was `juptyer/jupyterhub` is now `jupyterhub/jupyterhub`, etc.
+- `jupyterhub/jupyterhub` image on DockerHub no longer loads the jupyterhub_config.py in an ONBUILD step. A new `jupyterhub/jupyterhub-onbuild` image does this
+- Add statsd support, via `c.JupyterHub.statsd_{host,port,prefix}`
+- Update to traitlets 4.1 `@default`, `@observe` APIs for traits
+- Allow disabling PAM sessions via `c.PAMAuthenticator.open_sessions = False`. This may be needed on SELinux-enabled systems, where our PAM session logic often does not work properly
+- Add `Spawner.environment` configurable, for defining extra environment variables to load for single-user servers
+- JupyterHub API tokens can be pregenerated and loaded via `JupyterHub.api_tokens`, a dict of `token: username`.
+- JupyterHub API tokens can be requested via the REST API, with a POST request to `/api/authorizations/token`.
+  This can only be used if the Authenticator has a username and password.
+- Various fixes for user URLs and redirects
+
+
 ## 0.5
 
 
