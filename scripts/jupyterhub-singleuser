@@ -171,7 +171,7 @@ class SingleUserNotebookApp(NotebookApp):
     hub_api_url = Unicode(config=True)
     aliases = aliases
     flags = flags
-    open_browser = Bool(False, config=True, help='Here for backwards compatible reasons. Leave as False')
+    open_browser = False
     trust_xheaders = True
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
