@@ -7,10 +7,10 @@ message. These two lists provide links to identifying the cause of the
 problem and how to resolve it.
 
 ## Behavior problems
-- [JupyterHub proxy fails to start](troubleshooting.md#jupyterhub-proxy-fails-to-start)
+- [JupyterHub proxy fails to start](#jupyterhub-proxy-fails-to-start)
 
 ## Errors
-- [500 error after spawning a single-user server](troubleshooting.md#500-error-after-spawning-my-single-user-server)
+- [500 error after spawning a single-user server](#500-error-after-spawning-my-single-user-server)
 
 ----
 
