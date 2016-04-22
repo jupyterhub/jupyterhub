@@ -4,7 +4,9 @@ include setupegg.py
 include bower.json
 include package.json
 include *requirements.txt
+include Dockerfile
 
+graft onbuild
 graft jupyterhub
 graft scripts
 graft share
