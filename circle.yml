@@ -8,4 +8,12 @@ dependencies:
 
 test:
   override:
-    - docker build -t jupyter/jupyterhub .
+    - docker build -t jupyterhub/jupyterhub .
+    - docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
+
+deployment:
+  hub:
+    branch: master
+    commands:
+      - docker login -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest}
