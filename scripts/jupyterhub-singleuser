@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """Extend regular notebook server to be aware of multiuser things."""
 
 # Copyright (c) Jupyter Development Team.
@@ -47,7 +47,7 @@ class JupyterHubLoginHandler(LoginHandler):
     @staticmethod
     def login_available(settings):
         return True
-    
+
     @staticmethod
     def verify_token(self, cookie_name, encrypted_cookie):
         """method for token verification"""
@@ -55,7 +55,7 @@ class JupyterHubLoginHandler(LoginHandler):
         if encrypted_cookie in cookie_cache:
             # we've seen this token before, don't ask upstream again
             return cookie_cache[encrypted_cookie]
-    
+
         hub_api_url = self.settings['hub_api_url']
         hub_api_key = self.settings['hub_api_key']
         r = requests.get(url_path_join(
@@ -78,7 +78,7 @@ class JupyterHubLoginHandler(LoginHandler):
             data = r.json()
         cookie_cache[encrypted_cookie] = data
         return data
-    
+
     @staticmethod
     def get_user(self):
         """alternative get_current_user to query the central server"""
@@ -87,7 +87,7 @@ class JupyterHubLoginHandler(LoginHandler):
         # since this may be called again when trying to render the error page
         if hasattr(self, '_cached_user'):
             return self._cached_user
-        
+
         self._cached_user = None
         my_user = self.settings['user']
         encrypted_cookie = self.get_cookie(self.cookie_name)
@@ -210,37 +210,37 @@ class SingleUserNotebookApp(NotebookApp):
     def _clear_cookie_cache(self):
         self.log.debug("Clearing cookie cache")
         self.tornado_settings['cookie_cache'].clear()
-    
+
     def migrate_config(self):
         if self.disable_user_config:
             # disable config-migration when user config is disabled
             return
         else:
             super(SingleUserNotebookApp, self).migrate_config()
-    
+
     @property
     def config_file_paths(self):
         path = super(SingleUserNotebookApp, self).config_file_paths
-        
+
         if self.disable_user_config:
             # filter out user-writable config dirs if user config is disabled
             path = list(_exclude_home(path))
         return path
-    
+
     @property
     def nbextensions_path(self):
         path = super(SingleUserNotebookApp, self).nbextensions_path
-        
+
         if self.disable_user_config:
             path = list(_exclude_home(path))
         return path
-    
+
     def _static_custom_path_default(self):
         path = super(SingleUserNotebookApp, self)._static_custom_path_default()
         if self.disable_user_config:
             path = list(_exclude_home(path))
         return path
-    
+
     def start(self):
         # Start a PeriodicCallback to clear cached cookies.  This forces us to
         # revalidate our user with the Hub at least every
@@ -251,7 +251,7 @@ class SingleUserNotebookApp(NotebookApp):
                 self.cookie_cache_lifetime * 1e3,
             ).start()
         super(SingleUserNotebookApp, self).start()
-    
+
     def init_webapp(self):
         # load the hub related settings into the tornado settings dict
         env = os.environ
@@ -267,21 +267,21 @@ class SingleUserNotebookApp(NotebookApp):
         s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
         super(SingleUserNotebookApp, self).init_webapp()
         self.patch_templates()
-    
+
     def patch_templates(self):
         """Patch page templates to add Hub-related buttons"""
-        
+
         self.jinja_template_vars['logo_url'] = self.hub_host + url_path_join(self.hub_prefix, 'logo')
         env = self.web_app.settings['jinja2_env']
-        
+
         env.globals['hub_control_panel_url'] = \
             self.hub_host + url_path_join(self.hub_prefix, 'home')
-        
+
         # patch jinja env loading to modify page template
         def get_page(name):
             if name == 'page.html':
                 return page_template
-        
+
         orig_loader = env.loader
         env.loader = ChoiceLoader([
             FunctionLoader(get_page),
