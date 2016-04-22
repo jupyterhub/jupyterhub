@@ -46,6 +46,7 @@ Contents:
 
    getting-started
    howitworks
+   websecurity
 
 .. toctree::
    :maxdepth: 2
