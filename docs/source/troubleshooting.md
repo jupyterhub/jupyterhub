@@ -7,14 +7,16 @@ message. These two lists provide links to identifying the cause of the
 problem and how to resolve it.
 
 ## Behavior problems
-- JupyterHub proxy fails to start
+- [JupyterHub proxy fails to start](troubleshooting.md#jupyterhub-proxy-fails-to-start)
 
 ## Errors
-- 500 error after spawning a single-user server
+- [500 error after spawning a single-user server](troubleshooting.md#500-error-after-spawning-my-single-user-server)
 
 ----
 
-## If JupyterHub proxy fails to start:
+## JupyterHub proxy fails to start
+
+If you have tried to start the JupyterHub proxy and it fails to start:
 
 - check if the JupyterHub IP configuration setting is
   ``c.JupyterHub.ip = '*'``; if it is, try ``c.JupyterHub.ip = ''``
@@ -22,11 +24,11 @@ problem and how to resolve it.
 
 ----
 
-## I am receiving a 500 error after spawning my single-user server (on the
-URL `/user/you/...`).
+## 500 error after spawning my single-user server
 
-This is often because your single-user server cannot check your cookies with
-the Hub.
+
+You receive a 500 error when accessing the URL `/user/you/...`. This is often
+seen when your single-user server cannot check your cookies with the Hub.
 
 There are two likely reasons for this:
 
