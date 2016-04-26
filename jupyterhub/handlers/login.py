@@ -15,12 +15,12 @@ class LogoutHandler(BaseHandler):
         user = self.get_current_user()
         if user:
             self.log.info("User logged out: %s", user.name)
-        self.clear_login_cookie()
-        for name in user.other_user_cookies:
-            self.clear_login_cookie(name)
-        user.other_user_cookies = set([])
+            self.clear_login_cookie()
+            for name in user.other_user_cookies:
+                self.clear_login_cookie(name)
+            user.other_user_cookies = set([])
+            self.statsd.incr('logout')
         self.redirect(self.hub.server.base_url, permanent=False)
-        self.statsd.incr('logout')
 
 
 class LoginHandler(BaseHandler):
