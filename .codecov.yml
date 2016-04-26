@@ -1,0 +1,3 @@
+# Disable coverage reports in PR comments
+comment:
+  branches: neverdothis
