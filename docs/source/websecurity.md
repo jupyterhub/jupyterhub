@@ -45,7 +45,7 @@ as it resolves all of the cross-site issues.
 ### Disabling user config
 
 If subdomains are not available or not desirable,
-0.5 also adds an option `Spawner.disable_use_config`,
+0.5 also adds an option `Spawner.disable_user_config`,
 which you can set to prevent the user-owned configuration files from being loaded.
 This leaves only package installation and PATHs as things the admin must enforce.
 
