@@ -6,7 +6,7 @@ Questions, comments? Visit our Google Group:
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
-[![codecov.io](https://codecov.io/github/jupyter/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyter/jupyterhub?branch=master)
+[![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
 
 
 JupyterHub, a multi-user server, manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
@@ -67,7 +67,7 @@ Jupyter ~~IPython~~ notebook:
 
 For a development install, clone the repository and then install from source:
 
-    git clone https://github.com/jupyter/jupyterhub
+    git clone https://github.com/jupyterhub/jupyterhub
     cd jupyterhub
     pip3 install -r dev-requirements.txt -e .
 
@@ -93,7 +93,7 @@ and then visit `http://localhost:8000`, and sign in with your unix credentials.
 
 To allow multiple users to sign into the server, you will need to
 run the `jupyterhub` command as a *privileged user*, such as root.
-The [wiki](https://github.com/jupyter/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
+The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
 describes how to run the server as a *less privileged user*, which requires more
 configuration of the system.
 
@@ -116,13 +116,13 @@ The authentication and process spawning mechanisms can be replaced,
 which should allow plugging into a variety of authentication or process control environments.
 Some examples, meant as illustration and testing of this concept:
 
-- Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyter/oauthenticator)
-- Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyter/dockerspawner)
+- Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
+- Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyterhub/dockerspawner)
 
 ### Docker
 
-There is a ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyter/jupyterhub/).
-[Note: This `jupyter/jupyterhub` docker image is only an image for running the Hub service itself.
+There is a ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyterhub/jupyterhub/).
+[Note: This `jupyterhub/jupyterhub` docker image is only an image for running the Hub service itself.
 It does not require the other Jupyter components, which are needed by the single-user servers.
 To run the single-user servers, which may be on the same system as the Hub or not, installation of Jupyter Notebook ≥ 4 is required.]
 
@@ -148,7 +148,7 @@ We encourage you to ask questions on the mailing list:
 
 and you may participate in development discussions or get live help on Gitter:
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyter/jupyterhub?utm_source=badge&utm_medium=badge)
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyterhub/jupyterhub?utm_source=badge&utm_medium=badge)
 
 ## Resources
 - [Project Jupyter website](https://jupyter.org)
