@@ -410,6 +410,7 @@ class BaseHandler(RequestHandler):
         """render custom error pages"""
         exc_info = kwargs.get('exc_info')
         message = ''
+        exception = None
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         if exc_info:
             exception = exc_info[1]

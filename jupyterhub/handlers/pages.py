@@ -3,12 +3,14 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from http.client import responses
+
+from jinja2 import TemplateNotFound
 from tornado import web, gen
 
 from .. import orm
 from ..utils import admin_only, url_path_join
 from .base import BaseHandler
-from urllib.parse import quote
 
 
 class RootHandler(BaseHandler):
@@ -160,9 +162,43 @@ class AdminHandler(BaseHandler):
         self.finish(html)
 
 
+class ProxyErrorHandler(BaseHandler):
+    """Handler for rendering proxy error pages"""
+    
+    def get(self, status_code_s):
+        status_code = int(status_code_s)
+        status_message = responses.get(status_code, 'Unknown HTTP Error')
+        # build template namespace
+        
+        hub_home = url_path_join(self.hub.server.base_url, 'home')
+        message_html = ''
+        if status_code == 503:
+            message_html = ' '.join([
+                "Your server appears to be down.",
+                "Try restarting it <a href='%s'>from the hub</a>" % hub_home
+            ])
+        ns = dict(
+            status_code=status_code,
+            status_message=status_message,
+            message_html=message_html,
+            logo_url=hub_home,
+        )
+
+        self.set_header('Content-Type', 'text/html')
+        # render the template
+        try:
+            html = self.render_template('%s.html' % status_code, **ns)
+        except TemplateNotFound:
+            self.log.debug("No template for %d", status_code)
+            html = self.render_template('error.html', **ns)
+
+        self.write(html)
+
+
 default_handlers = [
     (r'/', RootHandler),
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
     (r'/spawn', SpawnHandler),
+    (r'/error/(\d+)', ProxyErrorHandler),
 ]

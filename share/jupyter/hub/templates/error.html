@@ -17,6 +17,11 @@
     {{message}}
   </p>
   {% endif %}
+  {% if message_html %}
+  <p>
+    {{message_html | safe}}
+  </p>
+  {% endif %}
   {% endblock error_detail %}
 </div>
 
