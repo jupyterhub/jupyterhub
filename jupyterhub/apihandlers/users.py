@@ -161,8 +161,9 @@ class UserServerAPIHandler(APIHandler):
     @admin_or_self
     def post(self, name):
         user = self.find_user(name)
-        if user.spawner:
-            state = yield user.spawner.poll()
+        if user.running:
+            # include notify, so that a server that died is noticed immediately
+            state = yield user.spawner.poll_and_notify()
             if state is None:
                 raise web.HTTPError(400, "%s's server is already running" % name)
 
@@ -180,7 +181,8 @@ class UserServerAPIHandler(APIHandler):
             return
         if not user.running:
             raise web.HTTPError(400, "%s's server is not running" % name)
-        status = yield user.spawner.poll()
+        # include notify, so that a server that died is noticed immediately
+        status = yield user.spawner.poll_and_notify()
         if status is not None:
             raise web.HTTPError(400, "%s's server is not running" % name)
         yield self.stop_single_user(user)

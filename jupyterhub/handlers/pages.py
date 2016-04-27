@@ -41,9 +41,14 @@ class HomeHandler(BaseHandler):
     """Render the user's home page."""
 
     @web.authenticated
+    @gen.coroutine
     def get(self):
+        user = self.get_current_user()
+        if user.running:
+            # trigger poll_and_notify event in case of a server that died
+            yield user.spawner.poll_and_notify()
         html = self.render_template('home.html',
-            user=self.get_current_user(),
+            user=user,
         )
         self.finish(html)
 
