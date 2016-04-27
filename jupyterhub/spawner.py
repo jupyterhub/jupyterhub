@@ -15,7 +15,7 @@ from subprocess import Popen
 from tempfile import mkdtemp
 
 from tornado import gen
-from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.ioloop import PeriodicCallback
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
@@ -335,15 +335,17 @@ class Spawner(LoggingConfigurable):
         
         self.stop_polling()
         
-        add_callback = IOLoop.current().add_callback
         for callback in self._callbacks:
-            add_callback(callback)
+            try:
+                yield gen.maybe_future(callback())
+            except Exception:
+                self.log.exception("Unhandled error in poll callback for %s", self)
+        return status
     
     death_interval = Float(0.1)
     @gen.coroutine
     def wait_for_death(self, timeout=10):
         """wait for the process to die, up to timeout seconds"""
-        loop = IOLoop.current()
         for i in range(int(timeout / self.death_interval)):
             status = yield self.poll()
             if status is not None:
