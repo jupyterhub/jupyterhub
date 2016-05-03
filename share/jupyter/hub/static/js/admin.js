@@ -178,6 +178,15 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         });
     });
 
+    $("#stop-all-servers").click(function () {
+        $("#stop-all-servers-dialog").modal();
+    });
+
+    $("#stop-all-servers-dialog").find(".stop-all-button").click(function () {
+        // stop all clicks all the active stop buttons
+        $('.stop-server').not('.hidden').click();
+    });
+
     $("#shutdown-hub").click(function () {
         var dialog = $("#shutdown-hub-dialog");
         dialog.find("input[type=checkbox]").prop("checked", true);
