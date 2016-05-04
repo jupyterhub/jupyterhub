@@ -937,6 +937,7 @@ class JupyterHub(Application):
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
             '--default-target', self.hub.server.host,
+            '--error-target', url_path_join(self.hub.server.url, 'error'),
         ]
         if self.subdomain_host:
             cmd.append('--host-routing')
