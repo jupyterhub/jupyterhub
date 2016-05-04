@@ -152,15 +152,15 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         });
     });
     
-    $("#add-user").click(function () {
-        var dialog = $("#add-user-dialog");
+    $("#add-users").click(function () {
+        var dialog = $("#add-users-dialog");
         dialog.find(".username-input").val('');
         dialog.find(".admin-checkbox").prop("checked", false);
         dialog.modal();
     });
 
-    $("#add-user-dialog").find(".save-button").click(function () {
-        var dialog = $("#add-user-dialog");
+    $("#add-users-dialog").find(".save-button").click(function () {
+        var dialog = $("#add-users-dialog");
         var lines = dialog.find(".username-input").val().split('\n');
         var admin = dialog.find(".admin-checkbox").prop("checked");
         var usernames = [];
