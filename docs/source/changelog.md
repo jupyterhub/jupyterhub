@@ -4,6 +4,17 @@ See `git log` for a more detailed summary.
 
 ## 0.6
 
+### 0.6.1
+
+Bugfixes on 0.6:
+
+- statsd is an optional dependency, only needed if in use
+- Notice more quickly when servers have crashed
+- Better error pages for proxy errors
+- Add Stop All button to admin panel for stopping all servers at once
+
+### 0.6.0
+
 - JupyterHub has moved to a new `jupyterhub` namespace on GitHub and Docker. What was `juptyer/jupyterhub` is now `jupyterhub/jupyterhub`, etc.
 - `jupyterhub/jupyterhub` image on DockerHub no longer loads the jupyterhub_config.py in an ONBUILD step. A new `jupyterhub/jupyterhub-onbuild` image does this
 - Add statsd support, via `c.JupyterHub.statsd_{host,port,prefix}`
