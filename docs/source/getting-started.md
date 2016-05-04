@@ -344,11 +344,11 @@ which is the place to put configuration that you want to affect all of your user
 
 ## External services
 
-JupyterHub has a REST API that can be used to run external services like the
+JupyterHub has a REST API that can be used by external services like the
 [cull_idle_servers](https://github.com/jupyterhub/jupyterhub/blob/master/examples/cull-idle/cull_idle_servers.py)
 script which monitors and kills idle single-user servers periodically. In order to run such an
-external service, you need to provide it an API token that - for the above example - is passed
-through an environment variable called `JPY_API_TOKEN`.
+external service, you need to provide it an API token. In the case of `cull_idle_servers`, it is passed
+as the environment variable called `JPY_API_TOKEN`.
 
 Currently there are two ways of registering that token with JupyterHub. The first on is to use
 the `jupyterhub` command to generate a token for a specific hub user:
@@ -370,7 +370,7 @@ and then write it to your JupyterHub configuration file (note that the **key** i
 c.JupyterHub.api_tokens = {'token' : 'username'}
 ```
 
-Upon restarting the daemon, you should see a message like below in the logs:
+Upon restarting JupyterHub, you should see a message like below in the logs:
 
 ```
 Adding API token for <username>
