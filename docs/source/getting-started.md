@@ -350,7 +350,7 @@ script which monitors and kills idle single-user servers periodically. In order 
 external service, you need to provide it an API token. In the case of `cull_idle_servers`, it is passed
 as the environment variable called `JPY_API_TOKEN`.
 
-Currently there are two ways of registering that token with JupyterHub. The first on is to use
+Currently there are two ways of registering that token with JupyterHub. The first one is to use
 the `jupyterhub` command to generate a token for a specific hub user:
 
 ```
@@ -376,7 +376,7 @@ Upon restarting JupyterHub, you should see a message like below in the logs:
 Adding API token for <username>
 ```
 
-Now you can run your script by providing it the API token and it will authenticate through
+Now you can run your script, i.e. `cull_idle_servers`, by providing it the API token and it will authenticate through
 the REST API to interact with it.
 
 ## File locations
