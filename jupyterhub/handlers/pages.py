@@ -16,6 +16,9 @@ from .base import BaseHandler
 class RootHandler(BaseHandler):
     """Render the Hub root page.
 
+    If next argument is passed by single-user server,
+    redirect to base_url + single-user page.
+
     If logged in, redirects to:
 
     - single-user server if running
@@ -24,6 +27,11 @@ class RootHandler(BaseHandler):
     Otherwise, renders login page.
     """
     def get(self):
+        next_url = self.get_argument('next', '')
+        if next_url and next_url.startswith('/user/'):
+            # Redirect /hub/?next=... requests from single-user servers.
+            url = url_path_join(self.hub.server.base_url, next_url.lstrip('/'))
+            self.redirect(url)
         user = self.get_current_user()
         if user:
             if user.running:
