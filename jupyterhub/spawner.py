@@ -255,9 +255,11 @@ class Spawner(LoggingConfigurable):
             args.append('--ip=%s' % self.ip)
         if self.notebook_dir:
             self.notebook_dir = self.notebook_dir.replace("%U",self.user.name)
+            self.notebook_dir = self.notebook_dir.replace("%u",self.user.name[0])
             args.append('--notebook-dir=%s' % self.notebook_dir)
         if self.default_url:
             self.default_url = self.default_url.replace("%U",self.user.name)
+            self.default_url = self.default_url.replace("%u",self.user.name[0])
             args.append('--NotebookApp.default_url=%s' % self.default_url)
 
         if self.debug:
