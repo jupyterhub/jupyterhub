@@ -10,7 +10,7 @@
  },
  "devDependencies": {
   "bower": "*",
-  "less": "~2",
+  "less": "^2.7.1",
   "less-plugin-clean-css": "*"
  }
 }
