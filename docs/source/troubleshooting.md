@@ -134,11 +134,11 @@ when starting JupyterHub or more conveniently set the `ssl_cert` variable in
 JupyterHub's configuration file, `jupyterhub_config.py`. In `jupyterhub_config.py`,
 set:
 
-    c.JupyterHub.ssl_cert = example_host-chained.crt
-    c.JupyterHub.ssl_key = example_host.key
+    c.JupyterHub.ssl_cert = /path/to/example_host-chained.crt
+    c.JupyterHub.ssl_key = /path/to/example_host.key
 
-and set ssl_cert to your_name-chained.crt and ssl_key to your private key.
+where `ssl_cert` is example-chained.crt and ssl_key to your private key.
 
 Then restart JupyterHub.
 
-
+See also [JupyterHub SSL encryption](getting-started.md#ssl-encryption).
