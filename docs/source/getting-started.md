@@ -191,7 +191,7 @@ these files be put in a secure location on your server, where they are not reada
 users.
 
 Note on **chain certificates**: If you are using a chain certificate, see also
-[chained certificate for SSL](#chained-certificates-for-ssl) in the JupyterHub troubleshooting FAQ).
+[chained certificate for SSL](troubleshooting.md#chained-certificates-for-ssl) in the JupyterHub troubleshooting FAQ).
 
 Note: In certain cases, e.g. **behind SSL termination in nginx**, allowing no SSL
 running on the hub may be desired. To run the Hub without SSL, you must opt
