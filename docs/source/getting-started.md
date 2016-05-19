@@ -190,7 +190,10 @@ Some cert files also contain the key, in which case only the cert is needed. It 
 these files be put in a secure location on your server, where they are not readable by regular
 users.
 
-Note: In certain cases, e.g. behind SSL termination in nginx, allowing no SSL
+Note on **chain certificates**: If you are using a chain certificate, see also
+[chained certificate for SSL](troubleshooting.md#chained-certificates-for-ssl) in the JupyterHub troubleshooting FAQ).
+
+Note: In certain cases, e.g. **behind SSL termination in nginx**, allowing no SSL
 running on the hub may be desired. To run the Hub without SSL, you must opt
 in by configuring and confirming the `--no-ssl` option, added as of [version 0.5](./changelog.html).
 

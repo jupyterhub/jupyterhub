@@ -12,6 +12,9 @@ problem and how to resolve it.
 ## Errors
 - [500 error after spawning a single-user server](#500-error-after-spawning-my-single-user-server)
 
+## How do I...?
+- [Use a chained certificate for SSL](#chained-certificates-for-ssl)
+
 ----
 
 ## JupyterHub proxy fails to start
@@ -97,3 +100,45 @@ issue (typicaly all containers created before a certain point in time):
 After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
+
+----
+
+### Chained certificates for SSL
+
+Some certificate providers, i.e. Entrust, may provide you with a chained
+certificate that contains multiple files. If you are using a chained
+certificate you will need to concatenate the individual files by appending the
+chain cert and root cert to your host cert:
+
+    cat your_host.crt chain.crt root.crt > your_host-chained.crt
+
+You would then set in your `jupyterhub_config.py` file the `ssl_key` and
+`ssl_cert` as follows:
+
+    c.JupyterHub.ssl_cert = your_host-chained.crt
+    c.JupyterHub.ssl_key = your_host.key
+
+
+#### Example
+
+Your certificate provider gives you the following files: `example_host.crt`,
+`Entrust_L1Kroot.txt` and `Entrust_Root.txt`.
+
+Concatenate the files appending the chain cert and root cert to your host cert:
+
+    cat example_host.crt Entrust_L1Kroot.txt Entrust_Root.txt > example_host-chained.crt
+
+You would then use the `example_host-chained.crt` as the value for
+JupyterHub's `ssl_cert`. You may pass this value as a command line option
+when starting JupyterHub or more conveniently set the `ssl_cert` variable in
+JupyterHub's configuration file, `jupyterhub_config.py`. In `jupyterhub_config.py`,
+set:
+
+    c.JupyterHub.ssl_cert = /path/to/example_host-chained.crt
+    c.JupyterHub.ssl_key = /path/to/example_host.key
+
+where `ssl_cert` is example-chained.crt and ssl_key to your private key.
+
+Then restart JupyterHub.
+
+See also [JupyterHub SSL encryption](getting-started.md#ssl-encryption).
