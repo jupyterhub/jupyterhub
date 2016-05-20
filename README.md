@@ -54,7 +54,6 @@ Notes on the `pip` command used in the installation directions below:
 
 JupyterHub can be installed with pip, and the proxy with npm:
 
-    npm install -g configurable-http-proxy
     pip3 install jupyterhub
 
 If you plan to run notebook servers locally, you may also need to install the
