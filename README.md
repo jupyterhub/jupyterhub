@@ -1,95 +1,86 @@
-# JupyterHub: A multi-user server for Jupyter notebooks
+# [JupyterHub](https://github.com/jupyterhub/jupyterhub)
 
-Questions, comments? Visit our Google Group:
-
-[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
-[![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
 [![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
+"
+[![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
+"
+[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
 
+With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
+**multi-user Hub** which spawns, manages, and proxies multiple instances of the
+single-user [Jupyter notebook *(IPython notebook)* ](https://jupyter-notebooks.readthedocs.io) server.
 
-JupyterHub, a multi-user server, manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
+JupyterHub provides **single-user notebook servers to many users**. For example,
+JupyterHub could serve notebooks to a class of students, a corporate
+workgroup, or a science research group. 
 
-Three actors:
+by [Project Jupyter](https://jupyter.org)
 
-- multi-user Hub (tornado process)
-- configurable http proxy (node-http-proxy)
-- multiple single-user IPython notebook servers (Python/IPython/tornado)
+----
 
-Basic principles:
+## Technical overview
+Three main actors make up JupyterHub:
 
-- Hub spawns proxy
-- Proxy forwards ~all requests to hub by default
+- multi-user **Hub** (tornado process)
+- configurable http **proxy** (node-http-proxy)
+- multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
+
+JupyterHub's basic principles for operation are:
+
+- Hub spawns a proxy
+- Proxy forwards all requests to Hub by default
 - Hub handles login, and spawns single-user servers on demand
-- Hub configures proxy to forward url prefixes to single-user servers
+- Hub configures proxy to forward url prefixes to the single-user servers
 
+----
 
-## Dependencies
+## Prerequisites
+Before installing JupyterHub, you need:
 
-JupyterHub itself requires [Python](https://www.python.org/downloads/) ≥ 3.3. To run the single-user servers (which may be on the same system as the Hub or not), [Jupyter Notebook](https://jupyter.readthedocs.org/en/latest/install.html) ≥ 4 is required.
+- [Python](https://www.python.org/downloads/) 3.3 or greater
 
-Install [nodejs/npm](https://www.npmjs.com/), which is available from your
-package manager. For example, install on Linux (Debian/Ubuntu) using:
+  An understanding of using [`pip`](https://pip.pypa.io/en/stable/) for installing
+  Python packages is recommended.
 
-    sudo apt-get install npm nodejs-legacy
+- [nodejs/npm](https://www.npmjs.com/)
 
-(The `nodejs-legacy` package installs the `node` executable and is currently
-required for npm to work on Debian/Ubuntu.)
+  [Install nodejs/npm](https://docs.npmjs.com/getting-started/installing-node), which is available from your
+  package manager. For example, install on Linux (Debian/Ubuntu) using:
 
-Next, install JavaScript dependencies:
+      sudo apt-get install npm nodejs-legacy
 
-    sudo npm install -g configurable-http-proxy
+  (The `nodejs-legacy` package installs the `node` executable and is currently
+  required for npm to work on Debian/Ubuntu.)
+ 
+- TLS certificate and key for HTTPS communication
 
-### (Optional) Installation Prerequisite (pip)
+- Domain name
 
-Notes on the `pip` command used in the installation directions below:
-- `sudo` may be needed for `pip install`, depending on the user's filesystem permissions.
-- JupyterHub requires Python >= 3.3, so `pip3` may be required on some machines for package installation instead of `pip` (especially when both Python 2 and Python 3 are installed on a machine). If `pip3` is not found, install it using (on Linux Debian/Ubuntu):
+Before running the single-user notebook servers (which may be on the same system as the Hub or not):
 
-        sudo apt-get install python3-pip
-
+- [Jupyter Notebook](https://jupyter.readthedocs.io/en/latest/install.html) version 4 or greater
 
 ## Installation
+JupyterHub can be installed with `pip`, and the proxy with `npm`:
 
-JupyterHub can be installed with pip, and the proxy with npm:
+```bash
+npm install -g configurable-http-proxy
+pip3 install jupyterhub    
+```
 
-    npm install -g configurable-http-proxy
-    pip3 install jupyterhub
-
-If you plan to run notebook servers locally, you may also need to install the
-Jupyter ~~IPython~~ notebook:
+If you plan to run notebook servers locally, you will need to install the
+Jupyter notebook:
 
     pip3 install --upgrade notebook
 
-
-### Development install
-
-For a development install, clone the repository and then install from source:
-
-    git clone https://github.com/jupyterhub/jupyterhub
-    cd jupyterhub
-    pip3 install -r dev-requirements.txt -e .
-
-If the `pip3 install` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional JavaScript dependencies:
-
-    npm install
-
-This will fetch client-side JavaScript dependencies necessary to compile CSS.
-
-You may also need to manually update JavaScript and CSS after some development updates, with:
-
-    python3 setup.py js    # fetch updated client-side js (changes rarely)
-    python3 setup.py css   # recompile CSS from LESS sources
-
-
-## Running the server
-
-To start the server, run the command:
+## Running the Hub server
+To start the Hub server, run the command:
 
     jupyterhub
 
-and then visit `http://localhost:8000`, and sign in with your unix credentials.
+Visit `https://localhost:8000` in your browser, and sign in with your unix credentials.
 
 To allow multiple users to sign into the server, you will need to
 run the `jupyterhub` command as a *privileged user*, such as root.
@@ -97,17 +88,21 @@ The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-Jupyt
 describes how to run the server as a *less privileged user*, which requires more
 configuration of the system.
 
-## Getting started
+----
 
-See the [getting started document](docs/source/getting-started.md) for the
-basics of configuring your JupyterHub deployment.
+## Configuration
+The [getting started document](docs/source/getting-started.md) contains the
+basics of configuring a JupyterHub deployment.
 
-### Some examples
+The JupyterHub **tutorial** provides a video and documentation that explains and illustrates the fundamental steps for installation and configuration. [Repo](https://github.com/jupyterhub/jupyterhub-tutorial)
+| [Tutorial documentation](http://jupyterhub-tutorial.readthedocs.io/en/latest/)
 
+#### Generate a default configuration file
 Generate a default config file:
 
     jupyterhub --generate-config
 
+#### Customize the configuration, authentication, and process spawning 
 Spawn the server on ``10.0.1.2:443`` with **https**:
 
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
@@ -119,40 +114,75 @@ Some examples, meant as illustration and testing of this concept:
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
 - Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyterhub/dockerspawner)
 
-### Docker
+----
 
-There is a ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyterhub/jupyterhub/).
-[Note: This `jupyterhub/jupyterhub` docker image is only an image for running the Hub service itself.
-It does not require the other Jupyter components, which are needed by the single-user servers.
-To run the single-user servers, which may be on the same system as the Hub or not, installation of Jupyter Notebook ≥ 4 is required.]
+## Docker
+A ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyterhub/jupyterhub/) gives a straightforward deployment of JupyterHub.
 
+*Note: This `jupyterhub/jupyterhub` docker image is only an image for running the Hub service itself.
+It does not require the other Jupyter components, such as Notebook installation, which are needed by the single-user servers.
+To run the single-user servers, which may be on the same system as the Hub or not, Jupyter Notebook version 4 or greater must be installed.*
+
+#### Starting JupyterHub with docker
 The JupyterHub docker image can be started with the following command:
 
     docker run -d --name jupyterhub jupyter/jupyterhub jupyterhub
 
-This command will create a container named `jupyterhub` that you can stop and resume with `docker stop/start`.
-It will be listening on all interfaces at port 8000, so this is perfect to test JupyterHub on your desktop or laptop.
-If you want to run docker on a computer that has a public IP then you should (as in MUST) secure it with ssl by
+This command will create a container named `jupyterhub` that you can **stop and resume** with `docker stop/start`.
+
+The Hub service will be listening on all interfaces at port 8000, which makes this a good choice for **testing JupyterHub on your desktop or laptop**.
+
+If you want to run docker on a computer that has a public IP then you should (as in MUST) **secure it with ssl** by
 adding ssl options to your docker configuration or using a ssl enabled proxy.
+
 [Mounting volumes](https://docs.docker.com/engine/userguide/containers/dockervolumes/) will
-allow you to store data outside the docker image (host system) so it will be persistent, even when you start
-a new image. The command `docker exec -it jupyterhub bash` will spawn a root shell in your docker
-container. You can use it to create system users in the container. These accounts will be used for authentication
-in jupyterhub's default configuration. In order to run without SSL (for testing purposes only), you'll need to set `--no-ssl` explicitly.
+allow you to **store data outside the docker image (host system) so it will be persistent**, even when you start
+a new image. 
 
-# Getting help
+The command `docker exec -it jupyterhub bash` will spawn a root shell in your docker
+container. You can **use the root shell to create system users in the container**. These accounts will be used for authentication
+in JupyterHub's default configuration. In order to run without SSL (for testing purposes only), you'll need to set `--no-ssl` explicitly.
 
-We encourage you to ask questions on the mailing list:
+----
 
-[![Google Group](https://img.shields.io/badge/-Google%20Group-lightgrey.svg)](https://groups.google.com/forum/#!forum/jupyter)
+## Contributing
+If you would like to contribute to the project, please read our [contributor documentation](http://jupyter.readthedocs.io/en/latest/contributor/content-contributor.html) and the [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
-and you may participate in development discussions or get live help on Gitter:
+For a **development install**, clone the [repository](https://github.com/jupyterhub/jupyterhub) and then install from source:
 
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/jupyterhub/jupyterhub?utm_source=badge&utm_medium=badge)
+```bash
+git clone https://github.com/jupyterhub/jupyterhub
+cd jupyterhub
+pip3 install -r dev-requirements.txt -e .
+```
+
+If the `pip3 install` command fails and complains about `lessc` being unavailable, you may need to explicitly install some additional JavaScript dependencies:
+
+    npm install
+
+This will fetch client-side JavaScript dependencies necessary to compile CSS.
+
+You may also need to manually update JavaScript and CSS after some development updates, with:
+
+```bash
+python3 setup.py js    # fetch updated client-side js
+python3 setup.py css   # recompile CSS from LESS sources
+```
+----
+## License
+We use a shared copyright model that enables all contributors to maintain the
+copyright on their contributions.
+
+All code is licensed under the terms of the revised BSD license.
+
+## Getting help
+We encourage you to ask questions on the [mailing list](https://groups.google.com/forum/#!forum/jupyter),
+and you may participate in development discussions or get live help on [Gitter](https://gitter.im/jupyterhub/jupyterhub).
 
 ## Resources
+- [Reporting Issues](https://github.com/jupyter/jupyterhub/issues)
+- JupyterHub tutorial | [Repo](https://github.com/jupyterhub/jupyterhub-tutorial)
+  | [Tutorial documentation](http://jupyterhub-tutorial.readthedocs.io/en/latest/)
+- [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF](https://media.readthedocs.io/pdf/jupyterhub/latest/jupyterhub.pdf)
+- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.io/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
-- [Documentation for JupyterHub](http://jupyterhub.readthedocs.org/en/latest/) [[PDF](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf)]
-- [Documentation for Project Jupyter](http://jupyter.readthedocs.org/en/latest/index.html) [[PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)]
-- [Issues](https://github.com/jupyter/jupyterhub/issues)
-- [Technical support - Jupyter Google Group](https://groups.google.com/forum/#!forum/jupyter)
