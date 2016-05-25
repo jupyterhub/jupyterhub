@@ -10,7 +10,7 @@
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** which spawns, manages, and proxies multiple instances of the
-single-user [Jupyter notebook *(IPython notebook)* ](https://jupyter-notebooks.readthedocs.io) server.
+single-user [Jupyter notebook *(IPython notebook)* ](https://jupyter-notebook.readthedocs.io) server.
 
 JupyterHub provides **single-user notebook servers to many users**. For example,
 JupyterHub could serve notebooks to a class of students, a corporate
