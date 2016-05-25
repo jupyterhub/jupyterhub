@@ -183,6 +183,6 @@ and you may participate in development discussions or get live help on [Gitter](
 - [Reporting Issues](https://github.com/jupyter/jupyterhub/issues)
 - JupyterHub tutorial | [Repo](https://github.com/jupyterhub/jupyterhub-tutorial)
   | [Tutorial documentation](http://jupyterhub-tutorial.readthedocs.io/en/latest/)
-- [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF](https://media.readthedocs.io/pdf/jupyterhub/latest/jupyterhub.pdf)
-- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.io/pdf/jupyter/latest/jupyter.pdf)
+- [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf) 
+- [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
