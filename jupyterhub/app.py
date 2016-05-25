@@ -902,6 +902,7 @@ class JupyterHub(Application):
         self.proxy.log = self.log
         self.proxy.public_server.ip = self.ip
         self.proxy.public_server.port = self.port
+        self.proxy.public_server.base_url = self.base_url
         self.proxy.api_server.ip = self.proxy_api_ip
         self.proxy.api_server.port = self.proxy_api_port
         self.proxy.api_server.base_url = '/api/routes/'

@@ -117,6 +117,8 @@ class MockHub(JupyterHub):
     
     last_activity_interval = 2
     
+    base_url = '/@/space%20word/'
+    
     @default('subdomain_host')
     def _subdomain_host_default(self):
         return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
