@@ -13,7 +13,7 @@ from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
 from . import mocking
-from .mocking import public_url, user_url
+from .mocking import public_host, public_url, user_url
 
 
 def check_db_locks(func):
@@ -105,7 +105,7 @@ def test_auth_api(app):
 
 
 def test_referer_check(app, io_loop):
-    url = ujoin(public_url(app), app.hub.server.base_url)
+    url = ujoin(public_host(app), app.hub.server.base_url)
     host = urlparse(url).netloc
     user = find_user(app.db, 'admin')
     if user is None:
@@ -351,7 +351,7 @@ def test_spawn(app, io_loop):
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
 
-    assert user.server.base_url == '/user/%s' % name
+    assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name)
     url = user_url(user, app)
     print(url)
     r = requests.get(url)

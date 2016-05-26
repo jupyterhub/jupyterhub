@@ -12,7 +12,7 @@ from .mocking import FormSpawner, public_url, public_host, user_url
 from .test_api import api_request
 
 def get_page(path, app, **kw):
-    base_url = ujoin(public_url(app), app.hub.server.base_url)
+    base_url = ujoin(public_host(app), app.hub.server.base_url)
     print(base_url)
     return requests.get(ujoin(base_url, path), **kw)
 
@@ -21,11 +21,11 @@ def test_root_no_auth(app, io_loop):
     routes = io_loop.run_sync(app.proxy.get_routes)
     print(routes)
     print(app.hub.server)
-    url = public_url(app)
+    url = ujoin(public_host(app), app.hub.server.base_url)
     print(url)
     r = requests.get(url)
     r.raise_for_status()
-    assert r.url == ujoin(url, app.hub.server.base_url, 'login')
+    assert r.url == ujoin(url, 'login')
 
 def test_root_auth(app):
     cookies = app.login_user('river')
@@ -80,7 +80,7 @@ def test_spawn_redirect(app, io_loop):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == '/user/%s' % name
+    assert path == ujoin(app.base_url, 'user/%s' % name)
     
     # should have started server
     status = io_loop.run_sync(u.spawner.poll)
@@ -91,7 +91,7 @@ def test_spawn_redirect(app, io_loop):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == '/user/%s' % name
+    assert path == ujoin(app.base_url, '/user/%s' % name)
 
 def test_spawn_page(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
@@ -102,7 +102,7 @@ def test_spawn_page(app):
 
 def test_spawn_form(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        base_url = ujoin(public_url(app), app.hub.server.base_url)
+        base_url = ujoin(public_host(app), app.hub.server.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
@@ -123,7 +123,7 @@ def test_spawn_form(app, io_loop):
 
 def test_spawn_form_with_file(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        base_url = ujoin(public_url(app), app.hub.server.base_url)
+        base_url = ujoin(public_host(app), app.hub.server.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
@@ -138,8 +138,6 @@ def test_spawn_form_with_file(app, io_loop):
                           files={'hello': ('hello.txt', b'hello world\n')}
                       )
         r.raise_for_status()
-        print(u.spawner)
-        print(u.spawner.user_options)
         assert u.spawner.user_options == {
             'energy': '511keV',
             'bounds': [-1, 1],
@@ -158,21 +156,23 @@ def test_user_redirect(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == '/user/%s' % name
+    assert path == ujoin(app.base_url, '/user/%s' % name)
 
     r = get_page('/user/baduser/test.ipynb', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == '/user/%s/test.ipynb' % name
+    assert path == ujoin(app.base_url, '/user/%s/test.ipynb' % name)
 
     r = get_page('/user/baduser/test.ipynb', app)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == '/hub/login'
+    assert path == ujoin(app.base_url, '/hub/login')
     query = urlparse(r.url).query
-    assert query == urlencode({'next': '/hub/user/baduser/test.ipynb'})
+    assert query == urlencode({
+        'next': ujoin(app.base_url, '/hub/user/baduser/test.ipynb')
+    })
 
 
 def test_login_fail(app):
@@ -233,8 +233,7 @@ def test_login_no_whitelist_adds_user(app):
 
 
 def test_static_files(app):
-    base_url = ujoin(public_url(app), app.hub.server.base_url)
-    print(base_url)
+    base_url = ujoin(public_host(app), app.hub.server.base_url)
     r = requests.get(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
