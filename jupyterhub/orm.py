@@ -285,7 +285,11 @@ class User(Base):
 
     api_tokens = relationship("APIToken", backref="user")
     cookie_id = Column(Unicode(1023), default=new_token)
+    # User.state is actually Spawner state
+    # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
+    # Authenticators can store their state here:
+    auth_state = Column(JSONDict)
 
     other_user_cookies = set([])
 

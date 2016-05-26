@@ -46,7 +46,7 @@ import jupyterhub
 from . import handlers, apihandlers
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 
-from . import orm
+from . import dbutil, orm
 from .user import User, UserDict
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
@@ -103,6 +103,7 @@ SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
 class NewToken(Application):
     """Generate and print a new API token"""
     name = 'jupyterhub-token'
+    version = jupyterhub.__version__
     description = """Generate and return new API token for a user.
 
     Usage:
@@ -142,6 +143,26 @@ class NewToken(Application):
         token = user.new_api_token()
         print(token)
 
+class UpgradeDB(Application):
+    """Upgrade the JupyterHub database schema."""
+    
+    name = 'jupyterhub-upgrade-db'
+    version = jupyterhub.__version__
+    description = """Upgrade the JupyterHub database to the current schema.
+    
+    Usage:
+
+        jupyterhub upgrade-db
+    """
+    aliases = common_aliases
+    classes = []
+    
+    def start(self):
+        hub = JupyterHub(parent=self)
+        hub.load_config_file(hub.config_file)
+        self.log.info("Upgrading %s", hub.db_url)
+        dbutil.upgrade(hub.db_url)
+
 
 class JupyterHub(Application):
     """An Application for starting a Multi-User Jupyter Notebook server."""
@@ -170,7 +191,8 @@ class JupyterHub(Application):
     flags = Dict(flags)
 
     subcommands = {
-        'token': (NewToken, "Generate an API token for a user")
+        'token': (NewToken, "Generate an API token for a user"),
+        'upgrade-db': (UpgradeDB, "Upgrade your JupyterHub state database to the current version."),
     }
 
     classes = List([
@@ -706,6 +728,11 @@ class JupyterHub(Application):
             self.log.debug("Database error was:", exc_info=True)
             if self.db_url.startswith('sqlite:///'):
                 self._check_db_path(self.db_url.split(':///', 1)[1])
+            self.log.critical('\n'.join([
+                "If you recently upgraded JupyterHub, try running",
+                "    jupyterhub upgrade-db",
+                "to upgrade your JupyterHub database schema",
+            ]))
             self.exit(1)
 
     def init_hub(self):
@@ -1308,6 +1335,7 @@ class JupyterHub(Application):
             print("\nInterrupted")
 
 NewToken.classes.append(JupyterHub)
+UpgradeDB.classes.append(JupyterHub)
 
 main = JupyterHub.launch_instance
 

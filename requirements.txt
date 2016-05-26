@@ -1,3 +1,4 @@
+alembic
 traitlets>=4.1
 tornado>=4.1
 jinja2
