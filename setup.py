@@ -55,7 +55,7 @@ def get_data_files():
     """Get data files in share/jupyter"""
     
     data_files = []
-    ntrim = len(here) + 1
+    ntrim = len(here + os.path.sep)
     
     for (d, dirs, filenames) in os.walk(share_jupyter):
         data_files.append((
@@ -64,6 +64,18 @@ def get_data_files():
         ))
     return data_files
 
+def get_package_data():
+    """Get package data
+
+    (mostly alembic config)
+    """
+    package_data = {}
+    pkg = pjoin(here, 'jupyterhub')
+    package_data['jupyterhub'] = [
+        'alembic/*',
+        'alembic/versions/*',
+    ]
+    return package_data
 
 ns = {}
 with open(pjoin(here, 'jupyterhub', 'version.py')) as f:
@@ -82,6 +94,7 @@ setup_args = dict(
                         # dummy, so that install_data doesn't get skipped
                         # this will be overridden when bower is run anyway
     data_files          = get_data_files() or ['dummy'],
+    package_data        = get_package_data(),
     version             = ns['__version__'],
     description         = "JupyterHub: A multi-user server for Jupyter notebooks",
     long_description    = "See https://jupyterhub.readthedocs.org for more info.",
