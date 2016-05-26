@@ -63,7 +63,7 @@ def _temp_alembic_ini(db_url):
     """
     with TemporaryDirectory() as td:
         alembic_ini = os.path.join(td, 'alembic.ini')
-        write_alembic_ini(alembic_ini)
+        write_alembic_ini(alembic_ini, db_url)
         yield alembic_ini
 
 
