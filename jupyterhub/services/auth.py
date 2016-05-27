@@ -84,10 +84,11 @@ class HubAuth(Configurable):
 
     - api_token (token for authenticating with JupyterHub API)
     - cookie_name (the name of the cookie I should be using)
+    - login_url (the *public* ``/hub/login`` URL of the Hub)
 
     The following config MAY be set:
 
-    - api_url: the URL of the Hub API.
+    - api_url: the base URL of the Hub's internal API
     - cookie_cache_max_age: the number of seconds responses
       from the Hub should be cached.
     """
@@ -99,6 +100,14 @@ class HubAuth(Configurable):
         Typically http://hub-ip:hub-port/hub/api
         """
     ).tag(config=True)
+
+    login_url = Unicode('https://127.0.0.1:8000/hub/login',
+        help="""The login URL of the Hub
+        
+        Typically https://public-hub-host/hub/login
+        """
+    ).tag(config=True)
+
     api_token = Unicode('',
         help="""API key for accessing Hub API.
 
@@ -141,7 +150,7 @@ class HubAuth(Configurable):
                 return cached
 
         r = requests.get(url_path_join(
-            self.hub_api_url, "authorizations/cookie", self.cookie_name, quote(encrypted_cookie, safe=''),
+            self.api_url, "authorizations/cookie", self.cookie_name, quote(encrypted_cookie, safe=''),
         ),
             headers = {'Authorization' : 'token %s' % self.api_token},
         )
