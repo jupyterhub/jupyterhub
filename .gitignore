@@ -1,6 +1,7 @@
 node_modules
 *.py[co]
 *~
+.cache
 .DS_Store
 build
 dist
