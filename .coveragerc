@@ -1,4 +1,4 @@
 [run]
 omit =
     jupyterhub/tests/*
-    jupyterhub/singleuser.py
+    jupyterhub/alembic/*
