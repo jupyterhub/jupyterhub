@@ -354,7 +354,8 @@ class JupyterHub(Application):
         return url_path_join(self.base_url, '/hub/')
 
     @observe('hub_prefix')
-    def _hub_prefix_changed(self, name, old, new):
+    def _hub_prefix_changed(self, change):
+        new = change['new']
         if new == '/':
             raise TraitError("'/' is not a valid hub prefix")
         if not new.startswith(self.base_url):
