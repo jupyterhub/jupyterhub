@@ -456,7 +456,11 @@ class PrefixRedirectHandler(BaseHandler):
     Redirects /foo to /prefix/foo, etc.
     """
     def get(self):
-        path = self.request.uri[len(self.base_url):]
+        uri = self.request.uri
+        if uri.startswith(self.base_url):
+            path = self.request.uri[len(self.base_url):]
+        else:
+            path = self.request.path
         self.redirect(url_path_join(
             self.hub.server.base_url, path,
         ), permanent=False)
