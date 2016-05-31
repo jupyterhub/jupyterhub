@@ -12,3 +12,4 @@
     auth
     spawner
     user
+    services.auth
