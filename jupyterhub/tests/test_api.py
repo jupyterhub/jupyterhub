@@ -146,6 +146,7 @@ def test_referer_check(app, io_loop):
     )
     assert r.status_code == 200
 
+# user API tests
 
 def test_get_users(app):
     db = app.db
@@ -295,6 +296,7 @@ def test_add_admin(app):
     assert user.name == name
     assert user.admin
 
+
 def test_delete_user(app):
     db = app.db
     mal = add_user(db, name='mal')
@@ -321,6 +323,7 @@ def test_make_admin(app):
     assert user.name == name
     assert user.admin
 
+
 def get_app_user(app, name):
     """Get the User object from the main thread
 
@@ -334,6 +337,7 @@ def get_app_user(app, name):
     app.io_loop.add_callback(get_user_id)
     user_id = q.get(timeout=2)
     return app.users[user_id]
+
 
 def test_spawn(app, io_loop):
     db = app.db
@@ -374,6 +378,7 @@ def test_spawn(app, io_loop):
     assert 'pid' not in user.state
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status == 0
+
 
 def test_slow_spawn(app, io_loop):
     # app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
@@ -484,6 +489,7 @@ def test_cookie(app):
     reply = r.json()
     assert reply['name'] == name
 
+
 def test_token(app):
     name = 'book'
     user = add_user(app.db, app=app, name=name)
@@ -494,6 +500,7 @@ def test_token(app):
     assert user_model['name'] == name
     r = api_request(app, 'authorizations/token', 'notauthorized')
     assert r.status_code == 404
+
 
 def test_get_token(app):
     name = 'user'
@@ -507,6 +514,7 @@ def test_get_token(app):
     token = json.loads(data)
     assert not token['Authentication'] is None
 
+
 def test_bad_get_token(app):
     name = 'user'
     password = 'fake'
@@ -516,6 +524,127 @@ def test_bad_get_token(app):
         'password': password,
     }))
     assert r.status_code == 403
+
+# group API tests
+
+def test_groups_list(app):
+    r = api_request(app, 'groups')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == []
+    
+    # create a group
+    group = orm.Group(name='alphaflight')
+    app.db.add(group)
+    app.db.commit()
+    
+    r = api_request(app, 'groups')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == [{
+        'name': 'alphaflight',
+        'users': []
+    }]
+
+
+def test_group_get(app):
+    group = orm.Group.find(app.db, name='alphaflight')
+    user = add_user(app.db, app=app, name='sasquatch')
+    group.users.append(user)
+    app.db.commit()
+    
+    r = api_request(app, 'groups/runaways')
+    assert r.status_code == 404
+    
+    r = api_request(app, 'groups/alphaflight')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == {
+        'name': 'alphaflight',
+        'users': ['sasquatch']
+    }
+
+
+def test_group_create_delete(app):
+    db = app.db
+    r = api_request(app, 'groups/runaways', method='delete')
+    assert r.status_code == 404
+    
+    r = api_request(app, 'groups/new', method='post', data=json.dumps({
+        'users': ['doesntexist']
+    }))
+    assert r.status_code == 400
+    assert orm.Group.find(db, name='new') is None
+    
+    r = api_request(app, 'groups/omegaflight', method='post', data=json.dumps({
+        'users': ['sasquatch']
+    }))
+    r.raise_for_status()
+    
+    omegaflight = orm.Group.find(db, name='omegaflight')
+    sasquatch = find_user(db, name='sasquatch')
+    assert omegaflight in sasquatch.groups
+    assert sasquatch in omegaflight.users
+    
+    # create duplicate raises 400
+    r = api_request(app, 'groups/omegaflight', method='post')
+    assert r.status_code == 400
+    
+    r = api_request(app, 'groups/omegaflight', method='delete')
+    assert r.status_code == 204
+    assert omegaflight not in sasquatch.groups
+    assert orm.Group.find(db, name='omegaflight') is None
+    
+    # delete nonexistant gives 404
+    r = api_request(app, 'groups/omegaflight', method='delete')
+    assert r.status_code == 404
+    
+
+
+def test_group_add_users(app):
+    db = app.db
+    # must specify users
+    r = api_request(app, 'groups/alphaflight/users', method='post', data='{}')
+    assert r.status_code == 400
+
+    names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
+    users = [ find_user(db, name=name) or add_user(db, app=app, name=name) for name in names ]
+    r = api_request(app, 'groups/alphaflight/users', method='post', data=json.dumps({
+        'users': names,
+    }))
+    r.raise_for_status()
+    
+    for user in users:
+        print(user.name)
+        assert [ g.name for g in user.groups ] == ['alphaflight']
+    
+    group = orm.Group.find(db, name='alphaflight')
+    assert sorted([ u.name for u in group.users ]) == sorted(names)
+
+
+def test_group_delete_users(app):
+    db = app.db
+    # must specify users
+    r = api_request(app, 'groups/alphaflight/users', method='delete', data='{}')
+    assert r.status_code == 400
+
+    names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
+    users = [ find_user(db, name=name) for name in names ]
+    r = api_request(app, 'groups/alphaflight/users', method='delete', data=json.dumps({
+        'users': names[:2],
+    }))
+    r.raise_for_status()
+    
+    for user in users[:2]:
+        assert user.groups == []
+    for user in users[2:]:
+        assert [ g.name for g in user.groups ] == ['alphaflight']
+    
+    group = orm.Group.find(db, name='alphaflight')
+    assert sorted([ u.name for u in group.users ]) == sorted(names[2:])
+
+
+# general API tests
 
 def test_options(app):
     r = api_request(app, 'users', method='options')
@@ -528,6 +657,7 @@ def test_bad_json_body(app):
     assert r.status_code == 400
 
 
+# shutdown must be last
 def test_shutdown(app):
     r = api_request(app, 'shutdown', method='post', data=json.dumps({
         'servers': True,
@@ -541,3 +671,4 @@ def test_shutdown(app):
         else:
             break
     assert not app.io_loop._running
+
