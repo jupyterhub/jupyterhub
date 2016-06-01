@@ -13,7 +13,6 @@ import socket
 import sys
 import threading
 from datetime import datetime
-from distutils.version import LooseVersion as V
 from getpass import getuser
 from subprocess import Popen
 from urllib.parse import urlparse
@@ -201,6 +200,17 @@ class JupyterHub(Application):
         Authenticator,
         PAMAuthenticator,
     ])
+    
+    load_groups = Dict(List(Unicode()),
+        help="""Dict of 'group': ['usernames'] to load at startup.
+        
+        This strictly *adds* groups and users to groups.
+        
+        Loading one set of groups, then starting JupyterHub again with a different
+        set will not remove users or groups from previous launches.
+        That must be done through the API.
+        """
+    ).tag(config=True)
 
     config_file = Unicode('jupyterhub_config.py',
         help="The config file to load",
@@ -834,7 +844,28 @@ class JupyterHub(Application):
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
-
+    
+    def init_groups(self):
+        """Load predefined groups into the database"""
+        db = self.db
+        for name, usernames in self.load_groups.items():
+            group = orm.Group.find(db, name)
+            if group is None:
+                group = orm.Group(name=name)
+                db.add(group)
+            for username in usernames:
+                username = self.authenticator.normalize_username(username)
+                if not self.authenticator.check_whitelist(username):
+                    raise ValueError("Username %r is not in whitelist" % username)
+                user = orm.User.find(db, name=username)
+                if user is None:
+                    if not self.authenticator.validate_username(username):
+                        raise ValueError("Group username %r is not valid" % username)
+                    user = orm.User(name=username)
+                    db.add(user)
+                group.users.append(user)
+        db.commit()
+    
     def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
         db = self.db
@@ -1129,6 +1160,7 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         yield self.init_users()
+        self.init_groups()
         self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
