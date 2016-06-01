@@ -90,6 +90,7 @@ class APIHandler(BaseHandler):
         model = {
             'name': user.name,
             'admin': user.admin,
+            'groups': [ g.name for g in user.groups ],
             'server': user.url if user.running else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),

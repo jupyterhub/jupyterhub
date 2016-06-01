@@ -21,14 +21,13 @@ def check_db_locks(func):
     Decorator for test functions that verifies no locks are held on the
     application's database upon exit by creating and dropping a dummy table.
 
-    Relies on an instance of JupyterhubApp being the first argument to the
+    Relies on an instance of JupyterHubApp being the first argument to the
     decorated function.
     """
 
-    def new_func(*args, **kwargs):
-        retval = func(*args, **kwargs)
+    def new_func(app, *args, **kwargs):
+        retval = func(app, *args, **kwargs)
 
-        app = args[0]
         temp_session = app.session_factory()
         temp_session.execute('CREATE TABLE dummy (foo INT)')
         temp_session.execute('DROP TABLE dummy')
@@ -159,12 +158,14 @@ def test_get_users(app):
     assert users == [
         {
             'name': 'admin',
+            'groups': [],
             'admin': True,
             'server': None,
             'pending': None,
         },
         {
             'name': 'user',
+            'groups': [],
             'admin': False,
             'server': None,
             'pending': None,
@@ -195,6 +196,7 @@ def test_get_user(app):
     user.pop('last_activity')
     assert user == {
         'name': name,
+        'groups': [],
         'admin': False,
         'server': None,
         'pending': None,
