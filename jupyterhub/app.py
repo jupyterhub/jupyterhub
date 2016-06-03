@@ -829,6 +829,16 @@ class JupyterHub(Application):
                 user = orm.User(name=name)
                 new_users.append(user)
                 db.add(user)
+        
+        # add API-only users to the db
+        # these do not go in the whitelist, or trigger add_user
+        for name in self.authenticator.api_only_admins:
+            user = orm.User.find(db, name)
+            if user is None:
+                user = orm.User(name=name, api_only=True, admin=True)
+            else:
+                # ensure api-only-admin status:
+                user.api_only = user.admin = True
 
         db.commit()
 
@@ -837,7 +847,8 @@ class JupyterHub(Application):
         # This lets whitelist be used to set up initial list,
         # but changes to the whitelist can occur in the database,
         # and persist across sessions.
-        for user in db.query(orm.User):
+        for user in db.query(orm.User)\
+                      .filter(orm.User.api_only==False):
             yield gen.maybe_future(self.authenticator.add_user(user))
         db.commit() # can add_user touch the db?
 

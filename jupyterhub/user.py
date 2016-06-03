@@ -197,7 +197,8 @@ class User(HasTraits):
     def spawn(self, options=None):
         """Start the user's spawner"""
         db = self.db
-        
+        if self.api_only:
+            raise web.HTTPError(400, "User %s is api-only and not allowed to start a server." % self.name)
         self.server = orm.Server(
             cookie_name=self.cookie_name,
             base_url=self.base_url,

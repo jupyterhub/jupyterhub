@@ -42,6 +42,15 @@ class Authenticator(LoggingConfigurable):
         If empty, allow any user to attempt login.
         """
     ).tag(config=True)
+    api_only_admins = Set(
+        help="""Set of usernames that are API-only.
+        
+        These are usernames that can only be authenticated via API key,
+        never login forms or OAuth setups.
+        
+        They are always administrators.
+        """
+    ).tag(config=True)
     custom_html = Unicode('',
         help="""HTML login form for custom handlers.
         Override in form-based custom authenticators
