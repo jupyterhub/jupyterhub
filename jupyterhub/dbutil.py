@@ -80,3 +80,14 @@ def upgrade(db_url, revision='head'):
             ['alembic', '-c', alembic_ini, 'upgrade', revision]
         )
 
+def _alembic(*args):
+    """Run an alembic command with a temporary alembic.ini"""
+    with _temp_alembic_ini('sqlite:///jupyterhub.sqlite') as alembic_ini:
+        check_call(
+            ['alembic', '-c', alembic_ini] + list(args)
+        )
+
+
+if __name__ == '__main__':
+    import sys
+    _alembic(*sys.argv[1:])
