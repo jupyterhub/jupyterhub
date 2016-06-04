@@ -158,6 +158,103 @@ paths:
       responses:
         '200':
           description: Sets a cookie granting the requesting admin access to the user's server
+  /groups:
+    get:
+      summary: List groups
+      responses:
+        '200':
+          description: The list of groups
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Group'
+  /groups/{name}:
+    get:
+      summary: Get a group by name
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The group model
+          schema:
+            $ref: '#/definitions/Group'
+    post:
+      summary: Create a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The group has been created
+          schema:
+            $ref: '#/definitions/Group'
+    delete:
+      summary: Delete a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The group has been deleted
+  /groups/{name}/users:
+    post:
+      summary: add users to a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+        - name: data
+          in: body
+          required: true
+          description: The users to add to the group
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                description: List of usernames to add to the group
+                items:
+                  type: string
+      responses:
+        '200':
+          description: The users have been added to the group
+          schema:
+            $ref: '#/definitions/Group'
+    delete:
+      summary: Remove users from a group
+      parameters:
+        - name: name
+          description: group name
+          in: path
+          required: true
+          type: string
+        - name: data
+          in: body
+          required: true
+          description: The users to add to the group
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                description: List of usernames to add to the group
+                items:
+                  type: string
+      responses:
+        '200':
+          description: The users have been removed from the group
   /proxy:
     get:
       summary: Get the proxy's routing table
@@ -246,6 +343,11 @@ definitions:
       admin:
         type: boolean
         description: Whether the user is an admin
+      groups:
+        type: array
+        description: The names of groups of which this user is a member
+        items:
+          type: string
       server:
         type: string
         description: The user's server's base URL, if running; null if not.
@@ -257,3 +359,14 @@ definitions:
         type: string
         format: ISO8601 Timestamp
         description: Timestamp of last-seen activity from the user
+  Group:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The group's name
+      users:
+        type: array
+        description: The names of users who are members of this group
+        items:
+          type: string

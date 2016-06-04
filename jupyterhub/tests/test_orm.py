@@ -124,3 +124,17 @@ def test_spawn_fails(db, io_loop):
     assert user.server is None
     assert not user.running
 
+
+def test_groups(db):
+    user = orm.User(name='aeofel')
+    db.add(user)
+    
+    group = orm.Group(name='lives')
+    db.add(group)
+    db.commit()
+    assert group.users == []
+    assert user.groups == []
+    group.users.append(user)
+    db.commit()
+    assert group.users == [user]
+    assert user.groups == [group]

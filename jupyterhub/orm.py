@@ -20,7 +20,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Table
 
 from .utils import (
     random_port, url_path_join, wait_for_server, wait_for_http_server,
@@ -258,6 +258,32 @@ class Hub(Base):
             return "<%s [unconfigured]>" % self.__class__.__name__
 
 
+# user:group many:many mapping table
+user_group_map = Table('user_group_map', Base.metadata,
+    Column('user_id', ForeignKey('users.id'), primary_key=True),
+    Column('group_id', ForeignKey('groups.id'), primary_key=True),
+)
+
+class Group(Base):
+    """User Groups"""
+    __tablename__ = 'groups'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(Unicode(1023), unique=True)
+    users = relationship('User', secondary='user_group_map', back_populates='groups')
+    
+    def __repr__(self):
+        return "<%s %s (%i users)>" % (
+            self.__class__.__name__, self.name, len(self.users)
+        )
+    @classmethod
+    def find(cls, db, name):
+        """Find a group by name.
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name==name).first()
+
+
 class User(Base):
     """The User table
 
@@ -290,6 +316,8 @@ class User(Base):
     state = Column(JSONDict)
     # Authenticators can store their state here:
     auth_state = Column(JSONDict)
+    # group mapping
+    groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
     other_user_cookies = set([])
 

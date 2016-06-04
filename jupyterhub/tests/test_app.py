@@ -140,3 +140,20 @@ def test_cookie_secret_env(tmpdir):
     assert hub.cookie_secret == binascii.a2b_hex('abc123')
     assert not os.path.exists(hub.cookie_secret_file)
 
+
+def test_load_groups(io_loop):
+    to_load = {
+        'blue': ['cyclops', 'rogue', 'wolverine'],
+        'gold': ['storm', 'jean-grey', 'colossus'],
+    }
+    hub = MockHub(load_groups=to_load)
+    hub.init_db()
+    io_loop.run_sync(hub.init_users)
+    hub.init_groups()
+    db = hub.db
+    blue = orm.Group.find(db, name='blue')
+    assert blue is not None
+    assert sorted([ u.name for u in blue.users ]) == sorted(to_load['blue'])
+    gold = orm.Group.find(db, name='gold')
+    assert gold is not None
+    assert sorted([ u.name for u in gold.users ]) == sorted(to_load['gold'])
