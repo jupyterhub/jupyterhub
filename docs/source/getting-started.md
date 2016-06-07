@@ -574,7 +574,7 @@ server {
     }
 	
 }
-
+```
 
 Now just restart `nginx`, restart the JupyterHub, and enjoy accessing https://HUB.DOMAIN.TLD while serving other content securely on https://NO_HUB.DOMAIN.TLD.
 
