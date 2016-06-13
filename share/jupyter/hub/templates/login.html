@@ -21,6 +21,12 @@
     Sign in
   </div>
   <div class='auth-form-body'>
+
+    <p id='insecure-login-warning'>
+    Warning: JupyterHub seems to be served over an unsecured HTTP connection.
+    We strongly recommend enabling TLS for JupyterHub.
+    </p>
+
     {% if login_error %}
     <p class="login_error">
       {{login_error}}
@@ -64,5 +70,11 @@
 
 {% block script %}
 {{super()}}
+
+<script>
+if (window.location.protocol === "https:") {
+    var warnings = document.getElementById('insecure-login-warning').remove()
+}
+</script>
 
 {% endblock %}
