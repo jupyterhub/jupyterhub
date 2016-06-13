@@ -356,20 +356,18 @@ class JupyterHub(Application):
         help="The ip for this process"
     ).tag(config=True)
     hub_prefix = URLPrefix('/hub/',
-        help="The prefix for the hub server. Must not be '/'"
-    ).tag(config=True)
+        help="The prefix for the hub server.  Always /base_url/hub/"
+    )
 
     @default('hub_prefix')
     def _hub_prefix_default(self):
         return url_path_join(self.base_url, '/hub/')
 
-    @observe('hub_prefix')
-    def _hub_prefix_changed(self, change):
-        new = change['new']
-        if new == '/':
-            raise TraitError("'/' is not a valid hub prefix")
-        if not new.startswith(self.base_url):
-            self.hub_prefix = url_path_join(self.base_url, new)
+    @observe('base_url')
+    def _update_hub_prefix(self, change):
+        """add base URL to hub prefix"""
+        base_url = change['new']
+        self.hub_prefix = self._hub_prefix_default()
 
     cookie_secret = Bytes(
         help="""The cookie secret to use to encrypt cookies.
