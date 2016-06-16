@@ -57,7 +57,7 @@ or at least with access to the PAM service,
 which regular users typically do not have
 (on Ubuntu, this requires being added to the `shadow` group).
 
-[More info on custom Authenticators](authenticators.md).
+[More info on custom Authenticators](authenticators.html).
 
 See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Authenticators).
 
@@ -72,6 +72,6 @@ and needs to be able to take three actions:
 2. poll whether the process is still running
 3. stop the process
 
-[More info on custom Spawners](spawners.md).
+[More info on custom Spawners](spawners.html).
 
 See a list of custom Spawners [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners).
