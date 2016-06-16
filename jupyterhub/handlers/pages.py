@@ -16,6 +16,9 @@ from .base import BaseHandler
 class RootHandler(BaseHandler):
     """Render the Hub root page.
 
+    If next argument is passed by single-user server,
+    redirect to base_url + single-user page.
+
     If logged in, redirects to:
 
     - single-user server if running
@@ -24,6 +27,18 @@ class RootHandler(BaseHandler):
     Otherwise, renders login page.
     """
     def get(self):
+        next_url = self.get_argument('next', '')
+        if not next_url.startswith('/'):
+            self.log.warn("Disallowing redirect outside JupyterHub: %r", next_url)
+            next_url = ''
+        if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
+            # add /hub/ prefix, to ensure we redirect to the right user's server.
+            # The next request will be handled by UserSpawnHandler,
+            # ultimately redirecting to the logged-in user's server.
+            without_prefix = next_url[len(self.base_url):]
+            next_url = url_path_join(self.hub.server.base_url, without_prefix)
+            self.redirect(next_url)
+            return
         user = self.get_current_user()
         if user:
             if user.running:
@@ -33,9 +48,8 @@ class RootHandler(BaseHandler):
             else:
                 url = url_path_join(self.hub.server.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
-            self.redirect(url)
-            return
-        url = url_path_join(self.hub.server.base_url, 'login')
+        else:
+            url = self.authenticator.login_url(self.base_url)
         self.redirect(url)
 
 
