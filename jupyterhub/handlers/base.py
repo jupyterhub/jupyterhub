@@ -471,8 +471,9 @@ class UserSpawnHandler(BaseHandler):
 
     If logged in, spawn a single-user server and redirect request.
     If a user, alice, requests /user/bob/notebooks/mynotebook.ipynb,
-    redirect her to /user/alice/notebooks/mynotebook.ipynb, which should
-    in turn call this function.
+    she will be redirected to /hub/user/bob/notebooks/mynotebook.ipynb,
+    which will be handled by this handler,
+    which will in turn send her to /user/alice/notebooks/mynotebook.ipynb.
     """
 
     @gen.coroutine

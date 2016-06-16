@@ -11,8 +11,12 @@ import mock
 from .mocking import FormSpawner, public_url, public_host, user_url
 from .test_api import api_request
 
-def get_page(path, app, **kw):
-    base_url = ujoin(public_host(app), app.hub.server.base_url)
+def get_page(path, app, hub=True, **kw):
+    if hub:
+        prefix = app.hub.server.base_url
+    else:
+        prefix = app.base_url
+    base_url = ujoin(public_host(app), prefix)
     print(base_url)
     return requests.get(ujoin(base_url, path), **kw)
 
@@ -32,6 +36,16 @@ def test_root_auth(app):
     r = requests.get(public_url(app), cookies=cookies)
     r.raise_for_status()
     assert r.url == user_url(app.users['river'], app)
+
+def test_root_redirect(app):
+    name = 'wash'
+    cookies = app.login_user(name)
+    next_url = ujoin(app.base_url, 'user/other/test.ipynb')
+    url = '/?' + urlencode({'next': next_url})
+    r = get_page(url, app, cookies=cookies)
+    r.raise_for_status()
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, 'user/%s/test.ipynb' % name)
 
 def test_home_no_auth(app):
     r = get_page('home', app, allow_redirects=False)
@@ -152,19 +166,19 @@ def test_user_redirect(app):
     name = 'wash'
     cookies = app.login_user(name)
 
-    r = get_page('/user/baduser', app, cookies=cookies)
+    r = get_page('/user/baduser', app, cookies=cookies, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s' % name)
 
-    r = get_page('/user/baduser/test.ipynb', app, cookies=cookies)
+    r = get_page('/user/baduser/test.ipynb', app, cookies=cookies, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/test.ipynb' % name)
 
-    r = get_page('/user/baduser/test.ipynb', app)
+    r = get_page('/user/baduser/test.ipynb', app, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
