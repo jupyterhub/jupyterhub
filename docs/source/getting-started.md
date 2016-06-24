@@ -424,13 +424,10 @@ c.JupyterHub.ssl_key = pjoin(ssl_dir, 'ssl.key')
 c.JupyterHub.ssl_cert = pjoin(ssl_dir, 'ssl.cert')
 
 # put the JupyterHub cookie secret and state db
-# in /var/run/jupyterhub
+# in /srv/jupyterhub/
 c.JupyterHub.cookie_secret_file = pjoin(runtime_dir, 'cookie_secret')
 c.JupyterHub.db_url = pjoin(runtime_dir, 'jupyterhub.sqlite')
 # or `--db=/path/to/jupyterhub.sqlite` on the command-line
-
-# put the log file in /var/log
-c.JupyterHub.log_file = '/var/log/jupyterhub.log'
 
 # use GitHub OAuthenticator for local users
 
@@ -459,7 +456,7 @@ export GITHUB_CLIENT_ID=github_id
 export GITHUB_CLIENT_SECRET=github_secret
 export OAUTH_CALLBACK_URL=https://example.com/hub/oauth_callback
 export CONFIGPROXY_AUTH_TOKEN=super-secret
-jupyterhub -f /path/to/aboveconfig.py
+jupyterhub -f /path/to/aboveconfig.py &> /var/log/jupyterhub.log
 ```
 
 # Further reading
