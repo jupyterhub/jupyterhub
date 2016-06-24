@@ -520,6 +520,24 @@ class UserSpawnHandler(BaseHandler):
             ))
 
 
+class UserRedirectHandler(BaseHandler):
+    """Redirect requests to user servers.
+    
+    Allows public linking to "this file on your server".
+    
+    /user-redirect/path/to/foo will redirect to /user/:name/path/to/foo
+    
+    If the user is not logged in, send to login URL, redirecting back here.
+    
+    .. versionadded:: 0.7
+    """
+    @web.authenticated
+    def get(self, path):
+        user = self.get_current_user()
+        url = url_path_join(user.url, path)
+        self.redirect(url)
+
+
 class CSPReportHandler(BaseHandler):
     '''Accepts a content security policy violation report'''
     @web.authenticated
@@ -532,7 +550,9 @@ class CSPReportHandler(BaseHandler):
         # Report it to statsd as well
         self.statsd.incr('csp_report')
 
+
 default_handlers = [
     (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
+    (r'/user-redirect/(.*)?', UserRedirectHandler),
     (r'/security/csp-report', CSPReportHandler),
 ]
