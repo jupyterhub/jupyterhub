@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
+[![Requirements Status](https://requires.io/github/jupyterhub/jupyterhub/requirements.svg?branch=master)](https://requires.io/github/jupyterhub/jupyterhub/requirements/?branch=master)
 "
 [![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
 "
@@ -14,7 +15,7 @@ single-user [Jupyter notebook *(IPython notebook)* ](https://jupyter-notebook.re
 
 JupyterHub provides **single-user notebook servers to many users**. For example,
 JupyterHub could serve notebooks to a class of students, a corporate
-workgroup, or a science research group. 
+workgroup, or a science research group.
 
 by [Project Jupyter](https://jupyter.org)
 
@@ -53,7 +54,7 @@ Before installing JupyterHub, you need:
 
   (The `nodejs-legacy` package installs the `node` executable and is currently
   required for npm to work on Debian/Ubuntu.)
- 
+
 - TLS certificate and key for HTTPS communication
 
 - Domain name
@@ -102,7 +103,7 @@ Generate a default config file:
 
     jupyterhub --generate-config
 
-#### Customize the configuration, authentication, and process spawning 
+#### Customize the configuration, authentication, and process spawning
 Spawn the server on ``10.0.1.2:443`` with **https**:
 
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
@@ -137,7 +138,7 @@ adding ssl options to your docker configuration or using a ssl enabled proxy.
 
 [Mounting volumes](https://docs.docker.com/engine/userguide/containers/dockervolumes/) will
 allow you to **store data outside the docker image (host system) so it will be persistent**, even when you start
-a new image. 
+a new image.
 
 The command `docker exec -it jupyterhub bash` will spawn a root shell in your docker
 container. You can **use the root shell to create system users in the container**. These accounts will be used for authentication
@@ -183,6 +184,6 @@ and you may participate in development discussions or get live help on [Gitter](
 - [Reporting Issues](https://github.com/jupyter/jupyterhub/issues)
 - JupyterHub tutorial | [Repo](https://github.com/jupyterhub/jupyterhub-tutorial)
   | [Tutorial documentation](http://jupyterhub-tutorial.readthedocs.io/en/latest/)
-- [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf) 
+- [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
