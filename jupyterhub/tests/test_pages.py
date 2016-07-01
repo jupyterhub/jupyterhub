@@ -166,6 +166,28 @@ def test_user_redirect(app):
     name = 'wash'
     cookies = app.login_user(name)
 
+    r = get_page('/user-redirect/tree/top/', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, '/hub/login')
+    query = urlparse(r.url).query
+    assert query == urlencode({
+        'next': ujoin(app.hub.server.base_url, '/user-redirect/tree/top/')
+    })
+
+    r = get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
+
+
+def test_user_redirect_deprecated(app):
+    """redirecting from /user/someonelse/ URLs (deprecated)"""
+    name = 'wash'
+    cookies = app.login_user(name)
+
     r = get_page('/user/baduser', app, cookies=cookies, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))

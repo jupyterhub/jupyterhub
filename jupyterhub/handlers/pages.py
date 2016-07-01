@@ -37,6 +37,9 @@ class RootHandler(BaseHandler):
             # ultimately redirecting to the logged-in user's server.
             without_prefix = next_url[len(self.base_url):]
             next_url = url_path_join(self.hub.server.base_url, without_prefix)
+            self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
+                self.request.uri, next_url,
+            )
             self.redirect(next_url)
             return
         user = self.get_current_user()
