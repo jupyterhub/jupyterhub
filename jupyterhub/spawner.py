@@ -7,6 +7,7 @@ import errno
 import os
 import pipes
 import pwd
+import shutil
 import signal
 import sys
 import grp
@@ -465,10 +466,19 @@ class LocalProcessSpawner(Spawner):
         cmd.extend(self.get_args())
         
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
-        self.proc = Popen(cmd, env=env,
-            preexec_fn=self.make_preexec_fn(self.user.name),
-            start_new_session=True, # don't forward signals
-        )
+        try:
+            self.proc = Popen(cmd, env=env,
+                preexec_fn=self.make_preexec_fn(self.user.name),
+                start_new_session=True, # don't forward signals
+            )
+        except PermissionError:
+            # use which to get abspath
+            script = shutil.which(cmd[0]) or cmd[0]
+            self.log.error("Permission denied trying to run %r. Does %s have access to this file?",
+                script, self.user.name,
+            )
+            raise
+        
         self.pid = self.proc.pid
     
     @gen.coroutine
