@@ -19,6 +19,8 @@ from traitlets import (
     Bool,
     Unicode,
     CUnicode,
+    default,
+    validate,
 )
 
 from notebook.notebookapp import (
@@ -118,9 +120,9 @@ class SingleUserNotebookApp(NotebookApp):
     user = CUnicode(config=True)
     def _user_changed(self, name, old, new):
         self.log.name = new
-    hub_prefix = Unicode(config=True)
-    hub_host = Unicode(config=True)
-    hub_api_url = Unicode(config=True)
+    hub_prefix = Unicode().tag(config=True)
+    hub_host = Unicode().tag(config=True)
+    hub_api_url = Unicode().tag(config=True)
     aliases = aliases
     flags = flags
     open_browser = False
@@ -129,18 +131,20 @@ class SingleUserNotebookApp(NotebookApp):
     logout_handler_class = JupyterHubLogoutHandler
     port_retries = 0 # disable port-retries, since the Spawner will tell us what port to use
 
-    disable_user_config = Bool(False, config=True,
+    disable_user_config = Bool(False,
         help="""Disable user configuration of single-user server.
 
         Prevents user-writable files that normally configure the single-user server
         from being loaded, ensuring admins have full control of configuration.
         """
-    )
-
+    ).tag(config=True)
+    
+    @default('log_datefmt')
     def _log_datefmt_default(self):
         """Exclude date from default date format"""
         return "%Y-%m-%d %H:%M:%S"
 
+    @default('log_format')
     def _log_format_default(self):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
@@ -173,8 +177,9 @@ class SingleUserNotebookApp(NotebookApp):
             path = list(_exclude_home(path))
         return path
 
-    def _static_custom_path_default(self):
-        path = super(SingleUserNotebookApp, self)._static_custom_path_default()
+    @validate('static_custom_path')
+    def _validate_static_custom_path(self, proposal):
+        path = proposal['value']
         if self.disable_user_config:
             path = list(_exclude_home(path))
         return path
