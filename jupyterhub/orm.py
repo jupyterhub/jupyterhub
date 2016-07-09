@@ -304,7 +304,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(1023))
     # should we allow multiple servers per user?
-    _server_id = Column(Integer, ForeignKey('servers.id'))
+    _server_id = Column(Integer, ForeignKey('servers.id', ondelete="SET NULL"))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     admin = Column(Boolean, default=False)
     last_activity = Column(DateTime, default=datetime.utcnow)
@@ -370,7 +370,7 @@ class APIToken(Base):
 
     @declared_attr
     def user_id(cls):
-        return Column(Integer, ForeignKey('users.id'))
+        return Column(Integer, ForeignKey('users.id', ondelete="SET NULL"))
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(1023))
