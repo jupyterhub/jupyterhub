@@ -347,6 +347,7 @@ def test_spawn(app, io_loop):
         's': ['value'],
         'i': 5,
     }
+    before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
     r = api_request(app, 'users', name, 'server', method='post', data=json.dumps(options))
     assert r.status_code == 201
     assert 'pid' in user.state
@@ -378,6 +379,13 @@ def test_spawn(app, io_loop):
     assert 'pid' not in user.state
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status == 0
+
+    # check that we cleaned up after ourselves
+    assert user.server is None
+    after_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
+    assert before_servers == after_servers
+    tokens = list(db.query(orm.APIToken).filter(orm.APIToken.user_id==user.id))
+    assert tokens == []
 
 
 def test_slow_spawn(app, io_loop):

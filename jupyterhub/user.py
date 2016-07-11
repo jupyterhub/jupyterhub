@@ -291,12 +291,20 @@ class User(HasTraits):
         self.spawner.stop_polling()
         self.stop_pending = True
         try:
+            api_token = self.spawner.api_token
             status = yield spawner.poll()
             if status is None:
                 yield self.spawner.stop()
             spawner.clear_state()
             self.state = spawner.get_state()
             self.last_activity = datetime.utcnow()
+            # cleanup server entry, API token from defunct server
+            if self.server:
+                # cleanup server entry from db
+                self.db.delete(self.server)
+            orm_token = orm.APIToken.find(self.db, api_token)
+            if orm_token:
+                self.db.delete(orm_token)
             self.server = None
             self.db.commit()
         finally:
