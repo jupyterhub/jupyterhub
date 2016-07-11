@@ -370,7 +370,7 @@ class APIToken(Base):
 
     @declared_attr
     def user_id(cls):
-        return Column(Integer, ForeignKey('users.id', ondelete="SET NULL"))
+        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(1023))
