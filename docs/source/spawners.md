@@ -153,7 +153,7 @@ which would return:
 }
 ```
 
-When `Spawner.spawn` is called, this dictionary is accessible as `self.user_options`.
+When `Spawner.start` is called, this dictionary is accessible as `self.user_options`.
 
 
 
