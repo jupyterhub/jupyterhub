@@ -181,7 +181,7 @@ We encourage you to ask questions on the [mailing list](https://groups.google.co
 and you may participate in development discussions or get live help on [Gitter](https://gitter.im/jupyterhub/jupyterhub).
 
 ## Resources
-- [Reporting Issues](https://github.com/jupyter/jupyterhub/issues)
+- [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - JupyterHub tutorial | [Repo](https://github.com/jupyterhub/jupyterhub-tutorial)
   | [Tutorial documentation](http://jupyterhub-tutorial.readthedocs.io/en/latest/)
 - [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
