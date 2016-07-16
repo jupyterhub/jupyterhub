@@ -384,9 +384,28 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     api_tokens = Dict(Unicode(),
-        help="""Dict of token:username to be loaded into the database.
+        help="""PENDING DEPRECATION: consider using service_tokens
+        
+        Dict of token:username to be loaded into the database.
 
-        Allows ahead-of-time generation of API tokens for use by services.
+        Allows ahead-of-time generation of API tokens for use by externally managed services,
+        which authenticate as JupyterHub users.
+
+        Consider using service_tokens for general services that talk to the JupyterHub API.
+        """
+    ).tag(config=True)
+    @observe('api_tokens')
+    def _deprecate_api_tokens(self, change):
+        self.log.warn("JupyterHub.api_tokens is pending deprecation."
+            "  Consider using JupyterHub.service_tokens."
+            "  If you have a use case for services that identify as users,"
+            " let us know: https://github.com/jupyterhub/jupyterhub/issues"
+        )
+
+    service_tokens = Dict(Unicode(),
+        help="""Dict of token:servicename to be loaded into the database.
+
+        Allows ahead-of-time generation of API tokens for use by externally managed services.
         """
     ).tag(config=True)
 
@@ -864,37 +883,50 @@ class JupyterHub(Application):
                 group.users.append(user)
         db.commit()
     
-    def init_api_tokens(self):
-        """Load predefined API tokens (for services) into database"""
+    def _add_tokens(self, token_dict, kind):
+        """Add tokens for users or services to the database"""
+        if kind == 'user':
+            Class = orm.User
+        elif kind == 'service':
+            Class = orm.Service
+        else:
+            raise ValueError("kind must be user or service, not %r" % kind)
+
         db = self.db
-        for token, username in self.api_tokens.items():
-            username = self.authenticator.normalize_username(username)
-            if not self.authenticator.check_whitelist(username):
-                raise ValueError("Token username %r is not in whitelist" % username)
-            if not self.authenticator.validate_username(username):
-                raise ValueError("Token username %r is not valid" % username)
+        for token, name in token_dict.items():
+            if kind == 'user':
+                name = self.authenticator.normalize_username(name)
+                if not self.authenticator.check_whitelist(name):
+                    raise ValueError("Token name %r is not in whitelist" % name)
+                if not self.authenticator.validate_username(name):
+                    raise ValueError("Token name %r is not valid" % name)
             orm_token = orm.APIToken.find(db, token)
             if orm_token is None:
-                user = orm.User.find(db, username)
-                user_created = False
-                if user is None:
-                    user_created = True
-                    self.log.debug("Adding user %r to database", username)
-                    user = orm.User(name=username)
-                    db.add(user)
+                obj = Class.find(db, name)
+                created = False
+                if obj is None:
+                    created = True
+                    self.log.debug("Adding %s %r to database", kind, name)
+                    obj = Class(name=name)
+                    db.add(obj)
                     db.commit()
-                self.log.info("Adding API token for %s", username)
+                self.log.info("Adding API token for %s: %s", kind, name)
                 try:
-                    user.new_api_token(token)
+                    obj.new_api_token(token)
                 except Exception:
-                    if user_created:
+                    if created:
                         # don't allow bad tokens to create users
-                        db.delete(user)
+                        db.delete(obj)
                         db.commit()
                         raise
             else:
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
+
+    def init_api_tokens(self):
+        """Load predefined API tokens (for services) into database"""
+        self._add_tokens(self.service_tokens, kind='service')
+        self._add_tokens(self.api_tokens, kind='user')
 
     @gen.coroutine
     def init_spawners(self):
