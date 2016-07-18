@@ -1018,7 +1018,7 @@ class JupyterHub(Application):
                     " There better be SSL termination happening somewhere else...")
             else:
                 self.log.error(
-                    "Refusing to run JuptyterHub without SSL."
+                    "Refusing to run JupyterHub without SSL."
                     " If you are terminating SSL in another layer,"
                     " pass --no-ssl to tell JupyterHub to allow the proxy to listen on HTTP."
                 )
