@@ -7,6 +7,7 @@ HubAuth can be used in any application, even outside tornado.
 HubAuthenticated is a mixin class for tornado handlers that should authenticate with the Hub.
 """
 
+import socket
 import time
 from urllib.parse import quote
 
@@ -148,12 +149,25 @@ class HubAuth(Configurable):
             cached = self.cookie_cache.get(encrypted_cookie)
             if cached is not None:
                 return cached
+        try:
+            r = requests.get(
+                url_path_join(self.api_url,
+                              "authorizations/cookie",
+                              self.cookie_name,
+                              quote(encrypted_cookie, safe=''),
+                ),
+                headers = {
+                    'Authorization' : 'token %s' % self.api_token,
+                },
+            )
+        except requests.ConnectionError:
+            msg = "Failed to connect to Hub API at %r." % self.api_url
+            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
+            if '127.0.0.1' in self.api_url:
+                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
+                       " single-user servers if the servers are not on the same host as the Hub."
+            raise HTTPError(500, msg)
 
-        r = requests.get(url_path_join(
-            self.api_url, "authorizations/cookie", self.cookie_name, quote(encrypted_cookie, safe=''),
-        ),
-            headers = {'Authorization' : 'token %s' % self.api_token},
-        )
         if r.status_code == 404:
             data = None
         elif r.status_code == 403:
