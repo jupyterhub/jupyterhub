@@ -50,12 +50,18 @@ def new_spawner(db, **kwargs):
 
 def test_spawner(db, io_loop):
     spawner = new_spawner(db)
-    io_loop.run_sync(spawner.start)
-    assert spawner.user.server.ip == '127.0.0.1'
+    ip, port = io_loop.run_sync(spawner.start)
+    assert ip == '127.0.0.1'
+    assert isinstance(port, int)
+    assert port > 0
+    spawner.user.server.ip = ip
+    spawner.user.server.port = port
+    db.commit()
     
+
     # wait for the process to get to the while True: loop
     time.sleep(1)
-    
+
     status = io_loop.run_sync(spawner.poll)
     assert status is None
     io_loop.run_sync(spawner.stop)
@@ -65,8 +71,13 @@ def test_spawner(db, io_loop):
 def test_single_user_spawner(db, io_loop):
     spawner = new_spawner(db, cmd=['jupyterhub-singleuser'])
     spawner.api_token = 'secret'
-    io_loop.run_sync(spawner.start)
-    assert spawner.user.server.ip == '127.0.0.1'
+    ip, port = io_loop.run_sync(spawner.start)
+    assert ip == '127.0.0.1'
+    assert isinstance(port, int)
+    assert port > 0
+    spawner.user.server.ip = ip
+    spawner.user.server.port = port
+    db.commit()
     # wait for http server to come up,
     # checking for early termination every 1s
     def wait():

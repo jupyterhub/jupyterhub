@@ -225,7 +225,14 @@ class User(HasTraits):
             f = spawner.start()
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
-            yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            ip_port = yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            if ip_port:
+                # get ip, port info from return value of start()
+                self.server.ip, self.server.port = ip_port
+            else:
+                # prior to 0.7, spawners had to store this info in user.server themselves.
+                # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
+                self.log.warning("DEPRECATION: Spawner.start should return (ip, port) in JupyterHub >= 0.7")
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
                 self.log.warning("{user}'s server failed to start in {s} seconds, giving up".format(
