@@ -1,0 +1,16 @@
+name: jupyterhub_docs
+channels:
+  - conda-forge
+dependencies:
+- nodejs
+- python=3
+- jinja2
+- pamela
+- requests
+- sqlalchemy>=1
+- tornado>=4.1
+- traitlets>=4.1
+- pip:
+    - sphinx>=1.3.6
+    - recommonmark==0.4.0
+
