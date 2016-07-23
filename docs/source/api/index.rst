@@ -13,3 +13,4 @@
     spawner
     user
     services.auth
+    rest
