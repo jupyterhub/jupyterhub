@@ -35,6 +35,9 @@ JupyterHub's basic principles for operation are:
 - Hub handles login, and spawns single-user servers on demand
 - Hub configures proxy to forward url prefixes to the single-user servers
 
+JupyterHub also provides a
+[REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
+for administration of the Hub and users.
 ----
 
 ## Prerequisites
@@ -185,5 +188,6 @@ and you may participate in development discussions or get live help on [Gitter](
 - JupyterHub tutorial | [Repo](https://github.com/jupyterhub/jupyterhub-tutorial)
   | [Tutorial documentation](http://jupyterhub-tutorial.readthedocs.io/en/latest/)
 - [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
+- [Documentation for JupyterHub's REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
