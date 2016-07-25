@@ -17,3 +17,4 @@ for administration of the Hub and users.
     spawner
     user
     services.auth
+    rest
