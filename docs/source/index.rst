@@ -37,6 +37,10 @@ Basic principles:
 * Hub handles login, and spawns single-user servers on demand
 * Hub configures proxy to forward url prefixes to single-user servers
 
+JupyterHub also provides a
+[REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
+for administration of the Hub and users.
+
 
 Contents:
 
