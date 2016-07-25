@@ -64,6 +64,7 @@ def test_spawner(db, io_loop):
 
 def test_single_user_spawner(db, io_loop):
     spawner = new_spawner(db, cmd=['jupyterhub-singleuser'])
+    spawner.api_token = 'secret'
     io_loop.run_sync(spawner.start)
     assert spawner.user.server.ip == '127.0.0.1'
     # wait for http server to come up,
