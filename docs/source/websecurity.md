@@ -49,7 +49,7 @@ If subdomains are not available or not desirable,
 which you can set to prevent the user-owned configuration files from being loaded.
 This leaves only package installation and PATHs as things the admin must enforce.
 
-For most Spawners, PATH is not something users an influence,
+For most Spawners, PATH is not something users can influence,
 but care should be taken to ensure that the Spawn does *not* evaluate shell configuration files prior to launching the server.
 
 Package isolation is most easily handled by running the single-user server in a virtualenv with disabled system-site-packages.
