@@ -62,8 +62,9 @@ class SlowSpawner(MockSpawner):
     
     @gen.coroutine
     def start(self):
-        yield super().start()
+        (ip, port) = yield super().start()
         yield gen.sleep(2)
+        return ip, port
     
     @gen.coroutine
     def stop(self):
