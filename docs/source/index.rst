@@ -56,6 +56,7 @@ Contents:
    :maxdepth: 2
    :caption: Configuration
 
+   config-examples
    authenticators
    spawners
    troubleshooting

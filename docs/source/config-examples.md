@@ -1,10 +1,19 @@
-# Example with GitHub OAuth
+# Configuration examples
+
+This section provides configuration files and tips for the following
+configurations:
+
+- Example with GitHub OAuth
+- Example with nginx reverse proxy
+
+
+## Example with GitHub OAuth
 
 In the following example, we show a configuration files for a fairly standard JupyterHub deployment with the following assumptions:
 
 * JupyterHub is running on a single cloud server
 * Using SSL on the standard HTTPS port 443
-* You want to use [GitHub OAuth][oauthenticator] for login
+* You want to use GitHub OAuth (using oauthenticator) for login
 * You need the users to exist locally on the server
 * You want users' notebooks to be served from `~/assignments` to allow users to browse for notebooks within
   other users home directories
@@ -70,7 +79,7 @@ export CONFIGPROXY_AUTH_TOKEN=super-secret
 jupyterhub -f /path/to/aboveconfig.py
 ```
 
-# Example with nginx reverse proxy
+## Example with nginx reverse proxy
 
 In the following example, we show configuration files for a JupyterHub server running locally on port `8000` but accessible from the outside on the standard SSL port `443`. This could be useful if the JupyterHub server machine is also hosting other domains or content on `443`. The goal here is to have the following be true:
 

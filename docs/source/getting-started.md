@@ -289,6 +289,9 @@ If `JupyterHub.admin_access` is True (not default),
 then admin users have permission to log in *as other users* on their respective machines, for debugging.
 **You should make sure your users know if admin_access is enabled.**
 
+Note: additional configuration examples are provided in this guide's
+[Configuration Examples section](./config-examples.html).
+
 ### Adding and removing users
 
 Users can be added and removed to the Hub via the admin panel or REST API. These users will be
