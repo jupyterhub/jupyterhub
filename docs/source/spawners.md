@@ -17,7 +17,7 @@ Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://git
     environment and home directory for each users
 - [SudoSpawner](https://github.com/jupyter/sudospawner) enables JupyterHub to
   run without being root, by spawning an intermediate process via `sudo`
-- [BatchSpawner](https://github.com/mbmilligan/batchspawner) for spawning remote
+- [BatchSpawner](https://github.com/jupyterhub/batchspawner) for spawning remote
   servers using batch systems
 - [RemoteSpawner](https://github.com/zonca/remotespawner) to spawn notebooks
   and a remote server and tunnel the port via SSH
