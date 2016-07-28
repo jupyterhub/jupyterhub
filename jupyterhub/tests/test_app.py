@@ -55,8 +55,7 @@ def test_generate_config():
     assert 'Spawner.cmd' in cfg_text
     assert 'Authenticator.whitelist' in cfg_text
 
-
-def test_init_tokens():
+def test_init_tokens(io_loop):
     with TemporaryDirectory() as td:
         db_file = os.path.join(td, 'jupyterhub.sqlite')
         tokens = {
@@ -64,8 +63,8 @@ def test_init_tokens():
             'also-super-secret': 'gordon',
             'boagasdfasdf': 'chell',
         }
-        app = MockHub(db_file=db_file, api_tokens=tokens)
-        app.initialize([])
+        app = MockHub(db_url=db_file, api_tokens=tokens)
+        io_loop.run_sync(lambda : app.initialize([]))
         db = app.db
         for token, username in tokens.items():
             api_token = orm.APIToken.find(db, token)
@@ -74,8 +73,8 @@ def test_init_tokens():
             assert user.name == username
         
         # simulate second startup, reloading same tokens:
-        app = MockHub(db_file=db_file, api_tokens=tokens)
-        app.initialize([])
+        app = MockHub(db_url=db_file, api_tokens=tokens)
+        io_loop.run_sync(lambda : app.initialize([]))
         db = app.db
         for token, username in tokens.items():
             api_token = orm.APIToken.find(db, token)
@@ -85,9 +84,9 @@ def test_init_tokens():
         
         # don't allow failed token insertion to create users:
         tokens['short'] = 'gman'
-        app = MockHub(db_file=db_file, api_tokens=tokens)
-        # with pytest.raises(ValueError):
-        app.initialize([])
+        app = MockHub(db_url=db_file, api_tokens=tokens)
+        with pytest.raises(ValueError):
+            io_loop.run_sync(lambda : app.initialize([]))
         assert orm.User.find(app.db, 'gman') is None
 
 
