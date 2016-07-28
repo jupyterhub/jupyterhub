@@ -42,8 +42,13 @@ def find_user(db, name):
     return db.query(orm.User).filter(orm.User.name==name).first()
 
 def add_user(db, app=None, **kwargs):
-    orm_user = orm.User(**kwargs)
-    db.add(orm_user)
+    orm_user = find_user(db, name=kwargs.get('name'))
+    if orm_user is None:
+        orm_user = orm.User(**kwargs)
+        db.add(orm_user)
+    else:
+        for attr, value in kwargs.items():
+            setattr(orm_user, attr, value)
     db.commit()
     if app:
         user = app.users[orm_user.id] = User(orm_user, app.tornado_settings)
