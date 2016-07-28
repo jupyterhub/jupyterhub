@@ -128,6 +128,8 @@ Configuring only the main IP and port of JupyterHub should be sufficient for mos
 However, more customized scenarios may need additional networking details to
 be configured.
 
+
+
 ### Configuring the Proxy's REST API communication IP address and port (optional)
 The Hub service talks to the proxy via a REST API on a secondary port,
 whose network interface and port can be configured separately.
@@ -390,77 +392,10 @@ It is recommended to put all of the files used by JupyterHub into standard UNIX 
 * `/etc/jupyterhub` for all configuration files
 * `/var/log` for log files
 
-## Example
-
-In the following example, we show a configuration files for a fairly standard JupyterHub deployment with the following assumptions:
-
-* JupyterHub is running on a single cloud server
-* Using SSL on the standard HTTPS port 443
-* You want to use [GitHub OAuth][oauthenticator] for login
-* You need the users to exist locally on the server
-* You want users' notebooks to be served from `~/assignments` to allow users to browse for notebooks within
-  other users home directories
-* You want the landing page for each user to be a Welcome.ipynb notebook in their assignments directory.
-* All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
-
-Let's start out with `jupyterhub_config.py`:
-
-```python
-# jupyterhub_config.py
-c = get_config()
-
-import os
-pjoin = os.path.join
-
-runtime_dir = os.path.join('/srv/jupyterhub')
-ssl_dir = pjoin(runtime_dir, 'ssl')
-if not os.path.exists(ssl_dir):
-    os.makedirs(ssl_dir)
-
-
-# https on :443
-c.JupyterHub.port = 443
-c.JupyterHub.ssl_key = pjoin(ssl_dir, 'ssl.key')
-c.JupyterHub.ssl_cert = pjoin(ssl_dir, 'ssl.cert')
-
-# put the JupyterHub cookie secret and state db
-# in /srv/jupyterhub/
-c.JupyterHub.cookie_secret_file = pjoin(runtime_dir, 'cookie_secret')
-c.JupyterHub.db_url = pjoin(runtime_dir, 'jupyterhub.sqlite')
-# or `--db=/path/to/jupyterhub.sqlite` on the command-line
-
-# use GitHub OAuthenticator for local users
-
-c.JupyterHub.authenticator_class = 'oauthenticator.LocalGitHubOAuthenticator'
-c.GitHubOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
-# create system users that don't exist yet
-c.LocalAuthenticator.create_system_users = True
-
-# specify users and admin
-c.Authenticator.whitelist = {'rgbkrk', 'minrk', 'jhamrick'}
-c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
-
-# start single-user notebook servers in ~/assignments,
-# with ~/assignments/Welcome.ipynb as the default landing page
-# this config could also be put in
-# /etc/ipython/ipython_notebook_config.py
-c.Spawner.notebook_dir = '~/assignments'
-c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
-```
-
-Using the GitHub Authenticator [requires a few additional env variables][oauth-setup],
-which we will need to set when we launch the server:
-
-```bash
-export GITHUB_CLIENT_ID=github_id
-export GITHUB_CLIENT_SECRET=github_secret
-export OAUTH_CALLBACK_URL=https://example.com/hub/oauth_callback
-export CONFIGPROXY_AUTH_TOKEN=super-secret
-jupyterhub -f /path/to/aboveconfig.py &> /var/log/jupyterhub.log
-```
 
 # Further reading
 
+- [Configuration Examples](./config-examples.html)
 - [Custom Authenticators](./authenticators.html)
 - [Custom Spawners](./spawners.html)
 - [Troubleshooting](./troubleshooting.html)
