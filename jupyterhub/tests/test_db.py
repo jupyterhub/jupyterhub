@@ -23,7 +23,7 @@ def test_upgrade(tmpdir):
     print(db_url)
     upgrade(db_url)
 
-def test_upgrade_entrypoint(tmpdir):
+def test_upgrade_entrypoint(tmpdir, io_loop):
     generate_old_db(str(tmpdir))
     tmpdir.chdir()
     tokenapp = NewToken()
@@ -32,7 +32,7 @@ def test_upgrade_entrypoint(tmpdir):
         tokenapp.start()
     
     upgradeapp = UpgradeDB()
-    upgradeapp.initialize([])
+    io_loop.run_sync(lambda : upgradeapp.initialize([]))
     upgradeapp.start()
     
     # run tokenapp again, it should work

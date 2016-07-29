@@ -302,7 +302,7 @@ class User(Base):
     """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(Unicode(1023))
+    name = Column(Unicode(1023), unique=True)
     # should we allow multiple servers per user?
     _server_id = Column(Integer, ForeignKey('servers.id', ondelete="SET NULL"))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
@@ -340,21 +340,7 @@ class User(Base):
         
         If `token` is given, load that token.
         """
-        assert self.id is not None
-        db = inspect(self).session
-        if token is None:
-            token = new_token()
-        else:
-            if len(token) < 8:
-                raise ValueError("Tokens must be at least 8 characters, got %r" % token)
-            found = APIToken.find(db, token)
-            if found:
-                raise ValueError("Collision on token: %s..." % token[:4])
-        orm_token = APIToken(user_id=self.id)
-        orm_token.token = token
-        db.add(orm_token)
-        db.commit()
-        return token
+        return APIToken.new(token=token, user=self)
 
     @classmethod
     def find(cls, db, name):
@@ -364,13 +350,73 @@ class User(Base):
         """
         return db.query(cls).filter(cls.name==name).first()
 
+
+# service:server many:many mapping table
+service_server_map = Table('service_server_map', Base.metadata,
+    Column('service_id', ForeignKey('services.id')),
+    Column('server_id', ForeignKey('servers.id')),
+)
+
+
+class Service(Base):
+    """A service run with JupyterHub
+
+    A service is similar to a User without a Spawner.
+    A service can have API tokens for accessing the Hub's API
+
+    It has:
+
+    - name
+    - admin
+    - api tokens
+
+    In addition to what it has in common with users, a Service has extra info:
+
+    - servers: list of HTTP endpoints for the service
+    - pid: the process id (if managed)
+
+    """
+    __tablename__ = 'services'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # common user interface:
+    name = Column(Unicode(1023), unique=True)
+    admin = Column(Boolean, default=False)
+
+    api_tokens = relationship("APIToken", backref="service")
+
+    # service-specific interface
+    servers = relationship('Server', secondary='service_server_map')
+    pid = Column(Integer)
+
+    def new_api_token(self, token=None):
+        """Create a new API token
+
+        If `token` is given, load that token.
+        """
+        return APIToken.new(token=token, service=self)
+    
+    @classmethod
+    def find(cls, db, name):
+        """Find a service by name.
+
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name==name).first()
+
+
 class APIToken(Base):
     """An API token"""
     __tablename__ = 'api_tokens'
-
+    
+    # _constraint = ForeignKeyConstraint(['user_id', 'server_id'], ['users.id', 'services.id'])
     @declared_attr
     def user_id(cls):
-        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"))
+        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+
+    @declared_attr
+    def service_id(cls):
+        return Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(1023))
@@ -391,22 +437,42 @@ class APIToken(Base):
         self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
 
     def __repr__(self):
-        return "<{cls}('{pre}...', user='{u}')>".format(
+        if self.user is not None:
+            kind = 'user'
+            name = self.user.name
+        elif self.service is not None:
+            kind = 'service'
+            name = self.service.name
+        else:
+            # this shouldn't happen
+            kind = 'owner'
+            name = 'unknown'
+        return "<{cls}('{pre}...', {kind}='{name}')>".format(
             cls=self.__class__.__name__,
             pre=self.prefix,
-            u=self.user.name,
+            kind=kind,
+            name=name,
         )
 
     @classmethod
-    def find(cls, db, token):
+    def find(cls, db, token, *, kind=None):
         """Find a token object by value.
 
         Returns None if not found.
+        
+        `kind='user'` only returns API tokens for users
+        `kind='service'` only returns API tokens for services
         """
         prefix = token[:cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
         prefix_match = db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+        if kind == 'user':
+            prefix_match = prefix_match.filter(cls.user_id != None)
+        elif kind == 'service':
+            prefix_match = prefix_match.filter(cls.service_id != None)
+        elif kind is not None:
+            raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
         for orm_token in prefix_match:
             if orm_token.match(token):
                 return orm_token
@@ -414,6 +480,31 @@ class APIToken(Base):
     def match(self, token):
         """Is this my token?"""
         return compare_token(self.hashed, token)
+
+    @classmethod
+    def new(cls, token=None, user=None, service=None):
+        """Generate a new API token for a user or service"""
+        assert user or service
+        assert not (user and service)
+        db = inspect(user or service).session
+        if token is None:
+            token = new_token()
+        else:
+            if len(token) < 8:
+                raise ValueError("Tokens must be at least 8 characters, got %r" % token)
+            found = APIToken.find(db, token)
+            if found:
+                raise ValueError("Collision on token: %s..." % token[:4])
+        orm_token = APIToken(token=token)
+        if user:
+            assert user.id is not None
+            orm_token.user_id = user.id
+        else:
+            assert service.id is not None
+            orm_token.service_id = service.id
+        db.add(orm_token)
+        db.commit()
+        return token
 
 
 def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
