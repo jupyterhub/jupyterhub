@@ -310,7 +310,7 @@ paths:
         '200':
           description: The user identified by the API token
           schema:
-            $ref: '#!/definitions/User'
+            $ref: '#/definitions/User'
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
       summary: Identify a user from a cookie
@@ -328,7 +328,7 @@ paths:
         '200':
           description: The user identified by the cookie
           schema:
-            $ref: '#!/definitions/User'
+            $ref: '#/definitions/User'
   /shutdown:
     post:
       summary: Shutdown the Hub
