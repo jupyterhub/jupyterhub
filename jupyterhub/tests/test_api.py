@@ -3,12 +3,14 @@
 import json
 import time
 from queue import Queue
+import sys
 from urllib.parse import urlparse, quote
 
 import requests
 
 from tornado import gen
 
+import jupyterhub
 from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
@@ -655,6 +657,41 @@ def test_group_delete_users(app):
     
     group = orm.Group.find(db, name='alphaflight')
     assert sorted([ u.name for u in group.users ]) == sorted(names[2:])
+
+
+def test_root_api(app):
+    base_url = app.hub.server.url
+    url = ujoin(base_url, 'api')
+    r = requests.get(url)
+    r.raise_for_status()
+    expected = {
+        'version': jupyterhub.__version__
+    }
+    assert r.json() == expected
+
+
+def test_info(app):
+    r = api_request(app, 'info')
+    r.raise_for_status()
+    data = r.json()
+    assert data['version'] == jupyterhub.__version__
+    assert sorted(data) == [
+        'authenticator',
+        'python',
+        'spawner',
+        'sys_executable',
+        'version',
+    ]
+    assert data['python'] == sys.version
+    assert data['sys_executable'] == sys.executable
+    assert data['authenticator'] == {
+        'class': 'jupyterhub.tests.mocking.MockPAMAuthenticator',
+        'version': jupyterhub.__version__,
+    }
+    assert data['spawner'] == {
+        'class': 'jupyterhub.tests.mocking.MockSpawner',
+        'version': jupyterhub.__version__,
+    }
 
 
 # general API tests

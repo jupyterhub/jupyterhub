@@ -21,6 +21,60 @@ produces:
 consumes:
   - application/json
 paths:
+  /:
+    get:
+      summary: See the version of JupyterHub itself
+      description: |
+        This endpoint is not authenticated,
+        so clients can identify the version of JupyterHub before setting up authentication.
+      responses:
+        '200':
+          description: The version of JupyterHub itself
+          schema:
+            type: object
+            properties:
+              version:
+                type: string
+                description: The version of JupyterHub itself
+  /info:
+    get:
+      summary: Get detailed info about JupyterHub
+      description: |
+        Detailed information about JupyterHub,
+        including information about Python, JupyterHub's version,
+        and what Authenticators and Spawners are in use.
+      responses:
+        '200':
+          schema:
+            type: object
+            properties:
+              version:
+                type: string
+                description: The version of JupyterHub itself
+              python:
+                type: string
+                description: The version of Python, as returned by sys.version
+              sys_executable:
+                type: string
+                description: The path to sys.executable running JupyterHub
+              authenticator:
+                type: object
+                properties:
+                  class:
+                    type: string
+                    description: The Python class currently in use
+                  version:
+                    type: string
+                    description: The version of the package providing the Authenticator class
+              spawner:
+                type: object
+                properties:
+                  class:
+                    type: string
+                    description: The Python class currently in use for spawning single-user servers
+                  version:
+                    type: string
+                    description: The version of the package providing the Spawner class
   /users:
     get:
       summary: List users
