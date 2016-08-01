@@ -1058,7 +1058,7 @@ class JupyterHub(Application):
         self.log.info("Starting proxy @ %s", self.proxy.public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
         try:
-            self.proxy_process = Popen(cmd, env=env)
+            self.proxy_process = Popen(cmd, env=env, start_new_session=True)
         except FileNotFoundError as e:
             self.log.error(
                 "Failed to find proxy %r\n"
