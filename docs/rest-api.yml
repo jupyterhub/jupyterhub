@@ -359,7 +359,7 @@ definitions:
         description: The currently pending action, if any
       last_activity:
         type: string
-        format: ISO8601 Timestamp
+        format: date-time
         description: Timestamp of last-seen activity from the user
   Group:
     type: object
