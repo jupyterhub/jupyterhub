@@ -389,11 +389,11 @@ paths:
       parameters:
         - name: proxy
           in: body
-          type: bool
+          type: boolean
           description: Whether the proxy should be shutdown as well (default from Hub config)
         - name: servers
           in: body
-          type: bool
+          type: boolean
           description: Whether users's servers should be shutdown as well (default from Hub config)
       responses:
         '200':
