@@ -4,12 +4,15 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+import sys
 
 from tornado import web
 from tornado.ioloop import IOLoop
 
 from ..utils import admin_only
 from .base import APIHandler
+from ..version import __version__
+
 
 class ShutdownAPIHandler(APIHandler):
     
@@ -49,6 +52,56 @@ class ShutdownAPIHandler(APIHandler):
         loop.add_callback(loop.stop)
 
 
+class RootAPIHandler(APIHandler):
+
+    def get(self):
+        """GET /api/ returns info about the Hub and its API.
+
+        It is not an authenticated endpoint.
+        
+        For now, it just returns the version of JupyterHub itself.
+        """
+        data = {
+            'version': __version__,
+        }
+        self.finish(json.dumps(data))
+
+
+class InfoAPIHandler(APIHandler):
+
+    @admin_only
+    def get(self):
+        """GET /api/info returns detailed info about the Hub and its API.
+
+        It is not an authenticated endpoint.
+        
+        For now, it just returns the version of JupyterHub itself.
+        """
+        def _class_info(typ):
+            """info about a class (Spawner or Authenticator)"""
+            info = {
+                'class': '{mod}.{name}'.format(mod=typ.__module__, name=typ.__name__),
+            }
+            pkg = typ.__module__.split('.')[0]
+            try:
+                version = sys.modules[pkg].__version__
+            except (KeyError, AttributeError):
+                version = 'unknown'
+            info['version'] = version
+            return info
+
+        data = {
+            'version': __version__,
+            'python': sys.version,
+            'sys_executable': sys.executable,
+            'spawner': _class_info(self.settings['spawner_class']),
+            'authenticator': _class_info(self.authenticator.__class__),
+        }
+        self.finish(json.dumps(data))
+
+
 default_handlers = [
     (r"/api/shutdown", ShutdownAPIHandler),
+    (r"/api/?", RootAPIHandler),
+    (r"/api/info", InfoAPIHandler),
 ]
