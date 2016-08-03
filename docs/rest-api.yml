@@ -45,6 +45,7 @@ paths:
         and what Authenticators and Spawners are in use.
       responses:
         '200':
+          description: Detailed JupyterHub info
           schema:
             type: object
             properties:
