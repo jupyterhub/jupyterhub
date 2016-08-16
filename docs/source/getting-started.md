@@ -6,7 +6,7 @@ JupyterHub is highly customizable, so there's a lot to cover.
 
 ## Installation
 
-See [the readme](https://github.com/jupyter/jupyterhub/blob/master/README.md) for help installing JupyterHub.
+See [the readme](https://github.com/jupyterhub/jupyterhub/blob/master/README.md) for help installing JupyterHub.
 
 
 ## Overview
@@ -396,14 +396,6 @@ It is recommended to put all of the files used by JupyterHub into standard UNIX 
 * `/var/log` for log files
 
 
-# Further reading
-
-- [Configuration Examples](./config-examples.html)
-- [Custom Authenticators](./authenticators.html)
-- [Custom Spawners](./spawners.html)
-- [Troubleshooting](./troubleshooting.html)
-
-
-[oauth-setup]: https://github.com/jupyter/oauthenticator#setup
-[oauthenticator]: https://github.com/jupyter/oauthenticator
+[oauth-setup]: https://github.com/jupyterhub/oauthenticator#setup
+[oauthenticator]: https://github.com/jupyterhub/oauthenticator
 [PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module

@@ -1,23 +1,14 @@
 # Troubleshooting
 
-This document is under active development.
-
 When troubleshooting, you may see unexpected behaviors or receive an error
-message. These two lists provide links to identifying the cause of the
+message. This section provide links for identifying the cause of the
 problem and how to resolve it.
+
 
 ## Behavior problems
 - [JupyterHub proxy fails to start](#jupyterhub-proxy-fails-to-start)
 
-## Errors
-- [500 error after spawning a single-user server](#500-error-after-spawning-my-single-user-server)
-
-## How do I...?
-- [Use a chained certificate for SSL](#chained-certificates-for-ssl)
-
-----
-
-## JupyterHub proxy fails to start
+### JupyterHub proxy fails to start
 
 If you have tried to start the JupyterHub proxy and it fails to start:
 
@@ -25,13 +16,15 @@ If you have tried to start the JupyterHub proxy and it fails to start:
   ``c.JupyterHub.ip = '*'``; if it is, try ``c.JupyterHub.ip = ''``
 - Try starting with ``jupyterhub --ip=0.0.0.0``
 
-----
 
-## 500 error after spawning my single-user server
+## Errors
+- [500 error after spawning a single-user server](#500-error-after-spawning-my-single-user-server)
 
+### 500 error after spawning my single-user server
 
-You receive a 500 error when accessing the URL `/user/you/...`. This is often
-seen when your single-user server cannot check your cookies with the Hub.
+You receive a 500 error when accessing the URL `/user/<your_name>/...`.
+This is often seen when your single-user server cannot verify your user cookie
+with the Hub.
 
 There are two likely reasons for this:
 
@@ -39,23 +32,23 @@ There are two likely reasons for this:
    configuration problems)
 2. The single-user server cannot *authenticate* its requests (invalid token)
 
-### Symptoms:
+#### Symptoms:
 
 The main symptom is a failure to load *any* page served by the single-user
-server, met with a 500 error. This is typically the first page at `/user/you`
-after logging in or clicking "Start my server". When a single-user server
-receives a request, it makes an API request to the Hub to check if the cookie
-corresponds to the right user. This request is logged.
+server, met with a 500 error. This is typically the first page at `/user/<your_name>`
+after logging in or clicking "Start my server". When a single-user notebook server
+receives a request, the notebook server makes an API request to the Hub to 
+check if the cookie corresponds to the right user. This request is logged.
 
-If everything is working, it will look like this:
+If everything is working, the response logged will be similar to this:
 
 ```
 200 GET /hub/api/authorizations/cookie/jupyter-hub-token-name/[secret] (@10.0.1.4) 6.10ms
 ```
 
 You should see a similar 200 message, as above, in the Hub log when you first
-visit your single-user server. If you don't see this message in the log, it
-may mean that your single-user server isn't connecting to your Hub.
+visit your single-user notebook server. If you don't see this message in the log, it
+may mean that your single-user notebook server isn't connecting to your Hub.
 
 If you see 403 (forbidden) like this, it's a token problem:
 
@@ -63,12 +56,12 @@ If you see 403 (forbidden) like this, it's a token problem:
 403 GET /hub/api/authorizations/cookie/jupyter-hub-token-name/[secret] (@10.0.1.4) 4.14ms
 ```
 
-Check the logs of the single-user server, which may have more detailed
+Check the logs of the single-user notebook server, which may have more detailed
 information on the cause.
 
-### Causes and resolutions:
+#### Causes and resolutions:
 
-#### No authorization request
+##### No authorization request
 
 If you make an API request and it is not received by the server, you likely
 have a network configuration issue. Often, this happens when the Hub is only
@@ -81,7 +74,7 @@ that all single-user servers can connect to, e.g.:
 c.JupyterHub.hub_ip = '10.0.0.1'
 ```
 
-#### 403 GET /hub/api/authorizations/cookie
+##### 403 GET /hub/api/authorizations/cookie
 
 If you receive a 403 error, the API token for the single-user server is likely
 invalid. Commonly, the 403 error is caused by resetting the JupyterHub
@@ -101,7 +94,9 @@ After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
 
-----
+
+## How do I...?
+- [Use a chained certificate for SSL](#chained-certificates-for-ssl)
 
 ### Chained certificates for SSL
 

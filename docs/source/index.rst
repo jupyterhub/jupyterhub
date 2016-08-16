@@ -1,8 +1,15 @@
 JupyterHub
 ==========
 
-JupyterHub is a server that gives multiple users access to Jupyter notebooks,
-running an independent Jupyter notebook server for each user.
+JupyterHub is a project that uses a hub server to give multiple users access
+to Jupyter notebooks, by spawning and running an independent Jupyter notebook
+server for each user.
+
+JupyterHub runs as three separate parts:
+
+* The multi-user Hub (Python & Tornado)
+* A `configurable http proxy <https://github.com/jupyter/configurable-http-proxy>`_ (NodeJS)
+* Multiple single-user Jupyter notebook servers (Python & Tornado)
 
 To use JupyterHub, you need a Unix server (typically Linux) running
 somewhere that is accessible to your team on the network. The JupyterHub server
@@ -24,11 +31,7 @@ start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
 using Docker.
 
-JupyterHub runs as three separate parts:
 
-* The multi-user Hub (Python & Tornado)
-* A `configurable http proxy <https://github.com/jupyter/configurable-http-proxy>`_ (NodeJS)
-* Multiple single-user Jupyter notebook servers (Python & Tornado)
 
 Basic principles:
 
