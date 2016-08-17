@@ -15,4 +15,4 @@ JupyterHub also provides a REST API for administration of the Hub and users.
     spawner
     user
     services.auth
-    rest
+

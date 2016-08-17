@@ -1,51 +1,31 @@
 JupyterHub
 ==========
 
-JupyterHub is a project that uses a hub server to give multiple users access
-to Jupyter notebooks, by spawning and running an independent Jupyter notebook
-server for each user.
+With JupyterHub you can create a **multi-user Hub** which spawns, manages,
+and proxies multiple instances of the single-user
+`Jupyter notebook <https://jupyter-notebook.readthedocs.io>`_ server. For
+example, JupyterHub can be used to serve notebooks to a class of students, a
+corporate data science group, or a science research group.
 
-JupyterHub runs as three separate parts:
+Three main actors make up JupyterHub:
 
-* The multi-user Hub (Python & Tornado)
-* A `configurable http proxy <https://github.com/jupyter/configurable-http-proxy>`_ (NodeJS)
-* Multiple single-user Jupyter notebook servers (Python & Tornado)
+- multi-user **Hub** (tornado process)
+- configurable http **proxy** (node-http-proxy)
+- multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
 
-To use JupyterHub, you need a Unix server (typically Linux) running
-somewhere that is accessible to your team on the network. The JupyterHub server
-can be on an internal network at your organisation, or it can run on the public
-internet (in which case, take care with `security <getting-started.html#security>`__).
-Users access JupyterHub in a web browser, by going to the IP address or
-domain name of the server.
+JupyterHub's basic principles for operation are:
 
-Different :doc:`authenticators <authenticators>` control access
-to JupyterHub. The default one (pam) uses the user accounts on the server where
-JupyterHub is running. If you use this, you will need to create a user account
-on the system for each user on your team. Using other authenticators, you can
-allow users to sign in with e.g. a Github account, or with any single-sign-on
-system your organisation has.
-
-Next, :doc:`spawners <spawners>` control how JupyterHub starts
-the individual notebook server for each user. The default spawner will
-start a notebook server on the same machine running under their system username.
-The other main option is to start each server in a separate container, often
-using Docker.
-
-
-
-Basic principles:
-
-* Hub spawns proxy
-* Proxy forwards ~all requests to hub by default
-* Hub handles login, and spawns single-user servers on demand
-* Hub configures proxy to forward url prefixes to single-user servers
+- Hub spawns a proxy
+- Proxy forwards all requests to Hub by default
+- Hub handles login, and spawns single-user servers on demand
+- Hub configures proxy to forward url prefixes to the single-user servers
 
 JupyterHub also provides a
-[REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
+`REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default>`_
 for administration of the Hub and users.
 
-
-Contents:
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
@@ -65,17 +45,11 @@ Contents:
    troubleshooting
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :caption: Developer Documentation
-   
+
+   api/rest
    api/index
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Community documentation
-
-
 
 .. toctree::
    :maxdepth: 2
@@ -83,20 +57,18 @@ Contents:
 
    changelog
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Questions? Suggestions?
-
-   Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>
-   Jupyter website <https://jupyter.org>
-   Stack Overflow - Jupyter <https://stackoverflow.com/questions/tagged/jupyter>
-   Stack Overflow - Jupyter-notebook <https://stackoverflow.com/questions/tagged/jupyter-notebook>
-
-
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+Questions? Suggestions?
+-----------------------
+
+- `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
+- `Jupyter website <https://jupyter.org>`_
+- `Stack Overflow - Jupyter <https://stackoverflow.com/questions/tagged/jupyter>`_
+- `Stack Overflow - Jupyter-notebook <https://stackoverflow.com/questions/tagged/jupyter-notebook>`_
 

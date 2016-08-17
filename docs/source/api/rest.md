@@ -1,15 +1,25 @@
 # The JupyterHub REST API
 
-JupyterHub has a [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer), which you can use to perform actions on the Hub,
-such as checking what users are active, adding or removing users,
-stopping or starting user servers, etc.
+Using the JupyterHub [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer),
+you can perform actions on the Hub, such as:
 
-To get access to the JupyterHub API, you must create a token.
-You can create a token for a particular user with:
+- checking which users are active
+- adding or removing users
+- stopping or starting single user notebook servers
+
+## API tokens
+
+### Create an API token
+To send requests using JupyterHub API, you must pass an API token with the
+request. You can create a token for an individual user using the following
+command:
 
     jupyterhub token USERNAME
 
-Alternately, you can load API tokens in your `jupyterhub_config.py`:
+
+### Adding API tokens to the hub's configuration
+You may also add a dictionary of API tokens and usernames to the hub's
+configurations file, `jupyterhub_config.py`:
 
 ```python
 c.JupyterHub.api_tokens = {
@@ -17,22 +27,35 @@ c.JupyterHub.api_tokens = {
 }
 ```
 
-To authenticate your requests, pass this token in the Authorization header.
-For example, to list users with requests in Python:
+
+## Making an API request
+
+To authenticate your requests, pass the API token in the request's
+Authorization header.
+
+**Example: List the hub's users**
+
+Using the popular Python requests library, the following code sends an API
+request and an API token for authorization:
 
 ```python
 import requests
+
 api_url = 'http://127.0.0.1:8081/hub/api'
-r = requests.get(api_url + '/users',
+
+r = requests.get(api_url + '/users', 
     headers={
-        'Authorization': 'token %s' % token,
-    }
-)
+             'Authorization': 'token %s' % token,
+            }
+    )
+
 r.raise_for_status()
 users = r.json()
 ```
+ 
 
-You can see the full  [REST API Spec](../_static/rest-api/index.html) for details.
-A fancier version of the same information can be viewed [on swagger's petstore][].
+You can see the full [REST API Spec](../_static/rest-api/index.html) for details.
+The same REST API Spec can be viewed in a more visually appealing style [on swagger's petstore][].
+Both resources contain the same information and differ only in its display.
 
 [on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default

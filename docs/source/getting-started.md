@@ -1,14 +1,5 @@
 # Getting started with JupyterHub
 
-This document describes some of the basics of configuring JupyterHub to do what you want.
-JupyterHub is highly customizable, so there's a lot to cover.
-
-
-## Installation
-
-See [the readme](https://github.com/jupyterhub/jupyterhub/blob/master/README.md) for help installing JupyterHub.
-
-
 ## Overview
 
 JupyterHub is a set of processes that together provide a multiuser Jupyter Notebook server.
@@ -19,6 +10,37 @@ There are three main categories of processes run by the `jupyterhub` command lin
 - **Proxy**: the public facing part of the server that uses a dynamic proxy to route HTTP requests
   to the Hub and Single User Servers.
 - **Hub**: manages user accounts and authentication and coordinates Single Users Servers using a Spawner.
+
+To use JupyterHub, you need a Unix server (typically Linux) running
+somewhere that is accessible to your team on the network. The JupyterHub server
+can be on an internal network at your organisation, or it can run on the public
+internet (in which case, take care with `security <getting-started.html#security>`__).
+Users access JupyterHub in a web browser, by going to the IP address or
+domain name of the server.
+
+Basic principles:
+
+* Hub spawns proxy
+* Proxy forwards all requests to hub by default
+* Hub handles login, and spawns single-user servers on demand
+* Hub configures proxy to forward url prefixes to single-user servers
+
+Different :doc:`authenticators <authenticators>` control access
+to JupyterHub. The default one (pam) uses the user accounts on the server where
+JupyterHub is running. If you use this, you will need to create a user account
+on the system for each user on your team. Using other authenticators, you can
+allow users to sign in with e.g. a Github account, or with any single-sign-on
+system your organisation has.
+
+Next, :doc:`spawners <spawners>` control how JupyterHub starts
+the individual notebook server for each user. The default spawner will
+start a notebook server on the same machine running under their system username.
+The other main option is to start each server in a separate container, often
+using Docker.
+
+
+
+
 
 ## JupyterHub's default behavior
 
@@ -61,6 +83,9 @@ By default, starting JupyterHub will write two files to disk in the current work
 
 The location of these files can be specified via configuration, discussed below.
 
+## Installation
+
+See [the readme](https://github.com/jupyterhub/jupyterhub/blob/master/README.md) for help installing JupyterHub.
 
 ## How to configure JupyterHub
 

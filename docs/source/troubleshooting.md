@@ -6,7 +6,6 @@ problem and how to resolve it.
 
 
 ## Behavior problems
-- [JupyterHub proxy fails to start](#jupyterhub-proxy-fails-to-start)
 
 ### JupyterHub proxy fails to start
 
@@ -18,7 +17,6 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 
 
 ## Errors
-- [500 error after spawning a single-user server](#500-error-after-spawning-my-single-user-server)
 
 ### 500 error after spawning my single-user server
 
@@ -32,7 +30,7 @@ There are two likely reasons for this:
    configuration problems)
 2. The single-user server cannot *authenticate* its requests (invalid token)
 
-#### Symptoms:
+#### Symptoms
 
 The main symptom is a failure to load *any* page served by the single-user
 server, met with a 500 error. This is typically the first page at `/user/<your_name>`
@@ -59,7 +57,7 @@ If you see 403 (forbidden) like this, it's a token problem:
 Check the logs of the single-user notebook server, which may have more detailed
 information on the cause.
 
-#### Causes and resolutions:
+#### Causes and resolutions
 
 ##### No authorization request
 
@@ -96,7 +94,6 @@ your server again.
 
 
 ## How do I...?
-- [Use a chained certificate for SSL](#chained-certificates-for-ssl)
 
 ### Chained certificates for SSL
 

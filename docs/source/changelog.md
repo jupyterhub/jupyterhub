@@ -1,6 +1,6 @@
-# Summary of changes in JupyterHub
+# Change log summary
 
-See `git log` for a more detailed summary.
+See `git log` for additional detail.
 
 ## 0.6
 
