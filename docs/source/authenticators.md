@@ -1,4 +1,4 @@
-# Writing a custom Authenticator
+# Authenticators
 
 The [Authenticator][] is the mechanism for authorizing users.
 Basic authenticators use simple username and password authentication.
@@ -17,7 +17,6 @@ See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jup
 ## Basics of Authenticators
 
 A basic Authenticator has one central method:
-
 
 ### Authenticator.authenticate
 
@@ -54,7 +53,6 @@ class DictionaryAuthenticator(Authenticator):
         if self.passwords.get(data['username']) == data['password']:
             return data['username']
 ```
-
 
 ### Authenticator.whitelist
 
@@ -102,6 +100,8 @@ For these, you can override the login handlers.
 You can see an example implementation of an Authenticator that uses [GitHub OAuth][]
 at [OAuthenticator][].
 
+
+## Writing a custom authenticator
 
 [Authenticator]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/auth.py
 [PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
