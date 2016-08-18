@@ -3,26 +3,28 @@ JupyterHub
 
 With JupyterHub you can create a **multi-user Hub** which spawns, manages,
 and proxies multiple instances of the single-user
-`Jupyter notebook <https://jupyter-notebook.readthedocs.io>`_ server. For
-example, JupyterHub can be used to serve notebooks to a class of students, a
-corporate data science group, or a science research group.
+`Jupyter notebook <https://jupyter-notebook.readthedocs.io>`_ server.
+Due to its flexibility and customization options, JupyterHub can be used to
+serve notebooks to a class of students, a corporate data science group, or a
+scientific research group.
 
-Three main actors make up JupyterHub:
+Three subsystems make up JupyterHub:
 
-- multi-user **Hub** (tornado process)
-- configurable http **proxy** (node-http-proxy)
+- a multi-user **Hub** (tornado process)
+- a configurable http **proxy** (node-http-proxy)
 - multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
 
-JupyterHub's basic principles for operation are:
+JupyterHub's basic flow of operations includes:
 
-- Hub spawns a proxy
-- Proxy forwards all requests to Hub by default
-- Hub handles login, and spawns single-user servers on demand
-- Hub configures proxy to forward url prefixes to the single-user servers
+- The Hub spawns a proxy
+- The proxy forwards all requests to the Hub by default
+- The Hub handles user login and spawns single-user servers on demand
+- The Hub configures the proxy to forward URL prefixes to the single-user
+  notebook servers
 
 JupyterHub also provides a
 `REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default>`_
-for administration of the Hub and users.
+for convenient administration of the Hub, its users, and services.
 
 
 Contents
@@ -93,7 +95,6 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
 
 
 Questions? Suggestions?
