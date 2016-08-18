@@ -1,6 +1,6 @@
-===========================================
-Authenticating your service with JupyterHub
-===========================================
+=======================
+Authenticating Services
+=======================
 
 Module: :mod:`jupyterhub.services.auth`
 =======================================

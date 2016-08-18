@@ -1,4 +1,4 @@
-# The JupyterHub REST API
+# Using JupyterHub's REST API
 
 Using the JupyterHub [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer),
 you can perform actions on the Hub, such as:
@@ -7,9 +7,7 @@ you can perform actions on the Hub, such as:
 - adding or removing users
 - stopping or starting single user notebook servers
 
-## API tokens
-
-### Create an API token
+## Creating an API token
 To send requests using JupyterHub API, you must pass an API token with the
 request. You can create a token for an individual user using the following
 command:
@@ -17,9 +15,9 @@ command:
     jupyterhub token USERNAME
 
 
-### Adding API tokens to the hub's configuration
+## Adding tokens to the config file
 You may also add a dictionary of API tokens and usernames to the hub's
-configurations file, `jupyterhub_config.py`:
+configuration file, `jupyterhub_config.py`:
 
 ```python
 c.JupyterHub.api_tokens = {
@@ -53,6 +51,8 @@ r.raise_for_status()
 users = r.json()
 ```
  
+ 
+## Learning more about the API
 
 You can see the full [REST API Spec](../_static/rest-api/index.html) for details.
 The same REST API Spec can be viewed in a more visually appealing style [on swagger's petstore][].
