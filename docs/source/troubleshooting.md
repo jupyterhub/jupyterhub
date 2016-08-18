@@ -5,7 +5,7 @@ message. This section provide links for identifying the cause of the
 problem and how to resolve it.
 
 
-## Behavior problems
+## Behavior
 
 ### JupyterHub proxy fails to start
 
@@ -84,7 +84,7 @@ the container every time. This means that the same API token is used by the
 server for its whole life, until the container is rebuilt.
 
 The fix for this Docker case is to remove any Docker containers seeing this
-issue (typicaly all containers created before a certain point in time):
+issue (typically all containers created before a certain point in time):
 
     docker rm -f jupyter-name
 
@@ -95,7 +95,7 @@ your server again.
 
 ## How do I...?
 
-### Chained certificates for SSL
+### Use a chained SSL certificate
 
 Some certificate providers, i.e. Entrust, may provide you with a chained
 certificate that contains multiple files. If you are using a chained
