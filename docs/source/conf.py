@@ -38,6 +38,14 @@ extensions = [
     'sphinx.ext.napoleon',
 ]
 
+# Spelling
+try:
+    import sphinxcontrib.spelling
+except ImportError:
+    pass
+else:
+    extensions.append("sphinxcontrib.spelling")
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -391,3 +399,6 @@ else:
     from subprocess import check_call as sh
     sh(['make', 'rest-api'], cwd=docs)
 # otherwise, readthedocs.org uses their theme by default, so no need to specify it
+
+# Spell checking using sphinxcontrib-spelling
+spelling_word_list_filename='spelling_wordlist.txt'
