@@ -1,24 +1,36 @@
 # Getting started with JupyterHub
 
-## Overview
+## Technical Overview
 
-JupyterHub is a set of processes that together provide a multiuser Jupyter Notebook server.
-There are three main categories of processes run by the `jupyterhub` command line program:
+JupyterHub is a set of processes that together provide a single user Jupyter 
+Notebook server for each person in a group. 
 
-- **Single User Server**: a dedicated, single-user, Jupyter Notebook is started for each user on the system
-  when they log in. The object that starts these processes is called a Spawner.
-- **Proxy**: the public facing part of the server that uses a dynamic proxy to route HTTP requests
-  to the Hub and Single User Servers.
-- **Hub**: manages user accounts and authentication and coordinates Single Users Servers using a Spawner.
+### Three subsystems
+Three major subsystems run by the `jupyterhub` command line program:
 
-To use JupyterHub, you need a Unix server (typically Linux) running
-somewhere that is accessible to your team on the network. The JupyterHub server
-can be on an internal network at your organization, or it can run on the public
-internet (in which case, take care with [security](getting-started.html#security)).
-Users access JupyterHub in a web browser, by going to the IP address or
-domain name of the server.
+- **Single User Server**: a dedicated, single-user, Jupyter Notebook server is 
+  started for each user on the system when the user logs in. The object that
+  starts these servers is called a Spawner.
+- **Proxy**: the public facing part of JupyterHub that uses a dynamic proxy
+  to route HTTP requests to the Hub and Single User Notebook Servers.
+- **Hub**: manages user accounts, authentication, and coordinates Single User
+  Notebook Servers using a Spawner.
 
-Basic principles:
+![JupyterHub subsystems](images/jhub-parts.png)
+
+
+### Deployment server
+To use JupyterHub, you need a Unix server (typically Linux) running somewhere
+that is accessible to your team on the network. The JupyterHub server can be
+on an internal network at your organization, or it can run on the public
+internet (in which case, take care with the Hub's 
+[security](getting-started.html#security)).
+
+### Basic operation
+Users access JupyterHub through a web browser, by going to the IP address or
+the domain name of the server.
+
+Basic principles of operation:
 
 * Hub spawns proxy
 * Proxy forwards all requests to hub by default
@@ -38,8 +50,7 @@ start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
 using Docker.
 
-
-## JupyterHub's default behavior
+### Default behavior
 
 **IMPORTANT:** In its default configuration, JupyterHub requires SSL encryption (HTTPS) to run.
 **You should not run JupyterHub without SSL encryption on a public network.**
@@ -93,7 +104,7 @@ Prior to beginning installation, it's helpful to consider some of the following:
 - Spawner of singleuser notebook servers (Docker, Batch, etc.)
 - Services (nbgrader, etc.)
 
-## Folders and File Locations
+### Folders and File Locations
 
 It is recommended to put all of the files used by JupyterHub into standard
 UNIX filesystem locations.
@@ -102,7 +113,7 @@ UNIX filesystem locations.
 * `/etc/jupyterhub` for all configuration files
 * `/var/log` for log files
 
-## Configuration methods
+## Configuration
 
 JupyterHub is configured in two ways:
 
