@@ -24,38 +24,69 @@ JupyterHub also provides a
 `REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default>`_
 for administration of the Hub and users.
 
+
 Contents
 --------
 
+**User Guide**
+
+* :doc:`getting-started`
+* :doc:`rest`
+* :doc:`howitworks`
+* :doc:`websecurity`
+
 .. toctree::
    :maxdepth: 2
-   :caption: User Documentation
+   :hidden:
+   :caption: User Guide
 
    getting-started
+   rest
    howitworks
    websecurity
 
+
+**Configuration Guide**
+
+* :doc:`authenticators`
+* :doc:`spawners`
+* :doc:`config-examples`
+* :doc:`troubleshooting`
+
 .. toctree::
    :maxdepth: 2
-   :caption: Configuration
+   :hidden:
+   :caption: Configuration Guide
 
-   config-examples
    authenticators
    spawners
+   config-examples
    troubleshooting
 
+
+**API Reference**
+
+* :doc:`api/index`
+
 .. toctree::
    :maxdepth: 2
-   :caption: Developer Documentation
+   :hidden:
+   :caption: API Reference
 
-   api/rest
    api/index
 
+
+**About JupyterHub**
+
+* :doc:`changelog`
+
 .. toctree::
    :maxdepth: 2
+   :hidden:
    :caption: About JupyterHub
 
    changelog
+
 
 Indices and tables
 ------------------
@@ -64,11 +95,11 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+
 Questions? Suggestions?
 -----------------------
 
 - `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
 - `Jupyter website <https://jupyter.org>`_
-- `Stack Overflow - Jupyter <https://stackoverflow.com/questions/tagged/jupyter>`_
-- `Stack Overflow - Jupyter-notebook <https://stackoverflow.com/questions/tagged/jupyter-notebook>`_
+
 
