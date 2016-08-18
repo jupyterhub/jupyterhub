@@ -16,7 +16,6 @@ from tornado.web import RequestHandler
 from tornado import gen, web
 
 from .. import orm
-from ..user import User
 from ..spawner import LocalProcessSpawner
 from ..utils import url_path_join
 
@@ -168,6 +167,11 @@ class BaseHandler(RequestHandler):
             self.log.warning("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
             clear()
+        elif user.api_only:
+            # don't allow API-only users to login via cookie
+            self.log.error("Authenticated as {name} with cookie, but {name} is api-only",
+                extra={'name': user.name})
+            user = None
         return user
 
     def _user_from_orm(self, orm_user):

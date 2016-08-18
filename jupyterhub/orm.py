@@ -307,6 +307,7 @@ class User(Base):
     _server_id = Column(Integer, ForeignKey('servers.id', ondelete="SET NULL"))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     admin = Column(Boolean, default=False)
+    api_only = Column(Boolean, default=False)
     last_activity = Column(DateTime, default=datetime.utcnow)
 
     api_tokens = relationship("APIToken", backref="user")
