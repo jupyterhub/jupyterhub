@@ -13,8 +13,8 @@ There are three main categories of processes run by the `jupyterhub` command lin
 
 To use JupyterHub, you need a Unix server (typically Linux) running
 somewhere that is accessible to your team on the network. The JupyterHub server
-can be on an internal network at your organisation, or it can run on the public
-internet (in which case, take care with `security <getting-started.html#security>`__).
+can be on an internal network at your organization, or it can run on the public
+internet (in which case, take care with [security](getting-started.html#security)).
 Users access JupyterHub in a web browser, by going to the IP address or
 domain name of the server.
 
@@ -25,21 +25,18 @@ Basic principles:
 * Hub handles login, and spawns single-user servers on demand
 * Hub configures proxy to forward url prefixes to single-user servers
 
-Different :doc:`authenticators <authenticators>` control access
-to JupyterHub. The default one (pam) uses the user accounts on the server where
+Different [authenticators](authenticators.html) control access
+to JupyterHub. The default one (PAM) uses the user accounts on the server where
 JupyterHub is running. If you use this, you will need to create a user account
 on the system for each user on your team. Using other authenticators, you can
-allow users to sign in with e.g. a Github account, or with any single-sign-on
-system your organisation has.
+allow users to sign in with e.g. a GitHub account, or with any single-sign-on
+system your organization has.
 
-Next, :doc:`spawners <spawners>` control how JupyterHub starts
+Next, [spawners](spawners.html) control how JupyterHub starts
 the individual notebook server for each user. The default spawner will
 start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
 using Docker.
-
-
-
 
 
 ## JupyterHub's default behavior
@@ -85,9 +82,27 @@ The location of these files can be specified via configuration, discussed below.
 
 ## Installation
 
-See [the readme](https://github.com/jupyterhub/jupyterhub/blob/master/README.md) for help installing JupyterHub.
+See the project's [README](https://github.com/jupyterhub/jupyterhub/blob/master/README.md)
+for help installing JupyterHub.
 
-## How to configure JupyterHub
+### Planning your installation
+
+Prior to beginning installation, it's helpful to consider some of the following:
+- deployment system (bare metal, Docker)
+- Authentication (PAM, OAuth, etc.)
+- Spawner of singleuser notebook servers (Docker, Batch, etc.)
+- Services (nbgrader, etc.)
+
+## Folders and File Locations
+
+It is recommended to put all of the files used by JupyterHub into standard
+UNIX filesystem locations.
+
+* `/srv/jupyterhub` for all security and runtime files
+* `/etc/jupyterhub` for all configuration files
+* `/var/log` for log files
+
+## Configuration methods
 
 JupyterHub is configured in two ways:
 
@@ -152,7 +167,6 @@ Port 443 is used as an example since 443 is the default port for SSL/HTTPS.
 Configuring only the main IP and port of JupyterHub should be sufficient for most deployments of JupyterHub.
 However, more customized scenarios may need additional networking details to
 be configured.
-
 
 
 ### Configuring the Proxy's REST API communication IP address and port (optional)
@@ -288,16 +302,21 @@ subprocess of the Hub, this should happen automatically (this is the default con
 
 Another time you must set the Proxy authentication token yourself is if you want other services, such as [nbgrader](https://github.com/jupyter/nbgrader) to also be able to connect to the Proxy.
 
-## Configuring authentication
+## Authentication and users
 
 The default Authenticator uses [PAM][] to authenticate system users with their username and password.
 The default behavior of this Authenticator is to allow any user with an account and password on the system to login.
+
+### Creating a whitelist of users
+
 You can restrict which users are allowed to login with `Authenticator.whitelist`:
 
 
 ```python
 c.Authenticator.whitelist = {'mal', 'zoe', 'inara', 'kaylee'}
 ```
+
+### Managing Hub administrators
 
 Admin users of JupyterHub have the ability to take actions on users' behalf,
 such as stopping and restarting their servers,
@@ -317,7 +336,7 @@ then admin users have permission to log in *as other users* on their respective 
 Note: additional configuration examples are provided in this guide's
 [Configuration Examples section](./config-examples.html).
 
-### Adding and removing users
+### Add or remove users from the Hub
 
 Users can be added and removed to the Hub via the admin panel or REST API. These users will be
 added to the whitelist and database. Restarting the Hub will not require manually updating the
@@ -341,7 +360,7 @@ hosted deployments of JupyterHub, to avoid the need to manually create all your 
 launching the service. It is not recommended when running JupyterHub in situations where
 JupyterHub users maps directly onto UNIX users.
 
-## Configuring single-user servers
+## Spawners and single-user notebook servers
 
 Since the single-user server is an instance of `jupyter notebook`, an entire separate
 multi-process application, there are many aspect of that server can configure, and a lot of ways
@@ -411,14 +430,6 @@ Adding API token for <username>
 
 Now you can run your script, i.e. `cull_idle_servers`, by providing it the API token and it will authenticate through
 the REST API to interact with it.
-
-## File locations
-
-It is recommended to put all of the files used by JupyterHub into standard UNIX filesystem locations.
-
-* `/srv/jupyterhub` for all security and runtime files
-* `/etc/jupyterhub` for all configuration files
-* `/var/log` for log files
 
 
 [oauth-setup]: https://github.com/jupyterhub/oauthenticator#setup
