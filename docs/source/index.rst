@@ -8,23 +8,29 @@ Due to its flexibility and customization options, JupyterHub can be used to
 serve notebooks to a class of students, a corporate data science group, or a
 scientific research group.
 
+
+.. image:: images/jhub-parts.png
+   :alt: JupyterHub subsystems
+   :width: 40%
+   :align: right
+
+
 Three subsystems make up JupyterHub:
 
-- a multi-user **Hub** (tornado process)
-- a configurable http **proxy** (node-http-proxy)
-- multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
+* a multi-user **Hub** (tornado process)
+* a **configurable http proxy** (node-http-proxy)
+* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
 
 JupyterHub's basic flow of operations includes:
 
 - The Hub spawns a proxy
 - The proxy forwards all requests to the Hub by default
 - The Hub handles user login and spawns single-user servers on demand
-- The Hub configures the proxy to forward URL prefixes to the single-user
-  notebook servers
+- The Hub configures the proxy to forward URL prefixes to the single-user notebook servers
 
-JupyterHub also provides a
-`REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default>`_
-for convenient administration of the Hub, its users, and services.
+For convenient administration of the Hub, its users, and services, JupyterHub
+also provides a
+`REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default>`_.
 
 
 Contents
@@ -33,9 +39,9 @@ Contents
 **User Guide**
 
 * :doc:`getting-started`
-* :doc:`rest`
 * :doc:`howitworks`
 * :doc:`websecurity`
+* :doc:`rest`
 
 .. toctree::
    :maxdepth: 2
@@ -43,10 +49,9 @@ Contents
    :caption: User Guide
 
    getting-started
-   rest
    howitworks
    websecurity
-
+   rest
 
 **Configuration Guide**
 
