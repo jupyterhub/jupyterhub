@@ -1,4 +1,4 @@
-name: jupyterhub_docs
+name: jd
 channels:
   - conda-forge
 dependencies:
