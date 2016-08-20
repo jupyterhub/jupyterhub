@@ -11,18 +11,18 @@ and a custom Spawner needs to be able to take three actions:
 ## Examples
 Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners). Some examples include:
 - [DockerSpawner](https://github.com/jupyter/dockerspawner) for spawning user servers in Docker containers
-  * dockerspawner.DockerSpawner for spawning identical Docker containers for
+  * `dockerspawner.DockerSpawner` for spawning identical Docker containers for
     each users
-  * dockerspawner.SystemUserSpawner for spawning Docker containers with an
+  * `dockerspawner.SystemUserSpawner` for spawning Docker containers with an
     environment and home directory for each users
+  * both `DockerSpawner` and `SystemUserSpawner` also work with Docker Swarm for
+    launching containers on remote machines
 - [SudoSpawner](https://github.com/jupyter/sudospawner) enables JupyterHub to
   run without being root, by spawning an intermediate process via `sudo`
 - [BatchSpawner](https://github.com/jupyterhub/batchspawner) for spawning remote
   servers using batch systems
 - [RemoteSpawner](https://github.com/zonca/remotespawner) to spawn notebooks
   and a remote server and tunnel the port via SSH
-- [SwarmSpawner](https://github.com/compmodels/jupyterhub/blob/master/swarmspawner.py)
-  for spawning containers using Docker Swarm
 
 ## Spawner control methods
 
