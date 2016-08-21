@@ -855,7 +855,13 @@ class JupyterHub(Application):
         # but changes to the whitelist can occur in the database,
         # and persist across sessions.
         for user in db.query(orm.User):
-            yield gen.maybe_future(self.authenticator.add_user(user))
+            try:
+                yield gen.maybe_future(self.authenticator.add_user(user))
+            except Exception:
+                # TODO: Review approach to synchronize whitelist with db
+                # known cause of the exception is a user who has already been removed from the system
+                # but the user still exists in the hub's user db
+                self.log.exception("Error adding user %r already in db", user.name)
         db.commit() # can add_user touch the db?
 
         # The whitelist set and the users in the db are now the same.
