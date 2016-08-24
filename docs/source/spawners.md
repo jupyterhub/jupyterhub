@@ -1,4 +1,4 @@
-# Writing a custom Spawner
+# Spawners
 
 A [Spawner][] starts each single-user notebook server.
 The Spawner represents an abstract interface to a process,
@@ -8,8 +8,11 @@ and a custom Spawner needs to be able to take three actions:
 - poll whether the process is still running
 - stop the process
 
+
 ## Examples
-Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners). Some examples include:
+Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners).
+Some examples include:
+
 - [DockerSpawner](https://github.com/jupyter/dockerspawner) for spawning user servers in Docker containers
   * `dockerspawner.DockerSpawner` for spawning identical Docker containers for
     each users
@@ -23,6 +26,7 @@ Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://git
   servers using batch systems
 - [RemoteSpawner](https://github.com/zonca/remotespawner) to spawn notebooks
   and a remote server and tunnel the port via SSH
+
 
 ## Spawner control methods
 
@@ -61,10 +65,10 @@ and an integer exit status, otherwise.
 For the local process case, `Spawner.poll` uses `os.kill(PID, 0)`
 to check if the local process is still running.
 
-
 ### Spawner.stop
 
 `Spawner.stop` should stop the process. It must be a tornado coroutine, which should return when the process has finished exiting.
+
 
 ## Spawner state
 
@@ -97,6 +101,7 @@ def clear_state(self):
     self.pid = 0
 ```
 
+
 ## Spawner options form
 
 (new in 0.4)
@@ -114,7 +119,6 @@ If the `Spawner.options_form` is defined, when a user tries to start their serve
 If `Spawner.options_form` is undefined, the user's server is spawned directly, and no spawn page is rendered.
 
 See [this example](https://github.com/jupyter/jupyterhub/blob/master/examples/spawn-form/jupyterhub_config.py) for a form that allows custom CLI args for the local spawner.
-
 
 ### `Spawner.options_from_form`
 
@@ -156,5 +160,7 @@ which would return:
 When `Spawner.start` is called, this dictionary is accessible as `self.user_options`.
 
 
-
 [Spawner]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/spawner.py
+
+
+## Writing a custom spawner

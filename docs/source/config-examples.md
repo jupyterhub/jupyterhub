@@ -91,7 +91,7 @@ In the following example, we show configuration files for a JupyterHub server ru
 Let's start out with `jupyterhub_config.py`:
 
 ```python
-#Force the proxy to only listen to connections to 127.0.0.1
+# Force the proxy to only listen to connections to 127.0.0.1
 c.JupyterHub.ip = '127.0.0.1'
 ```
 
