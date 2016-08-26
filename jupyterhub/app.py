@@ -44,6 +44,7 @@ here = os.path.dirname(__file__)
 import jupyterhub
 from . import handlers, apihandlers
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
+from .services.service import Service
 
 from . import dbutil, orm
 from .user import User, UserDict
@@ -408,6 +409,29 @@ class JupyterHub(Application):
         Allows ahead-of-time generation of API tokens for use by externally managed services.
         """
     ).tag(config=True)
+    
+    services = List(Dict(),
+        help="""List of service specification dictionaries.
+        
+        A service
+        
+        For instance::
+        
+            services = [
+                {
+                    'name': 'cull_idle',
+                    'command': ['/path/to/cull_idle_servers.py'],
+                },
+                {
+                    'name': 'formgrader',
+                    'url': 'http://127.0.0.1:1234',
+                    'token': 'super-secret',
+                    'env': 
+                }
+            ]
+        """
+    ).tag(config=True)
+    _service_map = Dict()
 
     authenticator_class = Type(PAMAuthenticator, Authenticator,
         help="""Class for authenticating users.
@@ -933,6 +957,35 @@ class JupyterHub(Application):
         """Load predefined API tokens (for services) into database"""
         self._add_tokens(self.service_tokens, kind='service')
         self._add_tokens(self.api_tokens, kind='user')
+    
+    def init_services(self):
+        self._service_map = {}
+        for spec in self.services:
+            if 'name' not in spec:
+                raise ValueError('service spec must have a name: %r' % spec)
+            name = spec['name']
+            # get/create orm
+            orm_service = orm.Service.find(self.db, name=name)
+            if orm_service is None:
+                # not found, create a new one
+                orm_service = orm.Service(name=name)
+                self.db.add(orm_service)
+            orm_service.admin = spec.get('admin', False)
+            self.db.commit()
+            service = Service(
+                proxy=self.proxy, hub=self.hub, base_url=self.base_url,
+                db=self.db, orm=orm_service,
+                parent=self,
+                hub_api_url=self.hub.api_url,
+                **spec)
+            self._service_map[name] = service
+            if service.managed:
+                if not service.api_token:
+                    # generate new token
+                    service.api_token = service.orm.new_api_token()
+                else:
+                    # ensure provided token is registered
+                    self.service_tokens[service.api_token] = service.name
 
     @gen.coroutine
     def init_spawners(self):
@@ -1197,6 +1250,7 @@ class JupyterHub(Application):
         self.init_proxy()
         yield self.init_users()
         self.init_groups()
+        self.init_services()
         self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
@@ -1333,7 +1387,13 @@ class JupyterHub(Application):
         except Exception as e:
             self.log.critical("Failed to start proxy", exc_info=True)
             self.exit(1)
-            return
+        
+        for service_name, service in self._service_map.items():
+            try:
+                yield service.start()
+            except Exception as e:
+                self.log.critical("Failed to start service %s", service_name, exc_info=True)
+                self.exit(1)
 
         loop.add_callback(self.proxy.add_all_users, self.users)
 
