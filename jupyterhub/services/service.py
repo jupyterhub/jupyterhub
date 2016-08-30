@@ -50,7 +50,7 @@ from tornado import gen
 from traitlets import (
     HasTraits,
     Any, Bool, Dict, Unicode, Instance,
-    observe,
+    default, observe,
 )
 from traitlets.config import LoggingConfigurable
 
@@ -74,6 +74,7 @@ class _ServiceSpawner(LocalProcessSpawner):
     Removes notebook-specific-ness from LocalProcessSpawner.
     """
     cwd = Unicode()
+    cmd = Command(minlen=0)
     
     def make_preexec_fn(self, name):
         if not name or name == getuser():
@@ -81,7 +82,6 @@ class _ServiceSpawner(LocalProcessSpawner):
             return
         return super().make_preexec_fn(name)
 
-    @gen.coroutine
     def start(self):
         """Start the process"""
         env = self.get_env()
@@ -92,7 +92,7 @@ class _ServiceSpawner(LocalProcessSpawner):
             self.proc = Popen(self.cmd, env=env,
                 preexec_fn=self.make_preexec_fn(self.user.name),
                 start_new_session=True, # don't forward signals
-                cwd=self.cwd,
+                cwd=self.cwd or None,
             )
         except PermissionError:
             # use which to get abspath
@@ -137,47 +137,46 @@ class Service(LoggingConfigurable):
         
         If the service has an http endpoint, it
         """
-    )
+    ).tag(input=True)
     admin = Bool(False,
         help="Does the service need admin-access to the Hub API?"
-    )
+    ).tag(input=True)
     url = Unicode(
         help="""URL of the service.
         
         Only specify if the service runs an HTTP(s) endpoint that.
         If managed, will be passed as JUPYTERHUB_SERVICE_URL env.
         """
-    )
+    ).tag(input=True)
     @observe('url')
     def _url_changed(self, change):
         url = change['new']
         if not url:
             self.orm.server = None
         else:
-            if self.orm.server is None:
-                parsed = urlparse(url)
-                if parsed.port is not None:
-                    port = parsed.port
-                elif parsed.scheme == 'http':
-                    port = 80
-                elif parsed.scheme == 'https':
-                    port = 443
-                server = self.orm.server = orm.Server(
-                    proto=parsed.scheme,
-                    ip=parsed.host,
-                    port=port,
-                    cookie_name='jupyterhub-services',
-                    base_url=self.proxy_path,
-                )
-                self.db.add(server)
-                self.db.commit()
+            parsed = urlparse(url)
+            if parsed.port is not None:
+                port = parsed.port
+            elif parsed.scheme == 'http':
+                port = 80
+            elif parsed.scheme == 'https':
+                port = 443
+            server = self.orm.server = orm.Server(
+                proto=parsed.scheme,
+                ip=parsed.hostname,
+                port=port,
+                cookie_name='jupyterhub-services',
+                base_url=self.proxy_path,
+            )
+            self.db.add(server)
+            self.db.commit()
 
     api_token = Unicode(
         help="""The API token to use for the service.
         
         If unspecified, an API token will be generated for managed services.
         """
-    )
+    ).tag(input=True)
     # Managed service API:
 
     @property
@@ -185,28 +184,37 @@ class Service(LoggingConfigurable):
         """Am I managed by the Hub?"""
         return bool(self.command)
 
-    command = Command(
+    command = Command(minlen=0,
         help="Command to spawn this service, if managed."
-    )
+    ).tag(input=True)
     cwd = Unicode(
         help="""The working directory in which to run the service."""
-    )
+    ).tag(input=True)
     environment = Dict(
         help="""Environment variables to pass to the service.
         Only used if the Hub is spawning the service.
         """
-    )
+    ).tag(input=True)
     user = Unicode(getuser(),
         help="""The user to become when launching the service.
 
         If unspecified, run the service as the same user as the Hub.
         """
-    )
+    ).tag(input=True)
     
     # handles on globals:
     proxy = Any()
     hub = Any()
     base_url = Unicode()
+    db = Any()
+    orm = Any()
+    @default('orm')
+    def _orm_default(self):
+        return self.db.query(orm.Service).filter(orm.Service.name==self.name).first()
+    
+    @property
+    def server(self):
+        return self.orm.server
 
     @property
     def proxy_path(self):
@@ -219,7 +227,6 @@ class Service(LoggingConfigurable):
             managed=' managed' if self.managed else '',
         )
 
-    @gen.coroutine
     def start(self):
         """Start a managed service"""
         if not self.managed:
@@ -233,6 +240,7 @@ class Service(LoggingConfigurable):
         env['JUPYTERHUB_API_URL'] = self.hub_api_url
         env['JUPYTERHUB_BASE_URL'] = self.base_url
         env['JUPYTERHUB_SERVICE_PATH'] = self.proxy_path
+        env['JUPYTERHUB_SERVICE_URL'] = self.url
 
         self.spawner = _ServiceSpawner(
             cmd=self.command,
@@ -245,7 +253,7 @@ class Service(LoggingConfigurable):
                 server=self.orm.server,
             ),
         )
-        yield self.spawner.start()
+        self.spawner.start()
         self.proc = self.spawner.proc
         self.spawner.add_poll_callback(self._proc_stopped)
         self.spawner.start_polling()
@@ -253,7 +261,6 @@ class Service(LoggingConfigurable):
     def _proc_stopped(self):
         """Called when the service process unexpectedly exits"""
         self.log.error("Service %s exited with status %i", self.name, self.proc.returncode)
-        self.proc = None
         self.start()
         
     def stop(self):

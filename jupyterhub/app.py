@@ -976,8 +976,12 @@ class JupyterHub(Application):
                 proxy=self.proxy, hub=self.hub, base_url=self.base_url,
                 db=self.db, orm=orm_service,
                 parent=self,
-                hub_api_url=self.hub.api_url,
-                **spec)
+                hub_api_url=self.hub.api_url)
+            traits = service.traits(input=True)
+            for key, value in spec.items():
+                if key not in traits:
+                    raise AttributeError("No such service field: %s" % key)
+                setattr(service, key, value)
             self._service_map[name] = service
             if service.managed:
                 if not service.api_token:
@@ -986,6 +990,14 @@ class JupyterHub(Application):
                 else:
                     # ensure provided token is registered
                     self.service_tokens[service.api_token] = service.name
+            else:
+                self.service_tokens[service.api_token] = service.name
+
+        # delete services from db not in service config:
+        for service in self.db.query(orm.Service):
+            if service.name not in self._service_map:
+                self.db.delete(service)
+        self.db.commit()
 
     @gen.coroutine
     def init_spawners(self):
@@ -1155,6 +1167,7 @@ class JupyterHub(Application):
         yield self.start_proxy()
         self.log.info("Setting up routes on new proxy")
         yield self.proxy.add_all_users(self.users)
+        yield self.proxy.add_all_services(self.services)
         self.log.info("New proxy back up, and good to go")
 
     def init_tornado_settings(self):
@@ -1213,6 +1226,7 @@ class JupyterHub(Application):
         self.tornado_settings = settings
         # constructing users requires access to tornado_settings
         self.tornado_settings['users'] = self.users
+        self.tornado_settings['services'] = self._service_map
 
     def init_tornado_application(self):
         """Instantiate the tornado Application object"""
@@ -1354,7 +1368,7 @@ class JupyterHub(Application):
         self.statsd.gauge('users.active', active_users_count)
 
         self.db.commit()
-        yield self.proxy.check_routes(self.users, routes)
+        yield self.proxy.check_routes(self.users, self._service_map, routes)
 
     @gen.coroutine
     def start(self):
@@ -1396,6 +1410,7 @@ class JupyterHub(Application):
                 self.exit(1)
 
         loop.add_callback(self.proxy.add_all_users, self.users)
+        loop.add_callback(self.proxy.add_all_services, self._service_map)
 
         if self.proxy_process:
             # only check / restart the proxy if we started it in the first place.

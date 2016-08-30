@@ -68,6 +68,9 @@ class BaseHandler(RequestHandler):
         return self.settings.setdefault('users', {})
 
     @property
+    def services(self):
+        return self.settings.setdefault('services', {})
+    @property
     def hub(self):
         return self.settings['hub']
 
@@ -236,6 +239,10 @@ class BaseHandler(RequestHandler):
             **kwargs
         )
 
+    def set_service_cookie(self, user):
+        """set the login cookie for services"""
+        self._set_user_cookie(user, self.service_server)
+
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
         self._set_user_cookie(user, user.server)
@@ -253,6 +260,10 @@ class BaseHandler(RequestHandler):
         # create and set a new cookie token for the single-user server
         if user.server:
             self.set_server_cookie(user)
+
+        # set single cookie for services
+        if self.db.query(orm.Service).first():
+            self.set_service_cookie(user)
 
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():

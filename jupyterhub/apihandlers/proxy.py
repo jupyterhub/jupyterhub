@@ -28,7 +28,7 @@ class ProxyAPIHandler(APIHandler):
     @gen.coroutine
     def post(self):
         """POST checks the proxy to ensure"""
-        yield self.proxy.check_routes(self.users)
+        yield self.proxy.check_routes(self.users, self.services)
         
     
     @admin_only
@@ -59,7 +59,7 @@ class ProxyAPIHandler(APIHandler):
             self.proxy.auth_token = model['auth_token']
         self.db.commit()
         self.log.info("Updated proxy at %s", server.bind_url)
-        yield self.proxy.check_routes(self.users)
+        yield self.proxy.check_routes(self.users, self.services)
         
 
 
