@@ -18,9 +18,11 @@ it will be added to the Hub's proxy at `/service/:service-name`.
 ## Managed services
 
 **Managed** services are services that the Hub starts and is responsible for.
-These can only be local subprocesses of the Hub.
+These can only be local subprocesses of the Hub,
+and the Hub will take care of starting these processes and restarting them if they stop.
+
 While there are similarities with notebook Spawners,
-there are no plans to support the same spawning abstractions as notebook
+there are no plans to support the same spawning abstractions as notebook.
 If you want to run these services in docker or other environments,
 you can register it as an external service below.
 
@@ -51,7 +53,7 @@ When the service starts, the Hub will pass the following environment variables:
 JUPYTERHUB_SERVICE_NAME: the name of the service ('cull-idle' above)
 JUPYTERHUB_API_TOKEN: API token assigned to the service
 JUPYTERHUB_API_URL: URL for the JupyterHub API (http://127.0.0.1:8080/hub/api)
-JUPYTERHUB_BASE_URL: Base URL of the Hub (https://mydomain/)
+JUPYTERHUB_BASE_URL: Base URL of the Hub (https://mydomain[:port]/)
 JUPYTERHUB_SERVICE_PATH: Base path of this service (/service/cull-idle/)
 ```
 
@@ -59,6 +61,8 @@ JUPYTERHUB_SERVICE_PATH: Base path of this service (/service/cull-idle/)
 
 You can use your own service management tools, such as docker or systemd, to manage JupyterHub services.
 These are not subprocesses of the Hub, and you must tell JupyterHub what API token the service is using to perform its API requests.
+Each service will need a unique API token because the Hub authenticates each API request,
+identifying the originating service or user.
 
 An example of an externally managed service with admin access and running its own web server:
 
