@@ -102,17 +102,17 @@ class HubAuth(Configurable):
         """
     ).tag(config=True)
 
-    login_url = Unicode('https://127.0.0.1:8000/hub/login',
+    login_url = Unicode('/hub/login',
         help="""The login URL of the Hub
         
-        Typically https://public-hub-host/hub/login
+        Typically /hub/login
         """
     ).tag(config=True)
 
     api_token = Unicode('',
         help="""API key for accessing Hub API.
 
-        Generate with `jupyterhub token [username]` or add to JupyterHub.api_tokens config.
+        Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
         """
     ).tag(config=True)
 
