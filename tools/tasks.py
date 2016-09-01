@@ -172,7 +172,7 @@ def build_sdist(py):
     Returns the path to the tarball
     """
     with cd(repo_root):
-        cmd = [py, 'setup.py', 'sdist', '--formats=zip,gztar']
+        cmd = [py, 'setup.py', 'sdist', '--formats=gztar']
         run(cmd)
     
     return glob.glob(pjoin(repo_root, 'dist', '*.tar.gz'))[0]
