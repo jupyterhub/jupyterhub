@@ -15,7 +15,7 @@ from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
 from . import mocking
-from .mocking import public_host, public_url, user_url
+from .mocking import public_host, public_url
 
 
 def check_db_locks(func):
@@ -366,7 +366,7 @@ def test_spawn(app, io_loop):
     assert status is None
 
     assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name)
-    url = user_url(user, app)
+    url = public_url(app, user)
     print(url)
     r = requests.get(url)
     assert r.status_code == 200

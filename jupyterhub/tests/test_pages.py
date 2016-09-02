@@ -8,7 +8,7 @@ from ..utils import url_path_join as ujoin
 from .. import orm
 
 import mock
-from .mocking import FormSpawner, public_url, public_host, user_url
+from .mocking import FormSpawner, public_url, public_host
 from .test_api import api_request
 
 def get_page(path, app, hub=True, **kw):
@@ -35,7 +35,7 @@ def test_root_auth(app):
     cookies = app.login_user('river')
     r = requests.get(public_url(app), cookies=cookies)
     r.raise_for_status()
-    assert r.url == user_url(app.users['river'], app)
+    assert r.url == public_url(app, app.users['river'])
 
 def test_root_redirect(app):
     name = 'wash'

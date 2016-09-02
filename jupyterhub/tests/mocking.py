@@ -221,17 +221,6 @@ def public_url(app, user_or_service=None):
         return public_host(app) + app.proxy.public_server.base_url
 
 
-def user_url(user, app):
-    """Return the full public URL for a given user.
-    
-    Args:
-        user: user object, as return by app.users['username']
-        app: MockHub instance
-    Returns:
-        url (str): The public URL for user.
-    """
-    return public_url(app, user)
-
 # single-user-server mocking:
 
 class MockSingleUserServer(SingleUserNotebookApp):
