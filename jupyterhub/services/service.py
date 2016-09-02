@@ -148,29 +148,6 @@ class Service(LoggingConfigurable):
         If managed, will be passed as JUPYTERHUB_SERVICE_URL env.
         """
     ).tag(input=True)
-    @observe('url')
-    def _url_changed(self, change):
-        url = change['new']
-        if not url:
-            self.orm.server = None
-        else:
-            parsed = urlparse(url)
-            if parsed.port is not None:
-                port = parsed.port
-            elif parsed.scheme == 'http':
-                port = 80
-            elif parsed.scheme == 'https':
-                port = 443
-            server = self.orm.server = orm.Server(
-                proto=parsed.scheme,
-                ip=parsed.hostname,
-                port=port,
-                cookie_name='jupyterhub-services',
-                base_url=self.proxy_path,
-            )
-            self.db.add(server)
-            self.db.commit()
-
     api_token = Unicode(
         help="""The API token to use for the service.
         
@@ -201,24 +178,33 @@ class Service(LoggingConfigurable):
         If unspecified, run the service as the same user as the Hub.
         """
     ).tag(input=True)
-    
+
+    domain = Unicode()
+    host = Unicode()
+
     # handles on globals:
     proxy = Any()
-    hub = Any()
+    
     base_url = Unicode()
     db = Any()
     orm = Any()
-    @default('orm')
-    def _orm_default(self):
-        return self.db.query(orm.Service).filter(orm.Service.name==self.name).first()
-    
+
     @property
     def server(self):
         return self.orm.server
 
     @property
-    def proxy_path(self):
+    def prefix(self):
         return url_path_join(self.base_url, 'services', self.name)
+
+    @property
+    def proxy_path(self):
+        if not self.server:
+            return ''
+        if self.domain:
+            return url_path_join('/' + self.domain, self.server.base_url)
+        else:
+            return self.server.base_url
 
     def __repr__(self):
         return "<{cls}(name={name}{managed})>".format(
@@ -239,7 +225,7 @@ class Service(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         env['JUPYTERHUB_API_URL'] = self.hub_api_url
         env['JUPYTERHUB_BASE_URL'] = self.base_url
-        env['JUPYTERHUB_SERVICE_PATH'] = self.proxy_path
+        env['JUPYTERHUB_SERVICE_PATH'] = self.server.base_url
         env['JUPYTERHUB_SERVICE_URL'] = self.url
 
         self.spawner = _ServiceSpawner(

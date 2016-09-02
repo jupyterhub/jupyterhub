@@ -14,11 +14,13 @@ except ImportError:
 from urllib.parse import unquote
 
 import pytest
+import requests
 from tornado import gen
 from tornado.ioloop import IOLoop
 
 
 import jupyterhub.services.service
+from .mocking import public_url
 from .test_pages import get_page
 from ..utils import url_path_join, wait_for_http_server
 
@@ -97,16 +99,14 @@ def test_managed_service(app, mockservice):
 def test_proxy_service(app, mockservice, io_loop):
     name = mockservice.name
     routes = io_loop.run_sync(app.proxy.get_routes)
-    assert unquote(mockservice.proxy_path) in routes
-    io_loop.run_sync(mockservice.server.wait_up)
+    url = public_url(app, mockservice) + '/foo'
+    r = requests.get(url, allow_redirects=False)
     path = '/services/{}/foo'.format(name)
-    r = get_page(path, app, hub=False, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     assert r.text.endswith(path)
 
 
-@pytest.mark.now
 def test_external_service(app, io_loop):
     name = 'external'
     with external_service(app, name=name) as env:
@@ -125,9 +125,10 @@ def test_external_service(app, io_loop):
             evt.set()
         app.io_loop.add_callback(add_services)
         assert evt.wait(10)
+        service = app._service_map[name]
+        url = public_url(app, service) + '/api/users'
         path = '/services/{}/api/users'.format(name)
-        r = get_page(path, app, hub=False, allow_redirects=False)
-        print(r.headers, r.status_code)
+        r = requests.get(url, allow_redirects=False)
         r.raise_for_status()
         assert r.status_code == 200
         resp = r.json()

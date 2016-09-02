@@ -292,6 +292,15 @@ class JupyterHub(Application):
             # if not specified, assume https: You have to be really explicit about HTTP!
             self.subdomain_host = 'https://' + new
 
+    domain = Unicode(
+        help="domain name without proto,port"
+    )
+    @default('domain')
+    def _domain_default(self):
+        if not self.subdomain_host:
+            return ''
+        return urlparse(self.subdomain_host).hostname
+
     port = Integer(8000,
         help="The public facing port of the proxy"
     ).tag(config=True)
@@ -960,6 +969,12 @@ class JupyterHub(Application):
     
     def init_services(self):
         self._service_map = {}
+        if self.domain:
+            domain = 'services.' + self.domain
+            parsed = urlparse(self.subdomain_host)
+            host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
+        else:
+            domain = host = ''
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
@@ -972,16 +987,38 @@ class JupyterHub(Application):
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
-            service = Service(
-                proxy=self.proxy, hub=self.hub, base_url=self.base_url,
+            service = Service(parent=self,
+                base_url=self.base_url,
                 db=self.db, orm=orm_service,
-                parent=self,
-                hub_api_url=self.hub.api_url)
+                domain=domain, host=host,
+                hub_api_url=self.hub.api_url,
+            )
+
             traits = service.traits(input=True)
             for key, value in spec.items():
                 if key not in traits:
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
+
+            if service.url:
+                parsed = urlparse(service.url)
+                if parsed.port is not None:
+                    port = parsed.port
+                elif parsed.scheme == 'http':
+                    port = 80
+                elif parsed.scheme == 'https':
+                    port = 443
+                server = service.orm.server = orm.Server(
+                    proto=parsed.scheme,
+                    ip=parsed.hostname,
+                    port=port,
+                    cookie_name='jupyterhub-services',
+                    base_url=service.prefix,
+                )
+                self.db.add(server)
+            else:
+                service.orm.server = None
+
             self._service_map[name] = service
             if service.managed:
                 if not service.api_token:
@@ -1193,8 +1230,6 @@ class JupyterHub(Application):
         else:
             version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
 
-        subdomain_host = self.subdomain_host
-        domain = urlparse(subdomain_host).hostname
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -1217,8 +1252,8 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             jinja2_env=jinja_env,
             version_hash=version_hash,
-            subdomain_host=subdomain_host,
-            domain=domain,
+            subdomain_host=self.subdomain_host,
+            domain=self.domain,
             statsd=self.statsd,
         )
         # allow configured settings to have priority

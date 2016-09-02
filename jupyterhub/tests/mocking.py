@@ -209,9 +209,16 @@ def public_host(app):
         return app.proxy.public_server.host
 
 
-def public_url(app):
+def public_url(app, user_or_service=None):
     """Return the full, public base URL (including prefix) of the given JupyterHub instance."""
-    return public_host(app) + app.proxy.public_server.base_url
+    if user_or_service:
+        if app.subdomain_host:
+            host = user_or_service.host
+        else:
+            host = public_host(app)
+        return host + user_or_service.server.base_url
+    else:
+        return public_host(app) + app.proxy.public_server.base_url
 
 
 def user_url(user, app):
@@ -223,11 +230,7 @@ def user_url(user, app):
     Returns:
         url (str): The public URL for user.
     """
-    if app.subdomain_host:
-        host = user.host
-    else:
-        host = public_host(app)
-    return host + user.server.base_url
+    return public_url(app, user)
 
 # single-user-server mocking:
 
