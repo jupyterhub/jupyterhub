@@ -3,25 +3,17 @@
 from binascii import hexlify
 from contextlib import contextmanager
 import os
-from subprocess import Popen, TimeoutExpired
+from subprocess import Popen
 import sys
 from threading import Event
 import time
-try:
-    from unittest import mock
-except ImportError:
-    import mock
-from urllib.parse import unquote
 
-import pytest
 import requests
 from tornado import gen
 from tornado.ioloop import IOLoop
 
 
-import jupyterhub.services.service
 from .mocking import public_url
-from .test_pages import get_page
 from ..utils import url_path_join, wait_for_http_server
 
 here = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +21,7 @@ mockservice_py = os.path.join(here, 'mockservice.py')
 mockservice_cmd = [sys.executable, mockservice_py]
 
 from ..utils import random_port
+
 
 @contextmanager
 def external_service(app, name='mockservice'):
@@ -44,36 +37,6 @@ def external_service(app, name='mockservice'):
         yield env
     finally:
         p.terminate()
-
-
-# mock services for testing.
-# Shorter intervals, etc.
-class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
-    poll_interval = 1
-
-@pytest.yield_fixture
-def mockservice(request, app):
-    name = 'mock-service'
-    with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
-        app.services = [{
-            'name': name,
-            'command': mockservice_cmd,
-            'url': 'http://127.0.0.1:%i' % random_port(),
-            'admin': True,
-        }]
-        app.init_services()
-        app.io_loop.add_callback(app.proxy.add_all_services, app._service_map)
-        assert name in app._service_map
-        service = app._service_map[name]
-        app.io_loop.add_callback(service.start)
-        request.addfinalizer(service.stop)
-        for i in range(20):
-            if not getattr(service, 'proc', False):
-                time.sleep(0.2)
-        # ensure process finishes starting
-        with pytest.raises(TimeoutExpired):
-            service.proc.wait(1)
-        yield service
 
 
 def test_managed_service(app, mockservice):

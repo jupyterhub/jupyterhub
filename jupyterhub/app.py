@@ -968,7 +968,7 @@ class JupyterHub(Application):
         self._add_tokens(self.api_tokens, kind='user')
     
     def init_services(self):
-        self._service_map = {}
+        self._service_map.clear()
         if self.domain:
             domain = 'services.' + self.domain
             parsed = urlparse(self.subdomain_host)

@@ -54,7 +54,7 @@ JUPYTERHUB_SERVICE_NAME: the name of the service ('cull-idle' above)
 JUPYTERHUB_API_TOKEN: API token assigned to the service
 JUPYTERHUB_API_URL: URL for the JupyterHub API (http://127.0.0.1:8080/hub/api)
 JUPYTERHUB_BASE_URL: Base URL of the Hub (https://mydomain[:port]/)
-JUPYTERHUB_SERVICE_PATH: Base path of this service (/service/cull-idle/)
+JUPYTERHUB_SERVICE_PREFIX: URL path prefix of this service (/services/cull-idle/)
 ```
 
 ## External services

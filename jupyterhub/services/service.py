@@ -181,10 +181,10 @@ class Service(LoggingConfigurable):
 
     domain = Unicode()
     host = Unicode()
+    proc = Any()
 
     # handles on globals:
     proxy = Any()
-    
     base_url = Unicode()
     db = Any()
     orm = Any()
@@ -225,7 +225,7 @@ class Service(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         env['JUPYTERHUB_API_URL'] = self.hub_api_url
         env['JUPYTERHUB_BASE_URL'] = self.base_url
-        env['JUPYTERHUB_SERVICE_PATH'] = self.server.base_url
+        env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
         env['JUPYTERHUB_SERVICE_URL'] = self.url
 
         self.spawner = _ServiceSpawner(
