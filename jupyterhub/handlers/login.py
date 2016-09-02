@@ -3,6 +3,8 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from urllib.parse import urlparse
+
 from tornado.escape import url_escape
 from tornado import gen
 
@@ -38,8 +40,11 @@ class LoginHandler(BaseHandler):
     def get(self):
         self.statsd.incr('login.request')
         next_url = self.get_argument('next', '')
-        if not next_url.startswith('/'):
-            # disallow non-absolute next URLs (e.g. full URLs)
+        if (next_url + '/').startswith('%s://%s/' % (self.request.protocol, self.request.host)):
+            # treat absolute URLs for our host as absolute paths:
+            next_url = urlparse(next_url).path
+        elif not next_url.startswith('/'):
+            # disallow non-absolute next URLs (e.g. full URLs to other hosts)
             next_url = ''
         user = self.get_current_user()
         if user:
