@@ -28,11 +28,11 @@ if os.name in ('nt', 'dos'):
 # At least we're on the python version we need, move on.
 
 import os
-
 from glob import glob
-
-from distutils.core import setup
 from subprocess import check_call
+
+from setuptools import setup
+from setuptools.command.bdist_egg import bdist_egg
 
 pjoin = os.path.join
 
@@ -45,11 +45,6 @@ is_repo = os.path.exists(pjoin(here, '.git'))
 #---------------------------------------------------------------------------
 # Build basic package data, etc.
 #---------------------------------------------------------------------------
-
-# setuptools for wheel, develop
-for cmd in ['bdist_wheel', 'develop']:
-    if cmd in sys.argv:
-        import setuptools
 
 def get_data_files():
     """Get data files in share/jupyter"""
@@ -70,7 +65,6 @@ def get_package_data():
     (mostly alembic config)
     """
     package_data = {}
-    pkg = pjoin(here, 'jupyterhub')
     package_data['jupyterhub'] = [
         'alembic/*',
         'alembic/versions/*',
@@ -270,34 +264,44 @@ def js_css_first(cls, strict=True):
     return Command
 
 
+class bdist_egg_disabled(bdist_egg):
+    """Disabled version of bdist_egg
+
+    Prevents setup.py install performing setuptools' default easy_install,
+    which it should never ever do.
+    """
+    def run(self):
+        sys.exit("Aborting implicit building of eggs. Use `pip install .` to install from source.")
+
+
 setup_args['cmdclass'] = {
     'js': Bower,
     'css': CSS,
     'build_py': js_css_first(build_py, strict=is_repo),
     'sdist': js_css_first(sdist, strict=True),
+    'bdist_egg': bdist_egg if 'bdist_egg' in sys.argv else bdist_egg_disabled,
 }
 
 
 # setuptools requirements
 
-if 'setuptools' in sys.modules:
-    setup_args['zip_safe'] = False
-    from setuptools.command.develop import develop
-    class develop_js_css(develop):
-        def run(self):
-            if not self.uninstall:
-                self.distribution.run_command('js')
-                self.distribution.run_command('css')
-            develop.run(self)
-    setup_args['cmdclass']['develop'] = develop_js_css
-    setup_args['install_requires'] = install_requires = []
+setup_args['zip_safe'] = False
+from setuptools.command.develop import develop
+class develop_js_css(develop):
+    def run(self):
+        if not self.uninstall:
+            self.distribution.run_command('js')
+            self.distribution.run_command('css')
+        develop.run(self)
+setup_args['cmdclass']['develop'] = develop_js_css
+setup_args['install_requires'] = install_requires = []
 
-    with open('requirements.txt') as f:
-        for line in f.readlines():
-            req = line.strip()
-            if not req or req.startswith('#') or '://' in req:
-                continue
-            install_requires.append(req)
+with open('requirements.txt') as f:
+    for line in f.readlines():
+        req = line.strip()
+        if not req or req.startswith('#') or '://' in req:
+            continue
+        install_requires.append(req)
 
 #---------------------------------------------------------------------------
 # setup
