@@ -34,7 +34,7 @@ class ServiceListAPIHandler(APIHandler):
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target service or admin"""
-    def m(self, name):
+    def decorated_method(self, name):
         current = self.get_current_user()
         if current is None:
             raise web.HTTPError(403)
@@ -48,7 +48,7 @@ def admin_or_self(method):
         if name not in self.services:
             raise web.HTTPError(404)
         return method(self, name)
-    return m
+    return decorated_method
 
 class ServiceAPIHandler(APIHandler):
 

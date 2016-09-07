@@ -293,7 +293,7 @@ class JupyterHub(Application):
             self.subdomain_host = 'https://' + new
 
     domain = Unicode(
-        help="domain name without proto,port"
+        help="domain name, e.g. 'example.com' (excludes protocol, port)"
     )
     @default('domain')
     def _domain_default(self):
