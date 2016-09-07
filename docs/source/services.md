@@ -53,14 +53,15 @@ External Service, as described below.
 A Managed Service is characterized by its specified `command` for launching
 the Service. For example, the configuration of a 'cull idle' notebook server
 Managed Service would include the Service name, `True` setting for being
-administered by the Hub, and the `command` to launch the Service:
+administered by the Hub, and the `command` to launch the Service which will
+cull idle servers after a timeout interval:
 
 ```python
 c.JupyterHub.services = [
     {
         'name': 'cull-idle',
         'admin': True,
-        'command': ['python', '/path/to/cull-idle.py', '--interval']
+        'command': ['python', '/path/to/cull-idle.py', '--timeout']
     }
 ]
 ```
