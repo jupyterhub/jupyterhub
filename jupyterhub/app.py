@@ -44,6 +44,7 @@ here = os.path.dirname(__file__)
 import jupyterhub
 from . import handlers, apihandlers
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
+from .services.service import Service
 
 from . import dbutil, orm
 from .user import User, UserDict
@@ -291,6 +292,15 @@ class JupyterHub(Application):
             # if not specified, assume https: You have to be really explicit about HTTP!
             self.subdomain_host = 'https://' + new
 
+    domain = Unicode(
+        help="domain name, e.g. 'example.com' (excludes protocol, port)"
+    )
+    @default('domain')
+    def _domain_default(self):
+        if not self.subdomain_host:
+            return ''
+        return urlparse(self.subdomain_host).hostname
+
     port = Integer(8000,
         help="The public facing port of the proxy"
     ).tag(config=True)
@@ -408,6 +418,29 @@ class JupyterHub(Application):
         Allows ahead-of-time generation of API tokens for use by externally managed services.
         """
     ).tag(config=True)
+    
+    services = List(Dict(),
+        help="""List of service specification dictionaries.
+        
+        A service
+        
+        For instance::
+        
+            services = [
+                {
+                    'name': 'cull_idle',
+                    'command': ['/path/to/cull_idle_servers.py'],
+                },
+                {
+                    'name': 'formgrader',
+                    'url': 'http://127.0.0.1:1234',
+                    'token': 'super-secret',
+                    'env': 
+                }
+            ]
+        """
+    ).tag(config=True)
+    _service_map = Dict()
 
     authenticator_class = Type(PAMAuthenticator, Authenticator,
         help="""Class for authenticating users.
@@ -933,6 +966,75 @@ class JupyterHub(Application):
         """Load predefined API tokens (for services) into database"""
         self._add_tokens(self.service_tokens, kind='service')
         self._add_tokens(self.api_tokens, kind='user')
+    
+    def init_services(self):
+        self._service_map.clear()
+        if self.domain:
+            domain = 'services.' + self.domain
+            parsed = urlparse(self.subdomain_host)
+            host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
+        else:
+            domain = host = ''
+        for spec in self.services:
+            if 'name' not in spec:
+                raise ValueError('service spec must have a name: %r' % spec)
+            name = spec['name']
+            # get/create orm
+            orm_service = orm.Service.find(self.db, name=name)
+            if orm_service is None:
+                # not found, create a new one
+                orm_service = orm.Service(name=name)
+                self.db.add(orm_service)
+            orm_service.admin = spec.get('admin', False)
+            self.db.commit()
+            service = Service(parent=self,
+                base_url=self.base_url,
+                db=self.db, orm=orm_service,
+                domain=domain, host=host,
+                hub_api_url=self.hub.api_url,
+            )
+
+            traits = service.traits(input=True)
+            for key, value in spec.items():
+                if key not in traits:
+                    raise AttributeError("No such service field: %s" % key)
+                setattr(service, key, value)
+
+            if service.url:
+                parsed = urlparse(service.url)
+                if parsed.port is not None:
+                    port = parsed.port
+                elif parsed.scheme == 'http':
+                    port = 80
+                elif parsed.scheme == 'https':
+                    port = 443
+                server = service.orm.server = orm.Server(
+                    proto=parsed.scheme,
+                    ip=parsed.hostname,
+                    port=port,
+                    cookie_name='jupyterhub-services',
+                    base_url=service.prefix,
+                )
+                self.db.add(server)
+            else:
+                service.orm.server = None
+
+            self._service_map[name] = service
+            if service.managed:
+                if not service.api_token:
+                    # generate new token
+                    service.api_token = service.orm.new_api_token()
+                else:
+                    # ensure provided token is registered
+                    self.service_tokens[service.api_token] = service.name
+            else:
+                self.service_tokens[service.api_token] = service.name
+
+        # delete services from db not in service config:
+        for service in self.db.query(orm.Service):
+            if service.name not in self._service_map:
+                self.db.delete(service)
+        self.db.commit()
 
     @gen.coroutine
     def init_spawners(self):
@@ -1102,6 +1204,7 @@ class JupyterHub(Application):
         yield self.start_proxy()
         self.log.info("Setting up routes on new proxy")
         yield self.proxy.add_all_users(self.users)
+        yield self.proxy.add_all_services(self.services)
         self.log.info("New proxy back up, and good to go")
 
     def init_tornado_settings(self):
@@ -1127,8 +1230,6 @@ class JupyterHub(Application):
         else:
             version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
 
-        subdomain_host = self.subdomain_host
-        domain = urlparse(subdomain_host).hostname
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -1151,8 +1252,8 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             jinja2_env=jinja_env,
             version_hash=version_hash,
-            subdomain_host=subdomain_host,
-            domain=domain,
+            subdomain_host=self.subdomain_host,
+            domain=self.domain,
             statsd=self.statsd,
         )
         # allow configured settings to have priority
@@ -1160,6 +1261,7 @@ class JupyterHub(Application):
         self.tornado_settings = settings
         # constructing users requires access to tornado_settings
         self.tornado_settings['users'] = self.users
+        self.tornado_settings['services'] = self._service_map
 
     def init_tornado_application(self):
         """Instantiate the tornado Application object"""
@@ -1197,6 +1299,7 @@ class JupyterHub(Application):
         self.init_proxy()
         yield self.init_users()
         self.init_groups()
+        self.init_services()
         self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
@@ -1300,7 +1403,7 @@ class JupyterHub(Application):
         self.statsd.gauge('users.active', active_users_count)
 
         self.db.commit()
-        yield self.proxy.check_routes(self.users, routes)
+        yield self.proxy.check_routes(self.users, self._service_map, routes)
 
     @gen.coroutine
     def start(self):
@@ -1333,9 +1436,16 @@ class JupyterHub(Application):
         except Exception as e:
             self.log.critical("Failed to start proxy", exc_info=True)
             self.exit(1)
-            return
+        
+        for service_name, service in self._service_map.items():
+            try:
+                yield service.start()
+            except Exception as e:
+                self.log.critical("Failed to start service %s", service_name, exc_info=True)
+                self.exit(1)
 
         loop.add_callback(self.proxy.add_all_users, self.users)
+        loop.add_callback(self.proxy.add_all_services, self._service_map)
 
         if self.proxy_process:
             # only check / restart the proxy if we started it in the first place.

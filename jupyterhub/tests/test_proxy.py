@@ -137,11 +137,11 @@ def test_check_routes(app, io_loop):
     zoe = app.users[zoe]
     before = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert unquote(zoe.proxy_path) in before
-    io_loop.run_sync(lambda : app.proxy.check_routes(app.users))
+    io_loop.run_sync(lambda : app.proxy.check_routes(app.users, app._service_map))
     io_loop.run_sync(lambda : proxy.delete_user(zoe))
     during = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert unquote(zoe.proxy_path) not in during
-    io_loop.run_sync(lambda : app.proxy.check_routes(app.users))
+    io_loop.run_sync(lambda : app.proxy.check_routes(app.users, app._service_map))
     after = sorted(io_loop.run_sync(app.proxy.get_routes))
     assert unquote(zoe.proxy_path) in after
     assert before == after

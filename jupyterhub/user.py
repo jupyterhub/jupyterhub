@@ -173,7 +173,7 @@ class User(HasTraits):
     
     @property
     def host(self):
-        """Get the *host* for my server (domain[:port])"""
+        """Get the *host* for my server (proto://domain[:port])"""
         # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
         parsed = urlparse(self.settings['subdomain_host'])
         h = '%s://%s.%s' % (parsed.scheme, self.escaped_name, parsed.netloc)

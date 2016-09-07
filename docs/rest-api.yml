@@ -312,6 +312,30 @@ paths:
       responses:
         '200':
           description: The users have been removed from the group
+  /services:
+    get:
+      summary: List services
+      responses:
+        '200':
+          description: The service list
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Service'
+  /services/{name}:
+    get:
+      summary: Get a service by name
+      parameters:
+        - name: name
+          description: service name
+          in: path
+          required: true
+          type: string
+      responses:
+        '200':
+          description: The Service model
+          schema:
+            $ref: '#/definitions/Service'
   /proxy:
     get:
       summary: Get the proxy's routing table
@@ -434,5 +458,28 @@ definitions:
       users:
         type: array
         description: The names of users who are members of this group
+        items:
+          type: string
+  Service:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The service's name
+      admin:
+        type: boolean
+        description: Whether the service is an admin
+      url:
+        type: string
+        description: The internal url where the service is running
+      prefix:
+        type: string
+        description: The proxied URL prefix to the service's url
+      pid:
+        type: number
+        description: The PID of the service process (if managed)
+      command:
+        type: array
+        description: The command used to start the service (if managed)
         items:
           type: string

@@ -124,19 +124,17 @@ def test_service_tokens(db):
     assert service2.id != service.id
 
 
-def test_service_servers(db):
+def test_service_server(db):
     service = orm.Service(name='has_servers')
     db.add(service)
     db.commit()
     
-    assert service.servers == []
-    servers = service.servers = [
-        orm.Server(),
-        orm.Server(),
-    ]
-    assert [ s.id for s in servers ] == [ None, None ]
+    assert service.server is None
+    server = service.server = orm.Server()
+    assert service
+    assert server.id is None
     db.commit()
-    assert [ type(s.id) for s in servers ] == [ int, int ]
+    assert isinstance(server.id, int)
     
 
 def test_token_find(db):

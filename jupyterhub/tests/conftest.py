@@ -5,14 +5,19 @@
 
 import logging
 from getpass import getuser
-
-from pytest import fixture
+from subprocess import TimeoutExpired
+import time
+from unittest import mock
+from pytest import fixture, yield_fixture, raises
 from tornado import ioloop
 
 from .. import orm
+from ..utils import random_port
 
 from .mocking import MockHub
+from .test_services import mockservice_cmd
 
+import jupyterhub.services.service
 
 # global db session object
 _db = None
@@ -53,3 +58,34 @@ def app(request):
         app.stop()
     request.addfinalizer(fin)
     return app
+
+
+# mock services for testing.
+# Shorter intervals, etc.
+class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
+    poll_interval = 1
+
+
+@yield_fixture
+def mockservice(request, app):
+    name = 'mock-service'
+    with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
+        app.services = [{
+            'name': name,
+            'command': mockservice_cmd,
+            'url': 'http://127.0.0.1:%i' % random_port(),
+            'admin': True,
+        }]
+        app.init_services()
+        app.io_loop.add_callback(app.proxy.add_all_services, app._service_map)
+        assert name in app._service_map
+        service = app._service_map[name]
+        app.io_loop.add_callback(service.start)
+        request.addfinalizer(service.stop)
+        for i in range(20):
+            if not getattr(service, 'proc', False):
+                time.sleep(0.2)
+        # ensure process finishes starting
+        with raises(TimeoutExpired):
+            service.proc.wait(1)
+        yield service

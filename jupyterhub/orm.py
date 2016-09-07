@@ -153,6 +153,35 @@ class Proxy(Base):
         return client.fetch(req)
 
     @gen.coroutine
+    def add_service(self, service, client=None):
+        """Add a service's server to the proxy table."""
+        if not service.server:
+            raise RuntimeError(
+                "Service %s does not have an http endpoint to add to the proxy.", service.name)
+
+        self.log.info("Adding service %s to proxy %s => %s",
+            service.name, service.proxy_path, service.server.host,
+        )
+
+        yield self.api_request(service.proxy_path,
+            method='POST',
+            body=dict(
+                target=service.server.host,
+                service=service.name,
+            ),
+            client=client,
+        )
+
+    @gen.coroutine
+    def delete_service(self, service, client=None):
+        """Remove a service's server from the proxy table."""
+        self.log.info("Removing service %s from proxy", service.name)
+        yield self.api_request(service.proxy_path,
+            method='DELETE',
+            client=client,
+        )
+
+    @gen.coroutine
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
         self.log.info("Adding user %s to proxy %s => %s",
@@ -174,7 +203,7 @@ class Proxy(Base):
 
     @gen.coroutine
     def delete_user(self, user, client=None):
-        """Remove a user's server to the proxy table."""
+        """Remove a user's server from the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
         yield self.api_request(user.proxy_path,
             method='DELETE',
@@ -182,10 +211,20 @@ class Proxy(Base):
         )
 
     @gen.coroutine
-    def get_routes(self, client=None):
-        """Fetch the proxy's routes"""
-        resp = yield self.api_request('', client=client)
-        return json.loads(resp.body.decode('utf8', 'replace'))
+    def add_all_services(self, service_dict):
+        """Update the proxy table from the database.
+
+        Used when loading up a new proxy.
+        """
+        db = inspect(self).session
+        futures = []
+        for orm_service in db.query(Service):
+            service = service_dict[orm_service.name]
+            if service.server:
+                futures.append(self.add_service(service))
+        # wait after submitting them all
+        for f in futures:
+            yield f
 
     @gen.coroutine
     def add_all_users(self, user_dict):
@@ -204,12 +243,18 @@ class Proxy(Base):
             yield f
 
     @gen.coroutine
-    def check_routes(self, user_dict, routes=None):
+    def get_routes(self, client=None):
+        """Fetch the proxy's routes"""
+        resp = yield self.api_request('', client=client)
+        return json.loads(resp.body.decode('utf8', 'replace'))
+
+    @gen.coroutine
+    def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy"""
         if not routes:
             routes = yield self.get_routes()
 
-        have_routes = { r['user'] for r in routes.values() if 'user' in r }
+        user_routes = { r['user'] for r in routes.values() if 'user' in r }
         futures = []
         db = inspect(self).session
         for orm_user in db.query(User).filter(User.server != None):
@@ -222,9 +267,22 @@ class Proxy(Base):
                 # catch filter bug, either in sqlalchemy or my understanding of its behavior
                 self.log.error("User %s has no server, but wasn't filtered out.", user)
                 continue
-            if user.name not in have_routes:
+            if user.name not in user_routes:
                 self.log.warning("Adding missing route for %s (%s)", user.name, user.server)
                 futures.append(self.add_user(user))
+        
+        # check service routes
+        service_routes = { r['service'] for r in routes.values() if 'service' in r }
+        for orm_service in db.query(Service).filter(Service.server != None):
+            service = service_dict[orm_service.name]
+            if service.server is None:
+                # This should never be True, but seems to be on rare occasion.
+                # catch filter bug, either in sqlalchemy or my understanding of its behavior
+                self.log.error("Service %s has no server, but wasn't filtered out.", service)
+                continue
+            if service.name not in service_routes:
+                self.log.warning("Adding missing route for %s (%s)", service.name, service.server)
+                futures.append(self.add_service(service))
         for f in futures:
             yield f
 
@@ -351,13 +409,6 @@ class User(Base):
         return db.query(cls).filter(cls.name==name).first()
 
 
-# service:server many:many mapping table
-service_server_map = Table('service_server_map', Base.metadata,
-    Column('service_id', ForeignKey('services.id')),
-    Column('server_id', ForeignKey('servers.id')),
-)
-
-
 class Service(Base):
     """A service run with JupyterHub
 
@@ -369,10 +420,10 @@ class Service(Base):
     - name
     - admin
     - api tokens
+    - server (if proxied http endpoint)
 
     In addition to what it has in common with users, a Service has extra info:
 
-    - servers: list of HTTP endpoints for the service
     - pid: the process id (if managed)
 
     """
@@ -386,7 +437,8 @@ class Service(Base):
     api_tokens = relationship("APIToken", backref="service")
 
     # service-specific interface
-    servers = relationship('Server', secondary='service_server_map')
+    _server_id = Column(Integer, ForeignKey('servers.id'))
+    server = relationship(Server, primaryjoin=_server_id == Server.id)
     pid = Column(Integer)
 
     def new_api_token(self, token=None):

@@ -571,4 +571,4 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
-    
+

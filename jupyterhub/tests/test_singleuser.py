@@ -2,7 +2,7 @@
 
 import requests
 
-from .mocking import TestSingleUserSpawner, user_url
+from .mocking import TestSingleUserSpawner, public_url
 from ..utils import url_path_join
 
 def test_singleuser_auth(app, io_loop):
@@ -15,7 +15,7 @@ def test_singleuser_auth(app, io_loop):
     user = app.users['nandy']
     if not user.running:
         io_loop.run_sync(user.spawn)
-    url = user_url(user, app)
+    url = public_url(app, user)
     
     # no cookies, redirects to login page
     r = requests.get(url)
@@ -49,7 +49,7 @@ def test_disable_user_config(app, io_loop):
     io_loop.run_sync(user.spawn)
     io_loop.run_sync(lambda : app.proxy.add_user(user))
     
-    url = user_url(user, app)
+    url = public_url(app, user)
     
     # with cookies, login successful
     r = requests.get(url, cookies=cookies)

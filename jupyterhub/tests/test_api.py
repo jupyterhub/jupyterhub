@@ -6,6 +6,7 @@ from queue import Queue
 import sys
 from urllib.parse import urlparse, quote
 
+from pytest import mark
 import requests
 
 from tornado import gen
@@ -15,7 +16,7 @@ from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
 from . import mocking
-from .mocking import public_host, public_url, user_url
+from .mocking import public_host, public_url
 
 
 def check_db_locks(func):
@@ -155,6 +156,7 @@ def test_referer_check(app, io_loop):
 
 # user API tests
 
+@mark.user
 def test_get_users(app):
     db = app.db
     r = api_request(app, 'users')
@@ -185,6 +187,8 @@ def test_get_users(app):
     )
     assert r.status_code == 403
 
+
+@mark.user
 def test_add_user(app):
     db = app.db
     name = 'newuser'
@@ -196,6 +200,7 @@ def test_add_user(app):
     assert not user.admin
 
 
+@mark.user
 def test_get_user(app):
     name = 'user'
     r = api_request(app, 'users', name)
@@ -211,6 +216,7 @@ def test_get_user(app):
     }
 
 
+@mark.user
 def test_add_multi_user_bad(app):
     r = api_request(app, 'users', method='post')
     assert r.status_code == 400
@@ -220,6 +226,7 @@ def test_add_multi_user_bad(app):
     assert r.status_code == 400
 
 
+@mark.user
 def test_add_multi_user_invalid(app):
     app.authenticator.username_pattern = r'w.*'
     r = api_request(app, 'users', method='post',
@@ -230,6 +237,7 @@ def test_add_multi_user_invalid(app):
     assert r.json()['message'] == 'Invalid usernames: andrew, tara'
 
 
+@mark.user
 def test_add_multi_user(app):
     db = app.db
     names = ['a', 'b']
@@ -265,6 +273,7 @@ def test_add_multi_user(app):
     assert r_names == ['ab']
 
 
+@mark.user
 def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
@@ -283,6 +292,7 @@ def test_add_multi_user_admin(app):
         assert user.admin
 
 
+@mark.user
 def test_add_user_bad(app):
     db = app.db
     name = 'dne_newuser'
@@ -291,6 +301,8 @@ def test_add_user_bad(app):
     user = find_user(db, name)
     assert user is None
 
+
+@mark.user
 def test_add_admin(app):
     db = app.db
     name = 'newadmin'
@@ -304,6 +316,7 @@ def test_add_admin(app):
     assert user.admin
 
 
+@mark.user
 def test_delete_user(app):
     db = app.db
     mal = add_user(db, name='mal')
@@ -311,6 +324,7 @@ def test_delete_user(app):
     assert r.status_code == 204
 
 
+@mark.user
 def test_make_admin(app):
     db = app.db
     name = 'admin2'
@@ -366,7 +380,7 @@ def test_spawn(app, io_loop):
     assert status is None
 
     assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name)
-    url = user_url(user, app)
+    url = public_url(app, user)
     print(url)
     r = requests.get(url)
     assert r.status_code == 200
@@ -542,6 +556,7 @@ def test_bad_get_token(app):
 
 # group API tests
 
+@mark.group
 def test_groups_list(app):
     r = api_request(app, 'groups')
     r.raise_for_status()
@@ -562,6 +577,7 @@ def test_groups_list(app):
     }]
 
 
+@mark.group
 def test_group_get(app):
     group = orm.Group.find(app.db, name='alphaflight')
     user = add_user(app.db, app=app, name='sasquatch')
@@ -580,6 +596,7 @@ def test_group_get(app):
     }
 
 
+@mark.group
 def test_group_create_delete(app):
     db = app.db
     r = api_request(app, 'groups/runaways', method='delete')
@@ -613,9 +630,9 @@ def test_group_create_delete(app):
     # delete nonexistant gives 404
     r = api_request(app, 'groups/omegaflight', method='delete')
     assert r.status_code == 404
-    
 
 
+@mark.group
 def test_group_add_users(app):
     db = app.db
     # must specify users
@@ -637,6 +654,7 @@ def test_group_add_users(app):
     assert sorted([ u.name for u in group.users ]) == sorted(names)
 
 
+@mark.group
 def test_group_delete_users(app):
     db = app.db
     # must specify users
@@ -657,6 +675,61 @@ def test_group_delete_users(app):
     
     group = orm.Group.find(db, name='alphaflight')
     assert sorted([ u.name for u in group.users ]) == sorted(names[2:])
+
+
+# service API
+@mark.services
+def test_get_services(app, mockservice):
+    db = app.db
+    r = api_request(app, 'services')
+    r.raise_for_status()
+    assert r.status_code == 200
+
+    services = r.json()
+    assert services == {
+        'mock-service': {
+            'name': 'mock-service',
+            'admin': True,
+            'command': mockservice.command,
+            'pid': mockservice.proc.pid,
+            'prefix': mockservice.server.base_url,
+            'url': mockservice.url,
+        }
+    }
+
+    r = api_request(app, 'services',
+        headers=auth_header(db, 'user'),
+    )
+    assert r.status_code == 403
+
+
+@mark.services
+def test_get_service(app, mockservice):
+    db = app.db
+    r = api_request(app, 'services/%s' % mockservice.name)
+    r.raise_for_status()
+    assert r.status_code == 200
+
+    service = r.json()
+    assert service == {
+        'name': 'mock-service',
+        'admin': True,
+        'command': mockservice.command,
+        'pid': mockservice.proc.pid,
+        'prefix': mockservice.server.base_url,
+        'url': mockservice.url,
+    }
+
+    r = api_request(app, 'services/%s' % mockservice.name,
+        headers={
+            'Authorization': 'token %s' % mockservice.api_token
+        }
+    )
+    r.raise_for_status()
+    r = api_request(app, 'services/%s' % mockservice.name,
+        headers=auth_header(db, 'user'),
+    )
+    assert r.status_code == 403
 
 
 def test_root_api(app):
