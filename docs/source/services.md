@@ -21,8 +21,8 @@ Two main characteristics help define a Service:
 2. Does the *Service* have a web server that should be added to the proxy's 
    table?
 
-Currently, a Service may be either a 'Managed Service' which is managed by
-JupyterHub, or an 'External Service' which runs its own web server and
+Currently, a Service may be either a 'Hub-Managed Service' which is managed by
+JupyterHub, or an 'Externally-Managed Service' which runs its own web server and
 communicates operation instructions via the Hub's API.
 
 ### Properties of a Service
@@ -34,27 +34,27 @@ If a `url` is specified for where the Service runs its own web server,
 JupyterHub will add the Service to the Hub's proxy at 
 `/service/:service-name`.
 
-## Managed Service
+## Hub-Managed Service
 
 If a Service is started by the Hub and the Hub is responsible for the
-Service's actions, the Service is referred to as a **Managed Service** of 
-JupyterHub. Managed Services can only be a local subprocesses of the Hub. The
+Service's actions, the Service is referred to as a **Hub-Managed Service** of 
+JupyterHub. Hub-Managed Services can only be a local subprocesses of the Hub. The
 Hub will take care of starting these processes and restarting them if they
 stop.
 
-While Managed Services share some similarities with notebook Spawners,
-there are no plans for Managed Services to support the same spawning
+While Hub-Managed Services share some similarities with notebook Spawners,
+there are no plans for Hub-Managed Services to support the same spawning
 abstractions as a notebook Spawner. If you wish to run Services in
 Docker or other deployment environments, the Service can be registered as an
-External Service, as described below.
+Externally-Managed Service, as described below.
 
-### Launching a Managed Service
+### Launching a Hub-Managed Service
 
-A Managed Service is characterized by its specified `command` for launching
+A Hub-Managed Service is characterized by its specified `command` for launching
 the Service. For example, the configuration of a 'cull idle' notebook server
-Managed Service would include the Service name, `True` setting for being
-administered by the Hub, and the `command` to launch the Service which will
-cull idle servers after a timeout interval:
+Hub-Managed Service would include the Service name, admin permissions, and the
+`command` to launch the Service which will cull idle servers after a timeout
+interval:
 
 ```python
 c.JupyterHub.services = [
@@ -67,7 +67,7 @@ c.JupyterHub.services = [
 ```
 
 
-In addition to the `command` to launch the Service, a Managed Service may also
+In addition to the `command` to launch the Service, a Hub-Managed Service may also
 be configured with additional optional parameters, which describe the
 environment needed to start the process:
 
@@ -98,18 +98,18 @@ JUPYTERHUB_BASE_URL: https://mydomain[:port]
 JUPYTERHUB_SERVICE_PREFIX: /services/cull-idle/
 ```
 
-## External Services
+## Externally-Managed Services
 
-To meet your specific use case needs, you may use your own Service management
+To meet your specific use case needs, you may use your own service management
 tools, such as Docker or systemd, to manage a JupyterHub Service.
-These External Services, unlike Managed Services, are not subprocesses of
-the Hub. You must tell JupyterHub which API token the External Service is
-using to perform its API requests. Each External Service will need a unique
+These Externally-Managed Services, unlike Hub-Managed Services, are not subprocesses of
+the Hub. You must tell JupyterHub which API token the Externally-Managed Service is
+using to perform its API requests. Each Externally-Managed Service will need a unique
 API token because the Hub authenticates each API request and the API token is
 used to identify the originating Service or user.
 
-An example of an externally managed service with admin access and running its
-own web server:
+A configuration example of an Externally-Managed Service with admin access and running its
+own web server is:
 
 ```python
 c.JupyterHub.services = [
