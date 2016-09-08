@@ -159,3 +159,11 @@ with npmbox:
 
     pip wheel jupyterhub
     npmbox configurable-http-proxy
+
+### I want access to the whole filesystem, but still default users to their home directory
+ 
+Setting the following in `jupyterhub_config.py` will configure access to
+the entire filesystem and set the default to the user's home directory.
+
+c.Spawner.notebook_dir = '/'
+c.Spawner.default_url = '/home/%U' # %U will be replaced with the username
