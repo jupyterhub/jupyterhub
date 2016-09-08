@@ -134,3 +134,15 @@ where `ssl_cert` is example-chained.crt and ssl_key to your private key.
 Then restart JupyterHub.
 
 See also [JupyterHub SSL encryption](getting-started.md#ssl-encryption).
+
+### Install JupyterHub without a network connection
+
+Both conda and pip can be used without a network connection. You can make your
+own repository (directory) of conda packages and/or wheels, and then install
+from there instead of the internet.
+
+For instance, you can install JupyterHub with pip and configurable-http-proxy
+with npmbox:
+
+    pip wheel jupyterhub
+    npmbox configurable-http-proxy
