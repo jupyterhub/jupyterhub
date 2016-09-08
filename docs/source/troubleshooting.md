@@ -176,4 +176,5 @@ similar to this one:
     pyspark --total-executor-cores 2 --executor-memory 1G
 
 [Cloudera documentation for configuring spark on YARN applications](https://www.cloudera.com/documentation/enterprise/latest/topics/cdh_ig_running_spark_on_yarn.html#spark_on_yarn_config_apps)
-provides additional information.
+provides additional information. The [pySpark configuration documentation](https://spark.apache.org/docs/0.9.0/configuration.html)
+is also helpful for programmatic configuration examples.
