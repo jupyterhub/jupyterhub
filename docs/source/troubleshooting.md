@@ -165,8 +165,8 @@ with npmbox:
 Setting the following in `jupyterhub_config.py` will configure access to
 the entire filesystem and set the default to the user's home directory.
 
-c.Spawner.notebook_dir = '/'
-c.Spawner.default_url = '/home/%U' # %U will be replaced with the username
+    c.Spawner.notebook_dir = '/'
+    c.Spawner.default_url = '/home/%U' # %U will be replaced with the username
 
 ### How do I increase the number of pySpark executors on YARN?
 
