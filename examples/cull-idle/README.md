@@ -2,10 +2,10 @@
 
 The `cull_idle_servers.py` file provides a script to cull and shut down idle
 single-user notebook servers. This script is used when `cull-idle` is run as
-a Service or when it is run manually.
+a Service or when it is run manually as a standalone script.
 
 
-## Configure `cull-idle` to run as a Managed Service
+## Configure `cull-idle` to run as a Hub-Managed Service
 
 In `jupyterhub_config.py`, add the following dictionary for the `cull-idle`
 Service to the `c.JupyterHub.services` list:
@@ -20,16 +20,17 @@ c.JupyterHub.services = [
 ]
 ```
 
-where `'admin': True` indicates this is a Managed Service and `command` is
-used by the Hub to launch the `cull-idle` Service.
+where:
 
+- `'admin': True` indicates that the Service has 'admin' permissions, and
+- `'command'` indicates that the Service will be managed by the Hub.
 
-## Run `cull-idle` manually (not as a JupyterHub Service)
+## Run `cull-idle` manually as a standalone script
 
-This will run `cull-idle` manually. It needs to be done each time by a hub
-admin to run `cull-idle` to shut down idle single-user notebook servers. The
-admin only needs to run the script on the hub and not the individual
-single-user notebook servers.
+This will run `cull-idle` manually. `cull-idle` can be run as a standalone
+script anywhere with access to the Hub, and will periodically check for idle
+servers and shut them down via the Hub's REST API. In order to shutdown the
+servers, the token given to cull-idle must have admin privileges.
 
 Generate an API token and store it in the `JUPYTERHUB_API_TOKEN` environment
 variable. Run `cull_idle_servers.py` manually. 
