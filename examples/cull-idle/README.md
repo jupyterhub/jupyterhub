@@ -26,8 +26,10 @@ used by the Hub to launch the `cull-idle` Service.
 
 ## Run `cull-idle` manually (not as a JupyterHub Service)
 
-This will run `cull-idle` manually. It needs to be done each time you wish to
-run `cull-idle` to shut down idle single-user notebook servers.
+This will run `cull-idle` manually. It needs to be done each time by a hub
+admin to run `cull-idle` to shut down idle single-user notebook servers. The
+admin only needs to run the script on the hub and not the individual
+single-user notebook servers.
 
 Generate an API token and store it in the `JUPYTERHUB_API_TOKEN` environment
 variable. Run `cull_idle_servers.py` manually. 
@@ -36,4 +38,3 @@ variable. Run `cull_idle_servers.py` manually.
     export JUPYTERHUB_API_TOKEN=`jupyterhub token`
     python cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 ```
-
