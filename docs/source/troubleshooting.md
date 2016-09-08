@@ -15,6 +15,19 @@ If you have tried to start the JupyterHub proxy and it fails to start:
   ``c.JupyterHub.ip = '*'``; if it is, try ``c.JupyterHub.ip = ''``
 - Try starting with ``jupyterhub --ip=0.0.0.0``
 
+### sudospawner fails to run
+
+If the sudospawner script is not found in the path, sudospawner will not run.
+To avoid this, specify sudospawner's absolute path. For example, start 
+jupyterhub with:
+
+    jupyterhub --SudoSpawner.sudospawner_path='/absolute/path/to/sudospawner'
+
+or add:
+
+    c.SudoSpawner.sudospawner_path = '/absolute/path/to/sudospawner'
+
+to the config file, `jupyterhub_config.py`.
 
 ## Errors
 
