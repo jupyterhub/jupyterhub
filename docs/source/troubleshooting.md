@@ -167,3 +167,13 @@ the entire filesystem and set the default to the user's home directory.
 
 c.Spawner.notebook_dir = '/'
 c.Spawner.default_url = '/home/%U' # %U will be replaced with the username
+
+### How do I increase the number of pySpark executors on YARN?
+
+From the command line, pySpark executors can be configured using a command
+similar to this one:
+
+    pyspark --total-executor-cores 2 --executor-memory 1G
+
+[Cloudera documentation for configuring spark on YARN applications](https://www.cloudera.com/documentation/enterprise/latest/topics/cdh_ig_running_spark_on_yarn.html#spark_on_yarn_config_apps)
+provides additional information.
