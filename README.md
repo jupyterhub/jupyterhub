@@ -140,7 +140,7 @@ To run the single-user servers, which may be on the same system as the Hub or no
 #### Starting JupyterHub with docker
 The JupyterHub docker image can be started with the following command:
 
-    docker run -d --name jupyterhub jupyterhub/jupyterhub jupyterhub
+    docker run -d --name jupyterhub jupyterhub/jupyterhub jupyterhub --no-ssl
 
 This command will create a container named `jupyterhub` that you can **stop and resume** with `docker stop/start`.
 
