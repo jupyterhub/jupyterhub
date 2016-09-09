@@ -495,6 +495,16 @@ class LocalProcessSpawner(Spawner):
             raise
 
         self.pid = self.proc.pid
+
+        if self.__class__ is not LocalProcessSpawner:
+            # subclasses may not pass through return value of super().start,
+            # relying on deprecated 0.6 way of setting ip, port,
+            # so keep a redundant copy here for now.
+            # A deprecation warning will be shown if the subclass
+            # does not return ip, port.
+            if self.ip:
+                self.user.server.ip = self.ip
+            self.user.server.port = self.port
         return (self.ip or '127.0.0.1', self.port)
 
     @gen.coroutine
