@@ -274,7 +274,7 @@ class Spawner(LoggingConfigurable):
         if self.default_url:
             self.default_url = self.default_url.replace("%U",self.user.name)
             args.append('--NotebookApp.default_url=%s' % self.default_url)
-	if self.home_url:
+        if self.home_url:
             self.home_url = self.home_url.replace("%U", self.user.name)
             args.append('--NotebookApp.home_url=%s' % self.home_url)
         if self.debug:
