@@ -268,7 +268,7 @@ class JupyterHub(Application):
         Use with ssl_key
         """
     ).tag(config=True)
-    ip = Unicode('',
+    ip = Unicode('0.0.0.0',
         help="The public facing ip of the whole application (the proxy)"
     ).tag(config=True)
 
