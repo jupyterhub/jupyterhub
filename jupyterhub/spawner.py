@@ -162,6 +162,11 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
     
+    home_url = Unicode('',
+        help = """ Set the url of the home button. Can be used to redirect user always back
+        to home directory. %U will also be expanded to he user's username"""
+    ).tag(config = True)
+    
     disable_user_config = Bool(False,
         help="""Disable per-user configuration of single-user servers.
         
@@ -269,7 +274,9 @@ class Spawner(LoggingConfigurable):
         if self.default_url:
             self.default_url = self.default_url.replace("%U",self.user.name)
             args.append('--NotebookApp.default_url=%s' % self.default_url)
-
+        if self.home_url:
+            self.home_url = self.home_url.replace("%U", self.user.name)
+            args.append('--NotebookApp.home_url=%s' % self.home_url)
         if self.debug:
             args.append('--debug')
         if self.disable_user_config:
