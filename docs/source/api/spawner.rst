@@ -13,6 +13,6 @@ Module: :mod:`jupyterhub.spawner`
 ----------------
 
 .. autoclass:: Spawner
-    :members: options_from_form, poll, start, stop, get_args, get_env, get_state
+    :members: options_from_form, poll, start, stop, get_args, get_env, get_state, template_namespace, format_string
 
 .. autoclass:: LocalProcessSpawner

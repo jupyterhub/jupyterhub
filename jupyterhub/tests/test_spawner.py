@@ -41,6 +41,8 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('cmd', [sys.executable, '-c', _echo_sleep])
     kwargs.setdefault('user', db.query(orm.User).first())
     kwargs.setdefault('hub', db.query(orm.Hub).first())
+    kwargs.setdefault('notebook_dir', os.getcwd())
+    kwargs.setdefault('default_url', '/user/{username}/lab')
     kwargs.setdefault('INTERRUPT_TIMEOUT', 1)
     kwargs.setdefault('TERM_TIMEOUT', 1)
     kwargs.setdefault('KILL_TIMEOUT', 1)
@@ -128,6 +130,7 @@ def test_stop_spawner_stop_now(db, io_loop):
     status = io_loop.run_sync(spawner.poll)
     assert status == -signal.SIGTERM
 
+
 def test_spawner_poll(db, io_loop):
     first_spawner = new_spawner(db)
     user = first_spawner.user
@@ -160,6 +163,7 @@ def test_spawner_poll(db, io_loop):
     status = io_loop.run_sync(spawner.poll)
     assert status is not None
 
+
 def test_setcwd():
     cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as td:
@@ -178,3 +182,13 @@ def test_setcwd():
         spawnermod._try_setcwd(cwd)
         assert os.getcwd().startswith(temp_root)
     os.chdir(cwd)
+
+
+def test_string_formatting(db):
+    s = new_spawner(db, notebook_dir='user/%U/', default_url='/base/{username}')
+    name = s.user.name
+    assert s.notebook_dir == 'user/{username}/'
+    assert s.default_url == '/base/{username}'
+    assert s.format_string(s.notebook_dir) == 'user/%s/' % name
+    assert s.format_string(s.default_url) == '/base/%s' % name
+
