@@ -9,6 +9,7 @@ import os
 from jinja2 import ChoiceLoader, FunctionLoader
 
 from tornado import ioloop
+from textwrap import dedent
 
 try:
     import notebook
@@ -31,6 +32,7 @@ from notebook.notebookapp import (
 from notebook.auth.login import LoginHandler
 from notebook.auth.logout import LogoutHandler
 
+from jupyterhub import __version__
 from .services.auth import HubAuth, HubAuthenticated
 from .utils import url_path_join
 
@@ -117,6 +119,17 @@ def _exclude_home(path_list):
 
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
+    description = dedent("""
+    Single-user server for JupyterHub. Extends the Jupyter Notebook server.
+    
+    Meant to be invoked by JupyterHub Spawners, and not directly.
+    """)
+    
+    examples = ""
+    subcommands = {}
+    version = __version__
+    classes = NotebookApp.classes + [HubAuth]
+
     user = CUnicode(config=True)
     def _user_changed(self, name, old, new):
         self.log.name = new

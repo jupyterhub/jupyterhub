@@ -1,9 +1,14 @@
 """Tests for jupyterhub.singleuser"""
 
+from subprocess import check_output
+import sys
+
 import requests
 
+import jupyterhub
 from .mocking import TestSingleUserSpawner, public_url
 from ..utils import url_path_join
+
 
 def test_singleuser_auth(app, io_loop):
     # use TestSingleUserSpawner to launch a single-user app in a thread
@@ -32,6 +37,7 @@ def test_singleuser_auth(app, io_loop):
     r = requests.get(url_path_join(url, 'logout'), cookies=cookies)
     assert len(r.cookies) == 0
 
+
 def test_disable_user_config(app, io_loop):
     # use TestSingleUserSpawner to launch a single-user app in a thread
     app.spawner_class = TestSingleUserSpawner
@@ -56,3 +62,13 @@ def test_disable_user_config(app, io_loop):
     r.raise_for_status()
     assert r.url.rstrip('/').endswith('/user/nandy/tree')
     assert r.status_code == 200
+
+
+def test_help_output():
+    out = check_output([sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']).decode('utf8', 'replace')
+    assert 'JupyterHub' in out
+
+def test_version():
+    out = check_output([sys.executable, '-m', 'jupyterhub.singleuser', '--version']).decode('utf8', 'replace')
+    assert jupyterhub.__version__ in out
+
