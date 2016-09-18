@@ -1,0 +1,51 @@
+# Contributors
+
+Project Jupyter thanks the following people for their help and
+contribution on JupyterHub:
+
+- anderbubble
+- betatim
+- Carreau
+- ckald
+- cwaldbieser
+- daradib
+- datapolitan
+- dblockow-d2dcrc
+- dietmarw
+- DominicFollettSmith
+- dsblank
+- ellisonbg
+- evanlinde
+- Fokko
+- iamed18
+- JamiesHQ
+- jdavidheiser
+- jhamrick
+- josephtate
+- KrishnaPG
+- ksolan
+- mbmilligan
+- minrk
+- mistercrunch
+- Mistobaan
+- mwmarkland
+- nthiery
+- ObiWahn
+- ozancaglayan
+- PeterDaveHello
+- peterruppel
+- rafael-ladislau
+- rgbkrk
+- robnagler
+- ryanlovett
+- shreddd
+- ssanderson
+- takluyver
+- TimShawver
+- toobaz
+- tsaeger
+- vilhelmen
+- willingc
+- YannBrrd
+- yuvipanda
+- zoltan-fedor
