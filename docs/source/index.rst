@@ -93,6 +93,7 @@ Contents
    :caption: About JupyterHub
 
    changelog
+   contributor-list
 
 
 Indices and tables
