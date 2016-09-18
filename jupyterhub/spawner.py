@@ -21,6 +21,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets.config import LoggingConfigurable
 from traitlets import (
     Any, Bool, Dict, Instance, Integer, Float, List, Unicode,
+    validate,
 )
 
 from .traitlets import Command
@@ -147,7 +148,7 @@ class Spawner(LoggingConfigurable):
         help="""The notebook directory for the single-user server
         
         `~` will be expanded to the user's home directory
-        `%U` will be expanded to the user's username
+        `{username}` will be expanded to the user's username
         """
     ).tag(config=True)
 
@@ -158,9 +159,21 @@ class Spawner(LoggingConfigurable):
         full filesystem traversal, while preserving user's homedir as
         landing page for notebook
 
-        `%U` will be expanded to the user's username
+        `{username}` will be expanded to the user's username
         """
     ).tag(config=True)
+    
+    @validate('notebook_dir', 'default_url')
+    def _deprecate_percent_u(self, proposal):
+        print(proposal)
+        v = proposal['value']
+        if '%U' in v:
+            self.log.warn("%%U for username in %s is deprecated in JupyterHub 0.7, use {username}",
+                proposal['trait'].name,
+            )
+            v = v.replace('%U', '{username}')
+            self.log.warn("Converting %r to %r", proposal['value'], v)
+        return v
     
     disable_user_config = Bool(False,
         help="""Disable per-user configuration of single-user servers.
@@ -243,7 +256,45 @@ class Spawner(LoggingConfigurable):
 
         env['JPY_API_TOKEN'] = self.api_token
         return env
-    
+
+    def template_namespace(self):
+        """Return the template namespace for format-string formatting.
+
+        Currently used on default_url and notebook_dir.
+
+        Subclasses may add items to the available namespace.
+
+        The default implementation includes::
+
+            {
+              'username': user.name,
+              'base_url': users_base_url,
+            }
+
+        Returns:
+
+            ns (dict): namespace for string formatting.
+        """
+        d = {'username': self.user.name}
+        if self.user.server:
+            d['base_url'] = self.user.server.base_url
+        return d
+
+    def format_string(self, s):
+        """Render a Python format string
+
+        Uses :meth:`Spawner.template_namespace` to populate format namespace.
+
+        Args:
+
+            s (str): Python format-string to be formatted.
+
+        Returns:
+
+            str: Formatted string, rendered
+        """
+        return s.format(**self.template_namespace())
+
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
         args = [
@@ -264,11 +315,11 @@ class Spawner(LoggingConfigurable):
             args.append('--port=%i' % self.user.server.port)
 
         if self.notebook_dir:
-            self.notebook_dir = self.notebook_dir.replace("%U",self.user.name)
-            args.append('--notebook-dir=%s' % self.notebook_dir)
+            notebook_dir = self.format_string(self.notebook_dir)
+            args.append('--notebook-dir=%s' % notebook_dir)
         if self.default_url:
-            self.default_url = self.default_url.replace("%U",self.user.name)
-            args.append('--NotebookApp.default_url=%s' % self.default_url)
+            default_url = self.format_string(self.default_url)
+            args.append('--NotebookApp.default_url=%s' % default_url)
 
         if self.debug:
             args.append('--debug')
