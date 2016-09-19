@@ -1,0 +1,15 @@
+POST /users
+sets both user and whether admin
+
+POST /user
+sets user (no admin mention currently)
+
+PATCH /user
+
+check against functions
+
+descriptions change ok?
+
+base url in docs
+/hub/api
+
