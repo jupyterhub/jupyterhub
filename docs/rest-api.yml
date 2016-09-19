@@ -7,7 +7,7 @@ info:
   license:
     name: BSD-3-Clause
 schemes:
-  - http
+  - [http, https]
 securityDefinitions:
   token:
     type: apiKey
@@ -25,8 +25,8 @@ paths:
     get:
       summary: Get JupyterHub version
       description: |
-        This endpoint is not authenticated;
-        so clients can identify the version of JupyterHub before setting up authentication.
+        This endpoint is not authenticated. Clients and user can identify
+        the JupyterHub version before setting up authentication.
       responses:
         '200':
           description: The JupyterHub version
@@ -40,8 +40,8 @@ paths:
     get:
       summary: Get detailed info about JupyterHub
       description: |
-        Detailed JupyterHub information,
-        including Python version, JupyterHub's version and executable path,
+        Detailed JupyterHub information, including Python version,
+        JupyterHub's version and executable path,
         and which Authenticator and Spawner are active.
       responses:
         '200':
@@ -66,7 +66,7 @@ paths:
                     description: The Python class currently active for JupyterHub Authentication
                   version:
                     type: string
-                    description: The version of the currently active Authenticator class package
+                    description: The version of the currently active Authenticator
               spawner:
                 type: object
                 properties:
@@ -75,13 +75,13 @@ paths:
                     description: The Python class currently active for spawning single-user notebook servers
                   version:
                     type: string
-                    description: The version of the currently active Spawner class package
+                    description: The version of the currently active Spawner
   /users:
     get:
       summary: List users
       responses:
         '200':
-          description: The hub's user list
+          description: The Hub's user list
           schema:
             type: array
             items:
@@ -97,7 +97,7 @@ paths:
             properties:
               usernames:
                 type: array
-                description: list of usernames to create on hub
+                description: list of usernames to create on the Hub
                 items:
                   type: string
               admin:
@@ -150,16 +150,16 @@ paths:
         - name: data
           in: body
           required: true
-          description: Updated user info. At least one of name and admin is required.
+          description: Updated user info. At least one key to be updated (name or admin) is required.
           schema:
             type: object
             properties:
               name:
                 type: string
-                description: the new name (optional)
+                description: the new name (optional, if another key is updated i.e. admin)
               admin:
                 type: boolean
-                description: update admin (optional)
+                description: update admin (optional, if another key is updated i.e. name)
       responses:
         '200':
           description: The updated user info
@@ -202,10 +202,10 @@ paths:
         '204':
           description: The user's notebook server has stopped
         '202':
-          description: The user's notebook server has not stopped, but is taking a while after the request
+          description: The user's notebook server has not stopped, but a stop request has been submitted
   /users/{name}/admin-access:
     post:
-      summary: Grant an admin access to this user's notebook server
+      summary: Grant admin access to this user's notebook server
       parameters:
         - name: name
           description: username
@@ -214,7 +214,7 @@ paths:
           type: string
       responses:
         '200':
-          description: Sets a cookie granting the requesting admin access to the user's notebook server
+          description: Sets a cookie granting admin access to the user's notebook server
   /groups:
     get:
       summary: List groups
@@ -419,7 +419,7 @@ paths:
         - name: servers
           in: body
           type: boolean
-          description: Whether users's servers should be shutdown as well (default from Hub config)
+          description: Whether users's notebook servers should be shutdown as well (default from Hub config)
       responses:
         '200':
           description: Hub has shutdown
