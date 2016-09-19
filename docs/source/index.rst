@@ -57,6 +57,7 @@ Contents
 
 * :doc:`authenticators`
 * :doc:`spawners`
+* :doc:`services`
 * :doc:`config-examples`
 * :doc:`troubleshooting`
 
@@ -67,6 +68,7 @@ Contents
 
    authenticators
    spawners
+   services
    config-examples
    troubleshooting
 
@@ -86,6 +88,7 @@ Contents
 **About JupyterHub**
 
 * :doc:`changelog`
+* :doc:`contributor-list`
 
 .. toctree::
    :maxdepth: 2
@@ -93,6 +96,7 @@ Contents
    :caption: About JupyterHub
 
    changelog
+   contributor-list
 
 
 Indices and tables
