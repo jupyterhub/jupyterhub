@@ -61,6 +61,7 @@ Contents
 * :doc:`spawners`
 * :doc:`services`
 * :doc:`config-examples`
+* :doc:`upgrading`
 * :doc:`troubleshooting`
 
 .. toctree::
@@ -72,6 +73,7 @@ Contents
    spawners
    services
    config-examples
+   upgrading
    troubleshooting
 
 
