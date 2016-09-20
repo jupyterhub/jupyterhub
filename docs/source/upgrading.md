@@ -30,7 +30,30 @@ db fields: individual fields in a database table
 - upgrade hub first or upgrade db first???
 
 ## Tools
-- alembic
+
+### Using alembic for database migrations
+
+[Alembic][] ([docs for alembic][]) provides change management scripts for a
+relational database, using [SQLAlchemy][] as the underlying engine. This
+section will explain how alembic is used to upgrade JupyterHub's database.
+
+Looking at the JupyterHub source code from the root of the repo, we see:
+
+- `jupyterhub/alembic.ini` This file contains configuration information for
+  the database. It is used when the `alembic` command is run to access the
+  location of the change management scripts.
+- `jupyterhub/alembic` This directory contains the migration
+  environment used by alembic. The `env.py` file in this directory is a
+  Python file that is run when alembic does a database migration and may be
+  customized if necessary.
+  
+
+
+
+
+[Alembic]: https://bitbucket.org/zzzeek/alembic
+[docs for alembic]: http://alembic.zzzcomputing.com/en/latest/
+[SQLAlchemy]: http://www.sqlalchemy.org
+
 - scripts
-- sqlalchemy?
 - db tools
