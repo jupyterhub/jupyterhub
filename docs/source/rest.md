@@ -1,11 +1,17 @@
 # Using JupyterHub's REST API
 
-Using the JupyterHub [REST API](https://en.wikipedia.org/wiki/Representational_state_transfer),
-you can perform actions on the Hub, such as:
+Using the [JupyterHub REST API][], you can perform actions on the Hub,
+such as:
 
 - checking which users are active
 - adding or removing users
 - stopping or starting single user notebook servers
+- authenticating services
+
+A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)
+API provides a standard way for users to get and send information to the
+Hub.
+ 
 
 ## Creating an API token
 To send requests using JupyterHub API, you must pass an API token with the
@@ -54,8 +60,11 @@ users = r.json()
  
 ## Learning more about the API
 
-You can see the full [REST API Spec](../_static/rest-api/index.html) for details.
-The same REST API Spec can be viewed in a more visually appealing style [on swagger's petstore][].
+You can see the full [JupyterHub REST API][] for details.
+The same REST API Spec can be viewed in a more interactive style [on swagger's petstore][].
 Both resources contain the same information and differ only in its display.
+Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
 [on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
+[OpenAPI Initiative]: https://openapis.org/
+[JupyterHub REST API]: ./api/index.html
