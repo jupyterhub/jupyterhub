@@ -225,8 +225,9 @@ class Service(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         env['JUPYTERHUB_API_URL'] = self.hub_api_url
         env['JUPYTERHUB_BASE_URL'] = self.base_url
-        env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
-        env['JUPYTERHUB_SERVICE_URL'] = self.url
+        if self.url:
+            env['JUPYTERHUB_SERVICE_URL'] = self.url
+            env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
 
         self.spawner = _ServiceSpawner(
             cmd=self.command,
@@ -248,7 +249,7 @@ class Service(LoggingConfigurable):
         """Called when the service process unexpectedly exits"""
         self.log.error("Service %s exited with status %i", self.name, self.proc.returncode)
         self.start()
-        
+
     def stop(self):
         """Stop a managed service"""
         if not self.managed:

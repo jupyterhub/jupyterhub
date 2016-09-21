@@ -59,10 +59,11 @@ def test_managed_service(app, mockservice):
     assert service.proc.poll() is None
 
 
-def test_proxy_service(app, mockservice, io_loop):
-    name = mockservice.name
+def test_proxy_service(app, mockservice_url, io_loop):
+    service = mockservice_url
+    name = service.name
     routes = io_loop.run_sync(app.proxy.get_routes)
-    url = public_url(app, mockservice) + '/foo'
+    url = public_url(app, service) + '/foo'
     r = requests.get(url, allow_redirects=False)
     path = '/services/{}/foo'.format(name)
     r.raise_for_status()
@@ -99,3 +100,5 @@ def test_external_service(app, io_loop):
         assert len(resp) >= 1
         assert isinstance(resp[0], dict)
         assert 'name' in resp[0]
+
+
