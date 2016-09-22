@@ -3,7 +3,7 @@
 Cases:
 
 Managed:
-  - managed by JuyterHub (always subprocess, no custom Spawners)
+  - managed by JupyterHub (always subprocess, no custom Spawners)
   - always a long-running process
   - managed services are restarted automatically if they exit unexpectedly
 Unmanaged:
