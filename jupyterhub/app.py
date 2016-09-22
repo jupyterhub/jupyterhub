@@ -1439,7 +1439,7 @@ class JupyterHub(Application):
         
         for service_name, service in self._service_map.items():
             try:
-                yield service.start()
+                service.start()
             except Exception as e:
                 self.log.critical("Failed to start service %s", service_name, exc_info=True)
                 self.exit(1)
