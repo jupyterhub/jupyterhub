@@ -16,13 +16,15 @@ database:
 
 Let's take a closer look at each step in the upgrade process.
 
-## Backup
+## The upgrade process
 
-## Shutdown
+### Backup
 
-## Upgrade JupyterHub
+### Shutdown
 
-## Run `jupyterhub upgrade-db`
+### Upgrade JupyterHub
+
+### Run `jupyterhub upgrade-db`
 
 
 ## Upgrading a sqlite database
