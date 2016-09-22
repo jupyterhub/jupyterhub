@@ -66,9 +66,16 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     poll_interval = 1
 
 
-@yield_fixture
-def mockservice(request, app):
+def _mockservice(request, app, url=False):
     name = 'mock-service'
+    spec = {
+        'name': name,
+        'command': mockservice_cmd,
+        'admin': True,
+    }
+    if url:
+        spec['url'] = 'http://127.0.0.1:%i' % random_port(),
+
     with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
         app.services = [{
             'name': name,
@@ -88,4 +95,12 @@ def mockservice(request, app):
         # ensure process finishes starting
         with raises(TimeoutExpired):
             service.proc.wait(1)
-        yield service
+    return service
+
+@yield_fixture
+def mockservice(request, app):
+    yield _mockservice(request, app, url=False)
+
+@yield_fixture
+def mockservice_url(request, app):
+    yield _mockservice(request, app, url=True)
