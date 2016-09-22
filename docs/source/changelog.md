@@ -8,28 +8,30 @@ command line for details.
 ## [Unreleased] 0.7
 
 ### Added
+
 - Implement Services API [\#705](https://github.com/jupyterhub/jupyterhub/pull/705)
 - Add `/api/` and `/api/info` endpoints [\#675](https://github.com/jupyterhub/jupyterhub/pull/675)
 - Add documentation for JupyterLab, pySpark configuration, troubleshooting,
   and more.
 - Add logging of error if adding users already in database.  [\#689](https://github.com/jupyterhub/jupyterhub/pull/689)
+- Add HubAuth class for authenticating with JupyterHub. This class can
+  be used by any application, even outside tornado.
 
 ### Changed
+
 - Always install with setuptools but not eggs (effectively require
   `pip install .` [\#722](https://github.com/jupyterhub/jupyterhub/pull/722)
 - Updated formatting of changelog. [\#711](https://github.com/jupyterhub/jupyterhub/pull/711)
-- Use `/hub/login` instead of full URL in HubAuth.login_url and allow
-  absolute URLs if they are for our host (equivalent to absolute path)  [\#717](https://github.com/jupyterhub/jupyterhub/pull/717)
-- Install dependencies with pre [\#640](https://github.com/jupyterhub/jupyterhub/pull/640)
 
 ### Fixed
-- Backward compatibility for ip, port in LocalProcessSpawner subclasses. [\#734](https://github.com/jupyterhub/jupyterhub/pull/748)
+
 - Fix docker repository location [\#719](https://github.com/jupyterhub/jupyterhub/pull/719)
 - Fix swagger spec conformance and timestamp type in API spec
 
 
 ### Removed
-- Deprecate `%U` username substitution. [\#748](https://github.com/jupyterhub/jupyterhub/pull/748)
+
+- Deprecate `%U` username substitution in favor of `{username}`. [\#748](https://github.com/jupyterhub/jupyterhub/pull/748)
 - Removed deprecated SwarmSpawner link.  [\#699](https://github.com/jupyterhub/jupyterhub/pull/699)
 
 ## 0.6
