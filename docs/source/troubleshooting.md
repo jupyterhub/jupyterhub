@@ -4,6 +4,20 @@ When troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provide links for identifying the cause of the
 problem and how to resolve it.
 
+[*Behavior*](#behavior)
+- JupyterHub proxy fails to start
+- sudospawner fails to run
+
+[*Errors*](#errors)
+- 500 error after spawning my single-user server
+
+[*How do I...?*](#how-do-i)
+- Use a chained SSL certificate
+- Install JupyterHub without a network connection
+- I want access to the whole filesystem, but still default users to their home directory
+- How do I increase the number of pySpark executors on YARN?
+- How do I use JupyterLab's prerelease version with JupyterHub?
+- How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
 ## Behavior
 
@@ -201,3 +215,11 @@ In `jupyterhub_config.py`, configure the Spawner to tell the single-user
 notebook servers to default to JupyterLab:
 
     c.Spawner.default_url = '/lab'
+
+### How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
+
+1. Set up JupyterHub using OAuthenticator for GitHub authentication
+2. Configure whitelist to be an empty list in` jupyterhub_config.py`
+3. Configure admin list to have workshop leaders be listed with administrator privileges.
+
+Users will need a GitHub account to login and be authenticated by the Hub.
