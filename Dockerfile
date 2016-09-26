@@ -24,9 +24,11 @@
 FROM debian:jessie
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
-# install nodejs, utf8 locale
+# install nodejs, utf8 locale, set CDN because default httpredir is unreliable
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -y update && \
+RUN REPO=http://cdn-fastly.deb.debian.org && \
+    echo "deb $REPO/debian jessie main\ndeb $REPO/debian-security jessie/updates main" > /etc/apt/sources.list && \
+    apt-get -y update && \
     apt-get -y upgrade && \
     apt-get -y install npm nodejs nodejs-legacy wget locales git &&\
     /usr/sbin/update-locale LANG=C.UTF-8 && \
