@@ -241,7 +241,10 @@ class BaseHandler(RequestHandler):
 
     def set_service_cookie(self, user):
         """set the login cookie for services"""
-        self._set_user_cookie(user, self.service_server)
+        self._set_user_cookie(user, orm.Server(
+            cookie_name='jupyterhub-services',
+            base_url=url_path_join(self.base_url, 'services')
+        ))
 
     def set_server_cookie(self, user):
         """set the login cookie for the single-user server"""
@@ -262,7 +265,7 @@ class BaseHandler(RequestHandler):
             self.set_server_cookie(user)
 
         # set single cookie for services
-        if self.db.query(orm.Service).first():
+        if self.db.query(orm.Service).filter(orm.Service.server != None).first():
             self.set_service_cookie(user)
 
         # create and set a new cookie token for the hub

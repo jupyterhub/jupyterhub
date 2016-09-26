@@ -15,6 +15,7 @@ from tornado.web import RequestHandler, Application, authenticated, HTTPError
 
 from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
+from .mocking import public_url
 
 # mock for sending monotonic counter way into the future
 monotonic_future = mock.patch('time.monotonic', lambda : sys.maxsize)
@@ -193,4 +194,16 @@ def test_hub_authenticated(request):
         assert r.status_code == 302
         assert auth.login_url in r.headers['Location']
 
+
+def test_service_cookie_auth(app, mockservice_url):
+    cookies = app.login_user('badger')
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/', cookies=cookies)
+    r.raise_for_status()
+    print(r.text)
+    reply = r.json()
+    sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
+    assert sub_reply == {
+        'name': 'badger',
+        'admin': False,
+    }
 
