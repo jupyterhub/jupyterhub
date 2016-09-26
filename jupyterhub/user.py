@@ -161,9 +161,9 @@ class User(HasTraits):
     @property
     def proxy_path(self):
         if self.settings.get('subdomain_host'):
-            return url_path_join('/' + self.domain, self.server.base_url)
+            return url_path_join('/' + self.domain, self.base_url)
         else:
-            return self.server.base_url
+            return self.base_url
     
     @property
     def domain(self):

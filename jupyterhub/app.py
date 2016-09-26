@@ -1112,7 +1112,7 @@ class JupyterHub(Application):
         if self.proxy.public_server.is_up() or self.proxy.api_server.is_up():
             # check for *authenticated* access to the proxy (auth token can change)
             try:
-                yield self.proxy.get_routes()
+                routes = yield self.proxy.get_routes()
             except (HTTPError, OSError, socket.error) as e:
                 if isinstance(e, HTTPError) and e.code == 403:
                     msg = "Did CONFIGPROXY_AUTH_TOKEN change?"
@@ -1124,6 +1124,7 @@ class JupyterHub(Application):
                 return
             else:
                 self.log.info("Proxy already running at: %s", self.proxy.public_server.bind_url)
+                yield self.proxy.check_routes(self.users, self._service_map, routes)
             self.proxy_process = None
             return
 
