@@ -1311,6 +1311,13 @@ class JupyterHub(Application):
         """Shutdown our various subprocesses and cleanup runtime files."""
 
         futures = []
+
+        managed_services = [ s for s in self._service_map.values() if s.managed ]
+        if managed_services:
+            self.log.info("Cleaning up %i services...", len(managed_services))
+            for service in managed_services:
+                futures.append(service.stop())
+
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
