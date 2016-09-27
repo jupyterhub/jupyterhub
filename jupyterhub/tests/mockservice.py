@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 import requests
 from tornado import web, httpserver, ioloop
 
+from jupyterhub.services.auth import  HubAuthenticated
 
 class EchoHandler(web.RequestHandler):
     def get(self):
@@ -36,6 +37,12 @@ class APIHandler(web.RequestHandler):
         self.set_header('Content-Type', 'application/json')
         self.write(r.text)
 
+class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
+
+    @web.authenticated
+    def get(self):
+        self.write(self.get_current_user())
+
 
 def main():
     if os.environ['JUPYTERHUB_SERVICE_URL']:
@@ -43,6 +50,7 @@ def main():
         app = web.Application([
             (r'.*/env', EnvHandler),
             (r'.*/api/(.*)', APIHandler),
+            (r'.*/whoami/?', WhoAmIHandler),
             (r'.*', EchoHandler),
         ])
 

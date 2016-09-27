@@ -7,6 +7,7 @@ HubAuth can be used in any application, even outside tornado.
 HubAuthenticated is a mixin class for tornado handlers that should authenticate with the Hub.
 """
 
+import os
 import socket
 import time
 from urllib.parse import quote
@@ -95,7 +96,7 @@ class HubAuth(Configurable):
     """
 
     # where is the hub
-    api_url = Unicode('http://127.0.0.1:8081/hub/api',
+    api_url = Unicode(os.environ.get('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
         help="""The base API URL of the Hub.
 
         Typically http://hub-ip:hub-port/hub/api
@@ -109,14 +110,14 @@ class HubAuth(Configurable):
         """
     ).tag(config=True)
 
-    api_token = Unicode('',
+    api_token = Unicode(os.environ.get('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
         Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
         """
     ).tag(config=True)
 
-    cookie_name = Unicode(
+    cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
     cookie_cache_max_age = Integer(300,
@@ -238,7 +239,21 @@ class HubAuthenticated(object):
 
     """
     hub_users = None # set of allowed users
-    hub_auth = None # must be a HubAuth instance
+    
+    # self.hub_auth must be a HubAuth instance.
+    # If nothing specified, use default config,
+    # which will be configured with defaults
+    # based on JupyterHub environment variables for services.
+    _hub_auth = None
+    @property
+    def hub_auth(self):
+        if self._hub_auth is None:
+            self._hub_auth = HubAuth()
+        return self._hub_auth
+
+    @hub_auth.setter
+    def hub_auth(self, auth):
+        self._hub_auth = auth
 
     def check_hub_user(self, user_model):
         """Check whether Hub-authenticated user should be allowed.

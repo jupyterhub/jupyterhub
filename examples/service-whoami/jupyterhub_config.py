@@ -1,6 +1,10 @@
-from getpass import getuser
 import os
+import sys
 
-c.JupyterHub.api_tokens = {
-    os.environ['WHOAMI_HUB_API_TOKEN']: getuser(),
-}
+c.JupyterHub.services = [
+    {
+        'name': 'whoami',
+        'url': 'http://127.0.0.1:10101',
+        'command': [sys.executable, './whoami.py'],
+    }
+]
