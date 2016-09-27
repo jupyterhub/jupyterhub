@@ -257,19 +257,17 @@ class Proxy(Base):
         user_routes = { r['user'] for r in routes.values() if 'user' in r }
         futures = []
         db = inspect(self).session
-        for orm_user in db.query(User).filter(User.server != None):
+        for orm_user in db.query(User):
             user = user_dict[orm_user]
-            if not user.running:
-                # Don't add users to the proxy that haven't finished starting
-                continue
-            if user.server is None:
-                # This should never be True, but seems to be on rare occasion.
-                # catch filter bug, either in sqlalchemy or my understanding of its behavior
-                self.log.error("User %s has no server, but wasn't filtered out.", user)
-                continue
-            if user.name not in user_routes:
-                self.log.warning("Adding missing route for %s (%s)", user.name, user.server)
-                futures.append(self.add_user(user))
+            if user.running:
+                if user.name not in user_routes:
+                    self.log.warning("Adding missing route for %s (%s)", user.name, user.server)
+                    futures.append(self.add_user(user))
+            else:
+                # User not running, make sure it's not in the table
+                if user.name in user_routes:
+                    self.log.warning("Removing route for not running %s", user.name)
+                    futures.append(self.delete_user(user))
         
         # check service routes
         service_routes = { r['service'] for r in routes.values() if 'service' in r }
