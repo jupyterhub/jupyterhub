@@ -1309,7 +1309,7 @@ class JupyterHub(Application):
 
     @gen.coroutine
     def cleanup(self):
-        """Shutdown our various subprocesses and cleanup runtime files."""
+        """Shutdown managed services and various subprocesses. Cleanup runtime files."""
 
         futures = []
 
@@ -1328,7 +1328,7 @@ class JupyterHub(Application):
         else:
             self.log.info("Leaving single-user servers running")
 
-        # clean up proxy while SUS are shutting down
+        # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
             if self.proxy_process:
                 self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
