@@ -16,7 +16,7 @@ import sys
 
 v = sys.version_info
 if v[:2] < (3,3):
-    error = "ERROR: Jupyter Hub requires Python version 3.3 or above."
+    error = "ERROR: JupyterHub requires Python version 3.3 or above."
     print(error, file=sys.stderr)
     sys.exit(1)
 
@@ -91,7 +91,7 @@ setup_args = dict(
     package_data        = get_package_data(),
     version             = ns['__version__'],
     description         = "JupyterHub: A multi-user server for Jupyter notebooks",
-    long_description    = "See https://jupyterhub.readthedocs.org for more info.",
+    long_description    = "See https://jupyterhub.readthedocs.io for more info.",
     author              = "Jupyter Development Team",
     author_email        = "jupyter@googlegroups.com",
     url                 = "http://jupyter.org",
