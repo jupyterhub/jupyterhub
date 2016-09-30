@@ -2,4 +2,4 @@
 export CONFIGPROXY_AUTH_TOKEN=`openssl rand -hex 32`
 
 # start JupyterHub
-jupyterhub --no-ssl --ip=127.0.0.1
+jupyterhub --ip=127.0.0.1

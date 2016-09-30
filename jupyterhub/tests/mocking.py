@@ -122,7 +122,6 @@ class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
     db_file = None
-    confirm_no_ssl = True
     
     last_activity_interval = 2
     
