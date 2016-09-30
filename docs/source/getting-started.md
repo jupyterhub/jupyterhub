@@ -52,11 +52,11 @@ using Docker.
 
 ### Default behavior
 
-**IMPORTANT:** In its default configuration, JupyterHub requires SSL encryption (HTTPS) to run.
-**You should not run JupyterHub without SSL encryption on a public network.**
-See [Security documentation](#security) for how to configure JupyterHub to use SSL, and in
-certain cases, e.g. behind SSL termination in nginx, allowing the hub to run with no SSL
-by requiring `--no-ssl` (as of [version 0.5](./changelog.html)).
+**IMPORTANT: You should not run JupyterHub without SSL encryption on a public network.**
+See [Security documentation](#security) for how to configure JupyterHub to use SSL, 
+or put it behind SSL termination in another proxy server, such as nginx.
+JupyterHub 0.5-0.6 require extra confirmation via `--no-ssl` to allow running without SSL,
+but this is not needed anymore in 0.7.
 
 To start JupyterHub in its default configuration, type the following at the command line:
 
@@ -246,8 +246,7 @@ Note on **chain certificates**: If you are using a chain certificate, see also
 [chained certificate for SSL](troubleshooting.md#chained-certificates-for-ssl) in the JupyterHub troubleshooting FAQ).
 
 Note: In certain cases, e.g. **behind SSL termination in nginx**, allowing no SSL
-running on the hub may be desired. To run the Hub without SSL, you must opt
-in by configuring and confirming the `--no-ssl` option, added as of [version 0.5](./changelog.html).
+running on the hub may be desired.
 
 ### Cookie secret
 
