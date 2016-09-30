@@ -31,6 +31,8 @@ command line for details.
 
 ### Removed
 
+- Deprecate `--no-ssl` command line option. It has no meaning and warns if
+  used. [\#789](https://github.com/jupyterhub/jupyterhub/pull/789)
 - Deprecate `%U` username substitution in favor of `{username}`. [\#748](https://github.com/jupyterhub/jupyterhub/pull/748)
 - Removed deprecated SwarmSpawner link.  [\#699](https://github.com/jupyterhub/jupyterhub/pull/699)
 
