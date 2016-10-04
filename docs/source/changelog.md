@@ -5,7 +5,36 @@ its link will bring up a GitHub listing of changes. Use `git log` on the
 command line for details.
 
 
-## [Unreleased]
+## [Unreleased] 0.7
+
+### Added
+
+- Implement Services API [\#705](https://github.com/jupyterhub/jupyterhub/pull/705)
+- Add `/api/` and `/api/info` endpoints [\#675](https://github.com/jupyterhub/jupyterhub/pull/675)
+- Add documentation for JupyterLab, pySpark configuration, troubleshooting,
+  and more.
+- Add logging of error if adding users already in database.  [\#689](https://github.com/jupyterhub/jupyterhub/pull/689)
+- Add HubAuth class for authenticating with JupyterHub. This class can
+  be used by any application, even outside tornado.
+
+### Changed
+
+- Always install with setuptools but not eggs (effectively require
+  `pip install .` [\#722](https://github.com/jupyterhub/jupyterhub/pull/722)
+- Updated formatting of changelog. [\#711](https://github.com/jupyterhub/jupyterhub/pull/711)
+
+### Fixed
+
+- Fix docker repository location [\#719](https://github.com/jupyterhub/jupyterhub/pull/719)
+- Fix swagger spec conformance and timestamp type in API spec
+
+
+### Removed
+
+- Deprecate `--no-ssl` command line option. It has no meaning and warns if
+  used. [\#789](https://github.com/jupyterhub/jupyterhub/pull/789)
+- Deprecate `%U` username substitution in favor of `{username}`. [\#748](https://github.com/jupyterhub/jupyterhub/pull/748)
+- Removed deprecated SwarmSpawner link.  [\#699](https://github.com/jupyterhub/jupyterhub/pull/699)
 
 ## 0.6
 
