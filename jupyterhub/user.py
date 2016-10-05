@@ -258,7 +258,6 @@ class User(HasTraits):
         self.state = spawner.get_state()
         self.last_activity = datetime.utcnow()
         db.commit()
-        self.spawn_pending = False
         try:
             yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
@@ -285,6 +284,7 @@ class User(HasTraits):
                 ), exc_info=True)
             # raise original TimeoutError
             raise e
+        self.spawn_pending = False
         return self
 
     @gen.coroutine
