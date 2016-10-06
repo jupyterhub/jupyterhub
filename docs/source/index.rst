@@ -38,6 +38,7 @@ Contents
 
 **User Guide**
 
+* :doc:`quickstart`
 * :doc:`getting-started`
 * :doc:`howitworks`
 * :doc:`websecurity`
@@ -48,6 +49,7 @@ Contents
    :hidden:
    :caption: User Guide
 
+   quickstart
    getting-started
    howitworks
    websecurity
