@@ -4,9 +4,10 @@ import json
 import time
 from queue import Queue
 import sys
+from unittest import mock
 from urllib.parse import urlparse, quote
 
-from pytest import mark
+from pytest import mark, yield_fixture
 import requests
 
 from tornado import gen
@@ -409,17 +410,14 @@ def test_spawn(app, io_loop):
     assert tokens == []
 
 
-def test_slow_spawn(app, io_loop):
-    # app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
-    app.tornado_settings['spawner_class'] = mocking.SlowSpawner
-    app.tornado_application.settings['slow_spawn_timeout'] = 0
-    app.tornado_application.settings['slow_stop_timeout'] = 0
-
+def test_slow_spawn(app, io_loop, no_patience, request):
+    patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.SlowSpawner})
+    patch.start()
+    request.addfinalizer(patch.stop)
     db = app.db
     name = 'zoe'
     user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
-    app.tornado_settings['spawner_class'] = mocking.MockSpawner
     r.raise_for_status()
     assert r.status_code == 202
     app_user = get_app_user(app, name)
@@ -461,15 +459,15 @@ def test_slow_spawn(app, io_loop):
     assert r.status_code == 400
 
 
-def test_never_spawn(app, io_loop):
-    app.tornado_settings['spawner_class'] = mocking.NeverSpawner
-    app.tornado_application.settings['slow_spawn_timeout'] = 0
+def test_never_spawn(app, io_loop, no_patience, request):
+    patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.NeverSpawner})
+    patch.start()
+    request.addfinalizer(patch.stop)
 
     db = app.db
     name = 'badger'
     user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
-    app.tornado_settings['spawner_class'] = mocking.MockSpawner
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
     assert app_user.spawn_pending
