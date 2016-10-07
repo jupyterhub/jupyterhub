@@ -104,3 +104,12 @@ def mockservice(request, app):
 @yield_fixture
 def mockservice_url(request, app):
     yield _mockservice(request, app, url=True)
+
+@yield_fixture
+def no_patience(app):
+    """Set slow-spawning timeouts to zero"""
+    with mock.patch.dict(app.tornado_application.settings,
+                         {'slow_spawn_timeout': 0,
+                          'slow_stop_timeout': 0}):
+        yield
+
