@@ -325,10 +325,13 @@ class BaseHandler(RequestHandler):
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
         except gen.TimeoutError:
-            if user.spawn_pending:
+            # waiting_for_response indicates server process has started,
+            # but is yet to become responsive.
+            if not user.waiting_for_response:
                 # still in Spawner.start, which is taking a long time
-                # we shouldn't poll while spawn_pending is True
-                self.log.warning("User %s server is slow to start", user.name)
+                # we shouldn't poll while spawn is incomplete.
+                self.log.warning("User %s's server is slow to start (timeout=%s)",
+                    user.name, self.slow_spawn_timeout)
                 # schedule finish for when the user finishes spawning
                 IOLoop.current().add_future(f, finish_user_spawn)
             else:
@@ -338,7 +341,9 @@ class BaseHandler(RequestHandler):
                 if status is None:
                     # hit timeout, but server's running. Hope that it'll show up soon enough,
                     # though it's possible that it started at the wrong URL
-                    self.log.warning("User %s server is slow to become responsive", user.name)
+                    self.log.warning("User %s's server is slow to become responsive (timeout=%s)",
+                        user.name, self.slow_spawn_timeout)
+                    self.log.debug("Expecting server for %s at: %s", user.name, user.server.url)
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
