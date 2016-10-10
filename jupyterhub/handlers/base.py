@@ -6,6 +6,7 @@
 import re
 from datetime import timedelta
 from http.client import responses
+from urllib.parse import urlparse
 
 from jinja2 import TemplateNotFound
 
@@ -499,6 +500,21 @@ class UserSpawnHandler(BaseHandler):
     def get(self, name, user_path):
         current_user = self.get_current_user()
         if current_user and current_user.name == name:
+            # If people visit /user/:name directly on the Hub,
+            # the redirects will just loop, because the proxy is bypassed.
+            # Try to check for that and warn,
+            # though the user-facing behavior is unchainged
+            host_info = urlparse(self.request.full_url())
+            port = host_info.port
+            if not port:
+                port = 443 if host_info.scheme == 'https' else 80
+            if port != self.proxy.public_server.port and port == self.hub.server.port:
+                self.log.warning("""
+                    Detected possible direct connection to Hub's private ip: %s, bypassing proxy.
+                    This will result in a redirect loop.
+                    Make sure to connect to the proxied public URL %s
+                    """, self.request.full_url(), self.proxy.public_server.url)
+
             # logged in as correct user, spawn the server
             if current_user.spawner:
                 if current_user.spawn_pending:
