@@ -226,6 +226,8 @@ class SingleUserNotebookApp(NotebookApp):
         """Patch page templates to add Hub-related buttons"""
 
         self.jinja_template_vars['logo_url'] = self.hub_host + url_path_join(self.hub_prefix, 'logo')
+        self.jinja_template_vars['hub_host'] = self.hub_host
+        self.jinja_template_vars['hub_prefix'] = self.hub_prefix
         env = self.web_app.settings['jinja2_env']
 
         env.globals['hub_control_panel_url'] = \
