@@ -180,7 +180,7 @@ class JupyterHub(Application):
 
     generate default config file:
 
-        jupyterhub --generate-config -f /etc/jupyterhub/jupyterhub.py
+        jupyterhub --generate-config -f /etc/jupyterhub/jupyterhub_config.py
 
     spawn the server on 10.0.1.2:443 with https:
 
@@ -1351,6 +1351,9 @@ class JupyterHub(Application):
 
     def write_config_file(self):
         """Write our default config to a .py config file"""
+        if not os.path.exists(self.config_file):
+            print("Path does not exist. The destination directory must exist before generating config file.")
+            return
         if os.path.exists(self.config_file) and not self.answer_yes:
             answer = ''
             def ask():
