@@ -2,21 +2,24 @@
 
 ## Prerequisites
 
-**Before installing JupyterHub**, you need:
+**Before installing JupyterHub**, you will need:
 
 - [Python](https://www.python.org/downloads/) 3.3 or greater
 
-  An understanding of using [`pip`](https://pip.pypa.io/en/stable/) for
-  installing Python packages is recommended.
+  An understanding of using [`pip`](https://pip.pypa.io/en/stable/) or
+  [`conda`](http://conda.pydata.org/docs/get-started.html) for
+  installing Python packages is helpful.
 
 - [nodejs/npm](https://www.npmjs.com/)
 
   [Install nodejs/npm](https://docs.npmjs.com/getting-started/installing-node),
-  which is available from your package manager. For example, install on Linux
+  using your operating system's package manager. For example, install on Linux
   (Debian/Ubuntu) using:
 
-      sudo apt-get install npm nodejs-legacy
-
+  ```bash
+  sudo apt-get install npm nodejs-legacy
+  ```
+  
   (The `nodejs-legacy` package installs the `node` executable and is currently
   required for npm to work on Debian/Ubuntu.)
 
@@ -32,29 +35,56 @@ system as the Hub or not):
 
 ## Installation
 
-JupyterHub can be installed with `pip`, and the proxy with `npm`:
+JupyterHub can be installed with `pip` or `conda` and the proxy with `npm`:
 
+**pip, npm:**
 ```bash
+python3 -m pip install jupyterhub
 npm install -g configurable-http-proxy
-pip3 install jupyterhub
 ```
 
-If you plan to run notebook servers locally, you will need to install the
+**conda** (one command installs jupyterhub and proxy):
+```bash
+conda install -c conda-forge jupyterhub
+```
+
+To test your installation:
+
+```bash
+jupyterhub -h
+configurable-http-proxy -h
+```
+
+If you plan to run notebook servers locally, you will need also to install
 Jupyter notebook:
 
-    pip3 install --upgrade notebook
+**pip:**
+```bash
+python3 -m pip install notebook
+```
+
+**conda:**
+```bash
+conda install notebook
+```
 
 ## Start the Hub server
 
 To start the Hub server, run the command:
 
-    jupyterhub
+```bash
+jupyterhub
+```
 
 Visit `https://localhost:8000` in your browser, and sign in with your unix
 credentials.
 
-To allow multiple users to sign into the server, you will need to
-run the `jupyterhub` command as a *privileged user*, such as root.
+To allow multiple users to sign into the Hub server, you must start `jupyterhub` as a *privileged user*, such as root:
+
+```bash
+sudo jupyterhub
+```
+
 The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
 describes how to run the server as a *less privileged user*, which requires
 additional configuration of the system.
@@ -128,4 +158,3 @@ The command `docker exec -it jupyterhub bash` will spawn a root shell in your
 docker container. You can **use the root shell to create system users in the container**.
 These accounts will be used for authentication in JupyterHub's default
 configuration.
-
