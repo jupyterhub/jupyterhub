@@ -47,7 +47,7 @@ c.JupyterHub.db_url = pjoin(runtime_dir, 'jupyterhub.sqlite')
 # or `--db=/path/to/jupyterhub.sqlite` on the command-line
 
 # put the log file in /var/log
-c.JupyterHub.log_file = '/var/log/jupyterhub.log'
+c.JupyterHub.extra_log_file = '/var/log/jupyterhub.log'
 
 # use GitHub OAuthenticator for local users
 
