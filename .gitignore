@@ -20,4 +20,5 @@ share/jupyter/hub/static/css/style.min.css.map
 MANIFEST
 .coverage
 htmlcov
-
+jupyterlab_hub/jupyterlab_hub/static
+jupyterlab_hub/lib

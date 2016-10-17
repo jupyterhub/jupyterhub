@@ -1,0 +1,3 @@
+graft jupyterlab_hub/static
+graft src
+include package.json
