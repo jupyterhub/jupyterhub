@@ -1436,6 +1436,8 @@ class JupyterHub(Application):
             self.exit(1)
         
         for service_name, service in self._service_map.items():
+            if not service.managed:
+                continue
             try:
                 service.start()
             except Exception as e:
