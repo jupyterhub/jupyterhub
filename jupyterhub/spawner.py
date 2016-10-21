@@ -191,7 +191,7 @@ class Spawner(LoggingConfigurable):
     def load_state(self, state):
         """load state from the database
         
-        This is the extensible part of state
+        This is the extensible part of state.
         
         Override in a subclass if there is state to load.
         Should call `super`.
@@ -351,6 +351,20 @@ class Spawner(LoggingConfigurable):
         """Check if the single-user process is running
 
         return None if it is, an exit status (0 if unknown) if it is not.
+        If the Spawner has not been initialized (neither loaded state, nor called start),
+        it should behave as if it is not running (status=0).
+        If the Spawner has not finished starting,
+        it should behave as if it is running (status=None).
+
+        Assumptions about poll and when it can be called:
+
+        - poll may be called before start when state is loaded on Hub restart.
+          It should return 0 if the Spawner has not been initialized
+          via either load_state or start.
+        - If `.start()` is async, poll may be called during any yielded
+          portions of start. It should return None in this condition,
+          indicating that the process has not yet exited.
+
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
     

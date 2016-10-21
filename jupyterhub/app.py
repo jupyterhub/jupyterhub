@@ -1058,11 +1058,6 @@ class JupyterHub(Application):
 
         for orm_user in db.query(orm.User):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
-            if not user.state:
-                # without spawner state, server isn't valid
-                user.server = None
-                user_summaries.append(_user_summary(user))
-                continue
             self.log.debug("Loading state for %s from db", user.name)
             spawner = user.spawner
             status = yield spawner.poll()
