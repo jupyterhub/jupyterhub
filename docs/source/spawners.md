@@ -164,3 +164,5 @@ When `Spawner.start` is called, this dictionary is accessible as `self.user_opti
 
 
 ## Writing a custom spawner
+
+If you are interested in building a custom spawner, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html)
