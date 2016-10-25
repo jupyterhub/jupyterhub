@@ -1,6 +1,6 @@
 # How JupyterHub works
 
-JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
+JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user Jupyter notebook server.
 
 There are three basic processes involved:
 
