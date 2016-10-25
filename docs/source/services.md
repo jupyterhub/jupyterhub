@@ -124,11 +124,28 @@ c.JupyterHub.services = [
 
 ## Writing your own services
 
-TODO
+This Section Under Construction
+
+```
+       /\      
+      /  \     
+     / _o \    
+    / <(\  \   
+   /   />`A \  
+  '----------'  
+```
 
 ### Authenticating with the Hub
 
-TODO
+This Section Also Under Construction
+```
+               O
+       /~~~|#|]|=\|---\__
+     |-=_____________  |\\ ,       
+    I|_/,-.-.-.-.-,-.\_|='(        
+       ( o )( o )( o )     \       
+        `-'-'-'-'-`-'
+```
 
 JupyterHub 0.7 introduces some utilities to use the Hub's authentication
 mechanism.
