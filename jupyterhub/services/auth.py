@@ -84,15 +84,19 @@ class HubAuth(Configurable):
 
     The following config must be set:
 
-    - api_token (token for authenticating with JupyterHub API)
-    - cookie_name (the name of the cookie I should be using)
-    - login_url (the *public* ``/hub/login`` URL of the Hub)
+    - api_token (token for authenticating with JupyterHub API),
+      fetched from the JUPYTERHUB_API_TOKEN env by default.
 
     The following config MAY be set:
 
-    - api_url: the base URL of the Hub's internal API
+    - api_url: the base URL of the Hub's internal API,
+      fetched from JUPYTERHUB_API_URL by default.
     - cookie_cache_max_age: the number of seconds responses
       from the Hub should be cached.
+    - login_url (the *public* ``/hub/login`` URL of the Hub).
+    - cookie_name: the name of the cookie I should be using,
+      if different from the default (unlikely).
+
     """
 
     # where is the hub
@@ -223,7 +227,9 @@ class HubAuthenticated(object):
 
     - .hub_auth: A HubAuth instance
     - .hub_users: A set of usernames to allow.
-      If left unspecified or None, any Hub user will be allowed.
+      If left unspecified or None, username will note be checked.
+    - .hub_groups: A set of group names to allow.
+      If left unspecified or None, groups will not be checked.
 
     Examples::
 
@@ -239,6 +245,7 @@ class HubAuthenticated(object):
 
     """
     hub_users = None # set of allowed users
+    hub_groups = None # set of allowed groups
     
     # self.hub_auth must be a HubAuth instance.
     # If nothing specified, use default config,
@@ -267,14 +274,18 @@ class HubAuthenticated(object):
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
-        if self.hub_users is None:
-            # no users specified, allow any authenticated Hub user
+        if self.hub_users is None and self.hub_groups is None:
+            # no whitelist specified, allow any authenticated Hub user
             return user_model
         name = user_model['name']
-        if name in self.hub_users:
+        if self.hub_users and name in self.hub_users:
+            # user in whitelist
+            return user_model
+        elif self.hub_groups and set(user_model['groups']).union(self.hub_groups):
+            # group in whitelist
             return user_model
         else:
-            app_log.warn("Not allowing Hub user %s" % name)
+            app_log.warning("Not allowing Hub user %s" % name)
             return None
 
     def get_current_user(self):
