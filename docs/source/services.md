@@ -124,28 +124,162 @@ c.JupyterHub.services = [
 
 ## Writing your own services
 
-This Section Under Construction
+When writing your own services, you have a few decisions to make (in addition to what your service does!):
 
-```
-       /\      
-      /  \     
-     / _o \    
-    / <(\  \   
-   /   />`A \  
-  '----------'  
-```
+1. Does my service need a public URL?
+2. Do I want JupyterHub to start/stop the service?
+3. Does my service need authentication?
+
+When a service is managed by JupyterHub,
+the Hub will pass the necessary information to the service via environment variables described above.
+To make your service most flexible, you can use these same environment variables,
+whether your service is managed by the Hub or not.
+
+When you run a service that has a url, it will be accessible under a `/services/` prefix, such as `https://myhub.horse/services/my-service/`.
+For your service to route proxied requests properly, it must take `JUPYTERHUB_SERVICE_PREFIX` into account when routing requests.
+For example, a web service would normally service its root handler at `'/'`,
+but the proxied service would need to serve `JUPYTERHUB_SERVICE_PREFIX + '/'`.
+
 
 ### Authenticating with the Hub
 
-This Section Also Under Construction
-```
-               O
-       /~~~|#|]|=\|---\__
-     |-=_____________  |\\ ,       
-    I|_/,-.-.-.-.-,-.\_|='(        
-       ( o )( o )( o )     \       
-        `-'-'-'-'-`-'
+JupyterHub 0.7 introduces some utilities for using the Hub's authentication mechanism to govern access to your service.
+When a user logs into JupyterHub, the Hub sets a cookie (`jupyterhub-services`) that your service can use to authenticate requests.
+
+JupyterHub ships with a reference implementation of Hub authentication,
+but you can read on to find details of the process if you plan to implement your own hub-authenticating clients.
+
+The base implementation is the [`HubAuth`][HubAuth] class,
+which implements the requests to the Hub.
+
+To use HubAuth, you must set the `.api_token`, either when constructing the class,
+or via the `JUPYTERHUB_API_TOKEN` environment variable.
+
+Most of the implementation is in the [`HubAuth.user_for_cookie`][user_for_cookie] method,
+which makes a request of the Hub, and returns:
+
+- None if no user could be identified
+- a dict of the form:
+
+  ```python
+  {
+    "name": "username",
+    "groups": ["list", "of", "groups"],
+    "admin": False, # or True
+  }
+
+You are then free to use that user information to take appropriate action.
+
+HubAuth also caches the responses from the Hub for a number of seconds, governed by `cookie_cache_max_age` (default: five minutes).
+
+#### Flask Example
+
+For example, you can use HubAuth to authenticate requests to a flask service:
+See the `service-whoami-flask` example in the JupyterHub repo for more details.
+
+```python
+from functools import wraps
+import json
+import os
+from urllib.parse import quote
+
+from flask import Flask, redirect, request, Response
+
+from jupyterhub.services.auth import HubAuth
+
+prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
+
+auth = HubAuth(
+    api_token=os.environ['JUPYTERHUB_API_TOKEN'],
+    cookie_cache_max_age=60,
+)
+
+app = Flask(__name__)
+
+
+def authenticated(f):
+    """Decorator for authenticating with the Hub"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        cookie = request.cookies.get(auth.cookie_name)
+        if cookie:
+            user = auth.user_for_cookie(cookie)
+        else:
+            user = None
+        if user:
+            return f(user, *args, **kwargs)
+        else:
+            # redirect to login url on failed auth
+            return redirect(auth.login_url + '?next=%s' % quote(request.path))
+    return decorated
+
+
+@app.route(prefix + '/')
+@authenticated
+def whoami(user):
+    return Response(
+        json.dumps(user, indent=1, sort_keys=True),
+        mimetype='application/json',
+        )
 ```
 
-JupyterHub 0.7 introduces some utilities to use the Hub's authentication
-mechanism.
+
+#### Authenticating tornado services with JupyterHub
+
+Since most Jupyter services are written with tornado,
+we include a mixin, [`HubAuthenticated`][HubAuthenticated],
+for quickly authenticating your own tornado services with JupyterHub.
+
+Tornado's `@web.authenticated` method calls a Handler's `.get_current_user` method
+to identify the user. Mixing in `HubAuthenticated` defines `get_current_user` to use HubAuth.
+If you want to configure the HubAuth instance beyond the default, you'll want to define an `initialize` method, such as:
+
+```python
+class MyHandler(HubAuthenticated, web.RequestHandler):
+    hub_users = {'inara', 'mal'}
+
+    def initialize(self, hub_auth):
+        self.hub_auth = hub_auth
+
+    @web.authenticated
+    def get(self):
+        ...
+```
+
+
+The HubAuth will automatically load the desired configuration from the service environment variables.
+
+If you want to limit user access, you can specify either the `.hub_users` attribute or `.hub_groups`.
+These are sets that check against the username and user group list, respectively.
+If a user matches neither the user list nor the group list, they will not be allowed access.
+If these are left undefined, then any user will be allowed.
+
+
+#### Implementing your own Authentication with JupyterHub
+
+If you don't want to use the reference implementation
+(e.g. you find the implementation a poor fit for your flask app),
+you can implement authentication via the Hub yourself.
+We recommend looking at the [`HubAuth`][HubAuth] implementation for reference,
+but this is the process:
+
+1. retrieve the cookie `jupyterhub-services` from the request.
+2. Make an API request `GET /hub/api/authorizations/cookie/jupyterhub-services/cookie-value`,
+    where cookie-value is the url-encoded value of the `jupyterhub-services` cookie.
+    This request must be authenticated with a Hub API token in the `Authorization` header.
+    For example
+3. On success, the reply will be a JSON model describing the user:
+
+   ```json
+   { 
+     "name": "inara",
+     "groups": ["serenity", "guild"],
+     
+   }
+   ```
+
+
+
+[services_auth]: api/services.auth.html
+[HubAuth]: api/services.auth.html#jupyterhub.services.auth.HubAuth
+[HubAuthenticated]: api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
