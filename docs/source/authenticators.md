@@ -111,3 +111,4 @@ If you are interested in writing a custom authenticator, you can read [this tuto
 [GitHub OAuth]: https://developer.github.com/v3/oauth/
 [OAuthenticator]: https://github.com/jupyter/oauthenticator
 
+If you are interested in writing a custom authenticator you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html)
