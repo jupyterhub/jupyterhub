@@ -29,7 +29,7 @@ class RootHandler(BaseHandler):
     def get(self):
         next_url = self.get_argument('next', '')
         if not next_url.startswith('/'):
-            self.log.warn("Disallowing redirect outside JupyterHub: %r", next_url)
+            self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
         if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
             # add /hub/ prefix, to ensure we redirect to the right user's server.
