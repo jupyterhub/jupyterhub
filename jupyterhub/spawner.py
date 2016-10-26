@@ -168,11 +168,11 @@ class Spawner(LoggingConfigurable):
         print(proposal)
         v = proposal['value']
         if '%U' in v:
-            self.log.warn("%%U for username in %s is deprecated in JupyterHub 0.7, use {username}",
+            self.log.warning("%%U for username in %s is deprecated in JupyterHub 0.7, use {username}",
                 proposal['trait'].name,
             )
             v = v.replace('%U', '{username}')
-            self.log.warn("Converting %r to %r", proposal['value'], v)
+            self.log.warning("Converting %r to %r", proposal['value'], v)
         return v
     
     disable_user_config = Bool(False,

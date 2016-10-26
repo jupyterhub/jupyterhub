@@ -182,7 +182,7 @@ class HubAuth(Configurable):
             app_log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
             raise HTTPError(502, "Failed to check authorization (upstream problem)")
         elif r.status_code >= 400:
-            app_log.warn("Failed to check authorization: [%i] %s", r.status_code, r.reason)
+            app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Failed to check authorization")
         else:
             data = r.json()
