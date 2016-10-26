@@ -103,6 +103,8 @@ at [OAuthenticator][].
 
 ## Writing a custom authenticator
 
+If you are interested in writing a custom authenticator, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
+
 [Authenticator]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/auth.py
 [PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
 [OAuth]: https://en.wikipedia.org/wiki/OAuth 
