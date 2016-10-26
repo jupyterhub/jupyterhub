@@ -1,6 +1,6 @@
 """An example service authenticating with the Hub.
 
-This example service service serves `/services/whoami/`,
+This example service serves `/services/whoami/`,
 authenticated with the Hub,
 showing the user their own info.
 """
