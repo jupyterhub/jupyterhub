@@ -227,7 +227,7 @@ class HubAuthenticated(object):
 
     - .hub_auth: A HubAuth instance
     - .hub_users: A set of usernames to allow.
-      If left unspecified or None, username will note be checked.
+      If left unspecified or None, username will not be checked.
     - .hub_groups: A set of group names to allow.
       If left unspecified or None, groups will not be checked.
 

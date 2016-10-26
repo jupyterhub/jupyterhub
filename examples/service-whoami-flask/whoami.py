@@ -1,6 +1,8 @@
 """An example service authenticating with the Hub.
 
-This serves `/services/whoami/`, authenticated with the Hub, showing the user their own info.
+This example service service serves `/services/whoami/`,
+authenticated with the Hub,
+showing the user their own info.
 """
 from getpass import getuser
 import json
@@ -15,7 +17,7 @@ from jupyterhub.services.auth import HubAuthenticated
 
 
 class WhoAmIHandler(HubAuthenticated, RequestHandler):
-    hub_users = {getuser()} # the users allowed to access me
+    hub_users = {getuser()} # the users allowed to access this service
 
     @authenticated
     def get(self):

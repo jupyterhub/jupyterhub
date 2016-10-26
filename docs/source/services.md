@@ -80,11 +80,13 @@ environment needed to start the process:
 The Hub will pass the following environment variables to launch the Service:
 
 ```
-JUPYTERHUB_SERVICE_NAME:   the name of the service
+JUPYTERHUB_SERVICE_NAME:   The name of the service
 JUPYTERHUB_API_TOKEN:      API token assigned to the service
 JUPYTERHUB_API_URL:        URL for the JupyterHub API (default, http://127.0.0.1:8080/hub/api)
 JUPYTERHUB_BASE_URL:       Base URL of the Hub (https://mydomain[:port]/)
 JUPYTERHUB_SERVICE_PREFIX: URL path prefix of this service (/services/:service-name/)
+JUPYTERHUB_SERVICE_URL:    Local URL where the service is expected to be listening.
+                           Only for proxied web services.
 ```
 
 For the previous example, these environment variables would be passed when
@@ -121,6 +123,8 @@ c.JupyterHub.services = [
 ]
 ```
 
+In this case, the `url` field will be passed along to the service as `JUPYTERHUB_SERVICE_URL`.
+
 
 ## Writing your own services
 
@@ -128,12 +132,18 @@ When writing your own services, you have a few decisions to make (in addition to
 
 1. Does my service need a public URL?
 2. Do I want JupyterHub to start/stop the service?
-3. Does my service need authentication?
+3. Does my service need to authenticate users?
 
 When a service is managed by JupyterHub,
 the Hub will pass the necessary information to the service via environment variables described above.
 To make your service most flexible, you can use these same environment variables,
 whether your service is managed by the Hub or not.
+
+When a service is managed by JupyterHub,
+the Hub will define the environment variables, as described above,
+and pass the information as needed to the service.
+A flexible service, whether managed by the Hub or not,
+can make use of these same environment variables.
 
 When you run a service that has a url, it will be accessible under a `/services/` prefix, such as `https://myhub.horse/services/my-service/`.
 For your service to route proxied requests properly, it must take `JUPYTERHUB_SERVICE_PREFIX` into account when routing requests.
@@ -144,22 +154,24 @@ but the proxied service would need to serve `JUPYTERHUB_SERVICE_PREFIX + '/'`.
 ### Authenticating with the Hub
 
 JupyterHub 0.7 introduces some utilities for using the Hub's authentication mechanism to govern access to your service.
-When a user logs into JupyterHub, the Hub sets a cookie (`jupyterhub-services`) that your service can use to authenticate requests.
+When a user logs into JupyterHub, the Hub sets a cookie (`jupyterhub-services`).
+The service can use this cookie to authenticate requests.
 
-JupyterHub ships with a reference implementation of Hub authentication,
-but you can read on to find details of the process if you plan to implement your own hub-authenticating clients.
+JupyterHub ships with a reference implementation of Hub authentication that can be used by services.
+You may go beyond this reference implementation and create custom hub-authenticating clients and services.
+We describe the process below.
 
-The base implementation is the [`HubAuth`][HubAuth] class,
+The reference, or base, implementation is the [`HubAuth`][HubAuth] class,
 which implements the requests to the Hub.
 
-To use HubAuth, you must set the `.api_token`, either when constructing the class,
+To use HubAuth, you must set the `.api_token`, either programmatically when constructing the class,
 or via the `JUPYTERHUB_API_TOKEN` environment variable.
 
-Most of the implementation is in the [`HubAuth.user_for_cookie`][user_for_cookie] method,
+Most of the logic for authentication implementation is found in the [`HubAuth.user_for_cookie`][user_for_cookie] method,
 which makes a request of the Hub, and returns:
 
-- None if no user could be identified
-- a dict of the form:
+- None, if no user could be identified
+- a dict of the following form:
 
   ```python
   {
@@ -167,14 +179,17 @@ which makes a request of the Hub, and returns:
     "groups": ["list", "of", "groups"],
     "admin": False, # or True
   }
+  ```
 
 You are then free to use that user information to take appropriate action.
 
-HubAuth also caches the responses from the Hub for a number of seconds, governed by `cookie_cache_max_age` (default: five minutes).
+HubAuth also caches the Hub responses for a number of seconds,
+configurable by the `cookie_cache_max_age`` setting (default: five minutes).
 
 #### Flask Example
 
-For example, you can use HubAuth to authenticate requests to a flask service:
+For example, you have a Flask service that returns information about a user.
+JupyterHub's HubAuth class can be used to authenticate requests to the Flask service.
 See the `service-whoami-flask` example in the JupyterHub repo for more details.
 
 ```python
@@ -227,7 +242,7 @@ def whoami(user):
 #### Authenticating tornado services with JupyterHub
 
 Since most Jupyter services are written with tornado,
-we include a mixin, [`HubAuthenticated`][HubAuthenticated],
+we include a mixin class, [`HubAuthenticated`][HubAuthenticated],
 for quickly authenticating your own tornado services with JupyterHub.
 
 Tornado's `@web.authenticated` method calls a Handler's `.get_current_user` method
@@ -249,25 +264,40 @@ class MyHandler(HubAuthenticated, web.RequestHandler):
 
 The HubAuth will automatically load the desired configuration from the service environment variables.
 
-If you want to limit user access, you can specify either the `.hub_users` attribute or `.hub_groups`.
+If you want to limit user access, you can whitelist users through either the `.hub_users` attribute or `.hub_groups`.
 These are sets that check against the username and user group list, respectively.
 If a user matches neither the user list nor the group list, they will not be allowed access.
-If these are left undefined, then any user will be allowed.
+If both are left undefined, then any user will be allowed.
 
 
 #### Implementing your own Authentication with JupyterHub
 
 If you don't want to use the reference implementation
-(e.g. you find the implementation a poor fit for your flask app),
+(e.g. you find the implementation a poor fit for your Flask app),
 you can implement authentication via the Hub yourself.
-We recommend looking at the [`HubAuth`][HubAuth] implementation for reference,
-but this is the process:
+We recommend looking at the [`HubAuth`][HubAuth] class implementation for reference,
+and taking note of the following process:
 
 1. retrieve the cookie `jupyterhub-services` from the request.
 2. Make an API request `GET /hub/api/authorizations/cookie/jupyterhub-services/cookie-value`,
     where cookie-value is the url-encoded value of the `jupyterhub-services` cookie.
     This request must be authenticated with a Hub API token in the `Authorization` header.
-    For example
+    For example, with [requests][]:
+    
+    ```python
+    r = requests.get(
+        '/'/join((["http://127.0.0.1:8081/hub/api",
+                   "authorizations/cookie/jupyterhub-services",
+                   quote(encrypted_cookie, safe=''),
+        ]),
+        headers = {
+            'Authorization' : 'token %s' % api_token,
+        },
+    )
+    r.raise_for_status()
+    user = r.json()
+    ```
+
 3. On success, the reply will be a JSON model describing the user:
 
    ```json
@@ -279,7 +309,7 @@ but this is the process:
    ```
 
 
-
+[requests]: http://docs.python-requests.org
 [services_auth]: api/services.auth.html
 [HubAuth]: api/services.auth.html#jupyterhub.services.auth.HubAuth
 [HubAuthenticated]: api/services.auth.html#jupyterhub.services.auth.HubAuthenticated

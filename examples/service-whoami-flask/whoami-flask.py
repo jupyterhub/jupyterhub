@@ -12,6 +12,7 @@ from flask import Flask, redirect, request, Response
 
 from jupyterhub.services.auth import HubAuth
 
+
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 
 auth = HubAuth(
