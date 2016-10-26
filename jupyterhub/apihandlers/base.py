@@ -140,19 +140,18 @@ class APIHandler(BaseHandler):
 
     def _check_user_model(self, model):
         """Check a request-provided user model from a REST API"""
-        return self._check_model(model, self._user_model_types, 'user')
-        for groupname in model.get('groups', []):
-            if not isinstance(groupname, str):
-                raise web.HTTPError(400, "group names must be str, not %r" % type(groupname))
-
-    def _check_group_model(self, model):
-        """Check a request-provided user model from a REST API"""
-        self._check_model(model, self._group_model_types, 'group')
+        self._check_model(model, self._user_model_types, 'user')
         for username in model.get('users', []):
             if not isinstance(username, str):
-                raise web.HTTPError(400, "usernames must be str, not %r" % type(groupname))
+                raise web.HTTPError(400, ("usernames must be str, not %r", type(username)))
+
+    def _check_group_model(self, model):
+        """Check a request-provided group model from a REST API"""
+        self._check_model(model, self._group_model_types, 'group')
+        for groupname in model.get('groups', []):
+            if not isinstance(groupname, str):
+                raise web.HTTPError(400, ("group names must be str, not %r", type(groupname)))
 
     def options(self, *args, **kwargs):
         self.set_header('Access-Control-Allow-Headers', 'accept, content-type')
         self.finish()
-    
