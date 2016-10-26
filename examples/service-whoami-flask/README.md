@@ -1,6 +1,6 @@
-# Authenticating a service with JupyterHub
+# Authenticating a flask service with JupyterHub
 
-Uses `jupyterhub.services.HubAuthenticated` to authenticate requests with the Hub.
+Uses `jupyterhub.services.HubAuth` to authenticate requests with the Hub in a [flask][] application.
 
 ## Run
 
@@ -22,11 +22,12 @@ After logging in with your local-system credentials, you should see a JSON dump 
 }
 ```
 
-This relies on the Hub starting the whoami services, via config (see [jupyterhub_config.py](./jupyterhub_config.py)).
+This relies on the Hub starting the whoami service, via config (see [jupyterhub_config.py](./jupyterhub_config.py)).
 
 A similar service could be run externally, by setting the JupyterHub service environment variables:
 
     JUPYTERHUB_API_TOKEN
     JUPYTERHUB_SERVICE_PREFIX
 
-or instantiating and configuring a HubAuth object yourself, and attaching it as `self.hub_auth` in your HubAuthenticated handlers.
+
+[flask]: http://flask.pocoo.org
