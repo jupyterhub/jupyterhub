@@ -350,20 +350,26 @@ class Spawner(LoggingConfigurable):
     def poll(self):
         """Check if the single-user process is running
 
-        return None if it is, an exit status (0 if unknown) if it is not.
-        If the Spawner has not been initialized (neither loaded state, nor called start),
-        it should behave as if it is not running (status=0).
-        If the Spawner has not finished starting,
-        it should behave as if it is running (status=None).
+        returns:
+        
+        None, if single-user process is running.
+        Exit status (0 if unknown), if it is not running.
 
-        Assumptions about poll and when it can be called:
+        State transitions, behavior, and return response:
 
-        - poll may be called before start when state is loaded on Hub restart.
-          It should return 0 if the Spawner has not been initialized
-          via either load_state or start.
-        - If `.start()` is async, poll may be called during any yielded
-          portions of start. It should return None in this condition,
-          indicating that the process has not yet exited.
+        - If the Spawner has not been initialized (neither loaded state, nor called start),
+          it should behave as if it is not running (status=0).
+        - If the Spawner has not finished starting,
+          it should behave as if it is running (status=None).
+
+        Design assumptions about when `poll` may be called:
+
+        - On Hub launch: `poll` may be called before `start` when state is loaded on Hub launch.
+          `poll` should return exit status 0 (unknown) if the Spawner has not been initialized via
+          `load_state` or `start`.
+        - If `.start()` is async: `poll` may be called during any yielded portions of the `start`
+          process. `poll` should return None when `start` is yielded, indicating that the `start`
+          process has not yet completed.
 
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
