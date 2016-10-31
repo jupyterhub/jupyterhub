@@ -222,6 +222,7 @@ class BaseHandler(RequestHandler):
         if user and user.server:
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
+        self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'))
 
     def _set_user_cookie(self, user, server):
         # tornado <4.2 have a bug that consider secure==True as soon as
