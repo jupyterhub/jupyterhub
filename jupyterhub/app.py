@@ -1351,9 +1351,11 @@ class JupyterHub(Application):
 
     def write_config_file(self):
         """Write our default config to a .py config file"""
-        if not os.path.exists(self.config_file):
-            print("Path does not exist. The destination directory must exist before generating config file.")
-            return
+        config_file_dir = os.path.dirname(os.path.abspath(self.config_file))
+        if not os.path.isdir(config_file_dir):
+            self.exit("{} does not exist. The destination directory must exist before generating config file.".format(
+                config_file_dir,
+            ))
         if os.path.exists(self.config_file) and not self.answer_yes:
             answer = ''
             def ask():
