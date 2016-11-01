@@ -298,15 +298,15 @@ class Spawner(LoggingConfigurable):
     def get_args(self):
         """Return the arguments to be passed after self.cmd"""
         args = [
-            '--user=%s' % self.user.name,
-            '--cookie-name=%s' % self.user.server.cookie_name,
-            '--base-url=%s' % self.user.server.base_url,
-            '--hub-host=%s' % self.hub.host,
-            '--hub-prefix=%s' % self.hub.server.base_url,
-            '--hub-api-url=%s' % self.hub.api_url,
+            '--user="%s"' % self.user.name,
+            '--cookie-name="%s"' % self.user.server.cookie_name,
+            '--base-url="%s"' % self.user.server.base_url,
+            '--hub-host="%s"' % self.hub.host,
+            '--hub-prefix="%s"' % self.hub.server.base_url,
+            '--hub-api-url="%s"' % self.hub.api_url,
             ]
         if self.ip:
-            args.append('--ip=%s' % self.ip)
+            args.append('--ip="%s"' % self.ip)
 
         if self.port:
             args.append('--port=%i' % self.port)
@@ -316,10 +316,10 @@ class Spawner(LoggingConfigurable):
 
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir=%s' % notebook_dir)
+            args.append('--notebook-dir="%s"' % notebook_dir)
         if self.default_url:
             default_url = self.format_string(self.default_url)
-            args.append('--NotebookApp.default_url=%s' % default_url)
+            args.append('--NotebookApp.default_url="%s"' % default_url)
 
         if self.debug:
             args.append('--debug')

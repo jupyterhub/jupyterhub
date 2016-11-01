@@ -390,10 +390,10 @@ def test_spawn(app, io_loop):
     r = requests.get(ujoin(url, 'args'))
     assert r.status_code == 200
     argv = r.json()
-    for expected in ['--user=%s' % name, '--base-url=%s' % user.server.base_url]:
+    for expected in ['--user="%s"' % name, '--base-url="%s"' % user.server.base_url]:
         assert expected in argv
     if app.subdomain_host:
-        assert '--hub-host=%s' % app.subdomain_host in argv
+        assert '--hub-host="%s"' % app.subdomain_host in argv
 
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204
