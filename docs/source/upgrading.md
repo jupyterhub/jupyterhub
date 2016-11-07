@@ -20,9 +20,25 @@ Let's take a closer look at each step in the upgrade process.
 
 ### Backup
 
+To prevent unintended loss of data or configuration information, you should
+back up the Jupyterhub database (the default sqlite database or a custom
+database using Postgres or MySQL). Additionally, backing up your configuration
+file, `jupyterhub_config.py`, to a secure location.
+
 ### Shutdown
 
+Prior to shutting down JupyterHub, you should notify the Hub users of the
+scheduled downtime. This gives users the opportunity to finish any outstanding
+work in process.
+
+Next, shutdown the JupyterHub service.
+
 ### Upgrade JupyterHub
+
+Follow directions that correspond to your package manager, `pip` or `conda`,
+for the new JupyterHub release. These directions will guide you to the
+specific command. In general, `pip install -U jupyterhub` or
+`conda upgrade jupyter`
 
 ### Run `jupyterhub upgrade-db`
 
