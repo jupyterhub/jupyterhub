@@ -47,3 +47,12 @@ To run the upgrade process for JupyterHub databases, enter:
 ```
 jupyterhub upgrade-db
 ```
+
+## A note about JupyterHub databases
+
+The default database for JupyterHub is a sqlite database. sqlite is useful for
+testing, small deployments, and workshops.
+
+When running a long term deployment or a production system, we recommend using
+a database that supports ALTER_TABLE, such as Postgres or MySQL, as it will
+simplify future upgrades that may change database fields.
