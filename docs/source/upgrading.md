@@ -41,7 +41,7 @@ for the new JupyterHub release. These directions will guide you to the
 specific command. In general, `pip install -U jupyterhub` or
 `conda upgrade jupyterhub`
 
-### Run `jupyterhub upgrade-db`
+### Upgrade JupyterHub databases
 
 To run the upgrade process for JupyterHub databases, enter:
 
