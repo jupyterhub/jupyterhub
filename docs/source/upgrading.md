@@ -16,7 +16,8 @@ database:
 3. Upgrade JupyterHub
 4. Upgrade the database using run `jupyterhub upgrade-db`
 
-Let's take a closer look at each step in the upgrade process.
+Let's take a closer look at each step in the upgrade process as well as some
+additional information about JupyterHub databases.
 
 ### Backup
 
