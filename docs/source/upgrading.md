@@ -92,3 +92,15 @@ To run the upgrade process for JupyterHub databases, enter:
 ```
 jupyterhub upgrade-db
 ```
+
+## Upgrade checklist
+
+1. Backup JupyterHub database:
+    - `jupyterhub.sqlite` when using the default sqlite database
+    - Your JupyterHub database when using an RDBMS 
+2. Backup JupyterHub configuration file: `jupyterhub_config.py`
+3. Shutdown the Hub
+4. Upgrade JupyterHub
+    - `pip install -U jupyterhub` when using `pip`
+    - `conda upgrade jupyterhub` when using `conda`
+5. Upgrade the database using run `jupyterhub upgrade-db`
