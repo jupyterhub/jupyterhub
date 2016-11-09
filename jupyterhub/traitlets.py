@@ -6,6 +6,7 @@ Traitlets that are used in JupyterHub
 
 from traitlets import List, Unicode, Integer, TraitError
 
+
 class URLPrefix(Unicode):
     def validate(self, obj, value):
         u = super().validate(obj, value)
@@ -48,6 +49,9 @@ class MemorySpecification(Integer):
         'G': 1024 * 1024 * 1024,
         'T': 1024 * 1024 * 1024 * 1024
     }
+
+    # Default to allowing None as a value
+    allow_none = True
 
     def validate(self, obj, value):
         """
