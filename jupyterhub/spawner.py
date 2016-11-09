@@ -205,6 +205,7 @@ class Spawner(LoggingConfigurable):
 
     cpu_limit = Float(
         None,
+        allow_none=True,
         help="""
         Maximum number of cpu-cores a single-user server is allowed to use.
 
@@ -236,6 +237,7 @@ class Spawner(LoggingConfigurable):
 
     cpu_guarantee = Float(
         None,
+        allow_none=True,
         help="""
         Maximum number of cpu-cores a single-user server is allowed to use.
 
