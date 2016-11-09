@@ -1,11 +1,12 @@
-from traitlets import HasTraits
+import pytest
+from traitlets import HasTraits, TraitError
 
-from jupyterhub.traitlets import URLPrefix, Command
+from jupyterhub.traitlets import URLPrefix, Command, MemorySpecification
+
 
 def test_url_prefix():
     class C(HasTraits):
         url = URLPrefix()
-    
     c = C()
     c.url = '/a/b/c/'
     assert c.url == '/a/b/c/'
@@ -14,14 +15,38 @@ def test_url_prefix():
     c.url = 'a/b/c/d'
     assert c.url == '/a/b/c/d/'
 
+
 def test_command():
     class C(HasTraits):
         cmd = Command('default command')
         cmd2 = Command(['default_cmd'])
-    
     c = C()
     assert c.cmd == ['default command']
     assert c.cmd2 == ['default_cmd']
     c.cmd = 'foo bar'
     assert c.cmd == ['foo bar']
 
+
+def test_memoryspec():
+    class C(HasTraits):
+        mem = MemorySpecification()
+
+    c = C()
+
+    c.mem = 1024
+    assert c.mem == 1024
+
+    c.mem = '1024K'
+    assert c.mem == 1024 * 1024
+
+    c.mem = '1024M'
+    assert c.mem == 1024 * 1024 * 1024
+
+    c.mem = '1024G'
+    assert c.mem == 1024 * 1024 * 1024 * 1024
+
+    c.mem = '1024T'
+    assert c.mem == 1024 * 1024 * 1024 * 1024 * 1024
+
+    with pytest.raises(TraitError):
+        c.mem = '1024Gi'
