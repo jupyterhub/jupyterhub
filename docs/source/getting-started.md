@@ -2,13 +2,13 @@
 
 ## Technical Overview
 
-JupyterHub is a set of processes that together provide a single user Jupyter 
-Notebook server for each person in a group. 
+JupyterHub is a set of processes that together provide a single user Jupyter
+Notebook server for each person in a group.
 
 ### Three subsystems
 Three major subsystems run by the `jupyterhub` command line program:
 
-- **Single User Server**: a dedicated, single-user, Jupyter Notebook server is 
+- **Single User Server**: a dedicated, single-user, Jupyter Notebook server is
   started for each user on the system when the user logs in. The object that
   starts these servers is called a Spawner.
 - **Proxy**: the public facing part of JupyterHub that uses a dynamic proxy
@@ -23,7 +23,7 @@ Three major subsystems run by the `jupyterhub` command line program:
 To use JupyterHub, you need a Unix server (typically Linux) running somewhere
 that is accessible to your team on the network. The JupyterHub server can be
 on an internal network at your organization, or it can run on the public
-internet (in which case, take care with the Hub's 
+internet (in which case, take care with the Hub's
 [security](getting-started.html#security)).
 
 ### Basic operation
@@ -110,6 +110,8 @@ Prior to beginning installation, it's helpful to consider some of the following:
 - Authentication (PAM, OAuth, etc.)
 - Spawner of singleuser notebook servers (Docker, Batch, etc.)
 - Services (nbgrader, etc.)
+- JupyterHub database (default SQLite; traditional RDBMS such as PostgreSQL,)
+  MySQL, or other databases supported by [SQLAlchemy](http://www.sqlalchemy.org))  
 
 ### Folders and File Locations
 
