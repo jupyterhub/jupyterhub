@@ -162,7 +162,32 @@ When `Spawner.start` is called, this dictionary is accessible as `self.user_opti
 
 [Spawner]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/spawner.py
 
-
 ## Writing a custom spawner
 
 If you are interested in building a custom spawner, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html).
+
+## Exposing resource limits & guarantees
+
+Some spawners allow setting CPU / Memory limits and / or guarantees on the spawned single-user servers. Such spawners should expose the limits/guarantees to the single-user servers via environment variables.
+
+### Limits
+
+If limits are being enforced, the following environment variables should be set in the single-user notebooks' environment:
+
+* `LIMIT_MEM`: Maximum amount of memory the single user notebook is allowed to use, specified in integer bytes.
+* `LIMIT_CPU`: Maximum number of 'cpu cores' a single user notebook is allowed to use, specified as a float. For example, `1.0` allows you to use one CPU core, `0.5` half a CPU core, `4.0` four CPU cores, etc.
+
+If no resource limits are being enforced, these env variables should just not be set. Limits are also not guarantees - there are no guarantees that a single user notebook can use all the resources up to its limit.
+
+If other resources are being limited, it is useful for the spawner to put a suitable value in an environment variable that starts with `LIMIT_`.
+
+### Guarantees
+
+Some spawners offer guarantees that specific resources will be available to the single-user notebook. These are probably reserved in some form in the underlying cluster system.
+
+If guarantees are provided by the spawner, the following environment variables should be set in the single-user notebooks' environment:
+
+* `GUARANTEE_MEM`: Minimum amount of memory that the single user notebook is guaranteed to be able to use, specified in integer bytes.
+* `GUARANTEE_CPU`: Minimum number of 'cpu cores' a single-user notebook is allowed to use, specified as a float.
+
+If other resources are being guaranteed, it is useful for the spawner to put a suitable value in an environment variable that starts with `GUARANTEE_`.
