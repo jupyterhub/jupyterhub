@@ -166,28 +166,23 @@ When `Spawner.start` is called, this dictionary is accessible as `self.user_opti
 
 If you are interested in building a custom spawner, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html).
 
-## Exposing resource limits & guarantees
+## Spawners, resource limits, and guarantees (Optional)
 
-Some spawners allow setting CPU / Memory limits and / or guarantees on the spawned single-user servers. Such spawners should expose the limits/guarantees to the single-user servers via environment variables.
+Some spawners allow setting CPU and memory limits, or guarantees on the single-user notebook servers. In order to provide a consistent experience for sysadmins and users, we provide a standard way to set and discover memory/cpu limits/guarantees. These must be implemented by the spawner to work.
 
-### Limits
 
-If limits are being enforced, the following environment variables should be set in the single-user notebooks' environment:
+### Memory Limits & Guarantees
 
-* `LIMIT_MEM`: Maximum amount of memory the single user notebook is allowed to use, specified in integer bytes.
-* `LIMIT_CPU`: Maximum number of 'cpu cores' a single user notebook is allowed to use, specified as a float. For example, `1.0` allows you to use one CPU core, `0.5` half a CPU core, `4.0` four CPU cores, etc.
+In supported spawners, you can set `c.Spawner.mem_limit` to limit the total amount of memory that a single-user notebook server can allocate. Attempting to use more memory than this will cause errors. The single-user notebook server can discover its own memory limit by looking at the environment variable `MEM_LIMIT`, which will be specified in absolute bytes.
 
-If no resource limits are being enforced, these env variables should just not be set. Limits are also not guarantees - there are no guarantees that a single user notebook can use all the resources up to its limit.
+The limit does not claim that you will be able to use all the memory upto your limit. You can set `c.Spawner.mem_guarantee` to to provide a guarantee that at minimum this much memory will always be available for the single-user notebook server to use. The environment variable `MEM_GUARANTEE` will also be set in the single-user notebook server.
 
-If other resources are being limited, it is useful for the spawner to put a suitable value in an environment variable that starts with `LIMIT_`.
+The underlying system/cluster that the spawner uses is responsible for enforcing these limits and providing these guarantees. If these values are set to `None`, no limits / guarantees are provided, and no environment values are set.
 
-### Guarantees
+### CPU Limits & Guarantees
 
-Some spawners offer guarantees that specific resources will be available to the single-user notebook. These are probably reserved in some form in the underlying cluster system.
+In supported spawners, you can set `c.Spawner.cpu_limit` to limit the total number of cpu-cores that a single-user notebook server can use. These can be fractional - `0.5` means 50% of one CPU core, `4.0` is 4 cpu-cores, etc. This value is also set in the single-user notebook server's environment variable `CPU_LIMIT`.
 
-If guarantees are provided by the spawner, the following environment variables should be set in the single-user notebooks' environment:
+The limit does not claim that you will be able to use all the CPU up to your limit - other applications might be taking up CPU. You can set `c.Spawner.cpu_guarantee` to provide a guarantee for CPU usage. The environment variable `CPU_GUARANTEE` will be set in the single-user notebook server when a guarantee is being provided.
 
-* `GUARANTEE_MEM`: Minimum amount of memory that the single user notebook is guaranteed to be able to use, specified in integer bytes.
-* `GUARANTEE_CPU`: Minimum number of 'cpu cores' a single-user notebook is allowed to use, specified as a float.
-
-If other resources are being guaranteed, it is useful for the spawner to put a suitable value in an environment variable that starts with `GUARANTEE_`.
+The underlying system/cluster that the spawner uses is responsible for enforcing these limits and providing these guarantees. If these values are set to `None`, no limits / guarantees are provided, and no environment values are set.
