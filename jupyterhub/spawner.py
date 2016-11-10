@@ -186,7 +186,7 @@ class Spawner(LoggingConfigurable):
     mem_limit = MemorySpecification(
         None,
         help="""
-        Maximum number of bytes a single-user server is allowed to use.
+        Maximum number of bytes a single-user notebook server is allowed to use.
 
         Allows the following suffixes:
           - K -> Kilobytes
@@ -195,7 +195,7 @@ class Spawner(LoggingConfigurable):
           - T -> Terabytes
 
         If the single user server tries to allocate more memory than this,
-        it will fail. There is no guarantee that the single-user server
+        it will fail. There is no guarantee that the single-user notebook server
         will be able to allocate this much memory - only that it can not
         allocate more than this.
 
@@ -207,12 +207,12 @@ class Spawner(LoggingConfigurable):
         None,
         allow_none=True,
         help="""
-        Maximum number of cpu-cores a single-user server is allowed to use.
+        Maximum number of cpu-cores a single-user notebook server is allowed to use.
 
         If this value is set to 0.5, allows use of 50% of one CPU.
         If this value is set to 2, allows use of up to 2 CPUs.
 
-        The single-user server will never be scheduled by the kernel to
+        The single-user notebook server will never be scheduled by the kernel to
         use more cpu-cores than this. There is no guarantee that it can
         access this many cpu-cores.
 
@@ -223,7 +223,7 @@ class Spawner(LoggingConfigurable):
     mem_guarantee = MemorySpecification(
         None,
         help="""
-        Minimum number of bytes a single-user server is guaranteed to have available.
+        Minimum number of bytes a single-user notebook server is guaranteed to have available.
 
         Allows the following suffixes:
           - K -> Kilobytes
@@ -239,7 +239,7 @@ class Spawner(LoggingConfigurable):
         None,
         allow_none=True,
         help="""
-        Maximum number of cpu-cores a single-user server is allowed to use.
+        Minimum number of cpu-cores a single-user notebook server is guaranteed to have available.
 
         If this value is set to 0.5, allows use of 50% of one CPU.
         If this value is set to 2, allows use of up to 2 CPUs.
