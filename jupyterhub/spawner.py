@@ -326,13 +326,13 @@ class Spawner(LoggingConfigurable):
         # single-user notebook server, and not for direct usage by the spawners
         # themselves. Spawners should just use the traitlets directly.
         if self.mem_limit:
-            env['LIMIT_MEM'] = str(self.mem_limit)
+            env['MEM_LIMIT'] = str(self.mem_limit)
         if self.mem_guarantee:
-            env['GUARANTEE_MEM'] = str(self.mem_guarantee)
+            env['MEM_GUARANTEE'] = str(self.mem_guarantee)
         if self.cpu_limit:
-            env['LIMIT_CPU'] = str(self.cpu_limit)
+            env['CPU_LIMIT'] = str(self.cpu_limit)
         if self.cpu_guarantee:
-            env['GUARANTEE_CPU'] = str(self.cpu_guarantee)
+            env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
         return env
 
