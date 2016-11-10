@@ -322,6 +322,9 @@ class Spawner(LoggingConfigurable):
         env['JPY_API_TOKEN'] = self.api_token
 
         # Put in limit and guarantee info if they exist.
+        # Note that this is for use by the humans / notebook extensions in the
+        # single-user notebook server, and not for direct usage by the spawners
+        # themselves. Spawners should just use the traitlets directly.
         if self.mem_limit:
             env['LIMIT_MEM'] = str(self.mem_limit)
         if self.mem_guarantee:
