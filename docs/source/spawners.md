@@ -168,21 +168,47 @@ If you are interested in building a custom spawner, you can read [this tutorial]
 
 ## Spawners, resource limits, and guarantees (Optional)
 
-Some spawners allow setting CPU and memory limits, or guarantees on the single-user notebook servers. In order to provide a consistent experience for sysadmins and users, we provide a standard way to set and discover memory/cpu limits/guarantees. These must be implemented by the spawner to work.
-
+Some spawners of the single-user notebook servers allow setting limits or
+guarantees on resources, such as CPU and memory. To provide a consistent
+experience for sysadmins and users, we provide a standard way to set and
+discover these resource limits and guarantees, such as for memory and CPU. For
+the limits and guarantees to be useful, the spawner must implement support for
+them.
 
 ### Memory Limits & Guarantees
 
-In supported spawners, you can set `c.Spawner.mem_limit` to limit the total amount of memory that a single-user notebook server can allocate. Attempting to use more memory than this will cause errors. The single-user notebook server can discover its own memory limit by looking at the environment variable `MEM_LIMIT`, which will be specified in absolute bytes.
+`c.Spawner.mem_limit`: A **limit** specifies the *maximum amount of memory*
+that may be allocated, though there is no promise that the maximum amount will
+be available. In supported spawners, you can set `c.Spawner.mem_limit` to
+limit the total amount of memory that a single-user notebook server can
+allocate. Attempting to use more memory than this limit will cause errors. The
+single-user notebook server can discover its own memory limit by looking at
+the environment variable `MEM_LIMIT`, which is specified in absolute bytes.
 
-The limit does not claim that you will be able to use all the memory upto your limit. You can set `c.Spawner.mem_guarantee` to to provide a guarantee that at minimum this much memory will always be available for the single-user notebook server to use. The environment variable `MEM_GUARANTEE` will also be set in the single-user notebook server.
+`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a *minumum amount of
+memory* is desirable. In this case, you can set `c.Spawner.mem_guarantee` to
+to provide a guarantee that at minimum this much memory will always be
+available for the single-user notebook server to use. The environment variable
+`MEM_GUARANTEE` will also be set in the single-user notebook server.
 
-The underlying system/cluster that the spawner uses is responsible for enforcing these limits and providing these guarantees. If these values are set to `None`, no limits / guarantees are provided, and no environment values are set.
+The spawner's underlying system or cluster is responsible for enforcing these
+limits and providing these guarantees. If these values are set to `None`, no
+limits or guarantees are provided, and no environment values are set.
 
 ### CPU Limits & Guarantees
 
-In supported spawners, you can set `c.Spawner.cpu_limit` to limit the total number of cpu-cores that a single-user notebook server can use. These can be fractional - `0.5` means 50% of one CPU core, `4.0` is 4 cpu-cores, etc. This value is also set in the single-user notebook server's environment variable `CPU_LIMIT`.
+`c.Spawner.cpu_limit`: In supported spawners, you can set
+`c.Spawner.cpu_limit` to limit the total number of cpu-cores that a
+single-user notebook server can use. These can be fractional - `0.5` means 50%
+of one CPU core, `4.0` is 4 cpu-cores, etc. This value is also set in the
+single-user notebook server's environment variable `CPU_LIMIT`. The limit does
+not claim that you will be able to use all the CPU up to your limit as other
+higher priority applications might be taking up CPU.
 
-The limit does not claim that you will be able to use all the CPU up to your limit - other applications might be taking up CPU. You can set `c.Spawner.cpu_guarantee` to provide a guarantee for CPU usage. The environment variable `CPU_GUARANTEE` will be set in the single-user notebook server when a guarantee is being provided.
+`c.Spawner.cpu_guarantee`: You can set `c.Spawner.cpu_guarantee` to provide a
+guarantee for CPU usage. The environment variable `CPU_GUARANTEE` will be set
+in the single-user notebook server when a guarantee is being provided.
 
-The underlying system/cluster that the spawner uses is responsible for enforcing these limits and providing these guarantees. If these values are set to `None`, no limits / guarantees are provided, and no environment values are set.
+The spawner's underlying system or cluster is responsible for enforcing these
+limits and providing these guarantees. If these values are set to `None`, no
+limits or guarantees are provided, and no environment values are set.
