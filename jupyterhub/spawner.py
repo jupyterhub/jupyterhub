@@ -24,7 +24,7 @@ from traitlets import (
     validate,
 )
 
-from .traitlets import Command
+from .traitlets import Command, MemorySpecification
 from .utils import random_port
 
 class Spawner(LoggingConfigurable):
@@ -182,7 +182,72 @@ class Spawner(LoggingConfigurable):
         from having an effect on their server.
         """
     ).tag(config=True)
-    
+
+    mem_limit = MemorySpecification(
+        None,
+        help="""
+        Maximum number of bytes a single-user notebook server is allowed to use.
+
+        Allows the following suffixes:
+          - K -> Kilobytes
+          - M -> Megabytes
+          - G -> Gigabytes
+          - T -> Terabytes
+
+        If the single user server tries to allocate more memory than this,
+        it will fail. There is no guarantee that the single-user notebook server
+        will be able to allocate this much memory - only that it can not
+        allocate more than this.
+
+        This needs to be supported by your spawner for it to work.
+        """
+    ).tag(config=True)
+
+    cpu_limit = Float(
+        None,
+        allow_none=True,
+        help="""
+        Maximum number of cpu-cores a single-user notebook server is allowed to use.
+
+        If this value is set to 0.5, allows use of 50% of one CPU.
+        If this value is set to 2, allows use of up to 2 CPUs.
+
+        The single-user notebook server will never be scheduled by the kernel to
+        use more cpu-cores than this. There is no guarantee that it can
+        access this many cpu-cores.
+
+        This needs to be supported by your spawner for it to work.
+        """
+    ).tag(config=True)
+
+    mem_guarantee = MemorySpecification(
+        None,
+        help="""
+        Minimum number of bytes a single-user notebook server is guaranteed to have available.
+
+        Allows the following suffixes:
+          - K -> Kilobytes
+          - M -> Megabytes
+          - G -> Gigabytes
+          - T -> Terabytes
+
+        This needs to be supported by your spawner for it to work.
+        """
+    ).tag(config=True)
+
+    cpu_guarantee = Float(
+        None,
+        allow_none=True,
+        help="""
+        Minimum number of cpu-cores a single-user notebook server is guaranteed to have available.
+
+        If this value is set to 0.5, allows use of 50% of one CPU.
+        If this value is set to 2, allows use of up to 2 CPUs.
+
+        Note that this needs to be supported by your spawner for it to work.
+        """
+    ).tag(config=True)
+
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
@@ -255,6 +320,20 @@ class Spawner(LoggingConfigurable):
                 env[key] = value
 
         env['JPY_API_TOKEN'] = self.api_token
+
+        # Put in limit and guarantee info if they exist.
+        # Note that this is for use by the humans / notebook extensions in the
+        # single-user notebook server, and not for direct usage by the spawners
+        # themselves. Spawners should just use the traitlets directly.
+        if self.mem_limit:
+            env['MEM_LIMIT'] = str(self.mem_limit)
+        if self.mem_guarantee:
+            env['MEM_GUARANTEE'] = str(self.mem_guarantee)
+        if self.cpu_limit:
+            env['CPU_LIMIT'] = str(self.cpu_limit)
+        if self.cpu_guarantee:
+            env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
+
         return env
 
     def template_namespace(self):
