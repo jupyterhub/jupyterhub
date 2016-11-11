@@ -16,6 +16,7 @@ If you are reporting an issue with JupyterHub:
 **What actually happens**
 
 **Share what version of JupyterHub you are using**
+
 Running `jupyter troubleshoot` from the command line, if possible, and posting
 its output would also be helpful.
 
