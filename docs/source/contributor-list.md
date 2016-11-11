@@ -8,6 +8,7 @@ contribution on JupyterHub:
 - Carreau
 - ckald
 - cwaldbieser
+- danielballen
 - daradib
 - datapolitan
 - dblockow-d2dcrc
@@ -22,6 +23,7 @@ contribution on JupyterHub:
 - jdavidheiser
 - jhamrick
 - josephtate
+- kinuax
 - KrishnaPG
 - ksolan
 - mbmilligan
@@ -32,16 +34,21 @@ contribution on JupyterHub:
 - nthiery
 - ObiWahn
 - ozancaglayan
+- parente
 - PeterDaveHello
 - peterruppel
 - rafael-ladislau
 - rgbkrk
 - robnagler
 - ryanlovett
+- Scrypy
 - shreddd
+- spoorthyv
 - ssanderson
 - takluyver
+- temogen
 - TimShawver
+- Todd-Z-Li
 - toobaz
 - tsaeger
 - vilhelmen
