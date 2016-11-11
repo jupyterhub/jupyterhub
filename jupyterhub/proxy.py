@@ -23,7 +23,7 @@ class Proxy(LoggingConfigurable):
         """
         pass
 
-    def fetch_all_routes(self):
+    def get_all_routes(self):
         """
         Fetch and return all the routes associated by JupyterHub from the proxy
 
