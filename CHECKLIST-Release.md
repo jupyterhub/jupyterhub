@@ -14,7 +14,7 @@
     * Follow release process steps
     * Send builds to PyPI (Warehouse) and Conda Forge
 
-- Blog post and/or release notebook
+- Blog post and/or release note
 
 - Notify users of release
 
