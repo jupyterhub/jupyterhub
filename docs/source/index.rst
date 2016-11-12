@@ -28,8 +28,8 @@ JupyterHub's basic flow of operations includes:
 - The Hub handles user login and spawns single-user servers on demand
 - The Hub configures the proxy to forward URL prefixes to the single-user notebook servers
 
-For convenient administration of the Hub, its users, and services, JupyterHub
-also provides a
+For convenient administration of the Hub, its users, and :doc:`services`
+(added in version 7.0), JupyterHub also provides a
 `REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default>`_.
 
 

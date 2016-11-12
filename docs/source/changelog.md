@@ -20,7 +20,7 @@ command line for details.
 ### Changed
 
 - Always install with setuptools but not eggs (effectively require
-  `pip install .` [\#722](https://github.com/jupyterhub/jupyterhub/pull/722)
+  `pip install .`) [\#722](https://github.com/jupyterhub/jupyterhub/pull/722)
 - Updated formatting of changelog. [\#711](https://github.com/jupyterhub/jupyterhub/pull/711)
 
 ### Fixed
