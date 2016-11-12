@@ -1,3 +1,4 @@
+from glob import glob
 import os
 import shutil
 
@@ -30,11 +31,18 @@ def test_upgrade_entrypoint(tmpdir, io_loop):
     tokenapp.initialize(['kaylee'])
     with raises(OperationalError):
         tokenapp.start()
-    
+
+    sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
+    assert len(sqlite_files) == 1
+
     upgradeapp = UpgradeDB()
     io_loop.run_sync(lambda : upgradeapp.initialize([]))
     upgradeapp.start()
-    
+
+    # check that backup was created:
+    sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
+    assert len(sqlite_files) == 2
+
     # run tokenapp again, it should work
     tokenapp.start()
     
