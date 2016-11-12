@@ -16,17 +16,22 @@ command line for details.
 - Add logging of error if adding users already in database.  [\#689](https://github.com/jupyterhub/jupyterhub/pull/689)
 - Add HubAuth class for authenticating with JupyterHub. This class can
   be used by any application, even outside tornado.
+- Add user groups.
+- Add `/hub/user-redirect/...` URL for redirecting users to a file on their own server.
+
 
 ### Changed
 
 - Always install with setuptools but not eggs (effectively require
   `pip install .`) [\#722](https://github.com/jupyterhub/jupyterhub/pull/722)
 - Updated formatting of changelog. [\#711](https://github.com/jupyterhub/jupyterhub/pull/711)
+- Single-user server is provided by JupyterHub package, so single-user servers depend on JupyterHub now.
 
 ### Fixed
 
 - Fix docker repository location [\#719](https://github.com/jupyterhub/jupyterhub/pull/719)
 - Fix swagger spec conformance and timestamp type in API spec
+- Various redirect-loop-causing bugs have been fixed.
 
 
 ### Removed
