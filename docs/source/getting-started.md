@@ -105,7 +105,9 @@ By default, starting JupyterHub will write two files to disk in the current work
 
 - `jupyterhub.sqlite` is the sqlite database containing all of the state of the **Hub**.
   This file allows the **Hub** to remember what users are running and where,
-  as well as other information enabling you to restart parts of JupyterHub separately.
+  as well as other information enabling you to restart parts of JupyterHub separately. It is
+  important to note that this database contains *no* sensitive information other than **Hub**
+  usernames.
 - `jupyterhub_cookie_secret` is the encryption key used for securing cookies.
   This file needs to persist in order for restarting the Hub server to avoid invalidating cookies.
   Conversely, deleting this file and restarting the server effectively invalidates all login cookies.
@@ -264,6 +266,10 @@ security configuration:
 3. Proxy authentication token (used for the Hub and other services to authenticate to the Proxy)
 4. Periodic security audits
 
+*Note* that the **Hub** hashes all secrets (e.g., auth tokens) before storing them in its
+database. A loss of control over read-access to the database should have no security impact
+on your deployment.
+
 ### SSL encryption
 
 Since JupyterHub includes authentication and allows arbitrary code execution, you should not run
@@ -383,8 +389,6 @@ versions up to date.
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
-
-
 
 ## Authentication and users
 
