@@ -256,12 +256,13 @@ allow running without SSL using the command `jupyterhub --no-ssl`. The
 
 ---
 
-Security is the most important aspect of configuring Jupyter. There are three main aspects of the
+Security is the most important aspect of configuring Jupyter. There are four main aspects of the
 security configuration:
 
 1. SSL encryption (to enable HTTPS)
 2. Cookie secret (a key for encrypting browser cookies)
 3. Proxy authentication token (used for the Hub and other services to authenticate to the Proxy)
+4. Periodic security audits
 
 ### SSL encryption
 
@@ -275,12 +276,22 @@ c.JupyterHub.ssl_key = '/path/to/my.key'
 c.JupyterHub.ssl_cert = '/path/to/my.cert'
 ```
 
-It is also possible to use letsencrypt (https://letsencrypt.org/) to obtain a free, trusted SSL
-certificate. If you run letsencrypt using the default options, the needed configuration is (replace `your.domain.com` by your fully qualified domain name):
+It is also possible to use letsencrypt (https://letsencrypt.org/) to obtain
+a free, trusted SSL certificate. If you run letsencrypt using the default
+options, the needed configuration is (replace `mydomain.tld` by your fully
+qualified domain name):
 
 ```python
-c.JupyterHub.ssl_key = '/etc/letsencrypt/live/your.domain.com/privkey.pem'
-c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/your.domain.com/fullchain.pem'
+c.JupyterHub.ssl_key = '/etc/letsencrypt/live/{mydomain.tld}/privkey.pem'
+c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/{mydomain.tld}/fullchain.pem'
+```
+
+If the fully qualified domain name (FQDN) is `example.com`, the following
+would be the needed configuration:
+
+```python
+c.JupyterHub.ssl_key = '/etc/letsencrypt/live/example.com/privkey.pem'
+c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/example.com/fullchain.pem'
 ```
 
 Some cert files also contain the key, in which case only the cert is needed. It is important that
@@ -329,7 +340,7 @@ For security reasons, this environment variable should only be visible to the Hu
 If you set it dynamically as above, all users will be logged out each time the
 Hub starts.
 
-You can also set the secret in the configuration file itself,`jupyterhub_config.py`,
+You can also set the cookie secret in the configuration file itself,`jupyterhub_config.py`,
 as a binary string:
 
 ```python
@@ -367,8 +378,8 @@ to also be able to connect to the Proxy.
 ### Security audits
 
 We recommend that you do periodic reviews of your deployment's security. It's
-good practice to keep JupyterHub, configurable-http-proxy, and nodejs up to
-date.
+good practice to keep JupyterHub, configurable-http-proxy, and nodejs 
+versions up to date.
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
