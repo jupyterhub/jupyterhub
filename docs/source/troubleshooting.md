@@ -19,7 +19,7 @@ problem and how to resolve it.
 - How do I use JupyterLab's prerelease version with JupyterHub?
 - How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
-[*Troubleshooting commands*]()
+[*Troubleshooting commands*](#troubleshooting-commands)
 
 ## Behavior
 
