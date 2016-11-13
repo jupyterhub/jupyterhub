@@ -345,6 +345,10 @@ and taking note of the following process:
    }
    ```
 
+An example of using an Externally-Managed Service and authentication is
+[nbviewer](https://github.com/jupyter/nbviewer#securing-the-notebook-viewer),
+and an example of its configuration is found [here](https://github.com/jupyter/nbviewer/blob/master/nbviewer/providers/base.py#L94).
+
 
 [requests]: http://docs.python-requests.org/en/master/
 [services_auth]: api/services.auth.html
