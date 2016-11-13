@@ -346,7 +346,7 @@ and taking note of the following process:
    ```
 
 
-[requests]: http://docs.python-requests.org
+[requests]: http://docs.python-requests.org/en/master/
 [services_auth]: api/services.auth.html
 [HubAuth]: api/services.auth.html#jupyterhub.services.auth.HubAuth
 [HubAuthenticated]: api/services.auth.html#jupyterhub.services.auth.HubAuthenticated

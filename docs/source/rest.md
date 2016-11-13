@@ -11,7 +11,7 @@ such as:
 A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)
 API provides a standard way for users to get and send information to the
 Hub.
- 
+
 
 ## Creating an API token
 To send requests using JupyterHub API, you must pass an API token with the
@@ -47,7 +47,7 @@ import requests
 
 api_url = 'http://127.0.0.1:8081/hub/api'
 
-r = requests.get(api_url + '/users', 
+r = requests.get(api_url + '/users',
     headers={
              'Authorization': 'token %s' % token,
             }
@@ -56,8 +56,8 @@ r = requests.get(api_url + '/users',
 r.raise_for_status()
 users = r.json()
 ```
- 
- 
+
+
 ## Learning more about the API
 
 You can see the full [JupyterHub REST API][] for details.
@@ -66,5 +66,5 @@ Both resources contain the same information and differ only in its display.
 Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
 [on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
-[OpenAPI Initiative]: https://openapis.org/
+[OpenAPI Initiative]: https://www.openapis.org/
 [JupyterHub REST API]: ./api/index.html
