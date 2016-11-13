@@ -19,6 +19,8 @@ problem and how to resolve it.
 - How do I use JupyterLab's prerelease version with JupyterHub?
 - How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
+[*Troubleshooting commands*]()
+
 ## Behavior
 
 ### JupyterHub proxy fails to start
@@ -32,7 +34,7 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 ### sudospawner fails to run
 
 If the sudospawner script is not found in the path, sudospawner will not run.
-To avoid this, specify sudospawner's absolute path. For example, start 
+To avoid this, specify sudospawner's absolute path. For example, start
 jupyterhub with:
 
     jupyterhub --SudoSpawner.sudospawner_path='/absolute/path/to/sudospawner'
@@ -62,7 +64,7 @@ There are two likely reasons for this:
 The main symptom is a failure to load *any* page served by the single-user
 server, met with a 500 error. This is typically the first page at `/user/<your_name>`
 after logging in or clicking "Start my server". When a single-user notebook server
-receives a request, the notebook server makes an API request to the Hub to 
+receives a request, the notebook server makes an API request to the Hub to
 check if the cookie corresponds to the right user. This request is logged.
 
 If everything is working, the response logged will be similar to this:
@@ -175,7 +177,7 @@ with npmbox:
     npmbox configurable-http-proxy
 
 ### I want access to the whole filesystem, but still default users to their home directory
- 
+
 Setting the following in `jupyterhub_config.py` will configure access to
 the entire filesystem and set the default to the user's home directory.
 
@@ -199,7 +201,7 @@ While JupyterLab is still under active development, we have had users
 ask about how to try out JupyterLab with JupyterHub.
 
 You need to install and enable the JupyterLab extension system-wide,
-then you can change the default URL to `/lab`. 
+then you can change the default URL to `/lab`.
 
 For instance:
 
@@ -223,3 +225,27 @@ notebook servers to default to JupyterLab:
 3. Configure admin list to have workshop leaders be listed with administrator privileges.
 
 Users will need a GitHub account to login and be authenticated by the Hub.
+
+## Troubleshooting commands
+
+The following commands provide additional detail about installed packages,
+versions, and system information that may be helpful when troubleshooting
+a JupyterHub deployment. The commands are:
+
+- System and deployment information
+
+```bash
+jupyter troubleshooting
+```
+
+- Kernel information
+
+```bash
+jupyter kernelspec list
+```
+
+- Debug logs when running JupyterHub
+
+```bash
+jupyterhub --debug
+```
