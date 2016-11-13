@@ -30,4 +30,4 @@ JupyterHub API Reference:
     services.auth
 
 
-.. _OpenAPI Initiative: https://openapis.org/
+.. _OpenAPI Initiative: https://www.openapis.org/

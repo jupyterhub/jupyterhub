@@ -5,7 +5,7 @@ JupyterHub is a multi-user server that manages and proxies multiple instances of
 There are three basic processes involved:
 
 - multi-user Hub (Python/Tornado)
-- [configurable http proxy](https://github.com/jupyter/configurable-http-proxy) (node-http-proxy)
+- [configurable http proxy](https://github.com/jupyterhub/configurable-http-proxy) (node-http-proxy)
 - multiple single-user IPython notebook servers (Python/IPython/Tornado)
 
 The proxy is the only process that listens on a public interface.
@@ -59,7 +59,7 @@ which regular users typically do not have
 
 [More info on custom Authenticators](authenticators.html).
 
-See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Authenticators).
+See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 
 ### Spawning
@@ -74,4 +74,4 @@ and needs to be able to take three actions:
 
 [More info on custom Spawners](spawners.html).
 
-See a list of custom Spawners [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners).
+See a list of custom Spawners [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).
