@@ -183,10 +183,10 @@ python3 setup.py js    # fetch updated client-side js
 python3 setup.py css   # recompile CSS from LESS sources
 ```
 
-We use [py.test](http://doc.pytest.org/en/latest/) for testing. To run tests:
+We use [pytest](http://doc.pytest.org/en/latest/) for testing. To run tests:
 
 ```bash
-py.test jupyterhub/tests
+pytest jupyterhub/tests
 ```
 
 ----
