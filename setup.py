@@ -66,6 +66,7 @@ def get_package_data():
     """
     package_data = {}
     package_data['jupyterhub'] = [
+        'alembic.ini',
         'alembic/*',
         'alembic/versions/*',
     ]
