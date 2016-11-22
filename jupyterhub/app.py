@@ -57,7 +57,7 @@ from .utils import (
     ISO8601_ms, ISO8601_s,
 )
 # classes for config
-from .auth import Authenticator, PAMAuthenticator
+from .auth import Authenticator, PAMAuthenticator, LDAPAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
 
 # For faking stats
@@ -221,6 +221,7 @@ class JupyterHub(Application):
         LocalProcessSpawner,
         Authenticator,
         PAMAuthenticator,
+        LDAPAuthenticator
     ])
     
     load_groups = Dict(List(Unicode()),

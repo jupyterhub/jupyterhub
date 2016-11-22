@@ -13,6 +13,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from tornado import gen
 import pamela
+import ldap3 as ldap
 
 from traitlets.config import LoggingConfigurable
 from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
@@ -413,3 +414,34 @@ class PAMAuthenticator(LocalAuthenticator):
             self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
     
+class LDAPAuthenticator(Authenticator):
+    """Authenticate users via LDAP"""
+    server = Unicode('localhost', config=True,
+        help = """The LDAP server"""
+    )
+    auth_type = Unicode('SIMPLE', config=True,
+        help = """The LDAP authentication mode"""
+    )
+
+    @gen.coroutine
+    def authenticate(self, handler, data):
+        """Authenticate with LDAP, and return the username if login is successful.
+
+        Return None otherwise.
+        """
+        username = data['username']
+        password = data['password']
+        try:
+            server = ldap.Server(self.server, use_ssl=True)
+            conn = ldap.Connection(server, user=username, password=password,
+                                   auto_bind=True, authentication=self.auth_type)
+            if conn.user == username:
+                return username
+            else:
+                self.log.warn("User name %s not found: %s", user.name)
+                return None
+        except ldap.LDAPBindError as e:
+            self.log.warn("Failed to bind to LDAP for user %s: %s", username, e)
+        else:
+            return None
+
