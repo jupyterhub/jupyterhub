@@ -920,6 +920,7 @@ class JupyterHub(Application):
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
     
+    @gen.coroutine
     def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
@@ -930,7 +931,7 @@ class JupyterHub(Application):
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not self.authenticator.check_whitelist(username):
+                if not (yield gen.maybe_future(self.authenticator.check_whitelist(username))):
                     raise ValueError("Username %r is not in whitelist" % username)
                 user = orm.User.find(db, name=username)
                 if user is None:
@@ -941,6 +942,7 @@ class JupyterHub(Application):
                 group.users.append(user)
         db.commit()
     
+    @gen.coroutine
     def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
         if kind == 'user':
@@ -954,7 +956,7 @@ class JupyterHub(Application):
         for token, name in token_dict.items():
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
-                if not self.authenticator.check_whitelist(name):
+                if not (yield gen.maybe_future(self.authenticator.check_whitelist(name))):
                     raise ValueError("Token name %r is not in whitelist" % name)
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token name %r is not valid" % name)
@@ -980,11 +982,12 @@ class JupyterHub(Application):
             else:
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
-
+    
+    @gen.coroutine
     def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
-        self._add_tokens(self.service_tokens, kind='service')
-        self._add_tokens(self.api_tokens, kind='user')
+        yield self._add_tokens(self.service_tokens, kind='service')
+        yield self._add_tokens(self.api_tokens, kind='user')
     
     def init_services(self):
         self._service_map.clear()
@@ -1305,9 +1308,9 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         yield self.init_users()
-        self.init_groups()
+        yield self.init_groups()
         self.init_services()
-        self.init_api_tokens()
+        yield self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
         self.init_handlers()
