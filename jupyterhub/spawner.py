@@ -27,40 +27,63 @@ from traitlets import (
 from .traitlets import Command, MemorySpecification
 from .utils import random_port
 
+
 class Spawner(LoggingConfigurable):
-    """Base class for spawning single-user notebook servers.
-    
+    """
+    Abstract base class for spawning single-user notebook servers.
+
     Subclass this, and override the following methods:
-    
+
     - load_state
     - get_state
     - start
     - stop
     - poll
+
+    An instance of a `Spawner` subclass is created for each user.
     """
-    
+
     db = Any()
     user = Any()
     hub = Any()
     authenticator = Any()
     api_token = Unicode()
-    ip = Unicode('127.0.0.1',
-        help="The IP address (or hostname) the single-user server should listen on"
+
+    ip = Unicode(
+        '127.0.0.1',
+        help="""
+        The IP address (or hostname) the single-user server should listen on.
+
+        The JupyterHub proxy implementation should be able to send packets to this interface.
+        """
     ).tag(config=True)
-    port = Integer(0,
-        help="The port for single-user servers to listen on. New in version 0.7."
+
+    port = Integer(
+        0,
+        help="""
+        The port for single-user servers to listen on.
+
+        Defaults to `0`, which uses the default port (8888).
+
+        New in version 0.7.
+        """
     )
-    start_timeout = Integer(60,
-        help="""Timeout (in seconds) before giving up on the spawner.
-        
+
+    start_timeout = Integer(
+        60,
+        help="""
+        Timeout (in seconds) before giving up on starting of single-user server.
+
         This is the timeout for start to return, not the timeout for the server to respond.
         Callers of spawner.start will assume that startup has failed if it takes longer than this.
         start should return when the server process is started and its location is known.
         """
     ).tag(config=True)
 
-    http_timeout = Integer(30,
-        help="""Timeout (in seconds) before giving up on a spawned HTTP server
+    http_timeout = Integer(
+        30,
+        help="""
+        Timeout (in seconds) before giving up on a spawned HTTP server
 
         Once a server has successfully been spawned, this is the amount of time
         we wait before assuming that the server is unable to accept
@@ -68,22 +91,38 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    poll_interval = Integer(30,
-        help="""Interval (in seconds) on which to poll the spawner."""
+    poll_interval = Integer(
+        30,
+        help="""
+        Interval (in seconds) on which to poll the spawner for single-user server's status.
+
+        At every poll interval, each User's Spawner's `.poll` method is called, which checks
+        if the single-user server is still running. If it isn't running, then JupyterHub modifies
+        its own state accordingly and removes appropriate routes from the configurable proxy.
+        """
     ).tag(config=True)
+
     _callbacks = List()
     _poll_callback = Any()
-    
+
     debug = Bool(False,
-        help="Enable debug-logging of the single-user server"
+        help="""
+        Enable debug-logging of the single-user server.
+
+        These logs will be sent to wherever the single-user server is configured to send its logs
+        to (stderr by default). Your installation might need a log collection setup locally setup
+        if you want to capture all single-user server logs in one place.
+        """
     ).tag(config=True)
-    
-    options_form = Unicode("", help="""
+
+    options_form = Unicode(
+        "",
+        help="""
         An HTML form for options a user can specify on launching their server.
         The surrounding `<form>` element and the submit button are already provided.
-        
+
         For example:
-        
+
             Set your key:
             <input name="key" val="default_key"></input>
             <br>
@@ -92,6 +131,8 @@ class Spawner(LoggingConfigurable):
               <option value="A">The letter A</option>
               <option value="B">The letter B</option>
             </select>
+
+        The data from this form submission will be passed on to your spawner in `self.user_options`
     """).tag(config=True)
 
     def options_from_form(self, form_data):
@@ -107,9 +148,14 @@ class Spawner(LoggingConfigurable):
         prior to `Spawner.start`.
         """
         return form_data
-    
-    user_options = Dict(help="This is where form-specified options ultimately end up.")
-    
+
+    user_options = Dict(
+        help="""
+        Dict of user specified options specific to this spawned instance of the single-user server.
+
+        These are usually provided by the form displayed to the user by setting `options_form`
+        """)
+
     env_keep = List([
         'PATH',
         'PYTHONPATH',
@@ -119,50 +165,93 @@ class Spawner(LoggingConfigurable):
         'LANG',
         'LC_ALL',
     ],
-        help="Whitelist of environment variables for the subprocess to inherit"
+        help="""
+        Whitelist of environment variables for the single-user server to inherit from the JupyterHub process.
+
+        This whitelist is used to ensure that sensitive information in the JupyterHub process's environment
+        (such as `CONFIGPROXY_AUTH_TOKEN`) is not passed to the single-user server's process.
+        """
     ).tag(config=True)
+
     env = Dict(help="""Deprecated: use Spawner.get_env or Spawner.environment
-    
+
     - extend Spawner.get_env for adding required env in Spawner subclasses
     - Spawner.environment for config-specified env
     """)
-    
+
     environment = Dict(
-        help="""Environment variables to load for the Spawner.
+        help="""
+        Extra environment variables to set for the single-user server's process.
 
-        Value could be a string or a callable. If it is a callable, it will
-        be called with one parameter, which will be the instance of the spawner
-        in use. It should quickly (without doing much blocking operations) return
-        a string that will be used as the value for the environment variable.
+        Environment variables that end up in the single-user server's process come from 3 sources:
+          - This `environment` configurable
+          - The JupyterHub process' environment variables that are whitelisted in `env_keep`
+          - Variables to establish contact between the single-user notebook and the hub (such as JPY_API_TOKEN)
+
+        The `enviornment` configurable should be set by JupyterHub administrators to add
+        installation specific environment variables. It is a dict where the key is the name of the environment
+        variable, and the value can be a string or a callable. If it is a callable, it will be called
+        with one parameter (the spawner instance), and should return a string fairly quickly (no blocking
+        operations please!).
+
+        Note that the spawner class' interface is not guaranteed to be exactly same across upgrades,
+        so if you are using the callable take care to verify it continues to work after upgrades!
         """
     ).tag(config=True)
-    
-    cmd = Command(['jupyterhub-singleuser'],
-        help="""The command used for starting notebooks."""
+
+    # FIXME: Add info about shell expansion here.
+    cmd = Command(
+        ['jupyterhub-singleuser'],
+        help="""
+        The command used for starting the single-user server.
+
+        You can provide this as either a list or a string. Note that this should only contain
+        the path to the script to start - extra arguments should be provided via `args`.
+
+        This is usually set if you want to start the single-user server in a different python
+        environment (with virtualenv/conda) than JupyterHub itself.
+        """
     ).tag(config=True)
-    args = List(Unicode(),
-        help="""Extra arguments to be passed to the single-user server"""
+
+    # FIXME: Add info about shell expansion here.
+    args = List(
+        Unicode(),
+        help="""
+        Extra arguments to be passed to the single-user server.
+
+        """
     ).tag(config=True)
-    
-    notebook_dir = Unicode('',
-        help="""The notebook directory for the single-user server
-        
-        `~` will be expanded to the user's home directory
+
+    notebook_dir = Unicode(
+        '',
+        help="""
+        Path to the notebook directory for the single-user server.
+
+        The user will see a file listing of this directory when they start, and the Notebook
+        interface itself will not allow browsing outside the contents of this directory (and its
+        subdirectories) easily.
+
+        `~` will be expanded to the home directory of the user, and {username} will be replaced
+        with the name of the user.
+
+        Note that this does *not* prevent users from accessing files outside of this path! They
+        can do so with many other means.
+        """
+    ).tag(config=True)
+
+    # FIXME: Provide example of such an URL!
+    default_url = Unicode(
+        '',
+        help="""
+        The URL the single-user server should start in.
+
+        You can set `notebook_dir` to `/` and then construct a URL here to allow people to navigate
+        the whole filesystem from their notebook, but still start in their home directory.
+
         `{username}` will be expanded to the user's username
         """
     ).tag(config=True)
 
-    default_url = Unicode('',
-        help="""The default URL for the single-user server. 
-
-        Can be used in conjunction with --notebook-dir=/ to enable 
-        full filesystem traversal, while preserving user's homedir as
-        landing page for notebook
-
-        `{username}` will be expanded to the user's username
-        """
-    ).tag(config=True)
-    
     @validate('notebook_dir', 'default_url')
     def _deprecate_percent_u(self, proposal):
         print(proposal)
@@ -174,12 +263,16 @@ class Spawner(LoggingConfigurable):
             v = v.replace('%U', '{username}')
             self.log.warning("Converting %r to %r", proposal['value'], v)
         return v
-    
-    disable_user_config = Bool(False,
-        help="""Disable per-user configuration of single-user servers.
-        
-        This prevents any config in users' $HOME directories
-        from having an effect on their server.
+
+    disable_user_config = Bool(
+        False,
+        help="""
+        Disable per-user configuration of single-user servers.
+
+        This prevents any config in users' $HOME directories from having an effect on their server.
+
+        Note that this can be easily circumvented if the users can modify their python environment,
+        as is the case when they have their own conda environments / virtualenvs / containers.
         """
     ).tag(config=True)
 
