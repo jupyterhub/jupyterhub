@@ -32,9 +32,9 @@ class Command(List):
         return super().validate(obj, value)
 
 
-class MemorySpecification(Integer):
+class ByteSpecification(Integer):
     """
-    Allow easily specifying memory in units of 1024 with suffixes
+    Allow easily specifying bytes in units of 1024 with suffixes
 
     Suffixes allowed are:
       - K -> Kilobyte
@@ -65,7 +65,7 @@ class MemorySpecification(Integer):
             return value
         num = value[:-1]
         suffix = value[-1]
-        if not num.isdigit() and suffix not in MemorySpecification.UNIT_SUFFIXES:
+        if not num.isdigit() and suffix not in ByteSpecification.UNIT_SUFFIXES:
             raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
         else:
-            return int(num) * MemorySpecification.UNIT_SUFFIXES[suffix]
+            return int(num) * ByteSpecification.UNIT_SUFFIXES[suffix]
