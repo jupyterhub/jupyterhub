@@ -24,7 +24,7 @@ from traitlets import (
     validate,
 )
 
-from .traitlets import Command, MemorySpecification
+from .traitlets import Command, ByteSpecification
 from .utils import random_port
 
 class Spawner(LoggingConfigurable):
@@ -183,7 +183,7 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    mem_limit = MemorySpecification(
+    mem_limit = ByteSpecification(
         None,
         help="""
         Maximum number of bytes a single-user notebook server is allowed to use.
@@ -220,7 +220,7 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    mem_guarantee = MemorySpecification(
+    mem_guarantee = ByteSpecification(
         None,
         help="""
         Minimum number of bytes a single-user notebook server is guaranteed to have available.

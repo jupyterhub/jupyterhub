@@ -1,7 +1,7 @@
 import pytest
 from traitlets import HasTraits, TraitError
 
-from jupyterhub.traitlets import URLPrefix, Command, MemorySpecification
+from jupyterhub.traitlets import URLPrefix, Command, ByteSpecification
 
 
 def test_url_prefix():
@@ -29,7 +29,7 @@ def test_command():
 
 def test_memoryspec():
     class C(HasTraits):
-        mem = MemorySpecification()
+        mem = ByteSpecification()
 
     c = C()
 
