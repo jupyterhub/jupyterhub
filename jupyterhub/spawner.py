@@ -239,16 +239,17 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    # FIXME: Provide example of such an URL!
     default_url = Unicode(
         '',
         help="""
         The URL the single-user server should start in.
 
-        You can set `notebook_dir` to `/` and then construct a URL here to allow people to navigate
-        the whole filesystem from their notebook, but still start in their home directory.
-
         `{username}` will be expanded to the user's username
+
+        Example uses:
+        - You can set `notebook_dir` to `/` and `default_url` to `/home/{username}` to allow people to
+          navigate the whole filesystem from their notebook, but still start in their home directory.
+        - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.
         """
     ).tag(config=True)
 
