@@ -199,7 +199,6 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    # FIXME: Add info about shell expansion here.
     cmd = Command(
         ['jupyterhub-singleuser'],
         help="""
@@ -210,15 +209,19 @@ class Spawner(LoggingConfigurable):
 
         This is usually set if you want to start the single-user server in a different python
         environment (with virtualenv/conda) than JupyterHub itself.
+
+        Some spawners allow shell-style expansion here, allowing you to use environment variables.
+        Most, including the default, do not. Consult the documentation for your spawner to verify!
         """
     ).tag(config=True)
 
-    # FIXME: Add info about shell expansion here.
     args = List(
         Unicode(),
         help="""
         Extra arguments to be passed to the single-user server.
 
+        Some spawners allow shell-style expansion here, allowing you to use environment variables here.
+        Most, including the default, do not. Consult the documentation for your spawner to verify!
         """
     ).tag(config=True)
 
