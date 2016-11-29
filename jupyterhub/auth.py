@@ -353,11 +353,11 @@ class LocalAuthenticator(Authenticator):
             return ['adduser', '-q', '--gecos', '""', '--disabled-password']
 
     group_whitelist = Set(
-        help="
+        help="""
         Whitelist all users from this UNIX group.
 
         This makes the username whitelist ineffective.
-        ",
+        """
     ).tag(config=True)
 
     @observe('group_whitelist')
