@@ -658,48 +658,97 @@ def set_user_setuid(username):
 
 
 class LocalProcessSpawner(Spawner):
-    """A Spawner that just uses Popen to start local processes as users.
-    
-    Requires users to exist on the local system.
-    
+    """
+    A Spawner that uses `subprocess.Popen` to start single-user servers as local processes.
+
+    Requires local UNIX users matching the authenticated users to exist. Does not work on
+    Windows.
+
     This is the default spawner for JupyterHub.
     """
-    
-    INTERRUPT_TIMEOUT = Integer(10,
-        help="Seconds to wait for process to halt after SIGINT before proceeding to SIGTERM"
+
+    INTERRUPT_TIMEOUT = Integer(
+        10,
+        help="""
+        Seconds to wait for single-user server process to halt after SIGINT.
+
+        If the process has not exited cleanly after this many seconds, a SIGTERM is sent.
+        """
     ).tag(config=True)
-    TERM_TIMEOUT = Integer(5,
-        help="Seconds to wait for process to halt after SIGTERM before proceeding to SIGKILL"
+
+    TERM_TIMEOUT = Integer(
+        5,
+        help="""
+        Seconds to wait for single-user server process to halt after SIGTERM.
+
+        If the process does not exit cleanly after this many seconds of SIGTERM, a SIGKILL is sent.
+        """
     ).tag(config=True)
+
     KILL_TIMEOUT = Integer(5,
-        help="Seconds to wait for process to halt after SIGKILL before giving up"
+        help="""
+        Seconds to wait for process to halt after SIGKILL before giving up.
+
+        If the process does not exit cleanly after this many seconds of SIGKILL, it becomes a zombie
+        process. The hub process will log a warning and then give up.
+        """
     ).tag(config=True)
-    
-    proc = Instance(Popen, allow_none=True)
-    pid = Integer(0)
-    
+
+    proc = Instance(
+        Popen,
+        allow_none=True,
+        help="""
+        The process representing the single-user server process spawned for current user.
+
+        Is None if no process has been spawned yet.
+        """)
+    pid = Integer(
+        0,
+        help="""
+        The process id (pid) of the single-user server process spawned for current user.
+        """
+    )
+
     def make_preexec_fn(self, name):
+        """
+        Return a function that can be used to set the userid of the spawned process to user with name `name`
+
+        This function can be safely passed to `preexec_fn` of `Popen`
+        """
         return set_user_setuid(name)
-    
+
     def load_state(self, state):
-        """load pid from state"""
+        """
+        Restore state about spawned single-user server after a hub restart.
+
+        We currently only store/restore the process id.
+        """
         super(LocalProcessSpawner, self).load_state(state)
         if 'pid' in state:
             self.pid = state['pid']
-    
+
     def get_state(self):
-        """add pid to state"""
+        """
+        Save state that is needed to restore this spawner instance after a hub restore.
+
+        We currently only store/restore the process id.
+        """
         state = super(LocalProcessSpawner, self).get_state()
         if self.pid:
             state['pid'] = self.pid
         return state
-    
+
     def clear_state(self):
-        """clear pid state"""
+        """
+        Clear stored state about this spawner.
+        """
         super(LocalProcessSpawner, self).clear_state()
         self.pid = 0
-    
+
     def user_env(self, env):
+        """
+        Augment environment of spawned process with user specific env variables.
+        """
         env['USER'] = self.user.name
         home = pwd.getpwnam(self.user.name).pw_dir
         shell = pwd.getpwnam(self.user.name).pw_shell
@@ -710,16 +759,20 @@ class LocalProcessSpawner(Spawner):
         if shell:
             env['SHELL'] = shell
         return env
-    
+
     def get_env(self):
-        """Add user environment variables"""
+        """
+        Get the complete set of environment variables to be set in the spawned process.
+        """
         env = super().get_env()
         env = self.user_env(env)
         return env
-    
+
     @gen.coroutine
     def start(self):
-        """Start the process"""
+        """
+        Start the single-user server.
+        """
         self.port = random_port()
         cmd = []
         env = self.get_env()
@@ -756,7 +809,12 @@ class LocalProcessSpawner(Spawner):
 
     @gen.coroutine
     def poll(self):
-        """Poll the process"""
+        """
+        Poll the spawned process to see if it is still running.
+
+        If the process is still running, we return None. If it is not running,
+        we return the exit code of the process if we have access to it, or 0 otherwise.
+        """
         # if we started the process, poll with Popen
         if self.proc is not None:
             status = self.proc.poll()
@@ -764,15 +822,14 @@ class LocalProcessSpawner(Spawner):
                 # clear state if the process is done
                 self.clear_state()
             return status
-        
+
         # if we resumed from stored state,
         # we don't have the Popen handle anymore, so rely on self.pid
-        
         if not self.pid:
             # no pid, not running
             self.clear_state()
             return 0
-        
+
         # send signal 0 to check if PID exists
         # this doesn't work on Windows, but that's okay because we don't support Windows.
         alive = yield self._signal(0)
@@ -781,10 +838,16 @@ class LocalProcessSpawner(Spawner):
             return 0
         else:
             return None
-    
+
     @gen.coroutine
     def _signal(self, sig):
-        """simple implementation of signal, which we can use when we are using setuid (we are root)"""
+        """
+        Send given signal to a single-user server's process.
+
+        Returns True if the process still exists, False otherwise.
+
+        The hub process is assumed to be root and hence have enough privilages to do this.
+        """
         try:
             os.kill(self.pid, sig)
         except OSError as e:
@@ -793,12 +856,13 @@ class LocalProcessSpawner(Spawner):
             else:
                 raise
         return True # process exists
-    
+
     @gen.coroutine
     def stop(self, now=False):
-        """stop the subprocess
-        
-        if `now`, skip waiting for clean shutdown
+        """
+        Stop the single-user server process for the current user.
+
+        If `now` is set to True, do not wait for the process to die. Otherwise, it'll wait.
         """
         if not now:
             status = yield self.poll()
@@ -807,7 +871,7 @@ class LocalProcessSpawner(Spawner):
             self.log.debug("Interrupting %i", self.pid)
             yield self._signal(signal.SIGINT)
             yield self.wait_for_death(self.INTERRUPT_TIMEOUT)
-        
+
         # clean shutdown failed, use TERM
         status = yield self.poll()
         if status is not None:
@@ -815,7 +879,7 @@ class LocalProcessSpawner(Spawner):
         self.log.debug("Terminating %i", self.pid)
         yield self._signal(signal.SIGTERM)
         yield self.wait_for_death(self.TERM_TIMEOUT)
-        
+
         # TERM failed, use KILL
         status = yield self.poll()
         if status is not None:
@@ -828,4 +892,3 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
-
