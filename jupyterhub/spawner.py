@@ -63,7 +63,7 @@ class Spawner(LoggingConfigurable):
         help="""
         The port for single-user servers to listen on.
 
-        Defaults to `0`, which uses the default port (8888).
+        Defaults to `0`, which uses a randomly allocated port number each time.
 
         New in version 0.7.
         """
