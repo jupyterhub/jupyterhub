@@ -21,88 +21,121 @@ from .handlers.login import LoginHandler
 from .utils import url_path_join
 from .traitlets import Command
 
-class Authenticator(LoggingConfigurable):
-    """A class for authentication.
-    
-    The primary API is one method, `authenticate`, a tornado coroutine
-    for authenticating users.
-    """
-    
-    db = Any()
-    admin_users = Set(
-        help="""set of usernames of admin users
 
-        If unspecified, only the user that launches the server will be admin.
+class Authenticator(LoggingConfigurable):
+    """
+    Abstract base class for implementing an authentication provider for JupyterHub.
+    """
+
+    db = Any()
+
+    admin_users = Set(
+        help="""
+        Set of users that will have admin rights on this JupyterHub.
+
+        Admin users have extra privilages:
+         - Use the admin panel to see list of users logged in
+         - Add / remove users in some authenticators
+         - Restart / halt the hub
+         - Start / stop users' single-user servers
+         - Can access each individual users' single-user server (if configured)
+
+        Admin access should be treated the same way root access is.
+
+        Defaults to an empty set, which allows only user that the hub process is running as.
         """
     ).tag(config=True)
+
     whitelist = Set(
-        help="""Username whitelist.
-        
-        Use this to restrict which users can login.
-        If empty, allow any user to attempt login.
+        help="""
+        Whitelist of usernames that are allowed to log in.
+
+        Use this with supported authenticators to restrict which users can log in. This is an
+        additional whitelist that further restricts users, beyond whatever restrictions the
+        authenticator you are using places.
+
+        If empty, does not perform any additional restriction.
         """
     ).tag(config=True)
-    custom_html = Unicode('',
-        help="""HTML login form for custom handlers.
-        Override in form-based custom authenticators
-        that don't use username+password,
-        or need custom branding.
+
+    custom_html = Unicode(
+        '',
+        help="""
+        HTML form to be overridden by authenticators if they want a custom authentication form.
+
+        Defaults to empty string, which shows the default username/password form.
         """
     )
-    login_service = Unicode('',
-        help="""Name of the login service for external
-        login services (e.g. 'GitHub').
+
+    login_service = Unicode(
+        '',
+        help="""
+        Name of the login service that this authenticator is providing using to authenticate users.
+
+        Example: GitHub, MediaWiki, Google, etc.
         """
     )
-    
+
     username_pattern = Unicode(
-        help="""Regular expression pattern for validating usernames.
-        
-        If not defined: allow any username.
+        help="""
+        Regular expression pattern that all valid usernames must match.
+
+        If a username does not match the pattern specified here, authentication will not be attempted.
+
+        If not set, allow any username.
         """
     ).tag(config=True)
+
     @observe('username_pattern')
     def _username_pattern_changed(self, change):
         if not change['new']:
             self.username_regex = None
         self.username_regex = re.compile(change['new'])
-    
-    username_regex = Any()
-    
+
+    username_regex = Any(
+        help="""
+        Compiled regex kept in sync with `username_pattern`
+        """
+    )
+
     def validate_username(self, username):
-        """Validate a (normalized) username.
-        
+        """
+        Validate a normalized username.
+
         Return True if username is valid, False otherwise.
         """
         if not self.username_regex:
             return True
         return bool(self.username_regex.match(username))
-    
+
     username_map = Dict(
-        help="""Dictionary mapping authenticator usernames to JupyterHub users.
-        
-        Can be used to map OAuth service names to local users, for instance.
-        
-        Used in normalize_username.
+        help="""
+        Dictionary mapping authenticator usernames to JupyterHub users.
+
+        Primarily used to normalize OAuth user names to local users.
         """
     ).tag(config=True)
-    
+
     def normalize_username(self, username):
-        """Normalize a username.
-        
-        Override in subclasses if usernames should have some normalization.
-        Default: cast to lowercase, lookup in username_map.
+        """
+        Normalize the given username and return it.
+
+        Override in subclasses if usernames need different normalization rules.
+
+        The default attempts to lowercase the username and apply `username_map` if it is
+        set.
         """
         username = username.lower()
         username = self.username_map.get(username, username)
         return username
-    
+
     def check_whitelist(self, username):
-        """Check a username against our whitelist.
-        
+        """
+        Check if a username is allowed to authenticate based on whitelist configuration.
+
         Return True if username is allowed, False otherwise.
-        No whitelist means any username should be allowed.
-        
+        No whitelist means any username is allowed.
+
         Names are normalized *before* being checked against the whitelist.
         """
         if not self.whitelist:
@@ -112,18 +145,22 @@ class Authenticator(LoggingConfigurable):
     
     @gen.coroutine
     def get_authenticated_user(self, handler, data):
-        """This is the outer API for authenticating a user.
-        
+        """
+        Authenticate the user who is attempting to log in.
+
+        Returns normalized username if successful, None otherwise.
+
         This calls `authenticate`, which should be overridden in subclasses,
         normalizes the username if any normalization should be done,
         and then validates the name in the whitelist.
-        
+
+        This is the outer API for authenticating a user.
         Subclasses should not need to override this method.
+
         The various stages can be overridden separately:
-        
-        - authenticate turns formdata into a username
-        - normalize_username normalizes the username
-        - check_whitelist checks against the user whitelist
+         - `authenticate` turns formdata into a username
+         - `normalize_username` normalizes the username
+         - `check_whitelist` checks against the user whitelist
         """
         username = yield self.authenticate(handler, data)
         if username is None:
@@ -139,15 +176,16 @@ class Authenticator(LoggingConfigurable):
         else:
             self.log.warning("User %r not in whitelist.", username)
             return
-    
+
     @gen.coroutine
     def authenticate(self, handler, data):
-        """Authenticate a user with login form data.
-        
+        """
+        Authenticate a user with login form data.
+
         This must be a tornado gen.coroutine.
         It must return the username on successful authentication,
         and return None on failed authentication.
-        
+
         Checking the whitelist is handled separately by the caller.
 
         Args:
@@ -160,25 +198,34 @@ class Authenticator(LoggingConfigurable):
         """
 
     def pre_spawn_start(self, user, spawner):
-        """Hook called before spawning a user's server.
-        
+        """
+        Hook called before spawning a user's server.
+
         Can be used to do auth-related startup, e.g. opening PAM sessions.
         """
-    
+
     def post_spawn_stop(self, user, spawner):
-        """Hook called after stopping a user container.
-        
+        """
+        Hook called after stopping a user container.
+
         Can be used to do auth-related cleanup, e.g. closing PAM sessions.
         """
-    
+
     def add_user(self, user):
-        """Add a new user
-        
+        """
+        Hook called when a user is added to the hub.
+
+        This is called:
+         - When a user first authenticates
+         - When the hub restarts, for all users.
+
         By default, this just adds the user to the whitelist.
-        
-        Subclasses may do more extensive things,
-        such as adding actual unix users,
+
+        Subclasses may do more extensive things, such as adding actual unix users,
         but they should call super to ensure the whitelist is updated.
+
+        Note that this should be idempotent, since it is called whenever the hub restarts
+        for all users.
 
         Args:
             user (User): The User wrapper object
@@ -187,61 +234,70 @@ class Authenticator(LoggingConfigurable):
             raise ValueError("Invalid username: %s" % user.name)
         if self.whitelist:
             self.whitelist.add(user.name)
-    
+
     def delete_user(self, user):
-        """Triggered when a user is deleted.
-        
+        """
+        Hook called when a user is deleted.
+
         Removes the user from the whitelist.
         Subclasses should call super to ensure the whitelist is updated.
-        
+
         Args:
             user (User): The User wrapper object
         """
         self.whitelist.discard(user.name)
-    
+
     def login_url(self, base_url):
-        """Override to register a custom login handler
-        
-        Generally used in combination with get_handlers.
-        
+        """
+        Override when registering a custom login handler.
+
+        Generally used by authenticators that do not use simple form based authentication.
+
+        The subclass overriding this is responsible for making sure there is a handler
+        available to handle the URL returned from this method, using the `get_handlers`
+        method.
+
         Args:
             base_url (str): the base URL of the Hub (e.g. /hub/)
-        
+
         Returns:
             str: The login URL, e.g. '/hub/login'
-        
         """
         return url_path_join(base_url, 'login')
-    
+
     def logout_url(self, base_url):
-        """Override to register a custom logout handler.
-        
-        Generally used in combination with get_handlers.
-        
+        """
+        Override when registering a custom logout handler.
+
+        The subclass overriding this is responsible for making sure there is a handler
+        available to handle the URL returned from this method, using the `get_handlers`
+        method.
+
         Args:
             base_url (str): the base URL of the Hub (e.g. /hub/)
-        
+
         Returns:
             str: The logout URL, e.g. '/hub/logout'
         """
         return url_path_join(base_url, 'logout')
-    
+
     def get_handlers(self, app):
-        """Return any custom handlers the authenticator needs to register
-        
-        (e.g. for OAuth).
-        
+        """
+        Return any custom handlers the authenticator needs to register.
+
+        Used in conjugation with `login_url` and `logout_url`.
+
         Args:
             app (JupyterHub Application):
                 the application object, in case it needs to be accessed for info.
         Returns:
             list: list of ``('/url', Handler)`` tuples passed to tornado.
-                The Hub prefix is added to any URLs.
-        
+                  The Hub prefix is added to any URLs.
         """
         return [
             ('/login', LoginHandler),
         ]
+
 
 class LocalAuthenticator(Authenticator):
     """Base class for Authenticators that work with local Linux/UNIX users
