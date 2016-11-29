@@ -300,40 +300,49 @@ class Authenticator(LoggingConfigurable):
 
 
 class LocalAuthenticator(Authenticator):
-    """Base class for Authenticators that work with local Linux/UNIX users
+    """
+    Abstract base class for Authenticators that work with local Linux/UNIX users
 
     Checks for local users, and can attempt to create them if they exist.
     """
-    
-    create_system_users = Bool(False,
-        help="""If a user is added that doesn't exist on the system,
-        should I try to create the system user?
+
+    create_system_users = Bool(
+        False,
+        help="""
+        If set to True, will attempt to create local system users if they do not exist already.
+
+        Supports Linux and BSD variants only.
         """
     ).tag(config=True)
+
     add_user_cmd = Command(
-        help="""The command to use for creating users as a list of strings.
-        
+        help="""
+        The command to use for creating users as a list of strings.
+
         For each element in the list, the string USERNAME will be replaced with
         the user's username. The username will also be appended as the final argument.
-        
+
         For Linux, the default value is:
-        
+
             ['adduser', '-q', '--gecos', '""', '--disabled-password']
-            
+
         To specify a custom home directory, set this to:
-        
+
             ['adduser', '-q', '--gecos', '""', '--home', '/customhome/USERNAME', '--disabled-password']
 
         This will run the command:
 
-        adduser -q --gecos "" --home /customhome/river --disabled-password river
-        
+            adduser -q --gecos "" --home /customhome/river --disabled-password river
+
         when the user 'river' is created.
         """
     ).tag(config=True)
-    
+
     @default('add_user_cmd')
     def _add_user_cmd_default(self):
+        """
+        Guess the most likely-to-work adduser command for each platform
+        """
         if sys.platform == 'darwin':
             raise ValueError("I don't know how to create users on OS X")
         elif which('pw'):
@@ -344,10 +353,18 @@ class LocalAuthenticator(Authenticator):
             return ['adduser', '-q', '--gecos', '""', '--disabled-password']
 
     group_whitelist = Set(
-        help="Automatically whitelist anyone in this group.",
+        help="
+        Whitelist all users from this UNIX group.
+
+        This makes the username whitelist ineffective.
+        ",
     ).tag(config=True)
+
     @observe('group_whitelist')
     def _group_whitelist_changed(self, change):
+        """
+        Log a warning if both group_whitelist and user whitelist are set.
+        """
         if self.whitelist:
             self.log.warning(
                 "Ignoring username whitelist because group whitelist supplied!"
@@ -360,6 +377,9 @@ class LocalAuthenticator(Authenticator):
             return super().check_whitelist(username)
 
     def check_group_whitelist(self, username):
+        """
+        If group_whitelist is configured, check if authenticating user is part of group.
+        """
         if not self.group_whitelist:
             return False
         for grnam in self.group_whitelist:
@@ -374,9 +394,10 @@ class LocalAuthenticator(Authenticator):
 
     @gen.coroutine
     def add_user(self, user):
-        """Add a new user
-        
-        If self.create_system_users, the user will attempt to be created.
+        """
+        Hook into add_user callback to execute code whenever a new user is added.
+
+        If self.create_system_users, the user will attempt to be created if it doesn't exist.
         """
         user_exists = yield gen.maybe_future(self.system_user_exists(user))
         if not user_exists:
@@ -384,9 +405,9 @@ class LocalAuthenticator(Authenticator):
                 yield gen.maybe_future(self.add_system_user(user))
             else:
                 raise KeyError("User %s does not exist." % user.name)
-        
+
         yield gen.maybe_future(super().add_user(user))
-    
+
     @staticmethod
     def system_user_exists(user):
         """Check if the user exists on the system"""
@@ -398,7 +419,11 @@ class LocalAuthenticator(Authenticator):
             return True
 
     def add_system_user(self, user):
-        """Create a new Linux/UNIX user on the system. Works on FreeBSD and Linux, at least."""
+        """
+        Create a new local UNIX user on the system.
+
+        Tested to work on FreeBSD and Linux, at least.
+        """
         name = user.name
         cmd = [ arg.replace('USERNAME', name) for arg in self.add_user_cmd ] + [name]
         self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
