@@ -349,51 +349,58 @@ class Spawner(LoggingConfigurable):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
             self.load_state(self.user.state)
-    
+
     def load_state(self, state):
-        """load state from the database
-        
-        This is the extensible part of state.
-        
-        Override in a subclass if there is state to load.
-        Should call `super`.
-        
-        See Also
-        --------
-        
-        get_state, clear_state
+        """
+        Restore state of spawner from database.
+
+        Called for each user's spawner after the hub process restarts.
+
+        `state` is a dict that'll contain the value returned by `get_state` of
+        the spawner, or {} if the spawner hasn't persisted any state yet.
+
+        Override in subclasses to restore any extra state that is needed to track
+        the single-user server for that user. Subclasses should call super().
         """
         pass
-    
+
     def get_state(self):
-        """store the state necessary for load_state
-        
-        A black box of extra state for custom spawners.
-        Subclasses should call `super`.
-        
+        """
+        Save state of spawner into database.
+
+        A black box of extra state for custom spawners. The returned value of this is
+        passed to `load_state`.
+
+        Subclasses should call `super().get_state()`, augment the state returned from
+        there, and return that state.
+
         Returns
         -------
-        
         state: dict
              a JSONable dict of state
         """
         state = {}
         return state
-    
+
     def clear_state(self):
-        """clear any state that should be cleared when the process stops
-        
-        State that should be preserved across server instances should not be cleared.
-        
+        """
+        Clear any state that should be cleared when the single-user server stops.
+
+        State that should be preserved across single-user server instances should not be cleared.
+
         Subclasses should call super, to ensure that state is properly cleared.
         """
         self.api_token = ''
-    
+
     def get_env(self):
-        """Return the environment dict to use for the Spawner.
+        """
+        Return the environment dict to use for the Spawner.
 
         This applies things like `env_keep`, anything defined in `Spawner.environment`,
         and adds the API token to the env.
+
+        When overriding in subclasses, subclasses must call `super().get_env()`, extend the
+        returned dict and return it.
 
         Use this to access the env in Spawner.start to allow extension in subclasses.
         """
@@ -401,7 +408,7 @@ class Spawner(LoggingConfigurable):
         if self.env:
             warnings.warn("Spawner.env is deprecated, found %s" % self.env, DeprecationWarning)
             env.update(self.env)
-        
+
         for key in self.env_keep:
             if key in os.environ:
                 env[key] = os.environ[key]
@@ -434,7 +441,8 @@ class Spawner(LoggingConfigurable):
         return env
 
     def template_namespace(self):
-        """Return the template namespace for format-string formatting.
+        """
+        Return the template namespace for format-string formatting.
 
         Currently used on default_url and notebook_dir.
 
@@ -457,7 +465,8 @@ class Spawner(LoggingConfigurable):
         return d
 
     def format_string(self, s):
-        """Render a Python format string
+        """
+        Render a Python format string.
 
         Uses :meth:`Spawner.template_namespace` to populate format namespace.
 
@@ -472,7 +481,11 @@ class Spawner(LoggingConfigurable):
         return s.format(**self.template_namespace())
 
     def get_args(self):
-        """Return the arguments to be passed after self.cmd"""
+        """
+        Return the arguments to be passed after self.cmd.
+
+        Doesn't expect shell expansion to happen.
+        """
         args = [
             '--user="%s"' % self.user.name,
             '--cookie-name="%s"' % self.user.server.cookie_name,
@@ -503,33 +516,40 @@ class Spawner(LoggingConfigurable):
             args.append('--disable-user-config')
         args.extend(self.args)
         return args
-    
+
     @gen.coroutine
     def start(self):
-        """Start the single-user server
-        
+        """
+        Start the single-user server.
+
         Returns:
-        
-        (ip, port): the ip, port where the Hub can connect to the server.
-        
+          (ip, port): the ip, port where the Hub can connect to the server.
+
         .. versionchanged:: 0.7
             Return ip, port instead of setting on self.user.server directly.
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
-    
+
     @gen.coroutine
     def stop(self, now=False):
-        """Stop the single-user process"""
+        """
+        Stop the single-user server.
+
+        If `now` is set to `False`, do not wait for the server to stop. Otherwise, wait for
+        the server to stop before returning.
+
+        Must be a Torando coroutine.
+        """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
-    
+
     @gen.coroutine
     def poll(self):
-        """Check if the single-user process is running
+        """
+        Check if the single-user process is running
 
         returns:
-        
-        None, if single-user process is running.
-        Exit status (0 if unknown), if it is not running.
+          None, if single-user process is running.
+          Exit status (0 if unknown), if it is not running.
 
         State transitions, behavior, and return response:
 
@@ -549,29 +569,29 @@ class Spawner(LoggingConfigurable):
 
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
-    
+
     def add_poll_callback(self, callback, *args, **kwargs):
-        """add a callback to fire when the subprocess stops
-        
-        as noticed by periodic poll_and_notify()
+        """
+        Add a callback to fire when the single-user server stops.
         """
         if args or kwargs:
             cb = callback
             callback = lambda : cb(*args, **kwargs)
         self._callbacks.append(callback)
-    
+
     def stop_polling(self):
-        """stop the periodic poll"""
+        """
+        Stop polling for single-user server's running state.
+        """
         if self._poll_callback:
             self._poll_callback.stop()
             self._poll_callback = None
-        
+
     def start_polling(self):
-        """Start polling periodically
-        
-        callbacks registered via `add_poll_callback` will fire
-        if/when the process stops.
-        
+        """
+        Start polling periodically for single-user server's running state.
+
+        Callbacks registered via `add_poll_callback` will fire if/when the server stops.
         Explicit termination via the stop method will not trigger the callbacks.
         """
         if self.poll_interval <= 0:
@@ -579,9 +599,9 @@ class Spawner(LoggingConfigurable):
             return
         else:
             self.log.debug("Polling subprocess every %is", self.poll_interval)
-        
+
         self.stop_polling()
-        
+
         self._poll_callback = PeriodicCallback(
             self.poll_and_notify,
             1e3 * self.poll_interval
@@ -590,27 +610,29 @@ class Spawner(LoggingConfigurable):
 
     @gen.coroutine
     def poll_and_notify(self):
-        """Used as a callback to periodically poll the process,
-        and notify any watchers
+        """
+        Used as a callback to periodically poll the process and notify any watchers
         """
         status = yield self.poll()
         if status is None:
             # still running, nothing to do here
             return
-        
+
         self.stop_polling()
-        
+
         for callback in self._callbacks:
             try:
                 yield gen.maybe_future(callback())
             except Exception:
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status
-    
+
     death_interval = Float(0.1)
     @gen.coroutine
     def wait_for_death(self, timeout=10):
-        """wait for the process to die, up to timeout seconds"""
+        """
+        Wait for the single-user server to die, up to timeout seconds
+        """
         for i in range(int(timeout / self.death_interval)):
             status = yield self.poll()
             if status is not None:
@@ -618,8 +640,13 @@ class Spawner(LoggingConfigurable):
             else:
                 yield gen.sleep(self.death_interval)
 
+
 def _try_setcwd(path):
-    """Try to set CWD, walking up and ultimately falling back to a temp dir"""
+    """
+    Try to set CWD to path, walking up until a valid directory is found.
+
+    If no valid directory is found, a temp directory is created and cwd is set to that.
+    """
     while path != '/':
         try:
             os.chdir(path)
@@ -635,15 +662,24 @@ def _try_setcwd(path):
 
 
 def set_user_setuid(username):
-    """return a preexec_fn for setting the user (via setuid) of a spawned process"""
+    """
+    Return a preexec_fn for spawning a single-user server as a particular user.
+
+    Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
+    homedirectory.
+    """
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
     gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
-    
+
     def preexec():
-        # set the user and group
+        """
+        Set uid/gid of current process. Executed after fork but before exec by python.
+
+        Also try to chdir to the user's home directory.
+        """
         os.setgid(gid)
         try:
             os.setgroups(gids)
@@ -653,7 +689,7 @@ def set_user_setuid(username):
 
         # start in the user's home dir
         _try_setcwd(home)
-    
+
     return preexec
 
 
