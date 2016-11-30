@@ -23,9 +23,7 @@ from .traitlets import Command
 
 
 class Authenticator(LoggingConfigurable):
-    """
-    Abstract base class for implementing an authentication provider for JupyterHub.
-    """
+    """Base class for implementing an authentication provider for JupyterHub"""
 
     db = Any()
 
@@ -42,7 +40,7 @@ class Authenticator(LoggingConfigurable):
 
         Admin access should be treated the same way root access is.
 
-        Defaults to an empty set, which allows only user that the hub process is running as.
+        Defaults to an empty set, in which case no user has admin access.
         """
     ).tag(config=True)
 
@@ -52,27 +50,29 @@ class Authenticator(LoggingConfigurable):
 
         Use this with supported authenticators to restrict which users can log in. This is an
         additional whitelist that further restricts users, beyond whatever restrictions the
-        authenticator you are using places.
+        authenticator has in place.
 
         If empty, does not perform any additional restriction.
         """
     ).tag(config=True)
 
     custom_html = Unicode(
-        '',
         help="""
         HTML form to be overridden by authenticators if they want a custom authentication form.
 
-        Defaults to empty string, which shows the default username/password form.
+        Defaults to an empty string, which shows the default username/password form.
         """
     )
 
     login_service = Unicode(
-        '',
         help="""
         Name of the login service that this authenticator is providing using to authenticate users.
 
         Example: GitHub, MediaWiki, Google, etc.
+
+        Setting this value replaces the login form with a "Login with <login_service>" button.
+
+        Any authenticator that redirects to an external service (e.g. using OAuth) should set this.
         """
     )
 
@@ -99,8 +99,7 @@ class Authenticator(LoggingConfigurable):
     )
 
     def validate_username(self, username):
-        """
-        Validate a normalized username.
+        """Validate a normalized username
 
         Return True if username is valid, False otherwise.
         """
@@ -109,16 +108,14 @@ class Authenticator(LoggingConfigurable):
         return bool(self.username_regex.match(username))
 
     username_map = Dict(
-        help="""
-        Dictionary mapping authenticator usernames to JupyterHub users.
+        help="""Dictionary mapping authenticator usernames to JupyterHub users.
 
         Primarily used to normalize OAuth user names to local users.
         """
     ).tag(config=True)
 
     def normalize_username(self, username):
-        """
-        Normalize the given username and return it.
+        """Normalize the given username and return it
 
         Override in subclasses if usernames need different normalization rules.
 
@@ -130,8 +127,7 @@ class Authenticator(LoggingConfigurable):
         return username
 
     def check_whitelist(self, username):
-        """
-        Check if a username is allowed to authenticate based on whitelist configuration.
+        """Check if a username is allowed to authenticate based on whitelist configuration
 
         Return True if username is allowed, False otherwise.
         No whitelist means any username is allowed.
@@ -145,8 +141,7 @@ class Authenticator(LoggingConfigurable):
     
     @gen.coroutine
     def get_authenticated_user(self, handler, data):
-        """
-        Authenticate the user who is attempting to log in.
+        """Authenticate the user who is attempting to log in
 
         Returns normalized username if successful, None otherwise.
 
@@ -179,8 +174,7 @@ class Authenticator(LoggingConfigurable):
 
     @gen.coroutine
     def authenticate(self, handler, data):
-        """
-        Authenticate a user with login form data.
+        """Authenticate a user with login form data
 
         This must be a tornado gen.coroutine.
         It must return the username on successful authentication,
@@ -198,22 +192,19 @@ class Authenticator(LoggingConfigurable):
         """
 
     def pre_spawn_start(self, user, spawner):
-        """
-        Hook called before spawning a user's server.
+        """Hook called before spawning a user's server
 
         Can be used to do auth-related startup, e.g. opening PAM sessions.
         """
 
     def post_spawn_stop(self, user, spawner):
-        """
-        Hook called after stopping a user container.
+        """Hook called after stopping a user container
 
         Can be used to do auth-related cleanup, e.g. closing PAM sessions.
         """
 
     def add_user(self, user):
-        """
-        Hook called when a user is added to the hub.
+        """Hook called when a user is added to JupyterHub
 
         This is called:
          - When a user first authenticates
@@ -236,8 +227,7 @@ class Authenticator(LoggingConfigurable):
             self.whitelist.add(user.name)
 
     def delete_user(self, user):
-        """
-        Hook called when a user is deleted.
+        """Hook called when a user is deleted
 
         Removes the user from the whitelist.
         Subclasses should call super to ensure the whitelist is updated.
@@ -248,8 +238,7 @@ class Authenticator(LoggingConfigurable):
         self.whitelist.discard(user.name)
 
     def login_url(self, base_url):
-        """
-        Override when registering a custom login handler.
+        """Override this when registering a custom login handler
 
         Generally used by authenticators that do not use simple form based authentication.
 
@@ -266,8 +255,7 @@ class Authenticator(LoggingConfigurable):
         return url_path_join(base_url, 'login')
 
     def logout_url(self, base_url):
-        """
-        Override when registering a custom logout handler.
+        """Override when registering a custom logout handler
 
         The subclass overriding this is responsible for making sure there is a handler
         available to handle the URL returned from this method, using the `get_handlers`
@@ -282,8 +270,7 @@ class Authenticator(LoggingConfigurable):
         return url_path_join(base_url, 'logout')
 
     def get_handlers(self, app):
-        """
-        Return any custom handlers the authenticator needs to register.
+        """Return any custom handlers the authenticator needs to register
 
         Used in conjugation with `login_url` and `logout_url`.
 
@@ -300,14 +287,12 @@ class Authenticator(LoggingConfigurable):
 
 
 class LocalAuthenticator(Authenticator):
-    """
-    Abstract base class for Authenticators that work with local Linux/UNIX users
+    """Base class for Authenticators that work with local Linux/UNIX users
 
     Checks for local users, and can attempt to create them if they exist.
     """
 
-    create_system_users = Bool(
-        False,
+    create_system_users = Bool(False,
         help="""
         If set to True, will attempt to create local system users if they do not exist already.
 
@@ -317,7 +302,7 @@ class LocalAuthenticator(Authenticator):
 
     add_user_cmd = Command(
         help="""
-        The command to use for creating users as a list of strings.
+        The command to use for creating users as a list of strings
 
         For each element in the list, the string USERNAME will be replaced with
         the user's username. The username will also be appended as the final argument.
@@ -340,9 +325,7 @@ class LocalAuthenticator(Authenticator):
 
     @default('add_user_cmd')
     def _add_user_cmd_default(self):
-        """
-        Guess the most likely-to-work adduser command for each platform
-        """
+        """Guess the most likely-to-work adduser command for each platform"""
         if sys.platform == 'darwin':
             raise ValueError("I don't know how to create users on OS X")
         elif which('pw'):
@@ -394,8 +377,7 @@ class LocalAuthenticator(Authenticator):
 
     @gen.coroutine
     def add_user(self, user):
-        """
-        Hook into add_user callback to execute code whenever a new user is added.
+        """Hook called whenever a new user is added
 
         If self.create_system_users, the user will attempt to be created if it doesn't exist.
         """
@@ -419,8 +401,7 @@ class LocalAuthenticator(Authenticator):
             return True
 
     def add_system_user(self, user):
-        """
-        Create a new local UNIX user on the system.
+        """Create a new local UNIX user on the system.
 
         Tested to work on FreeBSD and Linux, at least.
         """
@@ -435,26 +416,21 @@ class LocalAuthenticator(Authenticator):
 
 
 class PAMAuthenticator(LocalAuthenticator):
-    """
-    Authenticate local UNIX users with PAM
-    """
+    """Authenticate local UNIX users with PAM"""
 
-    encoding = Unicode(
-        'utf8',
+    encoding = Unicode('utf8',
         help="""
         The text encoding to use when communicating with PAM
         """
     ).tag(config=True)
 
-    service = Unicode(
-        'login',
+    service = Unicode('login',
         help="""
-        The name of the PAM service to use for authentication.
+        The name of the PAM service to use for authentication
         """
     ).tag(config=True)
 
-    open_sessions = Bool(
-        True,
+    open_sessions = Bool(True,
         help="""
         Whether to open a new PAM session when spawners are started.
 
@@ -469,8 +445,7 @@ class PAMAuthenticator(LocalAuthenticator):
 
     @gen.coroutine
     def authenticate(self, handler, data):
-        """
-        Authenticate with PAM, and return the username if login is successful.
+        """Authenticate with PAM, and return the username if login is successful.
 
         Return None otherwise.
         """
@@ -486,9 +461,7 @@ class PAMAuthenticator(LocalAuthenticator):
             return username
 
     def pre_spawn_start(self, user, spawner):
-        """
-        Open PAM session for user if so configured.
-        """
+        """Open PAM session for user if so configured"""
         if not self.open_sessions:
             return
         try:
@@ -499,9 +472,7 @@ class PAMAuthenticator(LocalAuthenticator):
             self.open_sessions = False
 
     def post_spawn_stop(self, user, spawner):
-        """
-        Close PAM session for user if we were configured to opened one.
-        """
+        """Close PAM session for user if we were configured to opened one"""
         if not self.open_sessions:
             return
         try:
