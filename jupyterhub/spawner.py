@@ -42,7 +42,9 @@ class Spawner(LoggingConfigurable):
     - stop
     - poll
 
-    An instance of a `Spawner` subclass is created for each user.
+    As JupyterHub supports multiple users, an instance of the Spawner subclass
+    is created for each user. If there are 20 JupyterHub users, there will be 20
+    instances of the subclass.
     """
 
     db = Any()
@@ -98,7 +100,7 @@ class Spawner(LoggingConfigurable):
         help="""
         Interval (in seconds) on which to poll the spawner for single-user server's status.
 
-        At every poll interval, each User's Spawner's `.poll` method is called, which checks
+        At every poll interval, each spawner's `.poll` method is called, which checks
         if the single-user server is still running. If it isn't running, then JupyterHub modifies
         its own state accordingly and removes appropriate routes from the configurable proxy.
         """
@@ -110,10 +112,6 @@ class Spawner(LoggingConfigurable):
     debug = Bool(False,
         help="""
         Enable debug-logging of the single-user server.
-
-        These logs will be sent to wherever the single-user server is configured to send its logs
-        to (stderr by default). Your installation might need a log collection setup locally setup
-        if you want to capture all single-user server logs in one place.
         """
     ).tag(config=True)
 
@@ -153,9 +151,10 @@ class Spawner(LoggingConfigurable):
 
     user_options = Dict(
         help="""
-        Dict of user specified options specific to this spawned instance of the single-user server.
+        Dict of user specified options for the user's spawned instance of a single-user server.
 
-        These are usually provided by the form displayed to the user by setting `options_form`
+        These user options are usually provided by the `options_form` displayed to the user when they start
+        their server.
         """)
 
     env_keep = List([
@@ -206,8 +205,8 @@ class Spawner(LoggingConfigurable):
         help="""
         The command used for starting the single-user server.
 
-        You can provide this as either a list or a string. Note that this should only contain
-        the path to the script to start - extra arguments should be provided via `args`.
+        Provide either a string or a list containing the path to the startup script command. Extra arguments,
+        other than this path, should be provided via `args`.
 
         This is usually set if you want to start the single-user server in a different python
         environment (with virtualenv/conda) than JupyterHub itself.
@@ -232,9 +231,9 @@ class Spawner(LoggingConfigurable):
         help="""
         Path to the notebook directory for the single-user server.
 
-        The user will see a file listing of this directory when they start, and the Notebook
-        interface itself will not allow browsing outside the contents of this directory (and its
-        subdirectories) easily.
+        The user sees a file listing of this directory when the notebook interface is started. The
+        current interface does not easily allow browsing beyond the subdirectories in this directory's
+        tree.
 
         `~` will be expanded to the home directory of the user, and {username} will be replaced
         with the name of the user.
@@ -275,10 +274,11 @@ class Spawner(LoggingConfigurable):
         help="""
         Disable per-user configuration of single-user servers.
 
-        This prevents any config in users' $HOME directories from having an effect on their server.
+        When starting the user's single-user server, any config file found in the user's $HOME directory
+        will be ignored.
 
-        Note that this can be easily circumvented if the users can modify their python environment,
-        as is the case when they have their own conda environments / virtualenvs / containers.
+        Note: a user could circumvent this if the user modifies their Python environment, such as when
+        they have their own conda environments / virtualenvs / containers.
         """
     ).tag(config=True)
 
