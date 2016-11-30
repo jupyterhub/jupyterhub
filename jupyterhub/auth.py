@@ -186,9 +186,9 @@ class Authenticator(LoggingConfigurable):
             handler (tornado.web.RequestHandler): the current request handler
             data (dict): The formdata of the login form.
                          The default form has 'username' and 'password' fields.
-        Return:
-            str: the username of the authenticated user
-            None: Authentication failed
+        Returns:
+            username (str or None): The username of the authenticated user,
+            or None if Authentication failed
         """
 
     def pre_spawn_start(self, user, spawner):
@@ -278,8 +278,9 @@ class Authenticator(LoggingConfigurable):
             app (JupyterHub Application):
                 the application object, in case it needs to be accessed for info.
         Returns:
-            list: list of ``('/url', Handler)`` tuples passed to tornado.
-                  The Hub prefix is added to any URLs.
+            handlers (list):
+                list of ``('/url', Handler)`` tuples passed to tornado.
+                The Hub prefix is added to any URLs.
         """
         return [
             ('/login', LoginHandler),
