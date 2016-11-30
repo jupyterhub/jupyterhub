@@ -1,4 +1,6 @@
-"""Class for spawning single-user notebook servers."""
+"""
+Contains base Spawner class & default implementation
+"""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -27,32 +29,51 @@ from traitlets import (
 from .traitlets import Command, ByteSpecification
 from .utils import random_port
 
+
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
-    
+
     Subclass this, and override the following methods:
-    
+
     - load_state
     - get_state
     - start
     - stop
     - poll
+
+    As JupyterHub supports multiple users, an instance of the Spawner subclass
+    is created for each user. If there are 20 JupyterHub users, there will be 20
+    instances of the subclass.
     """
-    
+
     db = Any()
     user = Any()
     hub = Any()
     authenticator = Any()
     api_token = Unicode()
+
     ip = Unicode('127.0.0.1',
-        help="The IP address (or hostname) the single-user server should listen on"
+        help="""
+        The IP address (or hostname) the single-user server should listen on.
+
+        The JupyterHub proxy implementation should be able to send packets to this interface.
+        """
     ).tag(config=True)
+
     port = Integer(0,
-        help="The port for single-user servers to listen on. New in version 0.7."
+        help="""
+        The port for single-user servers to listen on.
+
+        Defaults to `0`, which uses a randomly allocated port number each time.
+
+        New in version 0.7.
+        """
     )
+
     start_timeout = Integer(60,
-        help="""Timeout (in seconds) before giving up on the spawner.
-        
+        help="""
+        Timeout (in seconds) before giving up on starting of single-user server.
+
         This is the timeout for start to return, not the timeout for the server to respond.
         Callers of spawner.start will assume that startup has failed if it takes longer than this.
         start should return when the server process is started and its location is known.
@@ -60,7 +81,8 @@ class Spawner(LoggingConfigurable):
     ).tag(config=True)
 
     http_timeout = Integer(30,
-        help="""Timeout (in seconds) before giving up on a spawned HTTP server
+        help="""
+        Timeout (in seconds) before giving up on a spawned HTTP server
 
         Once a server has successfully been spawned, this is the amount of time
         we wait before assuming that the server is unable to accept
@@ -69,21 +91,30 @@ class Spawner(LoggingConfigurable):
     ).tag(config=True)
 
     poll_interval = Integer(30,
-        help="""Interval (in seconds) on which to poll the spawner."""
+        help="""
+        Interval (in seconds) on which to poll the spawner for single-user server's status.
+
+        At every poll interval, each spawner's `.poll` method is called, which checks
+        if the single-user server is still running. If it isn't running, then JupyterHub modifies
+        its own state accordingly and removes appropriate routes from the configurable proxy.
+        """
     ).tag(config=True)
+
     _callbacks = List()
     _poll_callback = Any()
-    
+
     debug = Bool(False,
         help="Enable debug-logging of the single-user server"
     ).tag(config=True)
-    
-    options_form = Unicode("", help="""
+
+    options_form = Unicode(
+        help="""
         An HTML form for options a user can specify on launching their server.
+
         The surrounding `<form>` element and the submit button are already provided.
-        
+
         For example:
-        
+
             Set your key:
             <input name="key" val="default_key"></input>
             <br>
@@ -92,6 +123,8 @@ class Spawner(LoggingConfigurable):
               <option value="A">The letter A</option>
               <option value="B">The letter B</option>
             </select>
+
+        The data from this form submission will be passed on to your spawner in `self.user_options`
     """).tag(config=True)
 
     def options_from_form(self, form_data):
@@ -107,9 +140,15 @@ class Spawner(LoggingConfigurable):
         prior to `Spawner.start`.
         """
         return form_data
-    
-    user_options = Dict(help="This is where form-specified options ultimately end up.")
-    
+
+    user_options = Dict(
+        help="""
+        Dict of user specified options for the user's spawned instance of a single-user server.
+
+        These user options are usually provided by the `options_form` displayed to the user when they start
+        their server.
+        """)
+
     env_keep = List([
         'PATH',
         'PYTHONPATH',
@@ -119,50 +158,93 @@ class Spawner(LoggingConfigurable):
         'LANG',
         'LC_ALL',
     ],
-        help="Whitelist of environment variables for the subprocess to inherit"
+        help="""
+        Whitelist of environment variables for the single-user server to inherit from the JupyterHub process.
+
+        This whitelist is used to ensure that sensitive information in the JupyterHub process's environment
+        (such as `CONFIGPROXY_AUTH_TOKEN`) is not passed to the single-user server's process.
+        """
     ).tag(config=True)
+
     env = Dict(help="""Deprecated: use Spawner.get_env or Spawner.environment
-    
+
     - extend Spawner.get_env for adding required env in Spawner subclasses
     - Spawner.environment for config-specified env
     """)
-    
+
     environment = Dict(
-        help="""Environment variables to load for the Spawner.
+        help="""
+        Extra environment variables to set for the single-user server's process.
 
-        Value could be a string or a callable. If it is a callable, it will
-        be called with one parameter, which will be the instance of the spawner
-        in use. It should quickly (without doing much blocking operations) return
-        a string that will be used as the value for the environment variable.
+        Environment variables that end up in the single-user server's process come from 3 sources:
+          - This `environment` configurable
+          - The JupyterHub process' environment variables that are whitelisted in `env_keep`
+          - Variables to establish contact between the single-user notebook and the hub (such as JPY_API_TOKEN)
+
+        The `enviornment` configurable should be set by JupyterHub administrators to add
+        installation specific environment variables. It is a dict where the key is the name of the environment
+        variable, and the value can be a string or a callable. If it is a callable, it will be called
+        with one parameter (the spawner instance), and should return a string fairly quickly (no blocking
+        operations please!).
+
+        Note that the spawner class' interface is not guaranteed to be exactly same across upgrades,
+        so if you are using the callable take care to verify it continues to work after upgrades!
         """
     ).tag(config=True)
-    
+
     cmd = Command(['jupyterhub-singleuser'],
-        help="""The command used for starting notebooks."""
+        help="""
+        The command used for starting the single-user server.
+
+        Provide either a string or a list containing the path to the startup script command. Extra arguments,
+        other than this path, should be provided via `args`.
+
+        This is usually set if you want to start the single-user server in a different python
+        environment (with virtualenv/conda) than JupyterHub itself.
+
+        Some spawners allow shell-style expansion here, allowing you to use environment variables.
+        Most, including the default, do not. Consult the documentation for your spawner to verify!
+        """
     ).tag(config=True)
+
     args = List(Unicode(),
-        help="""Extra arguments to be passed to the single-user server"""
-    ).tag(config=True)
-    
-    notebook_dir = Unicode('',
-        help="""The notebook directory for the single-user server
-        
-        `~` will be expanded to the user's home directory
-        `{username}` will be expanded to the user's username
+        help="""
+        Extra arguments to be passed to the single-user server.
+
+        Some spawners allow shell-style expansion here, allowing you to use environment variables here.
+        Most, including the default, do not. Consult the documentation for your spawner to verify!
         """
     ).tag(config=True)
 
-    default_url = Unicode('',
-        help="""The default URL for the single-user server. 
+    notebook_dir = Unicode(
+        help="""
+        Path to the notebook directory for the single-user server.
 
-        Can be used in conjunction with --notebook-dir=/ to enable 
-        full filesystem traversal, while preserving user's homedir as
-        landing page for notebook
+        The user sees a file listing of this directory when the notebook interface is started. The
+        current interface does not easily allow browsing beyond the subdirectories in this directory's
+        tree.
 
-        `{username}` will be expanded to the user's username
+        `~` will be expanded to the home directory of the user, and {username} will be replaced
+        with the name of the user.
+
+        Note that this does *not* prevent users from accessing files outside of this path! They
+        can do so with many other means.
         """
     ).tag(config=True)
-    
+
+    default_url = Unicode(
+        help="""
+        The URL the single-user server should start in.
+
+        `{username}` will be expanded to the user's username
+
+        Example uses:
+        - You can set `notebook_dir` to `/` and `default_url` to `/home/{username}` to allow people to
+          navigate the whole filesystem from their notebook, but still start in their home directory.
+        - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.
+        """
+    ).tag(config=True)
+
     @validate('notebook_dir', 'default_url')
     def _deprecate_percent_u(self, proposal):
         print(proposal)
@@ -174,17 +256,20 @@ class Spawner(LoggingConfigurable):
             v = v.replace('%U', '{username}')
             self.log.warning("Converting %r to %r", proposal['value'], v)
         return v
-    
+
     disable_user_config = Bool(False,
-        help="""Disable per-user configuration of single-user servers.
-        
-        This prevents any config in users' $HOME directories
-        from having an effect on their server.
+        help="""
+        Disable per-user configuration of single-user servers.
+
+        When starting the user's single-user server, any config file found in the user's $HOME directory
+        will be ignored.
+
+        Note: a user could circumvent this if the user modifies their Python environment, such as when
+        they have their own conda environments / virtualenvs / containers.
         """
     ).tag(config=True)
 
-    mem_limit = ByteSpecification(
-        None,
+    mem_limit = ByteSpecification(None,
         help="""
         Maximum number of bytes a single-user notebook server is allowed to use.
 
@@ -203,8 +288,7 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    cpu_limit = Float(
-        None,
+    cpu_limit = Float(None,
         allow_none=True,
         help="""
         Maximum number of cpu-cores a single-user notebook server is allowed to use.
@@ -220,8 +304,7 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    mem_guarantee = ByteSpecification(
-        None,
+    mem_guarantee = ByteSpecification(None,
         help="""
         Minimum number of bytes a single-user notebook server is guaranteed to have available.
 
@@ -235,8 +318,7 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    cpu_guarantee = Float(
-        None,
+    cpu_guarantee = Float(None,
         allow_none=True,
         help="""
         Minimum number of cpu-cores a single-user notebook server is guaranteed to have available.
@@ -252,51 +334,54 @@ class Spawner(LoggingConfigurable):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
             self.load_state(self.user.state)
-    
+
     def load_state(self, state):
-        """load state from the database
-        
-        This is the extensible part of state.
-        
-        Override in a subclass if there is state to load.
-        Should call `super`.
-        
-        See Also
-        --------
-        
-        get_state, clear_state
+        """Restore state of spawner from database.
+
+        Called for each user's spawner after the hub process restarts.
+
+        `state` is a dict that'll contain the value returned by `get_state` of
+        the spawner, or {} if the spawner hasn't persisted any state yet.
+
+        Override in subclasses to restore any extra state that is needed to track
+        the single-user server for that user. Subclasses should call super().
         """
         pass
-    
+
     def get_state(self):
-        """store the state necessary for load_state
-        
-        A black box of extra state for custom spawners.
-        Subclasses should call `super`.
-        
+        """Save state of spawner into database.
+
+        A black box of extra state for custom spawners. The returned value of this is
+        passed to `load_state`.
+
+        Subclasses should call `super().get_state()`, augment the state returned from
+        there, and return that state.
+
         Returns
         -------
-        
         state: dict
              a JSONable dict of state
         """
         state = {}
         return state
-    
+
     def clear_state(self):
-        """clear any state that should be cleared when the process stops
-        
-        State that should be preserved across server instances should not be cleared.
-        
+        """Clear any state that should be cleared when the single-user server stops.
+
+        State that should be preserved across single-user server instances should not be cleared.
+
         Subclasses should call super, to ensure that state is properly cleared.
         """
         self.api_token = ''
-    
+
     def get_env(self):
         """Return the environment dict to use for the Spawner.
 
         This applies things like `env_keep`, anything defined in `Spawner.environment`,
         and adds the API token to the env.
+
+        When overriding in subclasses, subclasses must call `super().get_env()`, extend the
+        returned dict and return it.
 
         Use this to access the env in Spawner.start to allow extension in subclasses.
         """
@@ -304,7 +389,7 @@ class Spawner(LoggingConfigurable):
         if self.env:
             warnings.warn("Spawner.env is deprecated, found %s" % self.env, DeprecationWarning)
             env.update(self.env)
-        
+
         for key in self.env_keep:
             if key in os.environ:
                 env[key] = os.environ[key]
@@ -375,7 +460,10 @@ class Spawner(LoggingConfigurable):
         return s.format(**self.template_namespace())
 
     def get_args(self):
-        """Return the arguments to be passed after self.cmd"""
+        """Return the arguments to be passed after self.cmd
+
+        Doesn't expect shell expansion to happen.
+        """
         args = [
             '--user="%s"' % self.user.name,
             '--cookie-name="%s"' % self.user.server.cookie_name,
@@ -406,33 +494,37 @@ class Spawner(LoggingConfigurable):
             args.append('--disable-user-config')
         args.extend(self.args)
         return args
-    
+
     @gen.coroutine
     def start(self):
         """Start the single-user server
-        
+
         Returns:
-        
-        (ip, port): the ip, port where the Hub can connect to the server.
-        
+          (str, int): the (ip, port) where the Hub can connect to the server.
+
         .. versionchanged:: 0.7
             Return ip, port instead of setting on self.user.server directly.
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
-    
+
     @gen.coroutine
     def stop(self, now=False):
-        """Stop the single-user process"""
+        """Stop the single-user server
+
+        If `now` is set to `False`, do not wait for the server to stop. Otherwise, wait for
+        the server to stop before returning.
+
+        Must be a Tornado coroutine.
+        """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
-    
+
     @gen.coroutine
     def poll(self):
         """Check if the single-user process is running
 
-        returns:
-        
-        None, if single-user process is running.
-        Exit status (0 if unknown), if it is not running.
+        Returns:
+          None if single-user process is running.
+          Integer exit status (0 if unknown), if it is not running.
 
         State transitions, behavior, and return response:
 
@@ -452,29 +544,24 @@ class Spawner(LoggingConfigurable):
 
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
-    
+
     def add_poll_callback(self, callback, *args, **kwargs):
-        """add a callback to fire when the subprocess stops
-        
-        as noticed by periodic poll_and_notify()
-        """
+        """Add a callback to fire when the single-user server stops"""
         if args or kwargs:
             cb = callback
             callback = lambda : cb(*args, **kwargs)
         self._callbacks.append(callback)
-    
+
     def stop_polling(self):
-        """stop the periodic poll"""
+        """Stop polling for single-user server's running state"""
         if self._poll_callback:
             self._poll_callback.stop()
             self._poll_callback = None
-        
+
     def start_polling(self):
-        """Start polling periodically
-        
-        callbacks registered via `add_poll_callback` will fire
-        if/when the process stops.
-        
+        """Start polling periodically for single-user server's running state.
+
+        Callbacks registered via `add_poll_callback` will fire if/when the server stops.
         Explicit termination via the stop method will not trigger the callbacks.
         """
         if self.poll_interval <= 0:
@@ -482,9 +569,9 @@ class Spawner(LoggingConfigurable):
             return
         else:
             self.log.debug("Polling subprocess every %is", self.poll_interval)
-        
+
         self.stop_polling()
-        
+
         self._poll_callback = PeriodicCallback(
             self.poll_and_notify,
             1e3 * self.poll_interval
@@ -493,27 +580,25 @@ class Spawner(LoggingConfigurable):
 
     @gen.coroutine
     def poll_and_notify(self):
-        """Used as a callback to periodically poll the process,
-        and notify any watchers
-        """
+        """Used as a callback to periodically poll the process and notify any watchers"""
         status = yield self.poll()
         if status is None:
             # still running, nothing to do here
             return
-        
+
         self.stop_polling()
-        
+
         for callback in self._callbacks:
             try:
                 yield gen.maybe_future(callback())
             except Exception:
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status
-    
+
     death_interval = Float(0.1)
     @gen.coroutine
     def wait_for_death(self, timeout=10):
-        """wait for the process to die, up to timeout seconds"""
+        """Wait for the single-user server to die, up to timeout seconds"""
         for i in range(int(timeout / self.death_interval)):
             status = yield self.poll()
             if status is not None:
@@ -521,8 +606,12 @@ class Spawner(LoggingConfigurable):
             else:
                 yield gen.sleep(self.death_interval)
 
+
 def _try_setcwd(path):
-    """Try to set CWD, walking up and ultimately falling back to a temp dir"""
+    """Try to set CWD to path, walking up until a valid directory is found.
+
+    If no valid directory is found, a temp directory is created and cwd is set to that.
+    """
     while path != '/':
         try:
             os.chdir(path)
@@ -538,15 +627,24 @@ def _try_setcwd(path):
 
 
 def set_user_setuid(username):
-    """return a preexec_fn for setting the user (via setuid) of a spawned process"""
+    """Return a preexec_fn for spawning a single-user server as a particular user.
+
+    Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
+    home directory.
+    """
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
     home = user.pw_dir
     gids = [ g.gr_gid for g in grp.getgrall() if username in g.gr_mem ]
-    
+
     def preexec():
-        # set the user and group
+        """Set uid/gid of current process
+
+        Executed after fork but before exec by python.
+
+        Also try to chdir to the user's home directory.
+        """
         os.setgid(gid)
         try:
             os.setgroups(gids)
@@ -556,53 +654,92 @@ def set_user_setuid(username):
 
         # start in the user's home dir
         _try_setcwd(home)
-    
+
     return preexec
 
 
 class LocalProcessSpawner(Spawner):
-    """A Spawner that just uses Popen to start local processes as users.
-    
-    Requires users to exist on the local system.
-    
+    """
+    A Spawner that uses `subprocess.Popen` to start single-user servers as local processes.
+
+    Requires local UNIX users matching the authenticated users to exist.
+    Does not work on Windows.
+
     This is the default spawner for JupyterHub.
     """
-    
+
     INTERRUPT_TIMEOUT = Integer(10,
-        help="Seconds to wait for process to halt after SIGINT before proceeding to SIGTERM"
+        help="""
+        Seconds to wait for single-user server process to halt after SIGINT.
+
+        If the process has not exited cleanly after this many seconds, a SIGTERM is sent.
+        """
     ).tag(config=True)
+
     TERM_TIMEOUT = Integer(5,
-        help="Seconds to wait for process to halt after SIGTERM before proceeding to SIGKILL"
+        help="""
+        Seconds to wait for single-user server process to halt after SIGTERM.
+
+        If the process does not exit cleanly after this many seconds of SIGTERM, a SIGKILL is sent.
+        """
     ).tag(config=True)
+
     KILL_TIMEOUT = Integer(5,
-        help="Seconds to wait for process to halt after SIGKILL before giving up"
+        help="""
+        Seconds to wait for process to halt after SIGKILL before giving up.
+
+        If the process does not exit cleanly after this many seconds of SIGKILL, it becomes a zombie
+        process. The hub process will log a warning and then give up.
+        """
     ).tag(config=True)
-    
-    proc = Instance(Popen, allow_none=True)
-    pid = Integer(0)
-    
+
+    proc = Instance(Popen,
+        allow_none=True,
+        help="""
+        The process representing the single-user server process spawned for current user.
+
+        Is None if no process has been spawned yet.
+        """)
+    pid = Integer(0,
+        help="""
+        The process id (pid) of the single-user server process spawned for current user.
+        """
+    )
+
     def make_preexec_fn(self, name):
+        """
+        Return a function that can be used to set the user id of the spawned process to user with name `name`
+
+        This function can be safely passed to `preexec_fn` of `Popen`
+        """
         return set_user_setuid(name)
-    
+
     def load_state(self, state):
-        """load pid from state"""
+        """Restore state about spawned single-user server after a hub restart.
+
+        Local processes only need the process id.
+        """
         super(LocalProcessSpawner, self).load_state(state)
         if 'pid' in state:
             self.pid = state['pid']
-    
+
     def get_state(self):
-        """add pid to state"""
+        """Save state that is needed to restore this spawner instance after a hub restore.
+
+        Local processes only need the process id.
+        """
         state = super(LocalProcessSpawner, self).get_state()
         if self.pid:
             state['pid'] = self.pid
         return state
-    
+
     def clear_state(self):
-        """clear pid state"""
+        """Clear stored state about this spawner (pid)"""
         super(LocalProcessSpawner, self).clear_state()
         self.pid = 0
-    
+
     def user_env(self, env):
+        """Augment environment of spawned process with user specific env variables."""
         env['USER'] = self.user.name
         home = pwd.getpwnam(self.user.name).pw_dir
         shell = pwd.getpwnam(self.user.name).pw_shell
@@ -613,16 +750,16 @@ class LocalProcessSpawner(Spawner):
         if shell:
             env['SHELL'] = shell
         return env
-    
+
     def get_env(self):
-        """Add user environment variables"""
+        """Get the complete set of environment variables to be set in the spawned process."""
         env = super().get_env()
         env = self.user_env(env)
         return env
-    
+
     @gen.coroutine
     def start(self):
-        """Start the process"""
+        """Start the single-user server."""
         self.port = random_port()
         cmd = []
         env = self.get_env()
@@ -659,7 +796,11 @@ class LocalProcessSpawner(Spawner):
 
     @gen.coroutine
     def poll(self):
-        """Poll the process"""
+        """Poll the spawned process to see if it is still running.
+
+        If the process is still running, we return None. If it is not running,
+        we return the exit code of the process if we have access to it, or 0 otherwise.
+        """
         # if we started the process, poll with Popen
         if self.proc is not None:
             status = self.proc.poll()
@@ -667,15 +808,14 @@ class LocalProcessSpawner(Spawner):
                 # clear state if the process is done
                 self.clear_state()
             return status
-        
+
         # if we resumed from stored state,
         # we don't have the Popen handle anymore, so rely on self.pid
-        
         if not self.pid:
             # no pid, not running
             self.clear_state()
             return 0
-        
+
         # send signal 0 to check if PID exists
         # this doesn't work on Windows, but that's okay because we don't support Windows.
         alive = yield self._signal(0)
@@ -684,10 +824,15 @@ class LocalProcessSpawner(Spawner):
             return 0
         else:
             return None
-    
+
     @gen.coroutine
     def _signal(self, sig):
-        """simple implementation of signal, which we can use when we are using setuid (we are root)"""
+        """Send given signal to a single-user server's process.
+
+        Returns True if the process still exists, False otherwise.
+
+        The hub process is assumed to have enough privileges to do this (e.g. root).
+        """
         try:
             os.kill(self.pid, sig)
         except OSError as e:
@@ -696,12 +841,13 @@ class LocalProcessSpawner(Spawner):
             else:
                 raise
         return True # process exists
-    
+
     @gen.coroutine
     def stop(self, now=False):
-        """stop the subprocess
-        
-        if `now`, skip waiting for clean shutdown
+        """Stop the single-user server process for the current user.
+
+        If `now` is set to True, do not wait for the process to die.
+        Otherwise, it'll wait.
         """
         if not now:
             status = yield self.poll()
@@ -710,7 +856,7 @@ class LocalProcessSpawner(Spawner):
             self.log.debug("Interrupting %i", self.pid)
             yield self._signal(signal.SIGINT)
             yield self.wait_for_death(self.INTERRUPT_TIMEOUT)
-        
+
         # clean shutdown failed, use TERM
         status = yield self.poll()
         if status is not None:
@@ -718,7 +864,7 @@ class LocalProcessSpawner(Spawner):
         self.log.debug("Terminating %i", self.pid)
         yield self._signal(signal.SIGTERM)
         yield self.wait_for_death(self.TERM_TIMEOUT)
-        
+
         # TERM failed, use KILL
         status = yield self.poll()
         if status is not None:
@@ -731,4 +877,3 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
-
