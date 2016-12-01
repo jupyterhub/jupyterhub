@@ -210,6 +210,8 @@ class Authenticator(LoggingConfigurable):
          - When a user first authenticates
          - When the hub restarts, for all users.
 
+        This method may be a coroutine.
+
         By default, this just adds the user to the whitelist.
 
         Subclasses may do more extensive things, such as adding actual unix users,
