@@ -395,6 +395,7 @@ class Spawner(LoggingConfigurable):
 
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
+            # leave the notebook-dir value unquoted to allow shell expansions
             args.append('--notebook-dir=%s' % notebook_dir)
         if self.default_url:
             default_url = self.format_string(self.default_url)
