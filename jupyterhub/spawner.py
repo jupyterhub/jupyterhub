@@ -394,7 +394,7 @@ class Spawner(LoggingConfigurable):
             args.append('--port=%i' % self.user.server.port)
 
         if self.notebook_dir:
-            notebook_dir = self.format_string(self.notebook_dir)
+            notebook_dir = os.path.expanduser(self.format_string(self.notebook_dir))
             args.append('--notebook-dir="%s"' % notebook_dir)
         if self.default_url:
             default_url = self.format_string(self.default_url)
