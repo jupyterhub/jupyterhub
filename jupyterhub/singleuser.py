@@ -139,6 +139,9 @@ class SingleUserNotebookApp(NotebookApp):
     hub_api_url = Unicode().tag(config=True)
     aliases = aliases
     flags = flags
+    
+    # disble some single-user configurables
+    token = ''
     open_browser = False
     trust_xheaders = True
     login_handler_class = JupyterHubLoginHandler
