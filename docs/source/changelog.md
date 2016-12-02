@@ -5,9 +5,13 @@ its link will bring up a GitHub listing of changes. Use `git log` on the
 command line for details.
 
 
-## [Unreleased] 0.7
+## [Unreleased] 0.8
 
-### Added
+## 0.7
+
+### [0.7.0] - 2016-12-2
+
+#### Added
 
 - Implement Services API [\#705](https://github.com/jupyterhub/jupyterhub/pull/705)
 - Add `/api/` and `/api/info` endpoints [\#675](https://github.com/jupyterhub/jupyterhub/pull/675)
@@ -20,21 +24,21 @@ command line for details.
 - Add `/hub/user-redirect/...` URL for redirecting users to a file on their own server.
 
 
-### Changed
+#### Changed
 
 - Always install with setuptools but not eggs (effectively require
   `pip install .`) [\#722](https://github.com/jupyterhub/jupyterhub/pull/722)
 - Updated formatting of changelog. [\#711](https://github.com/jupyterhub/jupyterhub/pull/711)
 - Single-user server is provided by JupyterHub package, so single-user servers depend on JupyterHub now.
 
-### Fixed
+#### Fixed
 
 - Fix docker repository location [\#719](https://github.com/jupyterhub/jupyterhub/pull/719)
 - Fix swagger spec conformance and timestamp type in API spec
 - Various redirect-loop-causing bugs have been fixed.
 
 
-### Removed
+#### Removed
 
 - Deprecate `--no-ssl` command line option. It has no meaning and warns if
   used. [\#789](https://github.com/jupyterhub/jupyterhub/pull/789)
@@ -114,7 +118,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.6.1...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.6.1...0.7.0
 [0.6.1]: https://github.com/jupyterhub/jupyterhub/compare/0.6.0...0.6.1
 [0.6.0]: https://github.com/jupyterhub/jupyterhub/compare/0.5.0...0.6.0
 [0.5]: https://github.com/jupyterhub/jupyterhub/compare/0.4.1...0.5.0
