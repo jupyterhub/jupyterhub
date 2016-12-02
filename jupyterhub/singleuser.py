@@ -22,6 +22,7 @@ from traitlets import (
     CUnicode,
     default,
     validate,
+    TraitError,
 )
 
 from notebook.notebookapp import (
@@ -151,7 +152,23 @@ class SingleUserNotebookApp(NotebookApp):
         from being loaded, ensuring admins have full control of configuration.
         """
     ).tag(config=True)
-    
+
+    @validate('notebook_dir')
+    def _notebook_dir_validate(self, proposal):
+        value = os.path.expanduser(proposal['value'])
+        # Strip any trailing slashes
+        # *except* if it's root
+        _, path = os.path.splitdrive(value)
+        if path == os.sep:
+            return value
+        value = value.rstrip(os.sep)
+        if not os.path.isabs(value):
+            # If we receive a non-absolute path, make it absolute.
+            value = os.path.abspath(value)
+        if not os.path.isdir(value):
+            raise TraitError("No such notebook dir: %r" % value)
+        return value
+
     @default('log_datefmt')
     def _log_datefmt_default(self):
         """Exclude date from default date format"""
