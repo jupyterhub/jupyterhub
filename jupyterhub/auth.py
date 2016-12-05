@@ -56,6 +56,17 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    @observe('whitelist')
+    def _check_whitelist(self, change):
+        short_names = [name for name in change['new'] if len(name) <= 1]
+        if short_names:
+            sorted_names = sorted(short_names)
+            single = ''.join(sorted_names)
+            string_set_typo = "set('%s')" % single
+            self.log.warning("whitelist contains single-character names: %s; did you mean set([%r]) instead of %s?",
+                sorted_names[:8], single, string_set_typo,
+            )
+
     custom_html = Unicode(
         help="""
         HTML form to be overridden by authenticators if they want a custom authentication form.
