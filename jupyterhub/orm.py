@@ -17,8 +17,10 @@ from sqlalchemy import (
     DateTime,
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship
+from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.schema import Index
+from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine, Table
 
@@ -67,6 +69,12 @@ class Server(Base):
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode(255), default='/')
     cookie_name = Column(Unicode(255), default='cookie')
+    # added to handle multi-server feature
+    last_activity = Column(DateTime, default=datetime.utcnow)
+
+    users = association_proxy("server_to_users", "user",
+                              creator=lambda user: UserServer(user=user)
+                              )
 
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)
@@ -95,7 +103,8 @@ class Server(Base):
         """representation of URL used for binding
 
         Never used in APIs, only logging,
-        since it can be non-connectable value, such as '', meaning all interfaces.
+        since it can be non-connectable value, such as '',
+        meaning all interfaces.
         """
         if self.ip in {'', '0.0.0.0'}:
             return self.url.replace('127.0.0.1', self.ip or '*', 1)
@@ -107,7 +116,8 @@ class Server(Base):
         if http:
             yield wait_for_http_server(self.url, timeout=timeout)
         else:
-            yield wait_for_server(self.ip or '127.0.0.1', self.port, timeout=timeout)
+            yield wait_for_server(self.ip or '127.0.0.1', self.port,
+                                  timeout=timeout)
 
     def is_up(self):
         """Is the server accepting connections?"""
@@ -145,10 +155,10 @@ class Proxy(Base):
             body = json.dumps(body)
         self.log.debug("Fetching %s %s", method, url)
         req = HTTPRequest(url,
-            method=method,
-            headers={'Authorization': 'token {}'.format(self.auth_token)},
-            body=body,
-        )
+                          method=method,
+                          headers={'Authorization': 'token {}'.format(self.auth_token)},
+                          body=body,
+                          )
 
         return client.fetch(req)
 
@@ -160,46 +170,48 @@ class Proxy(Base):
                 "Service %s does not have an http endpoint to add to the proxy.", service.name)
 
         self.log.info("Adding service %s to proxy %s => %s",
-            service.name, service.proxy_path, service.server.host,
-        )
+                      service.name, service.proxy_path, service.server.host,
+                      )
 
         yield self.api_request(service.proxy_path,
-            method='POST',
-            body=dict(
-                target=service.server.host,
-                service=service.name,
-            ),
-            client=client,
-        )
+                               method='POST',
+                               body=dict(
+                                         target=service.server.host,
+                                         service=service.name,
+                                         ),
+                               client=client,
+                               )
 
     @gen.coroutine
     def delete_service(self, service, client=None):
         """Remove a service's server from the proxy table."""
         self.log.info("Removing service %s from proxy", service.name)
         yield self.api_request(service.proxy_path,
-            method='DELETE',
-            client=client,
-        )
+                               method='DELETE',
+                               client=client,
+                               )
 
     @gen.coroutine
+    # FIX-ME
+    # we need to add a reference to a specific server
     def add_user(self, user, client=None):
         """Add a user's server to the proxy table."""
         self.log.info("Adding user %s to proxy %s => %s",
-            user.name, user.proxy_path, user.server.host,
-        )
+                      user.name, user.proxy_path, user.server.host,
+                      )
 
         if user.spawn_pending:
             raise RuntimeError(
-                "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
+                    "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
 
         yield self.api_request(user.proxy_path,
-            method='POST',
-            body=dict(
-                target=user.server.host,
-                user=user.name,
-            ),
-            client=client,
-        )
+                               method='POST',
+                               body=dict(
+                                       target=user.server.host,
+                                       user=user.name,
+                                       ),
+                               client=client,
+                               )
 
     @gen.coroutine
     def delete_user(self, user, client=None):
@@ -248,6 +260,8 @@ class Proxy(Base):
         resp = yield self.api_request('', client=client)
         return json.loads(resp.body.decode('utf8', 'replace'))
 
+    # FIX-ME
+    # we need to add a reference to a specific server
     @gen.coroutine
     def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy"""
@@ -268,7 +282,7 @@ class Proxy(Base):
                 if user.name in user_routes:
                     self.log.warning("Removing route for not running %s", user.name)
                     futures.append(self.delete_user(user))
-        
+
         # check service routes
         service_routes = { r['service'] for r in routes.values() if 'service' in r }
         for orm_service in db.query(Service).filter(Service.server != None):
@@ -283,7 +297,6 @@ class Proxy(Base):
                 futures.append(self.add_service(service))
         for f in futures:
             yield f
-
 
 
 class Hub(Base):
@@ -316,9 +329,10 @@ class Hub(Base):
 
 # user:group many:many mapping table
 user_group_map = Table('user_group_map', Base.metadata,
-    Column('user_id', ForeignKey('users.id'), primary_key=True),
-    Column('group_id', ForeignKey('groups.id'), primary_key=True),
-)
+                       Column('user_id', ForeignKey('users.id'), primary_key=True),
+                       Column('group_id', ForeignKey('groups.id'), primary_key=True),
+                       )
+
 
 class Group(Base):
     """User Groups"""
@@ -326,24 +340,25 @@ class Group(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(1023), unique=True)
     users = relationship('User', secondary='user_group_map', back_populates='groups')
-    
+
     def __repr__(self):
         return "<%s %s (%i users)>" % (
             self.__class__.__name__, self.name, len(self.users)
         )
+
     @classmethod
     def find(cls, db, name):
         """Find a group by name.
 
         Returns None if not found.
         """
-        return db.query(cls).filter(cls.name==name).first()
+        return db.query(cls).filter(cls.name == name).first()
 
 
 class User(Base):
     """The User table
 
-    Each user has a single server,
+    Each user can have more than one server,
     and multiple tokens used for authorization.
 
     API tokens grant access to the Hub's REST API.
@@ -353,22 +368,24 @@ class User(Base):
     Cookies are set with a single ID.
     Resetting the Cookie ID invalidates all cookies, forcing user to login again.
 
+    `server` returns the first entry for the users' servers.
+
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
     """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(1023), unique=True)
-    # should we allow multiple servers per user?
-    _server_id = Column(Integer, ForeignKey('servers.id', ondelete="SET NULL"))
-    server = relationship(Server, primaryjoin=_server_id == Server.id)
     admin = Column(Boolean, default=False)
     last_activity = Column(DateTime, default=datetime.utcnow)
+
+    servers = association_proxy("user_to_servers", "server", creator=lambda server: UserServer(server=server))
 
     api_tokens = relationship("APIToken", backref="user")
     cookie_id = Column(Unicode(1023), default=new_token)
     # User.state is actually Spawner state
-    # We will need to figure something else out if/when we have multiple spawners per user
+    # We will need to figure something else
+    # out if/when we have multiple spawners per user
     state = Column(JSONDict)
     # Authenticators can store their state here:
     auth_state = Column(JSONDict)
@@ -376,6 +393,17 @@ class User(Base):
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
     other_user_cookies = set([])
+
+    @property
+    def server(self):
+        """Returns the first element of servers.
+
+        Returns None if the list is empty.
+        """
+        if len(self.servers) == 0:
+            return None
+        else:
+            return self.servers[0]
 
     def __repr__(self):
         if self.server:
@@ -393,7 +421,7 @@ class User(Base):
 
     def new_api_token(self, token=None):
         """Create a new API token
-        
+
         If `token` is given, load that token.
         """
         return APIToken.new(token=token, user=self)
@@ -404,7 +432,39 @@ class User(Base):
 
         Returns None if not found.
         """
-        return db.query(cls).filter(cls.name==name).first()
+        return db.query(cls).filter(cls.name == name).first()
+
+
+class UserServer(Base):
+    """The UserServer table
+
+    Each user can have have more than one server,
+    we use this table to mantain the Many-To-Many
+    relationship between Users and Servers.
+
+    Cookies are set with a single ID.
+    Resetting the Cookie ID invalidates all cookies, forcing user to login again.
+
+    A `state` column contains a JSON dict,
+    used for restoring state of a Spawner.
+    """
+    __tablename__ = 'users_servers'
+
+    _user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
+    _server_id = Column(Integer, ForeignKey('servers.id'), primary_key=True)
+
+    user = relationship(User, backref=backref('user_to_servers', cascade='all, delete-orphan'))
+    server = relationship(Server, backref=backref('server_to_users', cascade='all, delete-orphan'))
+
+    __table_args__ = (Index('server_user_index', '_server_id', '_user_id'),)
+
+    def __repr__(self):
+        return "<{cls}({name}@{ip}:{port})>".format(
+            cls=self.__class__.__name__,
+            name=self.user.name,
+            ip=self.server.ip,
+            port=self.server.port,
+        )
 
 
 class Service(Base):
@@ -427,7 +487,7 @@ class Service(Base):
     """
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    
+
     # common user interface:
     name = Column(Unicode(1023), unique=True)
     admin = Column(Boolean, default=False)
@@ -445,7 +505,7 @@ class Service(Base):
         If `token` is given, load that token.
         """
         return APIToken.new(token=token, service=self)
-    
+
     @classmethod
     def find(cls, db, name):
         """Find a service by name.
@@ -458,7 +518,7 @@ class Service(Base):
 class APIToken(Base):
     """An API token"""
     __tablename__ = 'api_tokens'
-    
+
     # _constraint = ForeignKeyConstraint(['user_id', 'server_id'], ['users.id', 'services.id'])
     @declared_attr
     def user_id(cls):
@@ -509,7 +569,7 @@ class APIToken(Base):
         """Find a token object by value.
 
         Returns None if not found.
-        
+
         `kind='user'` only returns API tokens for users
         `kind='service'` only returns API tokens for services
         """
