@@ -52,6 +52,14 @@ class Spawner(LoggingConfigurable):
     authenticator = Any()
     api_token = Unicode()
 
+    will_resume = Bool(False,
+        help="""Whether the Spawner will resume on next start
+
+        If a Spawner will resume instead of starting anew (e.g. resuming a Docker container),
+        API tokens in use when the Spawner stops will not be deleted.
+        """
+    )
+
     ip = Unicode('127.0.0.1',
         help="""
         The IP address (or hostname) the single-user server should listen on.
