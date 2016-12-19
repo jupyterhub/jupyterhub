@@ -70,12 +70,12 @@ class _MockUser(HasTraits):
 
 class _ServiceSpawner(LocalProcessSpawner):
     """Subclass of LocalProcessSpawner
-
+    
     Removes notebook-specific-ness from LocalProcessSpawner.
     """
     cwd = Unicode()
     cmd = Command(minlen=0)
-
+    
     def make_preexec_fn(self, name):
         if not name or name == getuser():
             # no setuid if no name
@@ -116,25 +116,25 @@ class Service(LoggingConfigurable):
     - url: str (None)
         The URL where the service is/should be.
         If specified, the service will be added to the proxy at /services/:name
-
+    
     If a service is to be managed by the Hub, it has a few extra options:
-
+    
     - command: (str/Popen list)
         Command for JupyterHub to spawn the service.
         Only use this if the service should be a subprocess.
         If command is not specified, it is assumed to be managed
         by a
-    - environment: dict
-        Additional environment variables for the service.
+    - env: dict
+        environment variables to add to the current env
     - user: str
         The name of a system user to become.
         If unspecified, run as the same user as the Hub.
     """
-
+    
     # inputs:
     name = Unicode(
         help="""The name of the service.
-
+        
         If the service has an http endpoint, it
         """
     ).tag(input=True)
@@ -143,14 +143,14 @@ class Service(LoggingConfigurable):
     ).tag(input=True)
     url = Unicode(
         help="""URL of the service.
-
+        
         Only specify if the service runs an HTTP(s) endpoint that.
         If managed, will be passed as JUPYTERHUB_SERVICE_URL env.
         """
     ).tag(input=True)
     api_token = Unicode(
         help="""The API token to use for the service.
-
+        
         If unspecified, an API token will be generated for managed services.
         """
     ).tag(input=True)
