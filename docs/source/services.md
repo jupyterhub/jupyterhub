@@ -54,7 +54,7 @@ If a service is also to be managed by the Hub, it has a few extra options:
         externally.
       - If a command is specified for launching the Service, the Service will
         be started and managed by the Hub.
-- `env: dict` - environment variables to add to the current env
+- `environment: dict` - additional environment variables for the Service.
 - `user: str` - the name of a system user to manage the Service. If
   unspecified, run as the same user as the Hub.
 
@@ -99,7 +99,7 @@ c.JupyterHub.services = [
 A Hub-Managed Service may also be configured with additional optional
 parameters, which describe the environment needed to start the Service process:
 
-- `env: dict` - additional environment variables for the Service.
+- `environment: dict` - additional environment variables for the Service.
 - `user: str` - name of the user to run the server if different from the Hub.
    Requires Hub to be root.
 - `cwd: path` directory in which to run the Service, if different from the
