@@ -234,6 +234,12 @@ class User(HasTraits):
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
                 self.log.warning("DEPRECATION: Spawner.start should return (ip, port) in JupyterHub >= 0.7")
+            if spawner.api_token != api_token:
+                # Spawner re-used an API token, discard the unused api_token
+                orm_token = orm.APIToken.find(self.db, api_token)
+                if orm_token is not None:
+                    self.db.delete(orm_token)
+                    self.db.commit()
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
                 self.log.warning("{user}'s server failed to start in {s} seconds, giving up".format(
@@ -313,10 +319,13 @@ class User(HasTraits):
             if self.server:
                 # cleanup server entry from db
                 self.db.delete(self.server)
-            orm_token = orm.APIToken.find(self.db, api_token)
-            if orm_token:
-                self.db.delete(orm_token)
             self.server = None
+            if not spawner.will_resume:
+                # find and remove the API token if the spawner isn't
+                # going to re-use it next time
+                orm_token = orm.APIToken.find(self.db, api_token)
+                if orm_token:
+                    self.db.delete(orm_token)
             self.db.commit()
         finally:
             self.stop_pending = False
