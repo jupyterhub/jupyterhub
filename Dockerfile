@@ -46,7 +46,7 @@ RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.2.12-Linux-x86_64.s
     /opt/conda/bin/pip install --upgrade pip && \
     rm /tmp/miniconda.sh
 ENV PATH=/opt/conda/bin:$PATH
-
+ADD jupyterhub/jupyterhub/version.py /src/jupyterhub/jupyterhub/version.py
 ADD . /src/jupyterhub
 WORKDIR /src/jupyterhub
 
