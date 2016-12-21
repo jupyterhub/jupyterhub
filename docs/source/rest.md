@@ -67,4 +67,4 @@ Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
 [on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
 [OpenAPI Initiative]: https://www.openapis.org/
-[JupyterHub REST API]: ./api/index.html
+[JupyterHub REST API]: ./_static/rest-api/index.html
