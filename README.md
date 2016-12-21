@@ -131,11 +131,11 @@ Some examples, meant as illustration and testing of this concept:
 ----
 
 ## Docker
-A ready to go [docker image for JupyterHub](https://hub.docker.com/r/jupyterhub/jupyterhub/) gives a straightforward deployment of JupyterHub.
+A starter [docker image for JupyterHub](https://hub.docker.com/r/jupyterhub/jupyterhub/) gives a baseline deployment of JupyterHub.
 
-*Note: This `jupyterhub/jupyterhub` docker image is only an image for running the Hub service itself.
-It does not require the other Jupyter components, such as Notebook installation, which are needed by the single-user servers.
-To run the single-user servers, which may be on the same system as the Hub or not, Jupyter Notebook version 4 or greater must be installed.*
+**Important:** This `jupyterhub/jupyterhub` image contains only the Hub itself, with no configuration. In general, one needs
+to make a derivative image, with at least a `jupyterhub_config.py` setting up an Authenticator and/or a Spawner. To run the
+single-user servers, which may be on the same system as the Hub or not, Jupyter Notebook version 4 or greater must be installed.
 
 #### Starting JupyterHub with docker
 The JupyterHub docker image can be started with the following command:
