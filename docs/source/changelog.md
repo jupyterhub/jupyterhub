@@ -13,7 +13,7 @@ command line for details.
 
 #### Added
 
-- `Spawner.will_resume` for signalling that a single-user server is paused instead of stopped.
+- `Spawner.will_resume` for signaling that a single-user server is paused instead of stopped.
   This is needed for cases like `DockerSpawner.remove_containers = False`,
   where the first API token is re-used for subsequent spawns.
 - Warning on startup about single-character usernames,
