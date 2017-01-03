@@ -454,7 +454,7 @@ class JupyterHub(Application):
                     'name': 'formgrader',
                     'url': 'http://127.0.0.1:1234',
                     'token': 'super-secret',
-                    'env':
+                    'environment':
                 }
             ]
         """

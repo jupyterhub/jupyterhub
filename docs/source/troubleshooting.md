@@ -249,3 +249,26 @@ jupyter kernelspec list
 ```bash
 jupyterhub --debug
 ```
+
+## Toree integration with HDFS rack awareness script
+
+The Apache Toree kernel will an issue, when running with JupyterHub, if the standard HDFS 
+rack awareness script is used. This will materialize in the logs as a repeated WARN:
+
+```bash
+16/11/29 16:24:20 WARN ScriptBasedMapping: Exception running /etc/hadoop/conf/topology_script.py some.ip.address
+ExitCodeException exitCode=1:   File "/etc/hadoop/conf/topology_script.py", line 63
+    print rack
+             ^
+SyntaxError: Missing parentheses in call to 'print'
+
+    at `org.apache.hadoop.util.Shell.runCommand(Shell.java:576)`
+```
+
+In order to resolve this issue, there are two potential options.
+
+1. Update HDFS core-site.xml, so the parameter "net.topology.script.file.name" points to a custom 
+script (e.g. /etc/hadoop/conf/custom_topology_script.py). Copy the original script and change the first line point
+to a python two installation (e.g. /usr/bin/python).
+2. In spark-env.sh add a Python 2 installation to your path (e.g. export PATH=/opt/anaconda2/bin:$PATH).
+
