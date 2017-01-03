@@ -32,8 +32,11 @@ from .utils import (
 
 class JSONDict(TypeDecorator):
     """Represents an immutable structure as a json-encoded string.
+
     Usage::
+
         JSONEncodedDict(255)
+
     """
 
     impl = TEXT
@@ -56,6 +59,7 @@ Base.log = app_log
 
 class Server(Base):
     """The basic state of a server
+
     connection and cookie info
     """
     __tablename__ = 'servers'
@@ -98,6 +102,7 @@ class Server(Base):
     @property
     def bind_url(self):
         """representation of URL used for binding
+
         Never used in APIs, only logging,
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
@@ -120,6 +125,7 @@ class Server(Base):
 
 class Proxy(Base):
     """A configurable-http-proxy instance.
+
     A proxy consists of the API server info and the public-facing server info,
     plus an auth token for configuring the proxy table.
     """
@@ -218,6 +224,7 @@ class Proxy(Base):
     @gen.coroutine
     def add_all_services(self, service_dict):
         """Update the proxy table from the database.
+
         Used when loading up a new proxy.
         """
         db = inspect(self).session
@@ -233,6 +240,7 @@ class Proxy(Base):
     @gen.coroutine
     def add_all_users(self, user_dict):
         """Update the proxy table from the database.
+
         Used when loading up a new proxy.
         """
         db = inspect(self).session
@@ -293,7 +301,9 @@ class Proxy(Base):
 
 class Hub(Base):
     """Bring it all together at the hub.
+
     The Hub is a server, plus its API path suffix
+
     the api_url is the full URL plus the api_path suffix on the end
     of the server base_url.
     """
@@ -344,15 +354,20 @@ class Group(Base):
 
 class User(Base):
     """The User table
+
     Each user can have more than a single server,
     and multiple tokens used for authorization.
+
     API tokens grant access to the Hub's REST API.
     These are used by single-user servers to authenticate requests,
     and external services to manipulate the Hub.
+
     Cookies are set with a single ID.
     Resetting the Cookie ID invalidates all cookies, forcing user to login again.
+
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
+
     `server` returns the first entry for the users' servers.
     'servers' is a list that contains a reference to the ser's Servers.
     """
@@ -449,15 +464,20 @@ class UserServer(Base):
 
 class Service(Base):
     """A service run with JupyterHub
+
     A service is similar to a User without a Spawner.
     A service can have API tokens for accessing the Hub's API
+
     It has:
     - name
     - admin
     - api tokens
     - server (if proxied http endpoint)
+
     In addition to what it has in common with users, a Service has extra info:
+
     - pid: the process id (if managed)
+
     """
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -482,6 +502,7 @@ class Service(Base):
     @classmethod
     def find(cls, db, name):
         """Find a service by name.
+
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name==name).first()
@@ -539,6 +560,7 @@ class APIToken(Base):
     @classmethod
     def find(cls, db, token, *, kind=None):
         """Find a token object by value.
+
         Returns None if not found.
 
         `kind='user'` only returns API tokens for users
