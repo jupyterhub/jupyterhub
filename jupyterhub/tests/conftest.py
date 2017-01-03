@@ -30,8 +30,8 @@ def db():
         _db = orm.new_session_factory('sqlite:///:memory:', echo=True)()
         user = orm.User(
             name=getuser(),
-            server=orm.Server(),
         )
+        user.servers.append(orm.Server())
         hub = orm.Hub(
             server=orm.Server(),
         )

@@ -54,7 +54,7 @@ def test_hub(db):
             port = 1234,
             base_url='/hubtest/',
         ),
-
+        
     )
     db.add(hub)
     db.commit()
@@ -129,14 +129,14 @@ def test_service_server(db):
     service = orm.Service(name='has_servers')
     db.add(service)
     db.commit()
-
+    
     assert service.server is None
     server = service.server = orm.Server()
     assert service
     assert server.id is None
     db.commit()
     assert isinstance(server.id, int)
-
+    
 
 def test_token_find(db):
     service = db.query(orm.Service).first()
@@ -172,17 +172,17 @@ def test_spawn_fails(db, io_loop):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
-
+    
     class BadSpawner(MockSpawner):
         @gen.coroutine
         def start(self):
             raise RuntimeError("Split the party")
-
+    
     user = User(orm_user, {
         'spawner_class': BadSpawner,
         'config': None,
     })
-
+    
     with pytest.raises(Exception) as exc:
         io_loop.run_sync(user.spawn)
     assert user.server is None
@@ -192,7 +192,7 @@ def test_spawn_fails(db, io_loop):
 def test_groups(db):
     user = orm.User.find(db, name='aeofel')
     db.add(user)
-
+    
     group = orm.Group(name='lives')
     db.add(group)
     db.commit()
