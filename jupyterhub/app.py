@@ -253,6 +253,18 @@ class JupyterHub(Application):
         Default is two weeks.
         """
     ).tag(config=True)
+    use_global_cookie = Bool(False,
+        help="""Use a single global cookie for all endpoints.
+        
+        Disables path-based cookie isolation, so the same cookie is used
+        for every endpoint.
+        This means that the same cookies used to authenticate with the Hub
+        are sent to single-user servers.
+        If a single-user server is compromised,
+        it will be able to steal the cookies of users who visit their server,
+        so only use this if users are trusted.
+        """
+    ).tag(config=True)
     last_activity_interval = Integer(300,
         help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
@@ -1034,7 +1046,7 @@ class JupyterHub(Application):
                     proto=parsed.scheme,
                     ip=parsed.hostname,
                     port=port,
-                    cookie_name='jupyterhub-services',
+                    cookie_name=self.hub.server.cookie_name if self.use_global_cookie else 'jupyterhub-services',
                     base_url=service.prefix,
                 )
                 self.db.add(server)
@@ -1254,6 +1266,7 @@ class JupyterHub(Application):
             base_url=self.base_url,
             cookie_secret=self.cookie_secret,
             cookie_max_age_days=self.cookie_max_age_days,
+            use_global_cookie=self.use_global_cookie,
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),

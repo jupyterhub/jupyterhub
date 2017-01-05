@@ -49,6 +49,10 @@ class BaseHandler(RequestHandler):
         return self.settings.get('base_url', '/')
 
     @property
+    def use_global_cookie(self):
+        return self.settings.get('use_global_cookie', False)
+
+    @property
     def version_hash(self):
         return self.settings.get('version_hash', '')
 
@@ -223,6 +227,8 @@ class BaseHandler(RequestHandler):
             self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
         self.clear_cookie(self.hub.server.cookie_name, path=self.hub.server.base_url, **kwargs)
         self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'))
+        if self.use_global_cookie:
+            self.clear_cookie(self.hub.server.cookie_name, **kwargs)
 
     def _set_user_cookie(self, user, server):
         # tornado <4.2 have a bug that consider secure==True as soon as
@@ -233,7 +239,7 @@ class BaseHandler(RequestHandler):
             kwargs = {}
         if self.subdomain_host:
             kwargs['domain'] = self.domain
-        self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
+        self.log.debug("Setting cookie on %s for %s: %s, %s", server.base_url, user.name, server.cookie_name, kwargs)
         self.set_secure_cookie(
             server.cookie_name,
             user.cookie_id,
@@ -256,6 +262,18 @@ class BaseHandler(RequestHandler):
         """set the login cookie for the Hub"""
         self._set_user_cookie(user, self.hub.server)
 
+    def set_global_cookie(self, user):
+        """Set a global cookie, to be used on all endpoints
+
+        Implicitly trusts single-user servers,
+        because this grants single-user servers access
+        to cookies used to authenticate with the Hub.
+        """
+        self._set_user_cookie(user, orm.Server(
+            cookie_name=self.hub.server.cookie_name,
+            base_url=self.base_url,
+        ))
+
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""
         if self.subdomain_host and not self.request.host.startswith(self.domain):
@@ -263,6 +281,14 @@ class BaseHandler(RequestHandler):
                 "Possibly setting cookie on wrong domain: %s != %s",
                 self.request.host, self.domain)
         # create and set a new cookie token for the single-user server
+        
+        if self.use_global_cookie:
+            # global cookie means the same cookie is used by all endpoints,
+            # not separating the cookie paths for Hub and users.
+            if not self.get_current_user_cookie():
+                self.set_global_cookie(user)
+            return
+
         if user.server:
             self.set_server_cookie(user)
 
