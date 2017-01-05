@@ -47,7 +47,12 @@ class HubAuthenticatedHandler(HubAuthenticated):
     @property
     def hub_users(self):
         return { self.settings['user'] }
-
+    @property
+    def hub_groups(self):
+        if self.settings['group']:
+            return { self.settings['group'] }
+        return set()
+    
 
 class JupyterHubLoginHandler(LoginHandler):
     """LoginHandler that hooks up Hub authentication"""
@@ -76,6 +81,7 @@ class JupyterHubLogoutHandler(LogoutHandler):
 aliases = dict(notebook_aliases)
 aliases.update({
     'user' : 'SingleUserNotebookApp.user',
+    'group': 'SingleUserNotebookApp.group',
     'cookie-name': 'HubAuth.cookie_name',
     'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
     'hub-host': 'SingleUserNotebookApp.hub_host',
@@ -131,7 +137,8 @@ class SingleUserNotebookApp(NotebookApp):
     version = __version__
     classes = NotebookApp.classes + [HubAuth]
 
-    user = CUnicode(config=True)
+    user = CUnicode().tag(config=True)
+    group = CUnicode().tag(config=True)
     def _user_changed(self, name, old, new):
         self.log.name = new
     hub_prefix = Unicode().tag(config=True)
@@ -234,6 +241,7 @@ class SingleUserNotebookApp(NotebookApp):
         self.init_hub_auth()
         s = self.tornado_settings
         s['user'] = self.user
+        s['group'] = self.group
         s['hub_prefix'] = self.hub_prefix
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
