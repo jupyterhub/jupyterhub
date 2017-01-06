@@ -405,6 +405,9 @@ You can restrict which users are allowed to login with `Authenticator.whitelist`
 c.Authenticator.whitelist = {'mal', 'zoe', 'inara', 'kaylee'}
 ```
 
+Users listed in the whitelist are added to the Hub database when the Hub is
+started.
+
 ### Managing Hub administrators
 
 Admin users of JupyterHub have the ability to take actions on users' behalf,
@@ -427,12 +430,17 @@ Note: additional configuration examples are provided in this guide's
 
 ### Add or remove users from the Hub
 
-Users can be added and removed to the Hub via the admin panel or REST API. These users will be
-added to the whitelist and database. Restarting the Hub will not require manually updating the
-whitelist in your config file, as the users will be loaded from the database. This means that
-after starting the Hub once, it is not sufficient to remove users from the whitelist in your
-config file. You must also remove them from the database, either by discarding the database file,
-or via the admin UI.
+Users can be added to and removed from the Hub via either the admin panel or
+REST API.
+
+If a user is **added**, the user will be automatically added to the whitelist
+and database. Restarting the Hub will not require manually updating the
+whitelist in your config file, as the users will be loaded from the database.
+
+After starting the Hub once, it is not sufficient to **remove** a user from
+the whitelist in your config file. You must also remove the user from the Hub's
+database, either by deleting the user from the admin page, or you can clear
+the `jupyterhub.sqlite` database and start fresh.
 
 The default `PAMAuthenticator` is one case of a special kind of authenticator, called a
 `LocalAuthenticator`, indicating that it manages users on the local system. When you add a user to
