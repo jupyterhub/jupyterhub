@@ -300,8 +300,12 @@ class HubAuthenticated(object):
         Returns:
             user_model (dict): The user model, if a user is identified, None if authentication fails.
         """
+        if hasattr(self, '_hub_auth_user_cache'):
+            return self._hub_auth_user_cache
         user_model = self.hub_auth.get_user(self)
         if not user_model:
+            self._hub_auth_user_cache = None
             return
-        return self.check_hub_user(user_model)
+        self._hub_auth_user_cache = self.check_hub_user(user_model)
+        return self._hub_auth_user_cache
 

@@ -14,11 +14,9 @@ c.JupyterHub.load_groups = {
     ]
 }
 
-hub_ip = '127.0.0.1'
-hub_api_port = 8081
 service_name = 'shared-notebook'
-group_name = 'shared'
 service_port = 9999
+group_name = 'shared'
 
 # start the notebook server as a service
 c.JupyterHub.services = [
@@ -27,12 +25,8 @@ c.JupyterHub.services = [
         'url': 'http://127.0.0.1:{}'.format(service_port),
         'command': [
             'jupyterhub-singleuser',
-            '--cookie-name=jupyterhub-services',
-            '--port={}'.format(service_port),
-            '--group={}'.format(group_name),
-            '--base-url=/services/{}'.format(service_name),
-            '--hub-prefix=/hub/',
-            '--hub-api-url=http://{}:{}/hub/api'.format(hub_ip, hub_api_port),
-        ]
+            '--group=shared',
+            '--debug',
+        ],
     }
 ]
