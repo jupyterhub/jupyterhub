@@ -5,6 +5,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import os
+from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader, FunctionLoader
 
@@ -21,6 +22,7 @@ from traitlets import (
     Unicode,
     CUnicode,
     default,
+    observe,
     validate,
     TraitError,
 )
@@ -124,6 +126,7 @@ def _exclude_home(path_list):
         if not p.startswith(home):
             yield p
 
+
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
     description = dedent("""
@@ -139,14 +142,49 @@ class SingleUserNotebookApp(NotebookApp):
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)
-    def _user_changed(self, name, old, new):
-        self.log.name = new
-    hub_prefix = Unicode().tag(config=True)
+    @observe('user')
+    def _user_changed(self, change):
+        self.log.name = change.new
+
     hub_host = Unicode().tag(config=True)
+
+    hub_prefix = Unicode('/hub/').tag(config=True)
+    @default('hub_prefix')
+    def _hub_prefix_default(self):
+        base_url = os.environ.get('JUPYTERHUB_BASE_URL') or '/'
+        return base_url + 'hub/'
+
     hub_api_url = Unicode().tag(config=True)
+    @default('hub_api_url')
+    def _hub_api_url_default(self):
+        return os.environ.get('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api'
+
+    # defaults for some configurables that may come from service env variables:
+    @default('base_url')
+    def _base_url_default(self):
+        return os.environ.get('JUPYTERHUB_SERVICE_PREFIX') or '/'
+
+    @default('cookie_name')
+    def _cookie_name_default(self):
+        if os.environ.get('JUPYTERHUB_SERVICE_NAME'):
+            # if I'm a service, use the services cookie name
+            return 'jupyterhub-services'
+
+    @default('port')
+    def _port_default(self):
+        if os.environ.get('JUPYTERHUB_SERVICE_URL'):
+            url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
+            return url.port
+
+    @default('ip')
+    def _ip_default(self):
+        if os.environ.get('JUPYTERHUB_SERVICE_URL'):
+            url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
+            return url.hostname
+
     aliases = aliases
     flags = flags
-    
+
     # disble some single-user configurables
     token = ''
     open_browser = False
