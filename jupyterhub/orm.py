@@ -73,10 +73,6 @@ class Server(Base):
     # added to handle multi-server feature
     last_activity = Column(DateTime, default=datetime.utcnow)
 
-    users = association_proxy("server_to_users", "user",
-                              creator=lambda user: UserServer(user=user)
-                              )
-
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)
 
@@ -368,8 +364,8 @@ class User(Base):
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
 
-    `server` returns the first entry for the users' servers.
-    'servers' is a list that contains a reference to the ser's Servers.
+    'server' returns the first entry for the users' servers.
+    'servers' is a list that contains a reference to the user's Servers.
     """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
