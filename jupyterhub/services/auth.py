@@ -281,7 +281,7 @@ class HubAuthenticated(object):
         if self.hub_users and name in self.hub_users:
             # user in whitelist
             return user_model
-        elif self.hub_groups and set(user_model['groups']).union(self.hub_groups):
+        elif self.hub_groups and set(user_model['groups']).intersection(self.hub_groups):
             # group in whitelist
             return user_model
         else:
