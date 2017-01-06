@@ -2,11 +2,8 @@
 set -e
 
 export JUPYTERHUB_API_TOKEN=super-secret
+export JUPYTERHUB_SERVICE_URL=http://127.0.0.1:9999
+export JUPYTERHUB_SERVICE_NAME=shared-notebook
 
 jupyterhub-singleuser \
-    --cookie-name=jupyterhub-services \
-    --port=9999 \
-    --group='shared' \
-    --base-url=/services/shared-notebook \
-    --hub-prefix=/hub/ \
-    --hub-api-url=http://127.0.0.1:8081/hub/api/
+    --group='shared'
