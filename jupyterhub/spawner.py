@@ -190,7 +190,7 @@ class Spawner(LoggingConfigurable):
         Environment variables that end up in the single-user server's process come from 3 sources:
           - This `environment` configurable
           - The JupyterHub process' environment variables that are whitelisted in `env_keep`
-          - Variables to establish contact between the single-user notebook and the hub (such as JPY_API_TOKEN)
+          - Variables to establish contact between the single-user notebook and the hub (such as JUPYTERHUB_API_TOKEN)
 
         The `enviornment` configurable should be set by JupyterHub administrators to add
         installation specific environment variables. It is a dict where the key is the name of the environment
@@ -414,7 +414,9 @@ class Spawner(LoggingConfigurable):
                 env[key] = value(self)
             else:
                 env[key] = value
-
+        
+        env['JUPYTERHUB_API_TOKEN'] = self.api_token
+        # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
 
         # Put in limit and guarantee info if they exist.

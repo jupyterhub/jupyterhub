@@ -228,11 +228,18 @@ class SingleUserNotebookApp(NotebookApp):
         super(SingleUserNotebookApp, self).start()
 
     def init_hub_auth(self):
-        if not os.environ.get('JPY_API_TOKEN'):
-            self.exit("JPY_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?")
+        api_token = None
+        if os.getenv('JPY_API_TOKEN'):
+            # Deprecated env variable (as of 0.7.2)
+            api_token = os.environ.pop('JPY_API_TOKEN')
+        if os.getenv('JUPYTERHUB_API_TOKEN'):
+            api_token = os.environ.pop('JUPYTERHUB_API_TOKEN')
+        
+        if not api_token:
+            self.exit("JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?")
         self.hub_auth = HubAuth(
             parent=self,
-            api_token=os.environ.pop('JPY_API_TOKEN'),
+            api_token=api_token,
             api_url=self.hub_api_url,
         )
 
