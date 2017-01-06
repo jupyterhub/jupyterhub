@@ -571,6 +571,9 @@ class UserRedirectHandler(BaseHandler):
     def get(self, path):
         user = self.get_current_user()
         url = url_path_join(user.url, path)
+        if self.request.query:
+            # FIXME: use urlunparse instead?
+            url += '?' + self.request.query
         self.redirect(url)
 
 
