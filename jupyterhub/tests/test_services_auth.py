@@ -101,7 +101,8 @@ def test_hub_auth():
 def test_hub_authenticated(request):
     auth = HubAuth(cookie_name='jubal')
     mock_model = {
-        'name': 'jubalearly'
+        'name': 'jubalearly',
+        'groups': ['lions'],
     }
     cookie_url = url_path_join(auth.api_url, "authorizations/cookie", auth.cookie_name)
     good_url = url_path_join(cookie_url, "early")
@@ -186,6 +187,25 @@ def test_hub_authenticated(request):
 
         # no pass whitelist
         TestHandler.hub_users = {'kaylee'}
+        r = requests.get('http://127.0.0.1:%i' % port,
+            cookies={'jubal': 'early'},
+            allow_redirects=False,
+        )
+        r.raise_for_status()
+        assert r.status_code == 302
+        assert auth.login_url in r.headers['Location']
+        
+        # pass group whitelist
+        TestHandler.hub_groups = {'lions'}
+        r = requests.get('http://127.0.0.1:%i' % port,
+            cookies={'jubal': 'early'},
+            allow_redirects=False,
+        )
+        r.raise_for_status()
+        assert r.status_code == 200
+
+        # no pass group whitelist
+        TestHandler.hub_groups = {'tigers'}
         r = requests.get('http://127.0.0.1:%i' % port,
             cookies={'jubal': 'early'},
             allow_redirects=False,
