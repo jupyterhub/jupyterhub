@@ -3,6 +3,8 @@
 This directory contains two examples of running a shared notebook server as a service,
 one as a 'managed' service, and one as an external service with supervisor.
 
+These examples require jupyterhub >= 0.7.2.
+
 A single-user notebook server is run as a service,
 and uses groups to authenticate a collection of users with the Hub.
 
@@ -20,6 +22,4 @@ In the external example, some extra steps are required to set up supervisor:
 3. install `shared-notebook-service` somewhere on your system, and update `/path/to/shared-notebook-service` to the absolute path of this destination
 3. copy `shared-notebook.conf` to `/etc/supervisor/conf.d/`
 4. `supervisorctl reload`
-
-These examples require jupyterhub >= 0.7.2.
 
