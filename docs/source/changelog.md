@@ -9,6 +9,19 @@ command line for details.
 
 ## 0.7
 
+### [0.7.2] - 2017-01-09
+
+#### Added
+
+- Support service environment variables and defaults in `jupyterhub-singleuser`
+  for easier deployment of notebook servers as a Service.
+- Add `--group` parameter for deploying `jupyterhub-singleuser` as a Service with group authentication.
+- Include URL parameters when redirecting through `/user-redirect/`
+
+### Fixed
+
+- Fix group authentication for HubAuthenticated services
+
 ### [0.7.1] - 2017-01-02
 
 #### Added
