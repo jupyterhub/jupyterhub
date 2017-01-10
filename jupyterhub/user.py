@@ -116,7 +116,10 @@ class User(HasTraits):
         
         hub = self.db.query(orm.Hub).first()
         
-        self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
+        if self.settings.get('use_global_cookie'):
+            self.cookie_name = hub.server.cookie_name
+        else:
+            self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
             self.settings.get('base_url', '/'), 'user', self.escaped_name)
         
