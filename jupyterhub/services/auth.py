@@ -174,6 +174,7 @@ class HubAuth(Configurable):
             raise HTTPError(500, msg)
 
         if r.status_code == 404:
+            app_log.warning("No Hub user identified for request")
             data = None
         elif r.status_code == 403:
             app_log.error("I don't have permission to verify cookies, my auth token may have expired: [%i] %s", r.status_code, r.reason)
@@ -186,6 +187,7 @@ class HubAuth(Configurable):
             raise HTTPError(500, "Failed to check authorization")
         else:
             data = r.json()
+            app_log.debug("Received request from Hub user %s", data)
         self.cookie_cache[encrypted_cookie] = data
         return data
 
@@ -274,14 +276,18 @@ class HubAuthenticated(object):
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
+        name = user_model['name']
         if self.hub_users is None and self.hub_groups is None:
             # no whitelist specified, allow any authenticated Hub user
+            app_log.debug("Allowing Hub user %s (all Hub users allowed)", name)
             return user_model
-        name = user_model['name']
         if self.hub_users and name in self.hub_users:
             # user in whitelist
+            app_log.debug("Allowing whitelisted Hub user %s", name)
             return user_model
-        elif self.hub_groups and set(user_model['groups']).union(self.hub_groups):
+        elif self.hub_groups and set(user_model['groups']).intersection(self.hub_groups):
+            allowed_groups = set(user_model['groups']).intersection(self.hub_groups)
+            app_log.debug("Allowing Hub user %s in group(s) %s", name, ','.join(sorted(allowed_groups)))
             # group in whitelist
             return user_model
         else:
@@ -294,8 +300,12 @@ class HubAuthenticated(object):
         Returns:
             user_model (dict): The user model, if a user is identified, None if authentication fails.
         """
+        if hasattr(self, '_hub_auth_user_cache'):
+            return self._hub_auth_user_cache
         user_model = self.hub_auth.get_user(self)
         if not user_model:
+            self._hub_auth_user_cache = None
             return
-        return self.check_hub_user(user_model)
+        self._hub_auth_user_cache = self.check_hub_user(user_model)
+        return self._hub_auth_user_cache
 

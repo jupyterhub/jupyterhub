@@ -1,0 +1,9 @@
+#!/bin/bash -l
+set -e
+
+export JUPYTERHUB_API_TOKEN=super-secret
+export JUPYTERHUB_SERVICE_URL=http://127.0.0.1:9999
+export JUPYTERHUB_SERVICE_NAME=shared-notebook
+
+jupyterhub-singleuser \
+    --group='shared'
