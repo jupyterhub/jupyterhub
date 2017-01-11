@@ -1095,6 +1095,7 @@ class JupyterHub(Application):
                 # if user.server is defined.
                 log = self.log.warning if user.server else self.log.debug
                 log("%s not running.", user.name)
+                # remove all server or servers entry from db related to the user
                 for server in user.servers:
                     db.delete(server)
                 db.commit()

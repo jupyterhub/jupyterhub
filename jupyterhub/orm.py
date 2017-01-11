@@ -351,8 +351,10 @@ class Group(Base):
 class User(Base):
     """The User table
 
-    Each user can have more than a single server,
-    and multiple tokens used for authorization.
+    Each user can have one or more single user notebook servers.
+
+    Each single user notebook server will have a unique token for authorization.
+    Therefore, a user with multiple notebook servers will have multiple tokens.
 
     API tokens grant access to the Hub's REST API.
     These are used by single-user servers to authenticate requests,
@@ -364,8 +366,9 @@ class User(Base):
     A `state` column contains a JSON dict,
     used for restoring state of a Spawner.
 
-    'server' returns the first entry for the users' servers.
-    'servers' is a list that contains a reference to the user's Servers.
+
+    `servers` is a list that contains a reference for each of the user's single user notebook servers.
+    The method `server` returns the first entry in the user's `servers` list.
     """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -429,12 +432,10 @@ class User(Base):
 
 class UserServer(Base):
     """The UserServer table
-    Each user can have have more than one server,
-    we use this table to mantain the Many-To-One
-    relationship between Users and Servers tables.
 
-    Servers can have only 1 user, this condition is mantained
-    by UniqueConstraint
+    A table storing the One-To-Many relationship between a user and servers.
+    Each user may have one or more servers.
+    A server can have only one (1) user. This condition is maintained by UniqueConstraint.
     """
     __tablename__ = 'users_servers'
 

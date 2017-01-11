@@ -315,9 +315,9 @@ class User(HasTraits):
             spawner.clear_state()
             self.state = spawner.get_state()
             self.last_activity = datetime.utcnow()
-            # cleanup server entry, API token from defunct server
+            # Cleanup defunct servers: delete entry and API token for each server
             for server in self.servers:
-                # cleanup servers entry from db
+                # remove server entry from db
                 self.db.delete(server)
             if not spawner.will_resume:
                 # find and remove the API token if the spawner isn't
