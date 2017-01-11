@@ -454,7 +454,7 @@ class JupyterHub(Application):
                     'name': 'formgrader',
                     'url': 'http://127.0.0.1:1234',
                     'token': 'super-secret',
-                    'environment': 
+                    'environment':
                 }
             ]
         """
@@ -1095,7 +1095,10 @@ class JupyterHub(Application):
                 # if user.server is defined.
                 log = self.log.warning if user.server else self.log.debug
                 log("%s not running.", user.name)
-                user.server = None
+                # remove all server or servers entry from db related to the user
+                for server in user.servers:
+                    db.delete(server)
+                db.commit()
 
             user_summaries.append(_user_summary(user))
 

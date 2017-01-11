@@ -65,9 +65,10 @@ def test_hub(db):
 
 def test_user(db):
     user = orm.User(name='kaylee',
-        server=orm.Server(),
         state={'pid': 4234},
     )
+    server = orm.Server()
+    user.servers.append(server)
     db.add(user)
     db.commit()
     assert user.name == 'kaylee'
