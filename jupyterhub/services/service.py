@@ -56,7 +56,7 @@ from traitlets.config import LoggingConfigurable
 
 from .. import orm
 from ..traitlets import Command
-from ..spawner import LocalProcessSpawner
+from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..utils import url_path_join
 
 class _MockUser(HasTraits):
@@ -80,7 +80,7 @@ class _ServiceSpawner(LocalProcessSpawner):
         if not name or name == getuser():
             # no setuid if no name
             return
-        return super().make_preexec_fn(name)
+        return set_user_setuid(name, chdir=False)
 
     def start(self):
         """Start the process"""
