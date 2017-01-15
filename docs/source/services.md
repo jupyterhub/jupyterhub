@@ -45,6 +45,8 @@ A Service may have the following properties:
 - `url: str (default - None)` - The URL where the service is/should be. If a
   url is specified for where the Service runs its own web server,
   the service will be added to the proxy at `/services/:name`
+- `api_token: str (default - None)` - For Externally-Managed Services you need to specify 
+  an API token to perform API requests to the Hub
 
 If a service is also to be managed by the Hub, it has a few extra options:
 
