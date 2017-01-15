@@ -27,7 +27,7 @@ An externally managed service running on a URL::
         'name': 'my-service',
         'url': 'https://host:8888',
         'admin': True,
-        'token': 'super-secret',
+        'api_token': 'super-secret',
     }
 
 A hub-managed service with no URL:
