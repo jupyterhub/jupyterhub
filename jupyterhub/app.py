@@ -51,6 +51,7 @@ from .services.service import Service
 
 from . import dbutil, orm
 from .user import User, UserDict
+from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .traitlets import URLPrefix, Command
@@ -1162,6 +1163,17 @@ class JupyterHub(Application):
         self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
         db.commit()
 
+    def init_oauth(self):
+        self.oauth_provider = make_provider(
+            self.session_factory,
+            url_prefix=url_path_join(self.hub.server.base_url, 'api/oauth2'),
+            login_url=self.authenticator.login_url(self.base_url)
+        )
+        
+        client_store = self.oauth_provider.client_authenticator.client_store
+        client_store.add_client(client_id="abc", client_secret="xyz",
+                                redirect_uri="http://localhost:9999/callback")
+
     def init_proxy(self):
         """Load the Proxy config into the database"""
         self.proxy = self.db.query(orm.Proxy).first()
@@ -1327,6 +1339,7 @@ class JupyterHub(Application):
             domain=self.domain,
             statsd=self.statsd,
             allow_multiple_servers=self.allow_multiple_servers,
+            oauth_provider=self.oauth_provider,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1373,6 +1386,7 @@ class JupyterHub(Application):
         yield self.init_groups()
         self.init_services()
         yield self.init_api_tokens()
+        self.init_oauth()
         self.init_tornado_settings()
         yield self.init_spawners()
         self.init_handlers()
