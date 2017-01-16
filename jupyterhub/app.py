@@ -259,6 +259,9 @@ class JupyterHub(Application):
     proxy_check_interval = Integer(30,
         help="Interval (in seconds) at which to check if the proxy is running."
     ).tag(config=True)
+    service_check_interval = Integer(60,
+        help="Interval (in seconds) at which to check connectivity of services."
+    ).tag(config=True)
 
     data_files_path = Unicode(DATA_FILES_PATH,
         help="The location of jupyterhub data files (e.g. /usr/local/share/jupyter/hub)"
@@ -1059,6 +1062,19 @@ class JupyterHub(Application):
         self.db.commit()
 
     @gen.coroutine
+    def check_services_health(self):
+        """Check connectivity of all services"""
+        for name, service in self._service_map.items():
+            if not service.url:
+                continue
+            try:
+                yield service.orm.server.wait_up(timeout=1)
+            except TimeoutError:
+                self.log.warning("Cannot connect to %s service %s at %s", service.kind, name, service.url)
+            else:
+                self.log.debug("%s service %s running at %s", service.kind.title(), name, service.url)
+
+    @gen.coroutine
     def init_spawners(self):
         db = self.db
 
@@ -1463,13 +1479,32 @@ class JupyterHub(Application):
             self.exit(1)
 
         for service_name, service in self._service_map.items():
-            if not service.managed:
-                continue
-            try:
-                service.start()
-            except Exception as e:
-                self.log.critical("Failed to start service %s", service_name, exc_info=True)
-                self.exit(1)
+            msg = '%s at %s' % (service_name, service.url) if service.url else service_name
+            if service.managed:
+                self.log.info("Starting managed service %s", msg)
+                try:
+                    service.start()
+                except Exception as e:
+                    self.log.critical("Failed to start service %s", service_name, exc_info=True)
+                    self.exit(1)
+            else:
+                self.log.info("Adding external service %s", msg)
+
+            if service.url:
+                tries = 10 if service.managed else 1
+                for i in range(tries):
+                    try:
+                        yield service.orm.server.wait_up(http=True, timeout=1)
+                    except TimeoutError:
+                        if service.managed:
+                            status = yield service.spawner.poll()
+                            if status is not None:
+                                self.log.error("Service %s exited with status %s", service_name, status)
+                                break
+                    else:
+                        break
+                else:
+                    self.log.error("Cannot connect to %s service %s at %s. Is it running?", service.kind, service_name, service.url)
 
         loop.add_callback(self.proxy.add_all_users, self.users)
         loop.add_callback(self.proxy.add_all_services, self._service_map)
@@ -1479,6 +1514,10 @@ class JupyterHub(Application):
             # this means a restarted Hub cannot restart a Proxy that its
             # predecessor started.
             pc = PeriodicCallback(self.check_proxy, 1e3 * self.proxy_check_interval)
+            pc.start()
+
+        if self.service_check_interval and any(s.url for s in self._service_map.values()):
+            pc = PeriodicCallback(self.check_services_health, 1e3 * self.service_check_interval)
             pc.start()
 
         if self.last_activity_interval:
