@@ -639,7 +639,7 @@ def _try_setcwd(path):
     os.chdir(td)
 
 
-def set_user_setuid(username):
+def set_user_setuid(username, chdir=True):
     """Return a preexec_fn for spawning a single-user server as a particular user.
 
     Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
@@ -666,7 +666,8 @@ def set_user_setuid(username):
         os.setuid(uid)
 
         # start in the user's home dir
-        _try_setcwd(home)
+        if chdir:
+            _try_setcwd(home)
 
     return preexec
 
