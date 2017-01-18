@@ -211,11 +211,11 @@ class User(HasTraits):
         """
         db = self.db
         server_uuid = uuid4()
-        server_url = urlsafe_b64encode(server_uuid.bytes)
+        server_url = urlsafe_b64encode(server_uuid.bytes).decode()
         server = orm.Server(
-            name = server_uuid.hex
+            name = server_uuid.hex,
             cookie_name=self.cookie_name,
-            base_url=self.base_url url_path_join(self.base_url, 'servers', server_url),
+            base_url=url_path_join(self.base_url, 'server', server_url),
         )
         self.servers.append(server)
         db.add(self)
