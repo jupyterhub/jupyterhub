@@ -4,6 +4,9 @@
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
+from uuid import uuid4
+from base64 import urlsafe_b64encode, urlsafe_b64decode
+
 from tornado import gen
 from tornado.log import app_log
 
@@ -147,7 +150,7 @@ class User(HasTraits):
     def __repr__(self):
         return repr(self.orm_user)
 
-    @property
+    @property # FIX-ME CHECK IF STILL NEEDED
     def running(self):
         """property for whether a user has a running server"""
         if self.spawn_pending or self.stop_pending:
@@ -198,11 +201,21 @@ class User(HasTraits):
 
     @gen.coroutine
     def spawn(self, options=None):
-        """Start the user's spawner"""
+        """Start the user's spawner
+        
+        Because there could be more then one server per user
+        each server has to have a unique reference (UUID4)
+        
+        base_url is built using user's base url and adding /servers/{name}
+        where name is the server uuid urlsafed
+        """
         db = self.db
+        server_uuid = uuid4()
+        server_url = urlsafe_b64encode(server_uuid.bytes)
         server = orm.Server(
+            name = server_uuid.hex
             cookie_name=self.cookie_name,
-            base_url=self.base_url,
+            base_url=self.base_url url_path_join(self.base_url, 'servers', server_url),
         )
         self.servers.append(server)
         db.add(self)
