@@ -206,7 +206,7 @@ class User(HasTraits):
         Because there could be more then one server per user
         each server has to have a unique reference (UUID4)
         
-        base_url is built using user's base url and adding /servers/{name}
+        base_url is built using user's base url and adding /server/{name}
         where name is the server uuid urlsafed
         """
         db = self.db
@@ -215,7 +215,7 @@ class User(HasTraits):
         server = orm.Server(
             name = server_uuid.hex,
             cookie_name=self.cookie_name,
-            base_url=url_path_join(self.base_url, 'server', server_url),
+            base_url=url_path_join(self.base_url, 'server', server_url[:10]),
         )
         self.servers.append(server)
         db.add(self)
