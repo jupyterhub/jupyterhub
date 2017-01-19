@@ -150,6 +150,12 @@ class UserAPIHandler(APIHandler):
             raise web.HTTPError(404)
         data = self.get_json_body()
         self._check_user_model(data)
+        # check if the new name is already taken
+        new_username = self.find_user(data['name']) if 'name' in data else None
+        if new_username is not None:
+            # check if the provided name inside the json is the same of the url
+            if name != data['name']:
+                raise web.HTTPError(400, "User %s already exists, username must be unique" % data['name'])
         for key, value in data.items():
             setattr(user, key, value)
         self.db.commit()
