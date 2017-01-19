@@ -260,7 +260,7 @@ class JupyterHub(Application):
         help="Interval (in seconds) at which to check if the proxy is running."
     ).tag(config=True)
     service_check_interval = Integer(60,
-        help="Interval (in seconds) at which to check connectivity of services."
+        help="Interval (in seconds) at which to check connectivity of services with web endpoints."
     ).tag(config=True)
 
     data_files_path = Unicode(DATA_FILES_PATH,
@@ -1478,6 +1478,7 @@ class JupyterHub(Application):
             self.log.critical("Failed to start proxy", exc_info=True)
             self.exit(1)
 
+        # start the service(s)
         for service_name, service in self._service_map.items():
             msg = '%s at %s' % (service_name, service.url) if service.url else service_name
             if service.managed:

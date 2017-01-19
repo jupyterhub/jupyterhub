@@ -163,7 +163,11 @@ class Service(LoggingConfigurable):
     
     @property
     def kind(self):
-        """Am I managed (as text)"""
+        """The name of the kind of service as a string
+
+        - 'managed' for managed services
+        - 'external' for external services
+        """
         return 'managed' if self.managed else 'external'
 
     command = Command(minlen=0,
