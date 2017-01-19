@@ -160,6 +160,15 @@ class Service(LoggingConfigurable):
     def managed(self):
         """Am I managed by the Hub?"""
         return bool(self.command)
+    
+    @property
+    def kind(self):
+        """The name of the kind of service as a string
+
+        - 'managed' for managed services
+        - 'external' for external services
+        """
+        return 'managed' if self.managed else 'external'
 
     command = Command(minlen=0,
         help="Command to spawn this service, if managed."
