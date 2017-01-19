@@ -150,6 +150,10 @@ class UserAPIHandler(APIHandler):
             raise web.HTTPError(404)
         data = self.get_json_body()
         self._check_user_model(data)
+        if 'name' in data and data['name'] != name:
+            # check if the new name is already taken inside db
+            if self.find_user(data['name']):
+                raise web.HTTPError(400, "User %s already exists, username must be unique" % data['name'])
         for key, value in data.items():
             setattr(user, key, value)
         self.db.commit()
@@ -209,7 +213,8 @@ class UserAdminAccessAPIHandler(APIHandler):
             raise web.HTTPError(400, "%s's server is not running" % name)
         self.set_server_cookie(user)
         # a service can also ask for a user cookie
-        # this code prevent to raise an error
+        # this code prevents to raise an error
+        # cause service doesn't have 'other_user_cookies'
         if getattr(current, 'other_user_cookies', None) is not None:
             current.other_user_cookies.add(name)
 
