@@ -151,7 +151,7 @@ class UserAPIHandler(APIHandler):
         data = self.get_json_body()
         self._check_user_model(data)
         if 'name' in data and data['name'] != name:
-            # check if the new name is already taken:
+            # check if the new name is already taken inside db
             if self.find_user(data['name']):
                 raise web.HTTPError(400, "User %s already exists, username must be unique" % data['name'])
         for key, value in data.items():
@@ -214,6 +214,7 @@ class UserAdminAccessAPIHandler(APIHandler):
         self.set_server_cookie(user)
         # a service can also ask for a user cookie
         # this code prevents to raise an error
+        # cause service doesn't have 'other_user_cookies'
         if getattr(current, 'other_user_cookies', None) is not None:
             current.other_user_cookies.add(name)
 
