@@ -234,7 +234,7 @@ class MockSingleUserServer(SingleUserNotebookApp):
         pass
 
 
-class TestSingleUserSpawner(MockSpawner):
+class StubSingleUserSpawner(MockSpawner):
     """Spawner that starts a MockSingleUserServer in a thread."""
     _thread = None
     @gen.coroutine

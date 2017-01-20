@@ -14,7 +14,7 @@ before_install:
 install:
     - pip install --pre -f travis-wheels/wheelhouse -r dev-requirements.txt .
 script:
-    - travis_retry py.test --cov jupyterhub jupyterhub/tests -v
+    - travis_retry py.test --cov=jupyterhub jupyterhub/tests -v
 after_success:
     - codecov
 matrix:
