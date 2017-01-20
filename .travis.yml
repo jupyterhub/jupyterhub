@@ -2,7 +2,8 @@
 language: python
 sudo: false
 python:
-    - 3.6-dev
+    - 3.7-dev
+    - 3.6
     - 3.5
     - 3.4
     - 3.3
@@ -18,5 +19,5 @@ after_success:
     - codecov
 matrix:
   include:
-    - python: 3.5
+    - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://127.0.0.1.xip.io:8000
