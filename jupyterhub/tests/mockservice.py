@@ -4,29 +4,37 @@ basic HTTP Server that echos URLs back,
 and allow retrieval of sys.argv.
 """
 
-import argparse
 import json
 import os
-import sys
 from urllib.parse import urlparse
 
 import requests
 from tornado import web, httpserver, ioloop
 
-from jupyterhub.services.auth import  HubAuthenticated
+from jupyterhub.services.auth import HubAuthenticated
+
 
 class EchoHandler(web.RequestHandler):
+    def data_received(self, chunk):
+        pass
+
     def get(self):
         self.write(self.request.path)
 
 
 class EnvHandler(web.RequestHandler):
+    def data_received(self, chunk):
+        pass
+
     def get(self):
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps(dict(os.environ)))
 
 
 class APIHandler(web.RequestHandler):
+    def data_received(self, chunk):
+        pass
+
     def get(self, path):
         api_token = os.environ['JUPYTERHUB_API_TOKEN']
         api_url = os.environ['JUPYTERHUB_API_URL']
@@ -37,7 +45,10 @@ class APIHandler(web.RequestHandler):
         self.set_header('Content-Type', 'application/json')
         self.write(r.text)
 
+
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
+    def data_received(self, chunk):
+        pass
 
     @web.authenticated
     def get(self):
