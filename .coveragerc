@@ -13,4 +13,5 @@ exclude_lines =
 ignore_errors = True
 omit =
     jupyterhub/tests/*
+    jupyterhub/alembic/*
     */site-packages/*
