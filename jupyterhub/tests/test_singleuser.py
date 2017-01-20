@@ -6,14 +6,14 @@ import sys
 import requests
 
 import jupyterhub
-from .mocking import TestSingleUserSpawner, public_url
+from .mocking import StubSingleUserSpawner, public_url
 from ..utils import url_path_join
 
 
 def test_singleuser_auth(app, io_loop):
-    # use TestSingleUserSpawner to launch a single-user app in a thread
-    app.spawner_class = TestSingleUserSpawner
-    app.tornado_settings['spawner_class'] = TestSingleUserSpawner
+    # use StubSingleUserSpawner to launch a single-user app in a thread
+    app.spawner_class = StubSingleUserSpawner
+    app.tornado_settings['spawner_class'] = StubSingleUserSpawner
     
     # login, start the server
     cookies = app.login_user('nandy')
@@ -39,9 +39,9 @@ def test_singleuser_auth(app, io_loop):
 
 
 def test_disable_user_config(app, io_loop):
-    # use TestSingleUserSpawner to launch a single-user app in a thread
-    app.spawner_class = TestSingleUserSpawner
-    app.tornado_settings['spawner_class'] = TestSingleUserSpawner
+    # use StubSingleUserSpawner to launch a single-user app in a thread
+    app.spawner_class = StubSingleUserSpawner
+    app.tornado_settings['spawner_class'] = StubSingleUserSpawner
     # login, start the server
     cookies = app.login_user('nandy')
     user = app.users['nandy']
