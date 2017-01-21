@@ -12,7 +12,7 @@ from tornado.log import app_log
 
 from sqlalchemy import inspect
 
-from .utils import url_path_join
+from .utils import url_path_join, default_server_name
 
 from . import orm
 from traitlets import HasTraits, Any, Dict, observe, default
@@ -204,18 +204,20 @@ class User(HasTraits):
         """Start the user's spawner
         
         Because there could be more then one server per user
-        each server has to have a unique reference (UUID4)
+        each server has to have a unique name between the servers of a given user
         
         base_url is built using user's base url and adding /server/{name}
         where name is the server uuid urlsafed
         """
         db = self.db
-        server_uuid = uuid4()
-        server_url = urlsafe_b64encode(server_uuid.bytes).decode()
+        if server_name in options:
+            server_name = options['server_name']
+        else:
+            server_name = default_server_name(self)
         server = orm.Server(
-            name = server_uuid.hex,
+            name = server_name,
             cookie_name=self.cookie_name,
-            base_url=url_path_join(self.base_url, 'server', server_url[:10]),
+            base_url=url_path_join(self.base_url, 'server', server_name),
         )
         self.servers.append(server)
         db.add(self)
