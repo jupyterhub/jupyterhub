@@ -105,14 +105,10 @@ def test_auth_api(app):
     assert reply['name'] == user.name
 
     # check fail
-    r = api_request(app, 'authorizations/token', api_token,
-        headers={'Authorization': 'no sir'},
-    )
+    r = api_request(app, 'authorizations/token', api_token, headers={'Authorization': 'no sir'},)
     assert r.status_code == 403
 
-    r = api_request(app, 'authorizations/token', api_token,
-        headers={'Authorization': 'token: %s' % user.cookie_id},
-    )
+    r = api_request(app, 'authorizations/token', api_token, headers={'Authorization': 'token: %s' % user.cookie_id},)
     assert r.status_code == 403
 
 
@@ -125,22 +121,17 @@ def test_referer_check(app, io_loop):
     cookies = app.login_user('admin')
     app_user = get_app_user(app, 'admin')
     # stop the admin's server so we don't mess up future tests
-    io_loop.run_sync(lambda : app.proxy.delete_user(app_user))
+    io_loop.run_sync(lambda: app.proxy.delete_user(app_user))
     io_loop.run_sync(app_user.stop)
 
     r = api_request(app, 'users',
-        headers={
-            'Authorization': '',
-            'Referer': 'null',
-        }, cookies=cookies,
-    )
+        headers={'Authorization': '', 'Referer': 'null', },
+        cookies=cookies, )
     assert r.status_code == 403
-    r = api_request(app, 'users',
-        headers={
+    r = api_request(app, 'users', headers={
             'Authorization': '',
             'Referer': 'http://attack.com/csrf/vulnerability',
-        }, cookies=cookies,
-    )
+        }, cookies=cookies,)
     assert r.status_code == 403
     r = api_request(app, 'users',
         headers={
@@ -159,7 +150,10 @@ def test_referer_check(app, io_loop):
     )
     assert r.status_code == 200
 
-# user API tests
+
+# --------------
+# User API tests
+# --------------
 
 
 @mark.user
@@ -412,7 +406,7 @@ def test_spawn(app, io_loop):
     assert user.server is None
     after_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
     assert before_servers == after_servers
-    tokens = list(db.query(orm.APIToken).filter(orm.APIToken.user_id==user.id))
+    tokens = list(db.query(orm.APIToken).filter(orm.APIToken.user_id == user.id))
     assert tokens == []
 
 
@@ -559,6 +553,11 @@ def test_bad_get_token(app):
     assert r.status_code == 403
 
 
+# ---------------
+# Group API tests
+# ---------------
+
+
 @mark.group
 def test_groups_list(app):
     r = api_request(app, 'groups')
@@ -680,7 +679,11 @@ def test_group_delete_users(app):
     assert sorted([ u.name for u in group.users ]) == sorted(names[2:])
 
 
-# service API
+# -----------------
+# Service API tests
+# -----------------
+
+
 @mark.services
 def test_get_services(app, mockservice):
     db = app.db
@@ -770,7 +773,10 @@ def test_info(app):
     }
 
 
-# general API tests
+# -----------------
+# General API tests
+# -----------------
+
 
 def test_options(app):
     r = api_request(app, 'users', method='options')
@@ -783,7 +789,11 @@ def test_bad_json_body(app):
     assert r.status_code == 400
 
 
-# shutdown must be last
+# ---------------------------------
+# Shutdown MUST always be last test
+# ---------------------------------
+
+
 def test_shutdown(app):
     r = api_request(app, 'shutdown', method='post', data=json.dumps({
         'servers': True,
@@ -797,4 +807,3 @@ def test_shutdown(app):
         else:
             break
     assert not app.io_loop._running
-
