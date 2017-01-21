@@ -76,7 +76,7 @@ class UserListAPIHandler(APIHandler):
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target user or admin"""
-    def m(self, name):
+    def m(self, name, *args, **kwargs):
         current = self.get_current_user()
         if current is None:
             raise web.HTTPError(403)
@@ -86,7 +86,7 @@ def admin_or_self(method):
         # raise 404 if not found
         if not self.find_user(name):
             raise web.HTTPError(404)
-        return method(self, name)
+        return method(self, name, args, kwargs)
     return m
 
 class UserAPIHandler(APIHandler):
@@ -160,10 +160,12 @@ class UserAPIHandler(APIHandler):
         self.write(json.dumps(self.user_model(user)))
 
 
-class UserServerAPIHandler(APIHandler):
+class UserCreateServerAPIHandler(APIHandler):
+
     @gen.coroutine
     @admin_or_self
     def post(self, name):
+            
         user = self.find_user(name)
         if user.running:
             # include notify, so that a server that died is noticed immediately
@@ -176,9 +178,12 @@ class UserServerAPIHandler(APIHandler):
         status = 202 if user.spawn_pending else 201
         self.set_status(status)
 
+
+class UserDeleteServerAPIHandler(APIHandler):
+
     @gen.coroutine
     @admin_or_self
-    def delete(self, name):
+    def delete(self, name, server_name):
         user = self.find_user(name)
         if user.stop_pending:
             self.set_status(202)
@@ -222,6 +227,7 @@ class UserAdminAccessAPIHandler(APIHandler):
 default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
-    (r"/api/users/([^/]+)/server", UserServerAPIHandler),
+    (r"/api/users/([^/]+)/servers", UserCreateServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
