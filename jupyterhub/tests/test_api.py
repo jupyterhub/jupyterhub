@@ -124,30 +124,13 @@ def test_referer_check(app, io_loop):
     io_loop.run_sync(lambda: app.proxy.delete_user(app_user))
     io_loop.run_sync(app_user.stop)
 
-    r = api_request(app, 'users',
-        headers={'Authorization': '', 'Referer': 'null', },
-        cookies=cookies, )
+    r = api_request(app, 'users', headers={'Authorization': '', 'Referer': 'null', }, cookies=cookies, )
     assert r.status_code == 403
-    r = api_request(app, 'users', headers={
-            'Authorization': '',
-            'Referer': 'http://attack.com/csrf/vulnerability',
-        }, cookies=cookies,)
+    r = api_request(app, 'users', headers={'Authorization': '', 'Referer': 'http://attack.com/csrf/vulnerability', }, cookies=cookies,)
     assert r.status_code == 403
-    r = api_request(app, 'users',
-        headers={
-            'Authorization': '',
-            'Referer': url,
-            'Host': host,
-        }, cookies=cookies,
-    )
+    r = api_request(app, 'users', headers={'Authorization': '', 'Referer': url, 'Host': host, }, cookies=cookies,)
     assert r.status_code == 200
-    r = api_request(app, 'users',
-        headers={
-            'Authorization': '',
-            'Referer': ujoin(url, 'foo/bar/baz/bat'),
-            'Host': host,
-        }, cookies=cookies,
-    )
+    r = api_request(app, 'users', headers={'Authorization': '', 'Referer': ujoin(url, 'foo/bar/baz/bat'), 'Host': host, }, cookies=cookies,)
     assert r.status_code == 200
 
 
@@ -182,9 +165,7 @@ def test_get_users(app):
         }
     ]
 
-    r = api_request(app, 'users',
-        headers=auth_header(db, 'user'),
-    )
+    r = api_request(app, 'users', headers=auth_header(db, 'user'), )
     assert r.status_code == 403
 
 
@@ -229,9 +210,7 @@ def test_add_multi_user_bad(app):
 @mark.user
 def test_add_multi_user_invalid(app):
     app.authenticator.username_pattern = r'w.*'
-    r = api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': ['Willow', 'Andrew', 'Tara']})
-    )
+    r = api_request(app, 'users', method='post', data=json.dumps({'usernames': ['Willow', 'Andrew', 'Tara']}))
     app.authenticator.username_pattern = ''
     assert r.status_code == 400
     assert r.json()['message'] == 'Invalid usernames: andrew, tara'
@@ -241,9 +220,7 @@ def test_add_multi_user_invalid(app):
 def test_add_multi_user(app):
     db = app.db
     names = ['a', 'b']
-    r = api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names}),
-    )
+    r = api_request(app, 'users', method='post', data=json.dumps({'usernames': names}), )
     assert r.status_code == 201
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
@@ -256,17 +233,13 @@ def test_add_multi_user(app):
         assert not user.admin
 
     # try to create the same users again
-    r = api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names}),
-    )
+    r = api_request(app, 'users', method='post', data=json.dumps({'usernames': names}), )
     assert r.status_code == 400
 
     names = ['a', 'b', 'ab']
 
     # try to create the same users again
-    r = api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names}),
-    )
+    r = api_request(app, 'users', method='post', data=json.dumps({'usernames': names}), )
     assert r.status_code == 201
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
@@ -277,9 +250,7 @@ def test_add_multi_user(app):
 def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
-    r = api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names, 'admin': True}),
-    )
+    r = api_request(app, 'users', method='post', data=json.dumps({'usernames': names, 'admin': True}), )
     assert r.status_code == 201
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
@@ -306,9 +277,7 @@ def test_add_user_bad(app):
 def test_add_admin(app):
     db = app.db
     name = 'newadmin'
-    r = api_request(app, 'users', name, method='post',
-        data=json.dumps({'admin': True}),
-    )
+    r = api_request(app, 'users', name, method='post', data=json.dumps({'admin': True}), )
     assert r.status_code == 201
     user = find_user(db, name)
     assert user is not None
@@ -335,9 +304,7 @@ def test_make_admin(app):
     assert user.name == name
     assert not user.admin
 
-    r = api_request(app, 'users', name, method='patch',
-        data=json.dumps({'admin': True})
-    )
+    r = api_request(app, 'users', name, method='patch', data=json.dumps({'admin': True}))
     assert r.status_code == 200
     user = find_user(db, name)
     assert user is not None
@@ -539,7 +506,7 @@ def test_get_token(app):
     assert r.status_code == 200
     data = r.content.decode("utf-8")
     token = json.loads(data)
-    assert not token['Authentication'] is None
+    assert token['Authentication'] is not None
 
 
 def test_bad_get_token(app):
@@ -573,10 +540,7 @@ def test_groups_list(app):
     r = api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
-    assert reply == [{
-        'name': 'alphaflight',
-        'users': []
-    }]
+    assert reply == [{'name': 'alphaflight', 'users': []}]
 
 
 @mark.group
@@ -592,10 +556,7 @@ def test_group_get(app):
     r = api_request(app, 'groups/alphaflight')
     r.raise_for_status()
     reply = r.json()
-    assert reply == {
-        'name': 'alphaflight',
-        'users': ['sasquatch']
-    }
+    assert reply == {'name': 'alphaflight', 'users': ['sasquatch'] }
 
 
 @mark.group
@@ -604,15 +565,11 @@ def test_group_create_delete(app):
     r = api_request(app, 'groups/runaways', method='delete')
     assert r.status_code == 404
     
-    r = api_request(app, 'groups/new', method='post', data=json.dumps({
-        'users': ['doesntexist']
-    }))
+    r = api_request(app, 'groups/new', method='post', data=json.dumps({'users': ['doesntexist']}))
     assert r.status_code == 400
     assert orm.Group.find(db, name='new') is None
     
-    r = api_request(app, 'groups/omegaflight', method='post', data=json.dumps({
-        'users': ['sasquatch']
-    }))
+    r = api_request(app, 'groups/omegaflight', method='post', data=json.dumps({'users': ['sasquatch']}))
     r.raise_for_status()
     
     omegaflight = orm.Group.find(db, name='omegaflight')
@@ -629,7 +586,7 @@ def test_group_create_delete(app):
     assert omegaflight not in sasquatch.groups
     assert orm.Group.find(db, name='omegaflight') is None
     
-    # delete nonexistant gives 404
+    # delete nonexistent gives 404
     r = api_request(app, 'groups/omegaflight', method='delete')
     assert r.status_code == 404
 
@@ -643,9 +600,7 @@ def test_group_add_users(app):
 
     names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
     users = [ find_user(db, name=name) or add_user(db, app=app, name=name) for name in names ]
-    r = api_request(app, 'groups/alphaflight/users', method='post', data=json.dumps({
-        'users': names,
-    }))
+    r = api_request(app, 'groups/alphaflight/users', method='post', data=json.dumps({'users': names, }))
     r.raise_for_status()
     
     for user in users:
@@ -665,9 +620,7 @@ def test_group_delete_users(app):
 
     names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
     users = [ find_user(db, name=name) for name in names ]
-    r = api_request(app, 'groups/alphaflight/users', method='delete', data=json.dumps({
-        'users': names[:2],
-    }))
+    r = api_request(app, 'groups/alphaflight/users', method='delete', data=json.dumps({'users': names[:2], }))
     r.raise_for_status()
     
     for user in users[:2]:
@@ -703,9 +656,7 @@ def test_get_services(app, mockservice):
         }
     }
 
-    r = api_request(app, 'services',
-        headers=auth_header(db, 'user'),
-    )
+    r = api_request(app, 'services', headers=auth_header(db, 'user'),)
     assert r.status_code == 403
 
 
@@ -726,15 +677,9 @@ def test_get_service(app, mockservice):
         'url': mockservice.url,
     }
 
-    r = api_request(app, 'services/%s' % mockservice.name,
-        headers={
-            'Authorization': 'token %s' % mockservice.api_token
-        }
-    )
+    r = api_request(app, 'services/%s' % mockservice.name, headers={'Authorization': 'token %s' % mockservice.api_token})
     r.raise_for_status()
-    r = api_request(app, 'services/%s' % mockservice.name,
-        headers=auth_header(db, 'user'),
-    )
+    r = api_request(app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user'),)
     assert r.status_code == 403
 
 
@@ -743,9 +688,7 @@ def test_root_api(app):
     url = ujoin(base_url, 'api')
     r = requests.get(url)
     r.raise_for_status()
-    expected = {
-        'version': jupyterhub.__version__
-    }
+    expected = {'version': jupyterhub.__version__}
     assert r.json() == expected
 
 
@@ -795,10 +738,7 @@ def test_bad_json_body(app):
 
 
 def test_shutdown(app):
-    r = api_request(app, 'shutdown', method='post', data=json.dumps({
-        'servers': True,
-        'proxy': True,
-    }))
+    r = api_request(app, 'shutdown', method='post', data=json.dumps({'servers': True, 'proxy': True,}))
     r.raise_for_status()
     reply = r.json()
     for i in range(100):
