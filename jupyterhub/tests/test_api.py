@@ -43,7 +43,8 @@ def check_db_locks(func):
 
 
 def find_user(db, name):
-    return db.query(orm.User).filter(orm.User.name==name).first()
+    return db.query(orm.User).filter(orm.User.name == name).first()
+
 
 def add_user(db, app=None, **kwargs):
     orm_user = find_user(db, name=kwargs.get('name'))
@@ -60,12 +61,14 @@ def add_user(db, app=None, **kwargs):
     else:
         return orm_user
 
+
 def auth_header(db, name):
     user = find_user(db, name)
     if user is None:
         user = add_user(db, name=name)
     token = user.new_api_token()
     return {'Authorization': 'token %s' % token}
+
 
 @check_db_locks
 def api_request(app, *api_path, **kwargs):
@@ -84,6 +87,7 @@ def api_request(app, *api_path, **kwargs):
     assert ujoin(app.hub.server.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
     assert 'http' not in resp.headers['Content-Security-Policy']
     return resp
+
 
 def test_auth_api(app):
     db = app.db
@@ -156,6 +160,7 @@ def test_referer_check(app, io_loop):
     assert r.status_code == 200
 
 # user API tests
+
 
 @mark.user
 def test_get_users(app):
@@ -353,6 +358,7 @@ def get_app_user(app, name):
     No ORM methods should be called on the result.
     """
     q = Queue()
+
     def get_user_id():
         user = find_user(app.db, name)
         q.put(user.id)
@@ -552,7 +558,6 @@ def test_bad_get_token(app):
     }))
     assert r.status_code == 403
 
-# group API tests
 
 @mark.group
 def test_groups_list(app):
