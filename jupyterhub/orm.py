@@ -65,11 +65,11 @@ class Server(Base):
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
     
-    name = Column(Unicode(32), unique=True) # this is a unique reference to the server, probably a UUID4
+    name = Column(Unicode(32)) # must be unique between user's servers
     proto = Column(Unicode(15), default='http')
     ip = Column(Unicode(255), default='')  # could also be a DNS name
     port = Column(Integer, default=random_port)
-    base_url = Column(Unicode(255), default='/')
+    base_url = Column(Unicode(255), unique=True)
     cookie_name = Column(Unicode(255), default='cookie')
 
     # added to handle multi-server feature
