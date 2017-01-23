@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """Test a proxy being started before the Hub"""
 
 import json
@@ -21,7 +19,7 @@ def test_external_proxy(request, io_loop):
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
     proxy_port = 54321
-    
+
     app = MockHub.instance(
         proxy_api_ip=proxy_ip,
         proxy_api_port=proxy_port,
@@ -49,14 +47,14 @@ def test_external_proxy(request, io_loop):
         if proxy.poll() is None:
             proxy.terminate()
     request.addfinalizer(_cleanup_proxy)
-    
+
     def wait_for_proxy():
         io_loop.run_sync(lambda: wait_for_http_server(
             'http://%s:%i' % (proxy_ip, proxy_port)))
     wait_for_proxy()
-    
+
     app.start([])
-    
+
     assert app.proxy_process is None
     
     routes = io_loop.run_sync(app.proxy.get_routes)
@@ -80,18 +78,18 @@ def test_external_proxy(request, io_loop):
     proxy.terminate()
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
-    
+
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert list(routes.keys()) == ['/']
     
     # poke the server to update the proxy
     r = api_request(app, 'proxy', method='post')
     r.raise_for_status()
-    
+
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert sorted(routes.keys()) == ['/', user_path]
-    
+
     # teardown the proxy, and start a new one with different auth and port
     proxy.terminate()
     new_auth_token = 'different!'
@@ -108,7 +106,7 @@ def test_external_proxy(request, io_loop):
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
-    
+
     # tell the hub where the new proxy is
     r = api_request(app, 'proxy', method='patch', data=json.dumps({
         'port': proxy_port,
@@ -118,16 +116,16 @@ def test_external_proxy(request, io_loop):
     }))
     r.raise_for_status()
     assert app.proxy.api_server.port == proxy_port
-    
+
     # get updated auth token from main thread
     def get_app_proxy_token():
         q = Queue()
         app.io_loop.add_callback(lambda: q.put(app.proxy.auth_token))
         return q.get(timeout=2)
-        
+
     assert get_app_proxy_token() == new_auth_token
     app.proxy.auth_token = new_auth_token
-    
+
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert sorted(routes.keys()) == ['/', user_path]
