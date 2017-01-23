@@ -118,7 +118,7 @@ To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
 
 | Authenticator                                                        | Description                                       |
 | -------------------------------------------------------------------- | ------------------------------------------------- |
-| PAM                                                                  | Default, built-in authenticator                   |
+| PAMAuthenticator                                                     | Default, built-in authenticator                   |
 | [OAuthenticator](https://github.com/jupyterhub/oauthenticator)       | OAuth + JupyterHub Authenticator = OAuthenticator |
 | [ldapauthenticator](https://github.com/jupyterhub/ldapauthenticator) | Simple LDAP Authenticator Plugin for JupyterHub   |
 
@@ -126,6 +126,7 @@ To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
 
 | Spawner                                                        | Description                                                                |
 | -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| LocalProcessSpawner                                            | Default, built-in spawner starts single-user servers as local processes    |
 | [dockerspawner](https://github.com/jupyterhub/dockerspawner)   | Spawn single-user servers in Docker containers                             |
 | [kubespawner](https://github.com/jupyterhub/kubespawner)       | Kubernetes spawner for JupyterHub                                          |
 | [sudospawner](https://github.com/jupyterhub/sudospawner)       | Spawn single-user servers without being root                               |
