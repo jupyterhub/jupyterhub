@@ -10,12 +10,12 @@ import pytest
 
 from .. import orm
 from .mocking import MockHub
-from .test_api import api_request
+from .test_api import api_request  # authenticated api request?
 from ..utils import wait_for_http_server, url_path_join as ujoin
 
 
+# TODO simplify this test
 def test_external_proxy(request, io_loop):
-    """Test a proxy started before the Hub"""
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
     proxy_port = 54321
@@ -30,6 +30,8 @@ def test_external_proxy(request, io_loop):
         MockHub.clear_instance()
         app.stop()
     request.addfinalizer(fin)
+
+    # configures and starts proxy process
     env = os.environ.copy()
     env['CONFIGPROXY_AUTH_TOKEN'] = auth_token
     cmd = app.proxy_cmd + [
@@ -49,18 +51,17 @@ def test_external_proxy(request, io_loop):
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
-        io_loop.run_sync(lambda: wait_for_http_server(
-            'http://%s:%i' % (proxy_ip, proxy_port)))
+        io_loop.run_sync(lambda: wait_for_http_server('http://%s:%i' % (proxy_ip, proxy_port)))
     wait_for_proxy()
 
     app.start([])
-
     assert app.proxy_process is None
-    
+
+    # test if api service has a root route '/'
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert list(routes.keys()) == ['/']
     
-    # add user
+    # add user to the db and server
     name = 'river'
     r = api_request(app, 'users', name, method='post')
     r.raise_for_status()
@@ -68,6 +69,7 @@ def test_external_proxy(request, io_loop):
     r.raise_for_status()
     
     routes = io_loop.run_sync(app.proxy.get_routes)
+    # sets the desired path result
     user_path = unquote(ujoin(app.base_url, 'user/river'))
     if app.subdomain_host:
         domain = urlparse(app.subdomain_host).hostname
@@ -76,8 +78,10 @@ def test_external_proxy(request, io_loop):
     
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
+    assert proxy is None
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
+    assert proxy is not None
 
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert list(routes.keys()) == ['/']
@@ -162,7 +166,7 @@ def test_check_routes(app, io_loop):
     assert before == after
 
 
-@pytest.mark.parametrize("test_data", [None, 'notjson', json.dumps([])])
+@pytest.mark.parametrize("test_data", [None, 'notjson', b'bytedata', json.dumps([])])
 def test_proxy_patch_bad_request_data(app, test_data):
     r = api_request(app, 'proxy', method='patch', data=test_data)
     assert r.status_code == 400
