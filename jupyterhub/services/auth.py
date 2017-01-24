@@ -138,6 +138,27 @@ class HubAuth(Configurable):
     def _cookie_cache(self):
         return _ExpiringDict(self.cookie_cache_max_age)
 
+    def _check_response_for_authorization(self, r):
+        """Verify the response for authorizing a user
+
+        Raises an error if the response failed, otherwise returns the json
+        """
+        if r.status_code == 404:
+            app_log.warning("No Hub user identified for request")
+            data = None
+        elif r.status_code == 403:
+            app_log.error("I don't have permission to verify cookies, my auth token may have expired: [%i] %s", r.status_code, r.reason)
+            raise HTTPError(500, "Permission failure checking authorization, I may need a new token")
+        elif r.status_code >= 500:
+            app_log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
+            raise HTTPError(502, "Failed to check authorization (upstream problem)")
+        elif r.status_code >= 400:
+            app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
+            raise HTTPError(500, "Failed to check authorization")
+        else:
+            app_log.debug("Received request from Hub user %s", data)
+            return r.json()
+
     def user_for_cookie(self, encrypted_cookie, use_cache=True):
         """Ask the Hub to identify the user for a given cookie.
 
@@ -173,22 +194,46 @@ class HubAuth(Configurable):
                        " single-user servers if the servers are not on the same host as the Hub."
             raise HTTPError(500, msg)
 
-        if r.status_code == 404:
-            app_log.warning("No Hub user identified for request")
-            data = None
-        elif r.status_code == 403:
-            app_log.error("I don't have permission to verify cookies, my auth token may have expired: [%i] %s", r.status_code, r.reason)
-            raise HTTPError(500, "Permission failure checking authorization, I may need a new token")
-        elif r.status_code >= 500:
-            app_log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
-            raise HTTPError(502, "Failed to check authorization (upstream problem)")
-        elif r.status_code >= 400:
-            app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
-            raise HTTPError(500, "Failed to check authorization")
-        else:
-            data = r.json()
-            app_log.debug("Received request from Hub user %s", data)
+        data = self._check_response_for_authorization(r)
         self.cookie_cache[encrypted_cookie] = data
+        return data
+
+    def user_for_token(self, token, use_cache=True):
+        """Ask the Hub to identify the user for a given token.
+
+        Args:
+            token (str): the token
+            use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
+
+        Returns:
+            user_model (dict): The user model, if a user is identified, None if authentication fails.
+
+            The 'name' field contains the user's name.
+        """
+        if use_cache:
+            cached = self.cookie_cache.get(token)
+            if cached is not None:
+                return cached
+        try:
+            r = requests.get(
+                url_path_join(self.api_url,
+                              "authorizations/token",
+                              quote(token, safe=''),
+                ),
+                headers = {
+                    'Authorization' : 'token %s' % self.api_token,
+                },
+            )
+        except requests.ConnectionError:
+            msg = "Failed to connect to Hub API at %r." % self.api_url
+            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
+            if '127.0.0.1' in self.api_url:
+                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
+                       " single-user servers if the servers are not on the same host as the Hub."
+            raise HTTPError(500, msg)
+
+        data = self._check_response_for_authorization(r)
+        self.cookie_cache[token] = data
         return data
 
     def get_user(self, handler):
