@@ -147,7 +147,7 @@ class HubAuth(Configurable):
             app_log.warning("No Hub user identified for request")
             data = None
         elif r.status_code == 403:
-            app_log.error("I don't have permission to verify cookies, my auth token may have expired: [%i] %s", r.status_code, r.reason)
+            app_log.error("I don't have permission to check authorization with JupyterHub, my auth token may have expired: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Permission failure checking authorization, I may need a new token")
         elif r.status_code >= 500:
             app_log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
