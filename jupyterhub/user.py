@@ -210,7 +210,7 @@ class User(HasTraits):
         where name is the server uuid urlsafed
         """
         db = self.db
-        if server_name in options:
+        if 'server_name' in options:
             server_name = options['server_name']
         else:
             server_name = default_server_name(self)
