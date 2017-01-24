@@ -69,7 +69,7 @@ class Server(Base):
     proto = Column(Unicode(15), default='http')
     ip = Column(Unicode(255), default='')  # could also be a DNS name
     port = Column(Integer, default=random_port)
-    base_url = Column(Unicode(255), unique=True)
+    base_url = Column(Unicode(255), default='/')
     cookie_name = Column(Unicode(255), default='cookie')
 
     # added to handle multi-server feature
