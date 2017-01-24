@@ -156,8 +156,9 @@ class HubAuth(Configurable):
             app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Failed to check authorization")
         else:
+            data = r.json()
             app_log.debug("Received request from Hub user %s", data)
-            return r.json()
+            return data
 
     def user_for_cookie(self, encrypted_cookie, use_cache=True):
         """Ask the Hub to identify the user for a given cookie.
