@@ -12,15 +12,12 @@ import requests
 from tornado import gen
 from tornado.ioloop import IOLoop
 
-
 from .mocking import public_url
-from ..utils import url_path_join, wait_for_http_server
+from ..utils import url_path_join, wait_for_http_server, random_port
 
-here = os.path.dirname(os.path.abspath(__file__))
-mockservice_py = os.path.join(here, 'mockservice.py')
+mockservice_path = os.path.dirname(os.path.abspath(__file__))
+mockservice_py = os.path.join(mockservice_path, 'mockservice.py')
 mockservice_cmd = [sys.executable, mockservice_py]
-
-from ..utils import random_port
 
 
 @contextmanager
@@ -31,24 +28,29 @@ def external_service(app, name='mockservice'):
         'JUPYTERHUB_API_URL': url_path_join(app.hub.server.url, 'api/'),
         'JUPYTERHUB_SERVICE_URL': 'http://127.0.0.1:%i' % random_port(),
     }
-    p = Popen(mockservice_cmd, env=env)
-    IOLoop().run_sync(lambda : wait_for_http_server(env['JUPYTERHUB_SERVICE_URL']))
+    proc = Popen(mockservice_cmd, env=env)
+    IOLoop().run_sync(
+        lambda: wait_for_http_server(env['JUPYTERHUB_SERVICE_URL'])
+    )
     try:
         yield env
     finally:
-        p.terminate()
+        proc.terminate()
 
 
-def test_managed_service(app, mockservice):
+def test_managed_service(mockservice):
     service = mockservice
     proc = service.proc
+    assert isinstance(proc.pid, object)
     first_pid = proc.pid
     assert proc.poll() is None
-    # shut it down:
+
+    # shut service down:
     proc.terminate()
     proc.wait(10)
     assert proc.poll() is not None
-    # ensure Hub notices and brings it back up:
+
+    # ensure Hub notices service is down and brings it back up:
     for i in range(20):
         if service.proc is not proc:
             break
@@ -62,16 +64,17 @@ def test_managed_service(app, mockservice):
 def test_proxy_service(app, mockservice_url, io_loop):
     service = mockservice_url
     name = service.name
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    io_loop.run_sync(app.proxy.get_routes)
     url = public_url(app, service) + '/foo'
     r = requests.get(url, allow_redirects=False)
     path = '/services/{}/foo'.format(name)
     r.raise_for_status()
+
     assert r.status_code == 200
     assert r.text.endswith(path)
 
 
-def test_external_service(app, io_loop):
+def test_external_service(app):
     name = 'external'
     with external_service(app, name=name) as env:
         app.services = [{
@@ -83,6 +86,7 @@ def test_external_service(app, io_loop):
         app.init_services()
         app.init_api_tokens()
         evt = Event()
+
         @gen.coroutine
         def add_services():
             yield app.proxy.add_all_services(app._service_map)
@@ -91,14 +95,12 @@ def test_external_service(app, io_loop):
         assert evt.wait(10)
         service = app._service_map[name]
         url = public_url(app, service) + '/api/users'
-        path = '/services/{}/api/users'.format(name)
         r = requests.get(url, allow_redirects=False)
         r.raise_for_status()
         assert r.status_code == 200
         resp = r.json()
+
         assert isinstance(resp, list)
         assert len(resp) >= 1
         assert isinstance(resp[0], dict)
         assert 'name' in resp[0]
-
-
