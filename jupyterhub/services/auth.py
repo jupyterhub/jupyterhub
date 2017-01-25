@@ -312,6 +312,10 @@ class HubAuthenticated(object):
     def hub_auth(self, auth):
         self._hub_auth = auth
 
+    def get_login_url(self):
+        """Return the Hub's login URL"""
+        return self.hub_auth.login_url
+
     def check_hub_user(self, user_model):
         """Check whether Hub-authenticated user should be allowed.
 
