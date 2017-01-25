@@ -138,14 +138,46 @@ class HubAuth(Configurable):
     def _cookie_cache(self):
         return _ExpiringDict(self.cookie_cache_max_age)
 
-    def _check_response_for_authorization(self, r):
-        """Verify the response for authorizing a user
+    def _check_hub_authorization(self, url, cache_key=None, use_cache=True):
+        """Identify a user with the Hub
+        
+        Args:
+            url (str): The API URL to check the Hub for authorization
+                       (e.g. http://127.0.0.1:8081/hub/api/authorizations/token/abc-def)
+            cache_key (str): The for checking the cache
+            use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
+
+        Returns:
+            user_model (dict): The user model, if a user is identified, None if authentication fails.
+        An HTTPError is raised if 
+        Verify the response for authorizing a user
 
         Raises an error if the response failed, otherwise returns the json
         """
+        if use_cache:
+            if cache_key is None:
+                raise ValueError("cache_key is required when using cache")
+            cached = self.cookie_cache.get(cache_key)
+            if cached is not None:
+                return cached
+
+        try:
+            r = requests.get(url,
+                headers = {
+                    'Authorization' : 'token %s' % self.api_token,
+                },
+            )
+        except requests.ConnectionError:
+            msg = "Failed to connect to Hub API at %r." % self.api_url
+            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
+            if '127.0.0.1' in self.api_url:
+                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
+                       " single-user servers if the servers are not on the same host as the Hub."
+            raise HTTPError(500, msg)
+
+        data = None
         if r.status_code == 404:
             app_log.warning("No Hub user identified for request")
-            data = None
         elif r.status_code == 403:
             app_log.error("I don't have permission to check authorization with JupyterHub, my auth token may have expired: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Permission failure checking authorization, I may need a new token")
@@ -158,7 +190,12 @@ class HubAuth(Configurable):
         else:
             data = r.json()
             app_log.debug("Received request from Hub user %s", data)
-            return data
+
+        if use_cache:
+            # cache result
+            self.cookie_cache[cache_key] = data
+        return data
+
 
     def user_for_cookie(self, encrypted_cookie, use_cache=True):
         """Ask the Hub to identify the user for a given cookie.
@@ -172,32 +209,14 @@ class HubAuth(Configurable):
 
             The 'name' field contains the user's name.
         """
-        if use_cache:
-            cached = self.cookie_cache.get(encrypted_cookie)
-            if cached is not None:
-                return cached
-        try:
-            r = requests.get(
-                url_path_join(self.api_url,
-                              "authorizations/cookie",
-                              self.cookie_name,
-                              quote(encrypted_cookie, safe=''),
-                ),
-                headers = {
-                    'Authorization' : 'token %s' % self.api_token,
-                },
-            )
-        except requests.ConnectionError:
-            msg = "Failed to connect to Hub API at %r." % self.api_url
-            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
-            if '127.0.0.1' in self.api_url:
-                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
-                       " single-user servers if the servers are not on the same host as the Hub."
-            raise HTTPError(500, msg)
-
-        data = self._check_response_for_authorization(r)
-        self.cookie_cache[encrypted_cookie] = data
-        return data
+        return self._check_hub_authorization(
+            url=url_path_join(self.api_url,
+                          "authorizations/cookie",
+                          self.cookie_name,
+                          quote(encrypted_cookie, safe='')),
+            cache_key='cookie:%s' % encrypted_cookie,
+            use_cache=use_cache,
+        )
 
     def user_for_token(self, token, use_cache=True):
         """Ask the Hub to identify the user for a given token.
@@ -211,31 +230,14 @@ class HubAuth(Configurable):
 
             The 'name' field contains the user's name.
         """
-        if use_cache:
-            cached = self.cookie_cache.get(token)
-            if cached is not None:
-                return cached
-        try:
-            r = requests.get(
-                url_path_join(self.api_url,
-                              "authorizations/token",
-                              quote(token, safe=''),
-                ),
-                headers = {
-                    'Authorization' : 'token %s' % self.api_token,
-                },
-            )
-        except requests.ConnectionError:
-            msg = "Failed to connect to Hub API at %r." % self.api_url
-            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
-            if '127.0.0.1' in self.api_url:
-                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
-                       " single-user servers if the servers are not on the same host as the Hub."
-            raise HTTPError(500, msg)
-
-        data = self._check_response_for_authorization(r)
-        self.cookie_cache[token] = data
-        return data
+        return self._check_hub_authorization(
+            url=url_path_join(self.api_url,
+                "authorizations/token",
+                quote(token, safe='')),
+            cache_key='token:%s' % token,
+            use_cache=use_cache,
+        )
+    
 
     def get_user(self, handler):
         """Get the Hub user for a given tornado handler.
