@@ -4,6 +4,7 @@ import sys
 from threading import Thread
 import time
 from unittest import mock
+from urllib.parse import urlparse
 
 from pytest import raises
 import requests
@@ -16,6 +17,7 @@ from tornado.web import RequestHandler, Application, authenticated, HTTPError
 from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
 from .mocking import public_url
+from .test_api import add_user
 
 # mock for sending monotonic counter way into the future
 monotonic_future = mock.patch('time.monotonic', lambda : sys.maxsize)
@@ -226,4 +228,42 @@ def test_service_cookie_auth(app, mockservice_url):
         'name': 'badger',
         'admin': False,
     }
+
+
+def test_service_token_auth(app, mockservice_url):
+    u = add_user(app.db, name='river')
+    token = u.new_api_token()
+    app.db.commit()
+
+    # token in Authorization header
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/',
+        headers={
+            'Authorization': 'token %s' % token,
+        })
+    r.raise_for_status()
+    reply = r.json()
+    sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
+    assert sub_reply == {
+        'name': 'river',
+        'admin': False,
+    }
+
+    # token in ?token parameter
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
+    r.raise_for_status()
+    reply = r.json()
+    sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
+    assert sub_reply == {
+        'name': 'river',
+        'admin': False,
+    }
+
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+        allow_redirects=False,
+    )
+    assert r.status_code == 302
+    assert 'Location' in r.headers
+    location = r.headers['Location']
+    path = urlparse(location).path
+    assert path.endswith('/hub/login')
 

@@ -8,6 +8,7 @@ HubAuthenticated is a mixin class for tornado handlers that should authenticate 
 """
 
 import os
+import re
 import socket
 import time
 from urllib.parse import quote
@@ -238,6 +239,23 @@ class HubAuth(Configurable):
             use_cache=use_cache,
         )
     
+    auth_header_name = 'Authorization'
+    auth_header_pat = re.compile('token\s+(.+)', re.IGNORECASE)
+
+    def get_token(self, handler):
+        """Get the user token from a request
+
+        - in URL parameters: ?token=<token>
+        - in header: Authorization: token <token>
+        """
+
+        user_token = handler.get_argument('token', '')
+        if not user_token:
+            # get it from Authorization header
+            m = self.auth_header_pat.match(handler.request.headers.get(self.auth_header_name, ''))
+            if m:
+                user_token = m.group(1)
+        return user_token
 
     def get_user(self, handler):
         """Get the Hub user for a given tornado handler.
@@ -259,15 +277,26 @@ class HubAuth(Configurable):
         if hasattr(handler, '_cached_hub_user'):
             return handler._cached_hub_user
 
-        handler._cached_hub_user = None
-        encrypted_cookie = handler.get_cookie(self.cookie_name)
-        if encrypted_cookie:
-            user_model = self.user_for_cookie(encrypted_cookie)
-            handler._cached_hub_user = user_model
-            return user_model
-        else:
-            app_log.debug("No token cookie")
-            return None
+        handler._cached_hub_user = user_model = None
+
+        # check token first
+        token = self.get_token(handler)
+        if token:
+            user_model = self.user_for_token(token)
+            if user_model:
+                handler._token_authenticated = True
+
+        # no token, check cookie
+        if user_model is None:
+            encrypted_cookie = handler.get_cookie(self.cookie_name)
+            if encrypted_cookie:
+                user_model = self.user_for_cookie(encrypted_cookie)
+
+        # cache result
+        handler._cached_hub_user = user_model
+        if not user_model:
+            app_log.debug("No user identified")
+        return user_model
 
 
 class HubAuthenticated(object):

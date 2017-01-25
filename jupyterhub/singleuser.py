@@ -63,6 +63,14 @@ class JupyterHubLoginHandler(LoginHandler):
         return True
 
     @staticmethod
+    def is_token_authenticated(handler):
+        """Is the request token-authenticated?"""
+        if getattr(handler, '_cached_hub_user', None) is None:
+            # ensure get_user has been called, so we know if we're token-authenticated
+            handler.get_current_user()
+        return getattr(handler, '_token_authenticated', False)
+
+    @staticmethod
     def get_user(handler):
         """alternative get_current_user to query the Hub"""
         # patch in HubAuthenticated class for querying the Hub for cookie authentication
