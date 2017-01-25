@@ -298,7 +298,7 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_prefix'] = self.hub_prefix
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
-        s['login_url'] = self.hub_host + self.hub_prefix
+        self.hub_auth.login_url = self.hub_host + self.hub_prefix
         s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
         super(SingleUserNotebookApp, self).init_webapp()
         self.patch_templates()
