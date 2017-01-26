@@ -15,41 +15,33 @@ from jupyterhub.services.auth import HubAuthenticated
 
 
 class EchoHandler(web.RequestHandler):
-    def data_received(self, chunk):
-        pass
-
+    """Handler that mocks a request to the tornado webserver"""
     def get(self):
         self.write(self.request.path)
 
 
 class EnvHandler(web.RequestHandler):
-    def data_received(self, chunk):
-        pass
-
+    """Handler that mocks a request using header and environment settings"""
     def get(self):
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps(dict(os.environ)))
 
 
 class APIHandler(web.RequestHandler):
-    def data_received(self, chunk):
-        pass
-
+    """Handler that mocks a request using an API token"""
     def get(self, path):
         api_token = os.environ['JUPYTERHUB_API_TOKEN']
         api_url = os.environ['JUPYTERHUB_API_URL']
-        r = requests.get(api_url + path, headers={
-            'Authorization': 'token %s' % api_token
-        })
+        r = requests.get(api_url + path,
+            headers={'Authorization': 'token %s' % api_token},
+        )
         r.raise_for_status()
         self.set_header('Content-Type', 'application/json')
         self.write(r.text)
 
 
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
-    def data_received(self, chunk):
-        pass
-
+    """Handler that mocks a request with an authenticated user"""
     @web.authenticated
     def get(self):
         self.write(self.get_current_user())
