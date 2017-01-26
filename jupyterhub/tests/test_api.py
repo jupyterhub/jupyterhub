@@ -168,6 +168,7 @@ def test_get_users(app):
         u.pop('last_activity')
     assert users == [
         {
+            'kind': 'user',
             'name': 'admin',
             'groups': [],
             'admin': True,
@@ -175,6 +176,7 @@ def test_get_users(app):
             'pending': None,
         },
         {
+            'kind': 'user',
             'name': 'user',
             'groups': [],
             'admin': False,
@@ -209,6 +211,7 @@ def test_get_user(app):
     user = r.json()
     user.pop('last_activity')
     assert user == {
+        'kind': 'user',
         'name': name,
         'groups': [],
         'admin': False,
@@ -570,6 +573,7 @@ def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert reply == [{
+        'kind': 'group',
         'name': 'alphaflight',
         'users': []
     }]
@@ -589,6 +593,7 @@ def test_group_get(app):
     r.raise_for_status()
     reply = r.json()
     assert reply == {
+        'kind': 'group',
         'name': 'alphaflight',
         'users': ['sasquatch']
     }

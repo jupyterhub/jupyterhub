@@ -89,6 +89,7 @@ class APIHandler(BaseHandler):
     def user_model(self, user):
         """Get the JSON model for a User object"""
         model = {
+            'kind': 'user',
             'name': user.name,
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
@@ -105,6 +106,7 @@ class APIHandler(BaseHandler):
     def group_model(self, group):
         """Get the JSON model for a Group object"""
         return {
+            'kind': 'group',
             'name': group.name,
             'users': [ u.name for u in group.users ],
         }
