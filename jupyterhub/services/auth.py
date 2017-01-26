@@ -12,6 +12,7 @@ import re
 import socket
 import time
 from urllib.parse import quote
+import warnings
 
 import requests
 
@@ -183,7 +184,6 @@ class HubAuth(Configurable):
             raise HTTPError(500, msg)
 
         data = None
-        print(r.status_code)
         if r.status_code == 404:
             app_log.warning("No Hub user identified for request")
         elif r.status_code == 403:
@@ -330,9 +330,19 @@ class HubAuthenticated(object):
                 ...
 
     """
+    hub_services = None # set of allowed services
     hub_users = None # set of allowed users
     hub_groups = None # set of allowed groups
     
+    @property
+    def allow_all(self):
+        """Property indicating that all successfully identified user
+        or service should be allowed.
+        """
+        return (self.hub_services is None
+            and self.hub_users is None
+            and self.hub_groups is None)
+
     # self.hub_auth must be a HubAuth instance.
     # If nothing specified, use default config,
     # which will be configured with defaults
@@ -352,34 +362,45 @@ class HubAuthenticated(object):
         """Return the Hub's login URL"""
         return self.hub_auth.login_url
 
-    def check_hub_user(self, user_model):
-        """Check whether Hub-authenticated user should be allowed.
+    def check_hub_user(self, model):
+        """Check whether Hub-authenticated user or service should be allowed.
 
         Returns the input if the user should be allowed, None otherwise.
 
         Override if you want to check anything other than the username's presence in hub_users list.
 
         Args:
-            user_model (dict): the user model returned from :class:`HubAuth`
+            model (dict): the user or service model returned from :class:`HubAuth`
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
-        name = user_model['name']
-        if self.hub_users is None and self.hub_groups is None:
-            # no whitelist specified, allow any authenticated Hub user
-            app_log.debug("Allowing Hub user %s (all Hub users allowed)", name)
-            return user_model
+        
+        name = model['name']
+        kind = model.get('kind', 'user')
+        if self.allow_all:
+            app_log.debug("Allowing Hub %s %s (all Hub users and services allowed)", kind, name)
+            return model
+
+        if kind == 'service':
+            # it's a service, check hub_services
+            if self.hub_services and name in self.hub_services:
+                app_log.debug("Allowing whitelisted Hub service %s", name)
+                return model
+            else:
+                app_log.warning("Not allowing Hub service %s", name)
+                return None
+
         if self.hub_users and name in self.hub_users:
             # user in whitelist
             app_log.debug("Allowing whitelisted Hub user %s", name)
-            return user_model
-        elif self.hub_groups and set(user_model['groups']).intersection(self.hub_groups):
-            allowed_groups = set(user_model['groups']).intersection(self.hub_groups)
+            return model
+        elif self.hub_groups and set(model['groups']).intersection(self.hub_groups):
+            allowed_groups = set(model['groups']).intersection(self.hub_groups)
             app_log.debug("Allowing Hub user %s in group(s) %s", name, ','.join(sorted(allowed_groups)))
             # group in whitelist
-            return user_model
+            return model
         else:
-            app_log.warning("Not allowing Hub user %s" % name)
+            app_log.warning("Not allowing Hub user %s", name)
             return None
 
     def get_current_user(self):
