@@ -8,6 +8,7 @@ HubAuthenticated is a mixin class for tornado handlers that should authenticate 
 """
 
 import os
+import re
 import socket
 import time
 from urllib.parse import quote
@@ -18,9 +19,10 @@ from tornado.log import app_log
 from tornado.web import HTTPError
 
 from traitlets.config import Configurable
-from traitlets import Unicode, Integer, Instance, default
+from traitlets import Unicode, Integer, Instance, default, observe
 
 from ..utils import url_path_join
+
 
 class _ExpiringDict(dict):
     """Dict-like cache for Hub API requests
@@ -124,8 +126,14 @@ class HubAuth(Configurable):
     cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
-    cookie_cache_max_age = Integer(300,
-        help="""The maximum time (in seconds) to cache the Hub's response for cookie authentication.
+    cookie_cache_max_age = Integer(help="DEPRECATED. Use cache_max_age")
+    @observe('cookie_cache_max_age')
+    def _deprecated_cookie_cache(self, change):
+        warnings.warn("cookie_cache_max_age is deprecated in JupyterHub 0.8. Use cache_max_age instead.")
+        self.cache_max_age = change.new
+
+    cache_max_age = Integer(300,
+        help="""The maximum time (in seconds) to cache the Hub's responses for authentication.
 
         A larger value reduces load on the Hub and occasional response lag.
         A smaller value reduces propagation time of changes on the Hub (rare).
@@ -133,19 +141,51 @@ class HubAuth(Configurable):
         Default: 300 (five minutes)
         """
     ).tag(config=True)
-    cookie_cache = Instance(_ExpiringDict, allow_none=False)
-    @default('cookie_cache')
-    def _cookie_cache(self):
-        return _ExpiringDict(self.cookie_cache_max_age)
+    cache = Instance(_ExpiringDict, allow_none=False)
+    @default('cache')
+    def _default_cache(self):
+        return _ExpiringDict(self.cache_max_age)
 
-    def _check_response_for_authorization(self, r):
-        """Verify the response for authorizing a user
+    def _check_hub_authorization(self, url, cache_key=None, use_cache=True):
+        """Identify a user with the Hub
+        
+        Args:
+            url (str): The API URL to check the Hub for authorization
+                       (e.g. http://127.0.0.1:8081/hub/api/authorizations/token/abc-def)
+            cache_key (str): The key for checking the cache
+            use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
 
-        Raises an error if the response failed, otherwise returns the json
+        Returns:
+            user_model (dict): The user model, if a user is identified, None if authentication fails.
+
+        Raises an HTTPError if the request failed for a reason other than no such user.
         """
+        if use_cache:
+            if cache_key is None:
+                raise ValueError("cache_key is required when using cache")
+            # check for a cached reply, so we don't check with the Hub if we don't have to
+            cached = self.cache.get(cache_key)
+            if cached is not None:
+                return cached
+
+        try:
+            r = requests.get(url,
+                headers = {
+                    'Authorization' : 'token %s' % self.api_token,
+                },
+            )
+        except requests.ConnectionError:
+            msg = "Failed to connect to Hub API at %r." % self.api_url
+            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
+            if '127.0.0.1' in self.api_url:
+                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
+                       " single-user servers if the servers are not on the same host as the Hub."
+            raise HTTPError(500, msg)
+
+        data = None
+        print(r.status_code)
         if r.status_code == 404:
             app_log.warning("No Hub user identified for request")
-            data = None
         elif r.status_code == 403:
             app_log.error("I don't have permission to check authorization with JupyterHub, my auth token may have expired: [%i] %s", r.status_code, r.reason)
             raise HTTPError(500, "Permission failure checking authorization, I may need a new token")
@@ -158,7 +198,12 @@ class HubAuth(Configurable):
         else:
             data = r.json()
             app_log.debug("Received request from Hub user %s", data)
-            return data
+
+        if use_cache:
+            # cache result
+            self.cache[cache_key] = data
+        return data
+
 
     def user_for_cookie(self, encrypted_cookie, use_cache=True):
         """Ask the Hub to identify the user for a given cookie.
@@ -172,32 +217,14 @@ class HubAuth(Configurable):
 
             The 'name' field contains the user's name.
         """
-        if use_cache:
-            cached = self.cookie_cache.get(encrypted_cookie)
-            if cached is not None:
-                return cached
-        try:
-            r = requests.get(
-                url_path_join(self.api_url,
-                              "authorizations/cookie",
-                              self.cookie_name,
-                              quote(encrypted_cookie, safe=''),
-                ),
-                headers = {
-                    'Authorization' : 'token %s' % self.api_token,
-                },
-            )
-        except requests.ConnectionError:
-            msg = "Failed to connect to Hub API at %r." % self.api_url
-            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
-            if '127.0.0.1' in self.api_url:
-                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
-                       " single-user servers if the servers are not on the same host as the Hub."
-            raise HTTPError(500, msg)
-
-        data = self._check_response_for_authorization(r)
-        self.cookie_cache[encrypted_cookie] = data
-        return data
+        return self._check_hub_authorization(
+            url=url_path_join(self.api_url,
+                          "authorizations/cookie",
+                          self.cookie_name,
+                          quote(encrypted_cookie, safe='')),
+            cache_key='cookie:%s' % encrypted_cookie,
+            use_cache=use_cache,
+        )
 
     def user_for_token(self, token, use_cache=True):
         """Ask the Hub to identify the user for a given token.
@@ -211,31 +238,31 @@ class HubAuth(Configurable):
 
             The 'name' field contains the user's name.
         """
-        if use_cache:
-            cached = self.cookie_cache.get(token)
-            if cached is not None:
-                return cached
-        try:
-            r = requests.get(
-                url_path_join(self.api_url,
-                              "authorizations/token",
-                              quote(token, safe=''),
-                ),
-                headers = {
-                    'Authorization' : 'token %s' % self.api_token,
-                },
-            )
-        except requests.ConnectionError:
-            msg = "Failed to connect to Hub API at %r." % self.api_url
-            msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
-            if '127.0.0.1' in self.api_url:
-                msg += "  Make sure to set c.JupyterHub.hub_ip to an IP accessible to" + \
-                       " single-user servers if the servers are not on the same host as the Hub."
-            raise HTTPError(500, msg)
+        return self._check_hub_authorization(
+            url=url_path_join(self.api_url,
+                "authorizations/token",
+                quote(token, safe='')),
+            cache_key='token:%s' % token,
+            use_cache=use_cache,
+        )
+    
+    auth_header_name = 'Authorization'
+    auth_header_pat = re.compile('token\s+(.+)', re.IGNORECASE)
 
-        data = self._check_response_for_authorization(r)
-        self.cookie_cache[token] = data
-        return data
+    def get_token(self, handler):
+        """Get the user token from a request
+
+        - in URL parameters: ?token=<token>
+        - in header: Authorization: token <token>
+        """
+
+        user_token = handler.get_argument('token', '')
+        if not user_token:
+            # get it from Authorization header
+            m = self.auth_header_pat.match(handler.request.headers.get(self.auth_header_name, ''))
+            if m:
+                user_token = m.group(1)
+        return user_token
 
     def get_user(self, handler):
         """Get the Hub user for a given tornado handler.
@@ -257,15 +284,26 @@ class HubAuth(Configurable):
         if hasattr(handler, '_cached_hub_user'):
             return handler._cached_hub_user
 
-        handler._cached_hub_user = None
-        encrypted_cookie = handler.get_cookie(self.cookie_name)
-        if encrypted_cookie:
-            user_model = self.user_for_cookie(encrypted_cookie)
-            handler._cached_hub_user = user_model
-            return user_model
-        else:
-            app_log.debug("No token cookie")
-            return None
+        handler._cached_hub_user = user_model = None
+
+        # check token first
+        token = self.get_token(handler)
+        if token:
+            user_model = self.user_for_token(token)
+            if user_model:
+                handler._token_authenticated = True
+
+        # no token, check cookie
+        if user_model is None:
+            encrypted_cookie = handler.get_cookie(self.cookie_name)
+            if encrypted_cookie:
+                user_model = self.user_for_cookie(encrypted_cookie)
+
+        # cache result
+        handler._cached_hub_user = user_model
+        if not user_model:
+            app_log.debug("No user identified")
+        return user_model
 
 
 class HubAuthenticated(object):
@@ -309,6 +347,10 @@ class HubAuthenticated(object):
     @hub_auth.setter
     def hub_auth(self, auth):
         self._hub_auth = auth
+
+    def get_login_url(self):
+        """Return the Hub's login URL"""
+        return self.hub_auth.login_url
 
     def check_hub_user(self, user_model):
         """Check whether Hub-authenticated user should be allowed.
