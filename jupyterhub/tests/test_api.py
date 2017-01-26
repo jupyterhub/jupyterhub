@@ -147,14 +147,16 @@ def test_referer_check(app, io_loop):
         headers={
             'Authorization': '',
             'Referer': 'null',
-        }, cookies=cookies, )
+        }, cookies=cookies,
+    )
     assert r.status_code == 403
 
     r = api_request(app, 'users',
         headers={
             'Authorization': '',
             'Referer': 'http://attack.com/csrf/vulnerability',
-        }, cookies=cookies, )
+        }, cookies=cookies,
+    )
     assert r.status_code == 403
 
     r = api_request(app, 'users',
@@ -162,7 +164,8 @@ def test_referer_check(app, io_loop):
             'Authorization': '',
             'Referer': url,
             'Host': host,
-        }, cookies=cookies, )
+        }, cookies=cookies,
+    )
     assert r.status_code == 200
 
     r = api_request(app, 'users',
@@ -170,7 +173,8 @@ def test_referer_check(app, io_loop):
             'Authorization': '',
             'Referer': ujoin(url, 'foo/bar/baz/bat'),
             'Host': host,
-        }, cookies=cookies, )
+        }, cookies=cookies,
+    )
     assert r.status_code == 200
 
 
@@ -206,7 +210,8 @@ def test_get_users(app):
     ]
 
     r = api_request(app, 'users',
-        headers=auth_header(db, 'user'), )
+        headers=auth_header(db, 'user'),
+    )
     assert r.status_code == 403
 
 
@@ -393,7 +398,9 @@ def test_spawn(app, io_loop):
         'i': 5,
     }
     before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
-    r = api_request(app, 'users', name, 'server', method='post', data=json.dumps(options))
+    r = api_request(app, 'users', name, 'server', method='post',
+        data=json.dumps(options),
+    )
     assert r.status_code == 201
     assert 'pid' in user.state
     app_user = get_app_user(app, name)
@@ -525,16 +532,22 @@ def test_cookie(app):
     cookies = app.login_user(name)
     # cookie jar gives '"cookie-value"', we want 'cookie-value'
     cookie = cookies[user.server.cookie_name][1:-1]
-    r = api_request(app, 'authorizations/cookie', user.server.cookie_name, "nothintoseehere")
+    r = api_request(app, 'authorizations/cookie',
+        user.server.cookie_name, "nothintoseehere",
+    )
     assert r.status_code == 404
 
-    r = api_request(app, 'authorizations/cookie', user.server.cookie_name, quote(cookie, safe=''))
+    r = api_request(app, 'authorizations/cookie',
+        user.server.cookie_name, quote(cookie, safe=''),
+    )
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
 
     # deprecated cookie in body:
-    r = api_request(app, 'authorizations/cookie', user.server.cookie_name, data=cookie)
+    r = api_request(app, 'authorizations/cookie',
+        user.server.cookie_name, data=cookie,
+    )
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
@@ -627,15 +640,15 @@ def test_group_create_delete(app):
     r = api_request(app, 'groups/runaways', method='delete')
     assert r.status_code == 404
 
-    r = api_request(app, 'groups/new', method='post', data=json.dumps({
-        'users': ['doesntexist']
-    }))
+    r = api_request(app, 'groups/new', method='post',
+        data=json.dumps({'users': ['doesntexist']}),
+    )
     assert r.status_code == 400
     assert orm.Group.find(db, name='new') is None
 
-    r = api_request(app, 'groups/omegaflight', method='post', data=json.dumps({
-        'users': ['sasquatch']
-    }))
+    r = api_request(app, 'groups/omegaflight', method='post',
+        data=json.dumps({'users': ['sasquatch']}),
+    )
     r.raise_for_status()
 
     omegaflight = orm.Group.find(db, name='omegaflight')
@@ -818,10 +831,9 @@ def test_bad_json_body(app):
 
 
 def test_shutdown(app):
-    r = api_request(app, 'shutdown', method='post', data=json.dumps({
-        'servers': True,
-        'proxy': True,
-    }))
+    r = api_request(app, 'shutdown', method='post',
+        data=json.dumps({'servers': True, 'proxy': True,}),
+    )
     r.raise_for_status()
     reply = r.json()
     for i in range(100):
