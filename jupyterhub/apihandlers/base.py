@@ -106,7 +106,15 @@ class APIHandler(BaseHandler):
         """Get the JSON model for a Group object"""
         return {
             'name': group.name,
-            'users': [ u.name for u in group.users ]
+            'users': [ u.name for u in group.users ],
+        }
+
+    def service_model(self, service):
+        """Get the JSON model for a Service object"""
+        return {
+            'kind': 'service',
+            'name': service.name,
+            'admin': service.admin,
         }
 
     _user_model_types = {
@@ -151,6 +159,7 @@ class APIHandler(BaseHandler):
         for groupname in model.get('groups', []):
             if not isinstance(groupname, str):
                 raise web.HTTPError(400, ("group names must be str, not %r", type(groupname)))
+
 
     def options(self, *args, **kwargs):
         self.set_header('Access-Control-Allow-Headers', 'accept, content-type')
