@@ -1,9 +1,13 @@
-"""Helpers for testing a Service
+"""Mock service for testing Service integration
 
-Each handler functions as a basic HTTP Server that echos URLs back,
-and allows retrieval of sys.argv.
+A JupyterHub service running a basic HTTP server.
+Used by the mockservice fixtures.
 
-These handlers are useful when testing a mock Service.
+Handlers allow:
+
+- echoing proxied URLs back
+- retrieving service's environment variables
+- testing service's API access to the Hub retrieval of sys.argv.
 """
 
 import json
