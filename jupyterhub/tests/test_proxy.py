@@ -63,7 +63,7 @@ def test_external_proxy(request, io_loop):
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert list(routes.keys()) == ['/']
     
-    # add user to the db and server
+    # add user to the db and start a single user server
     name = 'river'
     r = api_request(app, 'users', name, method='post')
     r.raise_for_status()
