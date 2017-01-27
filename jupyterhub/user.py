@@ -210,14 +210,15 @@ class User(HasTraits):
         where name is the server uuid urlsafed
         """
         db = self.db
-        if 'server_name' in options:
+        
+        if options is not None and 'server_name' in options:
             server_name = options['server_name']
         else:
             server_name = default_server_name(self)
         server = orm.Server(
             name = server_name,
             cookie_name=self.cookie_name,
-            base_url=url_path_join(self.base_url, 'server', server_name),
+            base_url=url_path_join(self.base_url, server_name),
         )
         self.servers.append(server)
         db.add(self)
