@@ -10,12 +10,12 @@ import pytest
 
 from .. import orm
 from .mocking import MockHub
-from .test_api import api_request  # authenticated api request?
+from .test_api import api_request
 from ..utils import wait_for_http_server, url_path_join as ujoin
 
 
-# TODO simplify this test
 def test_external_proxy(request, io_loop):
+
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
     proxy_port = 54321
@@ -29,6 +29,7 @@ def test_external_proxy(request, io_loop):
     def fin():
         MockHub.clear_instance()
         app.stop()
+
     request.addfinalizer(fin)
 
     # configures and starts proxy process
@@ -44,6 +45,7 @@ def test_external_proxy(request, io_loop):
     if app.subdomain_host:
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
+
 
     def _cleanup_proxy():
         if proxy.poll() is None:
@@ -78,10 +80,8 @@ def test_external_proxy(request, io_loop):
     
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
-    assert proxy is None
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
-    assert proxy is not None
 
     routes = io_loop.run_sync(app.proxy.get_routes)
     assert list(routes.keys()) == ['/']
@@ -135,38 +135,42 @@ def test_external_proxy(request, io_loop):
     assert sorted(routes.keys()) == ['/', user_path]
 
 
-def test_check_routes(app, io_loop):
+@pytest.mark.parametrize("username, endpoints", [
+    ('zoe', ['users/zoe', 'users/zoe/server']),
+    ('50fia', ['users/50fia', 'users/50fia/server']),
+    ('秀樹', ['users/秀樹', 'users/秀樹/server']),
+])
+def test_check_routes(app, io_loop, username, endpoints):
     proxy = app.proxy
 
-    r = api_request(app, 'users/zoe', method='post')
-    r.raise_for_status()
-    r = api_request(app, 'users/zoe/server', method='post')
-    r.raise_for_status()
+    for endpoint in endpoints:
+        r = api_request(app, endpoint, method='post')
+        r.raise_for_status()
 
-    zoe = orm.User.find(app.db, 'zoe')
-    assert zoe is not None
+    test_user = orm.User.find(app.db, username)
+    assert test_user is not None
 
     # check a valid route exists for user
-    zoe = app.users[zoe]
+    test_user = app.users[username]
     before = sorted(io_loop.run_sync(app.proxy.get_routes))
-    assert unquote(zoe.proxy_path) in before
+    assert unquote(test_user.proxy_path) in before
 
     # check if a route is removed when user deleted
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
-    io_loop.run_sync(lambda: proxy.delete_user(zoe))
+    io_loop.run_sync(lambda: proxy.delete_user(test_user))
     during = sorted(io_loop.run_sync(app.proxy.get_routes))
-    assert unquote(zoe.proxy_path) not in during
+    assert unquote(test_user.proxy_path) not in during
 
     # check if a route exists for user
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     after = sorted(io_loop.run_sync(app.proxy.get_routes))
-    assert unquote(zoe.proxy_path) in after
+    assert unquote(test_user.proxy_path) in after
 
     # check that before and after state are the same
     assert before == after
 
 
-@pytest.mark.parametrize("test_data", [None, 'notjson', b'bytedata', json.dumps([])])
+@pytest.mark.parametrize("test_data", [None, 'notjson', json.dumps([])])
 def test_proxy_patch_bad_request_data(app, test_data):
     r = api_request(app, 'proxy', method='patch', data=test_data)
     assert r.status_code == 400
