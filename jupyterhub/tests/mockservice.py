@@ -1,7 +1,9 @@
-"""Mock service for testing
+"""Helpers for testing a Service
 
-basic HTTP Server that echos URLs back,
-and allow retrieval of sys.argv.
+Each handler functions as a basic HTTP Server that echos URLs back,
+and allows retrieval of sys.argv.
+
+These handlers are useful when testing a mock Service.
 """
 
 import json
@@ -15,20 +17,20 @@ from jupyterhub.services.auth import HubAuthenticated
 
 
 class EchoHandler(web.RequestHandler):
-    """Handler that mocks a request to the tornado webserver"""
+    """Reply to an HTTP request with the path of the request."""
     def get(self):
         self.write(self.request.path)
 
 
 class EnvHandler(web.RequestHandler):
-    """Handler that mocks a request using header and environment settings"""
+    """Reply to an HTTP request with the service's environment as JSON."""
     def get(self):
         self.set_header('Content-Type', 'application/json')
         self.write(json.dumps(dict(os.environ)))
 
 
 class APIHandler(web.RequestHandler):
-    """Handler that mocks a request using an API token"""
+    """Relay API requests to the Hub's API using the service's API token."""
     def get(self, path):
         api_token = os.environ['JUPYTERHUB_API_TOKEN']
         api_url = os.environ['JUPYTERHUB_API_URL']
@@ -41,7 +43,7 @@ class APIHandler(web.RequestHandler):
 
 
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
-    """Handler that mocks a request with an authenticated user"""
+    """Reply with the name of the user who made the request."""
     @web.authenticated
     def get(self):
         self.write(self.get_current_user())
