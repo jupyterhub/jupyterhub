@@ -1,4 +1,6 @@
+from binascii import hexlify
 import json
+import os
 from queue import Queue
 import sys
 from threading import Thread
@@ -217,7 +219,8 @@ def test_hub_authenticated(request):
         assert auth.login_url in r.headers['Location']
 
 
-def test_service_cookie_auth(app, mockservice_url):
+def test_hubauth_cookie(app, mockservice_url):
+    """Test HubAuthenticated service with user cookies"""
     cookies = app.login_user('badger')
     r = requests.get(public_url(app, mockservice_url) + '/whoami/', cookies=cookies)
     r.raise_for_status()
@@ -230,7 +233,8 @@ def test_service_cookie_auth(app, mockservice_url):
     }
 
 
-def test_service_token_auth(app, mockservice_url):
+def test_hubauth_token(app, mockservice_url):
+    """Test HubAuthenticated service with user API tokens"""
     u = add_user(app.db, name='river')
     token = u.new_api_token()
     app.db.commit()
@@ -255,6 +259,47 @@ def test_service_token_auth(app, mockservice_url):
     sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
     assert sub_reply == {
         'name': 'river',
+        'admin': False,
+    }
+
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+        allow_redirects=False,
+    )
+    assert r.status_code == 302
+    assert 'Location' in r.headers
+    location = r.headers['Location']
+    path = urlparse(location).path
+    assert path.endswith('/hub/login')
+
+
+def test_hubauth_service_token(app, mockservice_url, io_loop):
+    """Test HubAuthenticated service with service API tokens"""
+    
+    token = hexlify(os.urandom(5)).decode('utf8')
+    name = 'test-api-service'
+    app.service_tokens[token] = name
+    io_loop.run_sync(app.init_api_tokens)
+    
+    # token in Authorization header
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/',
+        headers={
+            'Authorization': 'token %s' % token,
+        })
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == {
+        'kind': 'service',
+        'name': name,
+        'admin': False,
+    }
+
+    # token in ?token parameter
+    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == {
+        'kind': 'service',
+        'name': name,
         'admin': False,
     }
 

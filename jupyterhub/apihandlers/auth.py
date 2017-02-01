@@ -18,7 +18,11 @@ class TokenAPIHandler(APIHandler):
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             raise web.HTTPError(404)
-        self.write(json.dumps(self.user_model(self.users[orm_token.user])))
+        if orm_token.user:
+            model = self.user_model(self.users[orm_token.user])
+        elif orm_token.service:
+            model = self.service_model(orm_token.service)
+        self.write(json.dumps(model))
 
     @gen.coroutine
     def post(self):
