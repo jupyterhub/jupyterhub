@@ -12,6 +12,18 @@ from ..utils import admin_only
 from .base import APIHandler
 
 
+class SelfAPIHandler(APIHandler):
+    """Return the authenticated user's model
+    
+    Based on the authentication info. Acts as a 'whoami' for auth tokens.
+    """
+    @web.authenticated
+    def get(self):
+        user = self.get_current_user()
+        print(user)
+        self.write(json.dumps(self.user_model(user)))
+
+
 class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
@@ -272,6 +284,7 @@ class UserAdminAccessAPIHandler(APIHandler):
 
 
 default_handlers = [
+    (r"/api/user", SelfAPIHandler),
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
