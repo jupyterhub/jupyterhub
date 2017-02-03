@@ -14,6 +14,7 @@ from oauth2 import Provider
 from oauth2.tokengenerator import Uuid4 as UUID4
 
 from sqlalchemy.orm import scoped_session
+from tornado.escape import url_escape
 
 from . import orm
 from ..utils import url_path_join
@@ -28,12 +29,14 @@ class JupyterHubSiteAdapter(AuthorizationCodeGrantSiteAdapter):
         self.login_url = login_url
 
     def render_auth_page(self, request, response, environ, scopes, client):
+        """Auth page is a redirect to login page"""
         response.status_code = 302
-        response.headers['Location'] = self.login_url
+        response.headers['Location'] = self.login_url + '?next={}'.format(
+            url_escape(request.handler.request.path + '?' + request.handler.request.query)
+        }
         return response
 
     def authenticate(self, request, environ, scopes, client):
-        print(request, environ, scopes, client)
         handler = request.handler
         user = handler.get_current_user()
         if user:
@@ -61,7 +64,7 @@ class HubDBMixin(object):
 
 class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
     """OAuth2 AccessTokenStore, storing data in the Hub database"""
-    
+
     def _access_token_from_orm(self, orm_token):
         """Transform an ORM AccessToken record into an oauth2 AccessToken instance"""
         return AccessToken(
@@ -81,11 +84,10 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         :param access_token: An instance of :class:`oauth2.datatype.AccessToken`.
 
         """
-        print('save token', access_token, access_token.data)
         orm_token = orm.OAuthAccessToken(
             client_id=access_token.client_id,
             token=access_token.token,
-            grant_type=orm_token.grant_type,
+            grant_type=access_token.grant_type,
             expires_at=access_token.expires_at,
             refresh_token=access_token.refresh_token,
             refresh_expires_at=access_token.refresh_expires_at,
@@ -176,7 +178,6 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
             .query(orm.OAuthCode)\
             .filter(orm.OAuthCode.code == code)\
             .first()
-        print("fetch code", code, orm_code)
         if orm_code is None:
             raise AuthCodeNotFound()
         else:
@@ -197,7 +198,6 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
         :param authorization_code: An instance of
                                    :class:`oauth2.datatype.AuthorizationCode`.
         """
-        print("save code", authorization_code)
         orm_code = orm.OAuthCode(
             client_id=authorization_code.client_id,
             code=authorization_code.code,
@@ -217,7 +217,6 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
 
         :param code: The authorization code.
         """
-        print("delete code", code)
         orm_code = self.db.query(orm.OAuthCode).filter(orm.OAuthCode.code == code).first()
         if orm_code is not None:
             self.db.delete(orm_code)
@@ -238,23 +237,27 @@ class ClientStore(HubDBMixin, oauth2.store.ClientStore):
                  given client_id.
         """
         orm_client = self.db\
-            .query(orm.OAuthCode)\
+            .query(orm.OAuthClient)\
             .filter(orm.OAuthClient.identifier == client_id)\
             .first()
-        print("fetch client", client_id, orm_client)
         if orm_client is None:
             raise ClientNotFoundError()
         return Client(identifier=client_id, redirect_uris=[orm_client.redirect_uri], secret=orm_client.secret)
     
     def add_client(self, client_id, client_secret, redirect_uri):
         """Add a client"""
+        # clear existing clients with same ID
+        for client in self.db\
+                .query(orm.OAuthClient)\
+                .filter(orm.OAuthClient.identifier == client_id):
+            self.db.delete(client)
+
         orm_client = orm.OAuthClient(
             identifier=client_id,
             secret=client_secret,
             redirect_uri=redirect_uri,
         )
         self.db.add(orm_client)
-        print("add client", client_id, orm_client)
         self.db.commit()
 
 
@@ -272,6 +275,7 @@ def make_provider(session_factory, url_prefix, login_url):
     )
     provider.token_path = url_path_join(url_prefix, 'token')
     provider.authorize_path = url_path_join(url_prefix, 'authorize')
-    provider.add_grant(AuthorizationCodeGrant(site_adapter=JupyterHubSiteAdapter(login_url=login_url)))
+    site_adapter = JupyterHubSiteAdapter(login_url=login_url)
+    provider.add_grant(AuthorizationCodeGrant(site_adapter=site_adapter))
     return provider
 

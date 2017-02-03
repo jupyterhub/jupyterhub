@@ -30,9 +30,9 @@ class OAuthAccessToken(Base):
     client_id = Column(Unicode(1023))
     grant_type = Column(Enum(GrantType), nullable=False)
     token = Column(Unicode(36))
-    expires_at = Column(DateTime)
+    expires_at = Column(Integer)
     refresh_token = Column(Unicode(36))
-    refresh_expires_at = Column(DateTime)
+    refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id'))
 
 
@@ -41,7 +41,7 @@ class OAuthCode(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     client_id = Column(Unicode(1023))
     code = Column(Unicode(36))
-    expires_at = Column(DateTime)
+    expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id'))
 
