@@ -512,7 +512,6 @@ class APIToken(Base):
     """An API token"""
     __tablename__ = 'api_tokens'
 
-    # _constraint = ForeignKeyConstraint(['user_id', 'server_id'], ['users.id', 'services.id'])
     @declared_attr
     def user_id(cls):
         return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)

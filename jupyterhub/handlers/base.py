@@ -148,7 +148,7 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
-            return orm_token.user or orm_token.service
+            return orm_token.service or self._user_from_orm(orm_token.user)
 
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""

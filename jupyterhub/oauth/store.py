@@ -16,8 +16,10 @@ from oauth2.tokengenerator import Uuid4 as UUID4
 from sqlalchemy.orm import scoped_session
 from tornado.escape import url_escape
 
+from ..orm import User
 from . import orm
-from ..utils import url_path_join
+from jupyterhub.orm import APIToken
+from ..utils import url_path_join, hash_token, compare_token
 
 
 class JupyterHubSiteAdapter(AuthorizationCodeGrantSiteAdapter):
@@ -33,7 +35,7 @@ class JupyterHubSiteAdapter(AuthorizationCodeGrantSiteAdapter):
         response.status_code = 302
         response.headers['Location'] = self.login_url + '?next={}'.format(
             url_escape(request.handler.request.path + '?' + request.handler.request.query)
-        }
+        )
         return response
 
     def authenticate(self, request, environ, scopes, client):
@@ -69,7 +71,6 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         """Transform an ORM AccessToken record into an oauth2 AccessToken instance"""
         return AccessToken(
             client_id=orm_token.client_id,
-            token=orm_token.token,
             grant_type=orm_token.grant_type,
             expires_at=orm_token.expires_at,
             refresh_token=orm_token.refresh_token,
@@ -84,16 +85,21 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         :param access_token: An instance of :class:`oauth2.datatype.AccessToken`.
 
         """
-        orm_token = orm.OAuthAccessToken(
+        
+        user = self.db.query(User).filter(User.id == access_token.user_id).first()
+        token = user.new_api_token(access_token.token)
+        orm_api_token = APIToken.find(self.db, token, kind='user')
+        
+        orm_access_token = orm.OAuthAccessToken(
             client_id=access_token.client_id,
-            token=access_token.token,
             grant_type=access_token.grant_type,
             expires_at=access_token.expires_at,
             refresh_token=access_token.refresh_token,
             refresh_expires_at=access_token.refresh_expires_at,
-            user_id=access_token.user_id,
+            user=user,
+            api_token=orm_api_token,
         )
-        self.db.add(orm_token)
+        self.db.add(orm_access_token)
         self.db.commit()
 
     def fetch_existing_token_of_user(self, client_id, grant_type, user_id):
@@ -110,6 +116,7 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         :raises: :class:`oauth2.error.AccessTokenNotFound` if no data could be
                  retrieved.
         """
+        raise NotImplementedError("Unique tokens not implemented")
         orm_token = self.db\
             .query(orm.OAuthAccessToken)\
             .filter(orm.OAuthAccessToken.client_id==client_id)\
@@ -130,6 +137,7 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         :raises: :class:`oauth2.error.AccessTokenNotFound` if no data could be retrieved for
                  given refresh_token.
         """
+        raise NotImplementedError("Refresh tokens not implemented")
         orm_token = self.db\
             .query(orm.OAuthAccessToken)\
             .filter(orm.OAuthAccessToken.refresh_token==refresh_token)\
@@ -223,13 +231,33 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
             self.db.commit()
 
 
-class ClientStore(HubDBMixin, oauth2.store.ClientStore):
+class HashComparable:
+    """An object for storing
+
+    Overrides `==` so that it identifies as equal to its unhashed original
+
+    Needed for storing hashed client_secrets
+    because python-oauth2 uses::
+
+        secret == client.client_secret
+
+    and we don't want to store secrets at rest.
     """
-    OAuth2 ClientStore, storing data in the Hub database
+    def __init__(self, hashed_token):
+        self.hashed_token = hashed_token
+    
+    def __repr__(self):
+        return "<{} '{}'>".format(self.__class__.__name__, self.hashed_token)
+
+    def __eq__(self, other):
+        return compare_token(self.hashed_token, other)
+
+
+class ClientStore(HubDBMixin, oauth2.store.ClientStore):
+    """OAuth2 ClientStore, storing data in the Hub database
     """
     def fetch_by_client_id(self, client_id):
-        """
-        Retrieve a client by its identifier.
+        """Retrieve a client by its identifier.
 
         :param client_id: Identifier of a client app.
         :return: An instance of :class:`oauth2.datatype.Client`.
@@ -242,19 +270,26 @@ class ClientStore(HubDBMixin, oauth2.store.ClientStore):
             .first()
         if orm_client is None:
             raise ClientNotFoundError()
-        return Client(identifier=client_id, redirect_uris=[orm_client.redirect_uri], secret=orm_client.secret)
+        return Client(identifier=client_id,
+                      redirect_uris=[orm_client.redirect_uri],
+                      secret=HashComparable(orm_client.secret),
+                      )
     
     def add_client(self, client_id, client_secret, redirect_uri):
-        """Add a client"""
+        """Add a client
+        
+        hash its client_secret before putting it in the database.
+        """
         # clear existing clients with same ID
         for client in self.db\
                 .query(orm.OAuthClient)\
                 .filter(orm.OAuthClient.identifier == client_id):
             self.db.delete(client)
+        self.db.commit()
 
         orm_client = orm.OAuthClient(
             identifier=client_id,
-            secret=client_secret,
+            secret=hash_token(client_secret),
             redirect_uri=redirect_uri,
         )
         self.db.add(orm_client)

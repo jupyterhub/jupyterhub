@@ -70,7 +70,6 @@ class OAuthHandler(BaseHandler, OAuth2Handler):
         pass
 
 
-
 default_handlers = [
     (r"/api/authorizations/cookie/([^/]+)(?:/([^/]+))?", CookieAPIHandler),
     (r"/api/authorizations/token/([^/]+)", TokenAPIHandler),

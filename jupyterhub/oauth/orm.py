@@ -1,4 +1,6 @@
 """SQLAlchemy declarations for OAuth2 data stores"""
+import enum
+
 from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy import (
     inspect,
@@ -12,9 +14,8 @@ from sqlalchemy.schema import Index, UniqueConstraint
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine, Table
-from ..orm import Base
+from ..orm import Base, APIToken, User
 
-import enum
 
 class GrantType(enum.Enum):
     authorization_code = 'authorization_code'
@@ -27,13 +28,16 @@ class GrantType(enum.Enum):
 class OAuthAccessToken(Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
+
     client_id = Column(Unicode(1023))
     grant_type = Column(Enum(GrantType), nullable=False)
-    token = Column(Unicode(36))
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(36))
     refresh_expires_at = Column(Integer)
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
+    user = relationship(User)
+    api_token_id = Column(Integer, ForeignKey('api_tokens.id', ondelete='CASCADE'))
+    api_token = relationship(APIToken, backref='oauth_token')
 
 
 class OAuthCode(Base):
@@ -43,13 +47,13 @@ class OAuthCode(Base):
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
-    user_id = Column(Integer, ForeignKey('users.id'))
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
 
 class OAuthClient(Base):
     __tablename__ = 'oauth_clients'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    identifier = Column(Unicode(1023))
+    identifier = Column(Unicode(1023), unique=True)
     secret = Column(Unicode(1023))
     redirect_uri = Column(Unicode(1023))
 
