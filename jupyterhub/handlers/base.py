@@ -22,7 +22,7 @@ from ..spawner import LocalProcessSpawner
 from ..utils import url_path_join
 
 # pattern for the authentication token header
-auth_header_pat = re.compile(r'^token\s+([^\s]+)$')
+auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
 
 # mapping of reason: reason_message
 reasons = {
