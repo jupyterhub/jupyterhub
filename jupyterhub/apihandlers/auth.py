@@ -11,7 +11,7 @@ from tornado import web, gen
 
 from .. import orm
 from ..utils import token_authenticated
-from .base import APIHandler
+from .base import BaseHandler, APIHandler
 
 
 class TokenAPIHandler(APIHandler):
@@ -61,7 +61,7 @@ class CookieAPIHandler(APIHandler):
         self.write(json.dumps(self.user_model(user)))
 
 
-class OAuthHandler(OAuth2Handler):
+class OAuthHandler(BaseHandler, OAuth2Handler):
     @property
     def provider(self):
         return self.settings['oauth_provider']
@@ -69,13 +69,12 @@ class OAuthHandler(OAuth2Handler):
     def initialize(self):
         pass
 
-class OAuthAPIHandler(OAuthHandler, APIHandler):
-    pass
+
 
 default_handlers = [
     (r"/api/authorizations/cookie/([^/]+)(?:/([^/]+))?", CookieAPIHandler),
     (r"/api/authorizations/token/([^/]+)", TokenAPIHandler),
     (r"/api/authorizations/token", TokenAPIHandler),
     (r"/api/oauth2/authorize", OAuthHandler),
-    (r"/api/oauth2/token", OAuthAPIHandler),
+    (r"/api/oauth2/token", OAuthHandler),
 ]
