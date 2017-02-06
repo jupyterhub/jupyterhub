@@ -120,6 +120,8 @@ class User(HasTraits):
         super().__init__(**kwargs)
 
         hub = self.db.query(orm.Hub).first()
+        
+        self.allow_multiple_servers = self.settings.get('allow_multiple_servers', False)
 
         self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
@@ -203,18 +205,27 @@ class User(HasTraits):
     def spawn(self, options=None):
         """Start the user's spawner
         
-        Because there could be more then one server per user
-        each server has to have a unique name between the servers of a given user
+        depending from the value of JupyterHub.allow_multiple_servers
         
-        base_url is built using user's base url and adding /server/{name}
-        where name is the server uuid urlsafed
+        if False:
+        JupyterHub expects only one single-server per user
+        url of the server will be /user/:name
+        
+        if True:
+        JupyterHub expects more than one single-server per user
+        url of the server will be /user/:name/:server_name
         """
         db = self.db
-        
-        if options is not None and 'server_name' in options:
-            server_name = options['server_name']
+                
+        if self.allow_multiple_servers:
+            if options is not None and 'server_name' in options:
+                server_name = options['server_name']
+            else:
+                server_name = default_server_name(self)
         else:
-            server_name = default_server_name(self)
+            server_name = ''
+        
+        
         server = orm.Server(
             name = server_name,
             cookie_name=self.cookie_name,

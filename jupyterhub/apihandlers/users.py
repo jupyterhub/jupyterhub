@@ -158,14 +158,54 @@ class UserAPIHandler(APIHandler):
             setattr(user, key, value)
         self.db.commit()
         self.write(json.dumps(self.user_model(user)))
+        
 
-
-class UserCreateServerAPIHandler(APIHandler):
-
+class UserServerAPIHandler(APIHandler):
+    """Create and delete single-user servers
+    
+    This handler should be used when c.JupyterHub.allow_multiple_servers = False
+    """
     @gen.coroutine
     @admin_or_self
     def post(self, name):
-            
+        user = self.find_user(name)
+        if user.running:
+            # include notify, so that a server that died is noticed immediately
+            state = yield user.spawner.poll_and_notify()
+            if state is None:
+                raise web.HTTPError(400, "%s's server is already running" % name)
+
+        options = self.get_json_body()
+        yield self.spawn_single_user(user, options=options)
+        status = 202 if user.spawn_pending else 201
+        self.set_status(status)
+
+    @gen.coroutine
+    @admin_or_self
+    def delete(self, name):
+        user = self.find_user(name)
+        if user.stop_pending:
+            self.set_status(202)
+            return
+        if not user.running:
+            raise web.HTTPError(400, "%s's server is not running" % name)
+        # include notify, so that a server that died is noticed immediately
+        status = yield user.spawner.poll_and_notify()
+        if status is not None:
+            raise web.HTTPError(400, "%s's server is not running" % name)
+        yield self.stop_single_user(user)
+        status = 202 if user.stop_pending else 204
+        self.set_status(status)
+
+
+class UserCreateMultiServerAPIHandler(APIHandler):
+    """Create multi single-user server
+    
+    This handler should be used when c.JupyterHub.allow_multiple_servers = True
+    """
+    @gen.coroutine
+    @admin_or_self
+    def post(self, name):
         user = self.find_user(name)
         if user.running:
             # include notify, so that a server that died is noticed immediately
@@ -179,8 +219,13 @@ class UserCreateServerAPIHandler(APIHandler):
         self.set_status(status)
 
 
-class UserDeleteServerAPIHandler(APIHandler):
-
+class UserDeleteMultiServerAPIHandler(APIHandler):
+    """Delete multi single-user server
+    
+    Expect a server_name inside the url /user/:user/servers/:server_name
+    
+    This handler should be used when c.JupyterHub.allow_multiple_servers = True
+    """
     @gen.coroutine
     @admin_or_self
     def delete(self, name, server_name):
@@ -227,7 +272,8 @@ class UserAdminAccessAPIHandler(APIHandler):
 default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
-    (r"/api/users/([^/]+)/servers", UserCreateServerAPIHandler),
-    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteServerAPIHandler),
+    (r"/api/users/([^/]+)/server", UserServerAPIHandler),
+    (r"/api/users/([^/]+)/servers", UserCreateMultiServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteMultiServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
