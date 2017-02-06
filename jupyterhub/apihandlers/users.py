@@ -86,7 +86,7 @@ def admin_or_self(method):
         # raise 404 if not found
         if not self.find_user(name):
             raise web.HTTPError(404)
-        return method(self, name, args, kwargs)
+        return method(self, name, *args, **kwargs)
     return m
 
 class UserAPIHandler(APIHandler):
