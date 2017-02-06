@@ -16,8 +16,7 @@ from oauth2.tokengenerator import Uuid4 as UUID4
 from sqlalchemy.orm import scoped_session
 from tornado.escape import url_escape
 
-from ..orm import User
-from . import orm
+from .. import orm
 from jupyterhub.orm import APIToken
 from ..utils import url_path_join, hash_token, compare_token
 
@@ -86,7 +85,7 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
 
         """
         
-        user = self.db.query(User).filter(User.id == access_token.user_id).first()
+        user = self.db.query(orm.User).filter(orm.User.id == access_token.user_id).first()
         token = user.new_api_token(access_token.token)
         orm_api_token = APIToken.find(self.db, token, kind='user')
         
