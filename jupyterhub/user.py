@@ -4,9 +4,6 @@
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
-from uuid import uuid4
-from base64 import urlsafe_b64encode, urlsafe_b64decode
-
 from tornado import gen
 from tornado.log import app_log
 
@@ -222,14 +219,17 @@ class User(HasTraits):
                 server_name = options['server_name']
             else:
                 server_name = default_server_name(self)
+            base_url = url_path_join(self.base_url, server_name)
         else:
             server_name = ''
+            base_url = self.base_url
+
         
         
         server = orm.Server(
             name = server_name,
             cookie_name=self.cookie_name,
-            base_url=url_path_join(self.base_url, server_name),
+            base_url=base_url,
         )
         self.servers.append(server)
         db.add(self)
