@@ -1,5 +1,5 @@
 alembic
-traitlets>=4.1
+traitlets>=4.3
 tornado>=4.1
 jinja2
 pamela
