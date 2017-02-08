@@ -6,8 +6,6 @@ python:
     - 3.5
     - 3.6
     - nightly
-    # PyPy versions
-    - pypy3
 
 # installing dependencies
 before_install:
@@ -19,10 +17,10 @@ install:
 
 # running tests
 script:
-    - if [[ $TRAVIS_PYTHON_VERSION == '3.6' | $TRAVIS_PYTHON_VERSION == 'nightly' | $TRAVIS_PYTHON_VERSION == 'pypy3']]; then travis_retry pytest --cov=jupyterhub jupyterhub/tests -v; fi # for Python 3.6 and above
-    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' | $TRAVIS_PYTHON_VERSION == '3.4' | $TRAVIS_PYTHON_VERSION == '3.3' ]]; then travis_retry py.test --cov=jupyterhub jupyterhub/tests -v; fi # for < 3.5
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.6' || $TRAVIS_PYTHON_VERSION == 'nightly' ]]; then travis_retry pytest --cov=jupyterhub jupyterhub/tests -v; fi # for Python 3.6 and above
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' || $TRAVIS_PYTHON_VERSION == '3.4' || $TRAVIS_PYTHON_VERSION == '3.3' ]]; then travis_retry py.test --cov=jupyterhub jupyterhub/tests -v; fi # for < 3.5
 after_success:
-    - if [[ $TRAVIS_PYTHON_VERSION != 'nightly' ]]; then codecov; fi
+    - codecov
 
 matrix:
   fast_finish: true
