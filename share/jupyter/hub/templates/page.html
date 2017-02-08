@@ -84,7 +84,6 @@
 
 <nav class="navbar navbar-default">
     <div class="container-fluid">
-      <!-- Brand and toggle get grouped for better mobile display -->
       <div class="navbar-header">
         <span id="jupyterhub-logo" class="pull-left"><a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a></span>
         <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#thenavbar" aria-expanded="false">
@@ -95,7 +94,6 @@
         </button>
       </div>
 
-      <!-- Collect the nav links, forms, and other content for toggling -->
       <div class="collapse navbar-collapse" id="thenavbar">
         {% if user %}
         <ul class="nav navbar-nav">
@@ -108,7 +106,7 @@
         {% endif %}
         <ul class="nav navbar-nav navbar-right">
           <li>
-  {% block login_widget %}
+            {% block login_widget %}
               <span id="login_widget">
                 {% if user %}
                   <a id="logout" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i class="fa fa-sign-out"></i> Logout</a>
@@ -116,13 +114,10 @@
                   <a id="login" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
                 {% endif %}
               </span>
-  {% endblock %}
+              {% endblock %}
           </li>
         </ul>
       </div>
-    
-
-
 
   {% block header %}
   {% endblock %}
