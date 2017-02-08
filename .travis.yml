@@ -17,8 +17,8 @@ install:
 
 # running tests
 script:
-    - if [[ $TRAVIS_PYTHON_VERSION == '3.6' || $TRAVIS_PYTHON_VERSION == 'nightly' ]]; then pytest --max-fail=2 --cov=jupyterhub jupyterhub/tests; fi # for Python 3.6 and above
-    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' || $TRAVIS_PYTHON_VERSION == '3.4' || $TRAVIS_PYTHON_VERSION == '3.3' ]]; then py.test --max-fail=2 --cov=jupyterhub jupyterhub/tests; fi # for < 3.5
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.6' || $TRAVIS_PYTHON_VERSION == 'nightly' ]]; then pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests; fi # for Python 3.6 and above
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' || $TRAVIS_PYTHON_VERSION == '3.4' || $TRAVIS_PYTHON_VERSION == '3.3' ]]; then py.test --maxfail=2 --cov=jupyterhub jupyterhub/tests; fi # for < 3.5
 after_success:
     - codecov
 
