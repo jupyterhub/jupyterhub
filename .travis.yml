@@ -1,7 +1,4 @@
 # http://travis-ci.org/#!/jupyter/jupyterhub
-# using container builds are faster so test as a normal user instead of root
-sudo: false
-
 language: python
 python:
     - 3.3
@@ -22,10 +19,10 @@ install:
 
 # running tests
 script:
-    - if [[ $TRAVIS_PYTHON_VERSION >= '3.6' ]]; then travis_retry pytest --cov=jupyterhub jupyterhub/tests -v; fi # for Python 3.6 and above
-    - if [[ $TRAVIS_PYTHON_VERSION <= '3.5' ]]; then travis_retry py.test --cov=jupyterhub jupyterhub/tests -v; fi # for < 3.5
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.6' | $TRAVIS_PYTHON_VERSION == 'nightly' | $TRAVIS_PYTHON_VERSION == 'pypy3']]; then travis_retry pytest --cov=jupyterhub jupyterhub/tests -v; fi # for Python 3.6 and above
+    - if [[ $TRAVIS_PYTHON_VERSION == '3.5' | $TRAVIS_PYTHON_VERSION == '3.4' | $TRAVIS_PYTHON_VERSION == '3.3' ]]; then travis_retry py.test --cov=jupyterhub jupyterhub/tests -v; fi # for < 3.5
 after_success:
-    - if [[ $TRAVIS_PYTHON_VERSION != nightly ]]; then codecov; fi
+    - if [[ $TRAVIS_PYTHON_VERSION != 'nightly' ]]; then codecov; fi
 
 matrix:
   fast_finish: true
