@@ -131,6 +131,26 @@ def test_auth_api(app):
     assert r.status_code == 403
 
 
+@mark.parametrize("headers, data, status", [
+    ({}, None, 200),
+    ({'Authorization': ''}, None, 403),
+    ({}, {'username': 'fake', 'password': 'fake'}, 200),
+])
+def test_request_token(app, headers, data, status):
+    if data:
+        data = json.dumps(data)
+    # request a new token
+    r = api_request(app, 'authorizations', 'token', method='post', data=data, headers=headers)
+    assert r.status_code == status
+    if status != 200:
+        return
+    reply = r.json()
+    assert 'token' in reply
+    r = api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    assert 'name' in r.json()
+
+
 def test_referer_check(app, io_loop):
     url = ujoin(public_host(app), app.hub.server.base_url)
     host = urlparse(url).netloc
