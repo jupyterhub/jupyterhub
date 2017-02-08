@@ -184,6 +184,15 @@ class AdminHandler(BaseHandler):
         self.finish(html)
 
 
+class TokenPageHandler(BaseHandler):
+    """Handler for page requesting new API tokens"""
+
+    @web.authenticated
+    def get(self):
+        html = self.render_template('token.html')
+        self.finish(html)
+
+
 class ProxyErrorHandler(BaseHandler):
     """Handler for rendering proxy error pages"""
     
@@ -222,5 +231,6 @@ default_handlers = [
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
     (r'/spawn', SpawnHandler),
+    (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
 ]

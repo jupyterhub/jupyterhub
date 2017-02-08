@@ -119,7 +119,13 @@ define(['jquery', 'utils'], function ($, utils) {
             options
         );
     };
-    
+
+    JHAPI.prototype.request_token = function (options) {
+        options = options || {};
+        options = update(options, {type: 'POST'});
+        this.api_request('authorizations/token', options);
+    };
+
     JHAPI.prototype.shutdown_hub = function (data, options) {
         options = options || {};
         options = update(options, {type: 'POST'});

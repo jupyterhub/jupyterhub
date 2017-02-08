@@ -1,26 +1,15 @@
+@logo-height: 28px;
+
 .jpy-logo {
-  height: 28px;
-  margin-top: 6px;
+  height: @logo-height;
+  margin-top: (@navbar-height - @logo-height) / 2;
 }
 
 #header {
   border-bottom: 1px solid #e7e7e7;
-  height: 40px;
 }
 
 .hidden {
   display: none;
 }
 
-.dropdown.navbar-btn{
-    padding:0 5px 0 0;
-}
-
-#login_widget{
-
-    & .navbar-btn.btn-sm {
-      margin-top: 5px;
-      margin-bottom: 5px;
-    }
-
-}

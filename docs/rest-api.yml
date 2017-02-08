@@ -377,6 +377,33 @@ paths:
       responses:
         '200':
           description: Success
+  /authorizations/token:
+    post:
+      summary: Request a new API token
+      description: |
+        Request a new API token to use with the JupyterHub REST API.
+        If not already authenticated, username and password can be sent
+        in the JSON request body.
+        Logging in via this method is only available when the active Authenticator
+        accepts passwords (e.g. not OAuth).
+      parameters:
+        - name: username
+          in: body
+          required: false
+          type: string
+        - name: password
+          in: body
+          required: false
+          type: string
+      responses:
+        '200':
+          description: The new API token
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+                description: The new API token.
   /authorizations/token/{token}:
     get:
       summary: Identify a user from an API token

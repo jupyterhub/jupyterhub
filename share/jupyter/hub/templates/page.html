@@ -27,7 +27,7 @@
 <head>
     <meta charset="utf-8">
 
-    <title>{% block title %}Jupyter Hub{% endblock %}</title>
+    <title>{% block title %}JupyterHub{% endblock %}</title>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
@@ -35,6 +35,8 @@
     <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
     {% endblock %}
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
+    <script src="{{static_url("components/jquery/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
+    <script src="{{static_url("components/bootstrap/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script>
     <script>
       require.config({
           {% if version_hash %}
@@ -75,31 +77,52 @@
 
 <noscript>
   <div id='noscript'>
-    Jupyter Hub requires JavaScript.<br>
+    JupyterHub requires JavaScript.<br>
     Please enable it to proceed.
   </div>
 </noscript>
 
-<div id="header" class="navbar navbar-static-top">
-  <div class="container">
-  <span id="jupyterhub-logo" class="pull-left"><a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a></span>
+<nav class="navbar navbar-default">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <span id="jupyterhub-logo" class="pull-left"><a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a></span>
+        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#thenavbar" aria-expanded="false">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
 
-  {% block login_widget %}
-
-    <span id="login_widget">
-      {% if user %}
-        <a id="logout" class="navbar-btn btn-sm btn btn-default pull-right" href="{{logout_url}}"> <i class="fa fa-sign-out"></i> Logout</a>
-      {% else %}
-        <a id="login" class="btn-sm btn navbar-btn btn-default pull-right" href="{{login_url}}">Login</a>
-      {% endif %}
-    </span>
-
-  {% endblock %}
+      <div class="collapse navbar-collapse" id="thenavbar">
+        {% if user %}
+        <ul class="nav navbar-nav">
+          <li><a href="{{base_url}}home">Home</a></li>
+          <li><a href="{{base_url}}token">Token</a></li>
+          {% endif %}
+          {% if user.admin %}
+          <li><a href="{{base_url}}admin">Admin</a></li>
+        </ul>
+        {% endif %}
+        <ul class="nav navbar-nav navbar-right">
+          <li>
+            {% block login_widget %}
+              <span id="login_widget">
+                {% if user %}
+                  <a id="logout" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i class="fa fa-sign-out"></i> Logout</a>
+                {% else %}
+                  <a id="login" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
+                {% endif %}
+              </span>
+              {% endblock %}
+          </li>
+        </ul>
+      </div>
 
   {% block header %}
   {% endblock %}
   </div>
-</div>
+</nav>
 
 {% block main %}
 {% endblock %}

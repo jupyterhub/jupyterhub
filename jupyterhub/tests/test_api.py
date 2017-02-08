@@ -568,28 +568,24 @@ def test_token(app):
     assert r.status_code == 404
 
 
-def test_get_token(app):
-    name = 'user'
-    user = add_user(app.db, app=app, name=name)
-    r = api_request(app, 'authorizations/token', method='post', data=json.dumps({
-        'username': name,
-        'password': name,
-    }))
-    assert r.status_code == 200
-    data = r.content.decode("utf-8")
-    token = json.loads(data)
-    assert not token['Authentication'] is None
-
-
-def test_bad_get_token(app):
-    name = 'user'
-    password = 'fake'
-    user = add_user(app.db, app=app, name=name)
-    r = api_request(app, 'authorizations/token', method='post', data=json.dumps({
-        'username': name,
-        'password': password,
-    }))
-    assert r.status_code == 403
+@mark.parametrize("headers, data, status", [
+    ({}, None, 200),
+    ({'Authorization': ''}, None, 403),
+    ({}, {'username': 'fake', 'password': 'fake'}, 200),
+])
+def test_get_new_token(app, headers, data, status):
+    if data:
+        data = json.dumps(data)
+    # request a new token
+    r = api_request(app, 'authorizations', 'token', method='post', data=data, headers=headers)
+    assert r.status_code == status
+    if status != 200:
+        return
+    reply = r.json()
+    assert 'token' in reply
+    r = api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    assert 'name' in r.json()
 
 
 # ---------------

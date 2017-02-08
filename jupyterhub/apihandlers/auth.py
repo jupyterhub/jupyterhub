@@ -26,16 +26,22 @@ class TokenAPIHandler(APIHandler):
 
     @gen.coroutine
     def post(self):
-        if self.authenticator is not None:
-          data = self.get_json_body()
-          username = yield self.authenticator.authenticate(self, data)
-          if username is None:
-            raise web.HTTPError(403)
-          user = self.find_user(username)
-          api_token = user.new_api_token()
-          self.write(json.dumps({"Authentication":api_token}))
-        else:
-          raise web.HTTPError(404)
+        user = self.get_current_user()
+        if user is None:
+            # allow requesting a token with username and password
+            # for authenticators where that's possible
+            data = self.get_json_body()
+            try:
+                username = yield self.authenticator.authenticate(self, data)
+            except Exception as e:
+                self.log.error("Failure trying to authenticate with form data: %s" % e)
+                username = None
+            if username is None:
+                raise web.HTTPError(403)
+            user = self.find_user(username)
+        api_token = user.new_api_token()
+        self.write(json.dumps({'token': api_token}))
+
 
 class CookieAPIHandler(APIHandler):
     @token_authenticated

@@ -1,0 +1,40 @@
+{% extends "page.html" %}
+
+{% block main %}
+
+<div class="container">
+  <div class="row">
+    <div class="text-center">
+      <a id="request-token" class="btn btn-lg btn-jupyter" href="#">
+        Request new API token
+      </a>
+    </div>
+  </div>
+  <div class="row">
+    <p>
+      <div id="token-area" class="col-md-6 col-md-offset-3" style="display: none;">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            Your new API Token
+          </div>
+          <div class="panel-body">
+            <p class="lead text-center">
+              <span id="token-result"></span>
+            </p>
+            <p>
+              Copy this token. You won't be able to see it again,
+              but you can always come back here to get a new one.
+            </p>
+          </div>
+        </div>
+      </div>
+    </p>
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script type="text/javascript">
+require(["token"]);
+</script>
+{% endblock %}
