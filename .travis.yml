@@ -1,23 +1,34 @@
 # http://travis-ci.org/#!/jupyter/jupyterhub
-language: python
+# using container builds are faster so test as a normal user instead of root
 sudo: false
+
+language: python
 python:
-    - 3.7-dev
-    - 3.6
-    - 3.5
-    - 3.4
     - 3.3
+    - 3.4
+    - 3.5
+    - 3.6
+    - nightly
+    # PyPy versions
+    - pypy3
+
+# installing dependencies
 before_install:
     - npm install
     - npm install -g configurable-http-proxy
     - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
 install:
     - pip install --pre -f travis-wheels/wheelhouse -r dev-requirements.txt .
+
+# running tests
 script:
-    - travis_retry py.test --cov=jupyterhub jupyterhub/tests -v
+    - if [[ $TRAVIS_PYTHON_VERSION >= '3.6' ]]; then travis_retry pytest --cov=jupyterhub jupyterhub/tests -v; fi # for Python 3.6 and above
+    - if [[ $TRAVIS_PYTHON_VERSION <= '3.5' ]]; then travis_retry py.test --cov=jupyterhub jupyterhub/tests -v; fi # for < 3.5
 after_success:
-    - codecov
+    - if [[ $TRAVIS_PYTHON_VERSION != nightly ]]; then codecov; fi
+
 matrix:
+  fast_finish: true
   include:
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://127.0.0.1.xip.io:8000
