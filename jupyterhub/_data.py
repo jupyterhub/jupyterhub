@@ -1,5 +1,6 @@
 """Get the data files for this package."""
 
+
 def get_data_files():
     """Walk up until we find share/jupyter/hub"""
     import sys
@@ -21,4 +22,3 @@ def get_data_files():
 
 # Package managers can just override this with the appropriate constant
 DATA_FILES_PATH = get_data_files()
-
