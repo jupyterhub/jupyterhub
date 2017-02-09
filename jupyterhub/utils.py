@@ -1,4 +1,4 @@
-"""Miscellaneous utilities."""
+"""Miscellaneous utilities"""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -121,7 +121,7 @@ def auth_decorator(check_auth):
 
 @auth_decorator
 def token_authenticated(self):
-    """Decorator for method authenticated only by Authorization token header.
+    """Decorator for method authenticated only by Authorization token header
 
     (no cookies)
     """
@@ -131,7 +131,7 @@ def token_authenticated(self):
 
 @auth_decorator
 def authenticated_403(self):
-    """Decorator for method to raise 403 error instead of redirect to login.
+    """Decorator for method to raise 403 error instead of redirect to login
 
     Like tornado.web.authenticated, this decorator raises a 403 error
     instead of redirecting to login.
@@ -142,7 +142,7 @@ def authenticated_403(self):
 
 @auth_decorator
 def admin_only(self):
-    """Decorator for restricting access to admin users."""
+    """Decorator for restricting access to admin users"""
     user = self.get_current_user()
     if user is None or not user.admin:
         raise web.HTTPError(403)
@@ -151,7 +151,7 @@ def admin_only(self):
 # Token utilities
 
 def new_token(*args, **kwargs):
-    """Generator for new random tokens.
+    """Generator for new random tokens
 
     For now, just UUIDs.
     """
