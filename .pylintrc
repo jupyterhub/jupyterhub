@@ -1,6 +1,9 @@
 [MASTER]
 # Ignore git and virtualenv-related folders.
-ignore=.git,lib
+ignore=
+    .git,
+    lib,
+    jupyterhub/tests/
 
 [MESSAGES CONTROL]
 disable=all
