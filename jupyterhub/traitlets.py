@@ -16,6 +16,7 @@ class URLPrefix(Unicode):
             u = u + '/'
         return u
 
+
 class Command(List):
     """Traitlet for a command that should be a list of strings,
     but allows it to be specified as a single string.
