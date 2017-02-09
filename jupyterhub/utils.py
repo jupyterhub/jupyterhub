@@ -1,4 +1,4 @@
-"""Miscellaneous utilities"""
+"""Miscellaneous utilities."""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -19,7 +19,7 @@ from tornado.log import app_log
 
 
 def random_port():
-    """get a single random port"""
+    """Get a single random port."""
     sock = socket.socket()
     sock.bind(('', 0))
     port = sock.getsockname()[1]
@@ -31,9 +31,9 @@ ISO8601_ms = '%Y-%m-%dT%H:%M:%S.%fZ'
 ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
 
 def can_connect(ip, port):
-    """Check if we can connect to an ip:port
+    """Check if we can connect to an ip:port.
     
-    return True if we can connect, False otherwise.
+    Return True if we can connect, False otherwise.
     """
     try:
         socket.create_connection((ip, port))
@@ -48,7 +48,7 @@ def can_connect(ip, port):
 
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):
-    """wait for any server to show up at ip:port"""
+    """Wait for any server to show up at ip:port."""
     loop = ioloop.IOLoop.current()
     tic = loop.time()
     while loop.time() - tic < timeout:
@@ -62,7 +62,7 @@ def wait_for_server(ip, port, timeout=10):
 
 @gen.coroutine
 def wait_for_http_server(url, timeout=10):
-    """Wait for an HTTP Server to respond at url
+    """Wait for an HTTP Server to respond at url.
     
     Any non-5XX response code will do, even 404.
     """
@@ -98,7 +98,7 @@ def wait_for_http_server(url, timeout=10):
 # Decorators for authenticated Handlers
 
 def auth_decorator(check_auth):
-    """Make an authentication decorator
+    """Make an authentication decorator.
 
     I heard you like decorators, so I put a decorator
     in your decorator, so you can decorate while you decorate.
@@ -117,7 +117,7 @@ def auth_decorator(check_auth):
 
 @auth_decorator
 def token_authenticated(self):
-    """decorator for a method authenticated only by the Authorization token header
+    """Decorator for method authenticated only by Authorization token header.
 
     (no cookies)
     """
@@ -126,13 +126,17 @@ def token_authenticated(self):
 
 @auth_decorator
 def authenticated_403(self):
-    """like web.authenticated, but raise 403 instead of redirect to login"""
+    """Decorator for method to raise 403 error instead of redirect to login.
+
+    Like tornado.web.authenticated, this decorator raises a 403 error
+    instead of redirecting to login.
+    """
     if self.get_current_user() is None:
         raise web.HTTPError(403)
 
 @auth_decorator
 def admin_only(self):
-    """decorator for restricting access to admin users"""
+    """Decorator for restricting access to admin users."""
     user = self.get_current_user()
     if user is None or not user.admin:
         raise web.HTTPError(403)
@@ -141,7 +145,7 @@ def admin_only(self):
 # Token utilities
 
 def new_token(*args, **kwargs):
-    """generator for new random tokens
+    """Generator for new random tokens.
     
     For now, just UUIDs.
     """
@@ -149,7 +153,7 @@ def new_token(*args, **kwargs):
 
 
 def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
-    """hash a token, and return it as `algorithm:salt:hash`
+    """Hash a token, and return it as `algorithm:salt:hash`.
     
     If `salt` is an integer, a random salt of that many bytes will be used.
     """
@@ -171,9 +175,9 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
 
 
 def compare_token(compare, token):
-    """compare a token with a hashed token
+    """Compare a token with a hashed token.
     
-    uses the same algorithm and salt of the hashed token for comparison
+    Uses the same algorithm and salt of the hashed token for comparison.
     """
     algorithm, srounds, salt, _ = compare.split(':')
     hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm).encode('utf8')
@@ -184,12 +188,12 @@ def compare_token(compare, token):
 
 
 def url_path_join(*pieces):
-    """Join components of url into a relative url
+    """Join components of url into a relative url.
 
     Use to prevent double slash when joining subpath. This will leave the
-    initial and final / in place
+    initial and final / in place.
     
-    Copied from notebook.utils.url_path_join
+    Copied from `notebook.utils.url_path_join`.
     """
     initial = pieces[0].startswith('/')
     final = pieces[-1].endswith('/')
