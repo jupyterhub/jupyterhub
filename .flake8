@@ -13,3 +13,19 @@
 # F811: redefinition of unused `name` from line `N`
 # F841: local variable assigned but never used
 ignore = E123, E124, E128, E201, E202, E402, E501, E711, E731, F401, F811, F841
+
+exclude =
+    .cache,
+    .github,
+    docs,
+    examples,
+    jupyterhub/alembic*,
+    jupyterhub/apihandlers*,
+    jupyterhub/handlers*,
+    jupyterhub/services*,
+    jupyterhub/tests*,
+    onbuild,
+    scripts,
+    share,
+    tools,
+    setup.py
