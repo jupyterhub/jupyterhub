@@ -149,7 +149,7 @@ class Authenticator(LoggingConfigurable):
             # No whitelist means any name is allowed
             return True
         return username in self.whitelist
-    
+
     @gen.coroutine
     def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
