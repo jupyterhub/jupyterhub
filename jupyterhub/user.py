@@ -39,7 +39,7 @@ class UserDict(dict):
         if isinstance(key, User):
             key = key.id
         elif isinstance(key, str):
-            orm_user = self.db.query(orm.User).filter(orm.User.name==key).first()
+            orm_user = self.db.query(orm.User).filter(orm.User.name == key).first()
             if orm_user is None:
                 raise KeyError("No such user: %s" % key)
             else:
@@ -56,7 +56,7 @@ class UserDict(dict):
         elif isinstance(key, int):
             id = key
             if id not in self:
-                orm_user = self.db.query(orm.User).filter(orm.User.id==id).first()
+                orm_user = self.db.query(orm.User).filter(orm.User.id == id).first()
                 if orm_user is None:
                     raise KeyError("No such user: %s" % id)
                 user = self[id] = User(orm_user, self.settings)
@@ -82,17 +82,19 @@ class User(HasTraits):
     settings = Dict()
 
     db = Any(allow_none=True)
+
     @default('db')
     def _db_default(self):
         if self.orm_user:
             return inspect(self.orm_user).session
+
     @observe('db')
     def _db_changed(self, change):
         """Changing db session reacquires ORM User object"""
         # db session changed, re-get orm User
         if self.orm_user:
             id = self.orm_user.id
-            self.orm_user = change['new'].query(orm.User).filter(orm.User.id==id).first()
+            self.orm_user = change['new'].query(orm.User).filter(orm.User.id == id).first()
         self.spawner.db = self.db
 
     orm_user = None
@@ -149,7 +151,7 @@ class User(HasTraits):
     def running(self):
         """property for whether a user has a running server"""
         if self.spawn_pending or self.stop_pending:
-            return False # server is not running if spawn or stop is still pending
+            return False  # server is not running if spawn or stop is still pending
         if self.server is None:
             return False
         return True
