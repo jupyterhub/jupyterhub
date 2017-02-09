@@ -1,2 +1,2 @@
 [flake8]
-ignore = E201, E202, E501, F401
+ignore = E124, E128, E201, E202, E501, E731, F401
