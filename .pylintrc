@@ -1,0 +1,20 @@
+[MASTER]
+# Ignore git and virtualenv-related folders.
+ignore=.git,lib
+
+[MESSAGES CONTROL]
+disable=all
+
+# Explicitly whitelist the lint checks we want to have
+# Prefer things that catch errors and what not, and not stylistic choices
+enable=missing-docstring,empty-docstring,unneeded-not,singleton-comparison,misplaced-comparison-constant,unidiomatic-typecheck,consider-using-enumerate,consider-iterating-dictionary,bad-classmethod-argument,bad-mcs-method-argument,bad-mcs-classmethod-argument,too-many-lines,multiple-statements,superfluous-parens,multiple-imports,ungrouped-imports,syntax-error,init-is-generator,return-in-init,function-redefined,not-in-loop,return-outside-function,yield-outside-function,nonexistent-operator,duplicate-argument-name,abstract-class-instantiated,bad-reversed-sequence,too-many-star-expressions,invalid-star-assignment-target,star-needs-assignment-target,nonlocal-and-global,continue-in-finally,nonlocal-without-binding,method-hidden,access-member-before-definition,no-method-argument,no-self-argument,invalid-slots-object,assigning-non-slot,invalid-slots,inherit-non-class,inconsistent-mro,duplicate-bases,non-iterator-returned,unexpected-special-method-signature,invalid-length-returned,import-error,used-before-assignment,undefined-variable,undefined-all-variable,unbalanced-tuple-unpacking,unpacking-non-sequence,bad-except-order,raising-bad-type,bad-exception-context,misplaced-bare-raise,raising-non-exception,notimplemented-raised,catching-non-exception,bad-super-call,no-member,not-callable,assignment-from-no-return,no-value-for-parameter,too-many-function-args,unexpected-keyword-arg,redundant-keyword-arg,missing-kwoa,invalid-sequence-index,invalid-slice-index,assignment-from-none,not-context-manager,invalid-unary-operand-type,unsupported-binary-operation,repeated-keyword,not-an-iterable,not-a-mapping,unsupported-membership-test,unsubscriptable-object,logging-unsupported-format,logging-format-truncated,logging-too-many-args,logging-too-few-args,bad-format-character,truncated-format-string,mixed-format-string,format-needs-mapping,missing-format-string-key,too-many-format-args,too-few-format-args,bad-str-strip-call,yield-inside-async-function,not-async-context-manager,fatal,astroid-error,parse-error,method-check-failed,bad-inline-option,useless-suppression,deprecated-pragma,unreachable,dangerous-default-value,pointless-statement,expression-not-assigned,unnecessary-pass,unnecessary-lambda,duplicate-key,useless-else-on-loop,eval-used,confusing-with-statement,using-constant-test,lost-exception,assert-on-tuple,bad-staticmethod-argument,protected-access,arguments-differ,signature-differs,abstract-method,super-init-not-called,no-init,non-parent-init-called,unnecessary-semicolon,bad-indentation,mixed-indentation,wildcard-import,deprecated-module,reimported,import-self,misplaced-future,global-variable-undefined,global-variable-not-assigned,global-at-module-level,unused-import,unused-variable,unused-wildcard-import,redefined-outer-name,redefined-builtin,redefine-in-handler,undefined-loop-variable,cell-var-from-loop,duplicate-except,broad-except,bare-except,binary-op-exception,logging-not-lazy,logging-format-interpolation,bad-format-string-key,bad-format-string,missing-format-argument-key,format-combined-specification,missing-format-attribute,invalid-format-index,anomalous-backslash-in-string,anomalous-unicode-escape-in-string,bad-open-mode,redundant-unittest-assert,deprecated-method
+
+[REPORTS]
+# Do not print a summary report
+reports=no
+
+[FORMAT]
+# One of the few stylistic things we try to check.
+# Modules shouldn't be *too large* - should be broken up
+# Feel free to bump this number if you disagree
+max-module-lines=2000

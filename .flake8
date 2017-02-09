@@ -1,18 +1,12 @@
 [flake8]
-# Ignore style errors
-# E123: closing bracket does not match indentation of opening bracket
-# E124: closing bracket does not match visual indentation
-# E128: continuation line under-indented for visual indent
-# E201: whitespace after `(`
-# E202: whitespace before `)`
-# E402: module level input not at top of file
-# E501: line too long (82 > 79 characters)
-# E711: comparison to None should be `if cond is None:`
-# E731: do not assign a lambda expression, use a def
+# Ignore style and complexity
+# E: style errors
+# W: style warnings
+# C: complexity
 # F401: module imported but unused
 # F811: redefinition of unused `name` from line `N`
 # F841: local variable assigned but never used
-ignore = E123, E124, E128, E201, E202, E402, E501, E711, E731, F401, F811, F841
+ignore = E, C, W, F401, F811, F841
 
 exclude =
     .cache,
@@ -20,10 +14,6 @@ exclude =
     docs,
     examples,
     jupyterhub/alembic*,
-    jupyterhub/apihandlers*,
-    jupyterhub/handlers*,
-    jupyterhub/services*,
-    jupyterhub/tests*,
     onbuild,
     scripts,
     share,
