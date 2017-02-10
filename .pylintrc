@@ -17,9 +17,3 @@ enable=
 [REPORTS]
 # Do not print a summary report
 reports=no
-
-[FORMAT]
-# One of the few stylistic things we try to check.
-# Modules shouldn't be *too large* - should be broken up
-# Feel free to bump this number if you disagree
-max-module-lines=2000
