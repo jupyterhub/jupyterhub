@@ -24,7 +24,9 @@ from ..utils import random_port
 
 from pamela import PAMError
 
+
 def mock_authenticate(username, password, service='login'):
+    """Mock simple login authentication"""
     # just use equality for testing
     if password == username:
         return True
@@ -33,6 +35,7 @@ def mock_authenticate(username, password, service='login'):
 
 
 def mock_open_session(username, service):
+    """Mock a session"""
     pass
 
 
@@ -101,6 +104,7 @@ class FormSpawner(MockSpawner):
 
 
 class MockPAMAuthenticator(PAMAuthenticator):
+    """Mock JupyterHub PAM Authenticator"""
     @default('admin_users')
     def _admin_users_default(self):
         return {'admin'}
