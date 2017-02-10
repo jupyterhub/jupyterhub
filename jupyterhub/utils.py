@@ -109,7 +109,6 @@ def auth_decorator(check_auth):
     def decorator(method):
         """Make a method decorator."""
         def decorated(self, *args, **kwargs):
-            """Make a decorator to check authentication."""
             check_auth(self)
             return method(self, *args, **kwargs)
         decorated.__name__ = method.__name__

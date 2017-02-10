@@ -148,7 +148,7 @@ def test_service_server(db):
 
 
 def test_token_find(db):
-    """Test if token is in db"""
+    """Test APIToken.find"""
     service = db.query(orm.Service).first()
     user = db.query(orm.User).first()
     service_token = service.new_api_token()
