@@ -54,16 +54,20 @@ def io_loop():
 
 @fixture(scope='module')
 def app(request):
-    """Mock a jupyterhub app for testing"""
-    mocked_app = MockHub.instance(log_level=logging.DEBUG)
-    mocked_app.start([])
+    """Start a Hub.
+
+    The mock multi-user hub, `MockHub`, is a `traitlets.config.Application`
+    singleton object.
+    """
+    app = MockHub.instance(log_level=logging.DEBUG)
+    app.start([])
 
     def fin():
         """Clean up steps for hub at termination"""
         MockHub.clear_instance()
-        mocked_app.stop()
+        app.stop()
     request.addfinalizer(fin)
-    return mocked_app
+    return app
 
 
 
