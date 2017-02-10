@@ -140,13 +140,13 @@ class Spawner(LoggingConfigurable):
 
     def options_from_form(self, form_data):
         """Interpret HTTP form data
-        
+
         Form data will always arrive as a dict of lists of strings.
         Override this function to understand single-values, numbers, etc.
-        
+
         This should coerce form data into the structure expected by self.user_options,
         which must be a dict.
-        
+
         Instances will receive this data on self.user_options, after passing through this function,
         prior to `Spawner.start`.
         """
@@ -414,7 +414,7 @@ class Spawner(LoggingConfigurable):
                 env[key] = value(self)
             else:
                 env[key] = value
-        
+
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
@@ -484,7 +484,7 @@ class Spawner(LoggingConfigurable):
             '--hub-host="%s"' % self.hub.host,
             '--hub-prefix="%s"' % self.hub.server.base_url,
             '--hub-api-url="%s"' % self.hub.api_url,
-            ]
+        ]
         if self.ip:
             args.append('--ip="%s"' % self.ip)
 
@@ -562,7 +562,7 @@ class Spawner(LoggingConfigurable):
         """Add a callback to fire when the single-user server stops"""
         if args or kwargs:
             cb = callback
-            callback = lambda : cb(*args, **kwargs)
+            callback = lambda: cb(*args, **kwargs)
         self._callbacks.append(callback)
 
     def stop_polling(self):
@@ -609,6 +609,7 @@ class Spawner(LoggingConfigurable):
         return status
 
     death_interval = Float(0.1)
+
     @gen.coroutine
     def wait_for_death(self, timeout=10):
         """Wait for the single-user server to die, up to timeout seconds"""
@@ -629,7 +630,7 @@ def _try_setcwd(path):
         try:
             os.chdir(path)
         except OSError as e:
-            exc = e # break exception instance out of except scope
+            exc = e  # break exception instance out of except scope
             print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
             path, _ = os.path.split(path)
         else:
@@ -785,7 +786,7 @@ class LocalProcessSpawner(Spawner):
         try:
             self.proc = Popen(cmd, env=env,
                 preexec_fn=self.make_preexec_fn(self.user.name),
-                start_new_session=True, # don't forward signals
+                start_new_session=True,  # don't forward signals
             )
         except PermissionError:
             # use which to get abspath
@@ -851,10 +852,10 @@ class LocalProcessSpawner(Spawner):
             os.kill(self.pid, sig)
         except OSError as e:
             if e.errno == errno.ESRCH:
-                return False # process is gone
+                return False  # process is gone
             else:
                 raise
-        return True # process exists
+        return True  # process exists
 
     @gen.coroutine
     def stop(self, now=False):

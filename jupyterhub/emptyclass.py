@@ -5,6 +5,8 @@ instance of itself that'll allow any method to be called on it.
 
 Primarily used to mock out the statsd client when statsd is not being used
 """
+
+
 class EmptyClass:
     def empty_function(self, *args, **kwargs):
         return self

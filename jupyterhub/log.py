@@ -11,11 +11,11 @@ from tornado.web import StaticFileHandler
 
 def coroutine_traceback(typ, value, tb):
     """Scrub coroutine frames from a traceback
-    
+
     Coroutine tracebacks have a bunch of identical uninformative frames at each yield point.
     This removes those extra frames, so tracebacks should be easier to read.
     This might be a horrible idea.
-    
+
     Returns a list of strings (like traceback.format_tb)
     """
     all_frames = traceback.extract_tb(tb)
@@ -63,7 +63,7 @@ def _scrub_headers(headers):
 
 def log_request(handler):
     """log a bit more information about each request than tornado's default
-    
+
     - move static file get success to debug-level (reduces noise)
     - get proxied IP instead of proxy IP
     - log referer for redirect and failed requests
@@ -80,10 +80,10 @@ def log_request(handler):
         log_method = access_log.warning
     else:
         log_method = access_log.error
-    
+
     uri = _scrub_uri(request.uri)
     headers = _scrub_headers(request.headers)
-    
+
     request_time = 1000.0 * handler.request.request_time()
     user = handler.get_current_user()
     ns = dict(
@@ -98,4 +98,3 @@ def log_request(handler):
     if status >= 500 and status != 502:
         log_method(json.dumps(headers, indent=2))
     log_method(msg.format(**ns))
-

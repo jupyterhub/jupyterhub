@@ -18,7 +18,7 @@ from getpass import getuser
 from subprocess import Popen
 from urllib.parse import urlparse
 
-if sys.version_info[:2] < (3,3):
+if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
 from jinja2 import Environment, FileSystemLoader
@@ -87,7 +87,7 @@ token_aliases.update(common_aliases)
 aliases.update(common_aliases)
 
 flags = {
-    'debug': ({'Application' : {'log_level': logging.DEBUG}},
+    'debug': ({'Application': {'log_level': logging.DEBUG}},
         "set log level to logging.DEBUG (maximize logging output)"),
     'generate-config': ({'JupyterHub': {'generate_config': True}},
         "generate default config file"),
@@ -99,7 +99,8 @@ flags = {
     ),
 }
 
-SECRET_BYTES = 2048 # the number of bytes to use when generating new secrets
+SECRET_BYTES = 2048  # the number of bytes to use when generating new secrets
+
 
 class NewToken(Application):
     """Generate and print a new API token"""
@@ -143,6 +144,7 @@ class NewToken(Application):
             self.exit(1)
         token = user.new_api_token()
         print(token)
+
 
 class UpgradeDB(Application):
     """Upgrade the JupyterHub database schema."""
@@ -308,6 +310,7 @@ class JupyterHub(Application):
         When using SSL (i.e. always) this also requires a wildcard SSL certificate.
         """
     ).tag(config=True)
+
     def _subdomain_host_changed(self, name, old, new):
         if new and '://' not in new:
             # host should include '://'
@@ -317,6 +320,7 @@ class JupyterHub(Application):
     domain = Unicode(
         help="domain name, e.g. 'example.com' (excludes protocol, port)"
     )
+
     @default('domain')
     def _domain_default(self):
         if not self.subdomain_host:
@@ -426,6 +430,7 @@ class JupyterHub(Application):
         Consider using service_tokens for general services that talk to the JupyterHub API.
         """
     ).tag(config=True)
+
     @observe('api_tokens')
     def _deprecate_api_tokens(self, change):
         self.log.warning("JupyterHub.api_tokens is pending deprecation."
@@ -523,7 +528,7 @@ class JupyterHub(Application):
     @default('users')
     def _users_default(self):
         assert self.tornado_settings
-        return UserDict(db_factory=lambda : self.db, settings=self.tornado_settings)
+        return UserDict(db_factory=lambda: self.db, settings=self.tornado_settings)
 
     admin_access = Bool(False,
         help="""Grant admin users permission to access single-user servers.
@@ -613,6 +618,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     statsd = Any(allow_none=False, help="The statsd client, if any. A mock will be used if we aren't using statsd")
+
     @default('statsd')
     def _statsd(self):
         if self.statsd_host:
@@ -758,6 +764,7 @@ class JupyterHub(Application):
 
     # thread-local storage of db objects
     _local = Instance(threading.local, ())
+
     @property
     def db(self):
         if not hasattr(self._local, 'db'):
@@ -858,7 +865,7 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.admin_users
         ]
-        self.authenticator.admin_users = set(admin_users) # force normalization
+        self.authenticator.admin_users = set(admin_users)  # force normalization
         for username in admin_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
@@ -886,7 +893,7 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.whitelist
         ]
-        self.authenticator.whitelist = set(whitelist) # force normalization
+        self.authenticator.whitelist = set(whitelist)  # force normalization
         for username in whitelist:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
@@ -917,7 +924,7 @@ class JupyterHub(Application):
                 # known cause of the exception is a user who has already been removed from the system
                 # but the user still exists in the hub's user db
                 self.log.exception("Error adding user %r already in db", user.name)
-        db.commit() # can add_user touch the db?
+        db.commit()  # can add_user touch the db?
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
@@ -1079,6 +1086,7 @@ class JupyterHub(Application):
         db = self.db
 
         user_summaries = ['']
+
         def _user_summary(user):
             parts = ['{0: >8}'.format(user.name)]
             if user.admin:
@@ -1131,7 +1139,7 @@ class JupyterHub(Application):
             )
             self.db.add(self.proxy)
             self.db.commit()
-        self.proxy.auth_token = self.proxy_auth_token # not persisted
+        self.proxy.auth_token = self.proxy_auth_token  # not persisted
         self.proxy.log = self.log
         self.proxy.public_server.ip = self.ip
         self.proxy.public_server.port = self.port
@@ -1200,9 +1208,10 @@ class JupyterHub(Application):
             self.log.error(
                 "Failed to find proxy %r\n"
                 "The proxy can be installed with `npm install -g configurable-http-proxy`"
-                 % self.proxy_cmd
+                % self.proxy_cmd
             )
             self.exit(1)
+
         def _check():
             status = self.proxy_process.poll()
             if status is not None:
@@ -1257,7 +1266,7 @@ class JupyterHub(Application):
         if os.path.isdir(os.path.join(parent, '.git')):
             version_hash = ''
         else:
-            version_hash=datetime.now().strftime("%Y%m%d%H%M%S"),
+            version_hash = datetime.now().strftime("%Y%m%d%H%M%S"),
 
         settings = dict(
             log_function=log_request,
@@ -1370,7 +1379,6 @@ class JupyterHub(Application):
         else:
             self.log.info("Leaving proxy running")
 
-
         # wait for the requests to stop finish:
         for f in futures:
             try:
@@ -1396,12 +1404,13 @@ class JupyterHub(Application):
             ))
         if os.path.exists(self.config_file) and not self.answer_yes:
             answer = ''
+
             def ask():
                 prompt = "Overwrite %s with default config? [y/N]" % self.config_file
                 try:
                     return input(prompt).lower() or 'n'
                 except KeyboardInterrupt:
-                    print('') # empty line
+                    print('')  # empty line
                     return 'n'
             answer = ask()
             while not answer.startswith(('y', 'n')):
@@ -1539,6 +1548,7 @@ class JupyterHub(Application):
         self.atexit()
 
     _atexit_ran = False
+
     def atexit(self):
         """atexit callback"""
         if self._atexit_ran:
@@ -1549,7 +1559,6 @@ class JupyterHub(Application):
         loop = IOLoop()
         loop.make_current()
         loop.run_sync(self.cleanup)
-
 
     def stop(self):
         if not self.io_loop:
@@ -1579,6 +1588,7 @@ class JupyterHub(Application):
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
+
 
 NewToken.classes.append(JupyterHub)
 UpgradeDB.classes.append(JupyterHub)

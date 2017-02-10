@@ -18,10 +18,10 @@ ALEMBIC_DIR = os.path.join(_here, 'alembic')
 
 def write_alembic_ini(alembic_ini='alembic.ini', db_url='sqlite:///jupyterhub.sqlite'):
     """Write a complete alembic.ini from our template.
-    
+
     Parameters
     ----------
-    
+
     alembic_ini: str
         path to the alembic.ini file that should be written.
     db_url: str
@@ -29,7 +29,7 @@ def write_alembic_ini(alembic_ini='alembic.ini', db_url='sqlite:///jupyterhub.sq
     """
     with open(ALEMBIC_INI_TEMPLATE_PATH) as f:
         alembic_ini_tpl = f.read()
-    
+
     with open(alembic_ini, 'w') as f:
         f.write(
             alembic_ini_tpl.format(
@@ -37,26 +37,25 @@ def write_alembic_ini(alembic_ini='alembic.ini', db_url='sqlite:///jupyterhub.sq
                 db_url=db_url,
             )
         )
-    
 
 
 @contextmanager
 def _temp_alembic_ini(db_url):
     """Context manager for temporary JupyterHub alembic directory
-    
+
     Temporarily write an alembic.ini file for use with alembic migration scripts.
-    
+
     Context manager yields alembic.ini path.
-    
+
     Parameters
     ----------
-    
+
     db_url: str
         The SQLAlchemy database url, e.g. `sqlite:///jupyterhub.sqlite`.
-    
+
     Returns
     -------
-    
+
     alembic_ini: str
         The path to the temporary alembic.ini that we have created.
         This file will be cleaned up on exit from the context manager.
@@ -69,7 +68,7 @@ def _temp_alembic_ini(db_url):
 
 def upgrade(db_url, revision='head'):
     """Upgrade the given database to revision.
-    
+
     db_url: str
         The SQLAlchemy database url, e.g. `sqlite:///jupyterhub.sqlite`.
     revision: str [default: head]
@@ -79,6 +78,7 @@ def upgrade(db_url, revision='head'):
         check_call(
             ['alembic', '-c', alembic_ini, 'upgrade', revision]
         )
+
 
 def _alembic(*args):
     """Run an alembic command with a temporary alembic.ini"""
