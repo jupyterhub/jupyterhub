@@ -70,8 +70,7 @@ def app(request):
     return app
 
 
-
-class MockServiceSpawner(jupyterhub.services.service.ServiceSpawner):
+class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     """Mock services for testing. For example, shorter poll intervals."""
     poll_interval = 1
 
