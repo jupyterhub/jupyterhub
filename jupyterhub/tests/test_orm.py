@@ -12,6 +12,7 @@ from .mocking import MockSpawner
 
 
 def test_server(db):
+    """Test that a server is correctly added to the db"""
     server = orm.Server()
     db.add(server)
     db.commit()
@@ -20,25 +21,20 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
-    assert server.host == 'http://127.0.0.1:%i' % server.port
+    assert server.host == 'http://127.0.0.1:{}'.format(server.port)
     assert server.url == server.host + '/'
-    assert server.bind_url == 'http://*:%i/' % server.port
+    assert server.bind_url == 'http://*:{}/'.format(server.port)
+
     server.ip = '127.0.0.1'
-    assert server.host == 'http://127.0.0.1:%i' % server.port
+    assert server.host == 'http://127.0.0.1:{}'.format(server.port)
     assert server.url == server.host + '/'
 
 
 def test_proxy(db):
     proxy = orm.Proxy(
         auth_token='abc-123',
-        public_server=orm.Server(
-            ip='192.168.1.1',
-            port=8000,
-        ),
-        api_server=orm.Server(
-            ip='127.0.0.1',
-            port=8001,
-        ),
+        public_server=orm.Server(ip='192.168.1.1', port=8000,),
+        api_server=orm.Server(ip='127.0.0.1',port=8001,),
     )
     db.add(proxy)
     db.commit()
@@ -190,14 +186,15 @@ def test_spawn_fails(db, io_loop):
 
 
 def test_groups(db):
+    """Test user added to a group succeeds"""
     user = orm.User.find(db, name='aeofel')
     db.add(user)
-    
     group = orm.Group(name='lives')
     db.add(group)
     db.commit()
     assert group.users == []
     assert user.groups == []
+
     group.users.append(user)
     db.commit()
     assert group.users == [user]
