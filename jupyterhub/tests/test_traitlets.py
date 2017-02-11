@@ -1,3 +1,4 @@
+"""Test traitlets"""
 import pytest
 from traitlets import HasTraits, TraitError
 
@@ -5,7 +6,9 @@ from jupyterhub.traitlets import URLPrefix, Command, ByteSpecification
 
 
 def test_url_prefix():
+    """Test url prefix configures correctly"""
     class C(HasTraits):
+        """Test class for URLPrefix trait"""
         url = URLPrefix()
     c = C()
     c.url = '/a/b/c/'
@@ -17,7 +20,9 @@ def test_url_prefix():
 
 
 def test_command():
+    """Test command trait"""
     class C(HasTraits):
+        """Test class for Command trait"""
         cmd = Command('default command')
         cmd2 = Command(['default_cmd'])
     c = C()
@@ -28,7 +33,9 @@ def test_command():
 
 
 def test_memoryspec():
+    """Test memory trait and converting string to numerical value"""
     class C(HasTraits):
+        """Test class for ByteSpecification trait"""
         mem = ByteSpecification()
 
     c = C()
