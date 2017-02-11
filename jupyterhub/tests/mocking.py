@@ -280,4 +280,3 @@ class StubSingleUserSpawner(MockSpawner):
             return None
         else:
             return 0
-
