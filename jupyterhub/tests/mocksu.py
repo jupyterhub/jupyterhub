@@ -9,7 +9,7 @@ import json
 import sys
 
 from tornado import web, httpserver, ioloop
-
+from .mockservice import EnvHandler
 
 class EchoHandler(web.RequestHandler):
     def get(self):
@@ -23,6 +23,7 @@ def main(args):
     
     app = web.Application([
         (r'.*/args', ArgsHandler),
+        (r'.*/env', EnvHandler),
         (r'.*', EchoHandler),
     ])
     
