@@ -125,6 +125,8 @@ class Spawner(LoggingConfigurable):
         The surrounding `<form>` element and the submit button are already provided.
 
         For example:
+        
+        .. code:: html
 
             Set your key:
             <input name="key" val="default_key"></input>
@@ -250,6 +252,7 @@ class Spawner(LoggingConfigurable):
         `{username}` will be expanded to the user's username
 
         Example uses:
+
         - You can set `notebook_dir` to `/` and `default_url` to `/home/{username}` to allow people to
           navigate the whole filesystem from their notebook, but still start in their home directory.
         - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.

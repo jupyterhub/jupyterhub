@@ -24,6 +24,7 @@ JupyterHub API Reference:
 
 .. toctree::
 
+    app
     auth
     spawner
     user
