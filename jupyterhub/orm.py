@@ -381,7 +381,7 @@ class User(Base):
     last_activity = Column(DateTime, default=datetime.utcnow)
 
     api_tokens = relationship("APIToken", backref="user")
-    cookie_id = Column(Unicode(1023), default=new_token)
+    cookie_id = Column(Unicode(1023), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
     # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
