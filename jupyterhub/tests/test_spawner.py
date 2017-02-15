@@ -106,7 +106,7 @@ def test_single_user_spawner(db, request):
     spawner.user.server.ip = ip
     spawner.user.server.port = port
     db.commit()
-    wait_for_spawner(spawner)
+    yield wait_for_spawner(spawner)
     status = yield spawner.poll()
     assert status is None
     yield spawner.stop()
