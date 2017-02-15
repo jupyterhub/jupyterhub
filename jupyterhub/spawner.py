@@ -258,7 +258,6 @@ class Spawner(LoggingConfigurable):
 
     @validate('notebook_dir', 'default_url')
     def _deprecate_percent_u(self, proposal):
-        print(proposal)
         v = proposal['value']
         if '%U' in v:
             self.log.warning("%%U for username in %s is deprecated in JupyterHub 0.7, use {username}",
