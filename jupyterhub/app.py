@@ -38,7 +38,7 @@ from tornado import gen, web
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
     Type, Set, Instance, Bytes, Float,
-    observe, default, validate,
+    observe, default,
 )
 from traitlets.config import Application, catch_config_error
 
@@ -419,9 +419,9 @@ class JupyterHub(Application):
         config=True,
         env='JPY_COOKIE_SECRET',
     )
-    @validate('cookie_secret')
-    def _cookie_secret_check(self, proposal):
-        secret = proposal.value
+    @observe('cookie_secret')
+    def _cookie_secret_check(self, change):
+        secret = change.new
         if len(secret) > COOKIE_SECRET_BYTES:
             self.log.warning("Cookie secret is %i bytes.  It should be %i.",
                 len(secret), COOKIE_SECRET_BYTES,
