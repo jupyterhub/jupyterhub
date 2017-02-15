@@ -52,13 +52,15 @@ def io_loop():
 @fixture(scope='module')
 def app(request):
     """Mock a jupyterhub app for testing"""
-    app = MockHub.instance(log_level=logging.DEBUG)
-    app.start([])
+    mocked_app = MockHub.instance(log_level=logging.DEBUG)
+    mocked_app.start([])
+
+
     def fin():
         MockHub.clear_instance()
-        app.stop()
+        mocked_app.stop()
     request.addfinalizer(fin)
-    return app
+    return mocked_app
 
 
 # mock services for testing.
