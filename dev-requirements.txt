@@ -2,6 +2,7 @@
 mock
 codecov
 pytest-cov
+pytest-tornado
 pytest>=2.8
 notebook
 requests-mock

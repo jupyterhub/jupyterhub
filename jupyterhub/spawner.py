@@ -258,7 +258,6 @@ class Spawner(LoggingConfigurable):
 
     @validate('notebook_dir', 'default_url')
     def _deprecate_percent_u(self, proposal):
-        print(proposal)
         v = proposal['value']
         if '%U' in v:
             self.log.warning("%%U for username in %s is deprecated in JupyterHub 0.7, use {username}",
@@ -708,6 +707,37 @@ class LocalProcessSpawner(Spawner):
         """
     ).tag(config=True)
 
+    popen_kwargs = Dict(
+        help="""Extra keyword arguments to pass to Popen
+
+        when spawning single-user servers.
+
+        For example::
+
+            popen_kwargs = dict(shell=True)
+
+        """
+    ).tag(config=True)
+    shell_cmd = Command(minlen=0,
+        help="""Specify a shell command to launch.
+
+        The single-user command will be appended to this list,
+        so it sould end with `-c` (for bash) or equivalent.
+
+        For example::
+
+            c.LocalProcessSpawner.shell_cmd = ['bash', '-l', '-c']
+
+        to launch with a bash login shell, which would set up the user's own complete environment.
+
+        .. warning::
+
+            Using shell_cmd gives users control over PATH, etc.,
+            which could change what the jupyterhub-singleuser launch command does.
+            Only use this for trusted users.
+        """
+    )
+
     proc = Instance(Popen,
         allow_none=True,
         help="""
@@ -782,12 +812,22 @@ class LocalProcessSpawner(Spawner):
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
 
+        if self.shell_cmd:
+            # using shell_cmd (e.g. bash -c),
+            # add our cmd list as the last (single) argument:
+            cmd = self.shell_cmd + [' '.join(pipes.quote(s) for s in cmd)]
+
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
+        
+        popen_kwargs = dict(
+            preexec_fn=self.make_preexec_fn(self.user.name),
+            start_new_session=True,  # don't forward signals
+        )
+        popen_kwargs.update(self.popen_kwargs)
+        # don't let user config override env
+        popen_kwargs['env'] = env
         try:
-            self.proc = Popen(cmd, env=env,
-                preexec_fn=self.make_preexec_fn(self.user.name),
-                start_new_session=True,  # don't forward signals
-            )
+            self.proc = Popen(cmd, **popen_kwargs)
         except PermissionError:
             # use which to get abspath
             script = shutil.which(cmd[0]) or cmd[0]
