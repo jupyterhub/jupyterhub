@@ -321,10 +321,11 @@ as follows:
 c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/cookie_secret'
 ```
 
-The content of this file should be a long random string encoded in MIME Base64. An example would be to generate this file as:
+The content of this file should be 32 random bytes, encoded as hex.
+An example would be to generate this file with:
 
 ```bash
-openssl rand -base64 2048 > /srv/jupyterhub/cookie_secret
+openssl rand -hex 32 > /srv/jupyterhub/cookie_secret
 ```
 
 In most deployments of JupyterHub, you should point this to a secure location on the file
@@ -339,7 +340,7 @@ the `JPY_COOKIE_SECRET` environment variable, which is a hex-encoded string. You
 can set it this way:
 
 ```bash
-export JPY_COOKIE_SECRET=`openssl rand -hex 1024`
+export JPY_COOKIE_SECRET=`openssl rand -hex 32`
 ```
 
 For security reasons, this environment variable should only be visible to the Hub.
@@ -350,7 +351,7 @@ You can also set the cookie secret in the configuration file itself,`jupyterhub_
 as a binary string:
 
 ```python
-c.JupyterHub.cookie_secret = bytes.fromhex('VERY LONG SECRET HEX STRING')
+c.JupyterHub.cookie_secret = bytes.fromhex('64 CHAR HEX STRING')
 ```
 
 ### Proxy authentication token

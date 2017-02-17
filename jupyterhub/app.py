@@ -6,16 +6,18 @@
 
 import atexit
 import binascii
+from datetime import datetime
+from getpass import getuser
 import logging
 import os
+import re
 import shutil
 import signal
 import socket
-import sys
-import threading
-from datetime import datetime
-from getpass import getuser
 from subprocess import Popen
+import sys
+from textwrap import dedent
+import threading
 from urllib.parse import urlparse
 
 if sys.version_info[:2] < (3, 3):
@@ -99,8 +101,9 @@ flags = {
     ),
 }
 
-SECRET_BYTES = 2048  # the number of bytes to use when generating new secrets
+COOKIE_SECRET_BYTES = 32  # the number of bytes to use when generating new cookie secrets
 
+HEX_RE = re.compile('([a-f0-9]{2})+', re.IGNORECASE)
 
 class NewToken(Application):
     """Generate and print a new API token"""
@@ -409,11 +412,20 @@ class JupyterHub(Application):
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
+        
+        Should be exactly 256 bits (32 bytes).
         """
     ).tag(
         config=True,
         env='JPY_COOKIE_SECRET',
     )
+    @observe('cookie_secret')
+    def _cookie_secret_check(self, change):
+        secret = change.new
+        if len(secret) > COOKIE_SECRET_BYTES:
+            self.log.warning("Cookie secret is %i bytes.  It should be %i.",
+                len(secret), COOKIE_SECRET_BYTES,
+            )
 
     cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
@@ -736,25 +748,42 @@ class JupyterHub(Application):
                 if perm & 0o07:
                     raise ValueError("cookie_secret_file can be read or written by anybody")
                 with open(secret_file) as f:
-                    b64_secret = f.read()
-                secret = binascii.a2b_base64(b64_secret)
+                    text_secret = f.read().strip()
+                if HEX_RE.match(text_secret):
+                    # >= 0.8, use 32B hex
+                    secret = binascii.a2b_hex(text_secret)
+                else:
+                    # old b64 secret with a bunch of ignored bytes
+                    secret = binascii.a2b_base64(text_secret)
+                    self.log.warning(dedent("""
+                    Old base64 cookie-secret detected in {0}.
+
+                    JupyterHub >= 0.8 expects 32B hex-encoded cookie secret
+                    for tornado's sha256 cookie signing.
+
+                    To generate a new secret:
+
+                        openssl rand -hex 32 > "{0}"
+                    """).format(secret_file))
             except Exception as e:
                 self.log.error(
                     "Refusing to run JupyterHub with invalid cookie_secret_file. "
                     "%s error was: %s",
                     secret_file, e)
                 self.exit(1)
+
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
-            secret = os.urandom(SECRET_BYTES)
+            secret = os.urandom(COOKIE_SECRET_BYTES)
 
         if secret_file and secret_from == 'new':
             # if we generated a new secret, store it in the secret_file
             self.log.info("Writing %s to %s", trait_name, secret_file)
-            b64_secret = binascii.b2a_base64(secret).decode('ascii')
+            text_secret = binascii.b2a_hex(secret).decode('ascii')
             with open(secret_file, 'w') as f:
-                f.write(b64_secret)
+                f.write(text_secret)
+                f.write('\n')
             try:
                 os.chmod(secret_file, 0o600)
             except OSError:
