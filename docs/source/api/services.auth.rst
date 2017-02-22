@@ -10,7 +10,7 @@ Module: :mod:`jupyterhub.services.auth`
 .. currentmodule:: jupyterhub.services.auth
 
 
-.. autoclass:: HubAuth
+.. autoconfigurable:: HubAuth
     :members:
 
 .. autoclass:: HubAuthenticated

@@ -20,6 +20,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
+    'autodoc_traits',
 ]
 
 templates_path = ['_templates']
@@ -37,6 +38,7 @@ from os.path import dirname
 docs = dirname(dirname(__file__))
 root = dirname(docs)
 sys.path.insert(0, root)
+sys.path.insert(0, os.path.join(docs, 'sphinxext'))
 
 import jupyterhub
 # The short X.Y version.
@@ -48,6 +50,9 @@ language = None
 exclude_patterns = []
 pygments_style = 'sphinx'
 todo_include_todos = False
+
+# Set the default role so we can use `foo` instead of ``foo``
+default_role = 'literal'
 
 # -- Source -------------------------------------------------------------
 

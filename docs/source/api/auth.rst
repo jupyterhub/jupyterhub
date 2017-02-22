@@ -11,11 +11,11 @@ Module: :mod:`jupyterhub.auth`
 
 
 
-.. autoclass:: Authenticator
+.. autoconfigurable:: Authenticator
     :members:
 
-.. autoclass:: LocalAuthenticator
+.. autoconfigurable:: LocalAuthenticator
     :members:
 
-.. autoclass:: PAMAuthenticator
+.. autoconfigurable:: PAMAuthenticator
 
