@@ -204,7 +204,7 @@ class Service(LoggingConfigurable):
 
     @property
     def prefix(self):
-        return url_path_join(self.base_url, 'services', self.name)
+        return url_path_join(self.base_url, 'services', self.name + '/')
 
     @property
     def proxy_path(self):
