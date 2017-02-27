@@ -180,6 +180,17 @@ class SingleUserNotebookApp(NotebookApp):
     def _base_url_default(self):
         return os.environ.get('JUPYTERHUB_SERVICE_PREFIX') or '/'
 
+    #Note: this may be removed if notebook module is >= 5.0.0b1
+    @validate('base_url')
+    def _validate_base_url(self, proposal):
+        """ensure base_url starts and ends with /"""
+        value = proposal.value
+        if not value.startswith('/'):
+            value = '/' + value
+        if not value.endswith('/'):
+            value = value + '/'
+        return value
+
     @default('cookie_name')
     def _cookie_name_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_NAME'):
