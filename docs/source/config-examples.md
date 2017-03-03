@@ -36,7 +36,7 @@ if not os.path.exists(ssl_dir):
 
 
 # Allows multiple single-server per user
-c.JupyterHub.allow_multiple_servers = False
+c.JupyterHub.allow_named_servers = True
 
 # https on :443
 c.JupyterHub.port = 443

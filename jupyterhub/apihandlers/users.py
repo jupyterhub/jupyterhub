@@ -163,7 +163,7 @@ class UserAPIHandler(APIHandler):
 class UserServerAPIHandler(APIHandler):
     """Create and delete single-user servers
     
-    This handler should be used when c.JupyterHub.allow_multiple_servers = False
+    This handler should be used when c.JupyterHub.allow_named_servers = False
     """
     @gen.coroutine
     @admin_or_self
@@ -198,15 +198,17 @@ class UserServerAPIHandler(APIHandler):
         self.set_status(status)
 
 
-class UserCreateMultiServerAPIHandler(APIHandler):
-    """Create multi single-user server
+class UserCreateNamedServerAPIHandler(APIHandler):
+    """Create a named single-user server
     
-    This handler should be used when c.JupyterHub.allow_multiple_servers = True
+    This handler should be used when c.JupyterHub.allow_named_servers = True
     """
     @gen.coroutine
     @admin_or_self
     def post(self, name):
         user = self.find_user(name)
+        if user is None:
+            raise HTTPError(404, "No such user %r" % name)
         if user.running:
             # include notify, so that a server that died is noticed immediately
             state = yield user.spawner.poll_and_notify()
@@ -219,12 +221,12 @@ class UserCreateMultiServerAPIHandler(APIHandler):
         self.set_status(status)
 
 
-class UserDeleteMultiServerAPIHandler(APIHandler):
-    """Delete multi single-user server
+class UserDeleteNamedServerAPIHandler(APIHandler):
+    """Delete a named single-user server
     
     Expect a server_name inside the url /user/:user/servers/:server_name
     
-    This handler should be used when c.JupyterHub.allow_multiple_servers = True
+    This handler should be used when c.JupyterHub.allow_named_servers = True
     """
     @gen.coroutine
     @admin_or_self
@@ -273,7 +275,7 @@ default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
-    (r"/api/users/([^/]+)/servers", UserCreateMultiServerAPIHandler),
-    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteMultiServerAPIHandler),
+    (r"/api/users/([^/]+)/servers", UserCreateNamedServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteNamedServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
