@@ -35,6 +35,9 @@ if not os.path.exists(ssl_dir):
     os.makedirs(ssl_dir)
 
 
+# Allows multiple single-server per user
+c.JupyterHub.allow_named_servers = True
+
 # https on :443
 c.JupyterHub.port = 443
 c.JupyterHub.ssl_key = pjoin(ssl_dir, 'ssl.key')

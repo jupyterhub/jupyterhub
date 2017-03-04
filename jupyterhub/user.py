@@ -9,7 +9,7 @@ from tornado.log import app_log
 
 from sqlalchemy import inspect
 
-from .utils import url_path_join
+from .utils import url_path_join, default_server_name
 
 from . import orm
 from traitlets import HasTraits, Any, Dict, observe, default
@@ -117,6 +117,8 @@ class User(HasTraits):
         super().__init__(**kwargs)
 
         hub = self.db.query(orm.Hub).first()
+        
+        self.allow_multiple_servers = self.settings.get('allow_multiple_servers', False)
 
         self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
@@ -147,7 +149,7 @@ class User(HasTraits):
     def __repr__(self):
         return repr(self.orm_user)
 
-    @property
+    @property # FIX-ME CHECK IF STILL NEEDED
     def running(self):
         """property for whether a user has a running server"""
         if self.spawn_pending or self.stop_pending:
@@ -198,11 +200,36 @@ class User(HasTraits):
 
     @gen.coroutine
     def spawn(self, options=None):
-        """Start the user's spawner"""
+        """Start the user's spawner
+        
+        depending from the value of JupyterHub.allow_multiple_servers
+        
+        if False:
+        JupyterHub expects only one single-server per user
+        url of the server will be /user/:name
+        
+        if True:
+        JupyterHub expects more than one single-server per user
+        url of the server will be /user/:name/:server_name
+        """
         db = self.db
+                
+        if self.allow_multiple_servers:
+            if options is not None and 'server_name' in options:
+                server_name = options['server_name']
+            else:
+                server_name = default_server_name(self)
+            base_url = url_path_join(self.base_url, server_name)
+        else:
+            server_name = ''
+            base_url = self.base_url
+
+        
+        
         server = orm.Server(
+            name = server_name,
             cookie_name=self.cookie_name,
-            base_url=self.base_url,
+            base_url=base_url,
         )
         self.servers.append(server)
         db.add(self)
@@ -212,6 +239,8 @@ class User(HasTraits):
         db.commit()
 
         spawner = self.spawner
+        # Passing server_name to the spawner
+        spawner.server_name = server_name
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()

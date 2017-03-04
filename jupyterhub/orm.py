@@ -64,6 +64,8 @@ class Server(Base):
     """
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
+    
+    name = Column(Unicode(32), default='') # must be unique between user's servers
     proto = Column(Unicode(15), default='http')
     ip = Column(Unicode(255), default='')  # could also be a DNS name
     port = Column(Integer, default=random_port)

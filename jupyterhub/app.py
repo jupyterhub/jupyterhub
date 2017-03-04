@@ -501,7 +501,11 @@ class JupyterHub(Application):
     @default('authenticator')
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
-
+    
+    allow_multiple_servers = Bool(False,
+        help="Allow multiple single-server per user"
+    ).tag(config=True)
+    
     # class for spawning single-user servers
     spawner_class = Type(LocalProcessSpawner, Spawner,
         help="""The class to use for spawning single-user servers.
@@ -1322,6 +1326,7 @@ class JupyterHub(Application):
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             statsd=self.statsd,
+            allow_multiple_servers=self.allow_multiple_servers,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

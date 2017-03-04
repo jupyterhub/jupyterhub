@@ -76,7 +76,7 @@ class UserListAPIHandler(APIHandler):
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target user or admin"""
-    def m(self, name):
+    def m(self, name, *args, **kwargs):
         current = self.get_current_user()
         if current is None:
             raise web.HTTPError(403)
@@ -86,7 +86,7 @@ def admin_or_self(method):
         # raise 404 if not found
         if not self.find_user(name):
             raise web.HTTPError(404)
-        return method(self, name)
+        return method(self, name, *args, **kwargs)
     return m
 
 class UserAPIHandler(APIHandler):
@@ -158,9 +158,13 @@ class UserAPIHandler(APIHandler):
             setattr(user, key, value)
         self.db.commit()
         self.write(json.dumps(self.user_model(user)))
-
+        
 
 class UserServerAPIHandler(APIHandler):
+    """Create and delete single-user servers
+    
+    This handler should be used when c.JupyterHub.allow_named_servers = False
+    """
     @gen.coroutine
     @admin_or_self
     def post(self, name):
@@ -179,6 +183,54 @@ class UserServerAPIHandler(APIHandler):
     @gen.coroutine
     @admin_or_self
     def delete(self, name):
+        user = self.find_user(name)
+        if user.stop_pending:
+            self.set_status(202)
+            return
+        if not user.running:
+            raise web.HTTPError(400, "%s's server is not running" % name)
+        # include notify, so that a server that died is noticed immediately
+        status = yield user.spawner.poll_and_notify()
+        if status is not None:
+            raise web.HTTPError(400, "%s's server is not running" % name)
+        yield self.stop_single_user(user)
+        status = 202 if user.stop_pending else 204
+        self.set_status(status)
+
+
+class UserCreateNamedServerAPIHandler(APIHandler):
+    """Create a named single-user server
+    
+    This handler should be used when c.JupyterHub.allow_named_servers = True
+    """
+    @gen.coroutine
+    @admin_or_self
+    def post(self, name):
+        user = self.find_user(name)
+        if user is None:
+            raise HTTPError(404, "No such user %r" % name)
+        if user.running:
+            # include notify, so that a server that died is noticed immediately
+            state = yield user.spawner.poll_and_notify()
+            if state is None:
+                raise web.HTTPError(400, "%s's server is already running" % name)
+
+        options = self.get_json_body()
+        yield self.spawn_single_user(user, options=options)
+        status = 202 if user.spawn_pending else 201
+        self.set_status(status)
+
+
+class UserDeleteNamedServerAPIHandler(APIHandler):
+    """Delete a named single-user server
+    
+    Expect a server_name inside the url /user/:user/servers/:server_name
+    
+    This handler should be used when c.JupyterHub.allow_named_servers = True
+    """
+    @gen.coroutine
+    @admin_or_self
+    def delete(self, name, server_name):
         user = self.find_user(name)
         if user.stop_pending:
             self.set_status(202)
@@ -223,5 +275,7 @@ default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
+    (r"/api/users/([^/]+)/servers", UserCreateNamedServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteNamedServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
