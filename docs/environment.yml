@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
 - nodejs
-- python=3
+- python=3.5
 - jinja2
 - pamela
 - requests
