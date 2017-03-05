@@ -4,7 +4,7 @@ Project Jupyter thanks the following people for their help and
 contribution on JupyterHub:
 
 - anderbubble
-- barrachi
+- barrachri
 - betatim
 - Carreau
 - ckald
