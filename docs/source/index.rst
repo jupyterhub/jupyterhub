@@ -92,6 +92,7 @@ Contents
 
 * :doc:`changelog`
 * :doc:`contributor-list`
+* :doc:`gallery-jhub-deployments`
 
 .. toctree::
    :maxdepth: 2
@@ -100,6 +101,7 @@ Contents
 
    changelog
    contributor-list
+   gallery-jhub-deployments
 
 
 Indices and tables
