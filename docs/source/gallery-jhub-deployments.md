@@ -22,7 +22,6 @@ Please submit pull requests to update information or to add new institutions or 
 - [NERSC](http://www.nersc.gov/)
     - [Press release on Jupyter and Cori](http://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
     - [Moving and sharing data](https://www.nersc.gov/assets/Uploads/03-MovingAndSharingData-Cholia.pdf)
-    - 
 
 - [Research IT](http://research-it.berkeley.edu)
     - [JupyterHub server supports campus research computation](http://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
@@ -68,7 +67,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### University of Missouri
 
-https://dsa.missouri.edu/faq/
+- https://dsa.missouri.edu/faq/
 
 ### University of Rochester CIRC 
 
@@ -95,12 +94,12 @@ https://dsa.missouri.edu/faq/
 
 ### AWS
 
-https://aws.amazon.com/blogs/big-data/running-jupyter-notebook-and-jupyterhub-on-amazon-emr/
+- [running-jupyter-notebook-and-jupyterhub-on-amazon-emr](https://aws.amazon.com/blogs/big-data/running-jupyter-notebook-and-jupyterhub-on-amazon-emr/)
 
 ### Google Cloud Platform
 
 - [Using Tensorflow and JupyterHub in Classrooms](https://cloud.google.com/solutions/using-tensorflow-jupyterhub-classrooms)
-- https://opensource.googleblog.com/2016/10/using-tensorflow-and-jupyterhub.html
+- [using-tensorflow-and-jupyterhub blog post](https://opensource.googleblog.com/2016/10/using-tensorflow-and-jupyterhub.html)
 
 ### Everware
 
