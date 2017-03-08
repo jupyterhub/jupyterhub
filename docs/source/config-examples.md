@@ -5,6 +5,7 @@ configurations:
 
 - Example with GitHub OAuth
 - Example with nginx reverse proxy
+- JupyterHub deployment on AWS with NGINX
 
 
 ## Example with GitHub OAuth
