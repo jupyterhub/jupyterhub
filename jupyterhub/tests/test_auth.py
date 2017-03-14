@@ -10,7 +10,9 @@ from .mocking import MockPAMAuthenticator
 
 from jupyterhub import auth, orm
 
+
 def test_pam_auth(io_loop):
+    """Test if user can be PAM Authenticated"""
     authenticator = MockPAMAuthenticator()
     authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'match',
@@ -24,7 +26,9 @@ def test_pam_auth(io_loop):
     }))
     assert authorized is None
 
+
 def test_pam_auth_whitelist(io_loop):
+    """Test that whitelisted users are PAM Authenticated"""
     authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
     authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'kaylee',
@@ -46,11 +50,14 @@ def test_pam_auth_whitelist(io_loop):
 
 
 class MockGroup:
+    """A mock group of users for testing authentication"""
     def __init__(self, *names):
+        """Initialize the group of users in memory"""
         self.gr_mem = names
 
 
 def test_pam_auth_group_whitelist(io_loop):
+    """Test user in a group whitelist can be authenticated"""
     g = MockGroup('kaylee')
     def getgrnam(name):
         return g
@@ -73,6 +80,7 @@ def test_pam_auth_group_whitelist(io_loop):
 
 
 def test_pam_auth_no_such_group(io_loop):
+    """Test if unrecognized whitelist group is not authenticated"""
     authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
     authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'kaylee',
@@ -82,6 +90,7 @@ def test_pam_auth_no_such_group(io_loop):
 
 
 def test_wont_add_system_user(io_loop):
+    """Test that a user will not be added unless the user is on whitelist"""
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.create_system_users = False
@@ -90,6 +99,7 @@ def test_wont_add_system_user(io_loop):
 
 
 def test_cant_add_system_user(io_loop):
+    """Test that user that is not on whitelist can not be added to system"""
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.add_user_cmd = ['jupyterhub-fake-command']
@@ -116,6 +126,7 @@ def test_cant_add_system_user(io_loop):
 
 
 def test_add_system_user(io_loop):
+    """Test if user can be added to system even if user is not on whitelist"""
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.create_system_users = True
@@ -136,6 +147,7 @@ def test_add_system_user(io_loop):
 
 
 def test_delete_user(io_loop):
+    """Test that user not in whitelist can be deleted"""
     user = orm.User(name='zoe')
     a = MockPAMAuthenticator(whitelist={'mal'})
     
@@ -147,6 +159,7 @@ def test_delete_user(io_loop):
 
 
 def test_urls():
+    """Test if urls for login/logout are correct"""
     a = auth.PAMAuthenticator()
     logout = a.logout_url('/base/url/')
     login = a.login_url('/base/url')
@@ -155,12 +168,14 @@ def test_urls():
 
 
 def test_handlers(app):
+    """Test that a handler exists for login"""
     a = auth.PAMAuthenticator()
     handlers = a.get_handlers(app)
     assert handlers[0][0] == '/login'
 
 
 def test_normalize_names(io_loop):
+    """Test names are normalized"""
     a = MockPAMAuthenticator()
     authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
         'username': 'ZOE',
@@ -186,7 +201,9 @@ def test_normalize_names(io_loop):
     }))
     assert authorized == 'test'
 
+
 def test_username_map(io_loop):
+    """Test if normalized authenticator username is mapped to JupyterHub user"""
     a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
     authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
         'username': 'WASH',
@@ -203,6 +220,7 @@ def test_username_map(io_loop):
 
 
 def test_validate_names(io_loop):
+    """Test validation of usernames by authenticator"""
     a = auth.PAMAuthenticator()
     assert a.validate_username('willow')
     assert a.validate_username('giles')
@@ -212,5 +230,3 @@ def test_validate_names(io_loop):
     a = auth.PAMAuthenticator(username_pattern='w.*')
     assert not a.validate_username('xander')
     assert a.validate_username('willow')
-
-
