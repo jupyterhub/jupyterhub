@@ -14,12 +14,16 @@ from .mocking import MockHub
 from .. import orm
 from ..app import COOKIE_SECRET_BYTES
 
+
 def test_help_all():
+    """Test JupyterHub --help-all command"""
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
     assert '--ip' in out
     assert '--JupyterHub.ip' in out
 
+
 def test_token_app():
+    """Test jupyterhub token command"""
     cmd = [sys.executable, '-m', 'jupyterhub', 'token']
     out = check_output(cmd + ['--help-all']).decode('utf8', 'replace')
     with TemporaryDirectory() as td:
@@ -28,7 +32,9 @@ def test_token_app():
         out = check_output(cmd + ['user'], cwd=td).decode('utf8', 'replace').strip()
     assert re.match(r'^[a-z0-9]+$', out)
 
+
 def test_generate_config():
+    """Test jupyterhub --generate-config command"""
     with NamedTemporaryFile(prefix='jupyterhub_config', suffix='.py') as tf:
         cfg_file = tf.name
     with open(cfg_file, 'w') as f:
@@ -56,7 +62,9 @@ def test_generate_config():
     assert 'Spawner.cmd' in cfg_text
     assert 'Authenticator.whitelist' in cfg_text
 
+
 def test_init_tokens(io_loop):
+    """Test initialization of api tokens"""
     with TemporaryDirectory() as td:
         db_file = os.path.join(td, 'jupyterhub.sqlite')
         tokens = {
@@ -92,6 +100,7 @@ def test_init_tokens(io_loop):
 
 
 def test_write_cookie_secret(tmpdir):
+    """Test that cookie secret is written to hub"""
     secret_path = str(tmpdir.join('cookie_secret'))
     hub = MockHub(cookie_secret_file=secret_path)
     hub.init_secrets()
@@ -101,6 +110,7 @@ def test_write_cookie_secret(tmpdir):
 
 
 def test_cookie_secret_permissions(tmpdir):
+    """Test cookie secret permission is not set to public"""
     secret_file = tmpdir.join('cookie_secret')
     secret_path = str(secret_file)
     secret = os.urandom(COOKIE_SECRET_BYTES)
@@ -119,6 +129,7 @@ def test_cookie_secret_permissions(tmpdir):
 
 
 def test_cookie_secret_content(tmpdir):
+    """Test cookie secret refers to valid content"""
     secret_file = tmpdir.join('cookie_secret')
     secret_file.write('not base 64: uñiço∂e')
     secret_path = str(secret_file)
@@ -129,6 +140,7 @@ def test_cookie_secret_content(tmpdir):
 
 
 def test_cookie_secret_env(tmpdir):
+    """Test that cookie secret exists in the system environment"""
     hub = MockHub(cookie_secret_file=str(tmpdir.join('cookie_secret')))
 
     with patch.dict(os.environ, {'JPY_COOKIE_SECRET': 'not hex'}):
@@ -142,6 +154,7 @@ def test_cookie_secret_env(tmpdir):
 
 
 def test_load_groups(io_loop):
+    """Test if user groups are loaded from db"""
     to_load = {
         'blue': ['cyclops', 'rogue', 'wolverine'],
         'gold': ['storm', 'jean-grey', 'colossus'],
