@@ -118,7 +118,7 @@ class User(HasTraits):
 
         hub = self.db.query(orm.Hub).first()
         
-        self.allow_multiple_servers = self.settings.get('allow_multiple_servers', False)
+        self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
         self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
