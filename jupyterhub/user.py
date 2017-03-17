@@ -118,7 +118,7 @@ class User(HasTraits):
 
         hub = self.db.query(orm.Hub).first()
         
-        self.allow_multiple_servers = self.settings.get('allow_multiple_servers', False)
+        self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
         self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
@@ -202,7 +202,7 @@ class User(HasTraits):
     def spawn(self, options=None):
         """Start the user's spawner
         
-        depending from the value of JupyterHub.allow_multiple_servers
+        depending from the value of JupyterHub.allow_named_servers
         
         if False:
         JupyterHub expects only one single-server per user
@@ -214,7 +214,7 @@ class User(HasTraits):
         """
         db = self.db
                 
-        if self.allow_multiple_servers:
+        if self.allow_named_servers:
             if options is not None and 'server_name' in options:
                 server_name = options['server_name']
             else:
@@ -224,8 +224,6 @@ class User(HasTraits):
             server_name = ''
             base_url = self.base_url
 
-        
-        
         server = orm.Server(
             name = server_name,
             cookie_name=self.cookie_name,
