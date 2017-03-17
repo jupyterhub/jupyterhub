@@ -529,7 +529,8 @@ class UserSpawnHandler(BaseHandler):
                 status = yield current_user.spawner.poll()
                 if status is not None:
                     if current_user.spawner.options_form:
-                        self.redirect(url_path_join(self.hub.server.base_url, 'spawn'))
+                        self.redirect(url_concat(url_path_join(self.hub.server.base_url, 'spawn'),
+                                                 {'next': self.request.uri}))
                         return
                     else:
                         yield self.spawn_single_user(current_user)
