@@ -79,7 +79,7 @@ class Spawner(LoggingConfigurable):
 
         New in version 0.7.
         """
-    )
+    ).tag(config=True)
 
     start_timeout = Integer(60,
         help="""
