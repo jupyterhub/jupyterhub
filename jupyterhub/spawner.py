@@ -204,6 +204,7 @@ class Spawner(LoggingConfigurable):
     ).tag(config=True)
 
     cmd = Command(['jupyterhub-singleuser'],
+        allow_none=True,
         help="""
         The command used for starting the single-user server.
 
