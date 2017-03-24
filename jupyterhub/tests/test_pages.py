@@ -114,6 +114,10 @@ def test_spawn_page(app):
         assert r.url.endswith('/spawn')
         assert FormSpawner.options_form in r.text
 
+        r = get_page('spawn?next=foo', app, cookies=cookies)
+        assert r.url.endswith('/spawn?next=foo')
+        assert FormSpawner.options_form in r.text
+
 def test_spawn_form(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.server.base_url)
@@ -122,11 +126,12 @@ def test_spawn_form(app, io_loop):
         u = app.users[orm_u]
         io_loop.run_sync(u.stop)
     
-        r = requests.post(ujoin(base_url, 'spawn'), cookies=cookies, data={
+        r = requests.post(ujoin(base_url, 'spawn?next=/user/jones/tree'), cookies=cookies, data={
             'bounds': ['-1', '1'],
             'energy': '511keV',
         })
         r.raise_for_status()
+        assert r.history
         print(u.spawner)
         print(u.spawner.user_options)
         assert u.spawner.user_options == {
