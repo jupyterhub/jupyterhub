@@ -77,6 +77,10 @@ class Spawner(LoggingConfigurable):
 
         Defaults to `0`, which uses a randomly allocated port number each time.
 
+        If set to a non-zero value, all Spawners will use the same port,
+        which only makes sense if each server is on a different address,
+        e.g. in containers.
+
         New in version 0.7.
         """
     ).tag(config=True)
