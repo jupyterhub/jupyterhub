@@ -83,6 +83,11 @@ class JupyterHubLoginHandler(LoginHandler):
             handler.__class__ = type(name, (HubAuthenticatedHandler, handler.__class__), {})
         return handler.get_current_user()
 
+    @classmethod
+    def validate_security(cls, app, ssl_options=None):
+        """Prevent warnings about security from base class"""
+        return
+
 
 class JupyterHubLogoutHandler(LogoutHandler):
     def get(self):
