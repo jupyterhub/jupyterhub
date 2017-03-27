@@ -32,6 +32,10 @@ If you have tried to start the JupyterHub proxy and it fails to start:
   ``c.JupyterHub.ip = '*'``; if it is, try ``c.JupyterHub.ip = ''``
 - Try starting with ``jupyterhub --ip=0.0.0.0``
 
+**Note**: If this occurs on Ubuntu/Debian, check that the you are using a
+recent version of node. Some versions of Ubuntu/Debian come with a version
+of node that is very old, and it is necessary to update node.
+
 ### sudospawner fails to run
 
 If the sudospawner script is not found in the path, sudospawner will not run.
