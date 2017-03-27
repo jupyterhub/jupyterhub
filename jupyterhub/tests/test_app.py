@@ -12,6 +12,7 @@ import pytest
 
 from .mocking import MockHub
 from .. import orm
+from ..app import COOKIE_SECRET_BYTES
 
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
@@ -102,8 +103,8 @@ def test_write_cookie_secret(tmpdir):
 def test_cookie_secret_permissions(tmpdir):
     secret_file = tmpdir.join('cookie_secret')
     secret_path = str(secret_file)
-    secret = os.urandom(1024)
-    secret_file.write(binascii.b2a_base64(secret))
+    secret = os.urandom(COOKIE_SECRET_BYTES)
+    secret_file.write(binascii.b2a_hex(secret))
     hub = MockHub(cookie_secret_file=secret_path)
 
     # raise with public secret file
