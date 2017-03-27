@@ -103,7 +103,7 @@ flags = {
 
 COOKIE_SECRET_BYTES = 32  # the number of bytes to use when generating new cookie secrets
 
-HEX_RE = re.compile('([a-f0-9]{2})+', re.IGNORECASE)
+HEX_RE = re.compile('^([a-f0-9]{2})+$', re.IGNORECASE)
 
 class NewToken(Application):
     """Generate and print a new API token"""
