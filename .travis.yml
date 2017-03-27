@@ -26,4 +26,4 @@ matrix:
   fast_finish: true
   include:
     - python: 3.6
-      env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://127.0.0.1.xip.io:8000
+      env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
