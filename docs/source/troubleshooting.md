@@ -7,6 +7,8 @@ problem and how to resolve it.
 [*Behavior*](#behavior)
 - JupyterHub proxy fails to start
 - sudospawner fails to run
+- What is the default behavior when none of the lists (admin, whitelist,
+  group whitelist) are set?
 
 [*Errors*](#errors)
 - 500 error after spawning my single-user server
@@ -49,6 +51,16 @@ or add:
     c.SudoSpawner.sudospawner_path = '/absolute/path/to/sudospawner'
 
 to the config file, `jupyterhub_config.py`.
+
+### What is the default behavior when none of the lists (admin, whitelist, group whitelist) are set?
+
+When nothing is given for these lists, there will be no admins, and all users
+who can authenticate on the system (i.e. all the unix users on the server with
+a password) will be allowed to start a server. The whitelist lets you limit
+this to a particular set of users, and the admin_users lets you specify who
+among them may use the admin interface (not necessary, unless you need to do
+things like inspect other users' servers, or modify the userlist at runtime).
+
 
 ## Errors
 
