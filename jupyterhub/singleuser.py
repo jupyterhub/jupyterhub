@@ -79,9 +79,12 @@ class JupyterHubLoginHandler(LoginHandler):
     def get_user(handler):
         """alternative get_current_user to query the Hub"""
         # patch in HubAuthenticated class for querying the Hub for cookie authentication
-        name = 'NowHubAuthenticated'
-        if handler.__class__.__name__ != name:
-            handler.__class__ = type(name, (HubAuthenticatedHandler, handler.__class__), {})
+        if HubAuthenticatedHandler not in handler.__class__.__bases__:
+            handler.__class__ = type(
+                handler.__class__.__name__,
+                (HubAuthenticatedHandler, handler.__class__),
+                {},
+            )
         return handler.get_current_user()
 
     @classmethod
