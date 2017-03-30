@@ -45,7 +45,6 @@ class TokenAPIHandler(APIHandler):
         self.write(json.dumps({'token': api_token}))
 
 
-
 class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name, cookie_value=None):

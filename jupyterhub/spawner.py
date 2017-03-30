@@ -51,6 +51,8 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     authenticator = Any()
     api_token = Unicode()
+    oauth_client_id = Unicode()
+    oauth_client_secret = Unicode()
 
     will_resume = Bool(False,
         help="""Whether the Spawner will resume on next start
@@ -391,6 +393,7 @@ class Spawner(LoggingConfigurable):
         Subclasses should call super, to ensure that state is properly cleared.
         """
         self.api_token = ''
+        self.oauth_client_secret = ''
 
     def get_env(self):
         """Return the environment dict to use for the Spawner.
@@ -425,6 +428,9 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
+        # OAuth settings
+        env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
+        env['JUPYTERHUB_CLIENT_SECRET'] = self.oauth_client_secret
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the

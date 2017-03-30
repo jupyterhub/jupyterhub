@@ -87,6 +87,10 @@ class BaseHandler(RequestHandler):
     def authenticator(self):
         return self.settings.get('authenticator', None)
 
+    @property
+    def oauth_provider(self):
+        return self.settings['oauth_provider']
+
     def finish(self, *args, **kwargs):
         """Roll back any uncommitted transactions from the handler."""
         self.db.rollback()

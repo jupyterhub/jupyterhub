@@ -7,20 +7,24 @@ HubAuth can be used in any application, even outside tornado.
 HubAuthenticated is a mixin class for tornado handlers that should authenticate with the Hub.
 """
 
+import json
 import os
 import re
 import socket
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 import warnings
 
 import requests
 
+from tornado.gen import coroutine
 from tornado.log import app_log
-from tornado.web import HTTPError
+from tornado.httputil import url_concat
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.web import HTTPError, RequestHandler
 
 from traitlets.config import Configurable
-from traitlets import Unicode, Integer, Instance, default, observe
+from traitlets import Unicode, Integer, Instance, default, observe, validate
 
 from ..utils import url_path_join
 
@@ -103,21 +107,109 @@ class HubAuth(Configurable):
     """
 
     # where is the hub
-    api_url = Unicode(os.environ.get('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
+    api_url = Unicode(os.getenv('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
         help="""The base API URL of the Hub.
 
         Typically http://hub-ip:hub-port/hub/api
         """
     ).tag(config=True)
-
-    login_url = Unicode('/hub/login',
-        help="""The login URL of the Hub
+    
+    host = Unicode('',
+        help="""The public host of this server.
         
-        Typically /hub/login
+        Only used if working with subdomains.
         """
     ).tag(config=True)
 
-    api_token = Unicode(os.environ.get('JUPYTERHUB_API_TOKEN', ''),
+    base_url = Unicode(os.getenv('JUPYTERHUB_SERVICE_PREFIX') or '/',
+        help="""The base URL prefix of this
+        
+        added on to host
+        
+        e.g. /services/service-name/ or /user/name/
+        
+        Default: get from JUPYTERHUB_SERVICE_PREFIX
+        """
+    )
+    @validate('base_url')
+    def _add_slash(self, proposal):
+        """Ensure base_url starts and ends with /"""
+        value = proposal['value']
+        if not value.startswith('/'):
+            value = '/' + value
+        if not value.endswith('/'):
+            value = value + '/'
+        return value
+
+    login_url = Unicode('/hub/login',
+        help="""The login URL of the Hub
+
+        Typically /hub/login
+
+        If using OAuth, will the OAuth redirect URL
+        including client_id, redirect_uri params.
+        """
+    ).tag(config=True)
+    @default('login_url')
+    def _login_url(self):
+        if self.using_oauth:
+            return url_concat(self.oauth_authorization_url, {
+                'client_id': self.oauth_client_id,
+                'redirect_uri': self.oauth_redirect_uri,
+                'response_type': 'code',
+            })
+        else:
+            return '/hub/login'
+
+    @property
+    def using_oauth(self):
+        """Am I using OAuth?"""
+        return bool(self.oauth_client_id)
+
+    oauth_client_id = Unicode(os.getenv('JUPYTERHUB_CLIENT_ID', ''),
+        help="""The OAuth client ID for this application.
+        
+        Use JUPYTERHUB_CLIENT_ID by default.
+        """
+    ).tag(config=True)
+    oauth_client_secret = Unicode(os.getenv('JUPYTERHUB_CLIENT_SECRET', ''),
+        help="""The OAuth client secret for this application.
+        
+        Use JUPYTERHUB_CLIENT_SECRET by default.
+        """
+    ).tag(config=True)
+
+    @property
+    def oauth_cookie_name(self):
+        """Use OAuth client_id for cookie name
+
+        because we don't want to use the same cookie name
+        across OAuth clients.
+        """
+        return self.oauth_client_id
+
+    oauth_redirect_uri = Unicode(
+        help="""OAuth redirect URI
+        
+        Should generally be /base_url/oauth_callback
+        """
+    ).tag(config=True)
+    @default('oauth_redirect_uri')
+    def _default_redirect(self):
+        return self.host + url_path_join(self.base_url, 'oauth_callback')
+
+    oauth_authorization_url = Unicode('/hub/api/oauth2/authorize',
+        help="The URL to redirect to when starting the OAuth process",
+    ).tag(config=True)
+
+    oauth_token_url = Unicode(
+        help="""The URL for requesting an OAuth token from JupyterHub"""
+    ).tag(config=True)
+    @default('oauth_token_url')
+    def _token_url(self):
+        return url_path_join(self.api_url, 'oauth2/token')
+
+    api_token = Unicode(os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
         Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
@@ -169,12 +261,23 @@ class HubAuth(Configurable):
             if cached is not None:
                 return cached
 
+        data = self._api_request('GET', url, allow_404=True)
+        if data is None:
+            app_log.warning("No Hub user identified for request")
+        else:
+            app_log.debug("Received request from Hub user %s", data)
+        if use_cache:
+            # cache result
+            self.cache[cache_key] = data
+        return data
+
+    def _api_request(self, method, url, **kwargs):
+        """Make an API request"""
+        allow_404 = kwargs.pop('allow_404', False)
+        headers = kwargs.setdefault('headers', {})
+        headers.setdefault('Authorization', 'token %s' % self.api_token)
         try:
-            r = requests.get(url,
-                headers = {
-                    'Authorization' : 'token %s' % self.api_token,
-                },
-            )
+            r = requests.request(method, url, **kwargs)
         except requests.ConnectionError:
             msg = "Failed to connect to Hub API at %r." % self.api_url
             msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
@@ -184,26 +287,49 @@ class HubAuth(Configurable):
             raise HTTPError(500, msg)
 
         data = None
-        if r.status_code == 404:
-            app_log.warning("No Hub user identified for request")
+        if r.status_code == 404 and allow_404:
+            pass
         elif r.status_code == 403:
             app_log.error("I don't have permission to check authorization with JupyterHub, my auth token may have expired: [%i] %s", r.status_code, r.reason)
+            app_log.error(r.text)
             raise HTTPError(500, "Permission failure checking authorization, I may need a new token")
         elif r.status_code >= 500:
             app_log.error("Upstream failure verifying auth token: [%i] %s", r.status_code, r.reason)
+            app_log.error(r.text)
             raise HTTPError(502, "Failed to check authorization (upstream problem)")
         elif r.status_code >= 400:
             app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
+            app_log.warning(r.text)
             raise HTTPError(500, "Failed to check authorization")
         else:
             data = r.json()
-            app_log.debug("Received request from Hub user %s", data)
 
-        if use_cache:
-            # cache result
-            self.cache[cache_key] = data
         return data
 
+    def oauth_token_for_code(self, code):
+        """Get OAuth token for code
+        
+        Finish OAuth handshake. Should be called in OAuth Callback handler.
+        
+        Args:
+            code: oauth code for finishing OAuth login
+        """
+        # GitHub specifies a POST request yet requires URL parameters
+        params = dict(
+            client_id=self.oauth_client_id,
+            client_secret=self.oauth_client_secret,
+            grant_type='authorization_code',
+            code=code,
+            redirect_uri=self.oauth_redirect_uri,
+        )
+
+        token_reply = self._api_request('POST', self.oauth_token_url,
+            data=urlencode(params).encode('utf8'),
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded'
+            })
+
+        return token_reply['access_token']
 
     def user_for_cookie(self, encrypted_cookie, use_cache=True):
         """Ask the Hub to identify the user for a given cookie.
@@ -264,6 +390,24 @@ class HubAuth(Configurable):
                 user_token = m.group(1)
         return user_token
 
+    def set_cookie(self, handler, user_model):
+        """Set a cookie recording OAuth result"""
+        kwargs = {
+            'path': self.base_url,
+        }
+        if handler.request.protocol == 'https':
+            kwargs['secure'] = True
+        # if self.subdomain_host:
+        #     kwargs['domain'] = self.domain
+        cookie_value = json.dumps({'name': user_model['name']})
+        app_log.debug("Setting oauth cookie for %s: %s, %s",
+            handler.request.remote_ip, self.oauth_cookie_name, kwargs)
+        handler.set_secure_cookie(
+            self.oauth_cookie_name,
+            cookie_value,
+            **kwargs
+        )
+
     def get_user(self, handler):
         """Get the Hub user for a given tornado handler.
 
@@ -295,9 +439,14 @@ class HubAuth(Configurable):
 
         # no token, check cookie
         if user_model is None:
-            encrypted_cookie = handler.get_cookie(self.cookie_name)
-            if encrypted_cookie:
-                user_model = self.user_for_cookie(encrypted_cookie)
+            if self.using_oauth:
+                user_model_json = handler.get_secure_cookie(self.oauth_cookie_name)
+                if user_model_json:
+                    user_model = json.loads(user_model_json.decode('utf8', 'replace'))
+            else:
+                encrypted_cookie = handler.get_cookie(self.cookie_name)
+                if encrypted_cookie:
+                    user_model = self.user_for_cookie(encrypted_cookie)
 
         # cache result
         handler._cached_hub_user = user_model
@@ -360,6 +509,7 @@ class HubAuthenticated(object):
 
     def get_login_url(self):
         """Return the Hub's login URL"""
+        app_log.debug("Redirecting to login url: %s" % self.hub_auth.login_url)
         return self.hub_auth.login_url
 
     def check_hub_user(self, model):
@@ -417,4 +567,54 @@ class HubAuthenticated(object):
             return
         self._hub_auth_user_cache = self.check_hub_user(user_model)
         return self._hub_auth_user_cache
+
+
+class JupyterHubOAuthCallbackHandler(HubAuthenticated, RequestHandler):
+    """OAuth Callback handler"""
+    
+    @coroutine
+    def get(self):
+        code = self.get_argument("code", False)
+        if not code:
+            raise HTTPError(400, "oauth callback made without a token")
+        # TODO: make async (in a Thread?)
+        token_reply = self.hub_auth.oauth_token_for_code(code)
+        
+        # TODO: Configure the curl_httpclient for tornado
+        
+        # Exchange the OAuth code for a GitHub Access Token
+        #
+        # See: https://developer.github.com/v3/oauth/
+        
+        # GitHub specifies a POST request yet requires URL parameters
+        params = dict(
+            client_id=self.hub_auth.oauth_client_id,
+            client_secret=self.hub_auth.oauth_client_secret,
+            code=code
+        )
+        
+        url = self.hub_auth.oauth_token_url
+        
+        req = HTTPRequest(url,
+                          method="POST",
+                          headers={"Accept": "application/json"},
+                          body=''
+                          )
+        
+        resp = yield http_client.fetch(req)
+        resp_json = json.loads(resp.body.decode('utf8', 'replace'))
+        access_token = resp_json['access_token']
+        
+        # Determine who the logged in user is
+        headers = {
+            "User-Agent": "JupyterHub OAuth Client",
+            "Authorization": "token {}".format(access_token)
+        }
+        req = HTTPRequest(self.hub_auth.oauth_token_url,
+                          method="GET",
+                          headers=headers,
+        )
+        resp = yield http_client.fetch(req)
+        user_model = json.loads(resp.body.decode('utf8', 'replace'))
+        self.hub_auth.set_cookie(self, user_model)
 

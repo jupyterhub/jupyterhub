@@ -34,9 +34,10 @@ from notebook.notebookapp import (
 )
 from notebook.auth.login import LoginHandler
 from notebook.auth.logout import LogoutHandler
+from notebook.base.handlers import IPythonHandler
 
 from jupyterhub import __version__
-from .services.auth import HubAuth, HubAuthenticated
+from .services.auth import HubAuth, HubAuthenticated, JupyterHubOAuthCallbackHandler
 from .utils import url_path_join
 
 
@@ -94,6 +95,25 @@ class JupyterHubLogoutHandler(LogoutHandler):
         self.redirect(
             self.settings['hub_host'] +
             url_path_join(self.settings['hub_prefix'], 'logout'))
+
+
+class OAuthCallbackHandler(IPythonHandler):
+    """Mixin IPythonHandler to get the right error pages, etc."""
+    @property
+    def hub_auth(self):
+        return self.settings['hub_auth']
+    
+    def get(self):
+        code = self.get_argument("code", False)
+        if not code:
+            raise HTTPError(400, "oauth callback made without a token")
+        # TODO: make async (in a Thread?)
+        token = self.hub_auth.oauth_token_for_code(code)
+        user_model = self.hub_auth.user_for_token(token)
+        self.log.info("Logged-in user %s", user_model)
+        self.hub_auth.set_cookie(self, user_model)
+        next_url = self.get_argument('next', '') or self.base_url
+        self.redirect(next_url)
 
 
 # register new hub related command-line aliases
@@ -311,10 +331,11 @@ class SingleUserNotebookApp(NotebookApp):
             parent=self,
             api_token=api_token,
             api_url=self.hub_api_url,
+            base_url=self.base_url,
         )
 
     def init_webapp(self):
-        # load the hub related settings into the tornado settings dict
+        # load the hub-related settings into the tornado settings dict
         self.init_hub_auth()
         s = self.tornado_settings
         s['user'] = self.user
@@ -322,11 +343,17 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_prefix'] = self.hub_prefix
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
-        self.hub_auth.login_url = self.hub_host + self.hub_prefix
         s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
         super(SingleUserNotebookApp, self).init_webapp()
-        self.patch_templates()
 
+        # add OAuth callback
+        self.web_app.add_handlers(r".*$", [(
+            urlparse(self.hub_auth.oauth_redirect_uri).path,
+            OAuthCallbackHandler
+        )])
+
+        self.patch_templates()
+    
     def patch_templates(self):
         """Patch page templates to add Hub-related buttons"""
 

@@ -4,12 +4,12 @@
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
+from oauth2.error import ClientNotFoundError
+from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
 
-from sqlalchemy import inspect
-
-from .utils import url_path_join, default_server_name
+from .utils import url_path_join, default_server_name, new_token
 
 from . import orm
 from traitlets import HasTraits, Any, Dict, observe, default
@@ -213,7 +213,6 @@ class User(HasTraits):
         url of the server will be /user/:name/:server_name
         """
         db = self.db
-                
         if self.allow_named_servers:
             if options is not None and 'server_name' in options:
                 server_name = options['server_name']
@@ -242,7 +241,24 @@ class User(HasTraits):
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
+
+        # create API and OAuth tokens
         spawner.api_token = api_token
+        spawner.oauth_client_id = client_id = 'user-%s-%s' % (self.escaped_name, server_name)
+        client_store = self.settings['oauth_provider'].client_authenticator.client_store
+        try:
+            oauth_client = client_store.fetch_by_client_id(client_id)
+        except ClientNotFoundError:
+            oauth_client = None
+        # create a new OAuth client + secret on every launch,
+        # except for resuming containers.
+        if oauth_client is None or not spawner.will_resume:
+            spawner.oauth_client_secret = client_secret = new_token()
+            print(server.base_url)
+            client_store.add_client(client_id, client_secret,
+                                    url_path_join(server.base_url, 'oauth_callback'),
+                                    )
+            db.commit()
 
         # trigger pre-spawn hook on authenticator
         authenticator = self.authenticator
