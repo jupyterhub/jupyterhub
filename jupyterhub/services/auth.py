@@ -106,31 +106,28 @@ class HubAuth(Configurable):
 
     """
 
-    # where is the hub
-    api_url = Unicode(os.getenv('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
-        help="""The base API URL of the Hub.
-
-        Typically http://hub-ip:hub-port/hub/api
+    hub_host = Unicode('',
+        help="""The public host of JupyterHub
+        
+        Only used if JupyterHub is spreading servers across subdomains.
         """
     ).tag(config=True)
-    
+
     host = Unicode('',
-        help="""The public host of this server.
+        help="""The public host of this service/server
         
-        Only used if working with subdomains.
+        Only used if JupyterHub is spreading servers across subdomains.
         """
     ).tag(config=True)
 
     base_url = Unicode(os.getenv('JUPYTERHUB_SERVICE_PREFIX') or '/',
-        help="""The base URL prefix of this
-        
-        added on to host
-        
+        help="""The base URL prefix of this application
+
         e.g. /services/service-name/ or /user/name/
-        
+
         Default: get from JUPYTERHUB_SERVICE_PREFIX
         """
-    )
+    ).tag(config=True)
     @validate('base_url')
     def _add_slash(self, proposal):
         """Ensure base_url starts and ends with /"""
@@ -141,84 +138,35 @@ class HubAuth(Configurable):
             value = value + '/'
         return value
 
-    login_url = Unicode('/hub/login',
-        help="""The login URL of the Hub
+    # where is the hub
+    api_url = Unicode(os.getenv('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
+        help="""The base API URL of the Hub.
 
-        Typically /hub/login
-
-        If using OAuth, will the OAuth redirect URL
-        including client_id, redirect_uri params.
+        Typically http://hub-ip:hub-port/hub/api
         """
     ).tag(config=True)
-    @default('login_url')
-    def _login_url(self):
-        if self.using_oauth:
-            return url_concat(self.oauth_authorization_url, {
-                'client_id': self.oauth_client_id,
-                'redirect_uri': self.oauth_redirect_uri,
-                'response_type': 'code',
-            })
-        else:
-            return '/hub/login'
-
-    @property
-    def using_oauth(self):
-        """Am I using OAuth?"""
-        return bool(self.oauth_client_id)
-
-    oauth_client_id = Unicode(os.getenv('JUPYTERHUB_CLIENT_ID', ''),
-        help="""The OAuth client ID for this application.
-        
-        Use JUPYTERHUB_CLIENT_ID by default.
-        """
-    ).tag(config=True)
-    oauth_client_secret = Unicode(os.getenv('JUPYTERHUB_CLIENT_SECRET', ''),
-        help="""The OAuth client secret for this application.
-        
-        Use JUPYTERHUB_CLIENT_SECRET by default.
-        """
-    ).tag(config=True)
-
-    @property
-    def oauth_cookie_name(self):
-        """Use OAuth client_id for cookie name
-
-        because we don't want to use the same cookie name
-        across OAuth clients.
-        """
-        return self.oauth_client_id
-
-    oauth_redirect_uri = Unicode(
-        help="""OAuth redirect URI
-        
-        Should generally be /base_url/oauth_callback
-        """
-    ).tag(config=True)
-    @default('oauth_redirect_uri')
-    def _default_redirect(self):
-        return self.host + url_path_join(self.base_url, 'oauth_callback')
-
-    oauth_authorization_url = Unicode('/hub/api/oauth2/authorize',
-        help="The URL to redirect to when starting the OAuth process",
-    ).tag(config=True)
-
-    oauth_token_url = Unicode(
-        help="""The URL for requesting an OAuth token from JupyterHub"""
-    ).tag(config=True)
-    @default('oauth_token_url')
-    def _token_url(self):
-        return url_path_join(self.api_url, 'oauth2/token')
-
+    
     api_token = Unicode(os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
         Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
         """
     ).tag(config=True)
+    
+    login_url = Unicode('/hub/login',
+        help="""The login URL to use
+        
+        Typically /hub/login
+        """
+    ).tag(config=True)
+    @default('login_url')
+    def _default_login_url(self):
+        return self.hub_host + '/hub/login'
 
     cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
+
     cookie_cache_max_age = Integer(help="DEPRECATED. Use cache_max_age")
     @observe('cookie_cache_max_age')
     def _deprecated_cookie_cache(self, change):
@@ -306,31 +254,6 @@ class HubAuth(Configurable):
 
         return data
 
-    def oauth_token_for_code(self, code):
-        """Get OAuth token for code
-        
-        Finish OAuth handshake. Should be called in OAuth Callback handler.
-        
-        Args:
-            code: oauth code for finishing OAuth login
-        """
-        # GitHub specifies a POST request yet requires URL parameters
-        params = dict(
-            client_id=self.oauth_client_id,
-            client_secret=self.oauth_client_secret,
-            grant_type='authorization_code',
-            code=code,
-            redirect_uri=self.oauth_redirect_uri,
-        )
-
-        token_reply = self._api_request('POST', self.oauth_token_url,
-            data=urlencode(params).encode('utf8'),
-            headers={
-                'Content-Type': 'application/x-www-form-urlencoded'
-            })
-
-        return token_reply['access_token']
-
     def user_for_cookie(self, encrypted_cookie, use_cache=True):
         """Ask the Hub to identify the user for a given cookie.
 
@@ -390,23 +313,11 @@ class HubAuth(Configurable):
                 user_token = m.group(1)
         return user_token
 
-    def set_cookie(self, handler, user_model):
-        """Set a cookie recording OAuth result"""
-        kwargs = {
-            'path': self.base_url,
-        }
-        if handler.request.protocol == 'https':
-            kwargs['secure'] = True
-        # if self.subdomain_host:
-        #     kwargs['domain'] = self.domain
-        cookie_value = json.dumps({'name': user_model['name']})
-        app_log.debug("Setting oauth cookie for %s: %s, %s",
-            handler.request.remote_ip, self.oauth_cookie_name, kwargs)
-        handler.set_secure_cookie(
-            self.oauth_cookie_name,
-            cookie_value,
-            **kwargs
-        )
+    def _get_user_cookie(self, handler):
+        """Get the user model from a cookie"""
+        encrypted_cookie = handler.get_cookie(self.cookie_name)
+        if encrypted_cookie:
+            return self.user_for_cookie(encrypted_cookie)
 
     def get_user(self, handler):
         """Get the Hub user for a given tornado handler.
@@ -439,20 +350,130 @@ class HubAuth(Configurable):
 
         # no token, check cookie
         if user_model is None:
-            if self.using_oauth:
-                user_model_json = handler.get_secure_cookie(self.oauth_cookie_name)
-                if user_model_json:
-                    user_model = json.loads(user_model_json.decode('utf8', 'replace'))
-            else:
-                encrypted_cookie = handler.get_cookie(self.cookie_name)
-                if encrypted_cookie:
-                    user_model = self.user_for_cookie(encrypted_cookie)
+            user_model = self._get_user_cookie(handler)
 
         # cache result
         handler._cached_hub_user = user_model
         if not user_model:
             app_log.debug("No user identified")
         return user_model
+
+
+class HubOAuth(HubAuth):
+    """HubAuth using OAuth for login instead of cookies set by the Hub.
+    
+    .. versionadded: 0.8
+    """
+
+    # Overrides of HubAuth API
+
+    @default('login_url')
+    def _login_url(self):
+        return url_concat(self.oauth_authorization_url, {
+            'client_id': self.oauth_client_id,
+            'redirect_uri': self.oauth_redirect_uri,
+            'response_type': 'code',
+        })
+
+    @property
+    def cookie_name(self):
+        """Use OAuth client_id for cookie name
+
+        because we don't want to use the same cookie name
+        across OAuth clients.
+        """
+        return self.oauth_client_id
+
+    def _get_user_cookie(self, handler):
+        user_model_json = handler.get_secure_cookie(self.cookie_name)
+        if user_model_json:
+            return json.loads(user_model_json.decode('utf8', 'replace'))
+
+    # HubOAuth API
+
+    oauth_client_id = Unicode(os.getenv('JUPYTERHUB_CLIENT_ID', ''),
+        help="""The OAuth client ID for this application.
+        
+        Use JUPYTERHUB_CLIENT_ID by default.
+        """
+    ).tag(config=True)
+    oauth_client_secret = Unicode(os.getenv('JUPYTERHUB_CLIENT_SECRET', ''),
+        help="""The OAuth client secret for this application.
+        
+        Use JUPYTERHUB_CLIENT_SECRET by default.
+        """
+    ).tag(config=True)
+
+    oauth_redirect_uri = Unicode(
+        help="""OAuth redirect URI
+        
+        Should generally be /base_url/oauth_callback
+        """
+    ).tag(config=True)
+    @default('oauth_redirect_uri')
+    def _default_redirect(self):
+        return self.host + url_path_join(self.base_url, 'oauth_callback')
+
+    oauth_authorization_url = Unicode('/hub/api/oauth2/authorize',
+        help="The URL to redirect to when starting the OAuth process",
+    ).tag(config=True)
+
+    oauth_token_url = Unicode(
+        help="""The URL for requesting an OAuth token from JupyterHub"""
+    ).tag(config=True)
+    @default('oauth_token_url')
+    def _token_url(self):
+        return url_path_join(self.api_url, 'oauth2/token')
+
+    def token_for_code(self, code):
+        """Get token for OAuth temporary code
+        
+        This is the last step of OAuth login.
+        Should be called in OAuth Callback handler.
+        
+        Args:
+            code (str): oauth code for finishing OAuth login
+        Returns:
+            token (str): JupyterHub API Token
+        """
+        # GitHub specifies a POST request yet requires URL parameters
+        params = dict(
+            client_id=self.oauth_client_id,
+            client_secret=self.oauth_client_secret,
+            grant_type='authorization_code',
+            code=code,
+            redirect_uri=self.oauth_redirect_uri,
+        )
+
+        token_reply = self._api_request('POST', self.oauth_token_url,
+            data=urlencode(params).encode('utf8'),
+            headers={
+                'Content-Type': 'application/x-www-form-urlencoded'
+            })
+
+        return token_reply['access_token']
+
+    def set_cookie(self, handler, user_model):
+        """Set a cookie recording OAuth result"""
+        kwargs = {
+            'path': self.base_url,
+        }
+        if handler.request.protocol == 'https':
+            kwargs['secure'] = True
+        # if self.subdomain_host:
+        #     kwargs['domain'] = self.domain
+        cookie_value = json.dumps({'name': user_model['name']})
+        app_log.debug("Setting oauth cookie for %s: %s, %s",
+            handler.request.remote_ip, self.cookie_name, kwargs)
+        handler.set_secure_cookie(
+            self.cookie_name,
+            cookie_value,
+            **kwargs
+        )
+    def clear_cookie(self, handler):
+        """Clear the OAuth cookie"""
+        handler.clear_cookie(self.cookie_name, path=self.base_url)
+    
 
 
 class HubAuthenticated(object):
@@ -497,10 +518,11 @@ class HubAuthenticated(object):
     # which will be configured with defaults
     # based on JupyterHub environment variables for services.
     _hub_auth = None
+    hub_auth_class = HubAuth
     @property
     def hub_auth(self):
         if self._hub_auth is None:
-            self._hub_auth = HubAuth()
+            self._hub_auth = self.hub_auth_class()
         return self._hub_auth
 
     @hub_auth.setter
@@ -569,7 +591,12 @@ class HubAuthenticated(object):
         return self._hub_auth_user_cache
 
 
-class JupyterHubOAuthCallbackHandler(HubAuthenticated, RequestHandler):
+class HubOAuthenticated(HubAuthenticated):
+    """Simple subclass of HubAuthenticated using OAuth instead of old shared cookies"""
+    hub_auth_class = HubOAuth
+
+
+class JupyterHubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
     """OAuth Callback handler"""
     
     @coroutine
@@ -578,43 +605,11 @@ class JupyterHubOAuthCallbackHandler(HubAuthenticated, RequestHandler):
         if not code:
             raise HTTPError(400, "oauth callback made without a token")
         # TODO: make async (in a Thread?)
-        token_reply = self.hub_auth.oauth_token_for_code(code)
-        
-        # TODO: Configure the curl_httpclient for tornado
-        
-        # Exchange the OAuth code for a GitHub Access Token
-        #
-        # See: https://developer.github.com/v3/oauth/
-        
-        # GitHub specifies a POST request yet requires URL parameters
-        params = dict(
-            client_id=self.hub_auth.oauth_client_id,
-            client_secret=self.hub_auth.oauth_client_secret,
-            code=code
-        )
-        
-        url = self.hub_auth.oauth_token_url
-        
-        req = HTTPRequest(url,
-                          method="POST",
-                          headers={"Accept": "application/json"},
-                          body=''
-                          )
-        
-        resp = yield http_client.fetch(req)
-        resp_json = json.loads(resp.body.decode('utf8', 'replace'))
-        access_token = resp_json['access_token']
-        
-        # Determine who the logged in user is
-        headers = {
-            "User-Agent": "JupyterHub OAuth Client",
-            "Authorization": "token {}".format(access_token)
-        }
-        req = HTTPRequest(self.hub_auth.oauth_token_url,
-                          method="GET",
-                          headers=headers,
-        )
-        resp = yield http_client.fetch(req)
-        user_model = json.loads(resp.body.decode('utf8', 'replace'))
+        token_reply = self.hub_auth.token_for_code(code)
+        user_model = self.hub_auth.user_for_token(token)
+        self.log.info("Logged-in user %s", user_model)
         self.hub_auth.set_cookie(self, user_model)
+        next_url = self.get_argument('next', '') or self.base_url
+        self.redirect(next_url)
+
 

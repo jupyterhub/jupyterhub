@@ -37,14 +37,14 @@ from notebook.auth.logout import LogoutHandler
 from notebook.base.handlers import IPythonHandler
 
 from jupyterhub import __version__
-from .services.auth import HubAuth, HubAuthenticated, JupyterHubOAuthCallbackHandler
+from .services.auth import HubOAuth, HubOAuthenticated, JupyterHubOAuthCallbackHandler
 from .utils import url_path_join
 
 
 # Authenticate requests with the Hub
 
 
-class HubAuthenticatedHandler(HubAuthenticated):
+class HubAuthenticatedHandler(HubOAuthenticated):
     """Class we are going to patch-in for authentication with the Hub"""
     @property
     def hub_auth(self):
@@ -95,12 +95,13 @@ class JupyterHubLoginHandler(LoginHandler):
 
 class JupyterHubLogoutHandler(LogoutHandler):
     def get(self):
+        self.settings['hub_auth'].clear_cookie(self)
         self.redirect(
             self.settings['hub_host'] +
             url_path_join(self.settings['hub_prefix'], 'logout'))
 
 
-class OAuthCallbackHandler(IPythonHandler):
+class OAuthCallbackHandler(JupyterHubOAuthCallbackHandler, IPythonHandler):
     """Mixin IPythonHandler to get the right error pages, etc."""
     @property
     def hub_auth(self):
@@ -111,7 +112,7 @@ class OAuthCallbackHandler(IPythonHandler):
         if not code:
             raise HTTPError(400, "oauth callback made without a token")
         # TODO: make async (in a Thread?)
-        token = self.hub_auth.oauth_token_for_code(code)
+        token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
         self.log.info("Logged-in user %s", user_model)
         self.hub_auth.set_cookie(self, user_model)
@@ -179,7 +180,7 @@ class SingleUserNotebookApp(NotebookApp):
     examples = ""
     subcommands = {}
     version = __version__
-    classes = NotebookApp.classes + [HubAuth]
+    classes = NotebookApp.classes + [HubOAuth]
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)
@@ -330,7 +331,7 @@ class SingleUserNotebookApp(NotebookApp):
 
         if not api_token:
             self.exit("JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?")
-        self.hub_auth = HubAuth(
+        self.hub_auth = HubOAuth(
             parent=self,
             api_token=api_token,
             api_url=self.hub_api_url,
