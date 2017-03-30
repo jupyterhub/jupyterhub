@@ -252,10 +252,6 @@ class BaseHandler(RequestHandler):
             base_url=url_path_join(self.base_url, 'services')
         ))
 
-    def set_server_cookie(self, user):
-        """set the login cookie for the single-user server"""
-        self._set_user_cookie(user, user.server)
-
     def set_hub_cookie(self, user):
         """set the login cookie for the Hub"""
         self._set_user_cookie(user, self.hub.server)
@@ -266,9 +262,6 @@ class BaseHandler(RequestHandler):
             self.log.warning(
                 "Possibly setting cookie on wrong domain: %s != %s",
                 self.request.host, self.domain)
-        # create and set a new cookie token for the single-user server
-        if user.server:
-            self.set_server_cookie(user)
 
         # set single cookie for services
         if self.db.query(orm.Service).filter(orm.Service.server != None).first():

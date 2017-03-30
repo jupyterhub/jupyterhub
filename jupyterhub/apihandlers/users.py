@@ -263,6 +263,8 @@ class UserAdminAccessAPIHandler(APIHandler):
     """
     @admin_only
     def post(self, name):
+        self.log.warning("Admin Access API is deprecated in JupyterHub 0.8."
+            " There is no action needed anymore.")
         current = self.get_current_user()
         self.log.warning("Admin user %s has requested access to %s's server",
             current.name, name,
@@ -274,12 +276,6 @@ class UserAdminAccessAPIHandler(APIHandler):
             raise web.HTTPError(404)
         if not user.running:
             raise web.HTTPError(400, "%s's server is not running" % name)
-        self.set_server_cookie(user)
-        # a service can also ask for a user cookie
-        # this code prevents to raise an error
-        # cause service doesn't have 'other_user_cookies'
-        if getattr(current, 'other_user_cookies', None) is not None:
-            current.other_user_cookies.add(name)
 
 
 default_handlers = [

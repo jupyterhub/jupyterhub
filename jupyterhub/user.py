@@ -244,6 +244,7 @@ class User(HasTraits):
 
         # create API and OAuth tokens
         spawner.api_token = api_token
+        spawner.admin_access = self.settings.get('admin_access', False)
         spawner.oauth_client_id = client_id = 'user-%s-%s' % (self.escaped_name, server_name)
         client_store = self.settings['oauth_provider'].client_authenticator.client_store
         try:

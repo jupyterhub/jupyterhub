@@ -46,6 +46,11 @@ from .utils import url_path_join
 
 class HubAuthenticatedHandler(HubOAuthenticated):
     """Class we are going to patch-in for authentication with the Hub"""
+
+    @property
+    def allow_admin(self):
+        return self.settings.get('admin_access', os.getenv('JUPYTERHUB_ADMIN_ACCESS') or False)
+
     @property
     def hub_auth(self):
         return self.settings['hub_auth']

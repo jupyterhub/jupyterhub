@@ -503,6 +503,7 @@ class HubAuthenticated(object):
     hub_services = None # set of allowed services
     hub_users = None # set of allowed users
     hub_groups = None # set of allowed groups
+    allow_admin = False # allow any admin user access
     
     @property
     def allow_all(self):
@@ -546,11 +547,15 @@ class HubAuthenticated(object):
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
-        
+
         name = model['name']
         kind = model.get('kind', 'user')
         if self.allow_all:
             app_log.debug("Allowing Hub %s %s (all Hub users and services allowed)", kind, name)
+            return model
+
+        if self.allow_admin and model.get('admin', False):
+            app_log.debug("Allowing Hub admin %s", name)
             return model
 
         if kind == 'service':

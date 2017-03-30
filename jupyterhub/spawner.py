@@ -50,6 +50,7 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     authenticator = Any()
+    admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
     oauth_client_secret = Unicode()
@@ -428,6 +429,8 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
+        if self.admin_access:
+            env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
         # OAuth settings
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
         env['JUPYTERHUB_CLIENT_SECRET'] = self.oauth_client_secret
