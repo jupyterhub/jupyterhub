@@ -20,7 +20,6 @@ class SelfAPIHandler(APIHandler):
     @web.authenticated
     def get(self):
         user = self.get_current_user()
-        print(user)
         self.write(json.dumps(self.user_model(user)))
 
 
