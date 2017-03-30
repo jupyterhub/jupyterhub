@@ -462,7 +462,7 @@ class HubOAuth(HubAuth):
             kwargs['secure'] = True
         # if self.subdomain_host:
         #     kwargs['domain'] = self.domain
-        cookie_value = json.dumps({'name': user_model['name']})
+        cookie_value = json.dumps(user_model)
         app_log.debug("Setting oauth cookie for %s: %s, %s",
             handler.request.remote_ip, self.cookie_name, kwargs)
         handler.set_secure_cookie(
