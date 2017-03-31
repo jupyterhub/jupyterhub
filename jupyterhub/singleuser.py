@@ -340,6 +340,7 @@ class SingleUserNotebookApp(NotebookApp):
             parent=self,
             api_token=api_token,
             api_url=self.hub_api_url,
+            hub_prefix=self.hub_prefix,
             base_url=self.base_url,
         )
 

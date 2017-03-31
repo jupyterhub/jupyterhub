@@ -145,6 +145,13 @@ class HubAuth(Configurable):
         Typically http://hub-ip:hub-port/hub/api
         """
     ).tag(config=True)
+    @default('api_url')
+    def _api_url(self):
+        env_url = os.getenv('JUPYTERHUB_API_URL')
+        if env_url:
+            return env_url
+        else:
+            return 'http://127.0.0.1:8081' + url_path_join(self.hub_prefix, 'api')
     
     api_token = Unicode(os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
@@ -152,7 +159,14 @@ class HubAuth(Configurable):
         Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
         """
     ).tag(config=True)
-    
+
+    hub_prefix = Unicode('/hub/',
+        help="""The URL prefix for the Hub itself.
+        
+        Typically /hub/
+        """
+    ).tag(config=True)
+
     login_url = Unicode('/hub/login',
         help="""The login URL to use
         
@@ -161,7 +175,7 @@ class HubAuth(Configurable):
     ).tag(config=True)
     @default('login_url')
     def _default_login_url(self):
-        return self.hub_host + '/hub/login'
+        return self.hub_host + url_path_join(self.hub_prefix, 'login')
 
     cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
@@ -417,6 +431,9 @@ class HubOAuth(HubAuth):
     oauth_authorization_url = Unicode('/hub/api/oauth2/authorize',
         help="The URL to redirect to when starting the OAuth process",
     ).tag(config=True)
+    @default('oauth_authorization_url')
+    def _auth_url(self):
+        return self.hub_host + url_path_join(self.hub_prefix, 'api/oauth2/authorize')
 
     oauth_token_url = Unicode(
         help="""The URL for requesting an OAuth token from JupyterHub"""
