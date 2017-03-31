@@ -183,7 +183,7 @@ def test_spawn_fails(db, io_loop):
         'config': None,
     })
     
-    with pytest.raises(Exception) as exc:
+    with pytest.raises(RuntimeError) as exc:
         io_loop.run_sync(user.spawn)
     assert user.server is None
     assert not user.running
