@@ -405,18 +405,25 @@ class HubOAuth(HubAuth):
 
     # HubOAuth API
 
-    oauth_client_id = Unicode(os.getenv('JUPYTERHUB_CLIENT_ID', ''),
+    oauth_client_id = Unicode(
         help="""The OAuth client ID for this application.
         
         Use JUPYTERHUB_CLIENT_ID by default.
         """
     ).tag(config=True)
-    oauth_client_secret = Unicode(os.getenv('JUPYTERHUB_CLIENT_SECRET', ''),
+    @default('oauth_client_id')
+    def _client_id(self):
+        return os.getenv('JUPYTERHUB_CLIENT_ID', '')
+
+    oauth_client_secret = Unicode(
         help="""The OAuth client secret for this application.
         
         Use JUPYTERHUB_CLIENT_SECRET by default.
         """
     ).tag(config=True)
+    @default('oauth_client_secret')
+    def _client_secret(self):
+        return os.getenv('JUPYTERHUB_CLIENT_SECRET', '')
 
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI
