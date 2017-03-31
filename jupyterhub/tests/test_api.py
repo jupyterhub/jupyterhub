@@ -533,15 +533,16 @@ def test_cookie(app):
     app_user = get_app_user(app, name)
 
     cookies = app.login_user(name)
+    cookie_name = app.hub.server.cookie_name
     # cookie jar gives '"cookie-value"', we want 'cookie-value'
-    cookie = cookies[user.server.cookie_name][1:-1]
+    cookie = cookies[cookie_name][1:-1]
     r = api_request(app, 'authorizations/cookie',
-        user.server.cookie_name, "nothintoseehere",
+        cookie_name, "nothintoseehere",
     )
     assert r.status_code == 404
 
     r = api_request(app, 'authorizations/cookie',
-        user.server.cookie_name, quote(cookie, safe=''),
+        cookie_name, quote(cookie, safe=''),
     )
     r.raise_for_status()
     reply = r.json()
@@ -549,7 +550,7 @@ def test_cookie(app):
 
     # deprecated cookie in body:
     r = api_request(app, 'authorizations/cookie',
-        user.server.cookie_name, data=cookie,
+        cookie_name, data=cookie,
     )
     r.raise_for_status()
     reply = r.json()
