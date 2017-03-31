@@ -133,9 +133,9 @@ def test_spawn_form(app, io_loop):
         })
         r.raise_for_status()
         assert r.history
-        print(u.spawner)
-        print(u.spawner.user_options)
-        assert u.spawner.user_options == {
+        print(wrapped_user.spawner)
+        print(wrapped_user.spawner.user_options)
+        assert wrapped_user.spawner.user_options == {
             'energy': '511keV',
             'bounds': [-1, 1],
             'notspecified': 5,
