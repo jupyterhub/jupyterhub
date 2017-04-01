@@ -411,19 +411,26 @@ started.
 
 ### Managing Hub administrators
 
-Admin users of JupyterHub have the ability to take actions on users' behalf,
-such as stopping and restarting their servers,
-and adding and removing new users from the whitelist.
-Any users in the admin list are automatically added to the whitelist,
-if they are not already present.
-The set of initial Admin users can configured as follows:
+#### Configuring admins (`admin_users`)
+
+Admin users of JupyterHub, `admin_users`, have the ability to add and remove
+users from the user `whitelist` or to take actions on the users' behalf,
+such as stopping and restarting their servers.
+
+A set of initial admin users, `admin_users` can configured be as follows:
 
 ```python
 c.Authenticator.admin_users = {'mal', 'zoe'}
 ```
+Users in the admin list are automatically added to the user `whitelist`,
+if they are not already present.
 
-If `JupyterHub.admin_access` is True (not default),
-then admin users have permission to log in *as other users* on their respective machines, for debugging.
+#### Admin access to other users' notebook servers (`admin_access`)
+
+By default the admin users do not have permission to log in *as other users*
+since the default `JupyterHub.admin_access` setting is False.
+If `JupyterHub.admin_access` is set to True, then admin users have permission
+to log in *as other users* on their respective machines, for debugging.
 **You should make sure your users know if admin_access is enabled.**
 
 Note: additional configuration examples are provided in this guide's
