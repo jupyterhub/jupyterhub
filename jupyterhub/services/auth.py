@@ -428,6 +428,12 @@ class HubOAuth(HubAuth):
     def _client_secret(self):
         return os.getenv('JUPYTERHUB_CLIENT_SECRET', '')
 
+    @validate('oauth_client_id', 'oauth_client_secret')
+    def _ensure_not_empty(self, proposal):
+        if not proposal.value:
+            raise ValueError("%s cannot be empty." % proposal.trait.name)
+        return proposal.value
+
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI
         
