@@ -634,7 +634,7 @@ class HubOAuthenticated(HubAuthenticated):
     hub_auth_class = HubOAuth
 
 
-class JupyterHubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
+class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
     """OAuth Callback handler"""
     
     @coroutine

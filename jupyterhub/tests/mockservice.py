@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 import requests
 from tornado import web, httpserver, ioloop
 
-from jupyterhub.services.auth import HubAuthenticated, HubOAuthenticated, JupyterHubOAuthCallbackHandler
+from jupyterhub.services.auth import HubAuthenticated, HubOAuthenticated, HubOAuthCallbackHandler
 
 
 class EchoHandler(web.RequestHandler):
@@ -77,7 +77,7 @@ def main():
             (r'.*/api/(.*)', APIHandler),
             (r'.*/whoami/?', WhoAmIHandler),
             (r'.*/owhoami/?', OWhoAmIHandler),
-            (r'.*/oauth_callback', JupyterHubOAuthCallbackHandler),
+            (r'.*/oauth_callback', HubOAuthCallbackHandler),
             (r'.*', EchoHandler),
         ], cookie_secret=os.urandom(32))
 

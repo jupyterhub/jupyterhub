@@ -37,7 +37,7 @@ from notebook.auth.logout import LogoutHandler
 from notebook.base.handlers import IPythonHandler
 
 from jupyterhub import __version__
-from .services.auth import HubOAuth, HubOAuthenticated, JupyterHubOAuthCallbackHandler
+from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
 from .utils import url_path_join
 
 
@@ -106,7 +106,7 @@ class JupyterHubLogoutHandler(LogoutHandler):
             url_path_join(self.settings['hub_prefix'], 'logout'))
 
 
-class OAuthCallbackHandler(JupyterHubOAuthCallbackHandler, IPythonHandler):
+class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
     """Mixin IPythonHandler to get the right error pages, etc."""
     @property
     def hub_auth(self):
