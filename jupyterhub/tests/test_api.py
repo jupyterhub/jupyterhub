@@ -732,8 +732,8 @@ def test_get_services(app, mockservice_url):
 
     services = r.json()
     assert services == {
-        'mock-service': {
-            'name': 'mock-service',
+        mockservice.name: {
+            'name': mockservice.name,
             'admin': True,
             'command': mockservice.command,
             'pid': mockservice.proc.pid,
@@ -758,7 +758,7 @@ def test_get_service(app, mockservice_url):
 
     service = r.json()
     assert service == {
-        'name': 'mock-service',
+        'name': mockservice.name,
         'admin': True,
         'command': mockservice.command,
         'pid': mockservice.proc.pid,
