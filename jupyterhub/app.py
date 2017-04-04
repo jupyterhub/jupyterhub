@@ -1086,7 +1086,7 @@ class JupyterHub(Application):
 
                 client_store.add_client(
                     client_id=service.oauth_client_id,
-                    client_secret=service.oauth_client_secret,
+                    client_secret=service.api_token,
                     redirect_uri=host + url_path_join(service.prefix, 'oauth_callback'),
                 )
             else:

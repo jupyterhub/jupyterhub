@@ -255,7 +255,7 @@ class StubSingleUserSpawner(MockSpawner):
                 app = self._app = MockSingleUserServer()
                 app.initialize(args)
                 assert app.hub_auth.oauth_client_id
-                assert app.hub_auth.oauth_client_secret
+                assert app.hub_auth.api_token
                 app.start()
         
         self._thread = threading.Thread(target=_run)

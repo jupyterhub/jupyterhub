@@ -256,8 +256,7 @@ class User(HasTraits):
             # create a new OAuth client + secret on every launch,
             # except for resuming containers.
             if oauth_client is None or not spawner.will_resume:
-                spawner.oauth_client_secret = client_secret = new_token()
-                client_store.add_client(client_id, client_secret,
+                client_store.add_client(client_id, api_token,
                                         url_path_join(server.base_url, 'oauth_callback'),
                                         )
                 db.commit()

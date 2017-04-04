@@ -211,17 +211,6 @@ class Service(LoggingConfigurable):
     def _default_client_id(self):
         return 'service-%s' % self.name
 
-    oauth_client_secret = Unicode(
-        help="""OAuth client secret for this service.
-        
-        Default: Generated on each launch.
-        """
-    ).tag(input=True)
-    @default('oauth_client_secret')
-    def _default_client_secret(self):
-        self.log.debug("Generating new OAuth secret for service %s", self.name)
-        return new_token()
-
     @property
     def server(self):
         return self.orm.server
@@ -267,7 +256,6 @@ class Service(LoggingConfigurable):
             environment=env,
             api_token=self.api_token,
             oauth_client_id=self.oauth_client_id,
-            oauth_client_secret=self.oauth_client_secret,
             cwd=self.cwd,
             user=_MockUser(
                 name=self.user,

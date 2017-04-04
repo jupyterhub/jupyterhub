@@ -417,18 +417,8 @@ class HubOAuth(HubAuth):
     @default('oauth_client_id')
     def _client_id(self):
         return os.getenv('JUPYTERHUB_CLIENT_ID', '')
-
-    oauth_client_secret = Unicode(
-        help="""The OAuth client secret for this application.
-        
-        Use JUPYTERHUB_CLIENT_SECRET by default.
-        """
-    ).tag(config=True)
-    @default('oauth_client_secret')
-    def _client_secret(self):
-        return os.getenv('JUPYTERHUB_CLIENT_SECRET', '')
-
-    @validate('oauth_client_id', 'oauth_client_secret')
+    
+    @validate('oauth_client_id', 'api_token')
     def _ensure_not_empty(self, proposal):
         if not proposal.value:
             raise ValueError("%s cannot be empty." % proposal.trait.name)
@@ -472,7 +462,7 @@ class HubOAuth(HubAuth):
         # GitHub specifies a POST request yet requires URL parameters
         params = dict(
             client_id=self.oauth_client_id,
-            client_secret=self.oauth_client_secret,
+            client_secret=self.api_token,
             grant_type='authorization_code',
             code=code,
             redirect_uri=self.oauth_redirect_uri,
