@@ -18,7 +18,7 @@ from tornado.web import RequestHandler, Application, authenticated, HTTPError
 
 from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
-from .mocking import public_url
+from .mocking import public_url, public_host
 from .test_api import add_user
 
 # mock for sending monotonic counter way into the future
@@ -244,7 +244,6 @@ def test_hubauth_token(app, mockservice_url):
         headers={
             'Authorization': 'token %s' % token,
         })
-    r.raise_for_status()
     reply = r.json()
     sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
     assert sub_reply == {
@@ -311,4 +310,24 @@ def test_hubauth_service_token(app, mockservice_url, io_loop):
     location = r.headers['Location']
     path = urlparse(location).path
     assert path.endswith('/hub/login')
+
+
+def test_oauth_service(app, mockservice_url):
+    url = url_path_join(public_url(app, mockservice_url) + 'owhoami/')
+    # first request is only going to set login cookie
+    # FIXME: redirect to originating URL (OAuth loses this info)
+    s = requests.Session()
+    s.cookies = app.login_user('link')
+    r = s.get(url)
+    r.raise_for_status()
+    # second request should be authenticated
+    r = s.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 200
+    reply = r.json()
+    sub_reply = { key:reply.get(key, 'missing') for key in ('kind', 'name') }
+    assert sub_reply == {
+        'name': 'link',
+        'kind': 'user',
+    }
 

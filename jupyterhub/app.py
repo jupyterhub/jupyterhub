@@ -1041,6 +1041,7 @@ class JupyterHub(Application):
             host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
         else:
             domain = host = ''
+        client_store = self.oauth_provider.client_authenticator.client_store
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
@@ -1082,6 +1083,12 @@ class JupyterHub(Application):
                     base_url=service.prefix,
                 )
                 self.db.add(server)
+
+                client_store.add_client(
+                    client_id=service.oauth_client_id,
+                    client_secret=service.oauth_client_secret,
+                    redirect_uri=host + url_path_join(service.prefix, 'oauth_callback'),
+                )
             else:
                 service.orm.server = None
 
@@ -1378,11 +1385,11 @@ class JupyterHub(Application):
         self.init_db()
         self.init_hub()
         self.init_proxy()
+        self.init_oauth()
         yield self.init_users()
         yield self.init_groups()
         self.init_services()
         yield self.init_api_tokens()
-        self.init_oauth()
         self.init_tornado_settings()
         yield self.init_spawners()
         self.init_handlers()

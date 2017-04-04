@@ -643,11 +643,11 @@ class JupyterHubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         if not code:
             raise HTTPError(400, "oauth callback made without a token")
         # TODO: make async (in a Thread?)
-        token_reply = self.hub_auth.token_for_code(code)
+        token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
-        self.log.info("Logged-in user %s", user_model)
+        app_log.info("Logged-in user %s", user_model)
         self.hub_auth.set_cookie(self, user_model)
-        next_url = self.get_argument('next', '') or self.base_url
+        next_url = self.get_argument('next', '') or self.hub_auth.base_url
         self.redirect(next_url)
 
 

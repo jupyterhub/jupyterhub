@@ -616,6 +616,7 @@ class APIToken(Base):
 
 
 class GrantType(enum.Enum):
+    # we only use authorization_code for now
     authorization_code = 'authorization_code'
     implicit = 'implicit'
     password = 'password'
@@ -654,7 +655,6 @@ class OAuthClient(Base):
     identifier = Column(Unicode(1023), unique=True)
     secret = Column(Unicode(1023))
     redirect_uri = Column(Unicode(1023))
-
 
 
 def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
