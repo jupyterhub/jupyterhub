@@ -723,7 +723,8 @@ def test_group_delete_users(app):
 
 
 @mark.services
-def test_get_services(app, mockservice):
+def test_get_services(app, mockservice_url):
+    mockservice = mockservice_url
     db = app.db
     r = api_request(app, 'services')
     r.raise_for_status()
@@ -748,7 +749,8 @@ def test_get_services(app, mockservice):
 
 
 @mark.services
-def test_get_service(app, mockservice):
+def test_get_service(app, mockservice_url):
+    mockservice = mockservice_url
     db = app.db
     r = api_request(app, 'services/%s' % mockservice.name)
     r.raise_for_status()

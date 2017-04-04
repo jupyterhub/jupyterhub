@@ -77,15 +77,10 @@ def _mockservice(request, app, url=False):
         'admin': True,
     }
     if url:
-        spec['url'] = 'http://127.0.0.1:%i' % random_port(),
+        spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
     with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
-        app.services = [{
-            'name': name,
-            'command': mockservice_cmd,
-            'url': 'http://127.0.0.1:%i' % random_port(),
-            'admin': True,
-        }]
+        app.services = [spec]
         app.init_services()
         app.io_loop.add_callback(app.proxy.add_all_services, app._service_map)
         assert name in app._service_map

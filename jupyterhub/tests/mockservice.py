@@ -70,7 +70,7 @@ class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
 def main():
     pprint.pprint(dict(os.environ), stream=sys.stderr)
 
-    if os.environ['JUPYTERHUB_SERVICE_URL']:
+    if os.getenv('JUPYTERHUB_SERVICE_URL'):
         url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
         app = web.Application([
             (r'.*/env', EnvHandler),
