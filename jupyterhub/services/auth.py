@@ -166,6 +166,9 @@ class HubAuth(Configurable):
         Typically /hub/
         """
     ).tag(config=True)
+    @default('hub_prefix')
+    def _default_hub_prefix(self):
+        return url_path_join(os.getenv('JUPYTERHUB_BASE_URL') or '/', 'hub') + '/'
 
     login_url = Unicode('/hub/login',
         help="""The login URL to use
