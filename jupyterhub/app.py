@@ -1169,10 +1169,6 @@ class JupyterHub(Application):
             url_prefix=url_path_join(self.hub.server.base_url, 'api/oauth2'),
             login_url=self.authenticator.login_url(self.hub.server.base_url),
         )
-        
-        client_store = self.oauth_provider.client_authenticator.client_store
-        client_store.add_client(client_id="abc", client_secret="xyz",
-                                redirect_uri="http://localhost:9999/callback")
 
     def init_proxy(self):
         """Load the Proxy config into the database"""
