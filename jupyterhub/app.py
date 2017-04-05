@@ -1067,6 +1067,16 @@ class JupyterHub(Application):
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
 
+            if service.managed:
+                if not service.api_token:
+                    # generate new token
+                    service.api_token = service.orm.new_api_token()
+                else:
+                    # ensure provided token is registered
+                    self.service_tokens[service.api_token] = service.name
+            else:
+                self.service_tokens[service.api_token] = service.name
+
             if service.url:
                 parsed = urlparse(service.url)
                 if parsed.port is not None:
@@ -1083,7 +1093,6 @@ class JupyterHub(Application):
                     base_url=service.prefix,
                 )
                 self.db.add(server)
-
                 client_store.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
@@ -1093,15 +1102,6 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             self._service_map[name] = service
-            if service.managed:
-                if not service.api_token:
-                    # generate new token
-                    service.api_token = service.orm.new_api_token()
-                else:
-                    # ensure provided token is registered
-                    self.service_tokens[service.api_token] = service.name
-            else:
-                self.service_tokens[service.api_token] = service.name
 
         # delete services from db not in service config:
         for service in self.db.query(orm.Service):
