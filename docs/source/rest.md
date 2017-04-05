@@ -57,6 +57,9 @@ r.raise_for_status()
 users = r.json()
 ```
 
+Note that the token authorizes JupyterHub REST API request. The same token
+does **not** authorize access to the [Jupyter Notebook REST API][] provided
+by notebook servers managed by JupyterHub.
 
 ## Learning more about the API
 
@@ -68,3 +71,4 @@ Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 [on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
 [OpenAPI Initiative]: https://www.openapis.org/
 [JupyterHub REST API]: ./_static/rest-api/index.html
+[Jupyter Notebook REST API]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/master/notebook/services/api/api.yaml
