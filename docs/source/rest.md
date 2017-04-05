@@ -57,7 +57,7 @@ r.raise_for_status()
 users = r.json()
 ```
 
-Note that the token authorizes JupyterHub REST API request. The same token
+Note that the token authorizes JupyterHub REST API requests. The same token
 does **not** authorize access to the [Jupyter Notebook REST API][] provided
 by notebook servers managed by JupyterHub.
 
