@@ -16,6 +16,7 @@ import pytest
 import requests
 from tornado import gen
 
+from ..user import User
 from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner
 from .. import orm
@@ -42,7 +43,7 @@ def setup():
 
 def new_spawner(db, **kwargs):
     kwargs.setdefault('cmd', [sys.executable, '-c', _echo_sleep])
-    kwargs.setdefault('user', db.query(orm.User).first())
+    kwargs.setdefault('user', User(db.query(orm.User).first(), {}))
     kwargs.setdefault('hub', db.query(orm.Hub).first())
     kwargs.setdefault('notebook_dir', os.getcwd())
     kwargs.setdefault('default_url', '/user/{username}/lab')
