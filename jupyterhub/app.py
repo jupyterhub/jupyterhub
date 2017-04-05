@@ -1059,6 +1059,7 @@ class JupyterHub(Application):
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,
                 hub_api_url=self.hub.api_url,
+                hub=self.hub,
             )
 
             traits = service.traits(input=True)
@@ -1093,6 +1094,7 @@ class JupyterHub(Application):
                     base_url=service.prefix,
                 )
                 self.db.add(server)
+
                 client_store.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,

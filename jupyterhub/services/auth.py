@@ -20,7 +20,6 @@ import requests
 from tornado.gen import coroutine
 from tornado.log import app_log
 from tornado.httputil import url_concat
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.web import HTTPError, RequestHandler
 
 from traitlets.config import Configurable
@@ -112,13 +111,9 @@ class HubAuth(Configurable):
         Only used if JupyterHub is spreading servers across subdomains.
         """
     ).tag(config=True)
-
-    host = Unicode('',
-        help="""The public host of this service/server
-        
-        Only used if JupyterHub is spreading servers across subdomains.
-        """
-    ).tag(config=True)
+    @default('hub_host')
+    def _default_hub_host(self):
+        return os.getenv('JUPYTERHUB_HOST', '')
 
     base_url = Unicode(os.getenv('JUPYTERHUB_SERVICE_PREFIX') or '/',
         help="""The base URL prefix of this application
@@ -378,7 +373,7 @@ class HubAuth(Configurable):
 
 class HubOAuth(HubAuth):
     """HubAuth using OAuth for login instead of cookies set by the Hub.
-    
+
     .. versionadded: 0.8
     """
 
@@ -432,7 +427,7 @@ class HubOAuth(HubAuth):
     ).tag(config=True)
     @default('oauth_redirect_uri')
     def _default_redirect(self):
-        return self.host + url_path_join(self.base_url, 'oauth_callback')
+        return os.getenv('JUPYTERHUB_OAUTH_CALLBACK_URL') or url_path_join(self.base_url, 'oauth_callback')
 
     oauth_authorization_url = Unicode('/hub/api/oauth2/authorize',
         help="The URL to redirect to when starting the OAuth process",
@@ -625,7 +620,14 @@ class HubOAuthenticated(HubAuthenticated):
 
 
 class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
-    """OAuth Callback handler"""
+    """OAuth Callback handler
+
+    Finishes the OAuth flow, setting a cookie to record the user's info.
+
+    Should be registered at SERVICE_PREFIX/oauth_callback
+
+    .. versionadded: 0.8
+    """
     
     @coroutine
     def get(self):

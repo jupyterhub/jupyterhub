@@ -43,27 +43,25 @@ from getpass import getuser
 import pipes
 import shutil
 from subprocess import Popen
-from urllib.parse import urlparse
-
-from tornado import gen
 
 from traitlets import (
     HasTraits,
     Any, Bool, Dict, Unicode, Instance,
-    default, observe,
+    default,
 )
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
 from ..traitlets import Command
 from ..spawner import LocalProcessSpawner, set_user_setuid
-from ..utils import url_path_join, new_token
+from ..utils import url_path_join
 
 class _MockUser(HasTraits):
     name = Unicode()
     server = Instance(orm.Server, allow_none=True)
     state = Dict()
     service = Instance(__module__ + '.Service')
+    host = Unicode()
 
 # We probably shouldn't use a Spawner here,
 # but there are too many concepts to share.
@@ -190,6 +188,7 @@ class Service(LoggingConfigurable):
 
     domain = Unicode()
     host = Unicode()
+    hub = Any()
     proc = Any()
 
     # handles on globals:
@@ -257,10 +256,12 @@ class Service(LoggingConfigurable):
             api_token=self.api_token,
             oauth_client_id=self.oauth_client_id,
             cwd=self.cwd,
+            hub=self.hub,
             user=_MockUser(
                 name=self.user,
                 service=self,
                 server=self.orm.server,
+                host=self.host,
             ),
         )
         self.spawner.start()

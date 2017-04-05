@@ -27,7 +27,7 @@ from traitlets import (
 )
 
 from .traitlets import Command, ByteSpecification
-from .utils import random_port
+from .utils import random_port, url_path_join
 
 
 class Spawner(LoggingConfigurable):
@@ -431,6 +431,10 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
         # OAuth settings
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
+        env['JUPYTERHUB_HOST'] = self.hub.host
+        if self.user.server:
+            env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = self.user.host + \
+                url_path_join(self.user.server.base_url, 'oauth_callback')
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
