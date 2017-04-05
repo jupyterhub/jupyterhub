@@ -120,7 +120,7 @@ class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
         token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
         self.log.info("Logged-in user %s", user_model)
-        self.hub_auth.set_cookie(self, user_model)
+        self.hub_auth.set_cookie(self, token)
         next_url = self.get_argument('next', '') or self.base_url
         self.redirect(next_url)
 

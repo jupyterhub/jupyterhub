@@ -397,9 +397,13 @@ class HubOAuth(HubAuth):
         return self.oauth_client_id
 
     def _get_user_cookie(self, handler):
-        user_model_json = handler.get_secure_cookie(self.cookie_name)
-        if user_model_json:
-            return json.loads(user_model_json.decode('utf8', 'replace'))
+        token = handler.get_secure_cookie(self.cookie_name)
+        if token:
+            user_model = self.user_for_token(token)
+            if user_model is None:
+                app_log.warning("Token stored in cookie may have expired")
+                handler.clear_cookie(self.cookie_name)
+            return user_model
 
     # HubOAuth API
 
@@ -471,21 +475,18 @@ class HubOAuth(HubAuth):
 
         return token_reply['access_token']
 
-    def set_cookie(self, handler, user_model):
+    def set_cookie(self, handler, access_token):
         """Set a cookie recording OAuth result"""
         kwargs = {
             'path': self.base_url,
         }
         if handler.request.protocol == 'https':
             kwargs['secure'] = True
-        # if self.subdomain_host:
-        #     kwargs['domain'] = self.domain
-        cookie_value = json.dumps(user_model)
         app_log.debug("Setting oauth cookie for %s: %s, %s",
             handler.request.remote_ip, self.cookie_name, kwargs)
         handler.set_secure_cookie(
             self.cookie_name,
-            cookie_value,
+            access_token,
             **kwargs
         )
     def clear_cookie(self, handler):
@@ -638,7 +639,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
         app_log.info("Logged-in user %s", user_model)
-        self.hub_auth.set_cookie(self, user_model)
+        self.hub_auth.set_cookie(self, token)
         next_url = self.get_argument('next', '') or self.hub_auth.base_url
         self.redirect(next_url)
 
