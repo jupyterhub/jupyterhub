@@ -257,7 +257,7 @@ class User(HasTraits):
             # except for resuming containers.
             if oauth_client is None or not spawner.will_resume:
                 client_store.add_client(client_id, api_token,
-                                        url_path_join(server.base_url, 'oauth_callback'),
+                                        url_path_join(self.url, 'oauth_callback'),
                                         )
                 db.commit()
 

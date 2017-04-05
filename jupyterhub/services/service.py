@@ -63,6 +63,15 @@ class _MockUser(HasTraits):
     service = Instance(__module__ + '.Service')
     host = Unicode()
 
+    @property
+    def url(self):
+        if not self.server:
+            return ''
+        if self.host:
+            return self.host + self.server.base_url
+        else:
+            return self.server.base_url
+
 # We probably shouldn't use a Spawner here,
 # but there are too many concepts to share.
 
