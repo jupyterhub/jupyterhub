@@ -101,71 +101,6 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         self.db.add(orm_access_token)
         self.db.commit()
 
-    def fetch_existing_token_of_user(self, client_id, grant_type, user_id):
-        """
-        Fetches an access token identified by its client id, type of grant and
-        user id.
-
-        This method must be implemented to make use of unique access tokens.
-
-        :param client_id: Identifier of the client a token belongs to.
-        :param grant_type: The type of the grant that created the token
-        :param user_id: Identifier of the user a token belongs to.
-        :return: An instance of :class:`oauth2.datatype.AccessToken`.
-        :raises: :class:`oauth2.error.AccessTokenNotFound` if no data could be
-                 retrieved.
-        """
-        raise NotImplementedError("Unique tokens not implemented")
-        orm_token = self.db\
-            .query(orm.OAuthAccessToken)\
-            .filter(orm.OAuthAccessToken.client_id==client_id)\
-            .filter(orm.OAuthAccessToken.user_id==user_id)\
-            .first()
-        if orm_token is None:
-            raise AccessTokenNotFound()
-        return self._access_token_from_orm(orm_token)
-
-
-    def fetch_by_refresh_token(self, refresh_token):
-        """
-        Fetches an access token from the store using its refresh token to
-        identify it.
-
-        :param refresh_token: A string containing the refresh token.
-        :return: An instance of :class:`oauth2.datatype.AccessToken`.
-        :raises: :class:`oauth2.error.AccessTokenNotFound` if no data could be retrieved for
-                 given refresh_token.
-        """
-        raise NotImplementedError("Refresh tokens not implemented")
-        orm_token = self.db\
-            .query(orm.OAuthAccessToken)\
-            .filter(orm.OAuthAccessToken.refresh_token==refresh_token)\
-            .first()
-        if orm_token is None:
-            raise AccessTokenNotFound()
-        return self._access_token_from_orm(orm_token)
-        raise NotImplementedError
-
-
-    def delete_refresh_token(self, refresh_token):
-        """
-        Deletes an access token from the store using its refresh token to identify it.
-        This invalidates both the access token and the refresh token.
-
-        :param refresh_token: A string containing the refresh token.
-        :return: None.
-        :raises: :class:`oauth2.error.AccessTokenNotFound` if no data could be retrieved for
-                 given refresh_token.
-        """
-        orm_token = self.db\
-            .query(orm.OAuthAccessToken)\
-            .filter(orm.OAuthAccessToken.refresh_token==refresh_token)\
-            .first()
-        if orm_token is None:
-            raise AccessTokenNotFound()
-        self.db.delete(orm_token)
-        self.db.commit()
-
 
 class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
     """
@@ -218,7 +153,7 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
 
     def delete_code(self, code):
         """
-        Deletes an authorization code after it's use per section 4.1.2.
+        Deletes an authorization code after its use per section 4.1.2.
 
         http://tools.ietf.org/html/rfc6749#section-4.1.2
 
