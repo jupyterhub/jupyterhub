@@ -166,16 +166,16 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
 
 
 class HashComparable:
-    """An object for storing
+    """An object for storing hashed tokens
 
-    Overrides `==` so that it identifies as equal to its unhashed original
+    Overrides `==` so that it compares as equal to its unhashed original
 
     Needed for storing hashed client_secrets
     because python-oauth2 uses::
 
         secret == client.client_secret
 
-    and we don't want to store secrets at rest.
+    and we don't want to store unhashed secrets in the database.
     """
     def __init__(self, hashed_token):
         self.hashed_token = hashed_token
@@ -188,8 +188,8 @@ class HashComparable:
 
 
 class ClientStore(HubDBMixin, oauth2.store.ClientStore):
-    """OAuth2 ClientStore, storing data in the Hub database
-    """
+    """OAuth2 ClientStore, storing data in the Hub database"""
+
     def fetch_by_client_id(self, client_id):
         """Retrieve a client by its identifier.
 
