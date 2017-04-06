@@ -27,7 +27,7 @@ from traitlets import (
 )
 
 from .traitlets import Command, ByteSpecification
-from .utils import random_port
+from .utils import random_port, url_path_join
 
 
 class Spawner(LoggingConfigurable):
@@ -50,7 +50,9 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     authenticator = Any()
+    admin_access = Bool(False)
     api_token = Unicode()
+    oauth_client_id = Unicode()
 
     will_resume = Bool(False,
         help="""Whether the Spawner will resume on next start
@@ -425,6 +427,13 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
+        if self.admin_access:
+            env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
+        # OAuth settings
+        env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
+        env['JUPYTERHUB_HOST'] = self.hub.host
+        env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
+            url_path_join(self.user.url, 'oauth_callback')
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -486,7 +495,6 @@ class Spawner(LoggingConfigurable):
         """
         args = [
             '--user="%s"' % self.user.name,
-            '--cookie-name="%s"' % self.user.server.cookie_name,
             '--base-url="%s"' % self.user.server.base_url,
             '--hub-host="%s"' % self.hub.host,
             '--hub-prefix="%s"' % self.hub.server.base_url,

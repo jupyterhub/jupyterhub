@@ -43,14 +43,11 @@ from getpass import getuser
 import pipes
 import shutil
 from subprocess import Popen
-from urllib.parse import urlparse
-
-from tornado import gen
 
 from traitlets import (
     HasTraits,
     Any, Bool, Dict, Unicode, Instance,
-    default, observe,
+    default,
 )
 from traitlets.config import LoggingConfigurable
 
@@ -64,6 +61,16 @@ class _MockUser(HasTraits):
     server = Instance(orm.Server, allow_none=True)
     state = Dict()
     service = Instance(__module__ + '.Service')
+    host = Unicode()
+
+    @property
+    def url(self):
+        if not self.server:
+            return ''
+        if self.host:
+            return self.host + self.server.base_url
+        else:
+            return self.server.base_url
 
 # We probably shouldn't use a Spawner here,
 # but there are too many concepts to share.
@@ -190,6 +197,7 @@ class Service(LoggingConfigurable):
 
     domain = Unicode()
     host = Unicode()
+    hub = Any()
     proc = Any()
 
     # handles on globals:
@@ -197,6 +205,19 @@ class Service(LoggingConfigurable):
     base_url = Unicode()
     db = Any()
     orm = Any()
+
+    oauth_provider = Any()
+
+    oauth_client_id = Unicode(
+        help="""OAuth client ID for this service.
+        
+        You shouldn't generally need to change this.
+        Default: `service-<name>`
+        """
+    ).tag(input=True)
+    @default('oauth_client_id')
+    def _default_client_id(self):
+        return 'service-%s' % self.name
 
     @property
     def server(self):
@@ -242,11 +263,14 @@ class Service(LoggingConfigurable):
             cmd=self.command,
             environment=env,
             api_token=self.api_token,
+            oauth_client_id=self.oauth_client_id,
             cwd=self.cwd,
+            hub=self.hub,
             user=_MockUser(
                 name=self.user,
                 service=self,
                 server=self.orm.server,
+                host=self.host,
             ),
         )
         self.spawner.start()

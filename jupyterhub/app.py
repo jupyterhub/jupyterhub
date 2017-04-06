@@ -51,6 +51,7 @@ from .services.service import Service
 
 from . import dbutil, orm
 from .user import User, UserDict
+from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .traitlets import URLPrefix, Command
@@ -1040,6 +1041,7 @@ class JupyterHub(Application):
             host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
         else:
             domain = host = ''
+        client_store = self.oauth_provider.client_authenticator.client_store
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
@@ -1057,6 +1059,7 @@ class JupyterHub(Application):
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,
                 hub_api_url=self.hub.api_url,
+                hub=self.hub,
             )
 
             traits = service.traits(input=True)
@@ -1064,6 +1067,16 @@ class JupyterHub(Application):
                 if key not in traits:
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
+
+            if service.managed:
+                if not service.api_token:
+                    # generate new token
+                    service.api_token = service.orm.new_api_token()
+                else:
+                    # ensure provided token is registered
+                    self.service_tokens[service.api_token] = service.name
+            else:
+                self.service_tokens[service.api_token] = service.name
 
             if service.url:
                 parsed = urlparse(service.url)
@@ -1081,19 +1094,16 @@ class JupyterHub(Application):
                     base_url=service.prefix,
                 )
                 self.db.add(server)
+
+                client_store.add_client(
+                    client_id=service.oauth_client_id,
+                    client_secret=service.api_token,
+                    redirect_uri=host + url_path_join(service.prefix, 'oauth_callback'),
+                )
             else:
                 service.orm.server = None
 
             self._service_map[name] = service
-            if service.managed:
-                if not service.api_token:
-                    # generate new token
-                    service.api_token = service.orm.new_api_token()
-                else:
-                    # ensure provided token is registered
-                    self.service_tokens[service.api_token] = service.name
-            else:
-                self.service_tokens[service.api_token] = service.name
 
         # delete services from db not in service config:
         for service in self.db.query(orm.Service):
@@ -1161,6 +1171,13 @@ class JupyterHub(Application):
 
         self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
         db.commit()
+
+    def init_oauth(self):
+        self.oauth_provider = make_provider(
+            self.session_factory,
+            url_prefix=url_path_join(self.hub.server.base_url, 'api/oauth2'),
+            login_url=self.authenticator.login_url(self.hub.server.base_url),
+        )
 
     def init_proxy(self):
         """Load the Proxy config into the database"""
@@ -1327,6 +1344,7 @@ class JupyterHub(Application):
             domain=self.domain,
             statsd=self.statsd,
             allow_multiple_servers=self.allow_multiple_servers,
+            oauth_provider=self.oauth_provider,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1369,6 +1387,7 @@ class JupyterHub(Application):
         self.init_db()
         self.init_hub()
         self.init_proxy()
+        self.init_oauth()
         yield self.init_users()
         yield self.init_groups()
         self.init_services()

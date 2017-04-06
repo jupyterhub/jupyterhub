@@ -77,17 +77,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         var el = $(this);
         var row = get_row(el);
         var user = row.data('user');
-        var w = window.open();
-        api.admin_access(user, {
-            async: false,
-            success: function () {
-                w.location = utils.url_path_join(prefix, 'user', user);
-            },
-            error: function (xhr, err) {
-                w.close();
-                console.error("Failed to gain access to server", err);
-            }
-        });
+        var w = window.open(utils.url_path_join(prefix, 'user', user));
     });
     
     $(".start-server").click(function () {

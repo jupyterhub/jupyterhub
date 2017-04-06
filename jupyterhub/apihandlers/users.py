@@ -12,6 +12,17 @@ from ..utils import admin_only
 from .base import APIHandler
 
 
+class SelfAPIHandler(APIHandler):
+    """Return the authenticated user's model
+    
+    Based on the authentication info. Acts as a 'whoami' for auth tokens.
+    """
+    @web.authenticated
+    def get(self):
+        user = self.get_current_user()
+        self.write(json.dumps(self.user_model(user)))
+
+
 class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
@@ -252,6 +263,8 @@ class UserAdminAccessAPIHandler(APIHandler):
     """
     @admin_only
     def post(self, name):
+        self.log.warning("Deprecated in JupyterHub 0.8."
+            " Admin access API is not needed now that we use OAuth.")
         current = self.get_current_user()
         self.log.warning("Admin user %s has requested access to %s's server",
             current.name, name,
@@ -263,15 +276,10 @@ class UserAdminAccessAPIHandler(APIHandler):
             raise web.HTTPError(404)
         if not user.running:
             raise web.HTTPError(400, "%s's server is not running" % name)
-        self.set_server_cookie(user)
-        # a service can also ask for a user cookie
-        # this code prevents to raise an error
-        # cause service doesn't have 'other_user_cookies'
-        if getattr(current, 'other_user_cookies', None) is not None:
-            current.other_user_cookies.add(name)
 
 
 default_handlers = [
+    (r"/api/user", SelfAPIHandler),
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),

@@ -6,10 +6,12 @@
 import json
 from urllib.parse import quote
 
+from oauth2.web.tornado import OAuth2Handler
 from tornado import web, gen
+
 from .. import orm
 from ..utils import token_authenticated
-from .base import APIHandler
+from .base import BaseHandler, APIHandler
 
 
 class TokenAPIHandler(APIHandler):
@@ -58,8 +60,24 @@ class CookieAPIHandler(APIHandler):
         self.write(json.dumps(self.user_model(user)))
 
 
+class OAuthHandler(BaseHandler, OAuth2Handler):
+    """Implement OAuth provider handlers
+    
+    OAuth2Handler sets `self.provider` in initialize,
+    but we are already passing the Provider object via settings.
+    """
+    @property
+    def provider(self):
+        return self.settings['oauth_provider']
+
+    def initialize(self):
+        pass
+
+
 default_handlers = [
     (r"/api/authorizations/cookie/([^/]+)(?:/([^/]+))?", CookieAPIHandler),
     (r"/api/authorizations/token/([^/]+)", TokenAPIHandler),
     (r"/api/authorizations/token", TokenAPIHandler),
+    (r"/api/oauth2/authorize", OAuthHandler),
+    (r"/api/oauth2/token", OAuthHandler),
 ]

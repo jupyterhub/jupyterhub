@@ -1,26 +1,24 @@
 # http://travis-ci.org/#!/jupyter/jupyterhub
 language: python
 python:
-    - nightly
-    - 3.6
-    - 3.5
-    - 3.4
-    - 3.3
-
+  - nightly
+  - 3.6
+  - 3.5
+  - 3.4
 
 # installing dependencies
 before_install:
-    - npm install
-    - npm install -g configurable-http-proxy
-    - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
+  - nvm install 6; nvm use 6
+  - npm install
+  - npm install -g configurable-http-proxy
 install:
-    - pip install --pre -f travis-wheels/wheelhouse -r dev-requirements.txt .
+  - pip install --pre -r dev-requirements.txt .
 
 # running tests
 script:
-    - pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
+  - pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
 after_success:
-    - codecov
+  - codecov
 
 matrix:
   fast_finish: true

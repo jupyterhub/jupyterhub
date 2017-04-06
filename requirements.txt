@@ -3,5 +3,6 @@ traitlets>=4.3.2
 tornado>=4.1
 jinja2
 pamela
+python-oauth2>=1.0
 sqlalchemy>=1.0
 requests
