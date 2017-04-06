@@ -263,8 +263,8 @@ class UserAdminAccessAPIHandler(APIHandler):
     """
     @admin_only
     def post(self, name):
-        self.log.warning("Admin Access API is deprecated in JupyterHub 0.8."
-            " There is no action needed anymore.")
+        self.log.warning("Deprecated in JupyterHub 0.8."
+            " Admin access API is not needed now that we use OAuth.")
         current = self.get_current_user()
         self.log.warning("Admin user %s has requested access to %s's server",
             current.name, name,
