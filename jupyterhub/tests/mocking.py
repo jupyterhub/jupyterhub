@@ -20,7 +20,7 @@ from ..auth import PAMAuthenticator
 from .. import orm
 from ..spawner import LocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
-from ..utils import random_port
+from ..utils import random_port, url_path_join
 
 from pamela import PAMError
 
@@ -210,16 +210,21 @@ def public_host(app):
         return app.proxy.public_server.host
 
 
-def public_url(app, user_or_service=None):
+def public_url(app, user_or_service=None, path=''):
     """Return the full, public base URL (including prefix) of the given JupyterHub instance."""
     if user_or_service:
         if app.subdomain_host:
             host = user_or_service.host
         else:
             host = public_host(app)
-        return host + user_or_service.server.base_url
+        prefix = user_or_service.server.base_url
     else:
-        return public_host(app) + app.proxy.public_server.base_url
+        host = public_host(app)
+        prefix = app.proxy.public_server.base_url
+    if path:
+        return host + url_path_join(prefix, path)
+    else:
+        return host + prefix
 
 
 # single-user-server mocking:
