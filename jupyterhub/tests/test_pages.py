@@ -4,8 +4,10 @@ from urllib.parse import urlencode, urlparse
 
 import requests
 
+from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
 from .. import orm
+from ..auth import Authenticator
 
 import mock
 from .mocking import FormSpawner, public_url, public_host
@@ -251,6 +253,28 @@ def test_login_redirect(app, io_loop):
     r.raise_for_status()
     assert r.status_code == 302
     assert r.headers['Location'].endswith('/hub/admin')
+
+
+def test_auto_login(app, io_loop, request):
+    class DummyLoginHandler(BaseHandler):
+        def get(self):
+            self.write('ok!')
+    base_url = public_url(app) + '/'
+    app.tornado_application.add_handlers(".*$", [
+        (ujoin(app.hub.server.base_url, 'dummy'), DummyLoginHandler),
+    ])
+    # no auto_login: end up at /hub/login
+    r = requests.get(base_url)
+    assert r.url == public_url(app, path='hub/login')
+    # enable auto_login: redirect from /hub/login to /hub/dummy
+    authenticator = Authenticator(auto_login=True)
+    authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
+
+    with mock.patch.dict(app.tornado_application.settings, {
+        'authenticator': authenticator,
+    }):
+        r = requests.get(base_url)
+    assert r.url == public_url(app, path='hub/dummy')
 
 
 def test_logout(app):
