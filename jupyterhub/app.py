@@ -1151,7 +1151,14 @@ class JupyterHub(Application):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             self.log.debug("Loading state for %s from db", user.name)
             spawner = user.spawner
-            status = yield spawner.poll()
+            status = 0
+            if user.server:
+                try:
+                    status = yield spawner.poll()
+                except Exception:
+                    self.log.exception("Failed to poll Spawner for %s, assuming it is not running.", user.name)
+                    status = -1
+
             if status is None:
                 self.log.info("%s still running", user.name)
                 spawner.add_poll_callback(user_stopped, user)
