@@ -954,11 +954,18 @@ class JupyterHub(Application):
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
-                # TODO: Review approach to synchronize whitelist with db
-                # known cause of the exception is a user who has already been removed from the system
-                # but the user still exists in the hub's user db
                 self.log.exception("Error adding user %r already in db", user.name)
-        db.commit()  # can add_user touch the db?
+                if self.authenticator.delete_invalid_users:
+                    self.log.warning("Deleting invalid user %r", user.name)
+                    db.delete(user)
+                else:
+                    self.log.warning(dedent("""
+                    You can set
+                        c.Authenticator.delete_invalid_users = True
+                    to automatically delete users that have been invalidated,
+                    e.g. by deleting them from the external system without notifying JupyterHub.
+                    """))
+        db.commit()
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
@@ -1156,7 +1163,7 @@ class JupyterHub(Application):
                 try:
                     status = yield spawner.poll()
                 except Exception:
-                    self.log.exception("Failed to poll Spawner for %s, assuming it is not running.", user.name)
+                    self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.", user.name)
                     status = -1
 
             if status is None:

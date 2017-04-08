@@ -125,6 +125,15 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    delete_invalid_users = Bool(False,
+        help="""Delete any invalid users from the database
+
+        When JupyterHub starts, if any users are found in the database
+        that do not pass a `validate_users` check, they will be deleted.
+        Default is False to avoid data loss due to config changes, etc.
+        """
+    )
+
     def normalize_username(self, username):
         """Normalize the given username and return it
 
