@@ -75,11 +75,12 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### University of California San Diego
 
-- DSC - Andrea Zonca
-    - https://zonca.github.io/2015/04/jupyterhub-hpc.html
+- San Diego Supercomputer Center - Andrea Zonca
+    - [Run Jupyterhub on a Supercomputer](https://zonca.github.io/2015/04/jupyterhub-hpc.html)
     - [Deploy JupyterHub on a VM for a Workshop](https://zonca.github.io/2016/04/jupyterhub-sdsc-cloud.html)
-    - https://zonca.github.io/2017/02/customize-python-environment-jupyterhub.html
-    - https://zonca.github.io/2017/02/sample-deployment-jupyterhub-hpc.html
+    - [Customize your Python environment in Jupyterhub](https://zonca.github.io/2017/02/customize-python-environment-jupyterhub.html)
+    - [Jupyterhub deployment on multiple nodes with Docker Swarm](https://zonca.github.io/2016/05/jupyterhub-docker-swarm.html)
+    - [Sample deployment of Jupyterhub in HPC on SDSC Comet](https://zonca.github.io/2017/02/sample-deployment-jupyterhub-hpc.html)
 
 ### TACC University of Texas
 
