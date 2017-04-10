@@ -19,7 +19,6 @@ from tornado import gen, web
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..user import User
 from ..utils import url_path_join
 
 # pattern for the authentication token header
@@ -292,14 +291,8 @@ class BaseHandler(RequestHandler):
         if not self.get_current_user_cookie():
             self.set_hub_cookie(user)
 
-    @gen.coroutine
     def authenticate(self, data):
-        auth = self.authenticator
-        if auth is not None:
-            result = yield auth.get_authenticated_user(self, data)
-            return result
-        else:
-            self.log.error("No authentication function, login is impossible!")
+        return gen.maybe_future(self.authenticator.get_authenticated_user(self, data))
 
 
     #---------------------------------------------------------------

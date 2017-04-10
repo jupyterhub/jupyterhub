@@ -185,17 +185,25 @@ class Authenticator(LoggingConfigurable):
          - `normalize_username` normalizes the username
          - `check_whitelist` checks against the user whitelist
         """
-        username = yield self.authenticate(handler, data)
-        if username is None:
+        authenticated = yield self.authenticate(handler, data)
+        if authenticated is None:
             return
+        if isinstance(authenticated, dict):
+            username = authenticated['name']
+        else:
+            username = authenticated
+
         username = self.normalize_username(username)
+        if isinstance(authenticated, dict):
+            # store normalized name back in dict
+            authenticated['name'] = username
         if not self.validate_username(username):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
         whitelist_pass = yield gen.maybe_future(self.check_whitelist(username))
         if whitelist_pass:
-            return username
+            return authenticated
         else:
             self.log.warning("User %r not in whitelist.", username)
             return
@@ -210,13 +218,19 @@ class Authenticator(LoggingConfigurable):
 
         Checking the whitelist is handled separately by the caller.
 
+        .. versionchanged:: Allow `authenticate` to return a dict containing auth_state.
+
         Args:
             handler (tornado.web.RequestHandler): the current request handler
             data (dict): The formdata of the login form.
                          The default form has 'username' and 'password' fields.
         Returns:
-            username (str or None): The username of the authenticated user,
-            or None if Authentication failed
+            user (str or dict or None): The username of the authenticated user,
+                or None if Authentication failed.
+                If the Authenticator has state associated with the user,
+                it can return a dict with the keys 'name' and 'state',
+                where 'name' is the username and 'state' is a dictionary
+                of auth state that will be persisted.
         """
 
     def pre_spawn_start(self, user, spawner):
