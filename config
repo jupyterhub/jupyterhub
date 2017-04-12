@@ -1,0 +1,5 @@
+{
+    "custom_css": "/home/saurabh/workspace/jupyterhub/brand.less",
+    "logo": "/home/saurabh/workspace/jupyterhub/sandstone.png",
+    "title": "Sandstone"
+}
