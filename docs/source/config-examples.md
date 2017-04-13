@@ -67,7 +67,7 @@ c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
 # start single-user notebook servers in ~/assignments,
 # with ~/assignments/Welcome.ipynb as the default landing page
 # this config could also be put in
-# /etc/ipython/ipython_notebook_config.py
+# /etc/jupyter/jupyter_notebook_config.py
 c.Spawner.notebook_dir = '~/assignments'
 c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
