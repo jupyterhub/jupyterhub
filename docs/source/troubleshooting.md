@@ -21,6 +21,8 @@ problem and how to resolve it.
 - How do I use JupyterLab's prerelease version with JupyterHub?
 - How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 - How do I set up rotating daily logs?
+- Toree integration with HDFS rack awareness script
+- Where do I find Docker images and Dockerfiles related to JupyterHub?
 
 [*Troubleshooting commands*](#troubleshooting-commands)
 
@@ -292,7 +294,7 @@ jupyter kernelspec list
 jupyterhub --debug
 ```
 
-## Toree integration with HDFS rack awareness script
+### Toree integration with HDFS rack awareness script
 
 The Apache Toree kernel will an issue, when running with JupyterHub, if the standard HDFS
 rack awareness script is used. This will materialize in the logs as a repeated WARN:
@@ -313,3 +315,13 @@ In order to resolve this issue, there are two potential options.
 script (e.g. /etc/hadoop/conf/custom_topology_script.py). Copy the original script and change the first line point
 to a python two installation (e.g. /usr/bin/python).
 2. In spark-env.sh add a Python 2 installation to your path (e.g. export PATH=/opt/anaconda2/bin:$PATH).
+
+### Where do I find Docker images and Dockerfiles related to JupyterHub?
+
+Docker images can be found at the [JupyterHub organization on DockerHub](https://hub.docker.com/u/jupyterhub/).
+The Docker image [jupyterhub/singleuser](https://hub.docker.com/r/jupyterhub/singleuser/)
+provides an example single user notebook server for use with DockerSpawner.
+
+Additional single user notebook server images can be found at the [Jupyter
+organization on DockerHub](https://hub.docker.com/r/jupyter/) and information
+about each image at the [jupyter/docker-stacks repo](https://github.com/jupyter/docker-stacks).
