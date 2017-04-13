@@ -495,7 +495,7 @@ c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 
 Since the single-user server extends the notebook server application,
 it still loads configuration from the `jupyter_notebook_config.py` config file.
-Each user may have one of these files in `$HOME/.jupyter/profile_default/`.
+Each user may have one of these files in `$HOME/.jupyter/`.
 Jupyter also supports loading system-wide config files from `/etc/jupyter/`,
 which is the place to put configuration that you want to affect all of your users.
 
