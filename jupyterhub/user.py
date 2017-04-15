@@ -236,7 +236,8 @@ class User(HasTraits):
         db.commit()
 
         spawner = self.spawner
-        # Passing server_name to the spawner
+        # Passing server_name and base_url to the spawner
+        spawner.server_base_url = base_url
         spawner.server_name = server_name
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state

@@ -470,7 +470,7 @@ class Spawner(LoggingConfigurable):
         """
         d = {'username': self.user.name}
         if self.user.server:
-            d['base_url'] = self.user.server.base_url
+            d['base_url'] = self.server_base_url
         return d
 
     def format_string(self, s):
@@ -495,7 +495,7 @@ class Spawner(LoggingConfigurable):
         """
         args = [
             '--user="%s"' % self.user.name,
-            '--base-url="%s"' % self.user.server.base_url,
+            '--base-url="%s"' % self.server_base_url,
             '--hub-host="%s"' % self.hub.host,
             '--hub-prefix="%s"' % self.hub.server.base_url,
             '--hub-api-url="%s"' % self.hub.api_url,

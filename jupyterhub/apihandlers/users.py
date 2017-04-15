@@ -220,11 +220,11 @@ class UserCreateNamedServerAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise HTTPError(404, "No such user %r" % name)
-        if user.running:
-            # include notify, so that a server that died is noticed immediately
-            state = yield user.spawner.poll_and_notify()
-            if state is None:
-                raise web.HTTPError(400, "%s's server is already running" % name)
+        #if user.running:
+        #    # include notify, so that a server that died is noticed immediately
+        #    state = yield user.spawner.poll_and_notify()
+        #    if state is None:
+        #        raise web.HTTPError(400, "%s's server is already running" % name)
 
         options = self.get_json_body()
         yield self.spawn_single_user(user, options=options)
@@ -246,8 +246,8 @@ class UserDeleteNamedServerAPIHandler(APIHandler):
         if user.stop_pending:
             self.set_status(202)
             return
-        if not user.running:
-            raise web.HTTPError(400, "%s's server is not running" % name)
+        #if not user.running:
+        #    raise web.HTTPError(400, "%s's server is not running" % name)
         # include notify, so that a server that died is noticed immediately
         status = yield user.spawner.poll_and_notify()
         if status is not None:
