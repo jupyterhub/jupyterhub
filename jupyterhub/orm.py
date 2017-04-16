@@ -392,7 +392,7 @@ class User(Base):
     auth_state = Column(JSONDict)
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
-
+    # Cookies granted to access other user servers
     other_user_cookies = set([])
 
     @property
@@ -486,6 +486,7 @@ class Service(Base):
     # common user interface:
     name = Column(Unicode(1023), unique=True)
     admin = Column(Boolean, default=False)
+    other_user_cookies = set([])
 
     api_tokens = relationship("APIToken", backref="service")
 
