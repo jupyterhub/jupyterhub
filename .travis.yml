@@ -1,4 +1,4 @@
-# http://travis-ci.org/#!/jupyter/jupyterhub
+# http://travis-ci.org/jupyterhub/jupyterhub
 language: python
 python:
   - nightly
