@@ -393,8 +393,6 @@ class User(Base):
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
-    other_user_cookies = set([])
-
     @property
     def server(self):
         """Returns the first element of servers.
