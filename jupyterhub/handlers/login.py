@@ -19,9 +19,6 @@ class LogoutHandler(BaseHandler):
         if user:
             self.log.info("User logged out: %s", user.name)
             self.clear_login_cookie()
-            for name in user.other_user_cookies:
-                self.clear_login_cookie(name)
-            user.other_user_cookies = set([])
             self.statsd.incr('logout')
 
         self.redirect(url_path_join(self.hub.server.base_url, 'login'), permanent=False)
