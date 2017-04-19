@@ -166,9 +166,9 @@ class User(HasTraits):
     @property
     def proxy_path(self):
         if self.settings.get('subdomain_host'):
-            return url_path_join('/' + self.domain, self.server_base_url)
+            return url_path_join('/' + self.domain, self.base_url)
         else:
-            return self.server_base_url
+            return self.base_url
 
     @property
     def domain(self):
@@ -235,12 +235,11 @@ class User(HasTraits):
         api_token = self.new_api_token()
         db.commit()
 
-        self.server_base_url = base_url
-
+        # here you create the instance 
         spawner = self.spawner
         # Passing server_name and base_url to the spawner
-        spawner.server_base_url = base_url
-        spawner.server_name = server_name
+        spawner.save_spawner(server_name)
+        spawner.server = server
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()

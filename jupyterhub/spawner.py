@@ -350,10 +350,24 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    _instances = {}
+    
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
             self.load_state(self.user.state)
+    
+    def save_spawner(self, server_name):
+        Spawner._instances[server_name] = self
+        self.server_name = server_name
+
+    @classmethod
+    def get_spawners(cls):
+        return cls._instances
+    
+    @classmethod
+    def get_spawner(cls, server_name):
+        return cls._instances[server_name]
 
     def load_state(self, state):
         """Restore state of spawner from database.
@@ -469,8 +483,8 @@ class Spawner(LoggingConfigurable):
             ns (dict): namespace for string formatting.
         """
         d = {'username': self.user.name}
-        if self.user.server:
-            d['base_url'] = self.server_base_url
+        if self.server:
+            d['base_url'] = self.server.base_url
         return d
 
     def format_string(self, s):
@@ -495,7 +509,7 @@ class Spawner(LoggingConfigurable):
         """
         args = [
             '--user="%s"' % self.user.name,
-            '--base-url="%s"' % self.server_base_url,
+            '--base-url="%s"' % self.server.base_url,
             '--hub-host="%s"' % self.hub.host,
             '--hub-prefix="%s"' % self.hub.server.base_url,
             '--hub-api-url="%s"' % self.hub.api_url,
@@ -505,9 +519,9 @@ class Spawner(LoggingConfigurable):
 
         if self.port:
             args.append('--port=%i' % self.port)
-        elif self.user.server.port:
+        elif self.server.port:
             self.log.warning("Setting port from user.server is deprecated as of JupyterHub 0.7.")
-            args.append('--port=%i' % self.user.server.port)
+            args.append('--port=%i' % self.server.port)
 
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
@@ -861,8 +875,8 @@ class LocalProcessSpawner(Spawner):
             # A deprecation warning will be shown if the subclass
             # does not return ip, port.
             if self.ip:
-                self.user.server.ip = self.ip
-            self.user.server.port = self.port
+                self.server.ip = self.ip
+            self.server.port = self.port
         return (self.ip or '127.0.0.1', self.port)
 
     @gen.coroutine
