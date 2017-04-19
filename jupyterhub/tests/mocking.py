@@ -149,9 +149,9 @@ class MockHub(JupyterHub):
         pass
     
     def start(self, argv=None):
-        self.db_file = NamedTemporaryFile()
         self.pid_file = NamedTemporaryFile(delete=False).name
-        self.db_url = self.db_file.name
+        self.db_file = NamedTemporaryFile()
+        self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         
         evt = threading.Event()
         
