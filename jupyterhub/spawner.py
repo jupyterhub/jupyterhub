@@ -350,24 +350,10 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    _instances = {}
-    
     def __init__(self, **kwargs):
         super(Spawner, self).__init__(**kwargs)
         if self.user.state:
             self.load_state(self.user.state)
-    
-    def save_spawner(self, server_name):
-        Spawner._instances[server_name] = self
-        self.server_name = server_name
-
-    @classmethod
-    def get_spawners(cls):
-        return cls._instances
-    
-    @classmethod
-    def get_spawner(cls, server_name):
-        return cls._instances[server_name]
 
     def load_state(self, state):
         """Restore state of spawner from database.

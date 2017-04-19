@@ -110,10 +110,12 @@ class User(HasTraits):
     @property
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
+    
 
     def __init__(self, orm_user, settings, **kwargs):
         self.orm_user = orm_user
         self.settings = settings
+        self._instances = {}
         super().__init__(**kwargs)
 
         hub = self.db.query(orm.Hub).first()
@@ -131,6 +133,17 @@ class User(HasTraits):
             authenticator=self.authenticator,
             config=self.settings.get('config'),
         )
+
+    @property
+    def get_spawners(self):
+        return self._instances
+    
+    @property
+    def get_spawner(self, server_name):
+        return self._instances[server_name]
+    
+    def save_spawner(self, server_name):
+        self._instances[server_name] = self.spawner
 
     # pass get/setattr to ORM user
 
@@ -235,11 +248,14 @@ class User(HasTraits):
         api_token = self.new_api_token()
         db.commit()
 
-        # here you create the instance 
         spawner = self.spawner
-        # Passing server_name and base_url to the spawner
-        spawner.save_spawner(server_name)
+
+        # Save spawner instance inside self._instances
+        self.save_spawner(server_name)
+
+        # Passing server, server_name and options to the spawner
         spawner.server = server
+        spawner.server_name = server_name
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
