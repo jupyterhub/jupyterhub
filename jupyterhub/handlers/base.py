@@ -141,13 +141,35 @@ class BaseHandler(RequestHandler):
     def cookie_max_age_days(self):
         return self.settings.get('cookie_max_age_days', None)
 
-    def get_current_user_token(self):
-        """get_current_user from Authorization header token"""
+    def get_auth_token(self):
+        """Get the authorization token from Authorization header"""
         auth_header = self.request.headers.get('Authorization', '')
         match = auth_header_pat.match(auth_header)
         if not match:
             return None
-        token = match.group(1)
+        return match.group(1)
+
+    def get_current_user_oauth_token(self):
+        """Get the current user identified by OAuth access token
+        
+        Separate from API token because OAuth access tokens
+        can only be used for identifying users,
+        not using the API.
+        """
+        token = self.get_auth_token()
+        if token is None:
+            return None
+        orm_token = orm.OAuthAccessToken.find(self.db, token)
+        if orm_token is None:
+            return None
+        else:
+            return self._user_from_orm(orm_token.user)
+    
+    def get_current_user_token(self):
+        """get_current_user from Authorization header token"""
+        token = self.get_auth_token()
+        if token is None:
+            return None
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             return None

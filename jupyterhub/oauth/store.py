@@ -6,7 +6,7 @@ implements https://python-oauth2.readthedocs.io/en/latest/store.html
 import threading
 
 from oauth2.datatype import Client, AccessToken, AuthorizationCode
-from oauth2.error import AccessTokenNotFound, AuthCodeNotFound, ClientNotFoundError, UserNotAuthenticated
+from oauth2.error import AuthCodeNotFound, ClientNotFoundError, UserNotAuthenticated
 from oauth2.grant import AuthorizationCodeGrant
 from oauth2.web import AuthorizationCodeGrantSiteAdapter
 import oauth2.store
@@ -17,8 +17,7 @@ from sqlalchemy.orm import scoped_session
 from tornado.escape import url_escape
 
 from .. import orm
-from jupyterhub.orm import APIToken
-from ..utils import url_path_join, hash_token, compare_token
+from ..utils import url_path_join, hash_token, compare_token, new_token
 
 
 class JupyterHubSiteAdapter(AuthorizationCodeGrantSiteAdapter):
@@ -66,17 +65,6 @@ class HubDBMixin(object):
 class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
     """OAuth2 AccessTokenStore, storing data in the Hub database"""
 
-    def _access_token_from_orm(self, orm_token):
-        """Transform an ORM AccessToken record into an oauth2 AccessToken instance"""
-        return AccessToken(
-            client_id=orm_token.client_id,
-            grant_type=orm_token.grant_type,
-            expires_at=orm_token.expires_at,
-            refresh_token=orm_token.refresh_token,
-            refresh_expires_at=orm_token.refresh_expires_at,
-            user_id=orm_token.user_id,
-        )
-
     def save_token(self, access_token):
         """
         Stores an access token in the database.
@@ -86,17 +74,14 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         """
         
         user = self.db.query(orm.User).filter(orm.User.id == access_token.user_id).first()
-        token = user.new_api_token(access_token.token)
-        orm_api_token = APIToken.find(self.db, token, kind='user')
-        
         orm_access_token = orm.OAuthAccessToken(
             client_id=access_token.client_id,
             grant_type=access_token.grant_type,
             expires_at=access_token.expires_at,
             refresh_token=access_token.refresh_token,
             refresh_expires_at=access_token.refresh_expires_at,
+            token=access_token.token,
             user=user,
-            api_token=orm_api_token,
         )
         self.db.add(orm_access_token)
         self.db.commit()
