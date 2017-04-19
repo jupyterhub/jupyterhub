@@ -200,14 +200,13 @@ class MockHub(JupyterHub):
 
     def load_config_file(self, *args, **kwargs):
         pass
-    
+
     @gen.coroutine
     def initialize(self, argv=None):
-        self.db_file = NamedTemporaryFile()
         self.pid_file = NamedTemporaryFile(delete=False).name
-        self.db_url = self.db_file.name
+        self.db_file = NamedTemporaryFile()
+        self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         yield super().initialize([])
-        
         user = orm.User(name='user')
         self.db.add(user)
         self.db.commit()
