@@ -140,7 +140,10 @@ class User(HasTraits):
     
     @property
     def get_spawner(self, server_name):
-        return self._instances[server_name]
+        try:
+            return self._instances[server_name]
+        except KeyError as err:
+            self.log.warning("spawner for server named %s doesn't exist" % server_name)
     
     def save_spawner(self, server_name):
         self._instances[server_name] = self.spawner
@@ -250,7 +253,7 @@ class User(HasTraits):
 
         spawner = self.spawner
 
-        # Save spawner instance inside self._instances
+        # Save spawner's instance inside self._instances
         self.save_spawner(server_name)
 
         # Passing server, server_name and options to the spawner
