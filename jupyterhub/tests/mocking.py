@@ -207,9 +207,13 @@ class MockHub(JupyterHub):
         self.db_file = NamedTemporaryFile()
         self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         yield super().initialize([])
-        user = orm.User(name='user')
-        self.db.add(user)
-        self.db.commit()
+
+        # add an initial user
+        user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
+        if user is None:
+            user = orm.User(name='user')
+            self.db.add(user)
+            self.db.commit()
 
     def stop(self):
         super().stop()
