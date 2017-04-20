@@ -461,7 +461,6 @@ class BaseHandler(RequestHandler):
         try:
             html = self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
-            self.log.debug("No template for %d", status_code)
             html = self.render_template('error.html', **ns)
 
         self.write(html)
