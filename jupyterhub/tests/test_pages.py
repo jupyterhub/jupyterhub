@@ -16,7 +16,7 @@ from .test_api import api_request
 
 def get_page(path, app, hub=True, **kw):
     if hub:
-        prefix = app.hub.server.base_url
+        prefix = app.hub.base_url
     else:
         prefix = app.base_url
     base_url = ujoin(public_host(app), prefix)
@@ -24,11 +24,11 @@ def get_page(path, app, hub=True, **kw):
     return requests.get(ujoin(base_url, path), **kw)
 
 def test_root_no_auth(app, io_loop):
-    print(app.hub.server.is_up())
+    print(app.hub.is_up())
     routes = io_loop.run_sync(app.proxy.get_routes)
     print(routes)
     print(app.hub.server)
-    url = ujoin(public_host(app), app.hub.server.base_url)
+    url = ujoin(public_host(app), app.hub.base_url)
     print(url)
     r = requests.get(url)
     r.raise_for_status()
@@ -123,7 +123,7 @@ def test_spawn_page(app):
 
 def test_spawn_form(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        base_url = ujoin(public_host(app), app.hub.server.base_url)
+        base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
@@ -145,7 +145,7 @@ def test_spawn_form(app, io_loop):
 
 def test_spawn_form_with_file(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        base_url = ujoin(public_host(app), app.hub.server.base_url)
+        base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
@@ -181,7 +181,7 @@ def test_user_redirect(app):
     assert path == ujoin(app.base_url, '/hub/login')
     query = urlparse(r.url).query
     assert query == urlencode({
-        'next': ujoin(app.hub.server.base_url, '/user-redirect/tree/top/')
+        'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')
     })
 
     r = get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
@@ -320,7 +320,7 @@ def test_login_no_whitelist_adds_user(app):
 
 
 def test_static_files(app):
-    base_url = ujoin(public_host(app), app.hub.server.base_url)
+    base_url = ujoin(public_host(app), app.hub.base_url)
     r = requests.get(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'

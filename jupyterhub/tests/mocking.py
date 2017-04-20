@@ -165,7 +165,7 @@ class MockHub(JupyterHub):
             self.db.add(user)
             self.db.commit()
             yield super(MockHub, self).start()
-            yield self.hub.server.wait_up(http=True)
+            yield self.hub.wait_up(http=True)
             self.io_loop.add_callback(evt.set)
         
         def _start():

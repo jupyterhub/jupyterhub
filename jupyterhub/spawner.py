@@ -496,8 +496,8 @@ class Spawner(LoggingConfigurable):
         args = [
             '--user="%s"' % self.user.name,
             '--base-url="%s"' % self.user.server.base_url,
-            '--hub-host="%s"' % self.hub.host,
-            '--hub-prefix="%s"' % self.hub.server.base_url,
+            '--hub-host="%s"' % self.hub.public_host,
+            '--hub-prefix="%s"' % self.hub.base_url,
             '--hub-api-url="%s"' % self.hub.api_url,
         ]
         if self.ip:

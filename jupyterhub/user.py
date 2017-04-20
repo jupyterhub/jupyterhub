@@ -117,10 +117,9 @@ class User(HasTraits):
         super().__init__(**kwargs)
 
         hub = self.db.query(orm.Hub).first()
-        
-        self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
-        self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
+        self.allow_named_servers = self.settings.get('allow_named_servers', False)
+        self.cookie_name = '%s-%s' % (hub.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
             self.settings.get('base_url', '/'), 'user', self.escaped_name)
 

@@ -62,6 +62,7 @@ from .utils import (
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
+from .objects import Server, Hub
 
 # For faking stats
 from .emptyclass import EmptyClass
@@ -805,36 +806,6 @@ class JupyterHub(Application):
             self._local.db = scoped_session(self.session_factory)()
         return self._local.db
 
-    @property
-    def hub(self):
-        if not getattr(self._local, 'hub', None):
-            q = self.db.query(orm.Hub)
-            assert q.count() <= 1
-            self._local.hub = q.first()
-            if self.subdomain_host and self._local.hub:
-                self._local.hub.host = self.subdomain_host
-        return self._local.hub
-
-    @hub.setter
-    def hub(self, hub):
-        self._local.hub = hub
-        if hub and self.subdomain_host:
-            hub.host = self.subdomain_host
-
-    @property
-    def proxy(self):
-        if not getattr(self._local, 'proxy', None):
-            q = self.db.query(orm.Proxy)
-            assert q.count() <= 1
-            p = self._local.proxy = q.first()
-            if p:
-                p.auth_token = self.proxy_auth_token
-        return self._local.proxy
-
-    @proxy.setter
-    def proxy(self, proxy):
-        self._local.proxy = proxy
-
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
@@ -861,28 +832,13 @@ class JupyterHub(Application):
 
     def init_hub(self):
         """Load the Hub config into the database"""
-        self.hub = self.db.query(orm.Hub).first()
-        if self.hub is None:
-            self.hub = orm.Hub(
-                server=orm.Server(
-                    ip=self.hub_ip,
-                    port=self.hub_port,
-                    base_url=self.hub_prefix,
-                    cookie_name='jupyter-hub-token',
-                )
-            )
-            self.db.add(self.hub)
-        else:
-            server = self.hub.server
-            server.ip = self.hub_ip
-            server.port = self.hub_port
-            server.base_url = self.hub_prefix
-        if self.subdomain_host:
-            if not self.subdomain_host:
-                raise ValueError("Must specify subdomain_host when using subdomains."
-                " This should be the public domain[:port] of the Hub.")
-
-        self.db.commit()
+        self.hub = Hub(
+            ip=self.hub_ip,
+            port=self.hub_port,
+            base_url=self.hub_prefix,
+            cookie_name='jupyter-hub-token',
+            public_host=self.subdomain_host,
+        )
 
     @gen.coroutine
     def init_users(self):
@@ -1231,8 +1187,8 @@ class JupyterHub(Application):
             '--port', str(self.proxy.public_server.port),
             '--api-ip', self.proxy.api_server.ip,
             '--api-port', str(self.proxy.api_server.port),
-            '--default-target', self.hub.server.host,
-            '--error-target', url_path_join(self.hub.server.url, 'error'),
+            '--default-target', self.hub.host,
+            '--error-target', url_path_join(self.hub.url, 'error'),
         ]
         if self.subdomain_host:
             cmd.append('--host-routing')
@@ -1299,7 +1255,7 @@ class JupyterHub(Application):
 
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
-        base_url = self.hub.server.base_url
+        base_url = self.hub.base_url
         jinja_options = dict(
             autoescape=True,
         )
@@ -1337,7 +1293,7 @@ class JupyterHub(Application):
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
-            static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
+            static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
             template_path=self.template_paths,
             jinja2_env=jinja_env,
@@ -1530,10 +1486,10 @@ class JupyterHub(Application):
         try:
             self.http_server.listen(self.hub_port, address=self.hub_ip)
         except Exception:
-            self.log.error("Failed to bind hub to %s", self.hub.server.bind_url)
+            self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
         else:
-            self.log.info("Hub API listening on %s", self.hub.server.bind_url)
+            self.log.info("Hub API listening on %s", self.hub.bind_url)
 
         # start the proxy
         try:

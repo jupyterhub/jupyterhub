@@ -58,8 +58,8 @@ def test_hub(db):
     )
     db.add(hub)
     db.commit()
-    assert hub.server.ip == '1.2.3.4'
-    assert hub.server.port == 1234
+    assert hub.ip == '1.2.3.4'
+    assert hub.port == 1234
     assert hub.api_url == 'http://1.2.3.4:1234/hubtest/api'
 
 
