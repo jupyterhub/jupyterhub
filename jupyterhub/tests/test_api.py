@@ -51,6 +51,7 @@ def check_db_locks(func):
 
 def find_user(db, name):
     """Find user in database."""
+    db.commit()
     return db.query(orm.User).filter(orm.User.name == name).first()
 
 
@@ -96,6 +97,8 @@ def api_request(app, *api_path, **kwargs):
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
     assert ujoin(app.hub.server.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
     assert 'http' not in resp.headers['Content-Security-Policy']
+    # trigger db sync
+    app.db.commit()
     return resp
 
 
@@ -434,6 +437,8 @@ def test_spawn(app, io_loop):
     assert 'pid' not in user.state
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status == 0
+
+    app.db.commit()
 
     # check that we cleaned up after ourselves
     assert user.server is None

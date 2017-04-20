@@ -200,6 +200,7 @@ class MockHub(JupyterHub):
             allow_redirects=False,
         )
         r.raise_for_status()
+        self.db.commit()
         assert r.cookies
         return r.cookies
 
