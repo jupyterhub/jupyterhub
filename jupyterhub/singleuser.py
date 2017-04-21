@@ -5,12 +5,13 @@
 # Distributed under the terms of the Modified BSD License.
 
 import os
+from textwrap import dedent
 from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader, FunctionLoader
 
 from tornado import ioloop
-from textwrap import dedent
+from tornado.web import HTTPError
 
 try:
     import notebook
@@ -119,6 +120,8 @@ class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
         # TODO: make async (in a Thread?)
         token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
+        if user_model is None:
+            raise HTTPError(500, "oauth callback failed to identify a user")
         self.log.info("Logged-in user %s", user_model)
         self.hub_auth.set_cookie(self, token)
         next_url = self.get_argument('next', '') or self.base_url
