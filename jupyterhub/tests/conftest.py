@@ -32,11 +32,7 @@ def db():
             name=getuser(),
         )
         user.servers.append(orm.Server())
-        hub = orm.Hub(
-            server=orm.Server(),
-        )
         _db.add(user)
-        _db.add(hub)
         _db.commit()
     return _db
 

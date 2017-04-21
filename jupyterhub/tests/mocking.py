@@ -207,7 +207,7 @@ def public_host(app):
     if app.subdomain_host:
         return app.subdomain_host
     else:
-        return app.proxy.public_server.host
+        return urlparse(app.proxy.public_url).host
 
 
 def public_url(app, user_or_service=None, path=''):

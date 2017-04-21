@@ -28,41 +28,6 @@ def test_server(db):
     assert server.url == server.host + '/'
 
 
-def test_proxy(db):
-    proxy = orm.Proxy(
-        auth_token='abc-123',
-        public_server=orm.Server(
-            ip='192.168.1.1',
-            port=8000,
-        ),
-        api_server=orm.Server(
-            ip='127.0.0.1',
-            port=8001,
-        ),
-    )
-    db.add(proxy)
-    db.commit()
-    assert proxy.public_server.ip == '192.168.1.1'
-    assert proxy.api_server.ip == '127.0.0.1'
-    assert proxy.auth_token == 'abc-123'
-
-
-def test_hub(db):
-    hub = orm.Hub(
-        server=orm.Server(
-            ip = '1.2.3.4',
-            port = 1234,
-            base_url='/hubtest/',
-        ),
-        
-    )
-    db.add(hub)
-    db.commit()
-    assert hub.ip == '1.2.3.4'
-    assert hub.port == 1234
-    assert hub.api_url == 'http://1.2.3.4:1234/hubtest/api'
-
-
 def test_user(db):
     user = orm.User(name='kaylee',
         state={'pid': 4234},

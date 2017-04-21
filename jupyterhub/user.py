@@ -116,10 +116,11 @@ class User(HasTraits):
         self.settings = settings
         super().__init__(**kwargs)
 
-        hub = self.db.query(orm.Hub).first()
-
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
+
+        hub = self.settings['hub']
         self.cookie_name = '%s-%s' % (hub.cookie_name, quote(self.name, safe=''))
+
         self.base_url = url_path_join(
             self.settings.get('base_url', '/'), 'user', self.escaped_name)
 
@@ -222,14 +223,15 @@ class User(HasTraits):
             server_name = ''
             base_url = self.base_url
 
-        server = orm.Server(
-            name = server_name,
+        orm_server = orm.Server(
+            name=server_name,
             cookie_name=self.cookie_name,
             base_url=base_url,
         )
-        self.servers.append(server)
-        db.add(self)
+        db.add(orm_server)
         db.commit()
+        server = Server(orm_server=orm_server)
+        self.servers.append(server)
 
         api_token = self.new_api_token()
         db.commit()

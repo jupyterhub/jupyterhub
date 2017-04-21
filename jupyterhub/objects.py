@@ -5,9 +5,17 @@
 
 from urllib.parse import urlparse
 
-from traitlets import HasTraits
-from . import orm
+from tornado import gen
 
+from traitlets import (
+    HasTraits, Instance, Integer, Unicode,
+    default, observe,
+)
+from . import orm
+from .utils import (
+    url_path_join, can_connect, wait_for_server,
+    wait_for_http_server, random_port,
+)
 
 class Server(HasTraits):
     """An object representing an HTTP endpoint.
@@ -28,7 +36,7 @@ class Server(HasTraits):
         """Create a Server from a given URL"""
         urlinfo = urlparse(url)
         proto = urlinfo.scheme
-        ip = urlinfo.hostname
+        ip = urlinfo.hostname or ''
         port = urlinfo.port
         if not port:
             if proto == 'https':
@@ -113,12 +121,12 @@ class Hub(Server):
     def server(self):
         """backward-compat"""
         return self
-    host = Unicode()
+    public_host = Unicode()
 
     @property
     def api_url(self):
         """return the full API url (with proto://host...)"""
-        return url_path_join(self.server.url, 'api')
+        return url_path_join(self.url, 'api')
 
     def __repr__(self):
         return "<%s %s:%s>" % (

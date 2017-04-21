@@ -60,7 +60,7 @@ def test_external_proxy(request, io_loop):
     assert app.proxy_process is None
 
     # test if api service has a root route '/'
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
     assert list(routes.keys()) == ['/']
     
     # add user to the db and start a single user server
@@ -70,7 +70,7 @@ def test_external_proxy(request, io_loop):
     r = api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
     # sets the desired path result
     user_path = unquote(ujoin(app.base_url, 'user/river'))
     if app.subdomain_host:
@@ -83,7 +83,8 @@ def test_external_proxy(request, io_loop):
     proxy = Popen(cmd, env=env)
     wait_for_proxy()
 
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
+
     assert list(routes.keys()) == ['/']
     
     # poke the server to update the proxy
@@ -91,7 +92,7 @@ def test_external_proxy(request, io_loop):
     r.raise_for_status()
 
     # check that the routes are correct
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
     assert sorted(routes.keys()) == ['/', user_path]
 
     # teardown the proxy, and start a new one with different auth and port
@@ -131,7 +132,7 @@ def test_external_proxy(request, io_loop):
     app.proxy.auth_token = new_auth_token
 
     # check that the routes are correct
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
     assert sorted(routes.keys()) == ['/', user_path]
 
 
@@ -152,7 +153,7 @@ def test_check_routes(app, io_loop, username, endpoints):
 
     # check a valid route exists for user
     test_user = app.users[username]
-    before = sorted(io_loop.run_sync(app.proxy.get_routes))
+    before = sorted(io_loop.run_sync(app.proxy.get_all_routes))
     assert unquote(test_user.proxy_path) in before
 
     # check if a route is removed when user deleted
@@ -163,7 +164,7 @@ def test_check_routes(app, io_loop, username, endpoints):
 
     # check if a route exists for user
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
-    after = sorted(io_loop.run_sync(app.proxy.get_routes))
+    after = sorted(io_loop.run_sync(app.proxy.get_all_routes))
     assert unquote(test_user.proxy_path) in after
 
     # check that before and after state are the same

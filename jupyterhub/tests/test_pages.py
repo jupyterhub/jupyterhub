@@ -25,7 +25,7 @@ def get_page(path, app, hub=True, **kw):
 
 def test_root_no_auth(app, io_loop):
     print(app.hub.is_up())
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
     print(routes)
     print(app.hub.server)
     url = ujoin(public_host(app), app.hub.base_url)

@@ -21,7 +21,7 @@ class ProxyAPIHandler(APIHandler):
         This is the same as fetching the routing table directly from the proxy,
         but without clients needing to maintain separate
         """
-        routes = yield self.proxy.get_routes()
+        routes = yield self.proxy.get_all_routes()
         self.write(json.dumps(routes))
     
     @admin_only
