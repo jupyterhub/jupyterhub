@@ -1173,10 +1173,12 @@ class JupyterHub(Application):
         db.commit()
 
     def init_oauth(self):
+        base_url = self.hub.server.base_url
         self.oauth_provider = make_provider(
             self.session_factory,
-            url_prefix=url_path_join(self.hub.server.base_url, 'api/oauth2'),
-            login_url=self.authenticator.login_url(self.hub.server.base_url),
+            url_prefix=url_path_join(base_url, 'api/oauth2'),
+            login_url=url_path_join(base_url, 'login')
+,
         )
 
     def init_proxy(self):
@@ -1307,7 +1309,7 @@ class JupyterHub(Application):
             **jinja_options
         )
 
-        login_url = self.authenticator.login_url(base_url)
+        login_url = url_path_join(base_url, 'login')
         logout_url = self.authenticator.logout_url(base_url)
 
         # if running from git, disable caching of require.js

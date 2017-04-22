@@ -53,7 +53,7 @@ class RootHandler(BaseHandler):
                 url = url_path_join(self.hub.server.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
         else:
-            url = url_path_join(self.hub.server.base_url, 'login')
+            url = self.settings['login_url']
         self.redirect(url)
 
 
