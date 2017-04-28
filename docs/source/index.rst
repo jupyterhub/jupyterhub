@@ -35,28 +35,6 @@ For convenient administration of the Hub, its users, and :doc:`services`
 Contents
 --------
 
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-
-   quickstart
-   getting-started
-   howitworks
-   websecurity
-   rest
-   authenticators
-   spawners
-   services
-   config-examples
-   jupyterhub-deployment-aws
-   upgrading
-   troubleshooting
-   api/index
-   changelog
-   contributor-list
-   gallery-jhub-deployments
-
-
 **User Guide**
 
 * :doc:`quickstart`
@@ -88,6 +66,30 @@ Contents
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
 
+.. _contents:
+
+Full Table of Contents
+----------------------
+
+.. toctree::
+   :numbered:
+   :maxdepth: 2
+
+   quickstart
+   getting-started
+   howitworks
+   websecurity
+   rest
+   authenticators
+   spawners
+   services
+   config-examples
+   upgrading
+   troubleshooting
+   api/index
+   changelog
+   contributor-list
+   gallery-jhub-deployments
 
 Indices and tables
 ------------------
