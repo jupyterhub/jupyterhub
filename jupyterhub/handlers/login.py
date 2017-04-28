@@ -78,7 +78,7 @@ class LoginHandler(BaseHandler):
         # parse the arguments dict
         data = {}
         for arg in self.request.arguments:
-            data[arg] = self.get_argument(arg)
+            data[arg] = self.get_argument(arg, strip=False)
 
         auth_timer = self.statsd.timer('login.authenticate').start()
         username = yield self.authenticate(data)
