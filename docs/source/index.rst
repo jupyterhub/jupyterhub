@@ -66,6 +66,20 @@ Contents
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
 
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`modindex`
+
+
+Questions? Suggestions?
+-----------------------
+
+- `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
+- `Jupyter website <https://jupyter.org>`_
+
 .. _contents:
 
 Full Table of Contents
@@ -75,6 +89,7 @@ Full Table of Contents
    :numbered:
    :maxdepth: 2
 
+   self
    quickstart
    getting-started
    howitworks
@@ -90,16 +105,3 @@ Full Table of Contents
    changelog
    contributor-list
    gallery-jhub-deployments
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-
-
-Questions? Suggestions?
------------------------
-
-- `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
-- `Jupyter website <https://jupyter.org>`_
