@@ -3,6 +3,7 @@
 from urllib.parse import urlencode, urlparse
 
 import requests
+from tornado import gen
 
 from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
@@ -229,6 +230,27 @@ def test_login_fail(app):
         allow_redirects=False,
     )
     assert not r.cookies
+
+
+def test_login_strip(app):
+    """Test that login form doesn't strip whitespace from passwords"""
+    form_data = {
+        'username': 'spiff',
+        'password': ' space man ',
+    }
+    base_url = public_url(app)
+    called_with = []
+    @gen.coroutine
+    def mock_authenticate(handler, data):
+        called_with.append(data)
+
+    with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
+        r = requests.post(base_url + 'hub/login',
+            data=form_data,
+            allow_redirects=False,
+        )
+    
+    assert called_with == [form_data]
 
 
 def test_login_redirect(app, io_loop):
