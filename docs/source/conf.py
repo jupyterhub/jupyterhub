@@ -21,6 +21,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'autodoc_traits',
+    'jupyter_alabaster_theme',
 ]
 
 templates_path = ['_templates']
@@ -66,7 +67,7 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'jupyter_alabaster_theme'
 
 #html_theme_options = {}
 #html_theme_path = []
