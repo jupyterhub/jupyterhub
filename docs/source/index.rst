@@ -50,7 +50,6 @@ Contents
 * :doc:`spawners`
 * :doc:`services`
 * :doc:`config-examples`
-* :doc:`jupyterhub-deployment-aws`
 * :doc:`upgrading`
 * :doc:`troubleshooting`
 
@@ -86,21 +85,11 @@ Full Table of Contents
 ----------------------
 
 .. toctree::
-   :numbered:
    :maxdepth: 2
 
    self
-   quickstart
-   getting-started
-   howitworks
-   websecurity
-   rest
-   authenticators
-   spawners
-   services
-   config-examples
-   upgrading
-   troubleshooting
+   user-guide
+   configuration-guide
    api/index
    changelog
    contributor-list
