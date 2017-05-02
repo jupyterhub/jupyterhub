@@ -5,7 +5,7 @@ implements https://python-oauth2.readthedocs.io/en/latest/store.html
 
 import threading
 
-from oauth2.datatype import Client, AccessToken, AuthorizationCode
+from oauth2.datatype import Client, AuthorizationCode
 from oauth2.error import AuthCodeNotFound, ClientNotFoundError, UserNotAuthenticated
 from oauth2.grant import AuthorizationCodeGrant
 from oauth2.web import AuthorizationCodeGrantSiteAdapter
@@ -17,7 +17,7 @@ from sqlalchemy.orm import scoped_session
 from tornado.escape import url_escape
 
 from .. import orm
-from ..utils import url_path_join, hash_token, compare_token, new_token
+from ..utils import url_path_join, hash_token, compare_token
 
 
 class JupyterHubSiteAdapter(AuthorizationCodeGrantSiteAdapter):
