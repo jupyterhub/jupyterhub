@@ -36,7 +36,10 @@ class LoginHandler(BaseHandler):
                 login_error=login_error,
                 custom_html=self.authenticator.custom_html,
                 login_url=self.settings['login_url'],
-                authenticator_login_url=self.authenticator.login_url(self.hub.server.base_url),
+                authenticator_login_url=url_concat(
+                    self.authenticator.login_url(self.hub.server.base_url),
+                    {'next': self.get_argument('next', '')},
+                ),
         )
 
     def get(self):
