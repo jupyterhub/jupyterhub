@@ -506,8 +506,65 @@ class Service(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
+class Hashed(object):
+    """Mixin for tables with hashed tokens"""
+    prefix_length = 4
+    algorithm = "sha512"
+    rounds = 16384
+    salt_bytes = 8
+    min_length = 8
 
-class APIToken(Base):
+    @property
+    def token(self):
+        raise AttributeError("token is write-only")
+
+    @token.setter
+    def token(self, token):
+        """Store the hashed value and prefix for a token"""
+        self.prefix = token[:self.prefix_length]
+        self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
+
+    def match(self, token):
+        """Is this my token?"""
+        return compare_token(self.hashed, token)
+    
+    @classmethod
+    def check_token(cls, db, token):
+        """Check if a token is acceptable"""
+        if len(token) < cls.min_length:
+            raise ValueError("Tokens must be at least %i characters, got %r" % (
+                cls.min_length, token)
+            )
+        found = cls.find(db, token)
+        if found:
+            raise ValueError("Collision on token: %s..." % token[:cls.prefix_length])
+
+    @classmethod
+    def find_prefix(cls, db, token):
+        """Start the query for matching token.
+        
+        Returns an SQLAlchemy query already filtered by prefix-matches.
+        """
+        prefix = token[:cls.prefix_length]
+        # since we can't filter on hashed values, filter on prefix
+        # so we aren't comparing with all tokens
+        return db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+
+    @classmethod
+    def find(cls, db, token):
+        """Find a token object by value.
+
+        Returns None if not found.
+
+        `kind='user'` only returns API tokens for users
+        `kind='service'` only returns API tokens for services
+        """
+        prefix_match = cls.find_prefix(db, token)
+        for orm_token in prefix_match:
+            if orm_token.match(token):
+                return orm_token
+
+class APIToken(Hashed, Base):
     """An API token"""
     __tablename__ = 'api_tokens'
 
@@ -521,21 +578,7 @@ class APIToken(Base):
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(1023))
-    prefix = Column(Unicode(1023))
-    prefix_length = 4
-    algorithm = "sha512"
-    rounds = 16384
-    salt_bytes = 8
-
-    @property
-    def token(self):
-        raise AttributeError("token is write-only")
-
-    @token.setter
-    def token(self, token):
-        """Store the hashed value and prefix for a token"""
-        self.prefix = token[:self.prefix_length]
-        self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
+    prefix = Column(Unicode(16))
 
     def __repr__(self):
         if self.user is not None:
@@ -564,10 +607,7 @@ class APIToken(Base):
         `kind='user'` only returns API tokens for users
         `kind='service'` only returns API tokens for services
         """
-        prefix = token[:cls.prefix_length]
-        # since we can't filter on hashed values, filter on prefix
-        # so we aren't comparing with all tokens
-        prefix_match = db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+        prefix_match = cls.find_prefix(db, token)
         if kind == 'user':
             prefix_match = prefix_match.filter(cls.user_id != None)
         elif kind == 'service':
@@ -578,10 +618,6 @@ class APIToken(Base):
             if orm_token.match(token):
                 return orm_token
 
-    def match(self, token):
-        """Is this my token?"""
-        return compare_token(self.hashed, token)
-
     @classmethod
     def new(cls, token=None, user=None, service=None):
         """Generate a new API token for a user or service"""
@@ -591,12 +627,8 @@ class APIToken(Base):
         if token is None:
             token = new_token()
         else:
-            if len(token) < 8:
-                raise ValueError("Tokens must be at least 8 characters, got %r" % token)
-            found = APIToken.find(db, token)
-            if found:
-                raise ValueError("Collision on token: %s..." % token[:4])
-        orm_token = APIToken(token=token)
+            cls.check_token(db, token)
+        orm_token = cls(token=token)
         if user:
             assert user.id is not None
             orm_token.user_id = user.id
@@ -622,19 +654,29 @@ class GrantType(enum.Enum):
     refresh_token = 'refresh_token'
 
 
-class OAuthAccessToken(Base):
+class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     client_id = Column(Unicode(1023))
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
-    refresh_token = Column(Unicode(36))
+    refresh_token = Column(Unicode(64))
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     user = relationship(User)
-    api_token_id = Column(Integer, ForeignKey('api_tokens.id', ondelete='CASCADE'))
-    api_token = relationship(APIToken, backref='oauth_token')
+    session = None # for API-equivalence with APIToken
+
+    # from Hashed
+    hashed = Column(Unicode(64))
+    prefix = Column(Unicode(16))
+    
+    def __repr__(self):
+        return "<{cls}('{prefix}...', user='{user}'>".format(
+            cls=self.__class__.__name__,
+            user=self.user and self.user.name,
+            prefix=self.prefix,
+        )
 
 
 class OAuthCode(Base):
