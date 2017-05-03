@@ -27,7 +27,7 @@ def db():
     """Get a db session"""
     global _db
     if _db is None:
-        _db = orm.new_session_factory('sqlite:///:memory:', echo=True)()
+        _db = orm.new_session_factory('sqlite:///:memory:')()
         user = orm.User(
             name=getuser(),
         )
@@ -68,30 +68,32 @@ def app(request):
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     poll_interval = 1
 
+_mock_service_counter = 0
 
 def _mockservice(request, app, url=False):
-    name = 'mock-service'
+    global _mock_service_counter
+    _mock_service_counter += 1
+    name = 'mock-service-%i' % _mock_service_counter
     spec = {
         'name': name,
         'command': mockservice_cmd,
         'admin': True,
     }
     if url:
-        spec['url'] = 'http://127.0.0.1:%i' % random_port(),
+        spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
     with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
-        app.services = [{
-            'name': name,
-            'command': mockservice_cmd,
-            'url': 'http://127.0.0.1:%i' % random_port(),
-            'admin': True,
-        }]
+        app.services = [spec]
         app.init_services()
         app.io_loop.add_callback(app.proxy.add_all_services, app._service_map)
         assert name in app._service_map
         service = app._service_map[name]
         app.io_loop.add_callback(service.start)
-        request.addfinalizer(service.stop)
+        def cleanup():
+            service.stop()
+            app.services[:] = []
+            app._service_map.clear()
+        request.addfinalizer(cleanup)
         for i in range(20):
             if not getattr(service, 'proc', False):
                 time.sleep(0.2)

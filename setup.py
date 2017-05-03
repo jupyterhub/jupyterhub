@@ -268,7 +268,7 @@ def js_css_first(cls, strict=True):
 class bdist_egg_disabled(bdist_egg):
     """Disabled version of bdist_egg
 
-    Prevents setup.py install performing setuptools' default easy_install,
+    Prevents setup.py install from performing setuptools' default easy_install,
     which it should never ever do.
     """
     def run(self):

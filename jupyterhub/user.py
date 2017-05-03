@@ -4,12 +4,12 @@
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
+from oauth2.error import ClientNotFoundError
+from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
 
-from sqlalchemy import inspect
-
-from .utils import url_path_join
+from .utils import url_path_join, default_server_name, new_token
 
 from . import orm
 from traitlets import HasTraits, Any, Dict, observe, default
@@ -117,6 +117,8 @@ class User(HasTraits):
         super().__init__(**kwargs)
 
         hub = self.db.query(orm.Hub).first()
+        
+        self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
         self.cookie_name = '%s-%s' % (hub.server.cookie_name, quote(self.name, safe=''))
         self.base_url = url_path_join(
@@ -147,7 +149,7 @@ class User(HasTraits):
     def __repr__(self):
         return repr(self.orm_user)
 
-    @property
+    @property # FIX-ME CHECK IF STILL NEEDED
     def running(self):
         """property for whether a user has a running server"""
         if self.spawn_pending or self.stop_pending:
@@ -198,11 +200,33 @@ class User(HasTraits):
 
     @gen.coroutine
     def spawn(self, options=None):
-        """Start the user's spawner"""
+        """Start the user's spawner
+        
+        depending from the value of JupyterHub.allow_named_servers
+        
+        if False:
+        JupyterHub expects only one single-server per user
+        url of the server will be /user/:name
+        
+        if True:
+        JupyterHub expects more than one single-server per user
+        url of the server will be /user/:name/:server_name
+        """
         db = self.db
+        if self.allow_named_servers:
+            if options is not None and 'server_name' in options:
+                server_name = options['server_name']
+            else:
+                server_name = default_server_name(self)
+            base_url = url_path_join(self.base_url, server_name)
+        else:
+            server_name = ''
+            base_url = self.base_url
+
         server = orm.Server(
+            name = server_name,
             cookie_name=self.cookie_name,
-            base_url=self.base_url,
+            base_url=base_url,
         )
         self.servers.append(server)
         db.add(self)
@@ -212,10 +236,33 @@ class User(HasTraits):
         db.commit()
 
         spawner = self.spawner
+        # Passing server_name to the spawner
+        spawner.server_name = server_name
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
+
+        # create API and OAuth tokens
         spawner.api_token = api_token
+        spawner.admin_access = self.settings.get('admin_access', False)
+        client_id = 'user-%s' % self.escaped_name
+        if server_name:
+            client_id = '%s-%s' % (client_id, server_name)
+        spawner.oauth_client_id = client_id
+        oauth_provider = self.settings.get('oauth_provider')
+        if oauth_provider:
+            client_store = oauth_provider.client_authenticator.client_store
+            try:
+                oauth_client = client_store.fetch_by_client_id(client_id)
+            except ClientNotFoundError:
+                oauth_client = None
+            # create a new OAuth client + secret on every launch,
+            # except for resuming containers.
+            if oauth_client is None or not spawner.will_resume:
+                client_store.add_client(client_id, api_token,
+                                        url_path_join(self.url, 'oauth_callback'),
+                                        )
+                db.commit()
 
         # trigger pre-spawn hook on authenticator
         authenticator = self.authenticator

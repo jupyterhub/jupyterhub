@@ -3,9 +3,12 @@
 from urllib.parse import urlencode, urlparse
 
 import requests
+from tornado import gen
 
+from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
 from .. import orm
+from ..auth import Authenticator
 
 import mock
 from .mocking import FormSpawner, public_url, public_host
@@ -114,6 +117,10 @@ def test_spawn_page(app):
         assert r.url.endswith('/spawn')
         assert FormSpawner.options_form in r.text
 
+        r = get_page('spawn?next=foo', app, cookies=cookies)
+        assert r.url.endswith('/spawn?next=foo')
+        assert FormSpawner.options_form in r.text
+
 def test_spawn_form(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.server.base_url)
@@ -122,11 +129,12 @@ def test_spawn_form(app, io_loop):
         u = app.users[orm_u]
         io_loop.run_sync(u.stop)
     
-        r = requests.post(ujoin(base_url, 'spawn'), cookies=cookies, data={
+        r = requests.post(ujoin(base_url, 'spawn?next=/user/jones/tree'), cookies=cookies, data={
             'bounds': ['-1', '1'],
             'energy': '511keV',
         })
         r.raise_for_status()
+        assert r.history
         print(u.spawner)
         print(u.spawner.user_options)
         assert u.spawner.user_options == {
@@ -224,6 +232,27 @@ def test_login_fail(app):
     assert not r.cookies
 
 
+def test_login_strip(app):
+    """Test that login form doesn't strip whitespace from passwords"""
+    form_data = {
+        'username': 'spiff',
+        'password': ' space man ',
+    }
+    base_url = public_url(app)
+    called_with = []
+    @gen.coroutine
+    def mock_authenticate(handler, data):
+        called_with.append(data)
+
+    with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
+        r = requests.post(base_url + 'hub/login',
+            data=form_data,
+            allow_redirects=False,
+        )
+    
+    assert called_with == [form_data]
+
+
 def test_login_redirect(app, io_loop):
     cookies = app.login_user('river')
     user = app.users['river']
@@ -246,6 +275,28 @@ def test_login_redirect(app, io_loop):
     r.raise_for_status()
     assert r.status_code == 302
     assert r.headers['Location'].endswith('/hub/admin')
+
+
+def test_auto_login(app, io_loop, request):
+    class DummyLoginHandler(BaseHandler):
+        def get(self):
+            self.write('ok!')
+    base_url = public_url(app) + '/'
+    app.tornado_application.add_handlers(".*$", [
+        (ujoin(app.hub.server.base_url, 'dummy'), DummyLoginHandler),
+    ])
+    # no auto_login: end up at /hub/login
+    r = requests.get(base_url)
+    assert r.url == public_url(app, path='hub/login')
+    # enable auto_login: redirect from /hub/login to /hub/dummy
+    authenticator = Authenticator(auto_login=True)
+    authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
+
+    with mock.patch.dict(app.tornado_application.settings, {
+        'authenticator': authenticator,
+    }):
+        r = requests.get(base_url)
+    assert r.url == public_url(app, path='hub/dummy')
 
 
 def test_logout(app):

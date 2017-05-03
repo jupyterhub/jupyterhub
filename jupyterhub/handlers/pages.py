@@ -7,6 +7,7 @@ from http.client import responses
 
 from jinja2 import TemplateNotFound
 from tornado import web, gen
+from tornado.httputil import url_concat
 
 from .. import orm
 from ..utils import admin_only, url_path_join
@@ -52,7 +53,7 @@ class RootHandler(BaseHandler):
                 url = url_path_join(self.hub.server.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
         else:
-            url = url_path_join(self.hub.server.base_url, 'login')
+            url = self.settings['login_url']
         self.redirect(url)
 
 
@@ -66,8 +67,13 @@ class HomeHandler(BaseHandler):
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             yield user.spawner.poll_and_notify()
+            url = user.url
+        else:
+            url = url_concat(url_path_join(self.base_url, 'spawn'),
+                             {'next': self.request.uri})
         html = self.render_template('home.html',
             user=user,
+            url=url,
         )
         self.finish(html)
 
@@ -85,6 +91,7 @@ class SpawnHandler(BaseHandler):
             user=user,
             spawner_options_form=user.spawner.options_form,
             error_message=message,
+            url=self.request.uri,
         )
 
     @web.authenticated
@@ -126,6 +133,13 @@ class SpawnHandler(BaseHandler):
             return
         self.set_login_cookie(user)
         url = user.url
+
+        next_url = self.get_argument('next', '')
+        if next_url and not next_url.startswith('/'):
+            self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
+        elif next_url:
+            url = next_url
+
         self.redirect(url)
 
 class AdminHandler(BaseHandler):

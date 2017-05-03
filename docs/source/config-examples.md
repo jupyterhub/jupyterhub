@@ -5,6 +5,7 @@ configurations:
 
 - Example with GitHub OAuth
 - Example with nginx reverse proxy
+- JupyterHub deployment on AWS with NGINX
 
 
 ## Example with GitHub OAuth
@@ -35,6 +36,9 @@ if not os.path.exists(ssl_dir):
     os.makedirs(ssl_dir)
 
 
+# Allows multiple single-server per user
+c.JupyterHub.allow_named_servers = True
+
 # https on :443
 c.JupyterHub.port = 443
 c.JupyterHub.ssl_key = pjoin(ssl_dir, 'ssl.key')
@@ -63,7 +67,7 @@ c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
 # start single-user notebook servers in ~/assignments,
 # with ~/assignments/Welcome.ipynb as the default landing page
 # this config could also be put in
-# /etc/ipython/ipython_notebook_config.py
+# /etc/jupyter/jupyter_notebook_config.py
 c.Spawner.notebook_dir = '~/assignments'
 c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```

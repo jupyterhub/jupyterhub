@@ -321,10 +321,11 @@ as follows:
 c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/cookie_secret'
 ```
 
-The content of this file should be a long random string encoded in MIME Base64. An example would be to generate this file as:
+The content of this file should be 32 random bytes, encoded as hex.
+An example would be to generate this file with:
 
 ```bash
-openssl rand -base64 2048 > /srv/jupyterhub/cookie_secret
+openssl rand -hex 32 > /srv/jupyterhub/cookie_secret
 ```
 
 In most deployments of JupyterHub, you should point this to a secure location on the file
@@ -339,7 +340,7 @@ the `JPY_COOKIE_SECRET` environment variable, which is a hex-encoded string. You
 can set it this way:
 
 ```bash
-export JPY_COOKIE_SECRET=`openssl rand -hex 1024`
+export JPY_COOKIE_SECRET=`openssl rand -hex 32`
 ```
 
 For security reasons, this environment variable should only be visible to the Hub.
@@ -350,7 +351,7 @@ You can also set the cookie secret in the configuration file itself,`jupyterhub_
 as a binary string:
 
 ```python
-c.JupyterHub.cookie_secret = bytes.fromhex('VERY LONG SECRET HEX STRING')
+c.JupyterHub.cookie_secret = bytes.fromhex('64 CHAR HEX STRING')
 ```
 
 ### Proxy authentication token
@@ -410,19 +411,26 @@ started.
 
 ### Managing Hub administrators
 
-Admin users of JupyterHub have the ability to take actions on users' behalf,
-such as stopping and restarting their servers,
-and adding and removing new users from the whitelist.
-Any users in the admin list are automatically added to the whitelist,
-if they are not already present.
-The set of initial Admin users can configured as follows:
+#### Configuring admins (`admin_users`)
+
+Admin users of JupyterHub, `admin_users`, have the ability to add and remove
+users from the user `whitelist` or to take actions on the users' behalf,
+such as stopping and restarting their servers.
+
+A set of initial admin users, `admin_users` can configured be as follows:
 
 ```python
 c.Authenticator.admin_users = {'mal', 'zoe'}
 ```
+Users in the admin list are automatically added to the user `whitelist`,
+if they are not already present.
 
-If `JupyterHub.admin_access` is True (not default),
-then admin users have permission to log in *as other users* on their respective machines, for debugging.
+#### Admin access to other users' notebook servers (`admin_access`)
+
+By default the admin users do not have permission to log in *as other users*
+since the default `JupyterHub.admin_access` setting is False.
+If `JupyterHub.admin_access` is set to True, then admin users have permission
+to log in *as other users* on their respective machines, for debugging.
 **You should make sure your users know if admin_access is enabled.**
 
 Note: additional configuration examples are provided in this guide's
@@ -486,9 +494,9 @@ c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
 Since the single-user server extends the notebook server application,
-it still loads configuration from the `ipython_notebook_config.py` config file.
-Each user may have one of these files in `$HOME/.ipython/profile_default/`.
-IPython also supports loading system-wide config files from `/etc/ipython/`,
+it still loads configuration from the `jupyter_notebook_config.py` config file.
+Each user may have one of these files in `$HOME/.jupyter/`.
+Jupyter also supports loading system-wide config files from `/etc/jupyter/`,
 which is the place to put configuration that you want to affect all of your users.
 
 ## External services

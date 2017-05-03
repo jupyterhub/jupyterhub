@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from datetime import datetime
+import enum
 import json
 
 from tornado import gen
@@ -14,7 +15,7 @@ from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy import (
     inspect,
     Column, Integer, ForeignKey, Unicode, Boolean,
-    DateTime,
+    DateTime, Enum
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship, backref
@@ -64,6 +65,8 @@ class Server(Base):
     """
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
+    
+    name = Column(Unicode(32), default='') # must be unique between user's servers
     proto = Column(Unicode(15), default='http')
     ip = Column(Unicode(255), default='')  # could also be a DNS name
     port = Column(Integer, default=random_port)
@@ -390,8 +393,6 @@ class User(Base):
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
-    other_user_cookies = set([])
-
     @property
     def server(self):
         """Returns the first element of servers.
@@ -505,27 +506,13 @@ class Service(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
-
-class APIToken(Base):
-    """An API token"""
-    __tablename__ = 'api_tokens'
-
-    # _constraint = ForeignKeyConstraint(['user_id', 'server_id'], ['users.id', 'services.id'])
-    @declared_attr
-    def user_id(cls):
-        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
-
-    @declared_attr
-    def service_id(cls):
-        return Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
-
-    id = Column(Integer, primary_key=True)
-    hashed = Column(Unicode(1023))
-    prefix = Column(Unicode(1023))
+class Hashed(object):
+    """Mixin for tables with hashed tokens"""
     prefix_length = 4
     algorithm = "sha512"
     rounds = 16384
     salt_bytes = 8
+    min_length = 8
 
     @property
     def token(self):
@@ -536,6 +523,62 @@ class APIToken(Base):
         """Store the hashed value and prefix for a token"""
         self.prefix = token[:self.prefix_length]
         self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
+
+    def match(self, token):
+        """Is this my token?"""
+        return compare_token(self.hashed, token)
+    
+    @classmethod
+    def check_token(cls, db, token):
+        """Check if a token is acceptable"""
+        if len(token) < cls.min_length:
+            raise ValueError("Tokens must be at least %i characters, got %r" % (
+                cls.min_length, token)
+            )
+        found = cls.find(db, token)
+        if found:
+            raise ValueError("Collision on token: %s..." % token[:cls.prefix_length])
+
+    @classmethod
+    def find_prefix(cls, db, token):
+        """Start the query for matching token.
+        
+        Returns an SQLAlchemy query already filtered by prefix-matches.
+        """
+        prefix = token[:cls.prefix_length]
+        # since we can't filter on hashed values, filter on prefix
+        # so we aren't comparing with all tokens
+        return db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+
+    @classmethod
+    def find(cls, db, token):
+        """Find a token object by value.
+
+        Returns None if not found.
+
+        `kind='user'` only returns API tokens for users
+        `kind='service'` only returns API tokens for services
+        """
+        prefix_match = cls.find_prefix(db, token)
+        for orm_token in prefix_match:
+            if orm_token.match(token):
+                return orm_token
+
+class APIToken(Hashed, Base):
+    """An API token"""
+    __tablename__ = 'api_tokens'
+
+    @declared_attr
+    def user_id(cls):
+        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+
+    @declared_attr
+    def service_id(cls):
+        return Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
+
+    id = Column(Integer, primary_key=True)
+    hashed = Column(Unicode(1023))
+    prefix = Column(Unicode(16))
 
     def __repr__(self):
         if self.user is not None:
@@ -564,10 +607,7 @@ class APIToken(Base):
         `kind='user'` only returns API tokens for users
         `kind='service'` only returns API tokens for services
         """
-        prefix = token[:cls.prefix_length]
-        # since we can't filter on hashed values, filter on prefix
-        # so we aren't comparing with all tokens
-        prefix_match = db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+        prefix_match = cls.find_prefix(db, token)
         if kind == 'user':
             prefix_match = prefix_match.filter(cls.user_id != None)
         elif kind == 'service':
@@ -578,10 +618,6 @@ class APIToken(Base):
             if orm_token.match(token):
                 return orm_token
 
-    def match(self, token):
-        """Is this my token?"""
-        return compare_token(self.hashed, token)
-
     @classmethod
     def new(cls, token=None, user=None, service=None):
         """Generate a new API token for a user or service"""
@@ -591,12 +627,8 @@ class APIToken(Base):
         if token is None:
             token = new_token()
         else:
-            if len(token) < 8:
-                raise ValueError("Tokens must be at least 8 characters, got %r" % token)
-            found = APIToken.find(db, token)
-            if found:
-                raise ValueError("Collision on token: %s..." % token[:4])
-        orm_token = APIToken(token=token)
+            cls.check_token(db, token)
+        orm_token = cls(token=token)
         if user:
             assert user.id is not None
             orm_token.user_id = user.id
@@ -606,6 +638,63 @@ class APIToken(Base):
         db.add(orm_token)
         db.commit()
         return token
+
+
+#------------------------------------
+# OAuth tables
+#------------------------------------
+
+
+class GrantType(enum.Enum):
+    # we only use authorization_code for now
+    authorization_code = 'authorization_code'
+    implicit = 'implicit'
+    password = 'password'
+    client_credentials = 'client_credentials'
+    refresh_token = 'refresh_token'
+
+
+class OAuthAccessToken(Hashed, Base):
+    __tablename__ = 'oauth_access_tokens'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    client_id = Column(Unicode(1023))
+    grant_type = Column(Enum(GrantType), nullable=False)
+    expires_at = Column(Integer)
+    refresh_token = Column(Unicode(64))
+    refresh_expires_at = Column(Integer)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
+    user = relationship(User)
+    session = None # for API-equivalence with APIToken
+
+    # from Hashed
+    hashed = Column(Unicode(64))
+    prefix = Column(Unicode(16))
+    
+    def __repr__(self):
+        return "<{cls}('{prefix}...', user='{user}'>".format(
+            cls=self.__class__.__name__,
+            user=self.user and self.user.name,
+            prefix=self.prefix,
+        )
+
+
+class OAuthCode(Base):
+    __tablename__ = 'oauth_codes'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    client_id = Column(Unicode(1023))
+    code = Column(Unicode(36))
+    expires_at = Column(Integer)
+    redirect_uri = Column(Unicode(1023))
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
+
+
+class OAuthClient(Base):
+    __tablename__ = 'oauth_clients'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    identifier = Column(Unicode(1023), unique=True)
+    secret = Column(Unicode(1023))
+    redirect_uri = Column(Unicode(1023))
 
 
 def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):

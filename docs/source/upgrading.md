@@ -28,7 +28,7 @@ where traditional RDBMS may be a better choice](https://sqlite.org/whentouse.htm
 
 ## The upgrade process
 
-Four fundamental process steps are needed when upgrading JupyterHub and its
+Five fundamental process steps are needed when upgrading JupyterHub and its
 database:
 
 1. Backup JupyterHub database

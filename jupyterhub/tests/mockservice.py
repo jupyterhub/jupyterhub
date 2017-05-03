@@ -11,13 +11,15 @@ Handlers allow:
 """
 
 import json
+import pprint
 import os
+import sys
 from urllib.parse import urlparse
 
 import requests
 from tornado import web, httpserver, ioloop
 
-from jupyterhub.services.auth import HubAuthenticated
+from jupyterhub.services.auth import HubAuthenticated, HubOAuthenticated, HubOAuthCallbackHandler
 
 
 class EchoHandler(web.RequestHandler):
@@ -47,21 +49,37 @@ class APIHandler(web.RequestHandler):
 
 
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
-    """Reply with the name of the user who made the request."""
+    """Reply with the name of the user who made the request.
+    
+    Uses deprecated cookie login
+    """
+    @web.authenticated
+    def get(self):
+        self.write(self.get_current_user())
+
+class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
+    """Reply with the name of the user who made the request.
+    
+    Uses OAuth login flow
+    """
     @web.authenticated
     def get(self):
         self.write(self.get_current_user())
 
 
 def main():
-    if os.environ['JUPYTERHUB_SERVICE_URL']:
+    pprint.pprint(dict(os.environ), stream=sys.stderr)
+
+    if os.getenv('JUPYTERHUB_SERVICE_URL'):
         url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
         app = web.Application([
             (r'.*/env', EnvHandler),
             (r'.*/api/(.*)', APIHandler),
             (r'.*/whoami/?', WhoAmIHandler),
+            (r'.*/owhoami/?', OWhoAmIHandler),
+            (r'.*/oauth_callback', HubOAuthCallbackHandler),
             (r'.*', EchoHandler),
-        ])
+        ], cookie_secret=os.urandom(32))
 
         server = httpserver.HTTPServer(app)
         server.listen(url.port, url.hostname)
@@ -69,6 +87,7 @@ def main():
         ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:
         print('\nInterrupted')
+
 
 if __name__ == '__main__':
     from tornado.options import parse_command_line

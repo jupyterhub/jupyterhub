@@ -27,7 +27,7 @@ from traitlets import (
 )
 
 from .traitlets import Command, ByteSpecification
-from .utils import random_port
+from .utils import random_port, url_path_join
 
 
 class Spawner(LoggingConfigurable):
@@ -50,7 +50,9 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     authenticator = Any()
+    admin_access = Bool(False)
     api_token = Unicode()
+    oauth_client_id = Unicode()
 
     will_resume = Bool(False,
         help="""Whether the Spawner will resume on next start
@@ -77,9 +79,13 @@ class Spawner(LoggingConfigurable):
 
         Defaults to `0`, which uses a randomly allocated port number each time.
 
+        If set to a non-zero value, all Spawners will use the same port,
+        which only makes sense if each server is on a different address,
+        e.g. in containers.
+
         New in version 0.7.
         """
-    )
+    ).tag(config=True)
 
     start_timeout = Integer(60,
         help="""
@@ -125,6 +131,8 @@ class Spawner(LoggingConfigurable):
         The surrounding `<form>` element and the submit button are already provided.
 
         For example:
+        
+        .. code:: html
 
             Set your key:
             <input name="key" val="default_key"></input>
@@ -204,6 +212,7 @@ class Spawner(LoggingConfigurable):
     ).tag(config=True)
 
     cmd = Command(['jupyterhub-singleuser'],
+        allow_none=True,
         help="""
         The command used for starting the single-user server.
 
@@ -250,6 +259,7 @@ class Spawner(LoggingConfigurable):
         `{username}` will be expanded to the user's username
 
         Example uses:
+
         - You can set `notebook_dir` to `/` and `default_url` to `/home/{username}` to allow people to
           navigate the whole filesystem from their notebook, but still start in their home directory.
         - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.
@@ -258,7 +268,6 @@ class Spawner(LoggingConfigurable):
 
     @validate('notebook_dir', 'default_url')
     def _deprecate_percent_u(self, proposal):
-        print(proposal)
         v = proposal['value']
         if '%U' in v:
             self.log.warning("%%U for username in %s is deprecated in JupyterHub 0.7, use {username}",
@@ -418,6 +427,13 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
+        if self.admin_access:
+            env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
+        # OAuth settings
+        env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
+        env['JUPYTERHUB_HOST'] = self.hub.host
+        env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
+            url_path_join(self.user.url, 'oauth_callback')
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -479,7 +495,6 @@ class Spawner(LoggingConfigurable):
         """
         args = [
             '--user="%s"' % self.user.name,
-            '--cookie-name="%s"' % self.user.server.cookie_name,
             '--base-url="%s"' % self.user.server.base_url,
             '--hub-host="%s"' % self.hub.host,
             '--hub-prefix="%s"' % self.hub.server.base_url,
@@ -708,6 +723,37 @@ class LocalProcessSpawner(Spawner):
         """
     ).tag(config=True)
 
+    popen_kwargs = Dict(
+        help="""Extra keyword arguments to pass to Popen
+
+        when spawning single-user servers.
+
+        For example::
+
+            popen_kwargs = dict(shell=True)
+
+        """
+    ).tag(config=True)
+    shell_cmd = Command(minlen=0,
+        help="""Specify a shell command to launch.
+
+        The single-user command will be appended to this list,
+        so it sould end with `-c` (for bash) or equivalent.
+
+        For example::
+
+            c.LocalProcessSpawner.shell_cmd = ['bash', '-l', '-c']
+
+        to launch with a bash login shell, which would set up the user's own complete environment.
+
+        .. warning::
+
+            Using shell_cmd gives users control over PATH, etc.,
+            which could change what the jupyterhub-singleuser launch command does.
+            Only use this for trusted users.
+        """
+    )
+
     proc = Instance(Popen,
         allow_none=True,
         help="""
@@ -782,12 +828,22 @@ class LocalProcessSpawner(Spawner):
         cmd.extend(self.cmd)
         cmd.extend(self.get_args())
 
+        if self.shell_cmd:
+            # using shell_cmd (e.g. bash -c),
+            # add our cmd list as the last (single) argument:
+            cmd = self.shell_cmd + [' '.join(pipes.quote(s) for s in cmd)]
+
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
+        
+        popen_kwargs = dict(
+            preexec_fn=self.make_preexec_fn(self.user.name),
+            start_new_session=True,  # don't forward signals
+        )
+        popen_kwargs.update(self.popen_kwargs)
+        # don't let user config override env
+        popen_kwargs['env'] = env
         try:
-            self.proc = Popen(cmd, env=env,
-                preexec_fn=self.make_preexec_fn(self.user.name),
-                start_new_session=True,  # don't forward signals
-            )
+            self.proc = Popen(cmd, **popen_kwargs)
         except PermissionError:
             # use which to get abspath
             script = shutil.which(cmd[0]) or cmd[0]

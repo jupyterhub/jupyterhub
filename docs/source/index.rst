@@ -29,7 +29,7 @@ JupyterHub's basic flow of operations includes:
 - The Hub configures the proxy to forward URL prefixes to the single-user notebook servers
 
 For convenient administration of the Hub, its users, and :doc:`services`
-(added in version 7.0), JupyterHub also provides a
+(added in version 0.7), JupyterHub also provides a
 `REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default>`__.
 
 Contents
@@ -60,6 +60,7 @@ Contents
 * :doc:`spawners`
 * :doc:`services`
 * :doc:`config-examples`
+* :doc:`jupyterhub-deployment-aws`
 * :doc:`upgrading`
 * :doc:`troubleshooting`
 
@@ -72,6 +73,7 @@ Contents
    spawners
    services
    config-examples
+   jupyterhub-deployment-aws
    upgrading
    troubleshooting
 
@@ -92,6 +94,7 @@ Contents
 
 * :doc:`changelog`
 * :doc:`contributor-list`
+* :doc:`gallery-jhub-deployments`
 
 .. toctree::
    :maxdepth: 2
@@ -100,6 +103,7 @@ Contents
 
    changelog
    contributor-list
+   gallery-jhub-deployments
 
 
 Indices and tables

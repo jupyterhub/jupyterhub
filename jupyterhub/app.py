@@ -6,16 +6,18 @@
 
 import atexit
 import binascii
+from datetime import datetime
+from getpass import getuser
 import logging
 import os
+import re
 import shutil
 import signal
 import socket
-import sys
-import threading
-from datetime import datetime
-from getpass import getuser
 from subprocess import Popen
+import sys
+from textwrap import dedent
+import threading
 from urllib.parse import urlparse
 
 if sys.version_info[:2] < (3, 3):
@@ -49,6 +51,7 @@ from .services.service import Service
 
 from . import dbutil, orm
 from .user import User, UserDict
+from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .traitlets import URLPrefix, Command
@@ -99,8 +102,9 @@ flags = {
     ),
 }
 
-SECRET_BYTES = 2048  # the number of bytes to use when generating new secrets
+COOKIE_SECRET_BYTES = 32  # the number of bytes to use when generating new cookie secrets
 
+HEX_RE = re.compile('^([a-f0-9]{2})+$', re.IGNORECASE)
 
 class NewToken(Application):
     """Generate and print a new API token"""
@@ -409,11 +413,20 @@ class JupyterHub(Application):
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
+        
+        Should be exactly 256 bits (32 bytes).
         """
     ).tag(
         config=True,
         env='JPY_COOKIE_SECRET',
     )
+    @observe('cookie_secret')
+    def _cookie_secret_check(self, change):
+        secret = change.new
+        if len(secret) > COOKIE_SECRET_BYTES:
+            self.log.warning("Cookie secret is %i bytes.  It should be %i.",
+                len(secret), COOKIE_SECRET_BYTES,
+            )
 
     cookie_secret_file = Unicode('jupyterhub_cookie_secret',
         help="""File in which to store the cookie secret."""
@@ -489,7 +502,11 @@ class JupyterHub(Application):
     @default('authenticator')
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
-
+    
+    allow_multiple_servers = Bool(False,
+        help="Allow multiple single-server per user"
+    ).tag(config=True)
+    
     # class for spawning single-user servers
     spawner_class = Type(LocalProcessSpawner, Spawner,
         help="""The class to use for spawning single-user servers.
@@ -736,25 +753,42 @@ class JupyterHub(Application):
                 if perm & 0o07:
                     raise ValueError("cookie_secret_file can be read or written by anybody")
                 with open(secret_file) as f:
-                    b64_secret = f.read()
-                secret = binascii.a2b_base64(b64_secret)
+                    text_secret = f.read().strip()
+                if HEX_RE.match(text_secret):
+                    # >= 0.8, use 32B hex
+                    secret = binascii.a2b_hex(text_secret)
+                else:
+                    # old b64 secret with a bunch of ignored bytes
+                    secret = binascii.a2b_base64(text_secret)
+                    self.log.warning(dedent("""
+                    Old base64 cookie-secret detected in {0}.
+
+                    JupyterHub >= 0.8 expects 32B hex-encoded cookie secret
+                    for tornado's sha256 cookie signing.
+
+                    To generate a new secret:
+
+                        openssl rand -hex 32 > "{0}"
+                    """).format(secret_file))
             except Exception as e:
                 self.log.error(
                     "Refusing to run JupyterHub with invalid cookie_secret_file. "
                     "%s error was: %s",
                     secret_file, e)
                 self.exit(1)
+
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
-            secret = os.urandom(SECRET_BYTES)
+            secret = os.urandom(COOKIE_SECRET_BYTES)
 
         if secret_file and secret_from == 'new':
             # if we generated a new secret, store it in the secret_file
             self.log.info("Writing %s to %s", trait_name, secret_file)
-            b64_secret = binascii.b2a_base64(secret).decode('ascii')
+            text_secret = binascii.b2a_hex(secret).decode('ascii')
             with open(secret_file, 'w') as f:
-                f.write(b64_secret)
+                f.write(text_secret)
+                f.write('\n')
             try:
                 os.chmod(secret_file, 0o600)
             except OSError:
@@ -1007,6 +1041,7 @@ class JupyterHub(Application):
             host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
         else:
             domain = host = ''
+        client_store = self.oauth_provider.client_authenticator.client_store
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
@@ -1024,6 +1059,7 @@ class JupyterHub(Application):
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,
                 hub_api_url=self.hub.api_url,
+                hub=self.hub,
             )
 
             traits = service.traits(input=True)
@@ -1031,6 +1067,16 @@ class JupyterHub(Application):
                 if key not in traits:
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
+
+            if service.managed:
+                if not service.api_token:
+                    # generate new token
+                    service.api_token = service.orm.new_api_token()
+                else:
+                    # ensure provided token is registered
+                    self.service_tokens[service.api_token] = service.name
+            else:
+                self.service_tokens[service.api_token] = service.name
 
             if service.url:
                 parsed = urlparse(service.url)
@@ -1048,19 +1094,16 @@ class JupyterHub(Application):
                     base_url=service.prefix,
                 )
                 self.db.add(server)
+
+                client_store.add_client(
+                    client_id=service.oauth_client_id,
+                    client_secret=service.api_token,
+                    redirect_uri=host + url_path_join(service.prefix, 'oauth_callback'),
+                )
             else:
                 service.orm.server = None
 
             self._service_map[name] = service
-            if service.managed:
-                if not service.api_token:
-                    # generate new token
-                    service.api_token = service.orm.new_api_token()
-                else:
-                    # ensure provided token is registered
-                    self.service_tokens[service.api_token] = service.name
-            else:
-                self.service_tokens[service.api_token] = service.name
 
         # delete services from db not in service config:
         for service in self.db.query(orm.Service):
@@ -1128,6 +1171,15 @@ class JupyterHub(Application):
 
         self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
         db.commit()
+
+    def init_oauth(self):
+        base_url = self.hub.server.base_url
+        self.oauth_provider = make_provider(
+            self.session_factory,
+            url_prefix=url_path_join(base_url, 'api/oauth2'),
+            login_url=url_path_join(base_url, 'login')
+,
+        )
 
     def init_proxy(self):
         """Load the Proxy config into the database"""
@@ -1257,7 +1309,7 @@ class JupyterHub(Application):
             **jinja_options
         )
 
-        login_url = self.authenticator.login_url(base_url)
+        login_url = url_path_join(base_url, 'login')
         logout_url = self.authenticator.logout_url(base_url)
 
         # if running from git, disable caching of require.js
@@ -1293,6 +1345,8 @@ class JupyterHub(Application):
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             statsd=self.statsd,
+            allow_multiple_servers=self.allow_multiple_servers,
+            oauth_provider=self.oauth_provider,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1335,6 +1389,7 @@ class JupyterHub(Application):
         self.init_db()
         self.init_hub()
         self.init_proxy()
+        self.init_oauth()
         yield self.init_users()
         yield self.init_groups()
         self.init_services()

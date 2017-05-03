@@ -7,6 +7,8 @@ problem and how to resolve it.
 [*Behavior*](#behavior)
 - JupyterHub proxy fails to start
 - sudospawner fails to run
+- What is the default behavior when none of the lists (admin, whitelist,
+  group whitelist) are set?
 
 [*Errors*](#errors)
 - 500 error after spawning my single-user server
@@ -18,6 +20,9 @@ problem and how to resolve it.
 - How do I increase the number of pySpark executors on YARN?
 - How do I use JupyterLab's prerelease version with JupyterHub?
 - How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
+- How do I set up rotating daily logs?
+- Toree integration with HDFS rack awareness script
+- Where do I find Docker images and Dockerfiles related to JupyterHub?
 
 [*Troubleshooting commands*](#troubleshooting-commands)
 
@@ -30,6 +35,10 @@ If you have tried to start the JupyterHub proxy and it fails to start:
 - check if the JupyterHub IP configuration setting is
   ``c.JupyterHub.ip = '*'``; if it is, try ``c.JupyterHub.ip = ''``
 - Try starting with ``jupyterhub --ip=0.0.0.0``
+
+**Note**: If this occurs on Ubuntu/Debian, check that the you are using a
+recent version of node. Some versions of Ubuntu/Debian come with a version
+of node that is very old, and it is necessary to update node.
 
 ### sudospawner fails to run
 
@@ -44,6 +53,16 @@ or add:
     c.SudoSpawner.sudospawner_path = '/absolute/path/to/sudospawner'
 
 to the config file, `jupyterhub_config.py`.
+
+### What is the default behavior when none of the lists (admin, whitelist, group whitelist) are set?
+
+When nothing is given for these lists, there will be no admins, and all users
+who can authenticate on the system (i.e. all the unix users on the server with
+a password) will be allowed to start a server. The whitelist lets you limit
+this to a particular set of users, and the admin_users lets you specify who
+among them may use the admin interface (not necessary, unless you need to do
+things like inspect other users' servers, or modify the userlist at runtime).
+
 
 ## Errors
 
@@ -226,6 +245,31 @@ notebook servers to default to JupyterLab:
 
 Users will need a GitHub account to login and be authenticated by the Hub.
 
+### How do I set up rotating daily logs?
+
+You can do this with [logrotate](http://www.linuxcommand.org/man_pages/logrotate8.html),
+or pipe to `logger` to use syslog instead of directly to a file.
+
+For example, with this logrotate config file:
+
+```
+/var/log/jupyterhub.log {
+  copytruncate
+  daily
+}
+```
+
+and run this daily by putting a script in `/etc/cron.daily/`:
+
+```bash
+logrotate /path/to/above-config
+```
+
+Or use syslog:
+
+    jupyterhub | logger -t jupyterhub
+
+
 ## Troubleshooting commands
 
 The following commands provide additional detail about installed packages,
@@ -250,9 +294,9 @@ jupyter kernelspec list
 jupyterhub --debug
 ```
 
-## Toree integration with HDFS rack awareness script
+### Toree integration with HDFS rack awareness script
 
-The Apache Toree kernel will an issue, when running with JupyterHub, if the standard HDFS 
+The Apache Toree kernel will an issue, when running with JupyterHub, if the standard HDFS
 rack awareness script is used. This will materialize in the logs as a repeated WARN:
 
 ```bash
@@ -267,8 +311,17 @@ SyntaxError: Missing parentheses in call to 'print'
 
 In order to resolve this issue, there are two potential options.
 
-1. Update HDFS core-site.xml, so the parameter "net.topology.script.file.name" points to a custom 
+1. Update HDFS core-site.xml, so the parameter "net.topology.script.file.name" points to a custom
 script (e.g. /etc/hadoop/conf/custom_topology_script.py). Copy the original script and change the first line point
 to a python two installation (e.g. /usr/bin/python).
 2. In spark-env.sh add a Python 2 installation to your path (e.g. export PATH=/opt/anaconda2/bin:$PATH).
 
+### Where do I find Docker images and Dockerfiles related to JupyterHub?
+
+Docker images can be found at the [JupyterHub organization on DockerHub](https://hub.docker.com/u/jupyterhub/).
+The Docker image [jupyterhub/singleuser](https://hub.docker.com/r/jupyterhub/singleuser/)
+provides an example single user notebook server for use with DockerSpawner.
+
+Additional single user notebook server images can be found at the [Jupyter
+organization on DockerHub](https://hub.docker.com/r/jupyter/) and information
+about each image at the [jupyter/docker-stacks repo](https://github.com/jupyter/docker-stacks).
