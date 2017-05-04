@@ -1,5 +1,5 @@
-# http://travis-ci.org/jupyterhub/jupyterhub
 language: python
+sudo: false
 python:
   - nightly
   - 3.6
