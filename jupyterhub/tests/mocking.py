@@ -246,7 +246,8 @@ class StubSingleUserSpawner(MockSpawner):
     _thread = None
     @gen.coroutine
     def start(self):
-        self.user.server.port = random_port()
+        ip = self.user.server.ip
+        port = self.user.server.port = random_port()
         env = self.get_env()
         args = self.get_args()
         evt = threading.Event()
@@ -267,6 +268,7 @@ class StubSingleUserSpawner(MockSpawner):
         self._thread.start()
         ready = evt.wait(timeout=3)
         assert ready
+        return (ip, port)
     
     @gen.coroutine
     def stop(self):
