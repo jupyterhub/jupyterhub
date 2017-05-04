@@ -431,7 +431,7 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
         # OAuth settings
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
-        env['JUPYTERHUB_HOST'] = self.hub.host
+        env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
             url_path_join(self.user.url, 'oauth_callback')
 
