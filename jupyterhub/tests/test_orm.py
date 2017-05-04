@@ -7,6 +7,7 @@ import pytest
 from tornado import gen
 
 from .. import orm
+from .. import objects
 from ..user import User
 from .mocking import MockSpawner
 
@@ -20,6 +21,9 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
+
+    # test wrapper
+    server = objects.Server(orm_server=server)
     assert server.host == 'http://127.0.0.1:%i' % server.port
     assert server.url == server.host + '/'
     assert server.bind_url == 'http://*:%i/' % server.port
@@ -29,9 +33,9 @@ def test_server(db):
 
 
 def test_user(db):
-    user = orm.User(name='kaylee',
+    user = User(orm.User(name='kaylee',
         state={'pid': 4234},
-    )
+    ))
     server = orm.Server()
     user.servers.append(server)
     db.add(user)

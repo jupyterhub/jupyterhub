@@ -17,8 +17,9 @@ from tornado.web import RequestHandler
 from tornado import gen, web
 
 from .. import orm
-from ..user import User
+from ..objects import Server
 from ..spawner import LocalProcessSpawner
+from ..user import User
 from ..utils import url_path_join
 
 # pattern for the authentication token header

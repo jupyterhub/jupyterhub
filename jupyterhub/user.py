@@ -9,9 +9,10 @@ from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
 
-from .utils import url_path_join, default_server_name, new_token
+from .utils import url_path_join, default_server_name
 
 from . import orm
+from .objects import Server
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
 
@@ -157,6 +158,13 @@ class User(HasTraits):
         if self.server is None:
             return False
         return True
+    
+    @property
+    def server(self):
+        if len(self.servers) == 0:
+            return None
+        else:
+            return Server(orm_server=self.servers[0])
 
     @property
     def escaped_name(self):
@@ -228,13 +236,12 @@ class User(HasTraits):
             cookie_name=self.cookie_name,
             base_url=base_url,
         )
-        db.add(orm_server)
-        db.commit()
-        server = Server(orm_server=orm_server)
-        self.servers.append(server)
+        self.servers.append(orm_server)
 
         api_token = self.new_api_token()
         db.commit()
+
+        server = Server(orm_server=orm_server)
 
         spawner = self.spawner
         # Passing server_name to the spawner
@@ -279,7 +286,7 @@ class User(HasTraits):
             ip_port = yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
             if ip_port:
                 # get ip, port info from return value of start()
-                self.server.ip, self.server.port = ip_port
+                server.ip, server.port = ip_port
             else:
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
@@ -317,14 +324,14 @@ class User(HasTraits):
         db.commit()
         self.waiting_for_response = True
         try:
-            yield self.server.wait_up(http=True, timeout=spawner.http_timeout)
+            yield server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(
                     "{user}'s server never showed up at {url} "
                     "after {http_timeout} seconds. Giving up".format(
                         user=self.name,
-                        url=self.server.url,
+                        url=server.url,
                         http_timeout=spawner.http_timeout,
                     )
                 )
@@ -332,7 +339,7 @@ class User(HasTraits):
             else:
                 e.reason = 'error'
                 self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                    user=self.name, url=self.server.url, error=e,
+                    user=self.name, url=server.url, error=e,
                 ))
             try:
                 yield self.stop()

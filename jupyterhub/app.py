@@ -1107,10 +1107,11 @@ class JupyterHub(Application):
     def init_proxy(self):
         """Load the Proxy config"""
         # FIXME: handle deprecated config here
-        public_url = 'http{s}://{ip}:{port}'.format(
+        public_url = 'http{s}://{ip}:{port}{base_url}'.format(
             s='s' if self.ssl_cert else '',
             ip=self.ip,
             port=self.port,
+            base_url=self.base_url,
         )
         self.proxy = self.proxy_class(
             db=self.db,
@@ -1309,21 +1310,22 @@ class JupyterHub(Application):
         users_count = 0
         active_users_count = 0
         for prefix, route in routes.items():
-            if 'user' not in route['data']:
+            route_data = route['data']
+            if 'user' not in route_data:
                 # not a user route, ignore it
                 continue
             users_count += 1
-            if 'last_activity' not in route['data']:
+            if 'last_activity' not in route_data:
                 # no last activity data (possibly proxy other than CHP)
                 continue
-            user = orm.User.find(self.db, route['user'])
+            user = orm.User.find(self.db, route_data['user'])
             if user is None:
                 self.log.warning("Found no user for route: %s", route)
                 continue
             try:
-                dt = datetime.strptime(route['last_activity'], ISO8601_ms)
+                dt = datetime.strptime(route_data['last_activity'], ISO8601_ms)
             except Exception:
-                dt = datetime.strptime(route['last_activity'], ISO8601_s)
+                dt = datetime.strptime(route_data['last_activity'], ISO8601_s)
             user.last_activity = max(user.last_activity, dt)
             # FIXME: Make this configurable duration. 30 minutes for now!
             if (datetime.now() - user.last_activity).total_seconds() < 30 * 60:

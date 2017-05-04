@@ -148,16 +148,6 @@ class User(Base):
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
-    @property
-    def server(self):
-        """Returns the first element of servers.
-        Returns None if the list is empty.
-        """
-        if len(self.servers) == 0:
-            return None
-        else:
-            return self.servers[0]
-
     def __repr__(self):
         if self.server:
             return "<{cls}({name}@{ip}:{port})>".format(

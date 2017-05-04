@@ -224,7 +224,7 @@ class UserCreateNamedServerAPIHandler(APIHandler):
     def post(self, name):
         user = self.find_user(name)
         if user is None:
-            raise HTTPError(404, "No such user %r" % name)
+            raise web.HTTPError(404, "No such user %r" % name)
         if user.running:
             # include notify, so that a server that died is noticed immediately
             state = yield user.spawner.poll_and_notify()

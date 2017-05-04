@@ -4,7 +4,6 @@ import os
 import sys
 from tempfile import NamedTemporaryFile
 import threading
-
 from unittest import mock
 
 import requests
@@ -18,6 +17,7 @@ from traitlets import default
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
+from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
@@ -207,7 +207,7 @@ def public_host(app):
     if app.subdomain_host:
         return app.subdomain_host
     else:
-        return urlparse(app.proxy.public_url).host
+        return Server.from_url(app.proxy.public_url).host
 
 
 def public_url(app, user_or_service=None, path=''):
@@ -220,7 +220,7 @@ def public_url(app, user_or_service=None, path=''):
         prefix = user_or_service.server.base_url
     else:
         host = public_host(app)
-        prefix = app.proxy.public_server.base_url
+        prefix = Server.from_url(app.proxy.public_url).base_url
     if path:
         return host + url_path_join(prefix, path)
     else:

@@ -43,7 +43,7 @@ class Server(HasTraits):
                 port = 443
             else:
                 port = 80
-        return cls(proto=proto, ip=ip, port=port)
+        return cls(proto=proto, ip=ip, port=port, base_url=urlinfo.path)
 
     @default('port')
     def _default_port(self):
