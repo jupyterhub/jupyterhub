@@ -194,7 +194,7 @@ class Proxy(LoggingConfigurable):
         if not routes:
             routes = yield self.get_all_routes()
 
-        user_routes = {r['user'] for r in routes.values() if 'user' in r}
+        user_routes = {r['data']['user'] for r in routes.values() if 'user' in r['data']}
         futures = []
         db = self.db
         for orm_user in db.query(User):
@@ -212,8 +212,8 @@ class Proxy(LoggingConfigurable):
                     futures.append(self.delete_user(user))
 
         # check service routes
-        service_routes = {r['service']
-                          for r in routes.values() if 'service' in r}
+        service_routes = {r['data']['service']
+                          for r in routes.values() if 'service' in r['data']}
         for orm_service in db.query(Service).filter(
                 Service.server is not None):
             service = service_dict[orm_service.name]
