@@ -6,6 +6,8 @@ from queue import Queue
 from subprocess import Popen
 from urllib.parse import urlparse, unquote
 
+from traitlets.config import Config
+
 import pytest
 
 from .. import orm
@@ -19,12 +21,12 @@ def test_external_proxy(request, io_loop):
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
     proxy_port = 54321
+    cfg = Config()
+    cfg.ConfigurableHTTPProxy.auth_token = auth_token
+    cfg.ConfigurableHTTPProxy.api_url = 'http://%s:%i' % (proxy_ip, proxy_port)
+    cfg.ConfigurableHTTPProxy.should_start = False
 
-    app = MockHub.instance(
-        proxy_api_ip=proxy_ip,
-        proxy_api_port=proxy_port,
-        proxy_auth_token=auth_token,
-    )
+    app = MockHub.instance(config=cfg)
 
     def fin():
         MockHub.clear_instance()
@@ -35,7 +37,8 @@ def test_external_proxy(request, io_loop):
     # configures and starts proxy process
     env = os.environ.copy()
     env['CONFIGPROXY_AUTH_TOKEN'] = auth_token
-    cmd = app.proxy_cmd + [
+    cmd = [
+        'configurable-http-proxy',
         '--ip', app.ip,
         '--port', str(app.port),
         '--api-ip', proxy_ip,
@@ -57,7 +60,7 @@ def test_external_proxy(request, io_loop):
     wait_for_proxy()
 
     app.start([])
-    assert app.proxy_process is None
+    assert app.proxy.proxy_process is None
 
     # test if api service has a root route '/'
     routes = io_loop.run_sync(app.proxy.get_all_routes)
@@ -100,10 +103,10 @@ def test_external_proxy(request, io_loop):
     new_auth_token = 'different!'
     env['CONFIGPROXY_AUTH_TOKEN'] = new_auth_token
     proxy_port = 55432
-    cmd = app.proxy_cmd + [
+    cmd = ['configurable-http-proxy',
         '--ip', app.ip,
         '--port', str(app.port),
-        '--api-ip', app.proxy_api_ip,
+        '--api-ip', proxy_ip,
         '--api-port', str(proxy_port),
         '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
@@ -113,14 +116,13 @@ def test_external_proxy(request, io_loop):
     wait_for_proxy()
 
     # tell the hub where the new proxy is
+    new_api_url = 'http://{}:{}'.format(proxy_ip, proxy_port)
     r = api_request(app, 'proxy', method='patch', data=json.dumps({
-        'port': proxy_port,
-        'protocol': 'http',
-        'ip': app.ip,
+        'api_url': new_api_url,
         'auth_token': new_auth_token,
     }))
     r.raise_for_status()
-    assert app.proxy.api_server.port == proxy_port
+    assert app.proxy.api_url == new_api_url
 
     # get updated auth token from main thread
     def get_app_proxy_token():
@@ -159,7 +161,7 @@ def test_check_routes(app, io_loop, username, endpoints):
     # check if a route is removed when user deleted
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     io_loop.run_sync(lambda: proxy.delete_user(test_user))
-    during = sorted(io_loop.run_sync(app.proxy.get_routes))
+    during = sorted(io_loop.run_sync(app.proxy.get_all_routes))
     assert unquote(test_user.proxy_path) not in during
 
     # check if a route exists for user

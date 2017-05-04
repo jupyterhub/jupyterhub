@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+from urllib.parse import urlparse
 
 from tornado import gen, web
 
@@ -48,17 +49,11 @@ class ProxyAPIHandler(APIHandler):
         if not isinstance(model, dict):
             raise web.HTTPError(400, "Request body must be JSON dict")
         
-        server = self.proxy.api_server
-        if 'ip' in model:
-            server.ip = model['ip']
-        if 'port' in model:
-            server.port = model['port']
-        if 'protocol' in model:
-            server.proto = model['protocol']
+        if 'api_url' in model:
+            self.proxy.api_url = model['api_url']
         if 'auth_token' in model:
             self.proxy.auth_token = model['auth_token']
-        self.db.commit()
-        self.log.info("Updated proxy at %s", server.bind_url)
+        self.log.info("Updated proxy at %s", self.proxy)
         yield self.proxy.check_routes(self.users, self.services)
         
 
