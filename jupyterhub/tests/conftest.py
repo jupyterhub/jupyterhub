@@ -9,7 +9,7 @@ from subprocess import TimeoutExpired
 import time
 from unittest import mock
 from pytest import fixture, raises
-from tornado import ioloop
+from tornado import ioloop, gen
 
 from .. import orm
 from ..utils import random_port
@@ -81,10 +81,14 @@ def _mockservice(request, app, url=False):
     with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
         app.services = [spec]
         app.init_services()
-        app.io_loop.add_callback(app.proxy.add_all_services, app._service_map)
         assert name in app._service_map
         service = app._service_map[name]
-        app.io_loop.add_callback(service.start)
+        @gen.coroutine
+        def start():
+            # wait for proxy to be updated before starting the service
+            yield app.proxy.add_all_services(app._service_map)
+            service.start()
+        app.io_loop.add_callback(start)
         def cleanup():
             service.stop()
             app.services[:] = []
@@ -96,6 +100,8 @@ def _mockservice(request, app, url=False):
         # ensure process finishes starting
         with raises(TimeoutExpired):
             service.proc.wait(1)
+        if url:
+            ioloop.IOLoop().run_sync(service.server.wait_up)
     return service
 
 
