@@ -228,12 +228,6 @@ class SingleUserNotebookApp(NotebookApp):
             value = value + '/'
         return value
 
-    @default('cookie_name')
-    def _cookie_name_default(self):
-        if os.environ.get('JUPYTERHUB_SERVICE_NAME'):
-            # if I'm a service, use the services cookie name
-            return 'jupyterhub-services'
-
     @default('port')
     def _port_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):

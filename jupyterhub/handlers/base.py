@@ -246,8 +246,6 @@ class BaseHandler(RequestHandler):
         kwargs = {}
         if self.subdomain_host:
             kwargs['domain'] = self.domain
-        if user and user.server:
-            self.clear_cookie(user.server.cookie_name, path=user.server.base_url, **kwargs)
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
         self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'))
 

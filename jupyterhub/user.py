@@ -112,15 +112,12 @@ class User(HasTraits):
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
-    def __init__(self, orm_user, settings, **kwargs):
+    def __init__(self, orm_user, settings=None, **kwargs):
         self.orm_user = orm_user
-        self.settings = settings
+        self.settings = settings or {}
         super().__init__(**kwargs)
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
-
-        hub = self.settings['hub']
-        self.cookie_name = '%s-%s' % (hub.cookie_name, quote(self.name, safe=''))
 
         self.base_url = url_path_join(
             self.settings.get('base_url', '/'), 'user', self.escaped_name)
@@ -128,7 +125,7 @@ class User(HasTraits):
         self.spawner = self.spawner_class(
             user=self,
             db=self.db,
-            hub=hub,
+            hub=self.settings.get('hub'),
             authenticator=self.authenticator,
             config=self.settings.get('config'),
         )
@@ -233,7 +230,6 @@ class User(HasTraits):
 
         orm_server = orm.Server(
             name=server_name,
-            cookie_name=self.cookie_name,
             base_url=base_url,
         )
         self.servers.append(orm_server)
