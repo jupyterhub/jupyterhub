@@ -87,7 +87,6 @@ Full Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   self
    user-guide
    configuration-guide
    api/index
