@@ -8,7 +8,7 @@ import shlex
 import recommonmark.parser
 
 # Set paths
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('.'))
 
 # -- General configuration ------------------------------------------------
 
@@ -169,12 +169,10 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 # -- Read The Docs --------------------------------------------------------
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-
 if not on_rtd:
-    # only import and set the theme if we're building docs locally
-    import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
-    html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
+    import jupyter_alabaster_theme
+    html_theme = 'jupyter_alabaster_theme'
+    html_theme_path = [jupyter_alabaster_theme.get_path()]
 else:
     # readthedocs.org uses their theme by default, so no need to specify it
     # build rest-api, since RTD doesn't run make
