@@ -43,16 +43,6 @@ Contents
 * :doc:`websecurity`
 * :doc:`rest`
 
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: User Guide
-
-   quickstart
-   getting-started
-   howitworks
-   websecurity
-   rest
 
 **Configuration Guide**
 
@@ -60,34 +50,13 @@ Contents
 * :doc:`spawners`
 * :doc:`services`
 * :doc:`config-examples`
-* :doc:`jupyterhub-deployment-aws`
 * :doc:`upgrading`
 * :doc:`troubleshooting`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Configuration Guide
-
-   authenticators
-   spawners
-   services
-   config-examples
-   jupyterhub-deployment-aws
-   upgrading
-   troubleshooting
 
 
 **API Reference**
 
 * :doc:`api/index`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: API Reference
-
-   api/index
 
 
 **About JupyterHub**
@@ -95,15 +64,6 @@ Contents
 * :doc:`changelog`
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: About JupyterHub
-
-   changelog
-   contributor-list
-   gallery-jhub-deployments
 
 
 Indices and tables
@@ -118,3 +78,18 @@ Questions? Suggestions?
 
 - `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
 - `Jupyter website <https://jupyter.org>`_
+
+.. _contents:
+
+Full Table of Contents
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   user-guide
+   configuration-guide
+   api/index
+   changelog
+   contributor-list
+   gallery-jhub-deployments
