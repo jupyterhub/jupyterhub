@@ -149,12 +149,13 @@ class User(Base):
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
     def __repr__(self):
-        if self.server:
+        if self.servers:
+            server = self.servers[0]
             return "<{cls}({name}@{ip}:{port})>".format(
                 cls=self.__class__.__name__,
                 name=self.name,
-                ip=self.server.ip,
-                port=self.server.port,
+                ip=server.ip,
+                port=server.port,
             )
         else:
             return "<{cls}({name} [unconfigured])>".format(
