@@ -616,7 +616,10 @@ class Spawner(LoggingConfigurable):
 
         self.stop_polling()
 
-        for callback in self._callbacks:
+        # clear callbacks list
+        self._callbacks, callbacks = ([], self._callbacks)
+
+        for callback in callbacks:
             try:
                 yield gen.maybe_future(callback())
             except Exception:
