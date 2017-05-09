@@ -539,10 +539,13 @@ class Spawner(LoggingConfigurable):
     def stop(self, now=False):
         """Stop the single-user server
 
-        If `now` is set to `False`, do not wait for the server to stop. Otherwise, wait for
-        the server to stop before returning.
+        If `now` is False (default), shutdown the server as gracefully as possible,
+        e.g. starting with SIGINT, then SIGTERM, then SIGKILL.
+        If `now` is True, terminate the server immediately.
 
-        Must be a Tornado coroutine.
+        The coroutine should return when the single-user server process is no longer running.
+
+        Must be a coroutine.
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
 
@@ -917,8 +920,11 @@ class LocalProcessSpawner(Spawner):
     def stop(self, now=False):
         """Stop the single-user server process for the current user.
 
-        If `now` is set to True, do not wait for the process to die.
-        Otherwise, it'll wait.
+        If `now` is False (default), shutdown the server as gracefully as possible,
+        e.g. starting with SIGINT, then SIGTERM, then SIGKILL.
+        If `now` is True, terminate the server immediately.
+
+        The coroutine should return when the process is no longer running.
         """
         if not now:
             status = yield self.poll()
