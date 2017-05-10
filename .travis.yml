@@ -12,6 +12,7 @@ before_install:
   - npm install
   - npm install -g configurable-http-proxy
 install:
+  - pip install -U pip
   - pip install --pre -r dev-requirements.txt .
 
 # running tests
