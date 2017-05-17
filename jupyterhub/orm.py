@@ -171,23 +171,17 @@ class Proxy(Base):
             service.name, service.proxy_path, service.server.host,
         )
 
-        yield self.api_request(service.proxy_path,
-            method='POST',
-            body=dict(
-                target=service.server.host,
-                service=service.name,
-            ),
-            client=client,
+        yield self.proxy.add_route(
+            service.proxy_path,
+            service.server.host,
+            {'service': service.name}
         )
 
     @gen.coroutine
     def delete_service(self, service, client=None):
         """Remove a service's server from the proxy table."""
         self.log.info("Removing service %s from proxy", service.name)
-        yield self.api_request(service.proxy_path,
-            method='DELETE',
-            client=client,
-        )
+        yield self.proxy.delete_route(service.proxy_path)
 
     # FIX-ME
     # we need to add a reference to a specific server
@@ -202,22 +196,18 @@ class Proxy(Base):
             raise RuntimeError(
                 "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
 
-        yield self.api_request(user.proxy_path,
-            method='POST',
-            body=dict(
-                target=user.server.host,
-                user=user.name,
-            ),
-            client=client,
+        yield self.proxy.add_route(
+            user.proxy_path,
+            user.server.host,
+            {'user': user.name}
         )
 
     @gen.coroutine
     def delete_user(self, user, client=None):
         """Remove a user's server from the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
-        yield self.api_request(user.proxy_path,
-            method='DELETE',
-            client=client,
+        yield self.proxy.delete_route(
+            user.proxy_path
         )
 
     @gen.coroutine
@@ -255,8 +245,7 @@ class Proxy(Base):
     @gen.coroutine
     def get_routes(self, client=None):
         """Fetch the proxy's routes"""
-        resp = yield self.api_request('', client=client)
-        return json.loads(resp.body.decode('utf8', 'replace'))
+        return (yield self.proxy.get_all_routes())
 
     # FIX-ME
     # we need to add a reference to a specific server
