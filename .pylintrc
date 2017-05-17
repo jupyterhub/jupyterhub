@@ -1,0 +1,19 @@
+[MASTER]
+# Ignore git and virtualenv-related folders.
+ignore=
+    .git,
+    lib,
+    jupyterhub/tests/
+
+[MESSAGES CONTROL]
+disable=all
+
+# Explicitly whitelist the lint checks we want to have
+# Prefer things that catch errors and what not, and not stylistic choices
+enable=
+    missing-docstring,
+    empty-docstring
+
+[REPORTS]
+# Do not print a summary report
+reports=no

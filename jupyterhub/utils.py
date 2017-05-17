@@ -107,6 +107,7 @@ def auth_decorator(check_auth):
     in your decorator, so you can decorate while you decorate.
     """
     def decorator(method):
+        """Make a method decorator."""
         def decorated(self, *args, **kwargs):
             check_auth(self)
             return method(self, *args, **kwargs)

@@ -105,6 +105,7 @@ def api_request(app, *api_path, **kwargs):
 
 
 def test_auth_api(app):
+    """Test authentication with a valid token"""
     db = app.db
     r = api_request(app, 'authorizations', 'gobbledygook')
     assert r.status_code == 404
@@ -132,6 +133,7 @@ def test_auth_api(app):
 
 
 def test_referer_check(app, io_loop):
+    """Check if referer in request header is valid"""
     url = ujoin(public_host(app), app.hub.server.base_url)
     host = urlparse(url).netloc
     user = find_user(app.db, 'admin')
@@ -185,6 +187,7 @@ def test_referer_check(app, io_loop):
 
 @mark.user
 def test_get_users(app):
+    """Check if API returns users when requested"""
     db = app.db
     r = api_request(app, 'users')
     assert r.status_code == 200
@@ -219,6 +222,7 @@ def test_get_users(app):
 
 @mark.user
 def test_add_user(app):
+    """Check if user can be successfully added by API"""
     db = app.db
     name = 'newuser'
     r = api_request(app, 'users', name, method='post')
@@ -231,6 +235,7 @@ def test_add_user(app):
 
 @mark.user
 def test_get_user(app):
+    """Check if API request returns the user successfully"""
     name = 'user'
     r = api_request(app, 'users', name)
     assert r.status_code == 200
@@ -248,6 +253,7 @@ def test_get_user(app):
 
 @mark.user
 def test_add_multi_user_bad(app):
+    """Check if adding multiple users fails as expected"""
     r = api_request(app, 'users', method='post')
     assert r.status_code == 400
     r = api_request(app, 'users', method='post', data='{}')
@@ -258,6 +264,7 @@ def test_add_multi_user_bad(app):
 
 @mark.user
 def test_add_multi_user_invalid(app):
+    """Test that a change in authenticator username pattern fails"""
     app.authenticator.username_pattern = r'w.*'
     r = api_request(app, 'users', method='post',
         data=json.dumps({'usernames': ['Willow', 'Andrew', 'Tara']})
@@ -269,6 +276,7 @@ def test_add_multi_user_invalid(app):
 
 @mark.user
 def test_add_multi_user(app):
+    """Test requests to add multiple users"""
     db = app.db
     names = ['a', 'b']
     r = api_request(app, 'users', method='post',
@@ -305,6 +313,7 @@ def test_add_multi_user(app):
 
 @mark.user
 def test_add_multi_user_admin(app):
+    """Test if multiple admins are added by a request"""
     db = app.db
     names = ['c', 'd']
     r = api_request(app, 'users', method='post',
@@ -324,6 +333,7 @@ def test_add_multi_user_admin(app):
 
 @mark.user
 def test_add_user_bad(app):
+    """Test if request will not add a user that does not exist in user list"""
     db = app.db
     name = 'dne_newuser'
     r = api_request(app, 'users', name, method='post')
@@ -334,6 +344,7 @@ def test_add_user_bad(app):
 
 @mark.user
 def test_add_admin(app):
+    """Test if request to add a new admin is successful"""
     db = app.db
     name = 'newadmin'
     r = api_request(app, 'users', name, method='post',
@@ -348,6 +359,7 @@ def test_add_admin(app):
 
 @mark.user
 def test_delete_user(app):
+    """Test if request to delete a user is successful"""
     db = app.db
     mal = add_user(db, name='mal')
     r = api_request(app, 'users', 'mal', method='delete')
@@ -356,6 +368,7 @@ def test_delete_user(app):
 
 @mark.user
 def test_make_admin(app):
+    """Test the request to grant a user administrative privileges"""
     db = app.db
     name = 'admin2'
     r = api_request(app, 'users', name, method='post')
@@ -393,6 +406,7 @@ def get_app_user(app, name):
 
 
 def test_spawn(app, io_loop):
+    """Test if API request spawns a single user server"""
     db = app.db
     name = 'wash'
     user = add_user(db, app=app, name=name)
@@ -444,6 +458,7 @@ def test_spawn(app, io_loop):
 
 
 def test_slow_spawn(app, io_loop, no_patience, request):
+    """Test if an API request spawns a single user server slowly"""
     patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.SlowSpawner})
     patch.start()
     request.addfinalizer(patch.stop)
@@ -493,6 +508,7 @@ def test_slow_spawn(app, io_loop, no_patience, request):
 
 
 def test_never_spawn(app, io_loop, no_patience, request):
+    """"Test if a request never spawns a single user server"""
     patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.NeverSpawner})
     patch.start()
     request.addfinalizer(patch.stop)
@@ -517,6 +533,7 @@ def test_never_spawn(app, io_loop, no_patience, request):
 
 
 def test_get_proxy(app, io_loop):
+    """Test the API request for proxy information"""
     r = api_request(app, 'proxy')
     r.raise_for_status()
     reply = r.json()
@@ -524,6 +541,7 @@ def test_get_proxy(app, io_loop):
 
 
 def test_cookie(app):
+    """Test if a valid cookie is passed in a request"""
     db = app.db
     name = 'patience'
     user = add_user(db, app=app, name=name)
@@ -558,6 +576,7 @@ def test_cookie(app):
 
 
 def test_token(app):
+    """Test if token is authorized"""
     name = 'book'
     user = add_user(app.db, app=app, name=name)
     token = user.new_api_token()
@@ -575,6 +594,7 @@ def test_token(app):
     ({}, {'username': 'fake', 'password': 'fake'}, 200),
 ])
 def test_get_new_token(app, headers, data, status):
+    """Test the request to get a new token"""
     if data:
         data = json.dumps(data)
     # request a new token
@@ -596,6 +616,7 @@ def test_get_new_token(app, headers, data, status):
 
 @mark.group
 def test_groups_list(app):
+    """Test the request to list all the available groups"""
     r = api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
@@ -618,6 +639,7 @@ def test_groups_list(app):
 
 @mark.group
 def test_group_get(app):
+    """Test that request returns a group of users"""
     group = orm.Group.find(app.db, name='alphaflight')
     user = add_user(app.db, app=app, name='sasquatch')
     group.users.append(user)
@@ -638,6 +660,7 @@ def test_group_get(app):
 
 @mark.group
 def test_group_create_delete(app):
+    """Tests the requests to create and later delete a group successfully"""
     db = app.db
     r = api_request(app, 'groups/runaways', method='delete')
     assert r.status_code == 404
@@ -674,6 +697,7 @@ def test_group_create_delete(app):
 
 @mark.group
 def test_group_add_users(app):
+    """Test the request to add a group of users"""
     db = app.db
     # must specify users
     r = api_request(app, 'groups/alphaflight/users', method='post', data='{}')
@@ -696,6 +720,7 @@ def test_group_add_users(app):
 
 @mark.group
 def test_group_delete_users(app):
+    """Test the request to delete a group of users"""
     db = app.db
     # must specify users
     r = api_request(app, 'groups/alphaflight/users', method='delete', data='{}')
@@ -723,8 +748,8 @@ def test_group_delete_users(app):
 
 
 @mark.services
-def test_get_services(app, mockservice_url):
-    mockservice = mockservice_url
+def test_get_services(app, mockservice):
+    """Test request to get information on all services"""
     db = app.db
     r = api_request(app, 'services')
     r.raise_for_status()
@@ -749,8 +774,8 @@ def test_get_services(app, mockservice_url):
 
 
 @mark.services
-def test_get_service(app, mockservice_url):
-    mockservice = mockservice_url
+def test_get_service(app, mockservice):
+    """Test requests for a specific service"""
     db = app.db
     r = api_request(app, 'services/%s' % mockservice.name)
     r.raise_for_status()
@@ -779,6 +804,7 @@ def test_get_service(app, mockservice_url):
 
 
 def test_root_api(app):
+    """Test that the expected version of the API is returned"""
     base_url = app.hub.server.url
     url = ujoin(base_url, 'api')
     r = requests.get(url)
@@ -790,6 +816,7 @@ def test_root_api(app):
 
 
 def test_info(app):
+    """Test an API request for information returns data for settings"""
     r = api_request(app, 'info')
     r.raise_for_status()
     data = r.json()
@@ -819,12 +846,14 @@ def test_info(app):
 
 
 def test_options(app):
+    """Test API request for available options in headers"""
     r = api_request(app, 'users', method='options')
     r.raise_for_status()
     assert 'Access-Control-Allow-Headers' in r.headers
 
 
 def test_bad_json_body(app):
+    """Test that a request including data that is not json fails"""
     r = api_request(app, 'users', method='post', data='notjson')
     assert r.status_code == 400
 
@@ -835,6 +864,7 @@ def test_bad_json_body(app):
 
 
 def test_shutdown(app):
+    """Test API shutdown hub request"""
     r = api_request(app, 'shutdown', method='post',
         data=json.dumps({'servers': True, 'proxy': True,}),
     )

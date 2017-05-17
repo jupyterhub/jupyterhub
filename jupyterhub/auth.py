@@ -461,7 +461,7 @@ class PAMAuthenticator(LocalAuthenticator):
         help="""
         Whether to open a new PAM session when spawners are started.
 
-        This may trigger things like mounting shared filsystems,
+        This may trigger things like mounting shared filesystems,
         loading credentials, etc. depending on system configuration,
         but it does not always work.
 

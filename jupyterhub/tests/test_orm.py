@@ -12,6 +12,7 @@ from .mocking import MockSpawner
 
 
 def test_server(db):
+    """Test that a server is correctly added to the db"""
     server = orm.Server()
     db.add(server)
     db.commit()
@@ -20,25 +21,21 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
-    assert server.host == 'http://127.0.0.1:%i' % server.port
+    assert server.host == 'http://127.0.0.1:{}'.format(server.port)
     assert server.url == server.host + '/'
-    assert server.bind_url == 'http://*:%i/' % server.port
+    assert server.bind_url == 'http://*:{}/'.format(server.port)
+
     server.ip = '127.0.0.1'
-    assert server.host == 'http://127.0.0.1:%i' % server.port
+    assert server.host == 'http://127.0.0.1:{}'.format(server.port)
     assert server.url == server.host + '/'
 
 
 def test_proxy(db):
+    """Check if proxy info saved correctly to db"""
     proxy = orm.Proxy(
         auth_token='abc-123',
-        public_server=orm.Server(
-            ip='192.168.1.1',
-            port=8000,
-        ),
-        api_server=orm.Server(
-            ip='127.0.0.1',
-            port=8001,
-        ),
+        public_server=orm.Server(ip='192.168.1.1', port=8000,),
+        api_server=orm.Server(ip='127.0.0.1', port=8001,),
     )
     db.add(proxy)
     db.commit()
@@ -48,6 +45,7 @@ def test_proxy(db):
 
 
 def test_hub(db):
+    """Check if hub saved to db correctly"""
     hub = orm.Hub(
         server=orm.Server(
             ip = '1.2.3.4',
@@ -64,6 +62,7 @@ def test_hub(db):
 
 
 def test_user(db):
+    """Check if user is saved to db correctly"""
     user = orm.User(name='kaylee',
         state={'pid': 4234},
     )
@@ -82,17 +81,21 @@ def test_user(db):
 
 
 def test_tokens(db):
+    """Test if API token is saved to db"""
     user = orm.User(name='inara')
     db.add(user)
     db.commit()
     token = user.new_api_token()
     assert any(t.match(token) for t in user.api_tokens)
+
     user.new_api_token()
     assert len(user.api_tokens) == 2
+
     found = orm.APIToken.find(db, token=token)
     assert found.match(token)
     assert found.user is user
     assert found.service is None
+
     found = orm.APIToken.find(db, 'something else')
     assert found is None
 
@@ -108,17 +111,21 @@ def test_tokens(db):
 
 
 def test_service_tokens(db):
+    """Test if service tokens are saved to db"""
     service = orm.Service(name='secret')
     db.add(service)
     db.commit()
     token = service.new_api_token()
     assert any(t.match(token) for t in service.api_tokens)
+
     service.new_api_token()
     assert len(service.api_tokens) == 2
+
     found = orm.APIToken.find(db, token=token)
     assert found.match(token)
     assert found.user is None
     assert found.service is service
+
     service2 = orm.Service(name='secret')
     db.add(service)
     db.commit()
@@ -126,29 +133,34 @@ def test_service_tokens(db):
 
 
 def test_service_server(db):
+    """Test if service and its server are saved"""
     service = orm.Service(name='has_servers')
     db.add(service)
     db.commit()
-    
     assert service.server is None
+
     server = service.server = orm.Server()
     assert service
     assert server.id is None
+
     db.commit()
     assert isinstance(server.id, int)
-    
+
 
 def test_token_find(db):
+    """Test APIToken.find"""
     service = db.query(orm.Service).first()
     user = db.query(orm.User).first()
     service_token = service.new_api_token()
     user_token = user.new_api_token()
     with pytest.raises(ValueError):
         orm.APIToken.find(db, 'irrelevant', kind='richard')
+
     # no kind, find anything
     found = orm.APIToken.find(db, token=user_token)
     assert found
     assert found.match(user_token)
+
     found = orm.APIToken.find(db, token=service_token)
     assert found
     assert found.match(service_token)
@@ -157,6 +169,7 @@ def test_token_find(db):
     found = orm.APIToken.find(db, token=user_token, kind='user')
     assert found
     assert found.match(user_token)
+
     found = orm.APIToken.find(db, token=service_token, kind='user')
     assert found is None
 
@@ -164,24 +177,30 @@ def test_token_find(db):
     found = orm.APIToken.find(db, token=service_token, kind='service')
     assert found
     assert found.match(service_token)
+
     found = orm.APIToken.find(db, token=user_token, kind='service')
     assert found is None
 
 
 def test_spawn_fails(db, io_loop):
+    """Test if server fails to spawn for user"""
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
     
     class BadSpawner(MockSpawner):
+        """Mock a defective spawner"""
         @gen.coroutine
         def start(self):
+            """Start spawn"""
             raise RuntimeError("Split the party")
     
-    user = User(orm_user, {
-        'spawner_class': BadSpawner,
-        'config': None,
-    })
+    user = User(orm_user,
+        {
+            'spawner_class': BadSpawner,
+            'config': None,
+        }
+    )
     
     with pytest.raises(RuntimeError) as exc:
         io_loop.run_sync(user.spawn)
@@ -190,14 +209,15 @@ def test_spawn_fails(db, io_loop):
 
 
 def test_groups(db):
+    """Test user added to a group succeeds"""
     user = orm.User.find(db, name='aeofel')
     db.add(user)
-    
     group = orm.Group(name='lives')
     db.add(group)
     db.commit()
     assert group.users == []
     assert user.groups == []
+
     group.users.append(user)
     db.commit()
     assert group.users == [user]

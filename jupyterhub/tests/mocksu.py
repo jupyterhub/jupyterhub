@@ -12,15 +12,18 @@ from tornado import web, httpserver, ioloop
 from .mockservice import EnvHandler
 
 class EchoHandler(web.RequestHandler):
+    """Handle echoing URLs back"""
     def get(self):
         self.write(self.request.path)
 
+
 class ArgsHandler(web.RequestHandler):
+    """Handle returning sys.argv"""
     def get(self):
         self.write(json.dumps(sys.argv))
 
 def main(args):
-    
+    """Create a server and start tornado IOLoop"""
     app = web.Application([
         (r'.*/args', ArgsHandler),
         (r'.*/env', EnvHandler),
