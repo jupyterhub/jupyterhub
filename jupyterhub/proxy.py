@@ -245,7 +245,7 @@ class ConfigurableHTTPProxy(Proxy):
     proxy_process = Any()
     client = Instance(AsyncHTTPClient, ())
 
-    debug = Bool(False, config=True)
+    debug = Bool(False, help="Add debug-level logging to the Proxy", config=True)
     auth_token = Unicode(
         help="""The Proxy Auth token.
 

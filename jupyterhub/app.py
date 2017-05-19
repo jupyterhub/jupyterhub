@@ -54,7 +54,7 @@ from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
-from .traitlets import URLPrefix
+from .traitlets import URLPrefix, Command
 from .utils import (
     url_path_join,
     ISO8601_ms, ISO8601_s,
@@ -353,12 +353,41 @@ class JupyterHub(Application):
                        help="""Select the Proxy API implementation."""
                        ).tag(config=True)
 
-    # FIXME: deprecated proxy config should map to CHP config with a warning
-    # proxy_cmd
-    # debug_proxy
-    # proxy_auth_token
-    # proxy_api_ip
-    # proxy_api_port
+    proxy_cmd = Command([], config=True,
+        help="DEPRECATED. Use ConfigurableHTTPProxy.command",
+    ).tag(config=True)
+    
+    debug_proxy = Bool(False,
+        help="DEPRECATED: Use ConfigurableHTTPProxy.debug",
+    ).tag(config=True)
+    proxy_auth_token = Unicode(
+        help="DEPRECATED: Use ConfigurableHTTPProxy.auth_token"
+    ).tag(config=True)
+
+    _proxy_config_map = {
+        'proxy_cmd': 'command',
+        'debug_proxy': 'debug',
+        'proxy_auth_token': 'auth_token',
+    }
+    @observe(*_proxy_config_map)
+    def _deprecated_proxy_config(self, change):
+        dest = self._proxy_config_map[change.name]
+        self.log.warning("JupyterHub.%s is deprecated in JupyterHub 0.8, use ConfigurableHTTPProxy.%s", change.name, dest)
+        self.config.ConfigurableHTTPProxy[dest] = change.new
+
+    proxy_api_ip = Unicode(
+        help="DEPRECATED: Use ConfigurableHTTPProxy.api_url"
+    ).tag(config=True)
+    proxy_api_port = Integer(
+        help="DEPRECATED: Use ConfigurableHTTPProxy.api_url"
+    ).tag(config=True)
+    @observe('proxy_api_port', 'proxy_api_ip')
+    def _deprecated_proxy_api(self, change):
+        self.log.warning("JupyterHub.%s is deprecated in JupyterHub 0.8, use ConfigurableHTTPProxy.api_url", change.name)
+        self.config.ConfigurableHTTPProxy.api_url = 'http://{}:{}'.format(
+            self.proxy_api_ip or '127.0.0.1',
+            self.proxy_api_port or self.port + 1,
+        )
 
     hub_port = Integer(8081,
         help="The port for this process"
