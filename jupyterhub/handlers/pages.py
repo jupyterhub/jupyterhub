@@ -67,13 +67,9 @@ class HomeHandler(BaseHandler):
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             yield user.spawner.poll_and_notify()
-            url = user.url
-        else:
-            url = url_concat(url_path_join(self.base_url, 'spawn'),
-                             {'next': self.request.uri})
         html = self.render_template('home.html',
             user=user,
-            url=url,
+            url=user.url,
         )
         self.finish(html)
 
