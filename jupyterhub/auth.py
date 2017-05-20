@@ -126,11 +126,19 @@ class Authenticator(LoggingConfigurable):
     ).tag(config=True)
 
     delete_invalid_users = Bool(False,
-        help="""Delete any invalid users from the database
+        help="""Delete any users from the database that do not pass validation
 
-        When JupyterHub starts, if any users are found in the database
-        that do not pass a `validate_users` check, they will be deleted.
-        Default is False to avoid data loss due to config changes, etc.
+        When JupyterHub starts, `.add_user` will be called
+        on each user in the database to verify that all users are still valid.
+
+        If `delete_invalid_users` is True,
+        any users that do not pass validation will be deleted from the database.
+        Use this if users might be deleted from an external system,
+        such as local user accounts.
+
+        If False (default), invalid users remain in the Hub's database
+        and a warning will be issued.
+        This is the default to avoid data loss due to config changes.
         """
     )
 

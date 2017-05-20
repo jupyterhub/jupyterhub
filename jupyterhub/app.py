@@ -956,14 +956,16 @@ class JupyterHub(Application):
             except Exception:
                 self.log.exception("Error adding user %r already in db", user.name)
                 if self.authenticator.delete_invalid_users:
-                    self.log.warning("Deleting invalid user %r", user.name)
+                    self.log.warning("Deleting invalid user %r from the Hub database", user.name)
                     db.delete(user)
                 else:
                     self.log.warning(dedent("""
                     You can set
                         c.Authenticator.delete_invalid_users = True
-                    to automatically delete users that have been invalidated,
-                    e.g. by deleting them from the external system without notifying JupyterHub.
+                    to automatically delete users from the Hub database that no longer pass
+                    Authenticator validation,
+                    such as when user accounts are deleted from the external system
+                    without notifying JupyterHub.
                     """))
         db.commit()
 
