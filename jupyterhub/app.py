@@ -217,6 +217,8 @@ class JupyterHub(Application):
     aliases = Dict(aliases)
     flags = Dict(flags)
 
+    raise_config_file_errors = True
+
     subcommands = {
         'token': (NewToken, "Generate an API token for a user"),
         'upgrade-db': (UpgradeDB, "Upgrade your JupyterHub state database to the current version."),
