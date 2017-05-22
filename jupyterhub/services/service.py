@@ -88,6 +88,12 @@ class _ServiceSpawner(LocalProcessSpawner):
             return
         return set_user_setuid(name, chdir=False)
 
+    def user_env(self, env):
+        if not self.user.name:
+            return env
+        else:
+            return super().user_env(env)
+
     def start(self):
         """Start the process"""
         env = self.get_env()
