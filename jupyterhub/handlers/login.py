@@ -57,7 +57,7 @@ class LoginHandler(BaseHandler):
                 if user.running:
                     next_url = user.url
                 else:
-                    next_url = self.hub.server.base_url
+                    next_url = self.hub.base_url
             # set new login cookie
             # because single-user cookie may have been cleared or incorrect
             self.set_login_cookie(self.get_current_user())
@@ -101,7 +101,7 @@ class LoginHandler(BaseHandler):
             next_url = self.get_argument('next', default='')
             if not next_url.startswith('/'):
                 next_url = ''
-            next_url = next_url or self.hub.server.base_url
+            next_url = next_url or self.hub.base_url
             self.redirect(next_url)
             self.log.info("User logged in: %s", username)
         else:

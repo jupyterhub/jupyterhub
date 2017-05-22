@@ -52,6 +52,7 @@ from traitlets import (
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
+from ..objects import Server
 from ..traitlets import Command
 from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..utils import url_path_join
@@ -60,7 +61,7 @@ class _MockUser(HasTraits):
     name = Unicode()
     server = Instance(orm.Server, allow_none=True)
     state = Dict()
-    service = Instance(__module__ + '.Service')
+    service = Instance(__name__ + '.Service')
     host = Unicode()
 
     @property
@@ -221,7 +222,10 @@ class Service(LoggingConfigurable):
 
     @property
     def server(self):
-        return self.orm.server
+        if self.orm.server:
+            return Server(orm_server=self.orm.server)
+        else:
+            return None
 
     @property
     def prefix(self):
