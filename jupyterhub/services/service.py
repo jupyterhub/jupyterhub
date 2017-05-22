@@ -258,7 +258,7 @@ class Service(LoggingConfigurable):
 
         env['JUPYTERHUB_SERVICE_NAME'] = self.name
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
-        env['JUPYTERHUB_API_URL'] = self.hub_api_url
+        env['JUPYTERHUB_API_URL'] = self.hub.api_url
         env['JUPYTERHUB_BASE_URL'] = self.base_url
         if self.url:
             env['JUPYTERHUB_SERVICE_URL'] = self.url

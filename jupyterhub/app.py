@@ -1058,7 +1058,6 @@ class JupyterHub(Application):
                 base_url=self.base_url,
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,
-                hub_api_url=self.hub.api_url,
                 hub=self.hub,
             )
 
