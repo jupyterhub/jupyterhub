@@ -38,6 +38,7 @@ from notebook.auth.logout import LogoutHandler
 from notebook.base.handlers import IPythonHandler
 
 from jupyterhub import __version__
+from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
 from .utils import url_path_join
 
@@ -345,6 +346,7 @@ class SingleUserNotebookApp(NotebookApp):
         # load the hub-related settings into the tornado settings dict
         self.init_hub_auth()
         s = self.tornado_settings
+        s['log_function'] = log_request
         s['user'] = self.user
         s['group'] = self.group
         s['hub_prefix'] = self.hub_prefix
