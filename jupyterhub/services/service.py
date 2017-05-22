@@ -39,7 +39,6 @@ A hub-managed service with no URL:
     }
 """
 
-from getpass import getuser
 import pipes
 import shutil
 from subprocess import Popen
@@ -85,10 +84,16 @@ class _ServiceSpawner(LocalProcessSpawner):
     cmd = Command(minlen=0)
 
     def make_preexec_fn(self, name):
-        if not name or name == getuser():
+        if not name:
             # no setuid if no name
             return
         return set_user_setuid(name, chdir=False)
+
+    def user_env(self, env):
+        if not self.user.name:
+            return env
+        else:
+            return super().user_env(env)
 
     def start(self):
         """Start the process"""
@@ -168,7 +173,7 @@ class Service(LoggingConfigurable):
     def managed(self):
         """Am I managed by the Hub?"""
         return bool(self.command)
-    
+
     @property
     def kind(self):
         """The name of the kind of service as a string
@@ -189,7 +194,7 @@ class Service(LoggingConfigurable):
         Only used if the Hub is spawning the service.
         """
     ).tag(input=True)
-    user = Unicode(getuser(),
+    user = Unicode("",
         help="""The user to become when launching the service.
 
         If unspecified, run the service as the same user as the Hub.
@@ -257,7 +262,7 @@ class Service(LoggingConfigurable):
 
         env['JUPYTERHUB_SERVICE_NAME'] = self.name
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
-        env['JUPYTERHUB_API_URL'] = self.hub_api_url
+        env['JUPYTERHUB_API_URL'] = self.hub.api_url
         env['JUPYTERHUB_BASE_URL'] = self.base_url
         if self.url:
             env['JUPYTERHUB_SERVICE_URL'] = self.url
