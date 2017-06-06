@@ -392,11 +392,26 @@ class JupyterHub(Application):
         )
 
     hub_port = Integer(8081,
-        help="The port for this process"
+        help="The port for the Hub process"
     ).tag(config=True)
     hub_ip = Unicode('127.0.0.1',
-        help="The ip for this process"
+        help="""The ip address for the Hub process to *bind* to.
+
+        See `hub_connect_ip` for cases where the bind and connect address should differ.
+        """
     ).tag(config=True)
+    hub_connect_ip = Unicode('',
+        help="""The ip or hostname for proxies and spawners to use
+        for connecting to the Hub.
+
+        Use when the bind address (`hub_ip`) is 0.0.0.0 or otherwise different
+        from the connect address.
+
+        Default: when `hub_ip` is 0.0.0.0, use `socket.gethostname()`, otherwise use `hub_ip`.
+
+        .. versionadded:: 0.8
+        """
+    )
     hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server.  Always /base_url/hub/"
     )
@@ -836,7 +851,8 @@ class JupyterHub(Application):
             cookie_name='jupyter-hub-token',
             public_host=self.subdomain_host,
         )
-        print(self.hub)
+        if self.hub_connect_ip:
+            self.hub.connect_ip = self.hub_connect_ip
 
     @gen.coroutine
     def init_users(self):

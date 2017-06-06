@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import socket
 from urllib.parse import urlparse
 
 from tornado import gen
@@ -26,10 +27,18 @@ class Server(HasTraits):
     orm_server = Instance(orm.Server, allow_none=True)
 
     ip = Unicode()
+    connect_ip = Unicode()
     proto = Unicode('http')
     port = Integer()
     base_url = Unicode('/')
     cookie_name = Unicode('')
+    
+    @default('connect_ip')
+    def _default_connect_ip(self):
+        # if listening on all interfaces, default to hostname
+        if self.ip in {'', '0.0.0.0'}:
+            return socket.gethostname()
+        return self.ip
 
     @classmethod
     def from_url(cls, url):
@@ -67,13 +76,9 @@ class Server(HasTraits):
 
     @property
     def host(self):
-        ip = self.ip
-        if ip in {'', '0.0.0.0'}:
-            # when listening on all interfaces, connect to localhost
-            ip = '127.0.0.1'
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
-            ip=ip,
+            ip=self.connect_ip,
             port=self.port,
         )
 
@@ -101,7 +106,7 @@ class Server(HasTraits):
         if http:
             yield wait_for_http_server(self.url, timeout=timeout)
         else:
-            yield wait_for_server(self.ip or '127.0.0.1', self.port, timeout=timeout)
+            yield wait_for_server(self.connect_ip, self.port, timeout=timeout)
 
     def is_up(self):
         """Is the server accepting connections?"""
