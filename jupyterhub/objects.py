@@ -33,12 +33,16 @@ class Server(HasTraits):
     base_url = Unicode('/')
     cookie_name = Unicode('')
     
-    @default('connect_ip')
-    def _default_connect_ip(self):
-        # if listening on all interfaces, default to hostname
-        if self.ip in {'', '0.0.0.0'}:
+    @property
+    def _connect_ip(self):
+        """Property for connect_ip"""
+        if self.connect_ip:
+            return self.connect_ip
+        elif self.ip in {'', '0.0.0.0'}:
+            # if listening on all interfaces, default to hostname
             return socket.gethostname()
-        return self.ip
+        else:
+            return self.ip
 
     @classmethod
     def from_url(cls, url):
@@ -78,7 +82,7 @@ class Server(HasTraits):
     def host(self):
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
-            ip=self.connect_ip,
+            ip=self._connect_ip,
             port=self.port,
         )
 
@@ -97,7 +101,7 @@ class Server(HasTraits):
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
         if self.ip in {'', '0.0.0.0'}:
-            return self.url.replace('127.0.0.1', self.ip or '*', 1)
+            return self.url.replace(self._connect_ip, self.ip or '*', 1)
         return self.url
 
     @gen.coroutine
@@ -106,7 +110,7 @@ class Server(HasTraits):
         if http:
             yield wait_for_http_server(self.url, timeout=timeout)
         else:
-            yield wait_for_server(self.connect_ip, self.port, timeout=timeout)
+            yield wait_for_server(self._connect_ip, self.port, timeout=timeout)
 
     def is_up(self):
         """Is the server accepting connections?"""
