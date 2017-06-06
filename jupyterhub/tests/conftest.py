@@ -53,6 +53,9 @@ def app(request):
 
 
     def fin():
+        # disconnect logging during cleanup because pytest closes captured FDs prematurely
+        mocked_app.log.handlers = []
+
         MockHub.clear_instance()
         mocked_app.stop()
     request.addfinalizer(fin)
