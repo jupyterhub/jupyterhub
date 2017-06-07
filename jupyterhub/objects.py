@@ -32,14 +32,20 @@ class Server(HasTraits):
     port = Integer()
     base_url = Unicode('/')
     cookie_name = Unicode('')
-    
+
     @property
     def _connect_ip(self):
-        """Property for connect_ip"""
+        """The address to use when connecting to this server
+
+        When `ip` is set to a real ip address, the same value is used.
+        When `ip` refers to 'all interfaces' (e.g. '0.0.0.0'),
+        clients connect via hostname by default.
+        Setting `connect_ip` explicitly overrides any default behavior.
+        """
         if self.connect_ip:
             return self.connect_ip
         elif self.ip in {'', '0.0.0.0'}:
-            # if listening on all interfaces, default to hostname
+            # if listening on all interfaces, default to hostname for connect
             return socket.gethostname()
         else:
             return self.ip
