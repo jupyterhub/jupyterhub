@@ -372,6 +372,7 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
         s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
+        s.setdefault('headers', {})['X-JupyterHub-Version'] = __version__
         super(SingleUserNotebookApp, self).init_webapp()
 
         # add OAuth callback
