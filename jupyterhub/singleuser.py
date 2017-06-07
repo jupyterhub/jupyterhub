@@ -357,6 +357,9 @@ class SingleUserNotebookApp(NotebookApp):
             hub_prefix=self.hub_prefix,
             base_url=self.base_url,
         )
+        # smoke check
+        if not self.hub_auth.oauth_client_id:
+            raise ValueError("Missing OAuth client ID")
 
     def init_webapp(self):
         # load the hub-related settings into the tornado settings dict
