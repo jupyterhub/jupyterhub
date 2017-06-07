@@ -193,6 +193,14 @@ class SingleUserNotebookApp(NotebookApp):
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)
+    
+    @default('user')
+    def _default_user(self):
+        return os.environ.get('JUPYTERHUB_USER') or ''
+
+    @default('group')
+    def _default_group(self):
+        return os.environ.get('JUPYTERHUB_GROUP') or ''
 
     @observe('user')
     def _user_changed(self, change):
@@ -233,13 +241,13 @@ class SingleUserNotebookApp(NotebookApp):
     def _port_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-            return url.port
+            return url.port or 8888
 
     @default('ip')
     def _ip_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-            return url.hostname
+            return url.hostname or '127.0.0.1'
 
     aliases = aliases
     flags = flags
