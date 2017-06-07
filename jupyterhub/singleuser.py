@@ -4,12 +4,16 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from distutils.version import LooseVersion as V
 import os
+import re
 from textwrap import dedent
 from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader, FunctionLoader
 
+from tornado.httpclient import AsyncHTTPClient
+from tornado import gen
 from tornado import ioloop
 from tornado.web import HTTPError
 
@@ -37,7 +41,7 @@ from notebook.auth.login import LoginHandler
 from notebook.auth.logout import LogoutHandler
 from notebook.base.handlers import IPythonHandler
 
-from jupyterhub import __version__
+from ._version import __version__, _check_version
 from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
 from .utils import url_path_join
@@ -337,7 +341,27 @@ class SingleUserNotebookApp(NotebookApp):
             path = list(_exclude_home(path))
         return path
 
+    @gen.coroutine
+    def check_hub_version(self):
+        """Test a connection to my Hub
+        
+        - exit if I can't connect at all
+        - check version and warn on sufficient mismatch
+        """
+        client = AsyncHTTPClient()
+        try:
+            resp = yield client.fetch(self.hub_api_url)
+        except Exception:
+            self.log.exception("Failed to connect to my Hub at %s. Is it running?", self.hub_api_url)
+            self.exit(1)
+        
+        hub_version = resp.headers.get('X-JupyterHub-Version')
+        _check_version(hub_version, __version__, self.log)
+
     def start(self):
+        self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
+        # start by hitting Hub to check version
+        ioloop.IOLoop.current().run_sync(self.check_hub_version)
         super(SingleUserNotebookApp, self).start()
 
     def init_hub_auth(self):
