@@ -37,6 +37,13 @@ def test_singleuser_auth(app, io_loop):
     r = requests.get(url_path_join(url, 'logout'), cookies=cookies)
     assert len(r.cookies) == 0
 
+    # another user accessing should get 403, not redirect to login
+    cookies = app.login_user('burgess')
+    r = requests.get(url, cookies=cookies)
+    assert r.status_code == 403
+    print(r.text)
+    assert r.text == ''
+
 
 def test_disable_user_config(app, io_loop):
     # use StubSingleUserSpawner to launch a single-user app in a thread
