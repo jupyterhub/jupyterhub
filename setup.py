@@ -73,7 +73,7 @@ def get_package_data():
     return package_data
 
 ns = {}
-with open(pjoin(here, 'jupyterhub', 'version.py')) as f:
+with open(pjoin(here, 'jupyterhub', '_version.py')) as f:
     exec(f.read(), {}, ns)
 
 
