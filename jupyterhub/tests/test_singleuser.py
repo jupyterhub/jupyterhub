@@ -41,8 +41,7 @@ def test_singleuser_auth(app, io_loop):
     cookies = app.login_user('burgess')
     r = requests.get(url, cookies=cookies)
     assert r.status_code == 403
-    print(r.text)
-    assert r.text == ''
+    assert 'burgess' in r.text
 
 
 def test_disable_user_config(app, io_loop):
