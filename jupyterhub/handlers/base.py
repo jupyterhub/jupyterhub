@@ -92,10 +92,15 @@ class BaseHandler(RequestHandler):
     def oauth_provider(self):
         return self.settings['oauth_provider']
 
+    def prepare(self):
+        """Roll back any uncommitted transactions at the start of the handler."""
+        self.db.rollback()
+        return super().prepare()
+
     def finish(self, *args, **kwargs):
         """Roll back any uncommitted transactions from the handler."""
         self.db.rollback()
-        super().finish(*args, **kwargs)
+        return super().finish(*args, **kwargs)
 
     #---------------------------------------------------------------
     # Security policies
@@ -477,7 +482,6 @@ class BaseHandler(RequestHandler):
         try:
             html = self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
-            self.log.debug("No template for %d", status_code)
             html = self.render_template('error.html', **ns)
 
         self.write(html)

@@ -149,9 +149,9 @@ class MockHub(JupyterHub):
         pass
     
     def start(self, argv=None):
-        self.db_file = NamedTemporaryFile()
         self.pid_file = NamedTemporaryFile(delete=False).name
-        self.db_url = self.db_file.name
+        self.db_file = NamedTemporaryFile()
+        self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         
         evt = threading.Event()
         
@@ -161,9 +161,11 @@ class MockHub(JupyterHub):
             # put initialize in start for SQLAlchemy threading reasons
             yield super(MockHub, self).initialize(argv=argv)
             # add an initial user
-            user = orm.User(name='user')
-            self.db.add(user)
-            self.db.commit()
+            user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
+            if user is None:
+                user = orm.User(name='user')
+                self.db.add(user)
+                self.db.commit()
             yield super(MockHub, self).start()
             yield self.hub.wait_up(http=True)
             self.io_loop.add_callback(evt.set)
@@ -177,7 +179,7 @@ class MockHub(JupyterHub):
         self._thread = threading.Thread(target=_start)
         self._thread.start()
         ready = evt.wait(timeout=10)
-        assert ready
+        assert ready, "MockHub app failed to start"
     
     def stop(self):
         super().stop()
@@ -198,6 +200,7 @@ class MockHub(JupyterHub):
             allow_redirects=False,
         )
         r.raise_for_status()
+        self.db.commit()
         assert r.cookies
         return r.cookies
 

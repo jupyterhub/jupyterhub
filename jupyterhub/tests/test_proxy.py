@@ -65,7 +65,9 @@ def test_external_proxy(request, io_loop):
     # test if api service has a root route '/'
     routes = io_loop.run_sync(app.proxy.get_all_routes)
     assert list(routes.keys()) == ['/']
-    
+
+    app.db.commit()
+
     # add user to the db and start a single user server
     name = 'river'
     r = api_request(app, 'users', name, method='post')

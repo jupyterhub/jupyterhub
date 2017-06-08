@@ -210,6 +210,7 @@ class Service(LoggingConfigurable):
     proxy = Any()
     base_url = Unicode()
     db = Any()
+    hub_api_url = Unicode()
     orm = Any()
 
     oauth_provider = Any()
