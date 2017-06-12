@@ -164,7 +164,7 @@ epub_exclude_files = ['search.html']
 
 # -- Intersphinx ----------------------------------------------------------
 
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {'https://docs.python.org/3/': None}
 
 # -- Read The Docs --------------------------------------------------------
 
