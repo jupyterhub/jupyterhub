@@ -266,7 +266,7 @@ class User(HasTraits):
                 client_store.add_client(client_id, api_token,
                                         url_path_join(self.url, 'oauth_callback'),
                                         )
-                db.commit()
+        db.commit()
 
         # trigger pre-spawn hook on authenticator
         authenticator = self.authenticator

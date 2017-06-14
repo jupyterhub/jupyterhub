@@ -6,7 +6,7 @@ import json
 import traceback
 
 from tornado.log import LogFormatter, access_log
-from tornado.web import StaticFileHandler
+from tornado.web import StaticFileHandler, HTTPError
 
 
 def coroutine_traceback(typ, value, tb):
@@ -88,7 +88,7 @@ def log_request(handler):
 
     try:
         user = handler.get_current_user()
-    except web.HTTPError:
+    except HTTPError:
         username = ''
     else:
         if user is None:
