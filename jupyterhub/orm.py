@@ -5,6 +5,7 @@
 
 from datetime import datetime
 import enum
+import os
 import json
 
 from tornado import gen
@@ -23,6 +24,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.schema import Index, UniqueConstraint
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import bindparam
+from sqlalchemy_utils.types.encrypted import EncryptedType
 from sqlalchemy import create_engine, Table
 
 from .utils import (
@@ -53,6 +55,38 @@ class JSONDict(TypeDecorator):
             value = json.loads(value)
         return value
 
+
+class OptionalEncrypted(EncryptedType):
+    def __init__(self, type_in=None, key=None, engine=None, **kwargs):
+        try:
+            import cryptography
+        except ImportError:
+            # not installed, so no encryption!
+            self.encrypted = False
+            print("Cryptography module not installed, auth_state will be disabled")
+            return
+
+        if 'AUTH_STATE_ENCRYPTION_KEY' not in os.environ:
+            print("Encryption key not set, Auth state will be disabled")
+            self.encrypted = False
+            return
+
+        if key is None:
+            key = os.environ['AUTH_STATE_ENCRYPTION_KEY']
+        super().__init__(type_in, key, engine, **kwargs)
+
+    def process_bind_param(self, value, dialect):
+        if not self.encrypted and value:
+            # If we aren't encrypted and get a non-empty value, just set an empty value
+            # FIXME: Warn in logs here
+            return None
+        return super().process_bind_param(value, dialect)
+
+    def process_result_value(self, value, dialect):
+        if not self.encrypted:
+            # If we don't have encryption support, don't even try to decrypt it
+            return None
+        return super().process_result_value(value, dialect)
 
 Base = declarative_base()
 Base.log = app_log
@@ -146,7 +180,7 @@ class User(Base):
     # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
     # Authenticators can store their state here:
-    auth_state = Column(JSONDict)
+    auth_state = OptionalEncrypted(JSONDict)
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
