@@ -241,13 +241,21 @@ class SingleUserNotebookApp(NotebookApp):
     def _port_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-            return url.port or 8888
+            if url.port:
+                return url.port
+            elif url.scheme == 'http':
+                return 80
+            elif url.scheme == 'https':
+                return 443
+        return 8888
 
     @default('ip')
     def _ip_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-            return url.hostname or '127.0.0.1'
+            if url.hostname:
+                return url.hostname
+        return '127.0.0.1'
 
     aliases = aliases
     flags = flags
