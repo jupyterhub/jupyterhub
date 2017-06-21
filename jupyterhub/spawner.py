@@ -438,8 +438,8 @@ class Spawner(LoggingConfigurable):
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_API_URL'] = self.hub.api_url
-        env['JUPYTERHUB_BASE_URL'] = self.hub.base_url
-        env['JUPYTERHUB_SERVICE_PREFIX'] = self.user.server.base_url
+        env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
+        env['JUPYTERHUB_SERVICE_PREFIX'] = self.user.base_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
