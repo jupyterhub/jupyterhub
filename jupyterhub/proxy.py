@@ -29,7 +29,24 @@ from .utils import url_path_join
 
 
 class RouteSpec(namedtuple('RouteSpec', ['path', 'host'])):
+    """Object wrapping a proxy route specification
+
+    Attributes:
+
+        path (str): The URL path prefix for this route. Required.
+        host (str): The hostname used for routing when host-based routing is enabled.
+
+    """
     def __new__(cls, path, *, host=''):
+        """Create a route specification.
+
+        Arguments:
+
+            path (str): The path prefix. Leading and trailing slashes will be added
+                if missing. Required.
+            host (str): The hostname used for routing when host-based routing is enabled.
+                Optional, keyword-only.
+        """
         # give host a default value
         if isinstance(path, cls) and host == '':
             # RouteSpec(routespec) makes a copy
