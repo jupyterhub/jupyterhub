@@ -221,7 +221,10 @@ def test_check_routes(app, io_loop, username, endpoints):
     False,
 ])
 def test_add_get_delete(app, route_str, as_str):
-    routespec = RouteSpec.as_routespec(route_str)
+    if app.subdomain_host and as_str:
+        # can't use simple str args when host is not empty
+        pytest.skip()
+    routespec = RouteSpec(route_str, host=urlparse(app.subdomain_host).hostname or '')
     proxy = app.proxy
     arg = route_str if as_str else routespec
     target = 'https://localhost:1234'
