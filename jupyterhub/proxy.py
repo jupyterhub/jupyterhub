@@ -35,6 +35,13 @@ class RouteSpec(namedtuple('RouteSpec', ['path', 'host'])):
             # RouteSpec(routespec) makes a copy
             path, host = path
 
+        # ensure leading/trailing slashes
+        if not path.startswith('/'):
+            path = '/' + path
+        if not path.endswith('/'):
+            path = path + '/'
+        return super().__new__(cls, path, host)
+
     @classmethod
     def as_routespec(cls, routespec):
         """Ensure a RouteSpec or str is a RouteSpec
@@ -400,6 +407,8 @@ class ConfigurableHTTPProxy(Proxy):
             if not self.host_routing:
                 raise RuntimeError("Adding route with a host")
             path = '/' + url_path_join(routespec.host, path)
+        if path != '/' and path.endswith('/'):
+            path = path.rstrip('/')
         return path
 
     def _routespec_from_chp_path(self, chp_path):

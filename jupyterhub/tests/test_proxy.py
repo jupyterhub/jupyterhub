@@ -4,7 +4,7 @@ import json
 import os
 from queue import Queue
 from subprocess import Popen
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 
 from traitlets.config import Config
 
@@ -21,22 +21,22 @@ def test_routespec():
     with pytest.raises(TypeError):
         RouteSpec()
 
-    spec = RouteSpec('/test')
+    spec = RouteSpec('/test/')
     assert spec.host == ''
-    assert spec.path == '/test'
+    assert spec.path == '/test/'
 
     assert 'path=%r' % spec.path in repr(spec)
     assert 'host' not in repr(spec)
 
-    spec = RouteSpec('/test2', host='myhost')
-    assert spec.path == '/test2'
+    spec = RouteSpec('test2', host='myhost')
+    assert spec.path == '/test2/'
     assert spec.host == 'myhost'
 
     assert 'path=%r' % spec.path in repr(spec)
     assert 'host=%r' % spec.host in repr(spec)
 
     copyspec = RouteSpec(spec)
-    assert copyspec.path == '/test2'
+    assert copyspec.path == '/test2/'
     assert copyspec.host == 'myhost'
     assert copyspec == spec
 
@@ -47,7 +47,7 @@ def test_as_routespec():
 
     spec2 = RouteSpec.as_routespec('/path')
     assert isinstance(spec2, RouteSpec)
-    assert spec2.path == '/path'
+    assert spec2.path == '/path/'
 
 
 def test_external_proxy(request, io_loop):
@@ -207,6 +207,36 @@ def test_check_routes(app, io_loop, username, endpoints):
     # check that before and after state are the same
     assert before == after
 
+
+@pytest.mark.now
+@pytest.mark.gen_test
+@pytest.mark.parametrize("route_str", [
+    '/has%20space/foo',
+    'trailing/slash/',
+    '/has/@/',
+    'has/' + quote('üñîçø∂é'),
+])
+@pytest.mark.parametrize("as_str", [
+    True,
+    False,
+])
+def test_add_get_delete(app, route_str, as_str):
+    routespec = RouteSpec.as_routespec(route_str)
+    proxy = app.proxy
+    arg = route_str if as_str else routespec
+    target = 'https://localhost:1234'
+    yield proxy.add_route(arg, target=target)
+    routes = yield proxy.get_all_routes()
+    assert routespec in routes.keys()
+    route = yield proxy.get_route(arg)
+    assert route == {
+        'target': target,
+        'routespec': routespec,
+        'data': route.get('data'),
+    }
+    yield proxy.delete_route(arg)
+    route = yield proxy.get_route(arg)
+    assert route is None
 
 @pytest.mark.parametrize("test_data", [None, 'notjson', json.dumps([])])
 def test_proxy_patch_bad_request_data(app, test_data):
