@@ -1,5 +1,5 @@
-# http://travis-ci.org/#!/jupyter/jupyterhub
 language: python
+sudo: false
 python:
   - nightly
   - 3.6
@@ -12,6 +12,7 @@ before_install:
   - npm install
   - npm install -g configurable-http-proxy
 install:
+  - pip install -U pip
   - pip install --pre -r dev-requirements.txt .
 
 # running tests

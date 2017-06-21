@@ -6,7 +6,7 @@ import json
 import traceback
 
 from tornado.log import LogFormatter, access_log
-from tornado.web import StaticFileHandler
+from tornado.web import StaticFileHandler, HTTPError
 
 
 def coroutine_traceback(typ, value, tb):
@@ -85,16 +85,38 @@ def log_request(handler):
     headers = _scrub_headers(request.headers)
 
     request_time = 1000.0 * handler.request.request_time()
-    user = handler.get_current_user()
+
+    try:
+        user = handler.get_current_user()
+    except HTTPError:
+        username = ''
+    else:
+        if user is None:
+            username = ''
+        elif isinstance(user, str):
+            username = user
+        elif isinstance(user, dict):
+            username = user['name']
+        else:
+            username = user.name
+
     ns = dict(
         status=status,
         method=request.method,
         ip=request.remote_ip,
         uri=uri,
         request_time=request_time,
-        user=user.name if user else ''
+        user=username,
+        location='',
     )
-    msg = "{status} {method} {uri} ({user}@{ip}) {request_time:.2f}ms"
+    msg = "{status} {method} {uri}{location} ({user}@{ip}) {request_time:.2f}ms"
     if status >= 500 and status != 502:
         log_method(json.dumps(headers, indent=2))
+    elif status in {301, 302}:
+        # log redirect targets
+        # FIXME: _headers is private, but there doesn't appear to be a public way
+        # to get headers from tornado
+        location = handler._headers.get('Location')
+        if location:
+            ns['location'] = ' → {}'.format(location)
     log_method(msg.format(**ns))

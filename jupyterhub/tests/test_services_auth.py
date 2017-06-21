@@ -195,9 +195,7 @@ def test_hub_authenticated(request):
             cookies={'jubal': 'early'},
             allow_redirects=False,
         )
-        r.raise_for_status()
-        assert r.status_code == 302
-        assert auth.login_url in r.headers['Location']
+        assert r.status_code == 403
         
         # pass group whitelist
         TestHandler.hub_groups = {'lions'}
@@ -214,9 +212,7 @@ def test_hub_authenticated(request):
             cookies={'jubal': 'early'},
             allow_redirects=False,
         )
-        r.raise_for_status()
-        assert r.status_code == 302
-        assert auth.login_url in r.headers['Location']
+        assert r.status_code == 403
 
 
 def test_hubauth_cookie(app, mockservice_url):

@@ -89,5 +89,4 @@ def _alembic(*args):
 
 
 if __name__ == '__main__':
-    import sys
     _alembic(*sys.argv[1:])

@@ -39,7 +39,6 @@ A hub-managed service with no URL:
     }
 """
 
-from getpass import getuser
 import pipes
 import shutil
 from subprocess import Popen
@@ -52,6 +51,7 @@ from traitlets import (
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
+from ..objects import Server
 from ..traitlets import Command
 from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..utils import url_path_join
@@ -60,7 +60,7 @@ class _MockUser(HasTraits):
     name = Unicode()
     server = Instance(orm.Server, allow_none=True)
     state = Dict()
-    service = Instance(__module__ + '.Service')
+    service = Instance(__name__ + '.Service')
     host = Unicode()
 
     @property
@@ -71,6 +71,12 @@ class _MockUser(HasTraits):
             return self.host + self.server.base_url
         else:
             return self.server.base_url
+    
+    @property
+    def base_url(self):
+        if not self.server:
+            return ''
+        return self.server.base_url
 
 # We probably shouldn't use a Spawner here,
 # but there are too many concepts to share.
@@ -84,10 +90,16 @@ class _ServiceSpawner(LocalProcessSpawner):
     cmd = Command(minlen=0)
 
     def make_preexec_fn(self, name):
-        if not name or name == getuser():
+        if not name:
             # no setuid if no name
             return
         return set_user_setuid(name, chdir=False)
+
+    def user_env(self, env):
+        if not self.user.name:
+            return env
+        else:
+            return super().user_env(env)
 
     def start(self):
         """Start the process"""
@@ -167,7 +179,7 @@ class Service(LoggingConfigurable):
     def managed(self):
         """Am I managed by the Hub?"""
         return bool(self.command)
-    
+
     @property
     def kind(self):
         """The name of the kind of service as a string
@@ -188,7 +200,7 @@ class Service(LoggingConfigurable):
         Only used if the Hub is spawning the service.
         """
     ).tag(input=True)
-    user = Unicode(getuser(),
+    user = Unicode("",
         help="""The user to become when launching the service.
 
         If unspecified, run the service as the same user as the Hub.
@@ -221,7 +233,10 @@ class Service(LoggingConfigurable):
 
     @property
     def server(self):
-        return self.orm.server
+        if self.orm.server:
+            return Server(orm_server=self.orm.server)
+        else:
+            return None
 
     @property
     def prefix(self):
@@ -252,9 +267,6 @@ class Service(LoggingConfigurable):
         env.update(self.environment)
 
         env['JUPYTERHUB_SERVICE_NAME'] = self.name
-        env['JUPYTERHUB_API_TOKEN'] = self.api_token
-        env['JUPYTERHUB_API_URL'] = self.hub_api_url
-        env['JUPYTERHUB_BASE_URL'] = self.base_url
         if self.url:
             env['JUPYTERHUB_SERVICE_URL'] = self.url
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url

@@ -116,11 +116,12 @@ To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
 
 ### Authenticators
 
-| Authenticator                                                        | Description                                       |
-| -------------------------------------------------------------------- | ------------------------------------------------- |
-| PAMAuthenticator                                                     | Default, built-in authenticator                   |
-| [OAuthenticator](https://github.com/jupyterhub/oauthenticator)       | OAuth + JupyterHub Authenticator = OAuthenticator |
-| [ldapauthenticator](https://github.com/jupyterhub/ldapauthenticator) | Simple LDAP Authenticator Plugin for JupyterHub   |
+| Authenticator                                                               | Description                                       |
+| --------------------------------------------------------------------------- | ------------------------------------------------- |
+| PAMAuthenticator                                                            | Default, built-in authenticator                   |
+| [OAuthenticator](https://github.com/jupyterhub/oauthenticator)              | OAuth + JupyterHub Authenticator = OAuthenticator |
+| [ldapauthenticator](https://github.com/jupyterhub/ldapauthenticator)        | Simple LDAP Authenticator Plugin for JupyterHub   |
+| [kdcAuthenticator](https://github.com/bloomberg/jupyterhub-kdcauthenticator)| Kerberos Authenticator Plugin for JupyterHub      |
 
 ### Spawners
 

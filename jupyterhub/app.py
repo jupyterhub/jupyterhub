@@ -30,7 +30,6 @@ from sqlalchemy.orm import scoped_session
 
 import tornado.httpserver
 import tornado.options
-from tornado.httpclient import HTTPError
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
 from tornado import gen, web
@@ -54,6 +53,7 @@ from .user import User, UserDict
 from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
+from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command
 from .utils import (
     url_path_join,
@@ -62,6 +62,7 @@ from .utils import (
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .spawner import Spawner, LocalProcessSpawner
+from .objects import Hub
 
 # For faking stats
 from .emptyclass import EmptyClass
@@ -140,7 +141,6 @@ class NewToken(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         hub.init_db()
-        hub.hub = hub.db.query(orm.Hub).first()
         hub.init_users()
         user = orm.User.find(hub.db, self.name)
         if user is None:
@@ -216,6 +216,8 @@ class JupyterHub(Application):
 
     aliases = Dict(aliases)
     flags = Dict(flags)
+
+    raise_config_file_errors = True
 
     subcommands = {
         'token': (NewToken, "Generate an API token for a user"),
@@ -349,52 +351,67 @@ class JupyterHub(Application):
         help="Supply extra arguments that will be passed to Jinja environment."
     ).tag(config=True)
 
-    proxy_cmd = Command('configurable-http-proxy',
-        help="""The command to start the http proxy.
+    proxy_class = Type(ConfigurableHTTPProxy, Proxy,
+                       help="""Select the Proxy API implementation."""
+                       ).tag(config=True)
 
-        Only override if configurable-http-proxy is not on your PATH
-        """
+    proxy_cmd = Command([], config=True,
+        help="DEPRECATED. Use ConfigurableHTTPProxy.command",
     ).tag(config=True)
+    
     debug_proxy = Bool(False,
-        help="show debug output in configurable-http-proxy"
+        help="DEPRECATED: Use ConfigurableHTTPProxy.debug",
     ).tag(config=True)
     proxy_auth_token = Unicode(
-        help="""The Proxy Auth token.
-
-        Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
-        """
+        help="DEPRECATED: Use ConfigurableHTTPProxy.auth_token"
     ).tag(config=True)
 
-    @default('proxy_auth_token')
-    def _proxy_auth_token_default(self):
-        token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', None)
-        if not token:
-            self.log.warning('\n'.join([
-                "",
-                "Generating CONFIGPROXY_AUTH_TOKEN. Restarting the Hub will require restarting the proxy.",
-                "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHub.proxy_auth_token config to avoid this message.",
-                "",
-            ]))
-            token = orm.new_token()
-        return token
+    _proxy_config_map = {
+        'proxy_cmd': 'command',
+        'debug_proxy': 'debug',
+        'proxy_auth_token': 'auth_token',
+    }
+    @observe(*_proxy_config_map)
+    def _deprecated_proxy_config(self, change):
+        dest = self._proxy_config_map[change.name]
+        self.log.warning("JupyterHub.%s is deprecated in JupyterHub 0.8, use ConfigurableHTTPProxy.%s", change.name, dest)
+        self.config.ConfigurableHTTPProxy[dest] = change.new
 
-    proxy_api_ip = Unicode('127.0.0.1',
-        help="The ip for the proxy API handlers"
+    proxy_api_ip = Unicode(
+        help="DEPRECATED: Use ConfigurableHTTPProxy.api_url"
     ).tag(config=True)
     proxy_api_port = Integer(
-        help="The port for the proxy API handlers"
+        help="DEPRECATED: Use ConfigurableHTTPProxy.api_url"
     ).tag(config=True)
-
-    @default('proxy_api_port')
-    def _proxy_api_port_default(self):
-        return self.port + 1
+    @observe('proxy_api_port', 'proxy_api_ip')
+    def _deprecated_proxy_api(self, change):
+        self.log.warning("JupyterHub.%s is deprecated in JupyterHub 0.8, use ConfigurableHTTPProxy.api_url", change.name)
+        self.config.ConfigurableHTTPProxy.api_url = 'http://{}:{}'.format(
+            self.proxy_api_ip or '127.0.0.1',
+            self.proxy_api_port or self.port + 1,
+        )
 
     hub_port = Integer(8081,
-        help="The port for this process"
+        help="The port for the Hub process"
     ).tag(config=True)
     hub_ip = Unicode('127.0.0.1',
-        help="The ip for this process"
+        help="""The ip address for the Hub process to *bind* to.
+
+        See `hub_connect_ip` for cases where the bind and connect address should differ.
+        """
     ).tag(config=True)
+    hub_connect_ip = Unicode('',
+        help="""The ip or hostname for proxies and spawners to use
+        for connecting to the Hub.
+
+        Use when the bind address (`hub_ip`) is 0.0.0.0 or otherwise different
+        from the connect address.
+
+        Default: when `hub_ip` is 0.0.0.0, use `socket.gethostname()`, otherwise use `hub_ip`.
+
+        .. versionadded:: 0.8
+        """
+    )
     hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server.  Always /base_url/hub/"
     )
@@ -682,10 +699,6 @@ class JupyterHub(Application):
     def init_ports(self):
         if self.hub_port == self.port:
             raise TraitError("The hub and proxy cannot both listen on port %i" % self.port)
-        if self.hub_port == self.proxy_api_port:
-            raise TraitError("The hub and proxy API cannot both listen on port %i" % self.hub_port)
-        if self.proxy_api_port == self.port:
-            raise TraitError("The proxy's public and API ports cannot both be %i" % self.port)
 
     @staticmethod
     def add_url_prefix(prefix, handlers):
@@ -805,36 +818,6 @@ class JupyterHub(Application):
             self._local.db = scoped_session(self.session_factory)()
         return self._local.db
 
-    @property
-    def hub(self):
-        if not getattr(self._local, 'hub', None):
-            q = self.db.query(orm.Hub)
-            assert q.count() <= 1
-            self._local.hub = q.first()
-            if self.subdomain_host and self._local.hub:
-                self._local.hub.host = self.subdomain_host
-        return self._local.hub
-
-    @hub.setter
-    def hub(self, hub):
-        self._local.hub = hub
-        if hub and self.subdomain_host:
-            hub.host = self.subdomain_host
-
-    @property
-    def proxy(self):
-        if not getattr(self._local, 'proxy', None):
-            q = self.db.query(orm.Proxy)
-            assert q.count() <= 1
-            p = self._local.proxy = q.first()
-            if p:
-                p.auth_token = self.proxy_auth_token
-        return self._local.proxy
-
-    @proxy.setter
-    def proxy(self, proxy):
-        self._local.proxy = proxy
-
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
@@ -861,28 +844,15 @@ class JupyterHub(Application):
 
     def init_hub(self):
         """Load the Hub config into the database"""
-        self.hub = self.db.query(orm.Hub).first()
-        if self.hub is None:
-            self.hub = orm.Hub(
-                server=orm.Server(
-                    ip=self.hub_ip,
-                    port=self.hub_port,
-                    base_url=self.hub_prefix,
-                    cookie_name='jupyter-hub-token',
-                )
-            )
-            self.db.add(self.hub)
-        else:
-            server = self.hub.server
-            server.ip = self.hub_ip
-            server.port = self.hub_port
-            server.base_url = self.hub_prefix
-        if self.subdomain_host:
-            if not self.subdomain_host:
-                raise ValueError("Must specify subdomain_host when using subdomains."
-                " This should be the public domain[:port] of the Hub.")
-
-        self.db.commit()
+        self.hub = Hub(
+            ip=self.hub_ip,
+            port=self.hub_port,
+            base_url=self.hub_prefix,
+            cookie_name='jupyter-hub-token',
+            public_host=self.subdomain_host,
+        )
+        if self.hub_connect_ip:
+            self.hub.connect_ip = self.hub_connect_ip
 
     @gen.coroutine
     def init_users(self):
@@ -954,11 +924,20 @@ class JupyterHub(Application):
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
-                # TODO: Review approach to synchronize whitelist with db
-                # known cause of the exception is a user who has already been removed from the system
-                # but the user still exists in the hub's user db
                 self.log.exception("Error adding user %r already in db", user.name)
-        db.commit()  # can add_user touch the db?
+                if self.authenticator.delete_invalid_users:
+                    self.log.warning("Deleting invalid user %r from the Hub database", user.name)
+                    db.delete(user)
+                else:
+                    self.log.warning(dedent("""
+                    You can set
+                        c.Authenticator.delete_invalid_users = True
+                    to automatically delete users from the Hub database that no longer pass
+                    Authenticator validation,
+                    such as when user accounts are deleted from the external system
+                    without notifying JupyterHub.
+                    """))
+        db.commit()
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
@@ -1058,7 +1037,6 @@ class JupyterHub(Application):
                 base_url=self.base_url,
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,
-                hub_api_url=self.hub.api_url,
                 hub=self.hub,
             )
 
@@ -1151,7 +1129,14 @@ class JupyterHub(Application):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             self.log.debug("Loading state for %s from db", user.name)
             spawner = user.spawner
-            status = yield spawner.poll()
+            status = 0
+            if user.server:
+                try:
+                    status = yield spawner.poll()
+                except Exception:
+                    self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.", user.name)
+                    status = -1
+
             if status is None:
                 self.log.info("%s still running", user.name)
                 spawner.add_poll_callback(user_stopped, user)
@@ -1173,131 +1158,37 @@ class JupyterHub(Application):
         db.commit()
 
     def init_oauth(self):
+        base_url = self.hub.server.base_url
         self.oauth_provider = make_provider(
             self.session_factory,
-            url_prefix=url_path_join(self.hub.server.base_url, 'api/oauth2'),
-            login_url=self.authenticator.login_url(self.hub.server.base_url),
+            url_prefix=url_path_join(base_url, 'api/oauth2'),
+            login_url=url_path_join(base_url, 'login')
+,
         )
 
     def init_proxy(self):
-        """Load the Proxy config into the database"""
-        self.proxy = self.db.query(orm.Proxy).first()
-        if self.proxy is None:
-            self.proxy = orm.Proxy(
-                public_server=orm.Server(),
-                api_server=orm.Server(),
-            )
-            self.db.add(self.proxy)
-            self.db.commit()
-        self.proxy.auth_token = self.proxy_auth_token  # not persisted
-        self.proxy.log = self.log
-        self.proxy.public_server.ip = self.ip
-        self.proxy.public_server.port = self.port
-        self.proxy.public_server.base_url = self.base_url
-        self.proxy.api_server.ip = self.proxy_api_ip
-        self.proxy.api_server.port = self.proxy_api_port
-        self.proxy.api_server.base_url = '/api/routes/'
-        self.db.commit()
-
-    @gen.coroutine
-    def start_proxy(self):
-        """Actually start the configurable-http-proxy"""
-        # check for proxy
-        if self.proxy.public_server.is_up() or self.proxy.api_server.is_up():
-            # check for *authenticated* access to the proxy (auth token can change)
-            try:
-                routes = yield self.proxy.get_routes()
-            except (HTTPError, OSError, socket.error) as e:
-                if isinstance(e, HTTPError) and e.code == 403:
-                    msg = "Did CONFIGPROXY_AUTH_TOKEN change?"
-                else:
-                    msg = "Is something else using %s?" % self.proxy.public_server.bind_url
-                self.log.error("Proxy appears to be running at %s, but I can't access it (%s)\n%s",
-                    self.proxy.public_server.bind_url, e, msg)
-                self.exit(1)
-                return
-            else:
-                self.log.info("Proxy already running at: %s", self.proxy.public_server.bind_url)
-                yield self.proxy.check_routes(self.users, self._service_map, routes)
-            self.proxy_process = None
-            return
-
-        env = os.environ.copy()
-        env['CONFIGPROXY_AUTH_TOKEN'] = self.proxy.auth_token
-        cmd = self.proxy_cmd + [
-            '--ip', self.proxy.public_server.ip,
-            '--port', str(self.proxy.public_server.port),
-            '--api-ip', self.proxy.api_server.ip,
-            '--api-port', str(self.proxy.api_server.port),
-            '--default-target', self.hub.server.host,
-            '--error-target', url_path_join(self.hub.server.url, 'error'),
-        ]
-        if self.subdomain_host:
-            cmd.append('--host-routing')
-        if self.debug_proxy:
-            cmd.extend(['--log-level', 'debug'])
-        if self.ssl_key:
-            cmd.extend(['--ssl-key', self.ssl_key])
-        if self.ssl_cert:
-            cmd.extend(['--ssl-cert', self.ssl_cert])
-        if self.statsd_host:
-            cmd.extend([
-                '--statsd-host', self.statsd_host,
-                '--statsd-port', str(self.statsd_port),
-                '--statsd-prefix', self.statsd_prefix + '.chp'
-            ])
-        # Warn if SSL is not used
-        if ' --ssl' not in ' '.join(cmd):
-            self.log.warning("Running JupyterHub without SSL."
-                "  I hope there is SSL termination happening somewhere else...")
-        self.log.info("Starting proxy @ %s", self.proxy.public_server.bind_url)
-        self.log.debug("Proxy cmd: %s", cmd)
-        try:
-            self.proxy_process = Popen(cmd, env=env, start_new_session=True)
-        except FileNotFoundError as e:
-            self.log.error(
-                "Failed to find proxy %r\n"
-                "The proxy can be installed with `npm install -g configurable-http-proxy`"
-                % self.proxy_cmd
-            )
-            self.exit(1)
-
-        def _check():
-            status = self.proxy_process.poll()
-            if status is not None:
-                e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                # py2-compatible `raise e from None`
-                e.__cause__ = None
-                raise e
-
-        for server in (self.proxy.public_server, self.proxy.api_server):
-            for i in range(10):
-                _check()
-                try:
-                    yield server.wait_up(1)
-                except TimeoutError:
-                    continue
-                else:
-                    break
-            yield server.wait_up(1)
-        self.log.debug("Proxy started and appears to be up")
-
-    @gen.coroutine
-    def check_proxy(self):
-        if self.proxy_process.poll() is None:
-            return
-        self.log.error("Proxy stopped with exit code %r",
-            'unknown' if self.proxy_process is None else self.proxy_process.poll()
+        """Load the Proxy config"""
+        # FIXME: handle deprecated config here
+        public_url = 'http{s}://{ip}:{port}{base_url}'.format(
+            s='s' if self.ssl_cert else '',
+            ip=self.ip,
+            port=self.port,
+            base_url=self.base_url,
         )
-        yield self.start_proxy()
-        self.log.info("Setting up routes on new proxy")
-        yield self.proxy.add_all_users(self.users)
-        yield self.proxy.add_all_services(self.services)
-        self.log.info("New proxy back up, and good to go")
+        self.proxy = self.proxy_class(
+            db=self.db,
+            public_url=public_url,
+            parent=self,
+            app=self,
+            log=self.log,
+            hub=self.hub,
+            ssl_cert=self.ssl_cert,
+            ssl_key=self.ssl_key,
+        )
 
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
-        base_url = self.hub.server.base_url
+        base_url = self.hub.base_url
         jinja_options = dict(
             autoescape=True,
         )
@@ -1307,7 +1198,7 @@ class JupyterHub(Application):
             **jinja_options
         )
 
-        login_url = self.authenticator.login_url(base_url)
+        login_url = url_path_join(base_url, 'login')
         logout_url = self.authenticator.logout_url(base_url)
 
         # if running from git, disable caching of require.js
@@ -1335,7 +1226,7 @@ class JupyterHub(Application):
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
-            static_url_prefix=url_path_join(self.hub.server.base_url, 'static/'),
+            static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
             template_path=self.template_paths,
             jinja2_env=jinja_env,
@@ -1420,13 +1311,8 @@ class JupyterHub(Application):
 
         # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
-            if self.proxy_process:
-                self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
-                if self.proxy_process.poll() is None:
-                    try:
-                        self.proxy_process.terminate()
-                    except Exception as e:
-                        self.log.error("Failed to terminate proxy process: %s", e)
+            if self.proxy.should_start:
+                yield gen.maybe_future(self.proxy.stop())
             else:
                 self.log.info("I didn't start the proxy, I can't clean it up")
         else:
@@ -1482,26 +1368,30 @@ class JupyterHub(Application):
     @gen.coroutine
     def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
-        routes = yield self.proxy.get_routes()
+        routes = yield self.proxy.get_all_routes()
         users_count = 0
         active_users_count = 0
         for prefix, route in routes.items():
-            if 'user' not in route:
+            route_data = route['data']
+            if 'user' not in route_data:
                 # not a user route, ignore it
                 continue
-            user = orm.User.find(self.db, route['user'])
+            users_count += 1
+            if 'last_activity' not in route_data:
+                # no last activity data (possibly proxy other than CHP)
+                continue
+            user = orm.User.find(self.db, route_data['user'])
             if user is None:
                 self.log.warning("Found no user for route: %s", route)
                 continue
             try:
-                dt = datetime.strptime(route['last_activity'], ISO8601_ms)
+                dt = datetime.strptime(route_data['last_activity'], ISO8601_ms)
             except Exception:
-                dt = datetime.strptime(route['last_activity'], ISO8601_s)
+                dt = datetime.strptime(route_data['last_activity'], ISO8601_s)
             user.last_activity = max(user.last_activity, dt)
             # FIXME: Make this configurable duration. 30 minutes for now!
             if (datetime.now() - user.last_activity).total_seconds() < 30 * 60:
                 active_users_count += 1
-            users_count += 1
         self.statsd.gauge('users.running', users_count)
         self.statsd.gauge('users.active', active_users_count)
 
@@ -1528,17 +1418,20 @@ class JupyterHub(Application):
         try:
             self.http_server.listen(self.hub_port, address=self.hub_ip)
         except Exception:
-            self.log.error("Failed to bind hub to %s", self.hub.server.bind_url)
+            self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
         else:
-            self.log.info("Hub API listening on %s", self.hub.server.bind_url)
+            self.log.info("Hub API listening on %s", self.hub.bind_url)
 
         # start the proxy
-        try:
-            yield self.start_proxy()
-        except Exception as e:
-            self.log.critical("Failed to start proxy", exc_info=True)
-            self.exit(1)
+        if self.proxy.should_start:
+            try:
+                yield self.proxy.start()
+            except Exception as e:
+                self.log.critical("Failed to start proxy", exc_info=True)
+                self.exit(1)
+        else:
+            self.log.info("Not starting proxy")
 
         # start the service(s)
         for service_name, service in self._service_map.items():
@@ -1572,12 +1465,6 @@ class JupyterHub(Application):
         loop.add_callback(self.proxy.add_all_users, self.users)
         loop.add_callback(self.proxy.add_all_services, self._service_map)
 
-        if self.proxy_process:
-            # only check / restart the proxy if we started it in the first place.
-            # this means a restarted Hub cannot restart a Proxy that its
-            # predecessor started.
-            pc = PeriodicCallback(self.check_proxy, 1e3 * self.proxy_check_interval)
-            pc.start()
 
         if self.service_check_interval and any(s.url for s in self._service_map.values()):
             pc = PeriodicCallback(self.check_services_health, 1e3 * self.service_check_interval)
@@ -1587,7 +1474,7 @@ class JupyterHub(Application):
             pc = PeriodicCallback(self.update_last_activity, 1e3 * self.last_activity_interval)
             pc.start()
 
-        self.log.info("JupyterHub is now running at %s", self.proxy.public_server.url)
+        self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
         # register cleanup on both TERM and INT
         atexit.register(self.atexit)
         self.init_signal()

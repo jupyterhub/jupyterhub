@@ -29,7 +29,7 @@ JupyterHub's basic flow of operations includes:
 - The Hub configures the proxy to forward URL prefixes to the single-user notebook servers
 
 For convenient administration of the Hub, its users, and :doc:`services`
-(added in version 7.0), JupyterHub also provides a
+(added in version 0.7), JupyterHub also provides a
 `REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default>`__.
 
 Contents
@@ -43,16 +43,6 @@ Contents
 * :doc:`websecurity`
 * :doc:`rest`
 
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: User Guide
-
-   quickstart
-   getting-started
-   howitworks
-   websecurity
-   rest
 
 **Configuration Guide**
 
@@ -60,34 +50,13 @@ Contents
 * :doc:`spawners`
 * :doc:`services`
 * :doc:`config-examples`
-* :doc:`jupyterhub-deployment-aws`
 * :doc:`upgrading`
 * :doc:`troubleshooting`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Configuration Guide
-
-   authenticators
-   spawners
-   services
-   config-examples
-   jupyterhub-deployment-aws
-   upgrading
-   troubleshooting
 
 
 **API Reference**
 
 * :doc:`api/index`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: API Reference
-
-   api/index
 
 
 **About JupyterHub**
@@ -95,15 +64,6 @@ Contents
 * :doc:`changelog`
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: About JupyterHub
-
-   changelog
-   contributor-list
-   gallery-jhub-deployments
 
 
 Indices and tables
@@ -118,3 +78,18 @@ Questions? Suggestions?
 
 - `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
 - `Jupyter website <https://jupyter.org>`_
+
+.. _contents:
+
+Full Table of Contents
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   user-guide
+   configuration-guide
+   api/index
+   changelog
+   contributor-list
+   gallery-jhub-deployments

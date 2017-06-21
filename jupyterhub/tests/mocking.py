@@ -4,7 +4,6 @@ import os
 import sys
 from tempfile import NamedTemporaryFile
 import threading
-
 from unittest import mock
 
 import requests
@@ -18,9 +17,10 @@ from traitlets import default
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
+from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
-from ..utils import random_port
+from ..utils import random_port, url_path_join
 
 from pamela import PAMError
 
@@ -165,7 +165,7 @@ class MockHub(JupyterHub):
             self.db.add(user)
             self.db.commit()
             yield super(MockHub, self).start()
-            yield self.hub.server.wait_up(http=True)
+            yield self.hub.wait_up(http=True)
             self.io_loop.add_callback(evt.set)
         
         def _start():
@@ -207,19 +207,24 @@ def public_host(app):
     if app.subdomain_host:
         return app.subdomain_host
     else:
-        return app.proxy.public_server.host
+        return Server.from_url(app.proxy.public_url).host
 
 
-def public_url(app, user_or_service=None):
+def public_url(app, user_or_service=None, path=''):
     """Return the full, public base URL (including prefix) of the given JupyterHub instance."""
     if user_or_service:
         if app.subdomain_host:
             host = user_or_service.host
         else:
             host = public_host(app)
-        return host + user_or_service.server.base_url
+        prefix = user_or_service.server.base_url
     else:
-        return public_host(app) + app.proxy.public_server.base_url
+        host = public_host(app)
+        prefix = Server.from_url(app.proxy.public_url).base_url
+    if path:
+        return host + url_path_join(prefix, path)
+    else:
+        return host + prefix
 
 
 # single-user-server mocking:
@@ -241,7 +246,8 @@ class StubSingleUserSpawner(MockSpawner):
     _thread = None
     @gen.coroutine
     def start(self):
-        self.user.server.port = random_port()
+        ip = self.ip = '127.0.0.1'
+        port = self.port = random_port()
         env = self.get_env()
         args = self.get_args()
         evt = threading.Event()
@@ -262,6 +268,7 @@ class StubSingleUserSpawner(MockSpawner):
         self._thread.start()
         ready = evt.wait(timeout=3)
         assert ready
+        return (ip, port)
     
     @gen.coroutine
     def stop(self):

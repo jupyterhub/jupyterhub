@@ -7,7 +7,6 @@ HubAuth can be used in any application, even outside tornado.
 HubAuthenticated is a mixin class for tornado handlers that should authenticate with the Hub.
 """
 
-import json
 import os
 import re
 import socket
@@ -492,7 +491,19 @@ class HubOAuth(HubAuth):
     def clear_cookie(self, handler):
         """Clear the OAuth cookie"""
         handler.clear_cookie(self.cookie_name, path=self.base_url)
-    
+
+
+class UserNotAllowed(Exception):
+    """Exception raised when a user is identified and not allowed"""
+    def __init__(self, model):
+        self.model = model
+
+    def __str__(self):
+        return '<{cls} {kind}={name}>'.format(
+            cls=self.__class__.__name__,
+            kind=self.model['kind'],
+            name=self.model['name'],
+        )
 
 
 class HubAuthenticated(object):
@@ -568,7 +579,7 @@ class HubAuthenticated(object):
         """
 
         name = model['name']
-        kind = model.get('kind', 'user')
+        kind = model.setdefault('kind', 'user')
         if self.allow_all:
             app_log.debug("Allowing Hub %s %s (all Hub users and services allowed)", kind, name)
             return model
@@ -584,7 +595,7 @@ class HubAuthenticated(object):
                 return model
             else:
                 app_log.warning("Not allowing Hub service %s", name)
-                return None
+                raise UserNotAllowed(model)
 
         if self.hub_users and name in self.hub_users:
             # user in whitelist
@@ -597,7 +608,7 @@ class HubAuthenticated(object):
             return model
         else:
             app_log.warning("Not allowing Hub user %s", name)
-            return None
+            raise UserNotAllowed(model)
 
     def get_current_user(self):
         """Tornado's authentication method
@@ -611,7 +622,15 @@ class HubAuthenticated(object):
         if not user_model:
             self._hub_auth_user_cache = None
             return
-        self._hub_auth_user_cache = self.check_hub_user(user_model)
+        try:
+            self._hub_auth_user_cache = self.check_hub_user(user_model)
+        except UserNotAllowed as e:
+            # cache None, in case get_user is called again while processing the error
+            self._hub_auth_user_cache = None
+            raise HTTPError(403, "{kind} {name} is not allowed.".format(**e.model))
+        except Exception:
+            self._hub_auth_user_cache = None
+            raise
         return self._hub_auth_user_cache
 
 
@@ -638,6 +657,8 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         # TODO: make async (in a Thread?)
         token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
+        if user_model is None:
+            raise HTTPError(500, "oauth callback failed to identify a user")
         app_log.info("Logged-in user %s", user_model)
         self.hub_auth.set_cookie(self, token)
         next_url = self.get_argument('next', '') or self.hub_auth.base_url

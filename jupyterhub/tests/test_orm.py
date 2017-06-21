@@ -3,10 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import socket
+
 import pytest
 from tornado import gen
 
 from .. import orm
+from .. import objects
 from ..user import User
 from .mocking import MockSpawner
 
@@ -20,53 +23,25 @@ def test_server(db):
     assert server.proto == 'http'
     assert isinstance(server.port, int)
     assert isinstance(server.cookie_name, str)
-    assert server.host == 'http://127.0.0.1:%i' % server.port
+
+    # test wrapper
+    server = objects.Server(orm_server=server)
+    assert server.host == 'http://%s:%i' % (socket.gethostname(), server.port)
     assert server.url == server.host + '/'
     assert server.bind_url == 'http://*:%i/' % server.port
     server.ip = '127.0.0.1'
     assert server.host == 'http://127.0.0.1:%i' % server.port
     assert server.url == server.host + '/'
 
-
-def test_proxy(db):
-    proxy = orm.Proxy(
-        auth_token='abc-123',
-        public_server=orm.Server(
-            ip='192.168.1.1',
-            port=8000,
-        ),
-        api_server=orm.Server(
-            ip='127.0.0.1',
-            port=8001,
-        ),
-    )
-    db.add(proxy)
-    db.commit()
-    assert proxy.public_server.ip == '192.168.1.1'
-    assert proxy.api_server.ip == '127.0.0.1'
-    assert proxy.auth_token == 'abc-123'
-
-
-def test_hub(db):
-    hub = orm.Hub(
-        server=orm.Server(
-            ip = '1.2.3.4',
-            port = 1234,
-            base_url='/hubtest/',
-        ),
-        
-    )
-    db.add(hub)
-    db.commit()
-    assert hub.server.ip == '1.2.3.4'
-    assert hub.server.port == 1234
-    assert hub.api_url == 'http://1.2.3.4:1234/hubtest/api'
+    server.connect_ip = 'hub'
+    assert server.host == 'http://hub:%i' % server.port
+    assert server.url == server.host + '/'
 
 
 def test_user(db):
-    user = orm.User(name='kaylee',
+    user = User(orm.User(name='kaylee',
         state={'pid': 4234},
-    )
+    ))
     server = orm.Server()
     user.servers.append(server)
     db.add(user)

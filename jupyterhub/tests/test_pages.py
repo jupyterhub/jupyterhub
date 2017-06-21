@@ -3,9 +3,12 @@
 from urllib.parse import urlencode, urlparse
 
 import requests
+from tornado import gen
 
+from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
 from .. import orm
+from ..auth import Authenticator
 
 import mock
 from .mocking import FormSpawner, public_url, public_host
@@ -13,7 +16,7 @@ from .test_api import api_request
 
 def get_page(path, app, hub=True, **kw):
     if hub:
-        prefix = app.hub.server.base_url
+        prefix = app.hub.base_url
     else:
         prefix = app.base_url
     base_url = ujoin(public_host(app), prefix)
@@ -21,11 +24,11 @@ def get_page(path, app, hub=True, **kw):
     return requests.get(ujoin(base_url, path), **kw)
 
 def test_root_no_auth(app, io_loop):
-    print(app.hub.server.is_up())
-    routes = io_loop.run_sync(app.proxy.get_routes)
+    print(app.hub.is_up())
+    routes = io_loop.run_sync(app.proxy.get_all_routes)
     print(routes)
     print(app.hub.server)
-    url = ujoin(public_host(app), app.hub.server.base_url)
+    url = ujoin(public_host(app), app.hub.base_url)
     print(url)
     r = requests.get(url)
     r.raise_for_status()
@@ -120,7 +123,7 @@ def test_spawn_page(app):
 
 def test_spawn_form(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        base_url = ujoin(public_host(app), app.hub.server.base_url)
+        base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
@@ -142,7 +145,7 @@ def test_spawn_form(app, io_loop):
 
 def test_spawn_form_with_file(app, io_loop):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        base_url = ujoin(public_host(app), app.hub.server.base_url)
+        base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
@@ -178,7 +181,7 @@ def test_user_redirect(app):
     assert path == ujoin(app.base_url, '/hub/login')
     query = urlparse(r.url).query
     assert query == urlencode({
-        'next': ujoin(app.hub.server.base_url, '/user-redirect/tree/top/')
+        'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')
     })
 
     r = get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
@@ -229,6 +232,27 @@ def test_login_fail(app):
     assert not r.cookies
 
 
+def test_login_strip(app):
+    """Test that login form doesn't strip whitespace from passwords"""
+    form_data = {
+        'username': 'spiff',
+        'password': ' space man ',
+    }
+    base_url = public_url(app)
+    called_with = []
+    @gen.coroutine
+    def mock_authenticate(handler, data):
+        called_with.append(data)
+
+    with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
+        r = requests.post(base_url + 'hub/login',
+            data=form_data,
+            allow_redirects=False,
+        )
+    
+    assert called_with == [form_data]
+
+
 def test_login_redirect(app, io_loop):
     cookies = app.login_user('river')
     user = app.users['river']
@@ -253,6 +277,28 @@ def test_login_redirect(app, io_loop):
     assert r.headers['Location'].endswith('/hub/admin')
 
 
+def test_auto_login(app, io_loop, request):
+    class DummyLoginHandler(BaseHandler):
+        def get(self):
+            self.write('ok!')
+    base_url = public_url(app) + '/'
+    app.tornado_application.add_handlers(".*$", [
+        (ujoin(app.hub.server.base_url, 'dummy'), DummyLoginHandler),
+    ])
+    # no auto_login: end up at /hub/login
+    r = requests.get(base_url)
+    assert r.url == public_url(app, path='hub/login')
+    # enable auto_login: redirect from /hub/login to /hub/dummy
+    authenticator = Authenticator(auto_login=True)
+    authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
+
+    with mock.patch.dict(app.tornado_application.settings, {
+        'authenticator': authenticator,
+    }):
+        r = requests.get(base_url)
+    assert r.url == public_url(app, path='hub/dummy')
+
+
 def test_logout(app):
     name = 'wash'
     cookies = app.login_user(name)
@@ -274,7 +320,7 @@ def test_login_no_whitelist_adds_user(app):
 
 
 def test_static_files(app):
-    base_url = ujoin(public_host(app), app.hub.server.base_url)
+    base_url = ujoin(public_host(app), app.hub.base_url)
     r = requests.get(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'

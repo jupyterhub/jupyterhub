@@ -37,8 +37,10 @@ def can_connect(ip, port):
 
     Return True if we can connect, False otherwise.
     """
+    if ip in {'', '0.0.0.0'}:
+        ip = '127.0.0.1'
     try:
-        socket.create_connection((ip, port))
+        socket.create_connection((ip, port)).close()
     except socket.error as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
@@ -50,6 +52,8 @@ def can_connect(ip, port):
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
+    if ip in {'', '0.0.0.0'}:
+        ip = '127.0.0.1'
     loop = ioloop.IOLoop.current()
     tic = loop.time()
     while loop.time() - tic < timeout:

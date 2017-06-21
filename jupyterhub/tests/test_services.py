@@ -25,7 +25,7 @@ def external_service(app, name='mockservice'):
     env = {
         'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
         'JUPYTERHUB_SERVICE_NAME': name,
-        'JUPYTERHUB_API_URL': url_path_join(app.hub.server.url, 'api/'),
+        'JUPYTERHUB_API_URL': url_path_join(app.hub.url, 'api/'),
         'JUPYTERHUB_SERVICE_URL': 'http://127.0.0.1:%i' % random_port(),
     }
     proc = Popen(mockservice_cmd, env=env)
@@ -64,7 +64,7 @@ def test_managed_service(mockservice):
 def test_proxy_service(app, mockservice_url, io_loop):
     service = mockservice_url
     name = service.name
-    io_loop.run_sync(app.proxy.get_routes)
+    io_loop.run_sync(app.proxy.get_all_routes)
     url = public_url(app, service) + '/foo'
     r = requests.get(url, allow_redirects=False)
     path = '/services/{}/foo'.format(name)

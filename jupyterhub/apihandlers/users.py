@@ -20,6 +20,11 @@ class SelfAPIHandler(APIHandler):
     @web.authenticated
     def get(self):
         user = self.get_current_user()
+        if user is None:
+            # whoami can be accessed via oauth token
+            user = self.get_current_user_oauth_token()
+        if user is None:
+            raise web.HTTPError(403)
         self.write(json.dumps(self.user_model(user)))
 
 
@@ -219,7 +224,7 @@ class UserCreateNamedServerAPIHandler(APIHandler):
     def post(self, name):
         user = self.find_user(name)
         if user is None:
-            raise HTTPError(404, "No such user %r" % name)
+            raise web.HTTPError(404, "No such user %r" % name)
         #if user.running:
         #    # include notify, so that a server that died is noticed immediately
         #    state = yield user.spawner.poll_and_notify()

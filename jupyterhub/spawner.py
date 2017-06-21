@@ -65,7 +65,7 @@ class Spawner(LoggingConfigurable):
         """
     )
 
-    ip = Unicode('127.0.0.1',
+    ip = Unicode('',
         help="""
         The IP address (or hostname) the single-user server should listen on.
 
@@ -431,9 +431,16 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
         # OAuth settings
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
-        env['JUPYTERHUB_HOST'] = self.hub.host
+        env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
             url_path_join(self.user.url, 'oauth_callback')
+        
+        # Info previously passed on args
+        env['JUPYTERHUB_USER'] = self.user.name
+        env['JUPYTERHUB_API_URL'] = self.hub.api_url
+        env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
+        if self.server:
+            env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -493,13 +500,6 @@ class Spawner(LoggingConfigurable):
 
         Doesn't expect shell expansion to happen.
         """
-        args = [
-            '--user="%s"' % self.user.name,
-            '--base-url="%s"' % self.server.base_url,
-            '--hub-host="%s"' % self.hub.host,
-            '--hub-prefix="%s"' % self.hub.server.base_url,
-            '--hub-api-url="%s"' % self.hub.api_url,
-        ]
         if self.ip:
             args.append('--ip="%s"' % self.ip)
 
@@ -539,10 +539,13 @@ class Spawner(LoggingConfigurable):
     def stop(self, now=False):
         """Stop the single-user server
 
-        If `now` is set to `False`, do not wait for the server to stop. Otherwise, wait for
-        the server to stop before returning.
+        If `now` is False (default), shutdown the server as gracefully as possible,
+        e.g. starting with SIGINT, then SIGTERM, then SIGKILL.
+        If `now` is True, terminate the server immediately.
 
-        Must be a Tornado coroutine.
+        The coroutine should return when the single-user server process is no longer running.
+
+        Must be a coroutine.
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
 
@@ -616,7 +619,10 @@ class Spawner(LoggingConfigurable):
 
         self.stop_polling()
 
-        for callback in self._callbacks:
+        # clear callbacks list
+        self._callbacks, callbacks = ([], self._callbacks)
+
+        for callback in callbacks:
             try:
                 yield gen.maybe_future(callback())
             except Exception:
@@ -917,8 +923,11 @@ class LocalProcessSpawner(Spawner):
     def stop(self, now=False):
         """Stop the single-user server process for the current user.
 
-        If `now` is set to True, do not wait for the process to die.
-        Otherwise, it'll wait.
+        If `now` is False (default), shutdown the server as gracefully as possible,
+        e.g. starting with SIGINT, then SIGTERM, then SIGKILL.
+        If `now` is True, terminate the server immediately.
+
+        The coroutine should return when the process is no longer running.
         """
         if not now:
             status = yield self.poll()

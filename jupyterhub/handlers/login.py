@@ -7,8 +7,8 @@ from urllib.parse import urlparse
 
 from tornado.escape import url_escape
 from tornado import gen
+from tornado.httputil import url_concat
 
-from ..utils import url_path_join
 from .base import BaseHandler
 
 
@@ -19,12 +19,11 @@ class LogoutHandler(BaseHandler):
         if user:
             self.log.info("User logged out: %s", user.name)
             self.clear_login_cookie()
-            for name in user.other_user_cookies:
-                self.clear_login_cookie(name)
-            user.other_user_cookies = set([])
             self.statsd.incr('logout')
-
-        self.redirect(url_path_join(self.hub.server.base_url, 'login'), permanent=False)
+        if self.authenticator.auto_login:
+            self.render('logout.html')
+        else:
+            self.redirect(self.settings['login_url'], permanent=False)
 
 
 class LoginHandler(BaseHandler):
@@ -37,6 +36,10 @@ class LoginHandler(BaseHandler):
                 login_error=login_error,
                 custom_html=self.authenticator.custom_html,
                 login_url=self.settings['login_url'],
+                authenticator_login_url=url_concat(
+                    self.authenticator.login_url(self.hub.server.base_url),
+                    {'next': self.get_argument('next', '')},
+                ),
         )
 
     def get(self):
@@ -54,12 +57,22 @@ class LoginHandler(BaseHandler):
                 if user.running:
                     next_url = user.url
                 else:
-                    next_url = self.hub.server.base_url
+                    next_url = self.hub.base_url
             # set new login cookie
             # because single-user cookie may have been cleared or incorrect
             self.set_login_cookie(self.get_current_user())
             self.redirect(next_url, permanent=False)
         else:
+            if self.authenticator.auto_login:
+                auto_login_url = self.authenticator.login_url(self.hub.server.base_url)
+                if auto_login_url == self.settings['login_url']:
+                    self.authenticator.auto_login = False
+                    self.log.warning("Authenticator.auto_login cannot be used without a custom login_url")
+                else:
+                    if next_url:
+                        auto_login_url = url_concat(auto_login_url, {'next': next_url})
+                    self.redirect(auto_login_url)
+                    return
             username = self.get_argument('username', default='')
             self.finish(self._render(username=username))
 
@@ -68,7 +81,7 @@ class LoginHandler(BaseHandler):
         # parse the arguments dict
         data = {}
         for arg in self.request.arguments:
-            data[arg] = self.get_argument(arg)
+            data[arg] = self.get_argument(arg, strip=False)
 
         auth_timer = self.statsd.timer('login.authenticate').start()
         username = yield self.authenticate(data)
@@ -88,7 +101,7 @@ class LoginHandler(BaseHandler):
             next_url = self.get_argument('next', default='')
             if not next_url.startswith('/'):
                 next_url = ''
-            next_url = next_url or self.hub.server.base_url
+            next_url = next_url or self.hub.base_url
             self.redirect(next_url)
             self.log.info("User logged in: %s", username)
         else:

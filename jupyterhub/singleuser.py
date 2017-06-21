@@ -5,12 +5,13 @@
 # Distributed under the terms of the Modified BSD License.
 
 import os
+from textwrap import dedent
 from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader, FunctionLoader
 
 from tornado import ioloop
-from textwrap import dedent
+from tornado.web import HTTPError
 
 try:
     import notebook
@@ -37,6 +38,7 @@ from notebook.auth.logout import LogoutHandler
 from notebook.base.handlers import IPythonHandler
 
 from jupyterhub import __version__
+from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
 from .utils import url_path_join
 
@@ -119,6 +121,8 @@ class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
         # TODO: make async (in a Thread?)
         token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
+        if user_model is None:
+            raise HTTPError(500, "oauth callback failed to identify a user")
         self.log.info("Logged-in user %s", user_model)
         self.hub_auth.set_cookie(self, token)
         next_url = self.get_argument('next', '') or self.base_url
@@ -189,6 +193,14 @@ class SingleUserNotebookApp(NotebookApp):
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)
+    
+    @default('user')
+    def _default_user(self):
+        return os.environ.get('JUPYTERHUB_USER') or ''
+
+    @default('group')
+    def _default_group(self):
+        return os.environ.get('JUPYTERHUB_GROUP') or ''
 
     @observe('user')
     def _user_changed(self, change):
@@ -225,23 +237,25 @@ class SingleUserNotebookApp(NotebookApp):
             value = value + '/'
         return value
 
-    @default('cookie_name')
-    def _cookie_name_default(self):
-        if os.environ.get('JUPYTERHUB_SERVICE_NAME'):
-            # if I'm a service, use the services cookie name
-            return 'jupyterhub-services'
-
     @default('port')
     def _port_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-            return url.port
+            if url.port:
+                return url.port
+            elif url.scheme == 'http':
+                return 80
+            elif url.scheme == 'https':
+                return 443
+        return 8888
 
     @default('ip')
     def _ip_default(self):
         if os.environ.get('JUPYTERHUB_SERVICE_URL'):
             url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-            return url.hostname
+            if url.hostname:
+                return url.hostname
+        return '127.0.0.1'
 
     aliases = aliases
     flags = flags
@@ -348,6 +362,7 @@ class SingleUserNotebookApp(NotebookApp):
         # load the hub-related settings into the tornado settings dict
         self.init_hub_auth()
         s = self.tornado_settings
+        s['log_function'] = log_request
         s['user'] = self.user
         s['group'] = self.group
         s['hub_prefix'] = self.hub_prefix

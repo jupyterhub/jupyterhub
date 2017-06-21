@@ -32,7 +32,7 @@ class APIHandler(BaseHandler):
             self.log.warning("Blocking API request with no referer")
             return False
         
-        host_path = url_path_join(host, self.hub.server.base_url)
+        host_path = url_path_join(host, self.hub.base_url)
         referer_path = referer.split('://', 1)[-1]
         if not (referer_path + '/').startswith(host_path):
             self.log.warning("Blocking Cross Origin API request.  Referer: %s, Host: %s",

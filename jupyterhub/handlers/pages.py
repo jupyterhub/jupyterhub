@@ -37,7 +37,7 @@ class RootHandler(BaseHandler):
             # The next request will be handled by UserSpawnHandler,
             # ultimately redirecting to the logged-in user's server.
             without_prefix = next_url[len(self.base_url):]
-            next_url = url_path_join(self.hub.server.base_url, without_prefix)
+            next_url = url_path_join(self.hub.base_url, without_prefix)
             self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
                 self.request.uri, next_url,
             )
@@ -50,10 +50,10 @@ class RootHandler(BaseHandler):
                 self.log.debug("User is running: %s", url)
                 self.set_login_cookie(user) # set cookie
             else:
-                url = url_path_join(self.hub.server.base_url, 'home')
+                url = url_path_join(self.hub.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
         else:
-            url = url_path_join(self.hub.server.base_url, 'login')
+            url = self.settings['login_url']
         self.redirect(url)
 
 
@@ -67,13 +67,9 @@ class HomeHandler(BaseHandler):
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             yield user.spawner.poll_and_notify()
-            url = user.url
-        else:
-            url = url_concat(url_path_join(self.base_url, 'spawn'),
-                             {'next': self.request.uri})
         html = self.render_template('home.html',
             user=user,
-            url=url,
+            url=user.url,
         )
         self.finish(html)
 
@@ -215,7 +211,7 @@ class ProxyErrorHandler(BaseHandler):
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         # build template namespace
         
-        hub_home = url_path_join(self.hub.server.base_url, 'home')
+        hub_home = url_path_join(self.hub.base_url, 'home')
         message_html = ''
         if status_code == 503:
             message_html = ' '.join([

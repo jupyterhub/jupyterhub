@@ -31,7 +31,7 @@ class Authenticator(LoggingConfigurable):
         help="""
         Set of users that will have admin rights on this JupyterHub.
 
-        Admin users have extra privilages:
+        Admin users have extra privileges:
          - Use the admin panel to see list of users logged in
          - Add / remove users in some authenticators
          - Restart / halt the hub
@@ -124,6 +124,23 @@ class Authenticator(LoggingConfigurable):
         Primarily used to normalize OAuth user names to local users.
         """
     ).tag(config=True)
+
+    delete_invalid_users = Bool(False,
+        help="""Delete any users from the database that do not pass validation
+
+        When JupyterHub starts, `.add_user` will be called
+        on each user in the database to verify that all users are still valid.
+
+        If `delete_invalid_users` is True,
+        any users that do not pass validation will be deleted from the database.
+        Use this if users might be deleted from an external system,
+        such as local user accounts.
+
+        If False (default), invalid users remain in the Hub's database
+        and a warning will be issued.
+        This is the default to avoid data loss due to config changes.
+        """
+    )
 
     def normalize_username(self, username):
         """Normalize the given username and return it
@@ -250,10 +267,23 @@ class Authenticator(LoggingConfigurable):
         """
         self.whitelist.discard(user.name)
 
+    auto_login = Bool(False, config=True,
+        help="""Automatically begin the login process
+
+        rather than starting with a "Login with..." link at `/hub/login`
+
+        To work, `.login_url()` must give a URL other than the default `/hub/login`,
+        such as an oauth handler or another automatic login handler,
+        registered with `.get_handlers()`.
+
+        .. versionadded:: 0.8
+        """
+    )
+
     def login_url(self, base_url):
         """Override this when registering a custom login handler
 
-        Generally used by authenticators that do not use simple form based authentication.
+        Generally used by authenticators that do not use simple form-based authentication.
 
         The subclass overriding this is responsible for making sure there is a handler
         available to handle the URL returned from this method, using the `get_handlers`

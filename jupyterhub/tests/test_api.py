@@ -83,7 +83,7 @@ def auth_header(db, name):
 @check_db_locks
 def api_request(app, *api_path, **kwargs):
     """Make an API request"""
-    base_url = app.hub.server.url
+    base_url = app.hub.url
     headers = kwargs.setdefault('headers', {})
 
     if 'Authorization' not in headers:
@@ -94,7 +94,7 @@ def api_request(app, *api_path, **kwargs):
     f = getattr(requests, method)
     resp = f(url, **kwargs)
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
-    assert ujoin(app.hub.server.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
+    assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
     assert 'http' not in resp.headers['Content-Security-Policy']
     return resp
 
@@ -132,7 +132,7 @@ def test_auth_api(app):
 
 
 def test_referer_check(app, io_loop):
-    url = ujoin(public_host(app), app.hub.server.base_url)
+    url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
     user = find_user(app.db, 'admin')
     if user is None:
@@ -423,10 +423,13 @@ def test_spawn(app, io_loop):
     r = requests.get(ujoin(url, 'args'))
     assert r.status_code == 200
     argv = r.json()
-    for expected in ['--user="%s"' % name, '--base-url="%s"' % user.server.base_url]:
-        assert expected in argv
+    assert '--port' in ' '.join(argv)
+    r = requests.get(ujoin(url, 'env'))
+    env = r.json()
+    for expected in ['JUPYTERHUB_USER', 'JUPYTERHUB_BASE_URL', 'JUPYTERHUB_API_TOKEN']:
+        assert expected in env
     if app.subdomain_host:
-        assert '--hub-host="%s"' % app.subdomain_host in argv
+        assert env['JUPYTERHUB_HOST'] == app.subdomain_host
 
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204
@@ -779,7 +782,7 @@ def test_get_service(app, mockservice_url):
 
 
 def test_root_api(app):
-    base_url = app.hub.server.url
+    base_url = app.hub.url
     url = ujoin(base_url, 'api')
     r = requests.get(url)
     r.raise_for_status()
