@@ -55,6 +55,7 @@ class Spawner(LoggingConfigurable):
     user = Any()
     hub = Any()
     authenticator = Any()
+    server = Any()
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -354,11 +355,6 @@ class Spawner(LoggingConfigurable):
         Note that this needs to be supported by your spawner for it to work.
         """
     ).tag(config=True)
-
-    def __init__(self, **kwargs):
-        super(Spawner, self).__init__(**kwargs)
-        if self.user.state:
-            self.load_state(self.user.state)
 
     def load_state(self, state):
         """Restore state of spawner from database.

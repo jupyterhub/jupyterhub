@@ -1,7 +1,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from collections import defaultdict
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
@@ -75,6 +74,15 @@ class UserDict(dict):
         dict.__delitem__(self, user_id)
 
 
+class _SpawnerDict(dict):
+    def __init__(self, spawner_factory):
+        self.spawner_factory = spawner_factory
+
+    def __getitem__(self, key):
+        if key not in self:
+            self[key] = self.spawner_factory(key)
+        return super().__getitem__(key)
+
 class User(HasTraits):
 
     @default('log')
@@ -101,6 +109,7 @@ class User(HasTraits):
             spawner.db = self.db
 
     orm_user = None
+    spawners = None
 
     @property
     def authenticator(self):
@@ -121,17 +130,19 @@ class User(HasTraits):
         self.base_url = url_path_join(
             self.settings.get('base_url', '/'), 'user', self.escaped_name)
 
-        self.spawners = defaultdict(self._new_spawner)
+        self.spawners = _SpawnerDict(self._new_spawner)
 
-    def _new_spawner(self):
+    def _new_spawner(self, name):
         """Create a new spawner"""
-        return self.spawner_class(
+        spawner = self.spawner_class(
             user=self,
             db=self.db,
             hub=self.settings.get('hub'),
             authenticator=self.authenticator,
             config=self.settings.get('config'),
         )
+        spawner.load_state((self.state or {}).get(name, {}))
+        return spawner
 
     # singleton property, self.spawner maps onto spawner with empty server_name
     @property
@@ -324,6 +335,8 @@ class User(HasTraits):
         spawner.start_polling()
 
         # store state
+        if self.state is None:
+            self.state = {}
         self.state[server_name] = spawner.get_state()
         self.last_activity = datetime.utcnow()
         db.commit()
@@ -379,6 +392,7 @@ class User(HasTraits):
             self.last_activity = datetime.utcnow()
             # remove server entry from db
             self.db.delete(spawner.server.orm_server)
+            spawner.server = None
             if not spawner.will_resume:
                 # find and remove the API token if the spawner isn't
                 # going to re-use it next time
