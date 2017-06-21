@@ -15,7 +15,7 @@ from . import orm
 from .objects import Server
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
-
+from .proxy import RouteSpec
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -169,11 +169,11 @@ class User(HasTraits):
         return quote(self.name, safe='@')
 
     @property
-    def proxy_path(self):
+    def proxy_spec(self):
         if self.settings.get('subdomain_host'):
-            return url_path_join('/' + self.domain, self.base_url)
+            return RouteSpec(path=self.base_url, host=self.domain)
         else:
-            return self.base_url
+            return RouteSpec(path=self.base_url)
 
     @property
     def domain(self):

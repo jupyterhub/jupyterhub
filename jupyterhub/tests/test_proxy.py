@@ -4,7 +4,7 @@ import json
 import os
 from queue import Queue
 from subprocess import Popen
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse
 
 from traitlets.config import Config
 
@@ -14,6 +14,40 @@ from .. import orm
 from .mocking import MockHub
 from .test_api import api_request
 from ..utils import wait_for_http_server, url_path_join as ujoin
+
+from jupyterhub.proxy import RouteSpec
+
+def test_routespec():
+    with pytest.raises(TypeError):
+        RouteSpec()
+
+    spec = RouteSpec('/test')
+    assert spec.host == ''
+    assert spec.path == '/test'
+
+    assert 'path=%r' % spec.path in repr(spec)
+    assert 'host' not in repr(spec)
+
+    spec = RouteSpec('/test2', host='myhost')
+    assert spec.path == '/test2'
+    assert spec.host == 'myhost'
+
+    assert 'path=%r' % spec.path in repr(spec)
+    assert 'host=%r' % spec.host in repr(spec)
+
+    copyspec = RouteSpec(spec)
+    assert copyspec.path == '/test2'
+    assert copyspec.host == 'myhost'
+    assert copyspec == spec
+
+def test_as_routespec():
+    spec = RouteSpec('/test', host='myhost')
+    as_spec = RouteSpec.as_routespec(spec)
+    assert as_spec is spec
+
+    spec2 = RouteSpec.as_routespec('/path')
+    assert isinstance(spec2, RouteSpec)
+    assert spec2.path == '/path'
 
 
 def test_external_proxy(request, io_loop):
@@ -64,7 +98,7 @@ def test_external_proxy(request, io_loop):
 
     # test if api service has a root route '/'
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert list(routes.keys()) == ['/']
+    assert list(routes.keys()) == [RouteSpec('/')]
     
     # add user to the db and start a single user server
     name = 'river'
@@ -75,11 +109,12 @@ def test_external_proxy(request, io_loop):
     
     routes = io_loop.run_sync(app.proxy.get_all_routes)
     # sets the desired path result
-    user_path = unquote(ujoin(app.base_url, 'user/river'))
+    user_path = ujoin(app.base_url, 'user/river')
+    host = ''
     if app.subdomain_host:
-        domain = urlparse(app.subdomain_host).hostname
-        user_path = '/%s.%s' % (name, domain) + user_path
-    assert sorted(routes.keys()) == ['/', user_path]
+        host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
+    user_spec = RouteSpec(user_path, host=host)
+    assert sorted(routes.keys()) == [RouteSpec('/'), user_spec]
     
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
@@ -88,7 +123,7 @@ def test_external_proxy(request, io_loop):
 
     routes = io_loop.run_sync(app.proxy.get_all_routes)
 
-    assert list(routes.keys()) == ['/']
+    assert list(routes.keys()) == [RouteSpec('/')]
     
     # poke the server to update the proxy
     r = api_request(app, 'proxy', method='post')
@@ -96,7 +131,7 @@ def test_external_proxy(request, io_loop):
 
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert sorted(routes.keys()) == ['/', user_path]
+    assert sorted(routes.keys()) == [RouteSpec('/'), user_spec]
 
     # teardown the proxy, and start a new one with different auth and port
     proxy.terminate()
@@ -135,7 +170,7 @@ def test_external_proxy(request, io_loop):
 
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert sorted(routes.keys()) == ['/', user_path]
+    assert sorted(routes.keys()) == [RouteSpec('/'), user_spec]
 
 
 @pytest.mark.parametrize("username, endpoints", [
@@ -156,18 +191,18 @@ def test_check_routes(app, io_loop, username, endpoints):
     # check a valid route exists for user
     test_user = app.users[username]
     before = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert unquote(test_user.proxy_path) in before
+    assert test_user.proxy_spec in before
 
     # check if a route is removed when user deleted
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     io_loop.run_sync(lambda: proxy.delete_user(test_user))
     during = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert unquote(test_user.proxy_path) not in during
+    assert test_user.proxy_spec not in during
 
     # check if a route exists for user
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     after = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert unquote(test_user.proxy_path) in after
+    assert test_user.proxy_spec in after
 
     # check that before and after state are the same
     assert before == after
