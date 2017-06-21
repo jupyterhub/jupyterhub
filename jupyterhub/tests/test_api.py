@@ -409,7 +409,7 @@ def test_spawn(app, io_loop):
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
     assert app_user.spawner.user_options == options
-    assert not app_user.spawn_pending
+    assert not app_user.spawner._spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
 
@@ -458,38 +458,38 @@ def test_slow_spawn(app, io_loop, no_patience, request):
     assert r.status_code == 202
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
-    assert app_user.spawn_pending
-    assert not app_user.stop_pending
+    assert app_user.spawner._spawn_pending
+    assert not app_user.spawner._stop_pending
 
     @gen.coroutine
     def wait_spawn():
-        while app_user.spawn_pending:
+        while app_user.spawner._spawn_pending:
             yield gen.sleep(0.1)
 
     io_loop.run_sync(wait_spawn)
-    assert not app_user.spawn_pending
+    assert not app_user.spawner._spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
 
     @gen.coroutine
     def wait_stop():
-        while app_user.stop_pending:
+        while app_user.pawner._stop_pending:
             yield gen.sleep(0.1)
 
     r = api_request(app, 'users', name, 'server', method='delete')
     r.raise_for_status()
     assert r.status_code == 202
     assert app_user.spawner is not None
-    assert app_user.stop_pending
+    assert app_user.spawner._stop_pending
 
     r = api_request(app, 'users', name, 'server', method='delete')
     r.raise_for_status()
     assert r.status_code == 202
     assert app_user.spawner is not None
-    assert app_user.stop_pending
+    assert app_user.spawner._stop_pending
 
     io_loop.run_sync(wait_stop)
-    assert not app_user.stop_pending
+    assert not app_user.spawner._stop_pending
     assert app_user.spawner is not None
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 400
@@ -506,15 +506,15 @@ def test_never_spawn(app, io_loop, no_patience, request):
     r = api_request(app, 'users', name, 'server', method='post')
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
-    assert app_user.spawn_pending
+    assert app_user.spawner._spawn_pending
 
     @gen.coroutine
     def wait_pending():
-        while app_user.spawn_pending:
+        while app_user.spawner._spawn_pending:
             yield gen.sleep(0.1)
 
     io_loop.run_sync(wait_pending)
-    assert not app_user.spawn_pending
+    assert not app_user.spawner._spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is not None
 

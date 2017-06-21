@@ -319,12 +319,13 @@ class BaseHandler(RequestHandler):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     @gen.coroutine
-    def spawn_single_user(self, user, options=None):
-        if user.spawn_pending:
+    def spawn_single_user(self, user, server_name='', options=None):
+        if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
         tic = IOLoop.current().time()
 
-        f = user.spawn(options)
+        f = user.spawn(server_name, options)
+        spawner = user.spawners[server_name]
 
         @gen.coroutine
         def finish_user_spawn(f=None):
@@ -340,14 +341,14 @@ class BaseHandler(RequestHandler):
             self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
             yield self.proxy.add_user(user)
-            user.spawner.add_poll_callback(self.user_stopped, user)
+            spawner.add_poll_callback(self.user_stopped, user)
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
-            if not user.waiting_for_response:
+            if not spawner._waiting_for_response:
                 # still in Spawner.start, which is taking a long time
                 # we shouldn't poll while spawn is incomplete.
                 self.log.warning("User %s's server is slow to start (timeout=%s)",
@@ -387,7 +388,7 @@ class BaseHandler(RequestHandler):
 
     @gen.coroutine
     def stop_single_user(self, user):
-        if user.stop_pending:
+        if user.spawner._stop_pending:
             raise RuntimeError("Stop already pending for: %s" % user.name)
         tic = IOLoop.current().time()
         yield self.proxy.delete_user(user)
@@ -408,7 +409,7 @@ class BaseHandler(RequestHandler):
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), f)
         except gen.TimeoutError:
-            if user.stop_pending:
+            if user.spawner._stop_pending:
                 # hit timeout, but stop is still pending
                 self.log.warning("User %s server is slow to stop", user.name)
                 # schedule finish for when the server finishes stopping
@@ -535,23 +536,23 @@ class UserSpawnHandler(BaseHandler):
                     """, self.request.full_url(), self.proxy.public_url)
 
             # logged in as correct user, spawn the server
-            if current_user.spawner:
-                if current_user.spawn_pending:
-                    # spawn has started, but not finished
-                    self.statsd.incr('redirects.user_spawn_pending', 1)
-                    html = self.render_template("spawn_pending.html", user=current_user)
-                    self.finish(html)
-                    return
+            spawner = current_user.spawner
+            if spawner._spawn_pending:
+                # spawn has started, but not finished
+                self.statsd.incr('redirects.user_spawn_pending', 1)
+                html = self.render_template("spawn_pending.html", user=current_user)
+                self.finish(html)
+                return
 
-                # spawn has supposedly finished, check on the status
-                status = yield current_user.spawner.poll()
-                if status is not None:
-                    if current_user.spawner.options_form:
-                        self.redirect(url_concat(url_path_join(self.hub.base_url, 'spawn'),
-                                                 {'next': self.request.uri}))
-                        return
-                    else:
-                        yield self.spawn_single_user(current_user)
+            # spawn has supposedly finished, check on the status
+            status = yield spawner.poll()
+            if status is not None:
+                if spawner.options_form:
+                    self.redirect(url_concat(url_path_join(self.hub.base_url, 'spawn'),
+                                             {'next': self.request.uri}))
+                    return
+                else:
+                    yield self.spawn_single_user(current_user)
             # set login cookie anew
             self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.base_url):]

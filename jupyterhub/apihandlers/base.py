@@ -97,9 +97,9 @@ class APIHandler(BaseHandler):
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
-        if user.spawn_pending:
+        if user.spawners['']._spawn_pending:
             model['pending'] = 'spawn'
-        elif user.stop_pending:
+        elif user.spawners['']._stop_pending:
             model['pending'] = 'stop'
         return model
 

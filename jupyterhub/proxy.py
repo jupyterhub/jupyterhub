@@ -140,7 +140,7 @@ class Proxy(LoggingConfigurable):
                       user.name, user.proxy_path, user.server.host,
                       )
 
-        if user.spawn_pending:
+        if user.spawner._spawn_pending:
             raise RuntimeError(
                 "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
 

@@ -45,6 +45,11 @@ class Spawner(LoggingConfigurable):
     is created for each user. If there are 20 JupyterHub users, there will be 20
     instances of the subclass.
     """
+    
+    # private attributes for tracking status
+    _spawn_pending = False
+    _stop_pending = False
+    _waiting_for_response = False
 
     db = Any()
     user = Any()
@@ -500,6 +505,8 @@ class Spawner(LoggingConfigurable):
 
         Doesn't expect shell expansion to happen.
         """
+        args = []
+
         if self.ip:
             args.append('--ip="%s"' % self.ip)
 
