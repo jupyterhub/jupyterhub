@@ -12,7 +12,11 @@ import sys
 from subprocess import Popen, PIPE, STDOUT
 
 from tornado import gen
-import pamela
+try:
+    import pamela
+except Exception as e:
+    pamela = None
+    _pamela_error = e
 
 from traitlets.config import LoggingConfigurable
 from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
@@ -486,6 +490,11 @@ class PAMAuthenticator(LocalAuthenticator):
         this is automatically set to False.
         """
     ).tag(config=True)
+    
+    def __init__(self, **kwargs):
+        if pamela is None:
+            raise _pamela_error from None
+        super().__init__(**kwargs)
 
     @gen.coroutine
     def authenticate(self, handler, data):
