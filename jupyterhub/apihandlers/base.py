@@ -101,7 +101,8 @@ class APIHandler(BaseHandler):
             model['pending'] = 'spawn'
         elif user.spawners['']._stop_pending:
             model['pending'] = 'stop'
-        # named servers
+        return model
+        # TODO: named servers
         servers = model['servers'] = {}
         for name, spawner in user.spawners.items():
             if False and user.running(name):

@@ -391,7 +391,8 @@ class User(HasTraits):
             self.state = spawner.get_state()
             self.last_activity = datetime.utcnow()
             # remove server entry from db
-            self.db.delete(spawner.server.orm_server)
+            if spawner.server is not None:
+                self.db.delete(spawner.server.orm_server)
             spawner.server = None
             if not spawner.will_resume:
                 # find and remove the API token if the spawner isn't

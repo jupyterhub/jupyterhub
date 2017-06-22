@@ -405,7 +405,7 @@ def test_spawn(app, io_loop):
         data=json.dumps(options),
     )
     assert r.status_code == 201
-    assert 'pid' in user.state
+    assert 'pid' in user.state['']
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
     assert app_user.spawner.user_options == options
@@ -434,7 +434,7 @@ def test_spawn(app, io_loop):
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204
 
-    assert 'pid' not in user.state
+    assert 'pid' not in user.state.get('', {})
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status == 0
 
@@ -473,7 +473,7 @@ def test_slow_spawn(app, io_loop, no_patience, request):
 
     @gen.coroutine
     def wait_stop():
-        while app_user.pawner._stop_pending:
+        while app_user.spawner._stop_pending:
             yield gen.sleep(0.1)
 
     r = api_request(app, 'users', name, 'server', method='delete')
@@ -532,7 +532,7 @@ def test_cookie(app):
     user = add_user(db, app=app, name=name)
     r = api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 201
-    assert 'pid' in user.state
+    assert 'pid' in user.state['']
     app_user = get_app_user(app, name)
 
     cookies = app.login_user(name)
