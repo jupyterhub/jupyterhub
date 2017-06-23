@@ -223,7 +223,8 @@ class Authenticator(LoggingConfigurable):
 
         Checking the whitelist is handled separately by the caller.
 
-        .. versionchanged:: Allow `authenticate` to return a dict containing auth_state.
+        .. versionchanged:: 0.8
+            Allow `authenticate` to return a dict containing auth_state.
 
         Args:
             handler (tornado.web.RequestHandler): the current request handler
