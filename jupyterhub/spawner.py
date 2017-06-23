@@ -513,7 +513,7 @@ class Spawner(LoggingConfigurable):
             notebook_dir = self.format_string(self.notebook_dir)
             args.append('--notebook-dir="%s"' % notebook_dir)
         if self.default_url:
-            default_url = self.format_string(self.default_url)
+            default_url = self.format_string('/tree' + self.default_url)
             args.append('--NotebookApp.default_url="%s"' % default_url)
 
         if self.debug:
