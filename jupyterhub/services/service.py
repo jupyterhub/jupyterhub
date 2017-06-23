@@ -52,7 +52,6 @@ from traitlets.config import LoggingConfigurable
 
 from .. import orm
 from ..objects import Server
-from ..proxy import RouteSpec
 from ..traitlets import Command
 from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..utils import url_path_join
@@ -249,9 +248,9 @@ class Service(LoggingConfigurable):
         if not self.server:
             return ''
         if self.domain:
-            return RouteSpec(path=self.server.base_url, host=self.domain)
+            return self.domain + self.server.base_url
         else:
-            return RouteSpec(self.server.base_url)
+            return self.server.base_url
 
     def __repr__(self):
         return "<{cls}(name={name}{managed})>".format(

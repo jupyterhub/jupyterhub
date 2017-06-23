@@ -1,4 +1,11 @@
-"""API for JupyterHub's proxy."""
+"""API for JupyterHub's proxy.
+
+Route Specification:
+
+- A routespec is a URI (excluding scheme), e.g.
+  'host.name/path/' for host-based routing or '/path/' for default routing.
+- Route paths should be normalized to always start and end with `/`
+"""
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -8,7 +15,7 @@ import json
 import os
 from subprocess import Popen
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
@@ -27,54 +34,6 @@ from .orm import Service, User
 from . import utils
 from .utils import url_path_join
 
-
-class RouteSpec(namedtuple('RouteSpec', ['path', 'host'])):
-    """Object wrapping a proxy route specification
-
-    Attributes:
-
-        path (str): The URL path prefix for this route. Required.
-        host (str): The hostname used for routing when host-based routing is enabled.
-
-    """
-    def __new__(cls, path, *, host=''):
-        """Create a route specification.
-
-        Arguments:
-
-            path (str): The path prefix. Leading and trailing slashes will be added
-                if missing. Required.
-            host (str): The hostname used for routing when host-based routing is enabled.
-                Optional, keyword-only.
-        """
-        # give host a default value
-        if isinstance(path, cls) and host == '':
-            # RouteSpec(routespec) makes a copy
-            path, host = path
-
-        # ensure leading/trailing slashes
-        if not path.startswith('/'):
-            path = '/' + path
-        if not path.endswith('/'):
-            path = path + '/'
-        return super().__new__(cls, path, host)
-
-    @classmethod
-    def as_routespec(cls, routespec):
-        """Ensure a RouteSpec or str is a RouteSpec
-        
-        Allows string arguments to be accepted anywhere RouteSpecs are accepted.
-        """
-        if isinstance(routespec, str):
-            return cls(routespec)
-        else:
-            return routespec
-
-    def __repr__(self):
-        if not self.host:
-            return '%s(path=%r)' % (self.__class__.__name__, self.path)
-        else:
-            return super().__repr__()
 
 class Proxy(LoggingConfigurable):
     """Base class for configurable proxies that JupyterHub can use."""
@@ -106,14 +65,32 @@ class Proxy(LoggingConfigurable):
 
         Will be called during teardown if should_start is True.
         """
+    
+    def validate_routespec(self, routespec):
+        """Validate a routespec
+        
+        - Checks host value vs host-based routing.
+        - Ensures trailing slash on path.
+        """
+        # check host routing
+        host_route = not routespec.startswith('/')
+        if host_route and not self.host_routing:
+            raise ValueError("Cannot add host-based route %r, not using host-routing" % routespec)
+        if self.host_routing and not host_route:
+            raise ValueError("Cannot add route without host %r, using host-routing" % routespec)
+        # add trailing slash
+        if not routespec.endswith('/'):
+            return routespec + '/'
+        else:
+            return routespec
 
     @gen.coroutine
     def add_route(self, routespec, target, data):
         """Add a route to the proxy.
 
         Args:
-            routespec (RouteSpec or str): A specification for which this route will be matched.
-                If a string, should be treated as RouteSpec(routespec).
+            routespec (str): A URI (excluding scheme) for which this route will be matched,
+                e.g. host.name/path/
             target (str): A URL that will be the target of this route.
             data (dict): A JSONable dict that will be associated with this route, and will
                 be returned when retrieving information about this route.
@@ -132,12 +109,30 @@ class Proxy(LoggingConfigurable):
         pass
 
     @gen.coroutine
+    def get_all_routes(self):
+        """Fetch and return all the routes associated by JupyterHub from the
+        proxy.
+
+        Should return a dictionary of routes, where the keys are
+        routespecs and each value is a dict of the form::
+
+          {
+            'routespec': the route specification
+            'target': the target host for this route
+            'data': the attached data dict for this route (as specified in add_route)
+          }
+        that would be returned by
+        `get_route(routespec)`.
+        """
+        pass
+
+    @gen.coroutine
     def get_route(self, routespec):
         """Return the route info for a given routespec.
 
         Args:
-            routespec (RouteSpec or str): The route specification that was used to add this route.
-                If a string, should be treated as RouteSpec(routespec).
+            routespec (str): A URI that was used to add this route,
+                e.g. `host.tld/path/`
 
         Returns:
             result (dict): with the following keys:
@@ -148,20 +143,9 @@ class Proxy(LoggingConfigurable):
             None: if there are no routes matching the given routespec
         """
         # default implementation relies on get_all_routes
-        routespec = RouteSpec.as_routespec(routespec)
+        routespec = self.validate_routespec(routespec)
         routes = yield self.get_all_routes()
         return routes.get(routespec)
-
-    @gen.coroutine
-    def get_all_routes(self):
-        """Fetch and return all the routes associated by JupyterHub from the
-        proxy.
-
-        Should return a dictionary of routes, where the keys are
-        routespecs and each value is the dict that would be returned by
-        `get_route(routespec)`.
-        """
-        pass
 
     # Most basic implementers must only implement above methods
 
@@ -416,39 +400,41 @@ class ConfigurableHTTPProxy(Proxy):
                        )
         yield self.start()
         yield self.restore_routes()
-    
+
     def _routespec_to_chp_path(self, routespec):
-        """Turn a RouteSpec into a CHP API path"""
-        path = routespec.path
-        if routespec.host:
-            if not self.host_routing:
-                raise RuntimeError("Adding route with a host")
-            path = '/' + url_path_join(routespec.host, path)
+        """Turn a routespec into a CHP API path
+
+        For host-based routing, CHP uses the host as the first path segment.
+        """
+        path = self.validate_routespec(routespec)
+        # CHP always wants to start with /
+        if not path.startswith('/'):
+            path = path + '/'
+        # BUG: CHP doesn't seem to like trailing slashes on some endpoints (DELETE)
         if path != '/' and path.endswith('/'):
             path = path.rstrip('/')
         return path
 
     def _routespec_from_chp_path(self, chp_path):
-        """Turn a CHP route into a RouteSpec
+        """Turn a CHP route into a route spec
         
         In the JSON API, CHP route keys are unescaped,
-        so re-escape them to raw URLs.
+        so re-escape them to raw URLs and ensure slashes are in the right places.
         """
         # chp stores routes in unescaped form.
         # restore escaped-form we created it with.
-        path = quote(chp_path, safe='@/')
-        host = ''
+        routespec = quote(chp_path, safe='@/')
         if self.host_routing:
-            host, *rest = path.lstrip('/').split('/', 1)
-            path = '/' + ''.join(rest)
-        return RouteSpec(path, host=host)
-
+            # host routes don't start with /
+            routespec = routespec.lstrip('/')
+        # all routes should end with /
+        if not routespec.endswith('/'):
+            routespec = routespec + '/'
+        return routespec
 
     def api_request(self, path, method='GET', body=None, client=None):
         """Make an authenticated API request of the proxy."""
         client = client or AsyncHTTPClient()
-        if isinstance(path, RouteSpec):
-            path = self._routespec_to_chp_path(path)
         url = url_path_join(self.api_url, 'api/routes', path)
 
         if isinstance(body, dict):
@@ -464,22 +450,20 @@ class ConfigurableHTTPProxy(Proxy):
         return client.fetch(req)
 
     def add_route(self, routespec, target, data=None):
-        # ensure RouteSpec object
-        routespec = RouteSpec.as_routespec(routespec)
         body = data or {}
         body['target'] = target
-        return self.api_request(routespec,
+        path = self._routespec_to_chp_path(routespec)
+        return self.api_request(path,
                                 method='POST',
                                 body=body,
                                 )
 
     def delete_route(self, routespec):
-        routespec = RouteSpec.as_routespec(routespec)
-        return self.api_request(routespec, method='DELETE')
+        path = self._routespec_to_chp_path(routespec)
+        return self.api_request(path, method='DELETE')
 
     def _reformat_routespec(self, routespec, chp_data):
         """Reformat CHP data format to JupyterHub's proxy API."""
-        # ensure RouteSpec object
         target = chp_data.pop('target')
         return {
             'routespec': routespec,

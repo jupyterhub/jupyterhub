@@ -15,40 +15,6 @@ from .mocking import MockHub
 from .test_api import api_request
 from ..utils import wait_for_http_server, url_path_join as ujoin
 
-from jupyterhub.proxy import RouteSpec
-
-def test_routespec():
-    with pytest.raises(TypeError):
-        RouteSpec()
-
-    spec = RouteSpec('/test/')
-    assert spec.host == ''
-    assert spec.path == '/test/'
-
-    assert 'path=%r' % spec.path in repr(spec)
-    assert 'host' not in repr(spec)
-
-    spec = RouteSpec('test2', host='myhost')
-    assert spec.path == '/test2/'
-    assert spec.host == 'myhost'
-
-    assert 'path=%r' % spec.path in repr(spec)
-    assert 'host=%r' % spec.host in repr(spec)
-
-    copyspec = RouteSpec(spec)
-    assert copyspec.path == '/test2/'
-    assert copyspec.host == 'myhost'
-    assert copyspec == spec
-
-def test_as_routespec():
-    spec = RouteSpec('/test', host='myhost')
-    as_spec = RouteSpec.as_routespec(spec)
-    assert as_spec is spec
-
-    spec2 = RouteSpec.as_routespec('/path')
-    assert isinstance(spec2, RouteSpec)
-    assert spec2.path == '/path/'
-
 
 def test_external_proxy(request, io_loop):
 
@@ -98,7 +64,7 @@ def test_external_proxy(request, io_loop):
 
     # test if api service has a root route '/'
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert list(routes.keys()) == [RouteSpec('/')]
+    assert list(routes.keys()) == ['/']
     
     # add user to the db and start a single user server
     name = 'river'
@@ -109,12 +75,13 @@ def test_external_proxy(request, io_loop):
     
     routes = io_loop.run_sync(app.proxy.get_all_routes)
     # sets the desired path result
-    user_path = ujoin(app.base_url, 'user/river')
+    user_path = ujoin(app.base_url, 'user/river') + '/'
+    print(app.base_url, user_path)
     host = ''
     if app.subdomain_host:
         host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
-    user_spec = RouteSpec(user_path, host=host)
-    assert sorted(routes.keys()) == [RouteSpec('/'), user_spec]
+    user_spec = host + user_path
+    assert sorted(routes.keys()) == ['/', user_spec]
     
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
@@ -123,7 +90,7 @@ def test_external_proxy(request, io_loop):
 
     routes = io_loop.run_sync(app.proxy.get_all_routes)
 
-    assert list(routes.keys()) == [RouteSpec('/')]
+    assert list(routes.keys()) == ['/']
     
     # poke the server to update the proxy
     r = api_request(app, 'proxy', method='post')
@@ -131,7 +98,7 @@ def test_external_proxy(request, io_loop):
 
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert sorted(routes.keys()) == [RouteSpec('/'), user_spec]
+    assert sorted(routes.keys()) == ['/', user_spec]
 
     # teardown the proxy, and start a new one with different auth and port
     proxy.terminate()
@@ -170,7 +137,7 @@ def test_external_proxy(request, io_loop):
 
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert sorted(routes.keys()) == [RouteSpec('/'), user_spec]
+    assert sorted(routes.keys()) == ['/', user_spec]
 
 
 @pytest.mark.parametrize("username, endpoints", [
@@ -207,39 +174,53 @@ def test_check_routes(app, io_loop, username, endpoints):
     # check that before and after state are the same
     assert before == after
 
+from contextlib import contextmanager
 
-@pytest.mark.now
 @pytest.mark.gen_test
-@pytest.mark.parametrize("route_str", [
-    '/has%20space/foo',
-    'trailing/slash/',
+@pytest.mark.parametrize("routespec", [
+    '/has%20space/foo/',
+    '/missing-trailing/slash',
     '/has/@/',
-    'has/' + quote('üñîçø∂é'),
+    '/has/' + quote('üñîçø∂é'),
+    'host.name/path/',
+    'other.host/path/no/slash',
 ])
-@pytest.mark.parametrize("as_str", [
-    True,
-    False,
-])
-def test_add_get_delete(app, route_str, as_str):
-    if app.subdomain_host and as_str:
-        # can't use simple str args when host is not empty
-        pytest.skip()
-    routespec = RouteSpec(route_str, host=urlparse(app.subdomain_host).hostname or '')
+def test_add_get_delete(app, routespec):
+    arg = routespec
+    if not routespec.endswith('/'):
+        routespec = routespec + '/'
+    
+    # host-routes when not host-routing raises an error
+    # and vice versa
+    expect_value_error = bool(app.subdomain_host) ^ (not routespec.startswith('/'))
+    @contextmanager
+    def context():
+        if expect_value_error:
+            with pytest.raises(ValueError):
+                yield
+        else:
+            yield
+
     proxy = app.proxy
-    arg = route_str if as_str else routespec
     target = 'https://localhost:1234'
-    yield proxy.add_route(arg, target=target)
+    with context():
+        yield proxy.add_route(arg, target=target)
     routes = yield proxy.get_all_routes()
-    assert routespec in routes.keys()
-    route = yield proxy.get_route(arg)
-    assert route == {
-        'target': target,
-        'routespec': routespec,
-        'data': route.get('data'),
-    }
-    yield proxy.delete_route(arg)
-    route = yield proxy.get_route(arg)
-    assert route is None
+    if not expect_value_error:
+        assert routespec in routes.keys()
+    with context():
+        route = yield proxy.get_route(arg)
+        assert route == {
+            'target': target,
+            'routespec': routespec,
+            'data': route.get('data'),
+        }
+    with context():
+        yield proxy.delete_route(arg)
+    with context():
+        route = yield proxy.get_route(arg)
+        assert route is None
+
 
 @pytest.mark.parametrize("test_data", [None, 'notjson', json.dumps([])])
 def test_proxy_patch_bad_request_data(app, test_data):

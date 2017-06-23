@@ -15,7 +15,6 @@ from . import orm
 from .objects import Server
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
-from .proxy import RouteSpec
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -120,7 +119,7 @@ class User(HasTraits):
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
         self.base_url = url_path_join(
-            self.settings.get('base_url', '/'), 'user', self.escaped_name)
+            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
 
         self.spawner = self.spawner_class(
             user=self,
@@ -171,9 +170,9 @@ class User(HasTraits):
     @property
     def proxy_spec(self):
         if self.settings.get('subdomain_host'):
-            return RouteSpec(path=self.base_url, host=self.domain)
+            return self.domain + self.base_url
         else:
-            return RouteSpec(path=self.base_url)
+            return self.base_url
 
     @property
     def domain(self):
@@ -223,7 +222,7 @@ class User(HasTraits):
                 server_name = options['server_name']
             else:
                 server_name = default_server_name(self)
-            base_url = url_path_join(self.base_url, server_name)
+            base_url = url_path_join(self.base_url, server_name) + '/'
         else:
             server_name = ''
             base_url = self.base_url
