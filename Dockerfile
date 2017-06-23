@@ -1,44 +1,62 @@
-# A base docker image that includes juptyerhub and IPython master
+# An incomplete base Docker image for running JupyterHub
 #
-# Build your own derivative images starting with
+# Add your configuration to create a complete derivative Docker image.
 #
-# FROM jupyter/jupyterhub:latest
+# Include your configuration settings by starting with one of two options:
 #
+# Option 1:
+#
+# FROM jupyterhub/jupyterhub:latest
+#
+# And put your configuration file jupyterhub_config.py in /srv/jupyterhub/jupyterhub_config.py.
+#
+# Option 2:
+#
+# Or you can create your jupyterhub config and database on the host machine, and mount it with:
+#
+# docker run -v $PWD:/srv/jupyterhub -t jupyterhub/jupyterhub
+#
+# NOTE
+# If you base on jupyterhub/jupyterhub-onbuild
+# your jupyterhub_config.py will be added automatically
+# from your docker directory.
 
 FROM debian:jessie
-
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 
-# install nodejs
+# install nodejs, utf8 locale, set CDN because default httpredir is unreliable
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -y update && apt-get -y upgrade && apt-get -y install npm nodejs nodejs-legacy wget
+RUN REPO=http://cdn-fastly.deb.debian.org && \
+    echo "deb $REPO/debian jessie main\ndeb $REPO/debian-security jessie/updates main" > /etc/apt/sources.list && \
+    apt-get -y update && \
+    apt-get -y upgrade && \
+    apt-get -y install wget locales git bzip2 &&\
+    /usr/sbin/update-locale LANG=C.UTF-8 && \
+    locale-gen C.UTF-8 && \
+    apt-get remove -y locales && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+ENV LANG C.UTF-8
 
-# install Python with conda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-3.9.1-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+# install Python + NodeJS with conda
+RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.2.12-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+    echo 'd0c7c71cc5659e54ab51f2005a8d96f3 */tmp/miniconda.sh' | md5sum -c - && \
     bash /tmp/miniconda.sh -f -b -p /opt/conda && \
-    /opt/conda/bin/conda install --yes python=3.5 sqlalchemy tornado jinja2 traitlets requests pip && \
+    /opt/conda/bin/conda install --yes -c conda-forge python=3.5 sqlalchemy tornado jinja2 traitlets requests pip nodejs configurable-http-proxy && \
+    /opt/conda/bin/pip install --upgrade pip && \
     rm /tmp/miniconda.sh
 ENV PATH=/opt/conda/bin:$PATH
 
-# install any pip dependencies not already installed by conda
-ADD requirements.txt /tmp/requirements.txt
-RUN pip install -r /tmp/requirements.txt
+ADD . /src/jupyterhub
+WORKDIR /src/jupyterhub
 
-# install js dependencies
-RUN npm install -g configurable-http-proxy
+RUN python setup.py js && pip install . && \
+    rm -rf $PWD ~/.cache ~/.npm
 
-WORKDIR /srv/
-ADD . /srv/jupyterhub
+RUN mkdir -p /srv/jupyterhub/
 WORKDIR /srv/jupyterhub/
-
-RUN pip install .
-
-WORKDIR /srv/jupyterhub/
-
-# Derivative containers should add jupyterhub config,
-# which will be used when starting the application.
-
 EXPOSE 8000
 
-ONBUILD ADD jupyterhub_config.py /srv/jupyterhub/jupyterhub_config.py
-CMD ["jupyterhub", "-f", "/srv/jupyterhub/jupyterhub_config.py"]
+LABEL org.jupyter.service="jupyterhub"
+
+CMD ["jupyterhub"]

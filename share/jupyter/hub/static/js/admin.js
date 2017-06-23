@@ -77,17 +77,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         var el = $(this);
         var row = get_row(el);
         var user = row.data('user');
-        var w = window.open();
-        api.admin_access(user, {
-            async: false,
-            success: function () {
-                w.location = utils.url_path_join(prefix, 'user', user);
-            },
-            error: function (xhr, err) {
-                w.close();
-                console.error("Failed to gain access to server", err);
-            }
-        });
+        var w = window.open(utils.url_path_join(prefix, 'user', user));
     });
     
     $(".start-server").click(function () {
@@ -152,15 +142,15 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         });
     });
     
-    $("#add-user").click(function () {
-        var dialog = $("#add-user-dialog");
+    $("#add-users").click(function () {
+        var dialog = $("#add-users-dialog");
         dialog.find(".username-input").val('');
         dialog.find(".admin-checkbox").prop("checked", false);
         dialog.modal();
     });
 
-    $("#add-user-dialog").find(".save-button").click(function () {
-        var dialog = $("#add-user-dialog");
+    $("#add-users-dialog").find(".save-button").click(function () {
+        var dialog = $("#add-users-dialog");
         var lines = dialog.find(".username-input").val().split('\n');
         var admin = dialog.find(".admin-checkbox").prop("checked");
         var usernames = [];
@@ -176,6 +166,15 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
                 window.location.reload();
             }
         });
+    });
+
+    $("#stop-all-servers").click(function () {
+        $("#stop-all-servers-dialog").modal();
+    });
+
+    $("#stop-all-servers-dialog").find(".stop-all-button").click(function () {
+        // stop all clicks all the active stop buttons
+        $('.stop-server').not('.hidden').click();
     });
 
     $("#shutdown-hub").click(function () {

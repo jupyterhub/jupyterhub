@@ -1,80 +1,95 @@
-.. JupyterHub documentation master file, created by
-   sphinx-quickstart on Mon Jan  4 16:31:09 2016.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 JupyterHub
 ==========
 
-.. note:: This is the official documentation for JupyterHub. This project is
-          under active development.
-
-JupyterHub is a multi-user server that manages and proxies multiple instances
-of the single-user Jupyter notebook server.
-
-Three actors:
-
-* multi-user Hub (tornado process)
-* configurable http proxy (node-http-proxy)
-* multiple single-user IPython notebook servers (Python/IPython/tornado)
-
-Basic principles:
-
-* Hub spawns proxy
-* Proxy forwards ~all requests to hub by default
-* Hub handles login, and spawns single-user servers on demand
-* Hub configures proxy to forward url prefixes to single-user servers
+With JupyterHub you can create a **multi-user Hub** which spawns, manages,
+and proxies multiple instances of the single-user
+`Jupyter notebook <https://jupyter-notebook.readthedocs.io/en/latest/>`_ server.
+Due to its flexibility and customization options, JupyterHub can be used to
+serve notebooks to a class of students, a corporate data science group, or a
+scientific research group.
 
 
-Contents:
-
-.. toctree::
-   :maxdepth: 1
-   :caption: User Documentation
-
-   getting-started
-   howitworks
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Configuration
-
-   authenticators
-   spawners
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Developer Documentation
-   
-   api/index
+.. image:: images/jhub-parts.png
+   :alt: JupyterHub subsystems
+   :width: 40%
+   :align: right
 
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Community documentation
+Three subsystems make up JupyterHub:
+
+* a multi-user **Hub** (tornado process)
+* a **configurable http proxy** (node-http-proxy)
+* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
+
+JupyterHub's basic flow of operations includes:
+
+- The Hub spawns a proxy
+- The proxy forwards all requests to the Hub by default
+- The Hub handles user login and spawns single-user servers on demand
+- The Hub configures the proxy to forward URL prefixes to the single-user notebook servers
+
+For convenient administration of the Hub, its users, and :doc:`services`
+(added in version 0.7), JupyterHub also provides a
+`REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default>`__.
+
+Contents
+--------
+
+**User Guide**
+
+* :doc:`quickstart`
+* :doc:`getting-started`
+* :doc:`howitworks`
+* :doc:`websecurity`
+* :doc:`rest`
 
 
+**Configuration Guide**
 
-.. toctree::
-   :maxdepth: 2
-   :caption: About JupyterHub
+* :doc:`authenticators`
+* :doc:`spawners`
+* :doc:`services`
+* :doc:`config-examples`
+* :doc:`upgrading`
+* :doc:`troubleshooting`
 
-   changelog
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Questions? Suggestions?
+**API Reference**
 
-   Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>
-   Jupyter website <https://jupyter.org>
-   Stack Overflow - Jupyter <https://stackoverflow.com/questions/tagged/jupyter>
-   Stack Overflow - Jupyter-notebook <https://stackoverflow.com/questions/tagged/jupyter-notebook>
+* :doc:`api/index`
+
+
+**About JupyterHub**
+
+* :doc:`changelog`
+* :doc:`contributor-list`
+* :doc:`gallery-jhub-deployments`
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
 
+
+Questions? Suggestions?
+-----------------------
+
+- `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
+- `Jupyter website <https://jupyter.org>`_
+
+.. _contents:
+
+Full Table of Contents
+----------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   user-guide
+   configuration-guide
+   api/index
+   changelog
+   contributor-list
+   gallery-jhub-deployments

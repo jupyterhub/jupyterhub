@@ -4,13 +4,16 @@ include setupegg.py
 include bower.json
 include package.json
 include *requirements.txt
+include Dockerfile
 
+graft onbuild
 graft jupyterhub
 graft scripts
 graft share
 
 # Documentation
 graft docs
+prune docs/node_modules
 
 # prune some large unused files from components
 prune share/jupyter/hub/static/components/bootstrap/css

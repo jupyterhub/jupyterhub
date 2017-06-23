@@ -1,0 +1,14 @@
+{
+  "name": "jupyterhub-docs-build",
+  "version": "0.0.0",
+  "description": "build JupyterHub swagger docs",
+  "scripts": {
+    "rest-api": "bootprint openapi ./rest-api.yml source/_static/rest-api"
+  },
+  "author": "",
+  "license": "BSD-3-Clause",
+  "devDependencies": {
+    "bootprint": "^0.10.0",
+    "bootprint-openapi": "^0.17.0"
+  }
+}

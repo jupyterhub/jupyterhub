@@ -1,34 +1,44 @@
-"""Tests for the REST API"""
+"""Tests for the REST API."""
 
 import json
 import time
-from datetime import timedelta
 from queue import Queue
-from urllib.parse import urlparse
+import sys
+from unittest import mock
+from urllib.parse import urlparse, quote
 
+from pytest import mark, yield_fixture
 import requests
 
 from tornado import gen
 
+import jupyterhub
 from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
 from . import mocking
+from .mocking import public_host, public_url
 
 
 def check_db_locks(func):
-    """
-    Decorator for test functions that verifies no locks are held on the
+    """Decorator that verifies no locks are held on database upon exit.
+
+    This decorator for test functions verifies no locks are held on the
     application's database upon exit by creating and dropping a dummy table.
 
-    Relies on an instance of JupyterhubApp being the first argument to the
-    decorated function.
+    The decorator relies on an instance of JupyterHubApp being the first
+    argument to the decorated function.
+
+    Example
+    -------
+
+        @check_db_locks
+        def api_request(app, *api_path, **kwargs):
+
     """
+    def new_func(app, *args, **kwargs):
+        retval = func(app, *args, **kwargs)
 
-    def new_func(*args, **kwargs):
-        retval = func(*args, **kwargs)
-
-        app = args[0]
         temp_session = app.session_factory()
         temp_session.execute('CREATE TABLE dummy (foo INT)')
         temp_session.execute('DROP TABLE dummy')
@@ -40,11 +50,19 @@ def check_db_locks(func):
 
 
 def find_user(db, name):
-    return db.query(orm.User).filter(orm.User.name==name).first()
-    
+    """Find user in database."""
+    return db.query(orm.User).filter(orm.User.name == name).first()
+
+
 def add_user(db, app=None, **kwargs):
-    orm_user = orm.User(**kwargs)
-    db.add(orm_user)
+    """Add a user to the database."""
+    orm_user = find_user(db, name=kwargs.get('name'))
+    if orm_user is None:
+        orm_user = orm.User(**kwargs)
+        db.add(orm_user)
+    else:
+        for attr, value in kwargs.items():
+            setattr(orm_user, attr, value)
     db.commit()
     if app:
         user = app.users[orm_user.id] = User(orm_user, app.tornado_settings)
@@ -52,17 +70,20 @@ def add_user(db, app=None, **kwargs):
     else:
         return orm_user
 
+
 def auth_header(db, name):
+    """Return header with user's API authorization token."""
     user = find_user(db, name)
     if user is None:
         user = add_user(db, name=name)
     token = user.new_api_token()
     return {'Authorization': 'token %s' % token}
 
+
 @check_db_locks
 def api_request(app, *api_path, **kwargs):
     """Make an API request"""
-    base_url = app.hub.server.url
+    base_url = app.hub.url
     headers = kwargs.setdefault('headers', {})
 
     if 'Authorization' not in headers:
@@ -73,25 +94,31 @@ def api_request(app, *api_path, **kwargs):
     f = getattr(requests, method)
     resp = f(url, **kwargs)
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
-    assert ujoin(app.hub.server.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
+    assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
     assert 'http' not in resp.headers['Content-Security-Policy']
     return resp
+
+
+# --------------------
+# Authentication tests
+# --------------------
+
 
 def test_auth_api(app):
     db = app.db
     r = api_request(app, 'authorizations', 'gobbledygook')
     assert r.status_code == 404
-    
+
     # make a new cookie token
     user = db.query(orm.User).first()
     api_token = user.new_api_token()
-    
+
     # check success:
     r = api_request(app, 'authorizations/token', api_token)
     assert r.status_code == 200
     reply = r.json()
     assert reply['name'] == user.name
-    
+
     # check fail
     r = api_request(app, 'authorizations/token', api_token,
         headers={'Authorization': 'no sir'},
@@ -105,7 +132,7 @@ def test_auth_api(app):
 
 
 def test_referer_check(app, io_loop):
-    url = app.hub.server.url
+    url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
     user = find_user(app.db, 'admin')
     if user is None:
@@ -113,9 +140,9 @@ def test_referer_check(app, io_loop):
     cookies = app.login_user('admin')
     app_user = get_app_user(app, 'admin')
     # stop the admin's server so we don't mess up future tests
-    io_loop.run_sync(lambda : app.proxy.delete_user(app_user))
+    io_loop.run_sync(lambda: app.proxy.delete_user(app_user))
     io_loop.run_sync(app_user.stop)
-    
+
     r = api_request(app, 'users',
         headers={
             'Authorization': '',
@@ -123,6 +150,7 @@ def test_referer_check(app, io_loop):
         }, cookies=cookies,
     )
     assert r.status_code == 403
+
     r = api_request(app, 'users',
         headers={
             'Authorization': '',
@@ -130,6 +158,7 @@ def test_referer_check(app, io_loop):
         }, cookies=cookies,
     )
     assert r.status_code == 403
+
     r = api_request(app, 'users',
         headers={
             'Authorization': '',
@@ -138,6 +167,7 @@ def test_referer_check(app, io_loop):
         }, cookies=cookies,
     )
     assert r.status_code == 200
+
     r = api_request(app, 'users',
         headers={
             'Authorization': '',
@@ -148,23 +178,33 @@ def test_referer_check(app, io_loop):
     assert r.status_code == 200
 
 
+# --------------
+# User API tests
+# --------------
+
+
+@mark.user
 def test_get_users(app):
     db = app.db
     r = api_request(app, 'users')
     assert r.status_code == 200
-    
+
     users = sorted(r.json(), key=lambda d: d['name'])
     for u in users:
         u.pop('last_activity')
     assert users == [
         {
+            'kind': 'user',
             'name': 'admin',
+            'groups': [],
             'admin': True,
             'server': None,
             'pending': None,
         },
         {
+            'kind': 'user',
             'name': 'user',
+            'groups': [],
             'admin': False,
             'server': None,
             'pending': None,
@@ -176,6 +216,8 @@ def test_get_users(app):
     )
     assert r.status_code == 403
 
+
+@mark.user
 def test_add_user(app):
     db = app.db
     name = 'newuser'
@@ -187,6 +229,7 @@ def test_add_user(app):
     assert not user.admin
 
 
+@mark.user
 def test_get_user(app):
     name = 'user'
     r = api_request(app, 'users', name)
@@ -194,13 +237,16 @@ def test_get_user(app):
     user = r.json()
     user.pop('last_activity')
     assert user == {
+        'kind': 'user',
         'name': name,
+        'groups': [],
         'admin': False,
         'server': None,
         'pending': None,
     }
 
 
+@mark.user
 def test_add_multi_user_bad(app):
     r = api_request(app, 'users', method='post')
     assert r.status_code == 400
@@ -210,6 +256,7 @@ def test_add_multi_user_bad(app):
     assert r.status_code == 400
 
 
+@mark.user
 def test_add_multi_user_invalid(app):
     app.authenticator.username_pattern = r'w.*'
     r = api_request(app, 'users', method='post',
@@ -220,6 +267,7 @@ def test_add_multi_user_invalid(app):
     assert r.json()['message'] == 'Invalid usernames: andrew, tara'
 
 
+@mark.user
 def test_add_multi_user(app):
     db = app.db
     names = ['a', 'b']
@@ -230,21 +278,21 @@ def test_add_multi_user(app):
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
     assert names == r_names
-    
+
     for name in names:
         user = find_user(db, name)
         assert user is not None
         assert user.name == name
         assert not user.admin
-    
+
     # try to create the same users again
     r = api_request(app, 'users', method='post',
         data=json.dumps({'usernames': names}),
     )
     assert r.status_code == 400
-    
+
     names = ['a', 'b', 'ab']
-    
+
     # try to create the same users again
     r = api_request(app, 'users', method='post',
         data=json.dumps({'usernames': names}),
@@ -255,6 +303,7 @@ def test_add_multi_user(app):
     assert r_names == ['ab']
 
 
+@mark.user
 def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
@@ -265,7 +314,7 @@ def test_add_multi_user_admin(app):
     reply = r.json()
     r_names = [ user['name'] for user in reply ]
     assert names == r_names
-    
+
     for name in names:
         user = find_user(db, name)
         assert user is not None
@@ -273,6 +322,7 @@ def test_add_multi_user_admin(app):
         assert user.admin
 
 
+@mark.user
 def test_add_user_bad(app):
     db = app.db
     name = 'dne_newuser'
@@ -281,6 +331,8 @@ def test_add_user_bad(app):
     user = find_user(db, name)
     assert user is None
 
+
+@mark.user
 def test_add_admin(app):
     db = app.db
     name = 'newadmin'
@@ -293,13 +345,16 @@ def test_add_admin(app):
     assert user.name == name
     assert user.admin
 
+
+@mark.user
 def test_delete_user(app):
     db = app.db
     mal = add_user(db, name='mal')
     r = api_request(app, 'users', 'mal', method='delete')
     assert r.status_code == 204
-    
 
+
+@mark.user
 def test_make_admin(app):
     db = app.db
     name = 'admin2'
@@ -319,19 +374,23 @@ def test_make_admin(app):
     assert user.name == name
     assert user.admin
 
+
 def get_app_user(app, name):
-    """Get the User object from the main thread
-    
-    Needed for access to the Spawner.
+    """Helper to get the User object from the main thread.
+
+    Needed for access to the Spawner during testing.
+
     No ORM methods should be called on the result.
     """
     q = Queue()
+
     def get_user_id():
         user = find_user(app.db, name)
         q.put(user.id)
     app.io_loop.add_callback(get_user_id)
     user_id = q.get(timeout=2)
     return app.users[user_id]
+
 
 def test_spawn(app, io_loop):
     db = app.db
@@ -341,7 +400,10 @@ def test_spawn(app, io_loop):
         's': ['value'],
         'i': 5,
     }
-    r = api_request(app, 'users', name, 'server', method='post', data=json.dumps(options))
+    before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
+    r = api_request(app, 'users', name, 'server', method='post',
+        data=json.dumps(options),
+    )
     assert r.status_code == 201
     assert 'pid' in user.state
     app_user = get_app_user(app, name)
@@ -350,31 +412,44 @@ def test_spawn(app, io_loop):
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
-    
-    assert user.server.base_url == '/user/%s' % name
-    r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url))
+
+    assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name)
+    url = public_url(app, user)
+    print(url)
+    r = requests.get(url)
     assert r.status_code == 200
     assert r.text == user.server.base_url
 
-    r = requests.get(ujoin(app.proxy.public_server.url, user.server.base_url, 'args'))
+    r = requests.get(ujoin(url, 'args'))
     assert r.status_code == 200
     argv = r.json()
-    for expected in ['--user=%s' % name, '--base-url=%s' % user.server.base_url]:
-        assert expected in argv
-    
+    assert '--port' in ' '.join(argv)
+    r = requests.get(ujoin(url, 'env'))
+    env = r.json()
+    for expected in ['JUPYTERHUB_USER', 'JUPYTERHUB_BASE_URL', 'JUPYTERHUB_API_TOKEN']:
+        assert expected in env
+    if app.subdomain_host:
+        assert env['JUPYTERHUB_HOST'] == app.subdomain_host
+
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 204
-    
+
     assert 'pid' not in user.state
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status == 0
 
-def test_slow_spawn(app, io_loop):
-    # app.tornado_application.settings['spawner_class'] = mocking.SlowSpawner
-    app.tornado_settings['spawner_class'] = mocking.SlowSpawner
-    app.tornado_application.settings['slow_spawn_timeout'] = 0
-    app.tornado_application.settings['slow_stop_timeout'] = 0
+    # check that we cleaned up after ourselves
+    assert user.server is None
+    after_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
+    assert before_servers == after_servers
+    tokens = list(db.query(orm.APIToken).filter(orm.APIToken.user_id == user.id))
+    assert tokens == []
 
+
+def test_slow_spawn(app, io_loop, no_patience, request):
+    patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.SlowSpawner})
+    patch.start()
+    request.addfinalizer(patch.stop)
     db = app.db
     name = 'zoe'
     user = add_user(db, app=app, name=name)
@@ -385,12 +460,12 @@ def test_slow_spawn(app, io_loop):
     assert app_user.spawner is not None
     assert app_user.spawn_pending
     assert not app_user.stop_pending
-    
+
     @gen.coroutine
     def wait_spawn():
         while app_user.spawn_pending:
             yield gen.sleep(0.1)
-    
+
     io_loop.run_sync(wait_spawn)
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
@@ -412,17 +487,18 @@ def test_slow_spawn(app, io_loop):
     assert r.status_code == 202
     assert app_user.spawner is not None
     assert app_user.stop_pending
-    
+
     io_loop.run_sync(wait_stop)
     assert not app_user.stop_pending
     assert app_user.spawner is not None
     r = api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 400
-    
 
-def test_never_spawn(app, io_loop):
-    app.tornado_settings['spawner_class'] = mocking.NeverSpawner
-    app.tornado_application.settings['slow_spawn_timeout'] = 0
+
+def test_never_spawn(app, io_loop, no_patience, request):
+    patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.NeverSpawner})
+    patch.start()
+    request.addfinalizer(patch.stop)
 
     db = app.db
     name = 'badger'
@@ -431,12 +507,12 @@ def test_never_spawn(app, io_loop):
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
     assert app_user.spawn_pending
-    
+
     @gen.coroutine
     def wait_pending():
         while app_user.spawn_pending:
             yield gen.sleep(0.1)
-    
+
     io_loop.run_sync(wait_pending)
     assert not app_user.spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
@@ -450,11 +526,321 @@ def test_get_proxy(app, io_loop):
     assert list(reply.keys()) == ['/']
 
 
-def test_shutdown(app):
-    r = api_request(app, 'shutdown', method='post', data=json.dumps({
-        'servers': True,
-        'proxy': True,
+def test_cookie(app):
+    db = app.db
+    name = 'patience'
+    user = add_user(db, app=app, name=name)
+    r = api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 201
+    assert 'pid' in user.state
+    app_user = get_app_user(app, name)
+
+    cookies = app.login_user(name)
+    cookie_name = app.hub.server.cookie_name
+    # cookie jar gives '"cookie-value"', we want 'cookie-value'
+    cookie = cookies[cookie_name][1:-1]
+    r = api_request(app, 'authorizations/cookie',
+        cookie_name, "nothintoseehere",
+    )
+    assert r.status_code == 404
+
+    r = api_request(app, 'authorizations/cookie',
+        cookie_name, quote(cookie, safe=''),
+    )
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+
+    # deprecated cookie in body:
+    r = api_request(app, 'authorizations/cookie',
+        cookie_name, data=cookie,
+    )
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+
+
+def test_token(app):
+    name = 'book'
+    user = add_user(app.db, app=app, name=name)
+    token = user.new_api_token()
+    r = api_request(app, 'authorizations/token', token)
+    r.raise_for_status()
+    user_model = r.json()
+    assert user_model['name'] == name
+    r = api_request(app, 'authorizations/token', 'notauthorized')
+    assert r.status_code == 404
+
+
+@mark.parametrize("headers, data, status", [
+    ({}, None, 200),
+    ({'Authorization': ''}, None, 403),
+    ({}, {'username': 'fake', 'password': 'fake'}, 200),
+])
+def test_get_new_token(app, headers, data, status):
+    if data:
+        data = json.dumps(data)
+    # request a new token
+    r = api_request(app, 'authorizations', 'token', method='post', data=data, headers=headers)
+    assert r.status_code == status
+    if status != 200:
+        return
+    reply = r.json()
+    assert 'token' in reply
+    r = api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    assert 'name' in r.json()
+
+
+# ---------------
+# Group API tests
+# ---------------
+
+
+@mark.group
+def test_groups_list(app):
+    r = api_request(app, 'groups')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == []
+
+    # create a group
+    group = orm.Group(name='alphaflight')
+    app.db.add(group)
+    app.db.commit()
+
+    r = api_request(app, 'groups')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == [{
+        'kind': 'group',
+        'name': 'alphaflight',
+        'users': []
+    }]
+
+
+@mark.group
+def test_group_get(app):
+    group = orm.Group.find(app.db, name='alphaflight')
+    user = add_user(app.db, app=app, name='sasquatch')
+    group.users.append(user)
+    app.db.commit()
+
+    r = api_request(app, 'groups/runaways')
+    assert r.status_code == 404
+
+    r = api_request(app, 'groups/alphaflight')
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == {
+        'kind': 'group',
+        'name': 'alphaflight',
+        'users': ['sasquatch']
+    }
+
+
+@mark.group
+def test_group_create_delete(app):
+    db = app.db
+    r = api_request(app, 'groups/runaways', method='delete')
+    assert r.status_code == 404
+
+    r = api_request(app, 'groups/new', method='post',
+        data=json.dumps({'users': ['doesntexist']}),
+    )
+    assert r.status_code == 400
+    assert orm.Group.find(db, name='new') is None
+
+    r = api_request(app, 'groups/omegaflight', method='post',
+        data=json.dumps({'users': ['sasquatch']}),
+    )
+    r.raise_for_status()
+
+    omegaflight = orm.Group.find(db, name='omegaflight')
+    sasquatch = find_user(db, name='sasquatch')
+    assert omegaflight in sasquatch.groups
+    assert sasquatch in omegaflight.users
+
+    # create duplicate raises 400
+    r = api_request(app, 'groups/omegaflight', method='post')
+    assert r.status_code == 400
+
+    r = api_request(app, 'groups/omegaflight', method='delete')
+    assert r.status_code == 204
+    assert omegaflight not in sasquatch.groups
+    assert orm.Group.find(db, name='omegaflight') is None
+
+    # delete nonexistent gives 404
+    r = api_request(app, 'groups/omegaflight', method='delete')
+    assert r.status_code == 404
+
+
+@mark.group
+def test_group_add_users(app):
+    db = app.db
+    # must specify users
+    r = api_request(app, 'groups/alphaflight/users', method='post', data='{}')
+    assert r.status_code == 400
+
+    names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
+    users = [ find_user(db, name=name) or add_user(db, app=app, name=name) for name in names ]
+    r = api_request(app, 'groups/alphaflight/users', method='post', data=json.dumps({
+        'users': names,
     }))
+    r.raise_for_status()
+
+    for user in users:
+        print(user.name)
+        assert [ g.name for g in user.groups ] == ['alphaflight']
+
+    group = orm.Group.find(db, name='alphaflight')
+    assert sorted([ u.name for u in group.users ]) == sorted(names)
+
+
+@mark.group
+def test_group_delete_users(app):
+    db = app.db
+    # must specify users
+    r = api_request(app, 'groups/alphaflight/users', method='delete', data='{}')
+    assert r.status_code == 400
+
+    names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
+    users = [ find_user(db, name=name) for name in names ]
+    r = api_request(app, 'groups/alphaflight/users', method='delete', data=json.dumps({
+        'users': names[:2],
+    }))
+    r.raise_for_status()
+
+    for user in users[:2]:
+        assert user.groups == []
+    for user in users[2:]:
+        assert [ g.name for g in user.groups ] == ['alphaflight']
+
+    group = orm.Group.find(db, name='alphaflight')
+    assert sorted([ u.name for u in group.users ]) == sorted(names[2:])
+
+
+# -----------------
+# Service API tests
+# -----------------
+
+
+@mark.services
+def test_get_services(app, mockservice_url):
+    mockservice = mockservice_url
+    db = app.db
+    r = api_request(app, 'services')
+    r.raise_for_status()
+    assert r.status_code == 200
+
+    services = r.json()
+    assert services == {
+        mockservice.name: {
+            'name': mockservice.name,
+            'admin': True,
+            'command': mockservice.command,
+            'pid': mockservice.proc.pid,
+            'prefix': mockservice.server.base_url,
+            'url': mockservice.url,
+        }
+    }
+
+    r = api_request(app, 'services',
+        headers=auth_header(db, 'user'),
+    )
+    assert r.status_code == 403
+
+
+@mark.services
+def test_get_service(app, mockservice_url):
+    mockservice = mockservice_url
+    db = app.db
+    r = api_request(app, 'services/%s' % mockservice.name)
+    r.raise_for_status()
+    assert r.status_code == 200
+
+    service = r.json()
+    assert service == {
+        'name': mockservice.name,
+        'admin': True,
+        'command': mockservice.command,
+        'pid': mockservice.proc.pid,
+        'prefix': mockservice.server.base_url,
+        'url': mockservice.url,
+    }
+
+    r = api_request(app, 'services/%s' % mockservice.name,
+        headers={
+            'Authorization': 'token %s' % mockservice.api_token
+        }
+    )
+    r.raise_for_status()
+    r = api_request(app, 'services/%s' % mockservice.name,
+        headers=auth_header(db, 'user'),
+    )
+    assert r.status_code == 403
+
+
+def test_root_api(app):
+    base_url = app.hub.url
+    url = ujoin(base_url, 'api')
+    r = requests.get(url)
+    r.raise_for_status()
+    expected = {
+        'version': jupyterhub.__version__
+    }
+    assert r.json() == expected
+
+
+def test_info(app):
+    r = api_request(app, 'info')
+    r.raise_for_status()
+    data = r.json()
+    assert data['version'] == jupyterhub.__version__
+    assert sorted(data) == [
+        'authenticator',
+        'python',
+        'spawner',
+        'sys_executable',
+        'version',
+    ]
+    assert data['python'] == sys.version
+    assert data['sys_executable'] == sys.executable
+    assert data['authenticator'] == {
+        'class': 'jupyterhub.tests.mocking.MockPAMAuthenticator',
+        'version': jupyterhub.__version__,
+    }
+    assert data['spawner'] == {
+        'class': 'jupyterhub.tests.mocking.MockSpawner',
+        'version': jupyterhub.__version__,
+    }
+
+
+# -----------------
+# General API tests
+# -----------------
+
+
+def test_options(app):
+    r = api_request(app, 'users', method='options')
+    r.raise_for_status()
+    assert 'Access-Control-Allow-Headers' in r.headers
+
+
+def test_bad_json_body(app):
+    r = api_request(app, 'users', method='post', data='notjson')
+    assert r.status_code == 400
+
+
+# ---------------------------------
+# Shutdown MUST always be last test
+# ---------------------------------
+
+
+def test_shutdown(app):
+    r = api_request(app, 'shutdown', method='post',
+        data=json.dumps({'servers': True, 'proxy': True,}),
+    )
     r.raise_for_status()
     reply = r.json()
     for i in range(100):

@@ -26,25 +26,29 @@ class APIHandler(BaseHandler):
         # If no header is provided, assume it comes from a script/curl.
         # We are only concerned with cross-site browser stuff here.
         if not host:
-            self.log.warn("Blocking API request with no host")
+            self.log.warning("Blocking API request with no host")
             return False
         if not referer:
-            self.log.warn("Blocking API request with no referer")
+            self.log.warning("Blocking API request with no referer")
             return False
         
-        host_path = url_path_join(host, self.hub.server.base_url)
+        host_path = url_path_join(host, self.hub.base_url)
         referer_path = referer.split('://', 1)[-1]
         if not (referer_path + '/').startswith(host_path):
-            self.log.warn("Blocking Cross Origin API request.  Referer: %s, Host: %s",
+            self.log.warning("Blocking Cross Origin API request.  Referer: %s, Host: %s",
                 referer, host_path)
             return False
         return True
     
     def get_current_user_cookie(self):
         """Override get_user_cookie to check Referer header"""
-        if not self.check_referer():
+        cookie_user = super().get_current_user_cookie()
+        # check referer only if there is a cookie user,
+        # avoiding misleading "Blocking Cross Origin" messages
+        # when there's no cookie set anyway.
+        if cookie_user and not self.check_referer():
             return None
-        return super().get_current_user_cookie()
+        return cookie_user
 
     def get_json_body(self):
         """Return the body of the request as JSON data."""
@@ -83,10 +87,13 @@ class APIHandler(BaseHandler):
         }))
 
     def user_model(self, user):
+        """Get the JSON model for a User object"""
         model = {
+            'kind': 'user',
             'name': user.name,
             'admin': user.admin,
-            'server': user.server.base_url if user.running else None,
+            'groups': [ g.name for g in user.groups ],
+            'server': user.url if user.running else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
@@ -95,24 +102,67 @@ class APIHandler(BaseHandler):
         elif user.stop_pending:
             model['pending'] = 'stop'
         return model
-    
-    _model_types = {
+
+    def group_model(self, group):
+        """Get the JSON model for a Group object"""
+        return {
+            'kind': 'group',
+            'name': group.name,
+            'users': [ u.name for u in group.users ],
+        }
+
+    def service_model(self, service):
+        """Get the JSON model for a Service object"""
+        return {
+            'kind': 'service',
+            'name': service.name,
+            'admin': service.admin,
+        }
+
+    _user_model_types = {
         'name': str,
         'admin': bool,
+        'groups': list,
     }
-    
-    def _check_user_model(self, model):
+
+    _group_model_types = {
+        'name': str,
+        'users': list,
+    }
+
+    def _check_model(self, model, model_types, name):
+        """Check a model provided by a REST API request
+        
+        Args:
+            model (dict): user-provided model
+            model_types (dict): dict of key:type used to validate types and keys
+            name (str): name of the model, used in error messages
+        """
         if not isinstance(model, dict):
             raise web.HTTPError(400, "Invalid JSON data: %r" % model)
-        if not set(model).issubset(set(self._model_types)):
+        if not set(model).issubset(set(model_types)):
             raise web.HTTPError(400, "Invalid JSON keys: %r" % model)
         for key, value in model.items():
-            if not isinstance(value, self._model_types[key]):
-                raise web.HTTPError(400, "user.%s must be %s, not: %r" % (
-                    key, self._model_types[key], type(value)
+            if not isinstance(value, model_types[key]):
+                raise web.HTTPError(400, "%s.%s must be %s, not: %r" % (
+                    name, key, model_types[key], type(value)
                 ))
+
+    def _check_user_model(self, model):
+        """Check a request-provided user model from a REST API"""
+        self._check_model(model, self._user_model_types, 'user')
+        for username in model.get('users', []):
+            if not isinstance(username, str):
+                raise web.HTTPError(400, ("usernames must be str, not %r", type(username)))
+
+    def _check_group_model(self, model):
+        """Check a request-provided group model from a REST API"""
+        self._check_model(model, self._group_model_types, 'group')
+        for groupname in model.get('groups', []):
+            if not isinstance(groupname, str):
+                raise web.HTTPError(400, ("group names must be str, not %r", type(groupname)))
+
 
     def options(self, *args, **kwargs):
         self.set_header('Access-Control-Allow-Headers', 'accept, content-type')
         self.finish()
-    

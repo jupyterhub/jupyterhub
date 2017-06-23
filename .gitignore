@@ -1,10 +1,12 @@
 node_modules
 *.py[co]
 *~
+.cache
 .DS_Store
 build
 dist
 docs/_build
+docs/source/_static/rest-api
 .ipynb_checkpoints
 # ignore config file at the top-level of the repo
 # but not sub-dirs

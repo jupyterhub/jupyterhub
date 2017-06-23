@@ -1,11 +1,11 @@
 # How JupyterHub works
 
-JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user <del>IPython</del> Jupyter notebook server.
+JupyterHub is a multi-user server that manages and proxies multiple instances of the single-user Jupyter notebook server.
 
 There are three basic processes involved:
 
 - multi-user Hub (Python/Tornado)
-- configurable http proxy (nodejs)
+- [configurable http proxy](https://github.com/jupyterhub/configurable-http-proxy) (node-http-proxy)
 - multiple single-user IPython notebook servers (Python/IPython/Tornado)
 
 The proxy is the only process that listens on a public interface.
@@ -57,9 +57,9 @@ or at least with access to the PAM service,
 which regular users typically do not have
 (on Ubuntu, this requires being added to the `shadow` group).
 
-[More info on custom Authenticators](authenticators.md).
+[More info on custom Authenticators](authenticators.html).
 
-See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Authenticators).
+See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 
 ### Spawning
@@ -72,6 +72,6 @@ and needs to be able to take three actions:
 2. poll whether the process is still running
 3. stop the process
 
-[More info on custom Spawners](spawners.md).
+[More info on custom Spawners](spawners.html).
 
-See a list of custom Spawners [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Spawners).
+See a list of custom Spawners [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).

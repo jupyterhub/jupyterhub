@@ -1,4 +1,4 @@
-FROM jupyter/jupyterhub
+FROM jupyter/jupyterhub-onbuild
 
 MAINTAINER Jupyter Project <jupyter@googlegroups.com>
 

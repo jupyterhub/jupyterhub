@@ -11,7 +11,7 @@
 {{ custom_html }}
 {% elif login_service %}
 <div class="service-login">
-  <a class='btn btn-jupyter btn-lg' href='{{login_url}}'>
+  <a class='btn btn-jupyter btn-lg' href='{{authenticator_login_url}}'>
     Sign in with {{login_service}}
   </a>
 </div>
@@ -21,6 +21,12 @@
     Sign in
   </div>
   <div class='auth-form-body'>
+
+    <p id='insecure-login-warning' class='hidden'>
+    Warning: JupyterHub seems to be served over an unsecured HTTP connection.
+    We strongly recommend enabling HTTPS for JupyterHub.
+    </p>
+
     {% if login_error %}
     <p class="login_error">
       {{login_error}}
@@ -64,5 +70,13 @@
 
 {% block script %}
 {{super()}}
+
+<script>
+if (window.location.protocol === "http:") {
+  // unhide http warning
+  var warning = document.getElementById('insecure-login-warning');
+  warning.className = warning.className.replace(/\bhidden\b/, '');
+}
+</script>
 
 {% endblock %}

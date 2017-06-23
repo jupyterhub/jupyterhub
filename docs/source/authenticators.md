@@ -1,4 +1,4 @@
-# Writing a custom Authenticator
+# Authenticators
 
 The [Authenticator][] is the mechanism for authorizing users.
 Basic authenticators use simple username and password authentication.
@@ -11,13 +11,12 @@ One such example is using [GitHub OAuth][].
 Because the username is passed from the Authenticator to the Spawner,
 a custom Authenticator and Spawner are often used together.
 
-See a list of custom Authenticators [on the wiki](https://github.com/jupyter/jupyterhub/wiki/Authenticators).
+See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 
 ## Basics of Authenticators
 
 A basic Authenticator has one central method:
-
 
 ### Authenticator.authenticate
 
@@ -48,13 +47,12 @@ class DictionaryAuthenticator(Authenticator):
     passwords = Dict(config=True,
         help="""dict of username:password for authentication"""
     )
-    
+
     @gen.coroutine
     def authenticate(self, handler, data):
         if self.passwords.get(data['username']) == data['password']:
             return data['username']
 ```
-
 
 ### Authenticator.whitelist
 
@@ -77,6 +75,7 @@ For simple mappings, a configurable dict `Authenticator.username_map` is used to
 c.Authenticator.username_map  = {
   'service-name': 'localname'
 }
+```
 
 ### Validating usernames
 
@@ -90,8 +89,9 @@ which is a regular expression string for validation.
 
 To only allow usernames that start with 'w':
 
-    c.Authenticator.username_pattern = r'w.*'
-
+```python
+c.Authenticator.username_pattern = r'w.*'
+```
 
 ## OAuth and other non-password logins
 
@@ -102,9 +102,12 @@ You can see an example implementation of an Authenticator that uses [GitHub OAut
 at [OAuthenticator][].
 
 
-[Authenticator]: https://github.com/jupyter/jupyterhub/blob/master/jupyterhub/auth.py
-[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
-[OAuth]: https://en.wikipedia.org/wiki/OAuth 
-[GitHub OAuth]: https://developer.github.com/v3/oauth/
-[OAuthenticator]: https://github.com/jupyter/oauthenticator
+## Writing a custom authenticator
 
+If you are interested in writing a custom authenticator, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
+
+[Authenticator]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/auth.py
+[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[OAuth]: https://en.wikipedia.org/wiki/OAuth
+[GitHub OAuth]: https://developer.github.com/v3/oauth/
+[OAuthenticator]: https://github.com/jupyterhub/oauthenticator

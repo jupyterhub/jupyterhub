@@ -47,11 +47,20 @@ help:
 	@echo "  linkcheck  to check all external links for integrity"
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
+	@echo "  spelling   to run spell check on documentation"
 
 clean:
 	rm -rf $(BUILDDIR)/*
 
-html:
+node_modules: package.json
+	npm install && touch node_modules
+
+rest-api: source/_static/rest-api/index.html
+
+source/_static/rest-api/index.html: rest-api.yml node_modules
+	npm run rest-api
+
+html: rest-api
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
@@ -171,6 +180,11 @@ linkcheck:
 	@echo "Link check complete; look for any errors in the above output " \
 	      "or in $(BUILDDIR)/linkcheck/output.txt."
 
+spelling:
+	$(SPHINXBUILD) -b spelling $(ALLSPHINXOPTS) $(BUILDDIR)/spelling
+	@echo
+	@echo "Spell check complete; look for any errors in the above output " \
+	      "or in $(BUILDDIR)/spelling/output.txt."
 doctest:
 	$(SPHINXBUILD) -b doctest $(ALLSPHINXOPTS) $(BUILDDIR)/doctest
 	@echo "Testing of doctests in the sources finished, look at the " \

@@ -32,8 +32,9 @@
     <tbody>
       <tr class="user-row add-user-row">
         <td colspan="12">
-          <a id="add-user" class="col-xs-5 btn btn-default">Add User</a>
-          <a id="shutdown-hub" class="col-xs-5 col-xs-offset-2 btn btn-danger">Shutdown Hub</a>
+          <a id="add-users" class="col-xs-2 btn btn-default">Add Users</a>
+          <a id="stop-all-servers" class="col-xs-2 col-xs-offset-5 btn btn-danger">Stop All</a>
+          <a id="shutdown-hub" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
         </td>
       </tr>
   {% for u in users %}
@@ -71,9 +72,13 @@
   This operation cannot be undone.
 {% endcall %}
 
+{% call modal('Stop All Servers', btn_label='Stop All', btn_class='btn-danger stop-all-button') %}
+  Are you sure you want to stop all your users' servers? Kernels will be shutdown and unsaved data may be lost.
+{% endcall %}
+
 {% call modal('Shutdown Hub', btn_label='Shutdown', btn_class='btn-danger shutdown-button') %}
   Are you sure you want to shutdown the Hub?
-  You can chose to leave the proxy and/or single-user servers running by unchecking the boxes below:
+  You can choose to leave the proxy and/or single-user servers running by unchecking the boxes below:
   <div class="checkbox">
     <label>
       <input type="checkbox" class="shutdown-proxy-checkbox">Shutdown proxy
@@ -108,7 +113,7 @@
 
 {{ user_modal('Edit User') }}
 
-{{ user_modal('Add User', multi=True) }}
+{{ user_modal('Add Users', multi=True) }}
 
 {% endblock %}
 
