@@ -31,6 +31,12 @@ class APIHandler(BaseHandler):
         if not referer:
             self.log.warning("Blocking API request with no referer")
             return False
+
+        # Checking CORS
+        allow_origin = self.settings.get('allow_origin', None)
+        self.log.warning(allow_origin)
+        if (allow_origin == '*') or (allow_origin and allow_origin in referer_path):
+            return True
         
         host_path = url_path_join(host, self.hub.base_url)
         referer_path = referer.split('://', 1)[-1]
