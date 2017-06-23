@@ -175,6 +175,7 @@ class Service(LoggingConfigurable):
         """
     ).tag(input=True)
     # Managed service API:
+    spawner = Any()
 
     @property
     def managed(self):
@@ -299,6 +300,7 @@ class Service(LoggingConfigurable):
     def stop(self):
         """Stop a managed service"""
         if not self.managed:
-            raise RuntimeError("Cannot start unmanaged service %s" % self)
-        self.spawner.stop_polling()
-        return self.spawner.stop()
+            raise RuntimeError("Cannot stop unmanaged service %s" % self)
+        if self.spawner:
+            self.spawner.stop_polling()
+            return self.spawner.stop()
