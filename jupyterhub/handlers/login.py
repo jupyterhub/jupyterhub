@@ -87,13 +87,9 @@ class LoginHandler(BaseHandler):
         authenticated = yield self.authenticate(data)
         auth_timer.stop(send=False)
 
-        if isinstance(authenticated, dict):
-            # unpack auth dict
-            username = authenticated['name']
-            auth_state = authenticated.get('state')
-        else:
-            username = authenticated
-            auth_state = None
+        # unpack auth dict
+        username = authenticated['name']
+        auth_state = authenticated.get('auth_state')
 
         if authenticated:
             self.statsd.incr('login.success')

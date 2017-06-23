@@ -171,32 +171,37 @@ class Authenticator(LoggingConfigurable):
     def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
 
-        Returns normalized username if successful, None otherwise.
+        Returns user dict if successful, None otherwise.
 
         This calls `authenticate`, which should be overridden in subclasses,
         normalizes the username if any normalization should be done,
         and then validates the name in the whitelist.
 
         This is the outer API for authenticating a user.
-        Subclasses should not need to override this method.
+        Subclasses should not override this method.
 
         The various stages can be overridden separately:
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
          - `check_whitelist` checks against the user whitelist
+        
+        .. versionchanged:: 0.8
+            return dict instead of username
         """
         authenticated = yield self.authenticate(handler, data)
         if authenticated is None:
             return
         if isinstance(authenticated, dict):
-            username = authenticated['name']
+            if 'name' not in authenticated:
+                raise ValueError("user missing a name: %r" % authenticated)
         else:
-            username = authenticated
+            authenticated = {
+                'name': authenticated,
+            }
+        authenticated.setdefault('auth_state', None)
 
-        username = self.normalize_username(username)
-        if isinstance(authenticated, dict):
-            # store normalized name back in dict
-            authenticated['name'] = username
+        # normalize the username
+        authenticated['name'] = username = self.normalize_username(authenticated['name'])
         if not self.validate_username(username):
             self.log.warning("Disallowing invalid username %r.", username)
             return
@@ -228,8 +233,8 @@ class Authenticator(LoggingConfigurable):
             user (str or dict or None): The username of the authenticated user,
                 or None if Authentication failed.
                 If the Authenticator has state associated with the user,
-                it can return a dict with the keys 'name' and 'state',
-                where 'name' is the username and 'state' is a dictionary
+                it can return a dict with the keys 'name' and 'auth_state',
+                where 'name' is the username and 'auth_state' is a dictionary
                 of auth state that will be persisted.
         """
 

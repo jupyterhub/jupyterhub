@@ -16,7 +16,7 @@ def test_pam_auth(io_loop):
         'username': 'match',
         'password': 'match',
     }))
-    assert authorized == 'match'
+    assert authorized['name'] == 'match'
     
     authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'match',
@@ -30,7 +30,7 @@ def test_pam_auth_whitelist(io_loop):
         'username': 'kaylee',
         'password': 'kaylee',
     }))
-    assert authorized == 'kaylee'
+    assert authorized['name'] == 'kaylee'
     
     authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
         'username': 'wash',
@@ -62,7 +62,7 @@ def test_pam_auth_group_whitelist(io_loop):
             'username': 'kaylee',
             'password': 'kaylee',
         }))
-    assert authorized == 'kaylee'
+    assert authorized['name'] == 'kaylee'
 
     with mock.patch.object(auth, 'getgrnam', getgrnam):
         authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
@@ -166,25 +166,25 @@ def test_normalize_names(io_loop):
         'username': 'ZOE',
         'password': 'ZOE',
     }))
-    assert authorized == 'zoe'
+    assert authorized['name'] == 'zoe'
 
     authorized = io_loop.run_sync(lambda: a.get_authenticated_user(None, {
         'username': 'Glenn',
         'password': 'Glenn',
     }))
-    assert authorized == 'glenn'
+    assert authorized['name'] == 'glenn'
 
     authorized = io_loop.run_sync(lambda: a.get_authenticated_user(None, {
         'username': 'hExi',
         'password': 'hExi',
     }))
-    assert authorized == 'hexi'
+    assert authorized['name'] == 'hexi'
 
     authorized = io_loop.run_sync(lambda: a.get_authenticated_user(None, {
         'username': 'Test',
         'password': 'Test',
     }))
-    assert authorized == 'test'
+    assert authorized['name'] == 'test'
 
 def test_username_map(io_loop):
     a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
@@ -193,13 +193,13 @@ def test_username_map(io_loop):
         'password': 'WASH',
     }))
 
-    assert authorized == 'alpha'
+    assert authorized['name'] == 'alpha'
 
     authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
         'username': 'Inara',
         'password': 'Inara',
     }))
-    assert authorized == 'inara'
+    assert authorized['name'] == 'inara'
 
 
 def test_validate_names(io_loop):

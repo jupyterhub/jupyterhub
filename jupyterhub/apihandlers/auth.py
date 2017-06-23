@@ -36,13 +36,13 @@ class TokenAPIHandler(APIHandler):
             # for authenticators where that's possible
             data = self.get_json_body()
             try:
-                username = yield self.authenticator.authenticate(self, data)
+                authenticated = yield self.authenticate(self, data)
             except Exception as e:
                 self.log.error("Failure trying to authenticate with form data: %s" % e)
-                username = None
-            if username is None:
+                authenticated = None
+            if authenticated is None:
                 raise web.HTTPError(403)
-            user = self.find_user(username)
+            user = self.find_user(authenticated['name'])
         api_token = user.new_api_token()
         self.write(json.dumps({'token': api_token}))
 
