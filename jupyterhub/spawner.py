@@ -260,8 +260,9 @@ class Spawner(LoggingConfigurable):
 
         Example uses:
 
-        - You can set `notebook_dir` to `/` and `default_url` to `/home/{username}` to allow people to
-          navigate the whole filesystem from their notebook, but still start in their home directory.
+        - You can set `notebook_dir` to `/` and `default_url` to `/tree/home/{username}` to allow people to
+          navigate the whole filesystem from their notebook server, but still start in their home directory.
+        - Start with `/notebooks` instead of `/tree` if `default_url` points to a notebook instead of a directory.
         - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.
         """
     ).tag(config=True)
@@ -513,7 +514,7 @@ class Spawner(LoggingConfigurable):
             notebook_dir = self.format_string(self.notebook_dir)
             args.append('--notebook-dir="%s"' % notebook_dir)
         if self.default_url:
-            default_url = self.format_string('/tree' + self.default_url)
+            default_url = self.format_string(self.default_url)
             args.append('--NotebookApp.default_url="%s"' % default_url)
 
         if self.debug:
