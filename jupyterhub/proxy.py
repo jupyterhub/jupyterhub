@@ -1,10 +1,18 @@
 """API for JupyterHub's proxy.
 
+Custom proxy implementations can subclass :class:`Proxy`
+and register in JupyterHub config:
+
+.. sourcecode:: python
+
+    from mymodule import MyProxy
+    c.JupyterHub.proxy_class = MyProxy
+
 Route Specification:
 
-- A routespec is a URI (excluding scheme), e.g.
-  'host.name/path/' for host-based routing or '/path/' for default routing.
-- Route paths should be normalized to always start and end with `/`
+- A routespec is a URL prefix ([host]/path/), e.g.
+  'host.tld/path/' for host-based routing or '/path/' for default routing.
+- Route paths should be normalized to always start and end with '/'
 """
 
 # Copyright (c) IPython Development Team.
@@ -36,7 +44,28 @@ from .utils import url_path_join
 
 
 class Proxy(LoggingConfigurable):
-    """Base class for configurable proxies that JupyterHub can use."""
+    """Base class for configurable proxies that JupyterHub can use.
+
+    A proxy implementation should subclass this and must define the following methods:
+
+    - :meth:`.get_all_routes` return a dictionary of all JupyterHub-related routes
+    - :meth:`.add_route` adds a route
+    - :meth:`.delete_route` deletes a route
+
+    In addition to these, the following method(s) may need to be implemented:
+
+    - :meth:`.start` start the proxy, if it should be launched by the Hub
+      instead of externally managed.
+      If the proxy is externally managed, it should set :attr:`should_start` to False.
+    - :meth:`.stop` stop the proxy. Only used if :meth:`.start` is also used.
+
+    And the following method(s) are optional, but can be provided:
+
+    - :meth:`.get_route` gets a single route.
+      There is a default implementation that extracts data from :meth:`.get_all_routes`,
+      but implementations may choose to provide a more efficient implementation
+      of fetching a single route.
+    """
 
     db = Any()
     app = Any()
@@ -47,7 +76,7 @@ class Proxy(LoggingConfigurable):
     host_routing = Bool()
 
     should_start = Bool(True, config=True,
-                        help="""Should the Hub start the proxy.
+                        help="""Should the Hub start the proxy
 
         If True, the Hub will start the proxy and stop it.
         Set to False if the proxy is managed externally,
@@ -58,12 +87,18 @@ class Proxy(LoggingConfigurable):
         """Start the proxy.
 
         Will be called during startup if should_start is True.
+
+        **Subclasses must define this method**
+        if the proxy is to be started by the Hub
         """
 
     def stop(self):
         """Stop the proxy.
 
         Will be called during teardown if should_start is True.
+
+        **Subclasses must define this method** 
+        if the proxy is to be started by the Hub
         """
     
     def validate_routespec(self, routespec):
@@ -88,10 +123,12 @@ class Proxy(LoggingConfigurable):
     def add_route(self, routespec, target, data):
         """Add a route to the proxy.
 
+        **Subclasses must define this method**
+
         Args:
-            routespec (str): A URI (excluding scheme) for which this route will be matched,
+            routespec (str): A URL prefix ([host]/path/) for which this route will be matched,
                 e.g. host.name/path/
-            target (str): A URL that will be the target of this route.
+            target (str): A full URL that will be the target of this route.
             data (dict): A JSONable dict that will be associated with this route, and will
                 be returned when retrieving information about this route.
 
@@ -105,7 +142,10 @@ class Proxy(LoggingConfigurable):
 
     @gen.coroutine
     def delete_route(self, routespec):
-        """Delete a route with a given routespec if it exists."""
+        """Delete a route with a given routespec if it exists.
+        
+        **Subclasses must define this method**
+        """
         pass
 
     @gen.coroutine
@@ -113,16 +153,16 @@ class Proxy(LoggingConfigurable):
         """Fetch and return all the routes associated by JupyterHub from the
         proxy.
 
+        **Subclasses must define this method**
+
         Should return a dictionary of routes, where the keys are
         routespecs and each value is a dict of the form::
 
           {
-            'routespec': the route specification
-            'target': the target host for this route
+            'routespec': the route specification ([host]/path/)
+            'target': the target host URL (proto://host) for this route
             'data': the attached data dict for this route (as specified in add_route)
           }
-        that would be returned by
-        `get_route(routespec)`.
         """
         pass
 
@@ -131,15 +171,20 @@ class Proxy(LoggingConfigurable):
         """Return the route info for a given routespec.
 
         Args:
-            routespec (str): A URI that was used to add this route,
+            routespec (str):
+                A URI that was used to add this route,
                 e.g. `host.tld/path/`
 
         Returns:
-            result (dict): with the following keys:
-                `routespec`: The normalized route specification passed in to add_route
-                `target`: The target for this route
-                `data`: The arbitrary data that was passed in by JupyterHub when adding this
+            result (dict):
+                dict with the following keys::
+        
+                'routespec': The normalized route specification passed in to add_route
+                    ([host]/path/)
+                'target': The target host for this route (proto://host)
+                'data': The arbitrary data dict that was passed in by JupyterHub when adding this
                         route.
+
             None: if there are no routes matching the given routespec
         """
         # default implementation relies on get_all_routes
@@ -279,14 +324,24 @@ class Proxy(LoggingConfigurable):
 
 
 class ConfigurableHTTPProxy(Proxy):
-    """Proxy implementation for the default configurable-http-proxy."""
+    """Proxy implementation for the default configurable-http-proxy.
+
+    This is the default proxy implementation
+    for running the nodejs proxy `configurable-http-proxy`.
+
+    If the proxy should not be run as a subprocess of the Hub,
+    (e.g. in a separate container),
+    set::
+    
+        c.ConfigurableHTTPProxy.should_start = False
+    """
 
     proxy_process = Any()
     client = Instance(AsyncHTTPClient, ())
 
-    debug = Bool(False, help="Add debug-level logging to the Proxy", config=True)
+    debug = Bool(False, help="Add debug-level logging to the Proxy.", config=True)
     auth_token = Unicode(
-        help="""The Proxy Auth token.
+        help="""The Proxy auth token
 
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
         """,
