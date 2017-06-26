@@ -136,7 +136,11 @@ class MockHub(JupyterHub):
     @default('ip')
     def _ip_default(self):
         return '127.0.0.1'
-    
+
+    @default('port')
+    def _port_default(self):
+        return random_port()
+
     @default('authenticator_class')
     def _authenticator_class_default(self):
         return MockPAMAuthenticator
