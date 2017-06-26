@@ -107,6 +107,10 @@ class Proxy(LoggingConfigurable):
         - Checks host value vs host-based routing.
         - Ensures trailing slash on path.
         """
+        if routespec == '/':
+            # / is the default route.
+            # don't check host-based routing
+            return routespec
         # check host routing
         host_route = not routespec.startswith('/')
         if host_route and not self.host_routing:
@@ -281,6 +285,11 @@ class Proxy(LoggingConfigurable):
         user_routes = {r['data']['user'] for r in routes.values() if 'user' in r['data']}
         futures = []
         db = self.db
+
+        if '/' not in routes:
+            self.log.warning("Adding missing default route")
+            self.add_hub_route(self.app.hub)
+
         for orm_user in db.query(User):
             user = user_dict[orm_user]
             if user.running:
@@ -315,9 +324,15 @@ class Proxy(LoggingConfigurable):
         for f in futures:
             yield f
 
+    def add_hub_route(self, hub):
+        """Add the default route for the Hub"""
+        self.log.info("Adding default route for Hub: / => %s", hub.host)
+        return self.add_route('/', self.hub.host)
+
     @gen.coroutine
     def restore_routes(self):
         self.log.info("Setting up routes on new proxy")
+        yield self.add_hub_route(self.app.hub)
         yield self.add_all_users(self.app.users)
         yield self.add_all_services(self.app.services)
         self.log.info("New proxy back up and good to go")
@@ -379,7 +394,6 @@ class ConfigurableHTTPProxy(Proxy):
             '--port', str(public_server.port),
             '--api-ip', api_server.ip,
             '--api-port', str(api_server.port),
-            '--default-target', self.hub.host,
             '--error-target', url_path_join(self.hub.url, 'error'),
         ]
         if self.app.subdomain_host:
@@ -464,7 +478,7 @@ class ConfigurableHTTPProxy(Proxy):
         path = self.validate_routespec(routespec)
         # CHP always wants to start with /
         if not path.startswith('/'):
-            path = path + '/'
+            path = '/' + path
         # BUG: CHP doesn't seem to like trailing slashes on some endpoints (DELETE)
         if path != '/' and path.endswith('/'):
             path = path.rstrip('/')

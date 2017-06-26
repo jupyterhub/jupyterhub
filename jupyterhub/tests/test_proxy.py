@@ -43,7 +43,7 @@ def test_external_proxy(request, io_loop):
         '--port', str(app.port),
         '--api-ip', proxy_ip,
         '--api-port', str(proxy_port),
-        '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
+        '--log-level=debug',
     ]
     if app.subdomain_host:
         cmd.append('--host-routing')
@@ -90,7 +90,7 @@ def test_external_proxy(request, io_loop):
 
     routes = io_loop.run_sync(app.proxy.get_all_routes)
 
-    assert list(routes.keys()) == ['/']
+    assert list(routes.keys()) == []
     
     # poke the server to update the proxy
     r = api_request(app, 'proxy', method='post')
