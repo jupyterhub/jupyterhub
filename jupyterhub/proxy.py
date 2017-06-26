@@ -521,6 +521,7 @@ class ConfigurableHTTPProxy(Proxy):
     def add_route(self, routespec, target, data=None):
         body = data or {}
         body['target'] = target
+        body['jupyterhub'] = True
         path = self._routespec_to_chp_path(routespec)
         return self.api_request(path,
                                 method='POST',
@@ -534,6 +535,7 @@ class ConfigurableHTTPProxy(Proxy):
     def _reformat_routespec(self, routespec, chp_data):
         """Reformat CHP data format to JupyterHub's proxy API."""
         target = chp_data.pop('target')
+        chp_data.pop('jupyterhub')
         return {
             'routespec': routespec,
             'target': target,
@@ -548,6 +550,10 @@ class ConfigurableHTTPProxy(Proxy):
         all_routes = {}
         for chp_path, chp_data in chp_routes.items():
             routespec = self._routespec_from_chp_path(chp_path)
+            if 'jupyterhub' not in chp_data:
+                # exclude routes not associated with JupyterHub
+                self.log.debug("Omitting non-jupyterhub route %r", routespec)
+                continue
             all_routes[routespec] = self._reformat_routespec(
                 routespec, chp_data)
         return all_routes
