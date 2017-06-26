@@ -174,6 +174,7 @@ class Service(LoggingConfigurable):
         """
     ).tag(input=True)
     # Managed service API:
+    spawner = Any()
 
     @property
     def managed(self):
@@ -243,11 +244,11 @@ class Service(LoggingConfigurable):
         return url_path_join(self.base_url, 'services', self.name + '/')
 
     @property
-    def proxy_path(self):
+    def proxy_spec(self):
         if not self.server:
             return ''
         if self.domain:
-            return url_path_join('/' + self.domain, self.server.base_url)
+            return self.domain + self.server.base_url
         else:
             return self.server.base_url
 
@@ -298,6 +299,7 @@ class Service(LoggingConfigurable):
     def stop(self):
         """Stop a managed service"""
         if not self.managed:
-            raise RuntimeError("Cannot start unmanaged service %s" % self)
-        self.spawner.stop_polling()
-        return self.spawner.stop()
+            raise RuntimeError("Cannot stop unmanaged service %s" % self)
+        if self.spawner:
+            self.spawner.stop_polling()
+            return self.spawner.stop()

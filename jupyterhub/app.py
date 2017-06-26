@@ -1182,6 +1182,7 @@ class JupyterHub(Application):
             app=self,
             log=self.log,
             hub=self.hub,
+            host_routing=bool(self.subdomain_host),
             ssl_cert=self.ssl_cert,
             ssl_key=self.ssl_key,
         )

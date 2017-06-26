@@ -97,7 +97,7 @@ def test_spawn_redirect(app, io_loop):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, 'user/%s' % name)
+    assert path == ujoin(app.base_url, 'user/%s/' % name)
     
     # should have started server
     status = io_loop.run_sync(u.spawner.poll)
@@ -108,7 +108,7 @@ def test_spawn_redirect(app, io_loop):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s' % name)
+    assert path == ujoin(app.base_url, '/user/%s/' % name)
 
 def test_spawn_page(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
