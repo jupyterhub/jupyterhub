@@ -175,31 +175,44 @@ class Authenticator(LoggingConfigurable):
     def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
 
-        Returns normalized username if successful, None otherwise.
+        Returns user dict if successful, None otherwise.
 
         This calls `authenticate`, which should be overridden in subclasses,
         normalizes the username if any normalization should be done,
         and then validates the name in the whitelist.
 
         This is the outer API for authenticating a user.
-        Subclasses should not need to override this method.
+        Subclasses should not override this method.
 
         The various stages can be overridden separately:
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
          - `check_whitelist` checks against the user whitelist
+        
+        .. versionchanged:: 0.8
+            return dict instead of username
         """
-        username = yield self.authenticate(handler, data)
-        if username is None:
+        authenticated = yield self.authenticate(handler, data)
+        if authenticated is None:
             return
-        username = self.normalize_username(username)
+        if isinstance(authenticated, dict):
+            if 'name' not in authenticated:
+                raise ValueError("user missing a name: %r" % authenticated)
+        else:
+            authenticated = {
+                'name': authenticated,
+            }
+        authenticated.setdefault('auth_state', None)
+
+        # normalize the username
+        authenticated['name'] = username = self.normalize_username(authenticated['name'])
         if not self.validate_username(username):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
         whitelist_pass = yield gen.maybe_future(self.check_whitelist(username))
         if whitelist_pass:
-            return username
+            return authenticated
         else:
             self.log.warning("User %r not in whitelist.", username)
             return
@@ -214,13 +227,20 @@ class Authenticator(LoggingConfigurable):
 
         Checking the whitelist is handled separately by the caller.
 
+        .. versionchanged:: 0.8
+            Allow `authenticate` to return a dict containing auth_state.
+
         Args:
             handler (tornado.web.RequestHandler): the current request handler
             data (dict): The formdata of the login form.
                          The default form has 'username' and 'password' fields.
         Returns:
-            username (str or None): The username of the authenticated user,
-            or None if Authentication failed
+            user (str or dict or None): The username of the authenticated user,
+                or None if Authentication failed.
+                If the Authenticator has state associated with the user,
+                it can return a dict with the keys 'name' and 'auth_state',
+                where 'name' is the username and 'auth_state' is a dictionary
+                of auth state that will be persisted.
         """
 
     def pre_spawn_start(self, user, spawner):
