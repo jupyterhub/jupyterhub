@@ -67,7 +67,11 @@ class Proxy(LoggingConfigurable):
       of fetching a single route.
     """
 
-    db = Any()
+    db_factory = Any()
+    @property
+    def db(self):
+        return self.db_factory()
+
     app = Any()
     hub = Any()
     public_url = Unicode()
@@ -445,7 +449,6 @@ class ConfigurableHTTPProxy(Proxy):
                 else:
                     break
             yield server.wait_up(1)
-        time.sleep(1)
         _check_process()
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)

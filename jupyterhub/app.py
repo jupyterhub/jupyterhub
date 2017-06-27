@@ -1176,7 +1176,7 @@ class JupyterHub(Application):
             base_url=self.base_url,
         )
         self.proxy = self.proxy_class(
-            db=self.db,
+            db_factory=lambda: self.db,
             public_url=public_url,
             parent=self,
             app=self,
