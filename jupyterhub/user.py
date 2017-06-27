@@ -92,12 +92,20 @@ class User(HasTraits):
     def _db_changed(self, change):
         """Changing db session reacquires ORM User object"""
         # db session changed, re-get orm User
-        if self.orm_user:
-            id = self.orm_user.id
-            self.orm_user = change['new'].query(orm.User).filter(orm.User.id == id).first()
-        self.spawner.db = self.db
+        db = change.new
+        if self._user_id is not None:
+            self.orm_user = db.query(orm.User).filter(orm.User.id == self._user_id).first()
+        self.spawner.db = change.new
 
-    orm_user = None
+    _user_id = None
+    orm_user = Any(allow_none=True)
+    @observe('orm_user')
+    def _orm_user_changed(self, change):
+        if change.new:
+            self._user_id = change.new.id
+        else:
+            self._user_id = None
+
     spawner = None
     spawn_pending = False
     stop_pending = False
@@ -112,8 +120,9 @@ class User(HasTraits):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     def __init__(self, orm_user, settings=None, **kwargs):
-        self.orm_user = orm_user
-        self.settings = settings or {}
+        if settings:
+            kwargs['settings'] = settings
+        kwargs['orm_user'] = orm_user
         super().__init__(**kwargs)
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
@@ -138,7 +147,7 @@ class User(HasTraits):
             raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
-        if self.orm_user and hasattr(self.orm_user, attr):
+        if not attr.startswith('_') and self.orm_user and hasattr(self.orm_user, attr):
             setattr(self.orm_user, attr, value)
         else:
             super().__setattr__(attr, value)
