@@ -67,7 +67,11 @@ class Proxy(LoggingConfigurable):
       of fetching a single route.
     """
 
-    db = Any()
+    db_factory = Any()
+    @property
+    def db(self):
+        return self.db_factory()
+
     app = Any()
     hub = Any()
     public_url = Unicode()
@@ -107,6 +111,10 @@ class Proxy(LoggingConfigurable):
         - Checks host value vs host-based routing.
         - Ensures trailing slash on path.
         """
+        if routespec == '/':
+            # / is the default route.
+            # don't check host-based routing
+            return routespec
         # check host routing
         host_route = not routespec.startswith('/')
         if host_route and not self.host_routing:
@@ -281,6 +289,11 @@ class Proxy(LoggingConfigurable):
         user_routes = {r['data']['user'] for r in routes.values() if 'user' in r['data']}
         futures = []
         db = self.db
+
+        if '/' not in routes:
+            self.log.warning("Adding missing default route")
+            self.add_hub_route(self.app.hub)
+
         for orm_user in db.query(User):
             user = user_dict[orm_user]
             if user.running:
@@ -315,9 +328,15 @@ class Proxy(LoggingConfigurable):
         for f in futures:
             yield f
 
+    def add_hub_route(self, hub):
+        """Add the default route for the Hub"""
+        self.log.info("Adding default route for Hub: / => %s", hub.host)
+        return self.add_route('/', self.hub.host)
+
     @gen.coroutine
     def restore_routes(self):
         self.log.info("Setting up routes on new proxy")
+        yield self.add_hub_route(self.app.hub)
         yield self.add_all_users(self.app.users)
         yield self.add_all_services(self.app.services)
         self.log.info("New proxy back up and good to go")
@@ -379,7 +398,6 @@ class ConfigurableHTTPProxy(Proxy):
             '--port', str(public_server.port),
             '--api-ip', api_server.ip,
             '--api-port', str(api_server.port),
-            '--default-target', self.hub.host,
             '--error-target', url_path_join(self.hub.url, 'error'),
         ]
         if self.app.subdomain_host:
@@ -431,7 +449,6 @@ class ConfigurableHTTPProxy(Proxy):
                 else:
                     break
             yield server.wait_up(1)
-        time.sleep(1)
         _check_process()
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)
@@ -464,7 +481,7 @@ class ConfigurableHTTPProxy(Proxy):
         path = self.validate_routespec(routespec)
         # CHP always wants to start with /
         if not path.startswith('/'):
-            path = path + '/'
+            path = '/' + path
         # BUG: CHP doesn't seem to like trailing slashes on some endpoints (DELETE)
         if path != '/' and path.endswith('/'):
             path = path.rstrip('/')
@@ -507,6 +524,7 @@ class ConfigurableHTTPProxy(Proxy):
     def add_route(self, routespec, target, data=None):
         body = data or {}
         body['target'] = target
+        body['jupyterhub'] = True
         path = self._routespec_to_chp_path(routespec)
         return self.api_request(path,
                                 method='POST',
@@ -520,6 +538,7 @@ class ConfigurableHTTPProxy(Proxy):
     def _reformat_routespec(self, routespec, chp_data):
         """Reformat CHP data format to JupyterHub's proxy API."""
         target = chp_data.pop('target')
+        chp_data.pop('jupyterhub')
         return {
             'routespec': routespec,
             'target': target,
@@ -534,6 +553,10 @@ class ConfigurableHTTPProxy(Proxy):
         all_routes = {}
         for chp_path, chp_data in chp_routes.items():
             routespec = self._routespec_from_chp_path(chp_path)
+            if 'jupyterhub' not in chp_data:
+                # exclude routes not associated with JupyterHub
+                self.log.debug("Omitting non-jupyterhub route %r", routespec)
+                continue
             all_routes[routespec] = self._reformat_routespec(
                 routespec, chp_data)
         return all_routes

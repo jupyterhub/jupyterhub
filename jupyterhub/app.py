@@ -1176,7 +1176,7 @@ class JupyterHub(Application):
             base_url=self.base_url,
         )
         self.proxy = self.proxy_class(
-            db=self.db,
+            db_factory=lambda: self.db,
             public_url=public_url,
             parent=self,
             app=self,
@@ -1433,6 +1433,7 @@ class JupyterHub(Application):
                 self.exit(1)
         else:
             self.log.info("Not starting proxy")
+        yield self.proxy.add_hub_route(self.hub)
 
         # start the service(s)
         for service_name, service in self._service_map.items():
