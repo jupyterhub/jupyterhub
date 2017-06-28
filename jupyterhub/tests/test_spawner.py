@@ -100,15 +100,12 @@ def wait_for_spawner(spawner, timeout=10):
 
 @pytest.mark.gen_test(run_sync=False)
 def test_single_user_spawner(app, request):
-    spawner = new_spawner(app.db, hub=app.hub, oauth_client_id='xxx', cmd=['jupyterhub-singleuser'])
-    spawner.api_token = 'secret'
-    ip, port = yield spawner.start()
-    assert ip == '127.0.0.1'
-    assert isinstance(port, int)
-    assert port > 0
-    spawner.user.server.ip = ip
-    spawner.user.server.port = port
-    db.commit()
+    user = next(iter(app.users.values()), None)
+    spawner = user.spawner
+    spawner.cmd = ['jupyterhub-singleuser']
+    yield user.spawn()
+    assert user.server.ip == '127.0.0.1'
+    assert user.server.port > 0
     yield wait_for_spawner(spawner)
     status = yield spawner.poll()
     assert status is None
