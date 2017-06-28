@@ -2,14 +2,14 @@
 
 This section contains getting started information on the following topics:
 
-- [Technical Overview](getting-started.html#technical-overview)
-- [Installation](getting-started.html#installation)
-- [Configuration](getting-started.html#configuration)
-- [Networking](getting-started.html#networking)
-- [Security](getting-started.html#security)
-- [Authentication and users](getting-started.html#authentication-and-users)
-- [Spawners and single-user notebook servers](getting-started.html#spawners-and-single-user-notebook-servers)
-- [External Services](getting-started.html#external-services)
+- [Technical Overview](#technical-overview)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Networking](#networking)
+- [Security](#security)
+- [Authentication and users](#authentication-and-users)
+- [Spawners and single-user notebook servers](#spawners-and-single-user-notebook-servers)
+- [External Services](#external-services)
 
 
 ## Technical Overview
@@ -36,7 +36,7 @@ To use JupyterHub, you need a Unix server (typically Linux) running somewhere
 that is accessible to your team on the network. The JupyterHub server can be
 on an internal network at your organization, or it can run on the public
 internet (in which case, take care with the Hub's
-[security](getting-started.html#security)).
+[security](#security)).
 
 ### Basic operation
 Users access JupyterHub through a web browser, by going to the IP address or
