@@ -204,7 +204,7 @@ def test_add_get_delete(app, routespec):
     proxy = app.proxy
     target = 'https://localhost:1234'
     with context():
-        yield proxy.add_route(arg, target=target, {})
+        yield proxy.add_route(arg, target, {})
     routes = yield proxy.get_all_routes()
     if not expect_value_error:
         assert routespec in routes.keys()
