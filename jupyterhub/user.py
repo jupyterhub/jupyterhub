@@ -12,6 +12,7 @@ from tornado.log import app_log
 from .utils import url_path_join, default_server_name
 
 from . import orm
+from ._version import _check_version, __version__
 from .objects import Server
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
@@ -328,7 +329,7 @@ class User(HasTraits):
         db.commit()
         self.waiting_for_response = True
         try:
-            yield server.wait_up(http=True, timeout=spawner.http_timeout)
+            resp = yield server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(
@@ -353,6 +354,9 @@ class User(HasTraits):
                 ), exc_info=True)
             # raise original TimeoutError
             raise e
+        else:
+            server_version = resp.headers.get('X-JupyterHub-Version')
+            _check_version(__version__, server_version, self.log)
         finally:
             self.waiting_for_response = False
             self.spawn_pending = False

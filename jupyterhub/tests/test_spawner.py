@@ -48,6 +48,7 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('user', User(db.query(orm.User).first(), {}))
     kwargs.setdefault('notebook_dir', os.getcwd())
     kwargs.setdefault('default_url', '/user/{username}/lab')
+    kwargs.setdefault('oauth_client_id', 'mock-client-id')
     kwargs.setdefault('INTERRUPT_TIMEOUT', 1)
     kwargs.setdefault('TERM_TIMEOUT', 1)
     kwargs.setdefault('KILL_TIMEOUT', 1)
@@ -98,16 +99,13 @@ def wait_for_spawner(spawner, timeout=10):
 
 
 @pytest.mark.gen_test(run_sync=False)
-def test_single_user_spawner(db, request):
-    spawner = new_spawner(db, cmd=['jupyterhub-singleuser'])
-    spawner.api_token = 'secret'
-    ip, port = yield spawner.start()
-    assert ip == '127.0.0.1'
-    assert isinstance(port, int)
-    assert port > 0
-    spawner.user.server.ip = ip
-    spawner.user.server.port = port
-    db.commit()
+def test_single_user_spawner(app, request):
+    user = next(iter(app.users.values()), None)
+    spawner = user.spawner
+    spawner.cmd = ['jupyterhub-singleuser']
+    yield user.spawn()
+    assert user.server.ip == '127.0.0.1'
+    assert user.server.port > 0
     yield wait_for_spawner(spawner)
     status = yield spawner.poll()
     assert status is None
