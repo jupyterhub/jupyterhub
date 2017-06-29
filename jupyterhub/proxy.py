@@ -128,7 +128,7 @@ class Proxy(LoggingConfigurable):
             return routespec
 
     @gen.coroutine
-    def add_route(self, routespec, target, data):
+    def add_route(self, routespec, target, data=None):
         """Add a route to the proxy.
 
         **Subclasses must define this method**
