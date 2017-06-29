@@ -1373,7 +1373,8 @@ class JupyterHub(Application):
         users_count = 0
         active_users_count = 0
         for prefix, route in routes.items():
-            route_data = route['data']
+            # 'data' could be empty
+            route_data = route.get('data', {})
             if 'user' not in route_data:
                 # not a user route, ignore it
                 continue
