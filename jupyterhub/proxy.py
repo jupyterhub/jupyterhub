@@ -128,7 +128,7 @@ class Proxy(LoggingConfigurable):
             return routespec
 
     @gen.coroutine
-    def add_route(self, routespec, target, data=None):
+    def add_route(self, routespec, target, data):
         """Add a route to the proxy.
 
         **Subclasses must define this method**
@@ -331,7 +331,7 @@ class Proxy(LoggingConfigurable):
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
         self.log.info("Adding default route for Hub: / => %s", hub.host)
-        return self.add_route('/', self.hub.host)
+        return self.add_route('/', self.hub.host, {'hub': True})
 
     @gen.coroutine
     def restore_routes(self):
@@ -521,7 +521,7 @@ class ConfigurableHTTPProxy(Proxy):
 
         return client.fetch(req)
 
-    def add_route(self, routespec, target, data=None):
+    def add_route(self, routespec, target, data):
         body = data or {}
         body['target'] = target
         body['jupyterhub'] = True
