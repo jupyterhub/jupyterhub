@@ -63,7 +63,7 @@ class Spawner(LoggingConfigurable):
         (e.g. resuming a Docker container),
         and API tokens in use when the Spawner stops will not be deleted.
         """
-    )
+    ).tag(config=True)
 
     ip = Unicode('',
         help="""
