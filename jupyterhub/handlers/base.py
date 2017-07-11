@@ -253,10 +253,11 @@ class BaseHandler(RequestHandler):
     def _set_user_cookie(self, user, server):
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
+        kwargs = {
+            'httponly': True,
+        }
         if  self.request.protocol == 'https':
-            kwargs = {'secure': True}
-        else:
-            kwargs = {}
+            kwargs['secure'] = True
         if self.subdomain_host:
             kwargs['domain'] = self.domain
         self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
