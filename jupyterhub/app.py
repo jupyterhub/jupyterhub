@@ -28,10 +28,11 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import scoped_session
 
+from tornado.httpclient import AsyncHTTPClient
 import tornado.httpserver
-import tornado.options
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
+import tornado.options
 from tornado import gen, web
 
 from traitlets import (
@@ -1249,6 +1250,14 @@ class JupyterHub(Application):
         """Instantiate the tornado Application object"""
         self.tornado_application = web.Application(self.handlers, **self.tornado_settings)
 
+    def init_pycurl(self):
+        """Configure tornado to use pycurl by default, if available"""
+        # use pycurl by default, if available:
+        try:
+            AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+        except ImportError as e:
+            self.log.debug("Could not load pycurl: %s\npycurl is recommended if you have a large number of users.", e)
+
     def write_pid_file(self):
         pid = os.getpid()
         if self.pid_file:
@@ -1274,6 +1283,7 @@ class JupyterHub(Application):
             cfg.JupyterHub.merge(cfg.JupyterHubApp)
             self.update_config(cfg)
         self.write_pid_file()
+        self.init_pycurl()
         self.init_ports()
         self.init_secrets()
         self.init_db()
