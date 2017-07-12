@@ -1473,9 +1473,8 @@ class JupyterHub(Application):
                         break
                 else:
                     self.log.error("Cannot connect to %s service %s at %s. Is it running?", service.kind, service_name, service.url)
-
-        loop.add_callback(self.proxy.add_all_users, self.users)
-        loop.add_callback(self.proxy.add_all_services, self._service_map)
+        
+        yield self.proxy.check_routes(self.users, self._service_map)
 
 
         if self.service_check_interval and any(s.url for s in self._service_map.values()):

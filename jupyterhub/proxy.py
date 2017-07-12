@@ -290,6 +290,8 @@ class Proxy(LoggingConfigurable):
         futures = []
         db = self.db
 
+        good_routes = {'/'}
+
         if '/' not in routes:
             self.log.warning("Adding missing default route")
             self.add_hub_route(self.app.hub)
@@ -297,16 +299,11 @@ class Proxy(LoggingConfigurable):
         for orm_user in db.query(User):
             user = user_dict[orm_user]
             if user.running:
+                good_routes.add(user.proxy_spec)
                 if user.name not in user_routes:
                     self.log.warning(
                         "Adding missing route for %s (%s)", user.name, user.server)
                     futures.append(self.add_user(user))
-            else:
-                # User not running, make sure it's not in the table
-                if user.name in user_routes:
-                    self.log.warning(
-                        "Removing route for not running %s", user.name)
-                    futures.append(self.delete_user(user))
 
         # check service routes
         service_routes = {r['data']['service']
@@ -321,10 +318,18 @@ class Proxy(LoggingConfigurable):
                 self.log.error(
                     "Service %s has no server, but wasn't filtered out.", service)
                 continue
+            good_routes.add(service.proxy_spec)
             if service.name not in service_routes:
                 self.log.warning("Adding missing route for %s (%s)",
                                  service.name, service.server)
                 futures.append(self.add_service(service))
+
+        # Now delete the routes that shouldn't be there
+        for routespec in routes:
+            if routespec not in good_routes:
+                self.log.warning("Deleting stale route %s", routespec)
+                futures.append(self.delete_route(routespec))
+
         for f in futures:
             yield f
 
