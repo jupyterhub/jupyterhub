@@ -119,8 +119,7 @@ from distutils.command.build_py import build_py
 from distutils.command.sdist import sdist
 
 
-sep = ';' if os.name == 'nt' else ':'
-npm_path = sep.join([
+npm_path = os.pathsep.join([
     pjoin(here, 'node_modules', '.bin'),
     os.environ.get("PATH", os.defpath),
 ])
