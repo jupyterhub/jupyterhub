@@ -181,10 +181,9 @@ class Bower(BaseCommand):
         env = os.environ.copy()
         env['PATH'] = npm_path
         args = ['bower', 'install', '--allow-root', '--config.interactive=false']
-        if os.name == 'nt':
-            args = ['cmd', '/C'] + args
+        shell = True if os.name == 'nt' else False
         try:
-            check_call(args, cwd=here, env=env)
+            check_call(args, cwd=here, env=env, shell=shell)
         except OSError as e:
             print("Failed to run bower: %s" % e, file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
@@ -240,10 +239,9 @@ class CSS(BaseCommand):
             '--source-map-rootpath=../',
             style_less, style_css,
         ]
-        if os.name == 'nt':
-            args = ['cmd', '/C'] + args
+        shell = True if os.name == 'nt' else False
         try:
-            check_call(args, cwd=here, env=env)
+            check_call(args, cwd=here, env=env, shell=shell)
         except OSError as e:
             print("Failed to run lessc: %s" % e, file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
