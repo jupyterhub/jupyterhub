@@ -433,7 +433,7 @@ class ConfigurableHTTPProxy(Proxy):
                 "The proxy can be installed with `npm install -g configurable-http-proxy`"
                 % self.command
             )
-            self.exit(1)
+            raise
 
         def _check_process():
             status = self.proxy_process.poll()
