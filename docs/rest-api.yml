@@ -443,9 +443,29 @@ paths:
           schema:
             $ref: '#/definitions/User'
   /oath2/authorize:
-
+      get:
+      summary:
+      description:
+      parameters:
+      responses:
+        '200':
+          description:
   /oath2/token:
-
+      post:
+      summary: Request an OAuth2 token
+      description: |
+        Request an OAuth2 token.
+      parameters:  ????
+      responses:
+        '200':
+          description: The new OAuth2 token
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+                description: The new OAuth2 token.
+        '400': ??
   /shutdown:
     post:
       summary: Shutdown the Hub
