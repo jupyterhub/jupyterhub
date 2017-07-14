@@ -110,6 +110,7 @@ class User(HasTraits):
     spawner = None
     spawn_pending = False
     stop_pending = False
+    proxy_pending = False
     waiting_for_response = False
 
     @property
@@ -158,8 +159,8 @@ class User(HasTraits):
 
     @property # FIX-ME CHECK IF STILL NEEDED
     def running(self):
-        """property for whether a user has a running server"""
-        if self.spawn_pending or self.stop_pending:
+        """property for whether a user has a fully running, accessible server"""
+        if self.spawn_pending or self.stop_pending or self.proxy_pending:
             return False  # server is not running if spawn or stop is still pending
         if self.server is None:
             return False
