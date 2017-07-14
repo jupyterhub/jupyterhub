@@ -431,7 +431,7 @@ class ConfigurableHTTPProxy(Proxy):
             self.log.error(
                 "Failed to find proxy %r\n"
                 "The proxy can be installed with `npm install -g configurable-http-proxy`"
-                % self.cmd
+                % self.command
             )
             self.exit(1)
 
