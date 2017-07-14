@@ -119,7 +119,7 @@ from distutils.command.build_py import build_py
 from distutils.command.sdist import sdist
 
 
-npm_path = ':'.join([
+npm_path = os.pathsep.join([
     pjoin(here, 'node_modules', '.bin'),
     os.environ.get("PATH", os.defpath),
 ])
@@ -179,13 +179,10 @@ class Bower(BaseCommand):
         
         env = os.environ.copy()
         env['PATH'] = npm_path
-        
+        args = ['bower', 'install', '--allow-root', '--config.interactive=false']
+        shell = True if os.name == 'nt' else False
         try:
-            check_call(
-                ['bower', 'install', '--allow-root', '--config.interactive=false'],
-                cwd=here,
-                env=env,
-            )
+            check_call(args, cwd=here, env=env, shell=shell)
         except OSError as e:
             print("Failed to run bower: %s" % e, file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
@@ -234,14 +231,16 @@ class CSS(BaseCommand):
         
         env = os.environ.copy()
         env['PATH'] = npm_path
+        args = [
+            'lessc', '--clean-css',
+            '--source-map-basepath={}'.format(static),
+            '--source-map={}'.format(sourcemap),
+            '--source-map-rootpath=../',
+            style_less, style_css,
+        ]
+        shell = True if os.name == 'nt' else False
         try:
-            check_call([
-                'lessc', '--clean-css',
-                '--source-map-basepath={}'.format(static),
-                '--source-map={}'.format(sourcemap),
-                '--source-map-rootpath=../',
-                style_less, style_css,
-            ], cwd=here, env=env)
+            check_call(args, cwd=here, env=env, shell=shell)
         except OSError as e:
             print("Failed to run lessc: %s" % e, file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
