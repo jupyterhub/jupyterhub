@@ -412,7 +412,7 @@ class JupyterHub(Application):
 
         .. versionadded:: 0.8
         """
-    )
+    ).tag(config=True)
     hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server.  Always /base_url/hub/"
     )
