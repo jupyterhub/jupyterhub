@@ -393,10 +393,13 @@ class User(HasTraits):
                     self.db.delete(orm_token)
             self.db.commit()
         finally:
-            self.stop_pending = False
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
-            if auth:
-                yield gen.maybe_future(
-                    auth.post_spawn_stop(self, spawner)
-                )
+            try:
+                if auth:
+                    yield gen.maybe_future(
+                        auth.post_spawn_stop(self, spawner)
+                    )
+            except Exception:
+                self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
+            self.stop_pending = False
