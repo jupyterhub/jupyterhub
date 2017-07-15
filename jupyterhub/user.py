@@ -110,6 +110,7 @@ class User(HasTraits):
     spawner = None
     spawn_pending = False
     stop_pending = False
+    proxy_pending = False
     waiting_for_response = False
 
     @property
@@ -158,8 +159,8 @@ class User(HasTraits):
 
     @property # FIX-ME CHECK IF STILL NEEDED
     def running(self):
-        """property for whether a user has a running server"""
-        if self.spawn_pending or self.stop_pending:
+        """property for whether a user has a fully running, accessible server"""
+        if self.spawn_pending or self.stop_pending or self.proxy_pending:
             return False  # server is not running if spawn or stop is still pending
         if self.server is None:
             return False
@@ -392,10 +393,13 @@ class User(HasTraits):
                     self.db.delete(orm_token)
             self.db.commit()
         finally:
-            self.stop_pending = False
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
-            if auth:
-                yield gen.maybe_future(
-                    auth.post_spawn_stop(self, spawner)
-                )
+            try:
+                if auth:
+                    yield gen.maybe_future(
+                        auth.post_spawn_stop(self, spawner)
+                    )
+            except Exception:
+                self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
+            self.stop_pending = False

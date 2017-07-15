@@ -4,9 +4,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from distutils.version import LooseVersion as V
 import os
-import re
 from textwrap import dedent
 from urllib.parse import urlparse
 
@@ -349,10 +347,17 @@ class SingleUserNotebookApp(NotebookApp):
         - check version and warn on sufficient mismatch
         """
         client = AsyncHTTPClient()
-        try:
-            resp = yield client.fetch(self.hub_api_url)
-        except Exception:
-            self.log.exception("Failed to connect to my Hub at %s. Is it running?", self.hub_api_url)
+        RETRIES = 5
+        for i in range(1, RETRIES+1):
+            try:
+                resp = yield client.fetch(self.hub_api_url)
+            except Exception:
+                self.log.exception("Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
+                self.hub_api_url, i, RETRIES)
+                yield gen.sleep(min(2**i, 16))
+            else:
+                break
+        else:
             self.exit(1)
         
         hub_version = resp.headers.get('X-JupyterHub-Version')

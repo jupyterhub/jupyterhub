@@ -321,6 +321,7 @@ class BaseHandler(RequestHandler):
         tic = IOLoop.current().time()
 
         f = user.spawn(options)
+        user.proxy_pending = True
 
         @gen.coroutine
         def finish_user_spawn(f=None):
@@ -335,8 +336,16 @@ class BaseHandler(RequestHandler):
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
-            yield self.proxy.add_user(user)
-            user.spawner.add_poll_callback(self.user_stopped, user)
+            try:
+                yield self.proxy.add_user(user)
+            except Exception:
+                self.log.exception("Failed to add user %s to proxy!", user)
+                self.log.error("Stopping user %s to avoid inconsistent state")
+                yield user.stop()
+            else:
+                user.spawner.add_poll_callback(self.user_stopped, user)
+            finally:
+                user.proxy_pending = False
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
@@ -532,7 +541,7 @@ class UserSpawnHandler(BaseHandler):
 
             # logged in as correct user, spawn the server
             if current_user.spawner:
-                if current_user.spawn_pending:
+                if current_user.spawn_pending or current_user.proxy_pending:
                     # spawn has started, but not finished
                     self.statsd.incr('redirects.user_spawn_pending', 1)
                     html = self.render_template("spawn_pending.html", user=current_user)
