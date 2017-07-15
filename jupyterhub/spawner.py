@@ -27,7 +27,7 @@ from traitlets import (
 )
 
 from .traitlets import Command, ByteSpecification
-from .utils import random_port, url_path_join
+from .utils import random_port, url_path_join, DT_MIN, DT_MAX, DT_SCALE
 
 
 class Spawner(LoggingConfigurable):
@@ -630,7 +630,7 @@ class Spawner(LoggingConfigurable):
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status
 
-    death_interval = Float(0.1)
+    death_interval = Float(DT_MIN)
 
     @gen.coroutine
     def wait_for_death(self, timeout=10):
@@ -644,7 +644,7 @@ class Spawner(LoggingConfigurable):
                 break
             else:
                 yield gen.sleep(dt)
-            dt = min(dt * 2, timeout - (loop.time() - tic))
+            dt = min(dt * DT_SCALE, DT_MAX, timeout - (loop.time() - tic))
 
 
 def _try_setcwd(path):

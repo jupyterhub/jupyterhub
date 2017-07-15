@@ -48,6 +48,12 @@ def can_connect(ip, port):
     else:
         return True
 
+# exponential falloff factors:
+# start at 100ms, falloff by 2x
+# never longer than 5s
+DT_MIN = 0.1
+DT_SCALE = 2
+DT_MAX = 5
 
 @gen.coroutine
 def wait_for_server(ip, port, timeout=10):
@@ -56,13 +62,13 @@ def wait_for_server(ip, port, timeout=10):
         ip = '127.0.0.1'
     loop = ioloop.IOLoop.current()
     tic = loop.time()
-    dt = 0.1
+    dt = DT_MIN
     while dt > 0:
         if can_connect(ip, port):
             return
         else:
             yield gen.sleep(dt)
-        dt = min(dt * 2, timeout - (loop.time() - tic))
+        dt = min(dt * DT_SCALE, DT_MAX, timeout - (loop.time() - tic))
     raise TimeoutError(
         "Server at {ip}:{port} didn't respond in {timeout} seconds".format(**locals())
     )
@@ -77,7 +83,7 @@ def wait_for_http_server(url, timeout=10):
     loop = ioloop.IOLoop.current()
     tic = loop.time()
     client = AsyncHTTPClient()
-    dt = 0.1
+    dt = DT_MIN
     while dt > 0:
         try:
             r = yield client.fetch(url, follow_redirects=False)
@@ -99,7 +105,7 @@ def wait_for_http_server(url, timeout=10):
             yield gen.sleep(dt)
         else:
             return r
-        dt = min(dt * 2, timeout - (loop.time() - tic))
+        dt = min(dt * DT_SCALE, DT_MAX, timeout - (loop.time() - tic))
 
     raise TimeoutError(
         "Server at {url} didn't respond in {timeout} seconds".format(**locals())
