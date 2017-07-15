@@ -18,7 +18,7 @@ from subprocess import Popen
 from tempfile import mkdtemp
 
 from tornado import gen
-from tornado.ioloop import PeriodicCallback
+from tornado.ioloop import PeriodicCallback, IOLoop
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
@@ -635,12 +635,16 @@ class Spawner(LoggingConfigurable):
     @gen.coroutine
     def wait_for_death(self, timeout=10):
         """Wait for the single-user server to die, up to timeout seconds"""
-        for i in range(int(timeout / self.death_interval)):
+        loop = IOLoop.current()
+        tic = loop.time()
+        dt = self.death_interval
+        while dt > 0:
             status = yield self.poll()
             if status is not None:
                 break
             else:
-                yield gen.sleep(self.death_interval)
+                yield gen.sleep(dt)
+            dt = min(dt * 2, timeout - (loop.time() - tic))
 
 
 def _try_setcwd(path):

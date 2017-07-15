@@ -56,11 +56,13 @@ def wait_for_server(ip, port, timeout=10):
         ip = '127.0.0.1'
     loop = ioloop.IOLoop.current()
     tic = loop.time()
-    while loop.time() - tic < timeout:
+    dt = 0.1
+    while dt > 0:
         if can_connect(ip, port):
             return
         else:
-            yield gen.sleep(0.1)
+            yield gen.sleep(dt)
+        dt = min(dt * 2, timeout - (loop.time() - tic))
     raise TimeoutError(
         "Server at {ip}:{port} didn't respond in {timeout} seconds".format(**locals())
     )
@@ -75,7 +77,8 @@ def wait_for_http_server(url, timeout=10):
     loop = ioloop.IOLoop.current()
     tic = loop.time()
     client = AsyncHTTPClient()
-    while loop.time() - tic < timeout:
+    dt = 0.1
+    while dt > 0:
         try:
             r = yield client.fetch(url, follow_redirects=False)
         except HTTPError as e:
@@ -86,16 +89,17 @@ def wait_for_http_server(url, timeout=10):
                     # but 502 or other proxy error is conceivable
                     app_log.warning(
                         "Server at %s responded with error: %s", url, e.code)
-                yield gen.sleep(0.1)
+                yield gen.sleep(dt)
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return e.response
         except (OSError, socket.error) as e:
             if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
-            yield gen.sleep(0.1)
+            yield gen.sleep(dt)
         else:
             return r
+        dt = min(dt * 2, timeout - (loop.time() - tic))
 
     raise TimeoutError(
         "Server at {url} didn't respond in {timeout} seconds".format(**locals())
