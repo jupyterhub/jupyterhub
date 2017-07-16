@@ -308,8 +308,7 @@ class Proxy(LoggingConfigurable):
         # check service routes
         service_routes = {r['data']['service']
                           for r in routes.values() if 'service' in r['data']}
-        for orm_service in db.query(Service).filter(
-                Service.server is not None):
+        for orm_service in db.query(Service).filter(Service.server != None):
             service = service_dict[orm_service.name]
             if service.server is None:
                 # This should never be True, but seems to be on rare occasion.
