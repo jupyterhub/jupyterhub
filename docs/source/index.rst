@@ -35,33 +35,40 @@ For convenient administration of the Hub, its users, and :doc:`services`
 Contents
 --------
 
-**User Guide**
+**Installation Guide**
 
 * :doc:`quickstart`
 * :doc:`getting-started`
-* :doc:`howitworks`
-* :doc:`websecurity`
-* :doc:`rest`
 
 
 **Configuration Guide**
 
+* :doc:`howitworks`
+* :doc:`websecurity`
+* :doc:`rest`
 * :doc:`authenticators`
 * :doc:`spawners`
 * :doc:`services`
-* :doc:`config-examples`
 * :doc:`upgrading`
-* :doc:`troubleshooting`
-
+* :doc:`config-examples`
 
 **API Reference**
 
 * :doc:`api/index`
 
 
-**About JupyterHub**
+**Troubleshooting**
+
+* :doc:`troubleshooting`
+
+
+**Changelog**
 
 * :doc:`changelog`
+
+
+**About JupyterHub**
+
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
 
@@ -90,6 +97,7 @@ Full Table of Contents
    user-guide
    configuration-guide
    api/index
+   troubleshooting
    changelog
    contributor-list
    gallery-jhub-deployments

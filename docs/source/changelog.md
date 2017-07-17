@@ -1,4 +1,4 @@
-# Change log summary
+# Changelog
 
 For detailed changes from the prior release, click on the version number, and
 its link will bring up a GitHub listing of changes. Use `git log` on the
