@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-**Before installing JupyterHub**, you will need:
+**Before installing JupyterHub**, you will need a Linux/Unix based system:
 
 - [Python](https://www.python.org/downloads/) 3.3 or greater
 
@@ -19,7 +19,7 @@
   ```bash
   sudo apt-get install npm nodejs-legacy
   ```
-  
+
   (The `nodejs-legacy` package installs the `node` executable and is currently
   required for npm to work on Debian/Ubuntu.)
 
