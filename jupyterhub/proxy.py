@@ -424,8 +424,9 @@ class ConfigurableHTTPProxy(Proxy):
                              "  I hope there is SSL termination happening somewhere else...")
         self.log.info("Starting proxy @ %s", public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
+        shell = os.name == 'nt' 
         try:
-            self.proxy_process = Popen(cmd, env=env, start_new_session=True)
+            self.proxy_process = Popen(cmd, env=env, start_new_session=True, shell=shell)
         except FileNotFoundError as e:
             self.log.error(
                 "Failed to find proxy %r\n"

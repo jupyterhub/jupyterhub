@@ -3,9 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from grp import getgrnam
 import pipes
-import pwd
 import re
 from shutil import which
 import sys
@@ -431,6 +429,7 @@ class LocalAuthenticator(Authenticator):
         """
         If group_whitelist is configured, check if authenticating user is part of group.
         """
+        from grp import getgrnam
         if not self.group_whitelist:
             return False
         for grnam in self.group_whitelist:
@@ -461,6 +460,7 @@ class LocalAuthenticator(Authenticator):
     @staticmethod
     def system_user_exists(user):
         """Check if the user exists on the system"""
+        import pwd
         try:
             pwd.getpwnam(user.name)
         except KeyError:
