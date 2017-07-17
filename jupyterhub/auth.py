@@ -24,6 +24,15 @@ from .utils import url_path_join
 from .traitlets import Command
 
 
+
+def getgrnam(name):
+    """Wrapper function to protect against `grp` not being available 
+    on Windows
+    """
+    import grp
+    return grp.getgrnam(name)
+
+
 class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
 
@@ -429,7 +438,6 @@ class LocalAuthenticator(Authenticator):
         """
         If group_whitelist is configured, check if authenticating user is part of group.
         """
-        from grp import getgrnam
         if not self.group_whitelist:
             return False
         for grnam in self.group_whitelist:
