@@ -107,6 +107,10 @@ class User(HasTraits):
             self.orm_user = db.query(orm.User).filter(orm.User.id == self._user_id).first()
         for spawner in self.spawners.values():
             spawner.db = db
+            if (spawner.server):
+                orm_server = spawner.server.orm_server
+                inspect(orm_server).session.expunge(orm_server)
+                db.add(orm_server)
 
     _user_id = None
     orm_user = Any(allow_none=True)
