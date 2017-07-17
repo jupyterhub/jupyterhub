@@ -8,11 +8,9 @@ Contains base Spawner class & default implementation
 import errno
 import os
 import pipes
-import pwd
 import shutil
 import signal
 import sys
-import grp
 import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
@@ -668,6 +666,8 @@ def set_user_setuid(username, chdir=True):
     Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
     home directory.
     """
+    import grp
+    import pwd
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
@@ -808,6 +808,7 @@ class LocalProcessSpawner(Spawner):
 
     def user_env(self, env):
         """Augment environment of spawned process with user specific env variables."""
+        import pwd
         env['USER'] = self.user.name
         home = pwd.getpwnam(self.user.name).pw_dir
         shell = pwd.getpwnam(self.user.name).pw_shell
