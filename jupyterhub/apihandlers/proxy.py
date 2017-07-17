@@ -12,25 +12,29 @@ from .. import orm
 from ..utils import admin_only
 from .base import APIHandler
 
+
 class ProxyAPIHandler(APIHandler):
     
     @admin_only
     @gen.coroutine
     def get(self):
         """GET /api/proxy fetches the routing table
-        
+
         This is the same as fetching the routing table directly from the proxy,
         but without clients needing to maintain separate
         """
         routes = yield self.proxy.get_all_routes()
         self.write(json.dumps(routes))
-    
+
     @admin_only
     @gen.coroutine
     def post(self):
-        """POST checks the proxy to ensure"""
+        """POST checks the proxy to ensure that it's up to date.
+
+        Can be used to jumpstart a newly launched proxy
+        without waiting for the check_routes interval.
+        """
         yield self.proxy.check_routes(self.users, self.services)
-        
     
     @admin_only
     @gen.coroutine

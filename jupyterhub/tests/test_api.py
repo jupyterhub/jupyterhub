@@ -413,9 +413,8 @@ def test_spawn(app, io_loop):
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
 
-    assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name)
+    assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name) + '/'
     url = public_url(app, user)
-    print(url)
     r = requests.get(url)
     assert r.status_code == 200
     assert r.text == user.server.base_url

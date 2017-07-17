@@ -5,6 +5,7 @@ import sys
 from tempfile import NamedTemporaryFile
 import threading
 from unittest import mock
+from urllib.parse import urlparse
 
 import requests
 
@@ -136,7 +137,15 @@ class MockHub(JupyterHub):
     @default('ip')
     def _ip_default(self):
         return '127.0.0.1'
-    
+
+    @default('port')
+    def _port_default(self):
+        if self.subdomain_host:
+            port = urlparse(self.subdomain_host).port
+            if port:
+                return port
+        return random_port()
+
     @default('authenticator_class')
     def _authenticator_class_default(self):
         return MockPAMAuthenticator

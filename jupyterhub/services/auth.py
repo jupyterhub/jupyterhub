@@ -478,6 +478,7 @@ class HubOAuth(HubAuth):
         """Set a cookie recording OAuth result"""
         kwargs = {
             'path': self.base_url,
+            'httponly': True,
         }
         if handler.request.protocol == 'https':
             kwargs['secure'] = True

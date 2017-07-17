@@ -12,10 +12,10 @@ from tornado.log import app_log
 from .utils import url_path_join, default_server_name
 
 from . import orm
+from ._version import _check_version, __version__
 from .objects import Server
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
-
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -102,14 +102,26 @@ class User(HasTraits):
     def _db_changed(self, change):
         """Changing db session reacquires ORM User object"""
         # db session changed, re-get orm User
-        if self.orm_user:
-            id = self.orm_user.id
-            self.orm_user = change['new'].query(orm.User).filter(orm.User.id == id).first()
+        db = change.new
+        if self._user_id is not None:
+            self.orm_user = db.query(orm.User).filter(orm.User.id == self._user_id).first()
         for spawner in self.spawners.values():
-            spawner.db = self.db
+            spawner.db = db
 
-    orm_user = None
+    _user_id = None
+    orm_user = Any(allow_none=True)
+    @observe('orm_user')
+    def _orm_user_changed(self, change):
+        if change.new:
+            self._user_id = change.new.id
+        else:
+            self._user_id = None
+
     spawners = None
+    spawn_pending = False
+    stop_pending = False
+    proxy_pending = False
+    waiting_for_response = False
 
     @property
     def authenticator(self):
@@ -120,15 +132,15 @@ class User(HasTraits):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
     def __init__(self, orm_user, settings=None, **kwargs):
-        self.orm_user = orm_user
-        self.settings = settings or {}
-        self._instances = {}
+        if settings:
+            kwargs['settings'] = settings
+        kwargs['orm_user'] = orm_user
         super().__init__(**kwargs)
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
         self.base_url = url_path_join(
-            self.settings.get('base_url', '/'), 'user', self.escaped_name)
+            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
 
         self.spawners = _SpawnerDict(self._new_spawner)
 
@@ -162,7 +174,7 @@ class User(HasTraits):
             raise AttributeError(attr)
 
     def __setattr__(self, attr, value):
-        if self.orm_user and hasattr(self.orm_user, attr):
+        if not attr.startswith('_') and self.orm_user and hasattr(self.orm_user, attr):
             setattr(self.orm_user, attr, value)
         else:
             super().__setattr__(attr, value)
@@ -193,9 +205,9 @@ class User(HasTraits):
         return quote(self.name, safe='@')
 
     @property
-    def proxy_path(self):
+    def proxy_spec(self):
         if self.settings.get('subdomain_host'):
-            return url_path_join('/' + self.domain, self.base_url)
+            return self.domain + self.base_url
         else:
             return self.base_url
 
@@ -245,7 +257,7 @@ class User(HasTraits):
         if self.allow_named_servers and not server_name:
             server_name = default_server_name(self)
 
-        base_url = url_path_join(self.base_url, server_name)
+        base_url = url_path_join(self.base_url, server_name) + '/'
 
         orm_server = orm.Server(
             name=server_name,
@@ -342,7 +354,7 @@ class User(HasTraits):
         db.commit()
         spawner._waiting_for_response = True
         try:
-            yield server.wait_up(http=True, timeout=spawner.http_timeout)
+            resp = yield server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(
@@ -367,6 +379,9 @@ class User(HasTraits):
                 ), exc_info=True)
             # raise original TimeoutError
             raise e
+        else:
+            server_version = resp.headers.get('X-JupyterHub-Version')
+            _check_version(__version__, server_version, self.log)
         finally:
             spawner._waiting_for_response = False
             spawner._spawn_pending = False

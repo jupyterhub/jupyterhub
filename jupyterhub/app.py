@@ -28,10 +28,11 @@ from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import scoped_session
 
+from tornado.httpclient import AsyncHTTPClient
 import tornado.httpserver
-import tornado.options
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
+import tornado.options
 from tornado import gen, web
 
 from traitlets import (
@@ -411,7 +412,7 @@ class JupyterHub(Application):
 
         .. versionadded:: 0.8
         """
-    )
+    ).tag(config=True)
     hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server.  Always /base_url/hub/"
     )
@@ -1176,12 +1177,13 @@ class JupyterHub(Application):
             base_url=self.base_url,
         )
         self.proxy = self.proxy_class(
-            db=self.db,
+            db_factory=lambda: self.db,
             public_url=public_url,
             parent=self,
             app=self,
             log=self.log,
             hub=self.hub,
+            host_routing=bool(self.subdomain_host),
             ssl_cert=self.ssl_cert,
             ssl_key=self.ssl_key,
         )
@@ -1248,6 +1250,14 @@ class JupyterHub(Application):
         """Instantiate the tornado Application object"""
         self.tornado_application = web.Application(self.handlers, **self.tornado_settings)
 
+    def init_pycurl(self):
+        """Configure tornado to use pycurl by default, if available"""
+        # use pycurl by default, if available:
+        try:
+            AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+        except ImportError as e:
+            self.log.debug("Could not load pycurl: %s\npycurl is recommended if you have a large number of users.", e)
+
     def write_pid_file(self):
         pid = os.getpid()
         if self.pid_file:
@@ -1273,6 +1283,7 @@ class JupyterHub(Application):
             cfg.JupyterHub.merge(cfg.JupyterHubApp)
             self.update_config(cfg)
         self.write_pid_file()
+        self.init_pycurl()
         self.init_ports()
         self.init_secrets()
         self.init_db()
@@ -1432,6 +1443,7 @@ class JupyterHub(Application):
                 self.exit(1)
         else:
             self.log.info("Not starting proxy")
+        yield self.proxy.add_hub_route(self.hub)
 
         # start the service(s)
         for service_name, service in self._service_map.items():
@@ -1461,9 +1473,8 @@ class JupyterHub(Application):
                         break
                 else:
                     self.log.error("Cannot connect to %s service %s at %s. Is it running?", service.kind, service_name, service.url)
-
-        loop.add_callback(self.proxy.add_all_users, self.users)
-        loop.add_callback(self.proxy.add_all_services, self._service_map)
+        
+        yield self.proxy.check_routes(self.users, self._service_map)
 
 
         if self.service_check_interval and any(s.url for s in self._service_map.values()):

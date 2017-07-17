@@ -4,7 +4,7 @@ import json
 import os
 from queue import Queue
 from subprocess import Popen
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse, quote
 
 from traitlets.config import Config
 
@@ -43,7 +43,7 @@ def test_external_proxy(request, io_loop):
         '--port', str(app.port),
         '--api-ip', proxy_ip,
         '--api-port', str(proxy_port),
-        '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
+        '--log-level=debug',
     ]
     if app.subdomain_host:
         cmd.append('--host-routing')
@@ -75,11 +75,13 @@ def test_external_proxy(request, io_loop):
     
     routes = io_loop.run_sync(app.proxy.get_all_routes)
     # sets the desired path result
-    user_path = unquote(ujoin(app.base_url, 'user/river'))
+    user_path = ujoin(app.base_url, 'user/river') + '/'
+    print(app.base_url, user_path)
+    host = ''
     if app.subdomain_host:
-        domain = urlparse(app.subdomain_host).hostname
-        user_path = '/%s.%s' % (name, domain) + user_path
-    assert sorted(routes.keys()) == ['/', user_path]
+        host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
+    user_spec = host + user_path
+    assert sorted(routes.keys()) == ['/', user_spec]
     
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
@@ -88,7 +90,7 @@ def test_external_proxy(request, io_loop):
 
     routes = io_loop.run_sync(app.proxy.get_all_routes)
 
-    assert list(routes.keys()) == ['/']
+    assert list(routes.keys()) == []
     
     # poke the server to update the proxy
     r = api_request(app, 'proxy', method='post')
@@ -96,7 +98,7 @@ def test_external_proxy(request, io_loop):
 
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert sorted(routes.keys()) == ['/', user_path]
+    assert sorted(routes.keys()) == ['/', user_spec]
 
     # teardown the proxy, and start a new one with different auth and port
     proxy.terminate()
@@ -135,7 +137,7 @@ def test_external_proxy(request, io_loop):
 
     # check that the routes are correct
     routes = io_loop.run_sync(app.proxy.get_all_routes)
-    assert sorted(routes.keys()) == ['/', user_path]
+    assert sorted(routes.keys()) == ['/', user_spec]
 
 
 @pytest.mark.parametrize("username, endpoints", [
@@ -156,21 +158,68 @@ def test_check_routes(app, io_loop, username, endpoints):
     # check a valid route exists for user
     test_user = app.users[username]
     before = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert unquote(test_user.proxy_path) in before
+    assert test_user.proxy_spec in before
 
     # check if a route is removed when user deleted
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     io_loop.run_sync(lambda: proxy.delete_user(test_user))
     during = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert unquote(test_user.proxy_path) not in during
+    assert test_user.proxy_spec not in during
 
     # check if a route exists for user
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     after = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert unquote(test_user.proxy_path) in after
+    assert test_user.proxy_spec in after
 
     # check that before and after state are the same
     assert before == after
+
+from contextlib import contextmanager
+
+@pytest.mark.gen_test
+@pytest.mark.parametrize("routespec", [
+    '/has%20space/foo/',
+    '/missing-trailing/slash',
+    '/has/@/',
+    '/has/' + quote('üñîçø∂é'),
+    'host.name/path/',
+    'other.host/path/no/slash',
+])
+def test_add_get_delete(app, routespec):
+    arg = routespec
+    if not routespec.endswith('/'):
+        routespec = routespec + '/'
+    
+    # host-routes when not host-routing raises an error
+    # and vice versa
+    expect_value_error = bool(app.subdomain_host) ^ (not routespec.startswith('/'))
+    @contextmanager
+    def context():
+        if expect_value_error:
+            with pytest.raises(ValueError):
+                yield
+        else:
+            yield
+
+    proxy = app.proxy
+    target = 'https://localhost:1234'
+    with context():
+        yield proxy.add_route(arg, target, {})
+    routes = yield proxy.get_all_routes()
+    if not expect_value_error:
+        assert routespec in routes.keys()
+    with context():
+        route = yield proxy.get_route(arg)
+        assert route == {
+            'target': target,
+            'routespec': routespec,
+            'data': route.get('data'),
+        }
+    with context():
+        yield proxy.delete_route(arg)
+    with context():
+        route = yield proxy.get_route(arg)
+        assert route is None
 
 
 @pytest.mark.parametrize("test_data", [None, 'notjson', json.dumps([])])
