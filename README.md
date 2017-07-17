@@ -51,6 +51,8 @@ for administration of the Hub and its users.
 
 ### Check prerequisites
 
+A Linux/Unix based system with the following:
+
 - [Python](https://www.python.org/downloads/) 3.3 or greater
 - [nodejs/npm](https://www.npmjs.com/) Install a recent version of
   [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node)
@@ -204,6 +206,20 @@ We use [pytest](http://doc.pytest.org/en/latest/) for **running tests**:
 ```bash
 pytest jupyterhub/tests
 ```
+
+### A note about platform support
+
+JupyterHub is supported on Linux/Unix based systems.
+
+JupyterHub officially **does not** support Windows. You may be able to use
+JupyterHub on Windows if you use a Spawner and Authenticator that work on
+Windows, but the JupyterHub defaults will not. Bugs reported on Windows will not
+be accepted, and the test suite will not run on Windows. Small patches that fix
+minor Windows compatibility issues (such as basic installation) **may** be accepted,
+however. For Windows-based systems, we would recommend running JupyterHub in a
+docker container or Linux VM.
+
+[Additional Reference:](http://www.tornadoweb.org/en/stable/#installation) Tornado's documentation on Windows platform support
 
 ## License
 

@@ -30,8 +30,8 @@ Three major subsystems run by the `jupyterhub` command line program:
 
 ![JupyterHub subsystems](images/jhub-parts.png)
 
-
 ### Deployment server
+
 To use JupyterHub, you need a Unix server (typically Linux) running somewhere
 that is accessible to your team on the network. The JupyterHub server can be
 on an internal network at your organization, or it can run on the public
@@ -119,6 +119,20 @@ The location of these files can be specified via configuration, discussed below.
 
 See the project's [README](https://github.com/jupyterhub/jupyterhub/blob/master/README.md)
 for help installing JupyterHub.
+
+### Platform support
+
+JupyterHub is supported on Linux/Unix based systems.
+
+JupyterHub officially **does not** support Windows. You may be able to use
+JupyterHub on Windows if you use a Spawner and Authenticator that work on
+Windows, but the JupyterHub defaults will not. Bugs reported on Windows will not
+be accepted, and the test suite will not run on Windows. Small patches that fix
+minor Windows compatibility issues (such as basic installation) **may** be accepted,
+however. For Windows-based systems, we would recommend running JupyterHub in a
+docker container or Linux VM.
+
+[Additional Reference:](http://www.tornadoweb.org/en/stable/#installation) Tornado's documentation on Windows platform support
 
 ### Planning your installation
 
@@ -385,7 +399,7 @@ to also be able to connect to the Proxy.
 ### Security audits
 
 We recommend that you do periodic reviews of your deployment's security. It's
-good practice to keep JupyterHub, configurable-http-proxy, and nodejs 
+good practice to keep JupyterHub, configurable-http-proxy, and nodejs
 versions up to date.
 
 A handy website for testing your deployment is
