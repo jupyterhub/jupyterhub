@@ -66,7 +66,6 @@ class Server(Base):
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
     
-    name = Column(Unicode(32), default='') # must be unique between user's servers
     proto = Column(Unicode(15), default='http')
     ip = Column(Unicode(255), default='')  # could also be a DNS name
     port = Column(Integer, default=random_port)
@@ -133,7 +132,10 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(1023), unique=True)
 
-    servers = association_proxy("user_to_servers", "server", creator=lambda server: UserServer(server=server))
+    _orm_spawners = relationship("Spawner", backref="user")
+    @property
+    def orm_spawners(self):
+        return {s.name: s for s in self._orm_spawners}
 
     admin = Column(Boolean, default=False)
     last_activity = Column(DateTime, default=datetime.utcnow)
@@ -149,19 +151,12 @@ class User(Base):
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
     def __repr__(self):
-        if self.servers:
-            server = self.servers[0]
-            return "<{cls}({name}@{ip}:{port})>".format(
-                cls=self.__class__.__name__,
-                name=self.name,
-                ip=server.ip,
-                port=server.port,
-            )
-        else:
-            return "<{cls}({name} [unconfigured])>".format(
-                cls=self.__class__.__name__,
-                name=self.name,
-            )
+        return "<{cls}({name} {running}/{total} running)>".format(
+            cls=self.__class__.__name__,
+            name=self.name,
+            total=len(self._orm_spawners),
+            running=sum(bool(s.server) for s in self._orm_spawners),
+        )
 
     def new_api_token(self, token=None):
         """Create a new API token
@@ -177,34 +172,18 @@ class User(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
+class Spawner(Base):
+    """"State about a Spawner"""
+    __tablename__ = 'spawners'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
-class UserServer(Base):
-    """The UserServer table
+    server_id = Column(Integer, ForeignKey('servers.id'))
+    server = relationship(Server)
 
-    A table storing the One-To-Many relationship between a user and servers.
-    Each user may have one or more servers.
-    A server can have only one (1) user. This condition is maintained by UniqueConstraint.
-    """
-    __tablename__ = 'users_servers'
-
-    _user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
-    _server_id = Column(Integer, ForeignKey('servers.id'), primary_key=True)
-
-    user = relationship(User, backref=backref('user_to_servers', cascade='all, delete-orphan'))
-    server = relationship(Server, backref=backref('server_to_users', cascade='all, delete-orphan')
-                          )
-
-    __table_args__ = (UniqueConstraint('_server_id'),
-                      Index('server_user_index', '_server_id', '_user_id'),
-                      )
-
-    def __repr__(self):
-        return "<{cls}({name}@{ip}:{port})>".format(
-            cls=self.__class__.__name__,
-            name=self.user.name,
-            ip=self.server.ip,
-            port=self.server.port,
-        )
+    state = Column(JSONDict)
+    name = Column(Unicode(512))
 
 
 class Service(Base):

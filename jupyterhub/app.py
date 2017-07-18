@@ -1129,29 +1129,30 @@ class JupyterHub(Application):
         for orm_user in db.query(orm.User):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             self.log.debug("Loading state for %s from db", user.name)
-            spawner = user.spawner
-            status = 0
-            if user.server:
-                try:
-                    status = yield spawner.poll()
-                except Exception:
-                    self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.", user.name)
-                    status = -1
+            for name, spawner in user.spawners.items():
+                status = 0
+                if spawner.server:
+                    try:
+                        status = yield spawner.poll()
+                    except Exception:
+                        self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.",
+                            user.name if name else '%s|%s' % (user.name, name))
+                        status = -1
 
-            if status is None:
-                self.log.info("%s still running", user.name)
-                spawner.add_poll_callback(user_stopped, user)
-                spawner.start_polling()
-            else:
-                # user not running. This is expected if server is None,
-                # but indicates the user's server died while the Hub wasn't running
-                # if user.server is defined.
-                log = self.log.warning if user.server else self.log.debug
-                log("%s not running.", user.name)
-                # remove all server or servers entry from db related to the user
-                for server in user.servers:
-                    db.delete(server)
-                db.commit()
+                if status is None:
+                    self.log.info("%s still running", user.name)
+                    spawner.add_poll_callback(user_stopped, user)
+                    spawner.start_polling()
+                else:
+                    # user not running. This is expected if server is None,
+                    # but indicates the user's server died while the Hub wasn't running
+                    # if user.server is defined.
+                    log = self.log.warning if spawner.server else self.log.debug
+                    log("%s not running.", user.name)
+                    # remove all server or servers entry from db related to the user
+                    if spawner.server:
+                        db.delete(spawner.orm_spawner.server)
+            db.commit()
 
             user_summaries.append(_user_summary(user))
 

@@ -147,17 +147,34 @@ class User(HasTraits):
             self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
 
         self.spawners = _SpawnerDict(self._new_spawner)
+        # load existing named spawners
+        for name in self.orm_spawners:
+            self.log.debug("Loading spawner %s:%s", self.name, name)
+            self.spawners[name] = self._new_spawner(name)
 
     def _new_spawner(self, name):
         """Create a new spawner"""
+        orm_spawner = self.orm_spawners.get(name)
+        if orm_spawner is None:
+            orm_spawner = orm.Spawner(user=self.orm_user, name=name)
+            self.db.add(orm_spawner)
+            self.db.commit()
+            assert name in self.orm_spawners
+        if name == '' and self.state:
+            # migrate user.state to spawner.state
+            orm_spawner.state = self.state
+            self.state = None
         spawner = self.spawner_class(
             user=self,
             db=self.db,
+            orm_spawner=orm_spawner,
             hub=self.settings.get('hub'),
             authenticator=self.authenticator,
             config=self.settings.get('config'),
         )
-        spawner.load_state((self.state or {}).get(name, {}))
+        if orm_spawner.server:
+            spawner.server = Server(orm_spawner.server)
+        spawner.load_state(orm_spawner.state or {})
         return spawner
 
     # singleton property, self.spawner maps onto spawner with empty server_name
@@ -198,10 +215,7 @@ class User(HasTraits):
 
     @property
     def server(self):
-        if len(self.servers) == 0:
-            return None
-        else:
-            return Server(orm_server=self.servers[0])
+        return self.spawner.server
 
     @property
     def escaped_name(self):
@@ -264,10 +278,9 @@ class User(HasTraits):
         base_url = url_path_join(self.base_url, server_name) + '/'
 
         orm_server = orm.Server(
-            name=server_name,
             base_url=base_url,
         )
-        self.servers.append(orm_server)
+        db.add(orm_server)
 
         api_token = self.new_api_token()
         db.commit()
@@ -275,6 +288,7 @@ class User(HasTraits):
         server = Server(orm_server=orm_server)
 
         spawner = self.spawners[server_name]
+        spawner.orm_spawner.server = orm_server
 
         # Passing server, server_name and options to the spawner
         spawner.server = server
@@ -353,7 +367,7 @@ class User(HasTraits):
         # store state
         if self.state is None:
             self.state = {}
-        self.state[server_name] = spawner.get_state()
+        spawner.orm_spawner.state = spawner.get_state()
         self.last_activity = datetime.utcnow()
         db.commit()
         spawner._waiting_for_response = True
@@ -407,7 +421,7 @@ class User(HasTraits):
             if status is None:
                 yield spawner.stop()
             spawner.clear_state()
-            self.state = spawner.get_state()
+            spawner.orm_spawner.state = spawner.get_state()
             self.last_activity = datetime.utcnow()
             # remove server entry from db
             if spawner.server is not None:

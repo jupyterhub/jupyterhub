@@ -51,6 +51,7 @@ class Spawner(LoggingConfigurable):
     _stop_pending = False
     _waiting_for_response = False
 
+    orm_spawner = Any()
     db = Any()
     user = Any()
     hub = Any()

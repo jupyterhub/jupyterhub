@@ -153,8 +153,8 @@ def test_spawner_poll(db, io_loop):
     assert status is None
     if user.state is None:
         user.state = {}
-    user.state[''] = first_spawner.get_state()
-    assert 'pid' in user.state['']
+    first_spawner.orm_spawner.state = first_spawner.get_state()
+    assert 'pid' in first_spawner.orm_spawner.state
     
     # create a new Spawner, loading from state of previous
     spawner = new_spawner(db, user=first_spawner.user)
