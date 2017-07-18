@@ -100,6 +100,7 @@ setup_args = dict(
     license             = "BSD",
     platforms           = "Linux, Mac OS X",
     keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
+    python_requires     = ">=3.4",
     classifiers         = [
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
