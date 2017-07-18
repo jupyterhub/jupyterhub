@@ -1,9 +1,13 @@
-# Installation with Docker
+Using Docker
+============
 
 .. important::
 
    We highly recommend following the `Zero to JupyterHub`_ tutorial for
    installing JupyterHub.
+
+Alternate installation using Docker
+-----------------------------------
 
 A ready to go `docker image <https://hub.docker.com/r/jupyterhub/jupyterhub/>`_
 gives a straightforward deployment of JupyterHub.
@@ -16,7 +20,8 @@ gives a straightforward deployment of JupyterHub.
     To run the single-user servers, which may be on the same system as the Hub or
     not, Jupyter Notebook version 4 or greater must be installed.
 
-## Starting JupyterHub with docker
+Starting JupyterHub with docker
+-------------------------------
 
 The JupyterHub docker image can be started with the following command::
 

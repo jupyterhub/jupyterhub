@@ -35,9 +35,10 @@ Contents
 **Installation Guide**
 
 * :doc:`quickstart`
-* :doc:`getting-started`
 * :doc:`quickstart-docker`
-
+* :doc: `installation-basics`
+* :doc: `config-basics`
+* :doc:`getting-started`
 
 **Configuration Reference**
 
