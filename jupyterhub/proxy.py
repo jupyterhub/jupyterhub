@@ -18,12 +18,10 @@ Route Specification:
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from collections import namedtuple
 import json
 import os
 from subprocess import Popen
-import time
-from urllib.parse import quote, urlparse
+from urllib.parse import quote
 
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
@@ -226,27 +224,31 @@ class Proxy(LoggingConfigurable):
         yield self.delete_route(service.proxy_spec)
 
     @gen.coroutine
-    def add_user(self, user, client=None):
+    def add_user(self, user, server_name='', client=None):
         """Add a user's server to the proxy table."""
+        spawner = user.spawners[server_name]
         self.log.info("Adding user %s to proxy %s => %s",
-                      user.name, user.proxy_spec, user.server.host,
+                      user.name, user.proxy_spec(server_name), spawner.server.host,
                       )
 
-        if user.spawner._spawn_pending:
+        if spawner._spawn_pending:
             raise RuntimeError(
                 "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
 
         yield self.add_route(
-            user.proxy_spec,
-            user.server.host,
-            {'user': user.name}
+            user.proxy_spec(server_name),
+            spawner.server.host,
+            {
+                'user': user.name,
+                'server_name': server_name,
+            }
         )
 
     @gen.coroutine
-    def delete_user(self, user):
+    def delete_user(self, user, server_name=''):
         """Remove a user's server from the proxy table."""
         self.log.info("Removing user %s from proxy", user.name)
-        yield self.delete_route(user.proxy_spec)
+        yield self.delete_route(user.proxy_spec(server_name))
 
     @gen.coroutine
     def add_all_services(self, service_dict):
@@ -274,8 +276,9 @@ class Proxy(LoggingConfigurable):
         futures = []
         for orm_user in db.query(User):
             user = user_dict[orm_user]
-            if user.running:
-                futures.append(self.add_user(user))
+            for name, spawner in user.spawners:
+                if user.running(name):
+                    futures.append(self.add_user(user, name))
         # wait after submitting them all
         for f in futures:
             yield f
@@ -286,7 +289,7 @@ class Proxy(LoggingConfigurable):
         if not routes:
             routes = yield self.get_all_routes()
 
-        user_routes = {r['data']['user'] for r in routes.values() if 'user' in r['data']}
+        user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
         db = self.db
 
@@ -298,12 +301,14 @@ class Proxy(LoggingConfigurable):
 
         for orm_user in db.query(User):
             user = user_dict[orm_user]
-            if user.running:
-                good_routes.add(user.proxy_spec)
-                if user.name not in user_routes:
-                    self.log.warning(
-                        "Adding missing route for %s (%s)", user.name, user.server)
-                    futures.append(self.add_user(user))
+            for name, spawner in user.spawners.items():
+                if user.running(name):
+                    spec = user.proxy_spec(name)
+                    good_routes.add(spec)
+                    if spec not in user_routes:
+                        self.log.warning(
+                            "Adding missing route for %s (%s)", spec, spawner.server)
+                        futures.append(self.add_user(user, name))
 
         # check service routes
         service_routes = {r['data']['service']
