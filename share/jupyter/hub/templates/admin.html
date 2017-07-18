@@ -44,12 +44,12 @@
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
       <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
       <td class="server-col col-sm-2 text-center">
-        <span class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
-        <span class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
+        <span class="stop-server btn btn-xs btn-danger {% if not u.running('') %}hidden{% endif %}">stop server</span>
+        <span class="start-server btn btn-xs btn-success {% if u.running('') %}hidden{% endif %}">start server</span>
       </td>
       <td class="server-col col-sm-1 text-center">
         {% if admin_access %}
-        <span class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
+        <span class="access-server btn btn-xs btn-success {% if not u.running('') %}hidden{% endif %}">access server</span>
         {% endif %}
       </td>
       <td class="edit-col col-sm-1 text-center">

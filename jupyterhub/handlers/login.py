@@ -54,7 +54,7 @@ class LoginHandler(BaseHandler):
         user = self.get_current_user()
         if user:
             if not next_url:
-                if user.running:
+                if user.running(''):
                     next_url = user.url
                 else:
                     next_url = self.hub.base_url

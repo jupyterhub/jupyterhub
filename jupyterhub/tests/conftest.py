@@ -31,7 +31,6 @@ def db():
         user = orm.User(
             name=getuser(),
         )
-        user.servers.append(orm.Server())
         _db.add(user)
         _db.commit()
     return _db

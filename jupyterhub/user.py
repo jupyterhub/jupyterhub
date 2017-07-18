@@ -149,11 +149,12 @@ class User(HasTraits):
         self.spawners = _SpawnerDict(self._new_spawner)
         # load existing named spawners
         for name in self.orm_spawners:
-            self.log.debug("Loading spawner %s:%s", self.name, name)
             self.spawners[name] = self._new_spawner(name)
 
     def _new_spawner(self, name):
         """Create a new spawner"""
+        self.log.debug("Creating Spawner for %s:%s", self.name, name)
+        
         orm_spawner = self.orm_spawners.get(name)
         if orm_spawner is None:
             orm_spawner = orm.Spawner(user=self.orm_user, name=name)
@@ -202,11 +203,12 @@ class User(HasTraits):
 
     def __repr__(self):
         return repr(self.orm_user)
-    
-    @property
-    def running(self):
+
+    def running(self, name):
         """property for whether a user has a running server"""
-        spawner = self.spawner
+        if name not in self.spawners:
+            return False
+        spawner = self.spawners[name]
         if spawner._spawn_pending or spawner._stop_pending:
             return False  # server is not running if spawn or stop is still pending
         if spawner.server is None:
@@ -222,12 +224,11 @@ class User(HasTraits):
         """My name, escaped for use in URLs, cookies, etc."""
         return quote(self.name, safe='@')
 
-    @property
-    def proxy_spec(self):
+    def proxy_spec(self, name=''):
         if self.settings.get('subdomain_host'):
-            return self.domain + self.base_url
+            return url_path_join(self.domain, self.base_url, name)
         else:
-            return self.base_url
+            return url_path_join(self.base_url, name)
 
     @property
     def domain(self):

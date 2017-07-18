@@ -148,7 +148,7 @@ class UserAPIHandler(APIHandler):
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.spawner._stop_pending:
             raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
-        if user.running:
+        if user.running(''):
             yield self.stop_single_user(user)
             if user.spawner._stop_pending:
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
@@ -185,7 +185,7 @@ class UserServerAPIHandler(APIHandler):
     @admin_or_self
     def post(self, name):
         user = self.find_user(name)
-        if user.running:
+        if user.running(''):
             # include notify, so that a server that died is noticed immediately
             state = yield user.spawner.poll_and_notify()
             if state is None:
@@ -203,7 +203,7 @@ class UserServerAPIHandler(APIHandler):
         if user.spawner._stop_pending:
             self.set_status(202)
             return
-        if not user.running:
+        if not user.running(''):
             raise web.HTTPError(400, "%s's server is not running" % name)
         # include notify, so that a server that died is noticed immediately
         status = yield user.spawner.poll_and_notify()
@@ -240,8 +240,8 @@ class UserNamedServerAPIHandler(APIHandler):
         if spawner._stop_pending:
             self.set_status(202)
             return
-        #if not user.running:
-        #    raise web.HTTPError(400, "%s's server is not running" % name)
+        if not user.running(name):
+           raise web.HTTPError(400, "%s's server is not running" % name)
         # include notify, so that a server that died is noticed immediately
         status = yield spawner.poll_and_notify()
         if status is not None:
@@ -268,8 +268,6 @@ class UserAdminAccessAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
-        if not user.running:
-            raise web.HTTPError(400, "%s's server is not running" % name)
 
 
 default_handlers = [

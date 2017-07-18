@@ -93,7 +93,7 @@ class APIHandler(BaseHandler):
             'name': user.name,
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
-            'server': user.url if user.running else None,
+            'server': user.url if user.running('') else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
@@ -105,7 +105,7 @@ class APIHandler(BaseHandler):
         # TODO: named servers
         servers = model['servers'] = {}
         for name, spawner in user.spawners.items():
-            if False and user.running(name):
+            if user.running(name):
                 servers[name] = s = {'name': name}
                 if spawner._spawn_pending:
                     s['pending'] = 'spawn'
