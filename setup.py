@@ -20,10 +20,11 @@ if v[:2] < (3,3):
     print(error, file=sys.stderr)
     sys.exit(1)
 
-
+shell = False
 if os.name in ('nt', 'dos'):
-    error = "ERROR: Windows is not supported"
-    print(error, file=sys.stderr)
+    shell = True
+    warning = "WARNING: Windows is not officially supported"
+    print(warning, file=sys.stderr)
 
 # At least we're on the python version we need, move on.
 
@@ -174,13 +175,12 @@ class Bower(BaseCommand):
         
         if self.should_run_npm():
             print("installing build dependencies with npm")
-            check_call(['npm', 'install', '--progress=false'], cwd=here)
+            check_call(['npm', 'install', '--progress=false'], cwd=here, shell=shell)
             os.utime(self.node_modules)
         
         env = os.environ.copy()
         env['PATH'] = npm_path
         args = ['bower', 'install', '--allow-root', '--config.interactive=false']
-        shell = True if os.name == 'nt' else False
         try:
             check_call(args, cwd=here, env=env, shell=shell)
         except OSError as e:
@@ -238,7 +238,6 @@ class CSS(BaseCommand):
             '--source-map-rootpath=../',
             style_less, style_css,
         ]
-        shell = True if os.name == 'nt' else False
         try:
             check_call(args, cwd=here, env=env, shell=shell)
         except OSError as e:
