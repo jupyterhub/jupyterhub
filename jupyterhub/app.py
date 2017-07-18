@@ -688,6 +688,9 @@ class JupyterHub(Application):
                 handler.setFormatter(_formatter)
             self.log.addHandler(handler)
 
+        # disable curl debug, which is TOO MUCH
+        logging.getLogger('tornado.curl_httpclient').setLevel(max(self.log_level, logging.INFO))
+
         # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
             # ensure all log statements identify the application they come from
