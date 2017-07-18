@@ -214,8 +214,8 @@ class UserServerAPIHandler(APIHandler):
         self.set_status(status)
 
 
-class UserCreateNamedServerAPIHandler(APIHandler):
-    """Create a named single-user server
+class UserNamedServerAPIHandler(APIHandler):
+    """Manage named single-user servers
     
     This handler should be used when c.JupyterHub.allow_named_servers = True
     """
@@ -226,25 +226,12 @@ class UserCreateNamedServerAPIHandler(APIHandler):
         if user is None:
             raise web.HTTPError(404, "No such user %r" % name)
         
-        #if user.running:
-        #    # include notify, so that a server that died is noticed immediately
-        #    state = yield user.spawner.poll_and_notify()
-        #    if state is None:
-        #        raise web.HTTPError(400, "%s's server is already running" % name)
-
         options = self.get_json_body()
         yield self.spawn_single_user(user, server_name, options=options)
-        status = 202 if user.spawner._spawn_pending else 201
+        spawner = user.spawners[server_name]
+        status = 202 if spawner._spawn_pending else 201
         self.set_status(status)
 
-
-class UserDeleteNamedServerAPIHandler(APIHandler):
-    """Delete a named single-user server
-    
-    Expect a server_name inside the url /user/:user/servers/:server_name
-    
-    This handler should be used when c.JupyterHub.allow_named_servers = True
-    """
     @gen.coroutine
     @admin_or_self
     def delete(self, name, server_name):
@@ -290,7 +277,6 @@ default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
-    (r"/api/users/([^/]+)/servers/([^/]*)", UserCreateNamedServerAPIHandler),
-    (r"/api/users/([^/]+)/servers/([^/]*)", UserDeleteNamedServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]*)", UserNamedServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
