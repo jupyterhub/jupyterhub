@@ -36,6 +36,7 @@ Contents
 
 * :doc:`quickstart`
 * :doc:`getting-started`
+* :doc:`quickstart-docker`
 
 
 **Configuration Reference**
