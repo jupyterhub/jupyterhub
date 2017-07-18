@@ -172,6 +172,8 @@ class MockHub(JupyterHub):
             # add an initial user
             user = orm.User(name='user')
             self.db.add(user)
+            admin = orm.User(name='admin', admin=True)
+            self.db.add(admin)
             self.db.commit()
             yield super(MockHub, self).start()
             yield self.hub.wait_up(http=True)
