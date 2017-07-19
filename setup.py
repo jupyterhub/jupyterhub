@@ -15,8 +15,8 @@ import shutil
 import sys
 
 v = sys.version_info
-if v[:2] < (3,3):
-    error = "ERROR: JupyterHub requires Python version 3.3 or above."
+if v[:2] < (3,4):
+    error = "ERROR: JupyterHub requires Python version 3.4 or above."
     print(error, file=sys.stderr)
     sys.exit(1)
 
@@ -49,10 +49,10 @@ is_repo = os.path.exists(pjoin(here, '.git'))
 
 def get_data_files():
     """Get data files in share/jupyter"""
-    
+
     data_files = []
     ntrim = len(here + os.path.sep)
-    
+
     for (d, dirs, filenames) in os.walk(share_jupyter):
         data_files.append((
             d[ntrim:],
@@ -134,27 +134,27 @@ def mtime(path):
 class BaseCommand(Command):
     """Dumb empty command because Command needs subclasses to override too much"""
     user_options = []
-    
+
     def initialize_options(self):
         pass
-    
+
     def finalize_options(self):
         pass
-    
+
     def get_inputs(self):
         return []
-    
+
     def get_outputs(self):
         return []
 
 
 class Bower(BaseCommand):
     description = "fetch static client-side components with bower"
-    
+
     user_options = []
     bower_dir = pjoin(static, 'components')
     node_modules = pjoin(here, 'node_modules')
-    
+
     def should_run(self):
         if not os.path.exists(self.bower_dir):
             return True
@@ -167,17 +167,17 @@ class Bower(BaseCommand):
         if not os.path.exists(self.node_modules):
             return True
         return mtime(self.node_modules) < mtime(pjoin(here, 'package.json'))
-    
+
     def run(self):
         if not self.should_run():
             print("bower dependencies up to date")
             return
-        
+
         if self.should_run_npm():
             print("installing build dependencies with npm")
             check_call(['npm', 'install', '--progress=false'], cwd=here, shell=shell)
             os.utime(self.node_modules)
-        
+
         env = os.environ.copy()
         env['PATH'] = npm_path
         args = ['bower', 'install', '--allow-root', '--config.interactive=false']
@@ -194,11 +194,11 @@ class Bower(BaseCommand):
 
 class CSS(BaseCommand):
     description = "compile CSS from LESS"
-    
+
     def should_run(self):
         """Does less need to run?"""
         # from IPython.html.tasks.py
-        
+
         css_targets = [pjoin(static, 'css', 'style.min.css')]
         css_maps = [t + '.map' for t in css_targets]
         targets = css_targets + css_maps
@@ -206,7 +206,7 @@ class CSS(BaseCommand):
             # some generated files don't exist
             return True
         earliest_target = sorted(mtime(t) for t in targets)[0]
-    
+
         # check if any .less files are newer than the generated targets
         for (dirpath, dirnames, filenames) in os.walk(static):
             for f in filenames:
@@ -215,20 +215,20 @@ class CSS(BaseCommand):
                     timestamp = mtime(path)
                     if timestamp > earliest_target:
                         return True
-    
+
         return False
-    
+
     def run(self):
         if not self.should_run():
             print("CSS up-to-date")
             return
-        
+
         self.run_command('js')
-        
+
         style_less = pjoin(static, 'less', 'style.less')
         style_css = pjoin(static, 'css', 'style.min.css')
         sourcemap = style_css + '.map'
-        
+
         env = os.environ.copy()
         env['PATH'] = npm_path
         args = [

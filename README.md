@@ -53,7 +53,7 @@ for administration of the Hub and its users.
 
 A Linux/Unix based system with the following:
 
-- [Python](https://www.python.org/downloads/) 3.3 or greater
+- [Python](https://www.python.org/downloads/) 3.4 or greater
 - [nodejs/npm](https://www.npmjs.com/) Install a recent version of
   [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node)
   For example, install it on Linux (Debian/Ubuntu) using:
