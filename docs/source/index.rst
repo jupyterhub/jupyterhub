@@ -36,9 +36,17 @@ Contents
 
 * :doc:`quickstart`
 * :doc:`quickstart-docker`
-* :doc: `installation-basics`
-* :doc: `config-basics`
-* :doc:`getting-started`
+* :doc:`installation-basics`
+
+**Getting Started**
+
+* :doc:`technical-overview`
+* :doc:`config-basics`
+* :doc:`networking-basics`
+* :doc:`security-basics`
+* :doc:`authenticators-users-basics`
+* :doc:`spawners-basics`
+* :doc:`services-basics`
 
 **Configuration Reference**
 
@@ -93,7 +101,8 @@ Full Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   user-guide
+   installation-guide
+   getting-started
    configuration-guide
    api/index
    troubleshooting

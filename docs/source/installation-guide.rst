@@ -7,5 +7,3 @@ Installation Guide
    quickstart
    quickstart-docker
    installation-basics
-   config-basics
-   getting-started
