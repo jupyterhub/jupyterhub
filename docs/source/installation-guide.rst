@@ -5,4 +5,5 @@ Installation Guide
    :maxdepth: 3
 
    quickstart
-   getting-started
+   quickstart-docker
+   installation-basics
