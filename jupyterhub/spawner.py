@@ -350,8 +350,6 @@ class Spawner(LoggingConfigurable):
     ).tag(config=True)
 
     pre_spawn_hook = Any(
-        None,
-        allow_none=True,
         help="""
         An optional hook function that you can implement to do some bootstrapping work before
         the spawner starts. For example, create a directory for your user or load initial content.
@@ -544,17 +542,9 @@ class Spawner(LoggingConfigurable):
         return args
 
     def run_pre_spawn_hook(self):
-        """
-        run a pre spawn hook function which you can define in your jupyterhub_config.py
-        :return: void
-        """
-        if (callable(self.pre_spawn_hook)):
-            try:
-                self.pre_spawn_hook(self)
-            except Exception as e:
-                self.log.exception("pre_spawn_hook failed with exception: %s", e)
-                raise e
-        return
+        """Run the pre_spawn_hook if defined"""
+        if self.pre_spawn_hook:
+            return self.pre_spawn_hook(self)
 
     @gen.coroutine
     def start(self):
