@@ -7,6 +7,16 @@ command line for details.
 
 ## [Unreleased] 0.8
 
+#### Added
+
+#### Changed
+
+#### Fixed
+
+#### Removed
+
+- End support for Python 3.3 
+
 ## 0.7
 
 ### [0.7.2] - 2017-01-09
