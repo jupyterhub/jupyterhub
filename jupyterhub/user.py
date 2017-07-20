@@ -141,7 +141,6 @@ class User(HasTraits):
         )
 
     # pass get/setattr to ORM user
-
     def __getattr__(self, attr):
         if hasattr(self.orm_user, attr):
             return getattr(self.orm_user, attr)
@@ -165,7 +164,7 @@ class User(HasTraits):
         if self.server is None:
             return False
         return True
-    
+
     @property
     def server(self):
         if len(self.servers) == 0:
@@ -282,6 +281,9 @@ class User(HasTraits):
         authenticator = self.authenticator
         if (authenticator):
             yield gen.maybe_future(authenticator.pre_spawn_start(self, spawner))
+
+        # run optional preparation work to bootstrap the notebook
+        yield gen.maybe_future(self.spawner.run_pre_spawn_hook())
 
         self.spawn_pending = True
         # wait for spawner.start to return
