@@ -39,16 +39,13 @@ def test_server(db):
 
 
 def test_user(db):
-    user = User(orm.User(name='kaylee',
-        state={'pid': 4234},
-    ))
-    server = orm.Server()
-    user.servers.append(server)
+    user = User(orm.User(name='kaylee'))
     db.add(user)
     db.commit()
+    spawner = user.spawners['']
+    spawner.orm_spawner.state = {'pid': 4234}
     assert user.name == 'kaylee'
-    assert user.server.ip == ''
-    assert user.state == {'pid': 4234}
+    assert user.orm_spawners[''].state == {'pid': 4234}
 
     found = orm.User.find(db, 'kaylee')
     assert found.name == user.name
@@ -160,7 +157,7 @@ def test_spawn_fails(db, io_loop):
     
     with pytest.raises(RuntimeError) as exc:
         io_loop.run_sync(user.spawn)
-    assert user.server is None
+    assert user.spawners[''].server is None
     assert not user.running('')
 
 

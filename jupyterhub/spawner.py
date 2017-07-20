@@ -26,6 +26,7 @@ from traitlets import (
     validate,
 )
 
+from .objects import Server
 from .traitlets import Command, ByteSpecification
 from .utils import random_port, url_path_join
 
@@ -52,11 +53,19 @@ class Spawner(LoggingConfigurable):
     _waiting_for_response = False
 
     orm_spawner = Any()
-    db = Any()
     user = Any()
     hub = Any()
     authenticator = Any()
-    server = Any()
+    orm_spawner = Any()
+    @property
+    def server(self):
+        if self.orm_spawner and self.orm_spawner.server:
+            return Server(orm_server=self.orm_spawner.server)
+    @property
+    def name(self):
+        if self.orm_spawner:
+            return self.orm_spawner.name
+        return ''
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -436,7 +445,7 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
-            url_path_join(self.user.url, 'oauth_callback')
+            url_path_join(self.user.url, self.name, 'oauth_callback')
         
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name

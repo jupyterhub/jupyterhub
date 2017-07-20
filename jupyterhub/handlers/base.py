@@ -58,6 +58,10 @@ class BaseHandler(RequestHandler):
         return self.settings.get('subdomain_host', '')
 
     @property
+    def allow_named_servers(self):
+        return self.settings.get('allow_named_servers', False)
+
+    @property
     def domain(self):
         return self.settings['domain']
 
@@ -360,7 +364,7 @@ class BaseHandler(RequestHandler):
                     # though it's possible that it started at the wrong URL
                     self.log.warning("User %s's server is slow to become responsive (timeout=%s)",
                         user.name, self.slow_spawn_timeout)
-                    self.log.debug("Expecting server for %s at: %s", user.name, user.server.url)
+                    self.log.debug("Expecting server for %s at: %s", user.name, spawner.server.url)
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:

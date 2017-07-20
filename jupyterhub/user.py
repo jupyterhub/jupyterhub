@@ -13,7 +13,6 @@ from .utils import url_path_join, default_server_name
 
 from . import orm
 from ._version import _check_version, __version__
-from .objects import Server
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
 
@@ -105,12 +104,8 @@ class User(HasTraits):
         db = change.new
         if self._user_id is not None:
             self.orm_user = db.query(orm.User).filter(orm.User.id == self._user_id).first()
-        for spawner in self.spawners.values():
-            spawner.db = db
-            if (spawner.server):
-                orm_server = spawner.server.orm_server
-                inspect(orm_server).session.expunge(orm_server)
-                db.add(orm_server)
+        for name, spawner in self.spawners.items():
+            spawner.orm_spawner = self.orm_user.orm_spawners[name]
 
     _user_id = None
     orm_user = Any(allow_none=True)
@@ -151,9 +146,11 @@ class User(HasTraits):
         for name in self.orm_spawners:
             self.spawners[name] = self._new_spawner(name)
 
-    def _new_spawner(self, name):
+    def _new_spawner(self, name, spawner_class=None, **kwargs):
         """Create a new spawner"""
-        self.log.debug("Creating Spawner for %s:%s", self.name, name)
+        if spawner_class is None:
+            spawner_class = self.spawner_class
+        self.log.debug("Creating %s for %s:%s", spawner_class, self.name, name)
         
         orm_spawner = self.orm_spawners.get(name)
         if orm_spawner is None:
@@ -165,16 +162,17 @@ class User(HasTraits):
             # migrate user.state to spawner.state
             orm_spawner.state = self.state
             self.state = None
-        spawner = self.spawner_class(
+        
+        spawn_kwargs = dict(
             user=self,
-            db=self.db,
             orm_spawner=orm_spawner,
             hub=self.settings.get('hub'),
             authenticator=self.authenticator,
             config=self.settings.get('config'),
         )
-        if orm_spawner.server:
-            spawner.server = Server(orm_spawner.server)
+        # update with kwargs. Mainly for testing.
+        spawn_kwargs.update(kwargs)
+        spawner = spawner_class(**spawn_kwargs)
         spawner.load_state(orm_spawner.state or {})
         return spawner
 
@@ -226,9 +224,9 @@ class User(HasTraits):
 
     def proxy_spec(self, name=''):
         if self.settings.get('subdomain_host'):
-            return url_path_join(self.domain, self.base_url, name)
+            return url_path_join(self.domain, self.base_url, name, '/')
         else:
-            return url_path_join(self.base_url, name)
+            return url_path_join(self.base_url, name, '/')
 
     @property
     def domain(self):
@@ -286,13 +284,12 @@ class User(HasTraits):
         api_token = self.new_api_token()
         db.commit()
 
-        server = Server(orm_server=orm_server)
 
         spawner = self.spawners[server_name]
         spawner.orm_spawner.server = orm_server
+        server = spawner.server
 
-        # Passing server, server_name and options to the spawner
-        spawner.server = server
+        # Passing user_options to the spawner
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
@@ -426,8 +423,8 @@ class User(HasTraits):
             self.last_activity = datetime.utcnow()
             # remove server entry from db
             if spawner.server is not None:
-                self.db.delete(spawner.server.orm_server)
-            spawner.server = None
+                self.db.delete(spawner.orm_spawner.server)
+            spawner.orm_spawner.server = None
             if not spawner.will_resume:
                 # find and remove the API token if the spawner isn't
                 # going to re-use it next time

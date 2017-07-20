@@ -156,7 +156,10 @@ class MockHub(JupyterHub):
     
     def init_signal(self):
         pass
-    
+
+    def load_config_file(self, *args, **kwargs):
+        pass
+
     def start(self, argv=None):
         self.db_file = NamedTemporaryFile()
         self.pid_file = NamedTemporaryFile(delete=False).name
@@ -172,8 +175,6 @@ class MockHub(JupyterHub):
             # add an initial user
             user = orm.User(name='user')
             self.db.add(user)
-            admin = orm.User(name='admin', admin=True)
-            self.db.add(admin)
             self.db.commit()
             yield super(MockHub, self).start()
             yield self.hub.wait_up(http=True)

@@ -9,6 +9,7 @@ import binascii
 from datetime import datetime
 from getpass import getuser
 import logging
+from operator import itemgetter
 import os
 import re
 import shutil
@@ -1116,8 +1117,9 @@ class JupyterHub(Application):
             parts = ['{0: >8}'.format(user.name)]
             if user.admin:
                 parts.append('admin')
-            if user.server:
-                parts.append('running at %s' % user.server)
+            for name, spawner in sorted(user.spawners.items(), key=itemgetter(0)):
+                if spawner.server:
+                    parts.append('%r running at %s' % (name, spawner.server))
             return ' '.join(parts)
 
         @gen.coroutine
@@ -1149,7 +1151,7 @@ class JupyterHub(Application):
                 else:
                     # user not running. This is expected if server is None,
                     # but indicates the user's server died while the Hub wasn't running
-                    # if user.server is defined.
+                    # if spawner.server is defined.
                     log = self.log.warning if spawner.server else self.log.debug
                     log("%s not running.", user.name)
                     # remove all server or servers entry from db related to the user
@@ -1319,6 +1321,7 @@ class JupyterHub(Application):
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
             for uid, user in self.users.items():
+                user.db = self.db
                 if user.spawner is not None:
                     futures.append(user.stop())
         else:

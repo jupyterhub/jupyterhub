@@ -43,9 +43,9 @@ def setup():
 
 
 def new_spawner(db, **kwargs):
+    user = kwargs.setdefault('user', User(db.query(orm.User).first(), {}))
     kwargs.setdefault('cmd', [sys.executable, '-c', _echo_sleep])
     kwargs.setdefault('hub', Hub())
-    kwargs.setdefault('user', User(db.query(orm.User).first(), {}))
     kwargs.setdefault('notebook_dir', os.getcwd())
     kwargs.setdefault('default_url', '/user/{username}/lab')
     kwargs.setdefault('oauth_client_id', 'mock-client-id')
@@ -53,7 +53,7 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('TERM_TIMEOUT', 1)
     kwargs.setdefault('KILL_TIMEOUT', 1)
     kwargs.setdefault('poll_interval', 1)
-    return LocalProcessSpawner(db=db, **kwargs)
+    return user._new_spawner('', spawner_class=LocalProcessSpawner, **kwargs)
 
 
 @pytest.mark.gen_test
@@ -63,8 +63,6 @@ def test_spawner(db, request):
     assert ip == '127.0.0.1'
     assert isinstance(port, int)
     assert port > 0
-    spawner.user.server.ip = ip
-    spawner.user.server.port = port
     db.commit()
 
     # wait for the process to get to the while True: loop
@@ -85,7 +83,7 @@ def wait_for_spawner(spawner, timeout=10):
     """
     deadline = time.monotonic() + timeout
     def wait():
-        return spawner.user.server.wait_up(timeout=1, http=True)
+        return spawner.server.wait_up(timeout=1, http=True)
     while time.monotonic() < deadline:
         status = yield spawner.poll()
         assert status is None
@@ -104,8 +102,8 @@ def test_single_user_spawner(app, request):
     spawner = user.spawner
     spawner.cmd = ['jupyterhub-singleuser']
     yield user.spawn()
-    assert user.server.ip == '127.0.0.1'
-    assert user.server.port > 0
+    assert spawner.server.ip == '127.0.0.1'
+    assert spawner.server.port > 0
     yield wait_for_spawner(spawner)
     status = yield spawner.poll()
     assert status is None
@@ -233,10 +231,12 @@ def test_shell_cmd(db, tmpdir, request):
         cmd=[sys.executable, '-m', 'jupyterhub.tests.mocksu'],
         shell_cmd=['bash', '--rcfile', str(f), '-i', '-c'],
     )
+    s.orm_spawner.server = orm.Server()
+    db.commit()
     (ip, port) = yield s.start()
     request.addfinalizer(s.stop)
-    s.user.server.ip = ip
-    s.user.server.port = port
+    s.server.ip = ip
+    s.server.port = port
     db.commit()
     yield wait_for_spawner(s)
     r = requests.get('http://%s:%i/env' % (ip, port))

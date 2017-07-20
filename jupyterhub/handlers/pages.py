@@ -182,7 +182,7 @@ class AdminHandler(BaseHandler):
 
         users = self.db.query(orm.User).order_by(*ordered)
         users = [ self._user_from_orm(u) for u in users ]
-        running = [ u for u in users if u.running ]
+        running = [ u for u in users if u.running('') ]
 
         html = self.render_template('admin.html',
             user=self.get_current_user(),

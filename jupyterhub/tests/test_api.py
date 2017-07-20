@@ -408,16 +408,17 @@ def test_spawn(app, io_loop):
     assert 'pid' in user.orm_spawners[''].state
     app_user = get_app_user(app, name)
     assert app_user.spawner is not None
+    spawner = app_user.spawner
     assert app_user.spawner.user_options == options
     assert not app_user.spawner._spawn_pending
     status = io_loop.run_sync(app_user.spawner.poll)
     assert status is None
 
-    assert user.server.base_url == ujoin(app.base_url, 'user/%s' % name) + '/'
+    assert spawner.server.base_url == ujoin(app.base_url, 'user/%s' % name) + '/'
     url = public_url(app, user)
     r = requests.get(url)
     assert r.status_code == 200
-    assert r.text == user.server.base_url
+    assert r.text == spawner.server.base_url
 
     r = requests.get(ujoin(url, 'args'))
     assert r.status_code == 200
@@ -438,7 +439,7 @@ def test_spawn(app, io_loop):
     assert status == 0
 
     # check that we cleaned up after ourselves
-    assert user.server is None
+    assert spawner.server is None
     after_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
     assert before_servers == after_servers
     tokens = list(db.query(orm.APIToken).filter(orm.APIToken.user_id == user.id))
