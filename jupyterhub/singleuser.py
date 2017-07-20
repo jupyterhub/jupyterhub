@@ -13,7 +13,7 @@ from jinja2 import ChoiceLoader, FunctionLoader
 from tornado.httpclient import AsyncHTTPClient
 from tornado import gen
 from tornado import ioloop
-from tornado.web import HTTPError
+from tornado.web import HTTPError, RequestHandler
 
 try:
     import notebook
@@ -400,8 +400,14 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_prefix'] = self.hub_prefix
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
-        s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
-        s.setdefault('headers', {})['X-JupyterHub-Version'] = __version__
+        csp_report_uri = s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
+        headers = s.setdefault('headers', {})
+        headers['X-JupyterHub-Version'] = __version__
+        # set CSP header directly to workaround bugs in jupyter/notebook 5.0
+        headers.setdefault('Content-Security-Policy', ';'.join([
+            "frame-ancestors 'self'",
+            "report-uri " + csp_report_uri,
+        ]))
         super(SingleUserNotebookApp, self).init_webapp()
 
         # add OAuth callback
@@ -409,9 +415,21 @@ class SingleUserNotebookApp(NotebookApp):
             urlparse(self.hub_auth.oauth_redirect_uri).path,
             OAuthCallbackHandler
         )])
-
+        
+        # apply X-JupyterHub-Version to *all* request handlers (even redirects)
+        self.patch_default_headers()
         self.patch_templates()
     
+    def patch_default_headers(self):
+        if hasattr(RequestHandler, '_orig_set_default_headers'):
+            return
+        RequestHandler._orig_set_default_headers = RequestHandler.set_default_headers
+        def set_jupyterhub_header(self):
+            self._orig_set_default_headers()
+            self.set_header('X-JupyterHub-Version', __version__)
+
+        RequestHandler.set_default_headers = set_jupyterhub_header
+
     def patch_templates(self):
         """Patch page templates to add Hub-related buttons"""
 

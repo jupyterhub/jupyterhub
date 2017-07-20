@@ -27,7 +27,7 @@ def _check_version(hub_version, singleuser_version, log):
     if hub_version != singleuser_version:
         from distutils.version import LooseVersion as V
         hub_major_minor = V(hub_version).version[:2]
-        singleuser_major_minor = V(__version__).version[:2]
+        singleuser_major_minor = V(singleuser_version).version[:2]
         if singleuser_major_minor == hub_major_minor:
             # patch-level mismatch or lower, log difference at debug-level
             # because this should be fine
@@ -36,5 +36,7 @@ def _check_version(hub_version, singleuser_version, log):
             # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
             log_method = log.warning
         log_method("jupyterhub version %s != jupyterhub-singleuser version %s",
-            hub_version, __version__,
+            hub_version, singleuser_version,
         )
+    else:
+        log.debug("jupyterhub and jupyterhub-singleuser both on version %s" % hub_version)
