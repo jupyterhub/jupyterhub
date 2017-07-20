@@ -126,10 +126,12 @@ class BaseHandler(RequestHandler):
         """
         headers = self.settings.get('headers', {})
         headers.setdefault("X-JupyterHub-Version", __version__)
-        headers.setdefault("Content-Security-Policy", self.content_security_policy)
 
         for header_name, header_content in headers.items():
             self.set_header(header_name, header_content)
+
+        if 'Content-Security-Policy' not in headers:
+            self.set_header('Content-Security-Policy', self.content_security_policy)
 
     #---------------------------------------------------------------
     # Login and cookie-related

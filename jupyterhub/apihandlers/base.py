@@ -13,6 +13,10 @@ from ..utils import url_path_join
 
 class APIHandler(BaseHandler):
 
+    @property
+    def content_security_policy(self):
+        return '; '.join([super().content_security_policy, "default-src 'none'"])
+
     def check_referer(self):
         """Check Origin for cross-site API requests.
         
