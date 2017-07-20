@@ -2,10 +2,10 @@
   "name": "jupyterhub-deps",
   "version": "0.0.0",
   "dependencies": {
-    "bootstrap": "components/bootstrap#~3.1",
-    "font-awesome": "components/font-awesome#~4.1",
-    "jquery": "components/jquery#~2.0",
-    "moment": "~2.7",
-    "requirejs": "~2.1"
+    "bootstrap": "components/bootstrap#~3.3",
+    "font-awesome": "components/font-awesome#~4.7",
+    "jquery": "components/jquery#~3.2",
+    "moment": "~2.18",
+    "requirejs": "~2.3"
   }
 }
