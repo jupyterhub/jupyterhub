@@ -12,7 +12,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/jupyterhub.svg)](https://pypi.python.org/pypi/jupyterhub)
 [![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
-[![Documentation Status](http://readthedocs.org/projects/jupyterhub/badge/?version=0.7.2)](http://jupyterhub.readthedocs.io/en/latest/?badge=0.7.2)
+[![Documentation Status](http://readthedocs.org/projects/jupyterhub/badge/?version=0.7.2)](http://jupyterhub.readthedocs.io/en/0.7.2/?badge=0.7.2)
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
