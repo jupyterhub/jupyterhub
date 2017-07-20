@@ -17,6 +17,10 @@ class APIHandler(BaseHandler):
     def content_security_policy(self):
         return '; '.join([super().content_security_policy, "default-src 'none'"])
 
+    def set_default_headers(self):
+        self.set_header('Content-Type', 'application/json')
+        super().set_default_headers()
+
     def check_referer(self):
         """Check Origin for cross-site API requests.
         
@@ -84,7 +88,6 @@ class APIHandler(BaseHandler):
             reason = getattr(exception, 'reason', '')
             if reason:
                 status_message = reason
-        self.set_header('Content-Type', 'application/json')
         self.write(json.dumps({
             'status': status_code,
             'message': message or status_message,
