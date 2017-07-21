@@ -13,8 +13,6 @@ import os
 import re
 import shutil
 import signal
-import socket
-from subprocess import Popen
 import sys
 from textwrap import dedent
 import threading
@@ -357,14 +355,14 @@ class JupyterHub(Application):
                        ).tag(config=True)
 
     proxy_cmd = Command([], config=True,
-        help="DEPRECATED. Use ConfigurableHTTPProxy.command",
+        help="DEPRECATED since version 0.8. Use ConfigurableHTTPProxy.command",
     ).tag(config=True)
     
     debug_proxy = Bool(False,
-        help="DEPRECATED: Use ConfigurableHTTPProxy.debug",
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.debug",
     ).tag(config=True)
     proxy_auth_token = Unicode(
-        help="DEPRECATED: Use ConfigurableHTTPProxy.auth_token"
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.auth_token"
     ).tag(config=True)
 
     _proxy_config_map = {
@@ -379,10 +377,10 @@ class JupyterHub(Application):
         self.config.ConfigurableHTTPProxy[dest] = change.new
 
     proxy_api_ip = Unicode(
-        help="DEPRECATED: Use ConfigurableHTTPProxy.api_url"
+        help="DEPRECATED since version 0.8 : Use ConfigurableHTTPProxy.api_url"
     ).tag(config=True)
     proxy_api_port = Integer(
-        help="DEPRECATED: Use ConfigurableHTTPProxy.api_url"
+        help="DEPRECATED since version 0.8 : Use ConfigurableHTTPProxy.api_url"
     ).tag(config=True)
     @observe('proxy_api_port', 'proxy_api_ip')
     def _deprecated_proxy_api(self, change):
@@ -464,7 +462,8 @@ class JupyterHub(Application):
 
     @observe('api_tokens')
     def _deprecate_api_tokens(self, change):
-        self.log.warning("JupyterHub.api_tokens is pending deprecation."
+        self.log.warning("JupyterHub.api_tokens is pending deprecations"
+            " since JupyterHub version 0.8."
             "  Consider using JupyterHub.service_tokens."
             "  If you have a use case for services that identify as users,"
             " let us know: https://github.com/jupyterhub/jupyterhub/issues"
@@ -572,7 +571,7 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
     admin_users = Set(
-        help="""DEPRECATED, use Authenticator.admin_users instead."""
+        help="""DEPRECATED since version 0.7.2, use Authenticator.admin_users instead."""
     ).tag(config=True)
 
     tornado_settings = Dict(
@@ -862,7 +861,7 @@ class JupyterHub(Application):
 
         if self.admin_users and not self.authenticator.admin_users:
             self.log.warning(
-                "\nJupyterHub.admin_users is deprecated."
+                "\nJupyterHub.admin_users is deprecated since version 0.7.2."
                 "\nUse Authenticator.admin_users instead."
             )
             self.authenticator.admin_users = self.admin_users
@@ -1163,8 +1162,7 @@ class JupyterHub(Application):
         self.oauth_provider = make_provider(
             self.session_factory,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
-            login_url=url_path_join(base_url, 'login')
-,
+            login_url=url_path_join(base_url, 'login'),
         )
 
     def init_proxy(self):
