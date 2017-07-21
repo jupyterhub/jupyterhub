@@ -186,7 +186,6 @@ class User(HasTraits):
         self.spawners[''] = spawner
 
     # pass get/setattr to ORM user
-
     def __getattr__(self, attr):
         if hasattr(self.orm_user, attr):
             return getattr(self.orm_user, attr)
@@ -207,7 +206,7 @@ class User(HasTraits):
         if name not in self.spawners:
             return False
         spawner = self.spawners[name]
-        if spawner._spawn_pending or spawner._stop_pending:
+        if spawner._spawn_pending or spawner._stop_pending or spawner._proxy_pending:
             return False  # server is not running if spawn or stop is still pending
         if spawner.server is None:
             return False
@@ -324,6 +323,8 @@ class User(HasTraits):
         spawner._spawn_pending = True
         # wait for spawner.start to return
         try:
+            # run optional preparation work to bootstrap the notebook
+            yield gen.maybe_future(self.spawner.run_pre_spawn_hook())
             f = spawner.start()
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
@@ -433,10 +434,13 @@ class User(HasTraits):
                     self.db.delete(orm_token)
             self.db.commit()
         finally:
-            spawner._stop_pending = False
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
-            if auth:
-                yield gen.maybe_future(
-                    auth.post_spawn_stop(self, spawner)
-                )
+            try:
+                if auth:
+                    yield gen.maybe_future(
+                        auth.post_spawn_stop(self, spawner)
+                    )
+            except Exception:
+                self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
+            spawner._stop_pending = False

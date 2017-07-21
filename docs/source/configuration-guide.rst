@@ -1,12 +1,14 @@
-Configuration Guide
-===================
+Configuration Reference
+=======================
 
 .. toctree::
    :maxdepth: 2
 
+   howitworks
+   websecurity
+   rest
    authenticators
    spawners
    services
-   config-examples
    upgrading
-   troubleshooting
+   config-examples

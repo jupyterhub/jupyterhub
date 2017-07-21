@@ -1,19 +1,15 @@
 JupyterHub
 ==========
 
-With JupyterHub you can create a **multi-user Hub** which spawns, manages,
-and proxies multiple instances of the single-user
-`Jupyter notebook <https://jupyter-notebook.readthedocs.io/en/latest/>`_ server.
-Due to its flexibility and customization options, JupyterHub can be used to
-serve notebooks to a class of students, a corporate data science group, or a
-scientific research group.
-
+`JupyterHub`_, a multi-user **Hub**, spawns, manages, and proxies multiple
+instances of the single-user `Jupyter notebook`_ server.
+JupyterHub can be used to serve notebooks to a class of students, a corporate
+data science group, or a scientific research group.
 
 .. image:: images/jhub-parts.png
    :alt: JupyterHub subsystems
    :width: 40%
    :align: right
-
 
 Three subsystems make up JupyterHub:
 
@@ -21,47 +17,65 @@ Three subsystems make up JupyterHub:
 * a **configurable http proxy** (node-http-proxy)
 * multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
 
-JupyterHub's basic flow of operations includes:
+JupyterHub performs the following functions:
 
 - The Hub spawns a proxy
 - The proxy forwards all requests to the Hub by default
 - The Hub handles user login and spawns single-user servers on demand
-- The Hub configures the proxy to forward URL prefixes to the single-user notebook servers
+- The Hub configures the proxy to forward URL prefixes to the single-user
+  notebook servers
 
-For convenient administration of the Hub, its users, and :doc:`services`
-(added in version 0.7), JupyterHub also provides a
-`REST API <http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default>`__.
+For convenient administration of the Hub, its users, and :doc:`services`,
+JupyterHub also provides a
+`REST API`_.
 
 Contents
 --------
 
-**User Guide**
+**Installation Guide**
 
 * :doc:`quickstart`
-* :doc:`getting-started`
+* :doc:`quickstart-docker`
+* :doc:`installation-basics`
+
+**Getting Started**
+
+* :doc:`technical-overview`
+* :doc:`config-basics`
+* :doc:`networking-basics`
+* :doc:`security-basics`
+* :doc:`authenticators-users-basics`
+* :doc:`spawners-basics`
+* :doc:`services-basics`
+
+**Configuration Reference**
+
 * :doc:`howitworks`
 * :doc:`websecurity`
 * :doc:`rest`
-
-
-**Configuration Guide**
-
 * :doc:`authenticators`
 * :doc:`spawners`
 * :doc:`services`
-* :doc:`config-examples`
 * :doc:`upgrading`
-* :doc:`troubleshooting`
-
+* :doc:`config-examples`
 
 **API Reference**
 
 * :doc:`api/index`
 
 
-**About JupyterHub**
+**Troubleshooting**
+
+* :doc:`troubleshooting`
+
+
+**Changelog**
 
 * :doc:`changelog`
+
+
+**About JupyterHub**
+
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
 
@@ -87,9 +101,16 @@ Full Table of Contents
 .. toctree::
    :maxdepth: 2
 
-   user-guide
+   installation-guide
+   getting-started
    configuration-guide
    api/index
+   troubleshooting
    changelog
    contributor-list
    gallery-jhub-deployments
+
+
+.. _JupyterHub: https://github.com/jupyterhub/jupyterhub
+.. _Jupyter notebook: https://jupyter-notebook.readthedocs.io/en/latest/
+.. _REST API: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default

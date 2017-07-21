@@ -72,7 +72,7 @@ def test_init_tokens(io_loop):
             assert api_token is not None
             user = api_token.user
             assert user.name == username
-        
+
         # simulate second startup, reloading same tokens:
         app = MockHub(db_url=db_file, api_tokens=tokens)
         io_loop.run_sync(lambda : app.initialize([]))
@@ -82,7 +82,7 @@ def test_init_tokens(io_loop):
             assert api_token is not None
             user = api_token.user
             assert user.name == username
-        
+
         # don't allow failed token insertion to create users:
         tokens['short'] = 'gman'
         app = MockHub(db_url=db_file, api_tokens=tokens)
@@ -157,3 +157,7 @@ def test_load_groups(io_loop):
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
     assert sorted([ u.name for u in gold.users ]) == sorted(to_load['gold'])
+
+def test_version():
+    if sys.version_info[:2] < (3, 3):
+        assertRaises(ValueError)

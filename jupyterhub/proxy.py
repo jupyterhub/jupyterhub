@@ -313,8 +313,7 @@ class Proxy(LoggingConfigurable):
         # check service routes
         service_routes = {r['data']['service']
                           for r in routes.values() if 'service' in r['data']}
-        for orm_service in db.query(Service).filter(
-                Service.server is not None):
+        for orm_service in db.query(Service).filter(Service.server != None):
             service = service_dict[orm_service.name]
             if service.server is None:
                 # This should never be True, but seems to be on rare occasion.
@@ -430,8 +429,9 @@ class ConfigurableHTTPProxy(Proxy):
                              "  I hope there is SSL termination happening somewhere else...")
         self.log.info("Starting proxy @ %s", public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
+        shell = os.name == 'nt' 
         try:
-            self.proxy_process = Popen(cmd, env=env, start_new_session=True)
+            self.proxy_process = Popen(cmd, env=env, start_new_session=True, shell=shell)
         except FileNotFoundError as e:
             self.log.error(
                 "Failed to find proxy %r\n"

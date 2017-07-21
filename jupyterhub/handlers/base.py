@@ -130,10 +130,12 @@ class BaseHandler(RequestHandler):
         """
         headers = self.settings.get('headers', {})
         headers.setdefault("X-JupyterHub-Version", __version__)
-        headers.setdefault("Content-Security-Policy", self.content_security_policy)
 
         for header_name, header_content in headers.items():
             self.set_header(header_name, header_content)
+
+        if 'Content-Security-Policy' not in headers:
+            self.set_header('Content-Security-Policy', self.content_security_policy)
 
     #---------------------------------------------------------------
     # Login and cookie-related
@@ -326,6 +328,7 @@ class BaseHandler(RequestHandler):
 
         f = user.spawn(server_name, options)
         spawner = user.spawners[server_name]
+        user.proxy_pending = True
 
         @gen.coroutine
         def finish_user_spawn(f=None):
@@ -340,8 +343,16 @@ class BaseHandler(RequestHandler):
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
-            yield self.proxy.add_user(user)
-            spawner.add_poll_callback(self.user_stopped, user)
+            try:
+                yield self.proxy.add_user(user, server_name)
+            except Exception:
+                self.log.exception("Failed to add user %s to proxy!", user)
+                self.log.error("Stopping user %s to avoid inconsistent state")
+                yield user.stop()
+            else:
+                user.spawner.add_poll_callback(self.user_stopped, user)
+            finally:
+                user.proxy_pending = False
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
@@ -537,7 +548,7 @@ class UserSpawnHandler(BaseHandler):
 
             # logged in as correct user, spawn the server
             spawner = current_user.spawner
-            if spawner._spawn_pending:
+            if spawner._spawn_pending or spawner._proxy_pending:
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
                 html = self.render_template("spawn_pending.html", user=current_user)

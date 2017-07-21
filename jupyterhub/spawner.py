@@ -8,17 +8,15 @@ Contains base Spawner class & default implementation
 import errno
 import os
 import pipes
-import pwd
 import shutil
 import signal
 import sys
-import grp
 import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
 from tornado import gen
-from tornado.ioloop import PeriodicCallback
+from tornado.ioloop import PeriodicCallback, IOLoop
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
@@ -28,7 +26,7 @@ from traitlets import (
 
 from .objects import Server
 from .traitlets import Command, ByteSpecification
-from .utils import random_port, url_path_join
+from .utils import random_port, url_path_join, DT_MIN, DT_MAX, DT_SCALE
 
 
 class Spawner(LoggingConfigurable):
@@ -367,6 +365,25 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    pre_spawn_hook = Any(
+        help="""
+        An optional hook function that you can implement to do some bootstrapping work before
+        the spawner starts. For example, create a directory for your user or load initial content.
+        
+        This can be set independent of any concrete spawner implementation.
+        
+        Example:
+        
+        from subprocess import check_call
+        def my_hook(spawner):
+            username = spawner.user.name
+            check_call(['./examples/bootstrap-script/bootstrap.sh', username])
+
+        c.Spawner.pre_spawn_hook = my_hook
+        
+        """
+    ).tag(config=True)
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -537,6 +554,11 @@ class Spawner(LoggingConfigurable):
         args.extend(self.args)
         return args
 
+    def run_pre_spawn_hook(self):
+        """Run the pre_spawn_hook if defined"""
+        if self.pre_spawn_hook:
+            return self.pre_spawn_hook(self)
+
     @gen.coroutine
     def start(self):
         """Start the single-user server
@@ -643,17 +665,21 @@ class Spawner(LoggingConfigurable):
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status
 
-    death_interval = Float(0.1)
+    death_interval = Float(DT_MIN)
 
     @gen.coroutine
     def wait_for_death(self, timeout=10):
         """Wait for the single-user server to die, up to timeout seconds"""
-        for i in range(int(timeout / self.death_interval)):
+        loop = IOLoop.current()
+        tic = loop.time()
+        dt = self.death_interval
+        while dt > 0:
             status = yield self.poll()
             if status is not None:
                 break
             else:
-                yield gen.sleep(self.death_interval)
+                yield gen.sleep(dt)
+            dt = min(dt * DT_SCALE, DT_MAX, timeout - (loop.time() - tic))
 
 
 def _try_setcwd(path):
@@ -681,6 +707,8 @@ def set_user_setuid(username, chdir=True):
     Returned preexec_fn will set uid/gid, and attempt to chdir to the target user's
     home directory.
     """
+    import grp
+    import pwd
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
@@ -821,6 +849,7 @@ class LocalProcessSpawner(Spawner):
 
     def user_env(self, env):
         """Augment environment of spawned process with user specific env variables."""
+        import pwd
         env['USER'] = self.user.name
         home = pwd.getpwnam(self.user.name).pw_dir
         shell = pwd.getpwnam(self.user.name).pw_shell

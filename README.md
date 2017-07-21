@@ -12,6 +12,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/jupyterhub.svg)](https://pypi.python.org/pypi/jupyterhub)
 [![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
+[![Documentation Status](http://readthedocs.org/projects/jupyterhub/badge/?version=0.7.2)](http://jupyterhub.readthedocs.io/en/0.7.2/?badge=0.7.2)
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
@@ -51,7 +52,9 @@ for administration of the Hub and its users.
 
 ### Check prerequisites
 
-- [Python](https://www.python.org/downloads/) 3.3 or greater
+A Linux/Unix based system with the following:
+
+- [Python](https://www.python.org/downloads/) 3.4 or greater
 - [nodejs/npm](https://www.npmjs.com/) Install a recent version of
   [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node)
   For example, install it on Linux (Debian/Ubuntu) using:
@@ -204,6 +207,20 @@ We use [pytest](http://doc.pytest.org/en/latest/) for **running tests**:
 ```bash
 pytest jupyterhub/tests
 ```
+
+### A note about platform support
+
+JupyterHub is supported on Linux/Unix based systems.
+
+JupyterHub officially **does not** support Windows. You may be able to use
+JupyterHub on Windows if you use a Spawner and Authenticator that work on
+Windows, but the JupyterHub defaults will not. Bugs reported on Windows will not
+be accepted, and the test suite will not run on Windows. Small patches that fix
+minor Windows compatibility issues (such as basic installation) **may** be accepted,
+however. For Windows-based systems, we would recommend running JupyterHub in a
+docker container or Linux VM.
+
+[Additional Reference:](http://www.tornadoweb.org/en/stable/#installation) Tornado's documentation on Windows platform support
 
 ## License
 

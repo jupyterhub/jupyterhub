@@ -3,9 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from grp import getgrnam
 import pipes
-import pwd
 import re
 from shutil import which
 import sys
@@ -24,6 +22,15 @@ from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
 from .handlers.login import LoginHandler
 from .utils import url_path_join
 from .traitlets import Command
+
+
+
+def getgrnam(name):
+    """Wrapper function to protect against `grp` not being available 
+    on Windows
+    """
+    import grp
+    return grp.getgrnam(name)
 
 
 class Authenticator(LoggingConfigurable):
@@ -461,6 +468,7 @@ class LocalAuthenticator(Authenticator):
     @staticmethod
     def system_user_exists(user):
         """Check if the user exists on the system"""
+        import pwd
         try:
             pwd.getpwnam(user.name)
         except KeyError:

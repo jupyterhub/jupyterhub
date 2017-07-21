@@ -1450,7 +1450,6 @@ class JupyterHub(Application):
                 self.exit(1)
         else:
             self.log.info("Not starting proxy")
-        yield self.proxy.add_hub_route(self.hub)
 
         # start the service(s)
         for service_name, service in self._service_map.items():
