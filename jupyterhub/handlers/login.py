@@ -87,11 +87,11 @@ class LoginHandler(BaseHandler):
         authenticated = yield self.authenticate(data)
         auth_timer.stop(send=False)
 
-        # unpack auth dict
-        username = authenticated['name']
-        auth_state = authenticated.get('auth_state')
-
         if authenticated:
+            # unpack auth dict
+            username = authenticated['name']
+            auth_state = authenticated.get('auth_state')
+
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
             user = self.user_from_username(username)
@@ -101,7 +101,7 @@ class LoginHandler(BaseHandler):
             already_running = False
             if user.spawner:
                 status = yield user.spawner.poll()
-                already_running = (status == None)
+                already_running = (status is None)
             if not already_running and not user.spawner.options_form:
                 yield self.spawn_single_user(user)
             self.set_login_cookie(user)
@@ -117,7 +117,7 @@ class LoginHandler(BaseHandler):
             self.log.debug("Failed login for %s", data.get('username', 'unknown user'))
             html = self._render(
                 login_error='Invalid username or password',
-                username=username,
+                username=data['username'],
             )
             self.finish(html)
 
