@@ -462,7 +462,7 @@ class JupyterHub(Application):
 
     @observe('api_tokens')
     def _deprecate_api_tokens(self, change):
-        self.log.warning("JupyterHub.api_tokens is pending deprecations"
+        self.log.warning("JupyterHub.api_tokens is pending deprecation"
             " since JupyterHub version 0.8."
             "  Consider using JupyterHub.service_tokens."
             "  If you have a use case for services that identify as users,"
