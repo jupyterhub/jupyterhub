@@ -1162,7 +1162,7 @@ class JupyterHub(Application):
         self.oauth_provider = make_provider(
             self.session_factory,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
-            login_url=url_path_join(base_url, 'login'),
+            login_url=url_path_join(base_url, 'login')
         )
 
     def init_proxy(self):
