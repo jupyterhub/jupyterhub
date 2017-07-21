@@ -1,5 +1,5 @@
-Security basics
-===============
+Security configuration
+======================
 
 .. important::
 
