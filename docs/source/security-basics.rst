@@ -14,8 +14,9 @@ configuration settings are the main aspects of security configuration:
    other services to authenticate to the Proxy)
 
 The Hub hashes all secrets (e.g., auth tokens) before storing them in its
-database. A loss of control over read-access to the database should have no
-security impact on your deployment.
+database. A loss of control over read-access to the database should have
+minimal impact on your deployment; if your database has been compromised, it
+is still a good idea to revoke existing tokens.
 
 .. _ssl-encryption:
 
@@ -87,22 +88,22 @@ Generating and storing as a cookie secret file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The cookie secret should be 32 random bytes, encoded as hex, and is typically
-stored in a ``cookie_secret`` file. An example command to generate the
-``cookie_secret`` file is:
+stored in a ``jupyterhub_cookie_secret`` file. An example command to generate the
+``jupyterhub_cookie_secret`` file is:
 
 .. code-block:: bash
 
-    openssl rand -hex 32 > /srv/jupyterhub/cookie_secret
+    openssl rand -hex 32 > /srv/jupyterhub/jupyterhub_cookie_secret
 
 In most deployments of JupyterHub, you should point this to a secure location on
-the file system, such as ``/srv/jupyterhub/cookie_secret``.
+the file system, such as ``/srv/jupyterhub/jupyterhub_cookie_secret``.
 
-The location of the ``cookie_secret_file`` can be specified in the
+The location of the ``jupyterhub_cookie_secret`` file can be specified in the
 ``jupyterhub_config.py`` file as follows:
 
 .. code-block:: python
 
-    c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/cookie_secret'
+    c.JupyterHub.cookie_secret_file = '/srv/jupyterhub/jupyterhub_cookie_secret'
 
 If the cookie secret file doesn't exist when the Hub starts, a new cookie
 secret is generated and stored in the file. The file must not be readable by
@@ -178,10 +179,3 @@ If you don't set the Proxy authentication token, the Hub will generate a random
 key itself, which means that any time you restart the Hub you **must also
 restart the Proxy**. If the proxy is a subprocess of the Hub, this should happen
 automatically (this is the default configuration).
-
-Setting a token when using services
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Another time you must set the Proxy authentication token yourself is if you
-want other services, such as `nbgrader <https://github.com/jupyter/nbgrader>`_,
-to also be able to connect to the Proxy.
