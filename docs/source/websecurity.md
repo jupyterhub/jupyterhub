@@ -1,9 +1,14 @@
 # Security Overview
 
-The **Security Overview** section helps you learn about the design of JupyterHub
-with respect to web security, the semi-trusted user, and the available
-mitigations to protect untrusted users from each other. It also helps you
-obtain a deeper understanding of how JupyterHub works.
+The **Security Overview** section helps you learn about:
+
+- the design of JupyterHub with respect to web security
+- the semi-trusted user
+- the available mitigations to protect untrusted users from each other
+- the value of periodic security audits.
+
+This overview also helps you obtain a deeper understanding of how JupyterHub
+works.
 
 ## Semi-trusted and untrusted users
 
@@ -97,5 +102,15 @@ It is important to note that the control over the environment only affects the
 single-user server, and not the environment(s) in which the user's kernel(s)
 may run. Installing additional packages in the kernel environment does not
 pose additional risk to the web application's security.
+
+## Security audits
+
+We recommend that you do periodic reviews of your deployment's security. It's
+good practice to keep JupyterHub, configurable-http-proxy, and nodejs
+versions up to date.
+
+A handy website for testing your deployment is
+[Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
+
 
 [configurable-http-proxy]: https://github.com/jupyterhub/configurable-http-proxy

@@ -1,19 +1,17 @@
-Security configuration
-======================
+Security settings
+=================
 
 .. important::
 
    You should not run JupyterHub without SSL encryption on a public network.
 
 Security is the most important aspect of configuring Jupyter. Three
-configuration settings and one best practice are the main aspects of security
-configuration:
+configuration settings are the main aspects of security configuration:
 
 1. :ref:`SSL encryption <ssl-encryption>` (to enable HTTPS)
 2. :ref:`Cookie secret <cookie-secret>` (a key for encrypting browser cookies)
 3. Proxy :ref:`authentication token <authentication-token>` (used for the Hub and
    other services to authenticate to the Proxy)
-4. Periodic :ref:`security audits <security-audits>`
 
 The Hub hashes all secrets (e.g., auth tokens) before storing them in its
 database. A loss of control over read-access to the database should have no
@@ -162,15 +160,3 @@ automatically (this is the default configuration).
 Another time you must set the Proxy authentication token yourself is if
 you want other services, such as `nbgrader <https://github.com/jupyter/nbgrader>`_,
 to also be able to connect to the Proxy.
-
-.. _security-audits:
-
-Security audits
----------------
-
-We recommend that you do periodic reviews of your deployment's security. It's
-good practice to keep JupyterHub, configurable-http-proxy, and nodejs
-versions up to date.
-
-A handy website for testing your deployment is
-`Qualsys' SSL analyzer tool <https://www.ssllabs.com/ssltest/analyze.html>`_.
