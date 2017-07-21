@@ -58,8 +58,8 @@ If any additional services are run on the same domain as the Hub, the services
 
 ## Mitigate security issues
 
-There are two main approaches to mitigating these issues with configuration
-options provided by JupyterHub.
+Several approaches to mitigating these issues with configuration
+options provided by JupyterHub include:
 
 ### Enable subdomains
 
@@ -74,12 +74,7 @@ institutional domains, wildcard DNS and SSL are not available. **If you do plan
 to serve untrusted users, enabling subdomains is highly encouraged**, as it
 resolves the cross-site issues.
 
-### Unavailable subdomains
-
-When subdomains are not available or not desirable, three steps can be taken
-to secure JupyterHub from untrusted users.
-
-#### Disable user config
+### Disable user config
 
 If subdomains are not available or not desirable, JupyterHub provides a a
 configuration option `Spawner.disable_user_config`, which can be set to prevent
@@ -87,16 +82,17 @@ the user-owned configuration files from being loaded. After implementing this
 option, PATHs and package installation and PATHs are the other things that the
 admin must enforce.
 
-#### Prevent spawners from evaluating shell configuration files
+### Prevent spawners from evaluating shell configuration files
 
 For most Spawners, `PATH` is not something users can influence, but care should
 be taken to ensure that the Spawner does *not* evaluate shell configuration
 files prior to launching the server.
 
-#### Isolate packages using virtualenv
+### Isolate packages using virtualenv
 
 Package isolation is most easily handled by running the single-user server in
-a virtualenv with disabled system-site-packages.
+a virtualenv with disabled system-site-packages. The user should not have
+permission to install packages into this environment.
 
 It is important to note that the control over the environment only affects the
 single-user server, and not the environment(s) in which the user's kernel(s)
