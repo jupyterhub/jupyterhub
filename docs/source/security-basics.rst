@@ -30,8 +30,8 @@ Using an SSL certificate
 
 This will require you to obtain an official, trusted SSL certificate or create a
 self-signed certificate. Once you have obtained and installed a key and
-certificate you need to specify their locations in the configuration file as
-follows:
+certificate you need to specify their locations in the ``jupyterhub_config.py``
+configuration file as follows:
 
 .. code-block:: python
 
@@ -58,7 +58,6 @@ qualified domain name):
 
     c.JupyterHub.ssl_key = '/etc/letsencrypt/live/{mydomain.tld}/privkey.pem'
     c.JupyterHub.ssl_cert = '/etc/letsencrypt/live/{mydomain.tld}/fullchain.pem'
-
 
 If the fully qualified domain name (FQDN) is ``example.com``, the following
 would be the needed configuration:
