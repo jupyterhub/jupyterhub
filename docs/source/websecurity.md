@@ -1,6 +1,11 @@
-# Web Security and JupyterHub's design
+# Security Overview
 
-## JupyterHub's design approach
+The **Security Overview** section helps you learn about the design of JupyterHub
+with respect to web security, the semi-trusted user, and the available
+mitigations to protect untrusted users from each other. It also helps you
+obtain a deeper understanding of how JupyterHub works.
+
+## Semi-trusted and untrusted users
 
 JupyterHub is designed to be a *simple multi-user server for modestly sized
 groups* of **semi-trusted** users. While the design reflects serving semi-trusted
@@ -18,7 +23,7 @@ single-user servers and the Hub, or between single-user servers and each
 other, since browsers see the whole thing (proxy, Hub, and single user
 servers) as a single website (i.e. single domain).
 
-## How to protect users from each other
+## Protect users from each other
 
 To protect users from each other, a user must **never** be able to write arbitrary
 HTML and serve it to another user on the Hub's domain. JupyterHub's
@@ -46,10 +51,10 @@ If any additional services are run on the same domain as the Hub, the services
 **must never** display user-authored HTML that is neither *sanitized* nor *sandboxed*
 (e.g. IFramed) to any user that lacks authentication as the author of a file.
 
-## Mitigate security issues through configuration options
+## Mitigate security issues
 
 There are two main approaches to mitigating these issues with configuration
-options provided by JupyterHub:
+options provided by JupyterHub.
 
 ### Enable subdomains
 
@@ -64,7 +69,10 @@ institutional domains, wildcard DNS and SSL are not available. **If you do plan
 to serve untrusted users, enabling subdomains is highly encouraged**, as it
 resolves the cross-site issues.
 
-### Steps to take when subdomains can not be used
+### Unavailable subdomains
+
+When subdomains are not available or not desirable, three steps can be taken
+to secure JupyterHub from untrusted users.
 
 #### Disable user config
 

@@ -1,18 +1,19 @@
-Security
-========
+Security basics
+===============
 
 .. important::
 
-   You should not run JupyterHub without SSL encryption on a public network
+   You should not run JupyterHub without SSL encryption on a public network.
 
-Security is the most important aspect of configuring Jupyter. There are four
-main aspects of the security configuration:
+Security is the most important aspect of configuring Jupyter. Three
+configuration settings and one best practice are the main aspects of security
+configuration:
 
-1. `SSL encryption <ssl-encryption>`_ (to enable HTTPS)
-2. `Cookie secret <cookie-secret>`_ (a key for encrypting browser cookies)
-3. Proxy `authentication token <authentication-token>`_ (used for the Hub and
+1. :ref:`SSL encryption <ssl-encryption>` (to enable HTTPS)
+2. :ref:`Cookie secret <cookie-secret>` (a key for encrypting browser cookies)
+3. Proxy :ref:`authentication token <authentication-token>` (used for the Hub and
    other services to authenticate to the Proxy)
-4. Periodic `security audits <security-audits>`_
+4. Periodic :ref:`security audits <security-audits>`
 
 The Hub hashes all secrets (e.g., auth tokens) before storing them in its
 database. A loss of control over read-access to the database should have no
@@ -100,11 +101,10 @@ An example would be to generate this file with:
 
     openssl rand -hex 32 > /srv/jupyterhub/cookie_secret
 
-
 In most deployments of JupyterHub, you should point this to a secure location on
 the file system, such as ``/srv/jupyterhub/cookie_secret``. If the cookie secret
 file doesn't exist when the Hub starts, a new cookie secret is generated and
-stored in the file. The file must not be readable by group or other or the
+stored in the file. The file must not be readable by ``group`` or ``other`` or the
 server won't start. The recommended permissions for the cookie secret file are
 ``600`` (owner-only rw).
 
@@ -123,7 +123,7 @@ Hub. If you set it dynamically as above, all users will be logged out each time
 the Hub starts.
 
 You can also set the cookie secret in the configuration file
-itself,``jupyterhub_config.py``, as a binary string:
+itself, ``jupyterhub_config.py``, as a binary string:
 
 .. code-block:: python
 
@@ -173,4 +173,4 @@ good practice to keep JupyterHub, configurable-http-proxy, and nodejs
 versions up to date.
 
 A handy website for testing your deployment is
-[Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
+`Qualsys' SSL analyzer tool <https://www.ssllabs.com/ssltest/analyze.html>`_.
