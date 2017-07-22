@@ -509,9 +509,12 @@ class PrefixRedirectHandler(BaseHandler):
         # This is important in many distributed proxy implementations - those are often eventually
         # consistent and can take upto a couple of seconds to actually apply throughout the cluster.
         times = int(self.get_argument('times', 0))
-        if times > 12:
+        # FIXME: should this be customizable? At times=7, it'll wait for about 12s the last time.
+        if times > 7:
             # We stop if we've been redirected 12 times.
             raise web.HTTPError(500)
+        # We want this to be 0 the first time, and then increase after that. This formula seems to work,
+        # but we might wanna make it customizable?
         yield gen.sleep(( (2 ** times) - 1)/10)
         uri = self.request.uri
         if uri.startswith(self.base_url):
