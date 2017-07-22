@@ -6,7 +6,7 @@
 import re
 from datetime import timedelta
 from http.client import responses
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from jinja2 import TemplateNotFound
 
@@ -503,15 +503,29 @@ class PrefixRedirectHandler(BaseHandler):
 
     Redirects /foo to /prefix/foo, etc.
     """
+    @gen.coroutine
     def get(self):
+        # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
+        # This is important in many distributed proxy implementations - those are often eventually
+        # consistent and can take upto a couple of seconds to actually apply throughout the cluster.
+        times = int(self.get_argument('times', 0))
+        if times > 12:
+            # We stop if we've been redirected 12 times.
+            raise web.HTTPError(500)
+        yield gen.sleep(( (2 ** times) - 1)/10)
         uri = self.request.uri
         if uri.startswith(self.base_url):
             path = self.request.uri[len(self.base_url):]
         else:
             path = self.request.path
-        self.redirect(url_path_join(
-            self.hub.base_url, path,
-        ), permanent=False)
+
+        url_parts = urlparse(url_path_join(self.hub.base_url, path))
+        query_parts = parse_qs(url_parts.query)
+        query_parts['times'] = times + 1
+        url_parts = url_parts._replace(query=urlencode(query_parts))
+        new_url = urlunparse(url_parts)
+
+        self.redirect(new_url, permanent=False)
 
 
 class UserSpawnHandler(BaseHandler):
