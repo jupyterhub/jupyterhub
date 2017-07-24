@@ -427,7 +427,7 @@ class OAuthAccessToken(Hashed, Base):
 
     # from Hashed
     hashed = Column(Unicode(64))
-    prefix = Column(Unicode(16))
+    prefix = Column(Unicode(16), index=True)
     
     def __repr__(self):
         return "<{cls}('{prefix}...', user='{user}'>".format(
