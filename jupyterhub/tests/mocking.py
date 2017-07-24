@@ -229,7 +229,7 @@ def public_url(app, user_or_service=None, path=''):
             host = user_or_service.host
         else:
             host = public_host(app)
-        prefix = user_or_service.server.base_url
+        prefix = user_or_service.prefix
     else:
         host = public_host(app)
         prefix = Server.from_url(app.proxy.public_url).base_url

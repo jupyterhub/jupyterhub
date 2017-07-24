@@ -400,11 +400,14 @@ class BaseHandler(RequestHandler):
         yield user.stop()
 
     @gen.coroutine
-    def stop_single_user(self, user):
-        if user.spawner._stop_pending:
-            raise RuntimeError("Stop already pending for: %s" % user.name)
+    def stop_single_user(self, user, name=''):
+        if name not in user.spawners:
+            raise KeyError("User %s has no such spawner %r", user.name, name)
+        spawner = user.spawners[name]
+        if spawner._stop_pending:
+            raise RuntimeError("Stop already pending for: %s:%s" % (user.name, name))
         tic = IOLoop.current().time()
-        yield self.proxy.delete_user(user)
+        yield self.proxy.delete_user(user, name)
         f = user.stop()
         @gen.coroutine
         def finish_stop(f=None):
@@ -422,9 +425,9 @@ class BaseHandler(RequestHandler):
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), f)
         except gen.TimeoutError:
-            if user.spawner._stop_pending:
+            if spawner._stop_pending:
                 # hit timeout, but stop is still pending
-                self.log.warning("User %s server is slow to stop", user.name)
+                self.log.warning("User %s:%s server is slow to stop", user.name, name)
                 # schedule finish for when the server finishes stopping
                 IOLoop.current().add_future(f, finish_stop)
             else:

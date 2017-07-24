@@ -276,7 +276,7 @@ class Proxy(LoggingConfigurable):
         futures = []
         for orm_user in db.query(User):
             user = user_dict[orm_user]
-            for name, spawner in user.spawners:
+            for name, spawner in user.spawners.items():
                 if user.running(name):
                     futures.append(self.add_user(user, name))
         # wait after submitting them all

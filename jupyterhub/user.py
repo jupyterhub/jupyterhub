@@ -134,7 +134,7 @@ class User(HasTraits):
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
-        self.base_url = url_path_join(
+        self.base_url = self.prefix = url_path_join(
             self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
 
         self.spawners = _SpawnerDict(self._new_spawner)
