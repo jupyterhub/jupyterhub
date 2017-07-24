@@ -82,9 +82,12 @@ class Server(HasTraits):
     # setter to pass through to the database
     @observe('ip', 'proto', 'port', 'base_url', 'cookie_name')
     def _change(self, change):
-        if self.orm_server:
-            if getattr(self.orm_server, change.name) != change.new:
-                setattr(self.orm_server, change.name, change.new)
+        if self.orm_server and getattr(self.orm_server, change.name) != change.new:
+            # setattr on an sqlalchemy object sets the dirty flag,
+            # even if the value doesn't change.
+            # Avoid calling setattr when there's been no change,
+            # to avoid setting the dirty flag and triggering rollback.
+            setattr(self.orm_server, change.name, change.new)
 
     @property
     def host(self):
