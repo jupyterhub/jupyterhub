@@ -83,7 +83,8 @@ class Server(HasTraits):
     @observe('ip', 'proto', 'port', 'base_url', 'cookie_name')
     def _change(self, change):
         if self.orm_server:
-            setattr(self.orm_server, change.name, change.new)
+            if getattr(self.orm_server, change.name) != change.new:
+                setattr(self.orm_server, change.name, change.new)
 
     @property
     def host(self):
