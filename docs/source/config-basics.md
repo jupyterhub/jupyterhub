@@ -13,8 +13,8 @@ This section will help you learn how to:
 
 ## Generate a default config file
 
-On startup, JupyterHub will look by default for a configuration file named
-`jupyterhub_config.py` in the current working directory.
+On startup, JupyterHub will look by default for a configuration file,
+`jupyterhub_config.py`, in the current working directory.
 
 To generate a default config file, `jupyterhub_config.py`:
 
@@ -56,18 +56,19 @@ To display all command line options that are available for configuration:
 ```
 
 Configuration using the command line options is done when launching JupyterHub.
-For example, to start JupyterHub on ``10.0.1.2:443`` with **https**, you
+For example, to start JupyterHub on ``10.0.1.2:443`` with https, you
 would enter:
 
 ```bash
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
 ```    
 
-All configurable options are technically configurable on the command-line,
+All configurable options may technically be set on the command-line,
 though some are inconvenient to type. To set a particular configuration
-parameter, `c.Class.trait`, use the command line option, `--Class.trait`, when
-starting JupyterHub. For example, configure the `c.Spawner.notebook_dir`
-trait from the command-line, use `--Spawner.notebook_dir`:
+parameter, `c.Class.trait`, you would use the command line option,
+`--Class.trait`, when starting JupyterHub. For example, to configure the
+`c.Spawner.notebook_dir` trait from the command-line, use the
+`--Spawner.notebook_dir` option:
 
 ```bash
 jupyterhub --Spawner.notebook_dir='~/assignments'
@@ -78,8 +79,8 @@ jupyterhub --Spawner.notebook_dir='~/assignments'
 The default authentication and process spawning mechanisms can be replaced, and
 specific [authenticators](docs/source/authenticators-users-basics.md) and
 [spawners](docs/source/spawners-basics.md) can be set in the configuration file.
-This enables JupyterHub to be used in a variety of authentication methods or process
-control and deployment environments. [Some examples](docs/source/config-examples.md),
+This enables JupyterHub to be used with a variety of authentication methods or
+process control and deployment environments. [Some examples](docs/source/config-examples.md),
 meant as illustration, are:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
