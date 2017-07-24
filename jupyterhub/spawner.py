@@ -48,6 +48,7 @@ class Spawner(LoggingConfigurable):
     # private attributes for tracking status
     _spawn_pending = False
     _stop_pending = False
+    _proxy_pending = False
     _waiting_for_response = False
 
     orm_spawner = Any()

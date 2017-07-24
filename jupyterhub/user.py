@@ -117,10 +117,6 @@ class User(HasTraits):
             self._user_id = None
 
     spawners = None
-    spawn_pending = False
-    stop_pending = False
-    proxy_pending = False
-    waiting_for_response = False
 
     @property
     def authenticator(self):

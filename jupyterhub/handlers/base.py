@@ -330,7 +330,7 @@ class BaseHandler(RequestHandler):
 
         f = user.spawn(server_name, options)
         spawner = user.spawners[server_name]
-        user.proxy_pending = True
+        spawner._proxy_pending = True
 
         @gen.coroutine
         def finish_user_spawn(f=None):
@@ -352,9 +352,9 @@ class BaseHandler(RequestHandler):
                 self.log.error("Stopping user %s to avoid inconsistent state")
                 yield user.stop()
             else:
-                user.spawner.add_poll_callback(self.user_stopped, user)
+                spawner.add_poll_callback(self.user_stopped, user)
             finally:
-                user.proxy_pending = False
+                spawner._proxy_pending = False
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
