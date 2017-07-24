@@ -72,10 +72,7 @@ def test_admin_not_admin(app):
     assert r.status_code == 403
 
 def test_admin(app):
-    cookies = app.login_user('river')
-    u = orm.User.find(app.db, 'river')
-    u.admin = True
-    app.db.commit()
+    cookies = app.login_user('admin')
     r = get_page('admin', app, cookies=cookies)
     r.raise_for_status()
     assert r.url.endswith('/admin')

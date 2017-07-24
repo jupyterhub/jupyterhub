@@ -309,6 +309,8 @@ class Proxy(LoggingConfigurable):
                         self.log.warning(
                             "Adding missing route for %s (%s)", spec, spawner.server)
                         futures.append(self.add_user(user, name))
+                elif spawner._proxy_pending:
+                    good_routes.add(user.proxy_spec(name))
 
         # check service routes
         service_routes = {r['data']['service']
