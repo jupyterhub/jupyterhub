@@ -1,5 +1,11 @@
 # Networking basics
 
+This section will help you with basic proxy and network configuration to:
+
+- set the proxy's IP address and port
+- set the proxy's REST API IP address and port
+- configure the Hub if the Proxy or Spawners are remote or isolated
+
 ## Set the Proxy's IP address and port
 
 The Proxy's main IP address setting determines where JupyterHub is available to users.
@@ -30,9 +36,10 @@ additional networking details to be configured.
 
 ## Set the Proxy's REST API communication IP address and port (optional)
 
-The Hub service talks to the proxy via a REST API on a secondary port,
-whose network interface and port can be configured separately.
 By default, this REST API listens on port 8081 of `localhost` only.
+The Hub service talks to the proxy via a REST API on a secondary port. This
+network interface and port can be configured separately and override the
+default settings.
 
 If running the Proxy separate from the Hub, configure the REST API communication
 IP address and port by adding this to the `jupyterhub_config.py` file:
@@ -43,7 +50,7 @@ c.JupyterHub.proxy_api_ip = '10.0.1.4'
 c.JupyterHub.proxy_api_port = 5432
 ```
 
-## Configuring the Hub if Spawners or Proxy are remote or isolated in containers
+## Configure the Hub if the Proxy or Spawners are remote or isolated
 
 The Hub service listens only on `localhost` (port 8080) by default.
 The Hub needs to be accessible from both the proxy and all Spawners.
