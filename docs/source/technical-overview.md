@@ -25,7 +25,7 @@ by the `jupyterhub` command line program:
   [configurable http proxy](https://github.com/jupyterhub/configurable-http-proxy)
   (node-http-proxy) is the default proxy.
 
-- **Single-User Notebook Server** (Python/IPython/Tornado): a dedicated,
+- **Single-User Notebook Server** (Python/Tornado): a dedicated,
   single-user, Jupyter Notebook server is started for each user on the system
   when the user logs in. The object that starts the single-user notebook
   servers is called a **Spawner**.    
@@ -39,7 +39,7 @@ the domain name of the server.
 
 The basic principles of operation are:
 
-- The Hub spawns proxy
+- The Hub spawns the proxy (in the default JupyterHub configuration)
 - The proxy forwards all requests to the Hub by default
 - The Hub handles login, and spawns single-user notebook servers on demand
 - The Hub configures the proxy to forward url prefixes to single-user notebook
@@ -68,25 +68,24 @@ When a user accesses JupyterHub, the following events take place:
 
 - Login data is handed to the [Authenticator](./authenticators.html) instance for
   validation
-- The Authenticator returns the username and if the login information is valid
+- The Authenticator returns the username if the login information is valid
 - A single-user notebook server instance is [spawned](./spawners.html) for the
   logged-in user
 - When the single-user notebook server starts, the proxy is notified to forward
   requests to `/user/[username]/*` to the single-user notebook server.
-- Two cookies are set, one for `/hub/` and another for `/user/[username]`,
-  containing an encrypted token.
+- A cookie is set on `/hub/`, containing an encrypted token. (Prior to version
+  0.8, a cookie for `/user/[username]` was used too.)
 - The browser is redirected to `/user/[username]`, and the request is handled by
   the single-user notebook server.
 
-Logging into a single-user notebook server is authenticated via the Hub:
+The single-user server identifies the user with the Hub via OAuth:
 
-- On request, the single-user server forwards the encrypted cookie to the Hub
-  for verification.
-- The Hub replies with the username if the encrypted cookie is valid.
-- If the user is the owner of the single-user notebook server, access is
-  allowed.
-- If it is the wrong user or an invalid cookie, the browser is redirected to
-  `/hub/login`.
+- on request, the single-user server checks a cookie
+- if no cookie is set, redirect to the Hub for verification via OAuth
+- after verification at the Hub, the browser is redirected back to the
+  single-user server
+- the token is verified and stored in a cookie
+- if no user is identified, the browser is redirected back to `/hub/login`
 
 ## Default Behavior
 
