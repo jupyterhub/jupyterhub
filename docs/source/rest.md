@@ -49,8 +49,9 @@ Authorization header.
 ### Use requests
 
 Using the popular Python [requests](http://docs.python-requests.org/en/master/)
-library, here's example code to get users of a JupyterHub deployment. An API
-is made, and the request sends an API token for authorization:
+library, here's example code to make an API request for the users of a JupyterHub
+deployment. An API GET request is made, and the request sends an API token for
+authorization. The response contains information about the users:
 
 ```python
 import requests
