@@ -16,7 +16,7 @@ deployment with the following assumptions:
 * Using GitHub OAuth (using oauthenticator) for login
 * Users exist locally on the server
 * Users' notebooks to be served from `~/assignments` to allow users to browse
-  for notebooks within other users home directories
+  for notebooks within other users' home directories
 * You want the landing page for each user to be a `Welcome.ipynb` notebook in
   their assignments directory.
 * All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
@@ -71,7 +71,7 @@ c.Spawner.notebook_dir = '~/assignments'
 c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
-In addition, using the GitHub Authenticator requires a few additional
+Using the GitHub Authenticator requires a few additional
 environment variable to be set prior to launching JupyterHub:
 
 ```bash
