@@ -1,9 +1,6 @@
 # Technical Overview
 
-JupyterHub is a set of processes that together provide a single user Jupyter
-Notebook server for each person in a group.
-
-This section gives you a high-level technical overview of:
+The **Technical Overview** section gives you a high-level view of:
 
 - JupyterHub's Subsystems: Hub, Proxy, Single-User Notebook Server
 - how the subsystems interact
@@ -16,7 +13,9 @@ JupyterHub and how it works.
 
 ## The Subsystems: Hub, Proxy, Single-User Notebook Server
 
-Three major subsystems are started by the `jupyterhub` command line program:
+JupyterHub is a set of processes that together provide a single user Jupyter
+Notebook server for each person in a group. Three major subsystems are started
+by the `jupyterhub` command line program:
 
 - **Hub** (Python/Tornado): manages user accounts, authentication, and
   coordinates Single User Notebook Servers using a Spawner.
