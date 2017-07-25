@@ -40,7 +40,6 @@ Contents
 
 **Getting Started**
 
-* :doc:`technical-overview`
 * :doc:`config-basics`
 * :doc:`networking-basics`
 * :doc:`security-basics`
@@ -50,7 +49,7 @@ Contents
 
 **Configuration Reference**
 
-* :doc:`howitworks`
+* :doc:`technical-overview`
 * :doc:`websecurity`
 * :doc:`rest`
 * :doc:`authenticators`

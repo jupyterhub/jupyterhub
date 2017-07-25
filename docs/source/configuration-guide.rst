@@ -5,7 +5,6 @@ Configuration Reference
    :maxdepth: 2
 
    technical-overview
-   howitworks
    websecurity
    rest
    authenticators
