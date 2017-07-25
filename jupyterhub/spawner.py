@@ -146,7 +146,7 @@ class Spawner(LoggingConfigurable):
         The surrounding `<form>` element and the submit button are already provided.
 
         For example:
-        
+
         .. code:: html
 
             Set your key:
@@ -370,18 +370,18 @@ class Spawner(LoggingConfigurable):
         help="""
         An optional hook function that you can implement to do some bootstrapping work before
         the spawner starts. For example, create a directory for your user or load initial content.
-        
-        This can be set independent of any concrete spawner implementation.
-        
-        Example:
-        
-        from subprocess import check_call
-        def my_hook(spawner):
-            username = spawner.user.name
-            check_call(['./examples/bootstrap-script/bootstrap.sh', username])
 
-        c.Spawner.pre_spawn_hook = my_hook
-        
+        This can be set independent of any concrete spawner implementation.
+
+        Example::
+
+            from subprocess import check_call
+            def my_hook(spawner):
+                username = spawner.user.name
+                check_call(['./examples/bootstrap-script/bootstrap.sh', username])
+
+            c.Spawner.pre_spawn_hook = my_hook
+
         """
     ).tag(config=True)
 
@@ -464,7 +464,7 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
             url_path_join(self.user.url, self.name, 'oauth_callback')
-        
+
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_API_URL'] = self.hub.api_url
@@ -884,7 +884,7 @@ class LocalProcessSpawner(Spawner):
             cmd = self.shell_cmd + [' '.join(pipes.quote(s) for s in cmd)]
 
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
-        
+
         popen_kwargs = dict(
             preexec_fn=self.make_preexec_fn(self.user.name),
             start_new_session=True,  # don't forward signals

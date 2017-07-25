@@ -1,30 +1,30 @@
 # Configuration examples
 
-This section provides configuration files and tips for the following
-configurations:
+This section provides examples, including configuration files and tips, for the
+following configurations:
 
-- Example with GitHub OAuth
-- Example with nginx reverse proxy
-- JupyterHub deployment on AWS with NGINX
+- Using GitHub OAuth
+- Using nginx reverse proxy
 
+## Using GitHub OAuth
 
-## Example with GitHub OAuth
+In this example, we show a configuration file for a fairly standard JupyterHub
+deployment with the following assumptions:
 
-In the following example, we show a configuration files for a fairly standard JupyterHub deployment with the following assumptions:
-
-* JupyterHub is running on a single cloud server
+* Running JupyterHub on a single cloud server
 * Using SSL on the standard HTTPS port 443
-* You want to use GitHub OAuth (using oauthenticator) for login
-* You need the users to exist locally on the server
-* You want users' notebooks to be served from `~/assignments` to allow users to browse for notebooks within
-  other users home directories
-* You want the landing page for each user to be a Welcome.ipynb notebook in their assignments directory.
+* Using GitHub OAuth (using oauthenticator) for login
+* Users exist locally on the server
+* Users' notebooks to be served from `~/assignments` to allow users to browse
+  for notebooks within other users' home directories
+* You want the landing page for each user to be a `Welcome.ipynb` notebook in
+  their assignments directory.
 * All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
 
-Let's start out with `jupyterhub_config.py`:
+The `jupyterhub_config.py` file would have these settings:
 
 ```python
-# jupyterhub_config.py
+# jupyterhub_config.py file
 c = get_config()
 
 import os
@@ -34,7 +34,6 @@ runtime_dir = os.path.join('/srv/jupyterhub')
 ssl_dir = pjoin(runtime_dir, 'ssl')
 if not os.path.exists(ssl_dir):
     os.makedirs(ssl_dir)
-
 
 # Allows multiple single-server per user
 c.JupyterHub.allow_named_servers = True
@@ -54,9 +53,9 @@ c.JupyterHub.db_url = pjoin(runtime_dir, 'jupyterhub.sqlite')
 c.JupyterHub.extra_log_file = '/var/log/jupyterhub.log'
 
 # use GitHub OAuthenticator for local users
-
 c.JupyterHub.authenticator_class = 'oauthenticator.LocalGitHubOAuthenticator'
 c.GitHubOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
+
 # create system users that don't exist yet
 c.LocalAuthenticator.create_system_users = True
 
@@ -72,34 +71,42 @@ c.Spawner.notebook_dir = '~/assignments'
 c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
-Using the GitHub Authenticator [requires a few additional env variables][oauth-setup],
-which we will need to set when we launch the server:
+Using the GitHub Authenticator requires a few additional
+environment variable to be set prior to launching JupyterHub:
 
 ```bash
 export GITHUB_CLIENT_ID=github_id
 export GITHUB_CLIENT_SECRET=github_secret
 export OAUTH_CALLBACK_URL=https://example.com/hub/oauth_callback
 export CONFIGPROXY_AUTH_TOKEN=super-secret
-jupyterhub -f /path/to/aboveconfig.py
+jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
 ```
 
-## Example with nginx reverse proxy
+## Using nginx reverse proxy
 
-In the following example, we show configuration files for a JupyterHub server running locally on port `8000` but accessible from the outside on the standard SSL port `443`. This could be useful if the JupyterHub server machine is also hosting other domains or content on `443`. The goal here is to have the following be true:
+In the following example, we show configuration files for a JupyterHub server
+running locally on port `8000` but accessible from the outside on the standard
+SSL port `443`. This could be useful if the JupyterHub server machine is also
+hosting other domains or content on `443`. The goal in this example is to
+satisfy the following:
 
 * JupyterHub is running on a server, accessed *only* via `HUB.DOMAIN.TLD:443`
-* On the same machine, `NO_HUB.DOMAIN.TLD` strictly serves different content, also on port `443`
-* `nginx` is used to manage the web servers / reverse proxy (which means that only nginx will be able to bind two servers to `443`)
-* After testing, the server in question should be able to score an A+ on the Qualys SSL Labs [SSL Server Test](https://www.ssllabs.com/ssltest/)
+* On the same machine, `NO_HUB.DOMAIN.TLD` strictly serves different content,
+  also on port `443`
+* `nginx` is used to manage the web servers / reverse proxy (which means that
+  only nginx will be able to bind two servers to `443`)
+* After testing, the server in question should be able to score an A+ on the
+  Qualys SSL Labs [SSL Server Test](https://www.ssllabs.com/ssltest/)
 
-Let's start out with `jupyterhub_config.py`:
+Let's start out with needed JupyterHub configuration in `jupyterhub_config.py`:
 
 ```python
 # Force the proxy to only listen to connections to 127.0.0.1
 c.JupyterHub.ip = '127.0.0.1'
 ```
 
-The `nginx` server config files are fairly standard fare except for the two `location` blocks within the `HUB.DOMAIN.TLD` config file:
+The **`nginx` server config file** is fairly standard fare except for the two
+`location` blocks within the `HUB.DOMAIN.TLD` config file:
 
 ```bash
 # HTTP server to redirect all 80 traffic to SSL/HTTPS
@@ -162,7 +169,11 @@ server {
 }
 ```
 
-`nginx` will now be the front facing element of JupyterHub on `443` which means it is also free to bind other servers, like `NO_HUB.DOMAIN.TLD` to the same port on the same machine and network interface. In fact, one can simply use the same server blocks as above for `NO_HUB` and simply add line for the root directory of the site as well as the applicable location call:
+`nginx` will now be the front facing element of JupyterHub on `443` which means
+it is also free to bind other servers, like `NO_HUB.DOMAIN.TLD` to the same port
+on the same machine and network interface. In fact, one can simply use the same
+server blocks as above for `NO_HUB` and simply add line for the root directory
+of the site as well as the applicable location call:
 
 ```bash
 server {
@@ -195,4 +206,6 @@ server {
 }
 ```
 
-Now just restart `nginx`, restart the JupyterHub, and enjoy accessing https://HUB.DOMAIN.TLD while serving other content securely on https://NO_HUB.DOMAIN.TLD.
+Now just restart `nginx`, restart the JupyterHub, and enjoy accessing
+https://HUB.DOMAIN.TLD while serving other content securely on
+https://NO_HUB.DOMAIN.TLD.

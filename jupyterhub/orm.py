@@ -247,7 +247,19 @@ class Hashed(object):
     def token(self, token):
         """Store the hashed value and prefix for a token"""
         self.prefix = token[:self.prefix_length]
-        self.hashed = hash_token(token, rounds=self.rounds, salt=self.salt_bytes, algorithm=self.algorithm)
+        if len(token) >= 32:
+            # Tokens are generally UUIDs, which have sufficient entropy on their own
+            # and don't need salt & hash rounds.
+            # ref: https://security.stackexchange.com/a/151262/155114
+            rounds = 1
+            salt_bytes = b''
+        else:
+            # users can still specify API tokens in a few ways,
+            # so trigger salt & hash rounds if they provide a short token
+            app_log.warning("Applying salt & hash rounds to %sB token" % len(token))
+            rounds = self.rounds
+            salt_bytes = self.salt_bytes
+        self.hashed = hash_token(token, rounds=rounds, salt=salt_bytes, algorithm=self.algorithm)
 
     def match(self, token):
         """Is this my token?"""
@@ -394,7 +406,7 @@ class OAuthAccessToken(Hashed, Base):
 
     # from Hashed
     hashed = Column(Unicode(64))
-    prefix = Column(Unicode(16))
+    prefix = Column(Unicode(16), index=True)
     
     def __repr__(self):
         return "<{cls}('{prefix}...', user='{user}'>".format(
