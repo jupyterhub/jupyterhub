@@ -6,7 +6,7 @@
 import re
 from datetime import timedelta
 from http.client import responses
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 from jinja2 import TemplateNotFound
 
@@ -20,7 +20,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..utils import url_path_join
+from ..utils import url_path_join, DT_SCALE
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -535,6 +535,7 @@ class UserSpawnHandler(BaseHandler):
     @gen.coroutine
     def get(self, name, user_path):
         current_user = self.get_current_user()
+
         if current_user and current_user.name == name:
             # If people visit /user/:name directly on the Hub,
             # the redirects will just loop, because the proxy is bypassed.
@@ -569,12 +570,40 @@ class UserSpawnHandler(BaseHandler):
                     return
                 else:
                     yield self.spawn_single_user(current_user)
+
+            # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
+            # This is important in many distributed proxy implementations - those are often eventually
+            # consistent and can take upto a couple of seconds to actually apply throughout the cluster.
+            try:
+                redirects = int(self.get_argument('redirects', 0))
+            except ValueError:
+                self.log.warning("Invalid redirects argument %r", self.get_argument('redirects'))
+                redirects = 0
+
+            if redirects >= self.settings.get('user_redirect_limit', 5):
+                # We stop if we've been redirected too many times.
+                raise web.HTTPError(500, "Redirect loop detected.")
+
             # set login cookie anew
             self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.base_url):]
             target = url_path_join(self.base_url, without_prefix)
             if self.subdomain_host:
                 target = current_user.host + target
+
+            # record redirect count in query parameter
+            if redirects:
+                self.log.warning("Redirect loop detected on %s", self.request.uri)
+                yield gen.sleep(min(1 * (DT_SCALE ** redirects), 10))
+                # rewrite target url with new `redirects` query value
+                url_parts = urlparse(target)
+                query_parts = parse_qs(url_parts.query)
+                query_parts['redirects'] = redirects + 1
+                url_parts = url_parts._replace(query=urlencode(query_parts))
+                target = urlunparse(url_parts)
+            else:
+                target = url_concat(target, {'redirects': 1})
+
             self.redirect(target)
             self.statsd.incr('redirects.user_after_login')
         elif current_user:
