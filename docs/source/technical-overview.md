@@ -4,12 +4,12 @@ JupyterHub is a set of processes that together provide a single user Jupyter
 Notebook server for each person in a group.
 
 This section gives you an overview of:
-- JupyterHub's subsystems
-- basic operations
-- logging in
--
+- JupyterHub's Subsystems: Hub, Proxy, Single-User Notebook Server
+- how the subsystems interact
+- the step-by-step events from JupyterHub access to user login
 
-## Subsystems of JupyterHub
+
+## The Subsystems: Hub, Proxy, Single-User Notebook Server
 
 Three major subsystems are started by the `jupyterhub` command line program:
 
@@ -28,7 +28,7 @@ Three major subsystems are started by the `jupyterhub` command line program:
 
 ![JupyterHub subsystems](images/jhub-parts.png)
 
-## Basic operation
+## How the Subsystems Interact
 
 Users access JupyterHub through a web browser, by going to the IP address or
 the domain name of the server.
@@ -45,68 +45,46 @@ The proxy is the only process that listens on a public interface. The Hub sits
 behind the proxy at `/hub`. Single-user servers sit behind the proxy at
 `/user/[username]`.
 
-Different **[authenticators](authenticators.html)** control access
+Different **[authenticators](./authenticators.html)** control access
 to JupyterHub. The default one (PAM) uses the user accounts on the server where
 JupyterHub is running. If you use this, you will need to create a user account
 on the system for each user on your team. Using other authenticators, you can
 allow users to sign in with e.g. a GitHub account, or with any single-sign-on
 system your organization has.
 
-Next, **[spawners](spawners.html)** control how JupyterHub starts
+Next, **[spawners](./spawners.html)** control how JupyterHub starts
 the individual notebook server for each user. The default spawner will
 start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
 using Docker.
 
-## Logging in
+## Step-by-step events from JupyterHub access to user login
 
-When a new browser logs in to JupyterHub, the following events take place:
+When user accesses JupyterHub, the following events take place:
 
-- Login data is handed to the [Authenticator](#authentication) instance for validation
-- The Authenticator returns the username, if login information is valid
-- A single-user server instance is [Spawned](#spawning) for the logged-in user
-- When the server starts, the proxy is notified to forward `/user/[username]/*` to the single-user server
+- Login data is handed to the [Authenticator](./authenticators.html) instance for
+  validation
+- The Authenticator returns the username and if the login information is valid
+- A single-user notebook server instance is [spawned](./spawners.html) for the
+  logged-in user
+- When the single-user notebook server starts, the proxy is notified to forward
+  requests to `/user/[username]/*` to the single-user notebook server.
 - Two cookies are set, one for `/hub/` and another for `/user/[username]`,
   containing an encrypted token.
-- The browser is redirected to `/user/[username]`, which is handled by the single-user server
+- The browser is redirected to `/user/[username]`, and the request is handled by
+  the single-user notebook server.
 
-Logging into a single-user server is authenticated via the Hub:
+Logging into a single-user notebook server is authenticated via the Hub:
 
-- On request, the single-user server forwards the encrypted cookie to the Hub for verification
-- The Hub replies with the username if it is a valid cookie
-- If the user is the owner of the server, access is allowed
-- If it is the wrong user or an invalid cookie, the browser is redirected to `/hub/login`
-
-## Customizing JupyterHub
-
-There are two basic extension points for JupyterHub: How users are authenticated,
-and how their server processes are started.
-Each is governed by a customizable class,
-and JupyterHub ships with just the most basic version of each.
-
-To enable custom authentication and/or spawning,
-subclass Authenticator or Spawner,
-and override the relevant methods.
+- On request, the single-user server forwards the encrypted cookie to the Hub
+  for verification.
+- The Hub replies with the username if the encrypted cookie is valid.
+- If the user is the owner of the single-user notebook server, access is
+  allowed.
+- If it is the wrong user or an invalid cookie, the browser is redirected to
+  `/hub/login`.
 
 ## Default behavior
-
-**IMPORTANT: You should not run JupyterHub without SSL encryption on a public network.**
-
-See [Security documentation](#security) for how to configure JupyterHub to use SSL,
-or put it behind SSL termination in another proxy server, such as nginx.
-
-To start JupyterHub in its default configuration, type the following at the command line:
-
-```bash
-    sudo jupyterhub
-```
-
-The default Authenticator that ships with JupyterHub authenticates users
-with their system name and password (via [PAM][]).
-Any user on the system with a password will be allowed to start a single-user notebook server.
-
-The default Spawner starts servers locally as each user, one dedicated server per user.
-These servers listen on localhost, and start in the given user's home directory.
 
 By default, the **Proxy** listens on all public interfaces on port 8000.
 Thus you can reach JupyterHub through either:
@@ -114,52 +92,66 @@ Thus you can reach JupyterHub through either:
 - `http://localhost:8000`
 - or any other public IP or domain pointing to your system.
 
-In their default configuration, the other services, the **Hub** and **Single-User Servers**,
-all communicate with each other on localhost only.
+In their default configuration, the other services, the **Hub** and
+**Single-User Notebook Servers**, all communicate with each other on localhost
+only.
 
-By default, starting JupyterHub will write two files to disk in the current working directory:
+By default, starting JupyterHub will write two files to disk in the current
+working directory:
 
-- `jupyterhub.sqlite` is the sqlite database containing all of the state of the **Hub**.
-  This file allows the **Hub** to remember what users are running and where,
-  as well as other information enabling you to restart parts of JupyterHub separately. It is
-  important to note that this database contains *no* sensitive information other than **Hub**
-  usernames.
+- `jupyterhub.sqlite` is the SQLite database containing all of the state of the
+  **Hub**. This file allows the **Hub** to remember which users are running and
+  where, as well as storing other information enabling you to restart parts of
+  JupyterHub separately. It is important to note that this database contains
+  **no** sensitive information other than **Hub** usernames.
 - `jupyterhub_cookie_secret` is the encryption key used for securing cookies.
-  This file needs to persist in order for restarting the Hub server to avoid invalidating cookies.
-  Conversely, deleting this file and restarting the server effectively invalidates all login cookies.
-  The cookie secret file is discussed in the [Cookie Secret documentation](#cookie-secret).
+  This file needs to persist so that a **Hub** server restart will avoid
+  invalidating cookies. Conversely, deleting this file and restarting the server
+  effectively invalidates all login cookies. The cookie secret file is discussed
+  in the [Cookie Secret section of the Security Basics document](./security-basics.html).
 
-The location of these files can be specified via configuration.
+The location of these files can be specified via configuration settings. It is
+recommended that these files be stored in standard UNIX filesystem locations,
+such as `/etc/jupyterhub` for all configuration files and `/srv/jupyterhub` for
+all security and runtime files.
 
-[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+## Customizing JupyterHub
+
+There are two basic extension points for JupyterHub:
+
+- How users are authenticated
+- How user's single-user notebook server processes are started
+
+Each is governed by a customizable class, and JupyterHub ships with basic
+defaults for each.
+
+To enable custom authentication and/or spawning, subclass `Authenticator` or
+`Spawner`, and override the relevant methods.
 
 ### Authentication
 
-Authentication is customizable via the Authenticator class.
-Authentication can be replaced by any mechanism,
-such as OAuth, Kerberos, etc.
+Authentication is customizable via the `Authenticator` class. Authentication can
+be replaced by any mechanism, such as OAuth, Kerberos, etc.
 
-JupyterHub only ships with [PAM](https://en.wikipedia.org/wiki/Pluggable_authentication_module) authentication,
-which requires the server to be run as root,
-or at least with access to the PAM service,
-which regular users typically do not have
-(on Ubuntu, this requires being added to the `shadow` group).
+JupyterHub only ships with Default
+[PAM, or pluggable authentication module,](https://en.wikipedia.org/wiki/Pluggable_authentication_module)
+authentication. This requires the `jupyterhub` Hub server to be run as root,
+or at least with access to the PAM service, which regular users typically do
+not have (e.g. on Ubuntu, this requires being added to the `shadow` group).
 
-[More info on custom Authenticators](authenticators.html).
+[More info on custom Authenticators](./authenticators.html).
 
 See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
-
 ### Spawning
 
-Each single-user server is started by a Spawner.
-The Spawner represents an abstract interface to a process,
-and needs to be able to take three actions:
+Each single-user server is started by a Spawner. The Spawner represents an
+abstract interface to a process, and needs to be able to take three actions:
 
 1. start the process
 2. poll whether the process is still running
 3. stop the process
 
-[More info on custom Spawners](spawners.html).
+[More info on custom Spawners](./spawners.html).
 
 See a list of custom Spawners [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).

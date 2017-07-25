@@ -6,7 +6,7 @@ JupyterHub is supported on Linux/Unix based systems. To use JupyterHub, you need
 a Unix server (typically Linux) running somewhere that is accessible to your
 team on the network. The JupyterHub server can be on an internal network at your
 organization, or it can run on the public internet (in which case, take care
-with the Hub's [security](#security)).
+with the Hub's [security](./security-basics.html)).
 
 JupyterHub officially **does not** support Windows. You may be able to use
 JupyterHub on Windows if you use a Spawner and Authenticator that work on
