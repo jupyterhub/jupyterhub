@@ -3,11 +3,16 @@
 JupyterHub is a set of processes that together provide a single user Jupyter
 Notebook server for each person in a group.
 
-This section gives you an overview of:
+This section gives you a high-level technical overview of:
+
 - JupyterHub's Subsystems: Hub, Proxy, Single-User Notebook Server
 - how the subsystems interact
-- the step-by-step events from JupyterHub access to user login
+- the process from JupyterHub access to user login
+- JupyterHub's default behavior
+- customizing JupyterHub
 
+The goal of this section is to share a deeper technical understanding of
+JupyterHub and how it works.
 
 ## The Subsystems: Hub, Proxy, Single-User Notebook Server
 
@@ -58,9 +63,9 @@ start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
 using Docker.
 
-## Step-by-step events from JupyterHub access to user login
+## The Process from JupyterHub Access to User Login
 
-When user accesses JupyterHub, the following events take place:
+When a user accesses JupyterHub, the following events take place:
 
 - Login data is handed to the [Authenticator](./authenticators.html) instance for
   validation
@@ -84,7 +89,7 @@ Logging into a single-user notebook server is authenticated via the Hub:
 - If it is the wrong user or an invalid cookie, the browser is redirected to
   `/hub/login`.
 
-## Default behavior
+## Default Behavior
 
 By default, the **Proxy** listens on all public interfaces on port 8000.
 Thus you can reach JupyterHub through either:
@@ -119,39 +124,12 @@ all security and runtime files.
 
 There are two basic extension points for JupyterHub:
 
-- How users are authenticated
-- How user's single-user notebook server processes are started
+- How users are authenticated by [Authenticators](./authenticators.html)
+- How user's single-user notebook server processes are started by
+  [Spawners](./spawners.html)
 
 Each is governed by a customizable class, and JupyterHub ships with basic
 defaults for each.
 
 To enable custom authentication and/or spawning, subclass `Authenticator` or
 `Spawner`, and override the relevant methods.
-
-### Authentication
-
-Authentication is customizable via the `Authenticator` class. Authentication can
-be replaced by any mechanism, such as OAuth, Kerberos, etc.
-
-JupyterHub only ships with Default
-[PAM, or pluggable authentication module,](https://en.wikipedia.org/wiki/Pluggable_authentication_module)
-authentication. This requires the `jupyterhub` server to be run as root,
-or at least with access to the PAM service, which regular users typically do
-not have (e.g. on Ubuntu, this requires being added to the `shadow` group).
-
-[More info on custom Authenticators](./authenticators.html).
-
-See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
-
-### Spawning
-
-Each single-user server is started by a Spawner. The Spawner represents an
-abstract interface to a process, and needs to be able to take three actions:
-
-1. start the process
-2. poll whether the process is still running
-3. stop the process
-
-[More info on custom Spawners](./spawners.html).
-
-See a list of custom Spawners [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).
