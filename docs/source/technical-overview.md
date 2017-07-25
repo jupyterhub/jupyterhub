@@ -108,7 +108,7 @@ working directory:
   This file needs to persist so that a **Hub** server restart will avoid
   invalidating cookies. Conversely, deleting this file and restarting the server
   effectively invalidates all login cookies. The cookie secret file is discussed
-  in the [Cookie Secret section of the Security Basics document](./security-basics.html).
+  in the [Cookie Secret section of the Security Settings document](./security-basics.html).
 
 The location of these files can be specified via configuration settings. It is
 recommended that these files be stored in standard UNIX filesystem locations,
@@ -135,7 +135,7 @@ be replaced by any mechanism, such as OAuth, Kerberos, etc.
 
 JupyterHub only ships with Default
 [PAM, or pluggable authentication module,](https://en.wikipedia.org/wiki/Pluggable_authentication_module)
-authentication. This requires the `jupyterhub` Hub server to be run as root,
+authentication. This requires the `jupyterhub` server to be run as root,
 or at least with access to the PAM service, which regular users typically do
 not have (e.g. on Ubuntu, this requires being added to the `shadow` group).
 
