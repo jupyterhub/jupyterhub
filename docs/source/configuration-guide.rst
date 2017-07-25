@@ -4,7 +4,7 @@ Configuration Reference
 .. toctree::
    :maxdepth: 2
 
-   howitworks
+   technical-overview
    websecurity
    rest
    authenticators
