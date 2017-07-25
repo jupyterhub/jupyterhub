@@ -1,45 +1,72 @@
 # Configuration Basics
 
-The [getting started document](docs/source/getting-started.md) contains
-general information about configuring a JupyterHub deployment and the
-[configuration reference](docs/source/configuration-guide.md) provides more
-comprehensive detail.
+The section contains basic information about configuring settings for a JupyterHub
+deployment. The [configuration reference](./configuration-guide.html)
+provides additional detail.
 
-## JupyterHub configuration
+This section will help you learn how to:
 
-Configuration parameters may be set by:
-- a configuration file `jupyterhub_config.py`, or
-- as options from the command line.
+- generate a default configuration file, `jupyterhub_config.py`
+- start with a specific configuration file
+- configure JupyterHub using command line options
+- find information and examples for some common deployments
 
-### Generate a default config file
+## Generate a default config file
 
-On startup, JupyterHub will look by default for a configuration file named
-`jupyterhub_config.py` in the current working directory.
+On startup, JupyterHub will look by default for a configuration file,
+`jupyterhub_config.py`, in the current working directory.
 
-To generate a default config file `jupyterhub_config.py`:
+To generate a default config file, `jupyterhub_config.py`:
 
 ```bash
 jupyterhub --generate-config
 ```
 
 This default `jupyterhub_config.py` file contains comments and guidance for all
-configuration variables and their default values.
+configuration variables and their default values. We recommend storing
+configuration files in the standard UNIX filesystem location, i.e.
+`/etc/jupyterhub`.
 
-### Configure using command line options
+## Start with a specific config file
+
+You can load a specific config file and start JupyterHub using:
+
+```bash
+jupyterhub -f /path/to/jupyterhub_config.py
+```
+
+If you have stored your configuration file in the recommended UNIX filesystem
+location, `/etc/jupyterhub`, the following command will start JupyterHub using
+the configuration file:
+
+```bash
+jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
+```
+
+The IPython documentation provides additional information on the
+[config system](http://ipython.readthedocs.io/en/stable/development/config.html)
+that Jupyter uses.
+
+## Configure using command line options
 
 To display all command line options that are available for configuration:
 
+```bash
     jupyterhub --help-all
+```
 
 Configuration using the command line options is done when launching JupyterHub.
-For example, to start JupyterHub on ``10.0.1.2:443`` with **https**, you
+For example, to start JupyterHub on ``10.0.1.2:443`` with https, you
 would enter:
 
+```bash
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
+```    
 
-All configurable options are technically configurable on the command-line,
-even if some are really inconvenient to type. Just replace the desired option,
-`c.Class.trait`, with `--Class.trait`. For example, to configure the
+All configurable options may technically be set on the command-line,
+though some are inconvenient to type. To set a particular configuration
+parameter, `c.Class.trait`, you would use the command line option,
+`--Class.trait`, when starting JupyterHub. For example, to configure the
 `c.Spawner.notebook_dir` trait from the command-line, use the
 `--Spawner.notebook_dir` option:
 
@@ -47,23 +74,14 @@ even if some are really inconvenient to type. Just replace the desired option,
 jupyterhub --Spawner.notebook_dir='~/assignments'
 ```
 
-### Load a specific config file
+## Configure for various deployment environments
 
-You can load a specific config file with:
-
-```bash
-jupyterhub -f /path/to/jupyterhub_config.py
-```
-
-See also: [general docs](http://ipython.org/ipython-doc/dev/development/config.html)
-on the config system Jupyter uses.
-
-### Configuration for different deployment environments
-
-The default authentication and process spawning mechanisms can be replaced,
-which allows plugging into a variety of authentication methods or process
-control and deployment environments. Some examples, meant as illustration and
-testing of this concept, are:
+The default authentication and process spawning mechanisms can be replaced, and
+specific [authenticators](./authenticators-users-basics.html) and
+[spawners](./spawners-basics.html) can be set in the configuration file.
+This enables JupyterHub to be used with a variety of authentication methods or
+process control and deployment environments. [Some examples](./config-examples.html),
+meant as illustration, are:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
 - Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyterhub/dockerspawner)
