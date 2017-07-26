@@ -57,6 +57,7 @@ def exponential_backoff(
         scale_factor=2,
         max_wait=5,
         timeout=10,
+        timeout_tolerance=0.1,
         *args, **kwargs):
     """
     Exponentially backoff until pass_func is true.
@@ -76,6 +77,11 @@ def exponential_backoff(
     """
     loop = ioloop.IOLoop.current()
     deadline = loop.time() + timeout
+    # add some jitter to the deadline itself, so that we don't
+    # re-align a bunch of timing out calls once the deadline is reached.
+    if timeout_tolerance:
+        tol = timeout_tolerance * timeout
+        deadline = random.uniform(deadline - tol, deadline + tol)
     scale = 1
     while True:
         ret = yield gen.maybe_future(pass_func(*args, **kwargs))
