@@ -536,7 +536,7 @@ def test_cookie(app):
     app_user = get_app_user(app, name)
 
     cookies = app.login_user(name)
-    cookie_name = app.hub.server.cookie_name
+    cookie_name = app.hub.cookie_name
     # cookie jar gives '"cookie-value"', we want 'cookie-value'
     cookie = cookies[cookie_name][1:-1]
     r = api_request(app, 'authorizations/cookie',

@@ -5,8 +5,7 @@
 
 import socket
 from urllib.parse import urlparse
-
-from tornado import gen
+import warnings
 
 from traitlets import (
     HasTraits, Instance, Integer, Unicode,
@@ -136,9 +135,14 @@ class Hub(Server):
     of the server base_url.
     """
 
+    cookie_name = 'jupyter-hub-token'
+
     @property
     def server(self):
-        """backward-compat"""
+        warnings.warn("Hub.server is deprecated in JupyterHub 0.8. Access attributes on the Hub directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self
     public_host = Unicode()
 

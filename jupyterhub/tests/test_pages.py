@@ -27,7 +27,7 @@ def test_root_no_auth(app, io_loop):
     print(app.hub.is_up())
     routes = io_loop.run_sync(app.proxy.get_all_routes)
     print(routes)
-    print(app.hub.server)
+    print(app.hub)
     url = ujoin(public_host(app), app.hub.base_url)
     print(url)
     r = requests.get(url)
@@ -280,7 +280,7 @@ def test_auto_login(app, io_loop, request):
             self.write('ok!')
     base_url = public_url(app) + '/'
     app.tornado_application.add_handlers(".*$", [
-        (ujoin(app.hub.server.base_url, 'dummy'), DummyLoginHandler),
+        (ujoin(app.hub.base_url, 'dummy'), DummyLoginHandler),
     ])
     # no auto_login: end up at /hub/login
     r = requests.get(base_url)
