@@ -53,7 +53,7 @@ def can_connect(ip, port):
 def exponential_backoff(
         pass_func,
         fail_message,
-        start_wait=0.1,
+        start_wait=0.2,
         scale_factor=2,
         max_wait=5,
         timeout=10,
@@ -75,25 +75,26 @@ def exponential_backoff(
     It'll return the value of pass_func when it's truthy!
     """
     loop = ioloop.IOLoop.current()
-    start_tic = loop.time()
-    dt = start_wait
+    deadline = loop.time() + timeout
+    scale = 1
     while True:
-        if (loop.time() - start_tic) > timeout:
-            # We time out!
-            break
         ret = yield gen.maybe_future(pass_func(*args, **kwargs))
         # Truthy!
         if ret:
             return ret
-        else:
-            yield gen.sleep(dt)
+        remaining = deadline - loop.time()
+        if remaining < 0:
+            # timeout exceeded
+            break
         # Add some random jitter to improve performance
         # This makes sure that we don't overload any single iteration
         # of the tornado loop with too many things
         # See https://www.awsarchitectureblog.com/2015/03/backoff.html
         # for a good example of why and how this helps. We're using their
         # full Jitter implementation equivalent.
-        dt = min(max_wait, random.uniform(0, dt * scale_factor))
+        dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
+        scale *= scale_factor
+        yield gen.sleep(dt)
     raise TimeoutError(fail_message)
 
 
