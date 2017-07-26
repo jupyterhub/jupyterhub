@@ -60,25 +60,59 @@ def exponential_backoff(
         timeout_tolerance=0.1,
         *args, **kwargs):
     """
-    Exponentially backoff until pass_func is true.
+    Exponentially backoff until `pass_func` is true.
 
-    This function will wait with exponential backoff + random jitter for as
-    many iterations as needed, with maximum timeout timeout. If pass_func is
-    still returning false at the end of timeout, a TimeoutError will be raised.
+    The `pass_func` function will wait with **exponential backoff** and
+    **random jitter** for as many needed iterations of the Tornado loop,
+    until reaching maximum `timeout` or truthiness. If `pass_func` is still
+    returning false at `timeout`, a `TimeoutError` will be raised.
 
-    It'll start waiting at start_wait, scaling up by continuously multiplying itself
-    by scale_factor until pass_func returns true. It'll never wait for more than
-    max_wait seconds per iteration.
+    The first iteration will begin with a wait time of `start_wait` seconds.
+    Each subsequent iteration's wait time will scale up by continuously
+    multiplying itself by `scale_factor`. This continues for each iteration
+    until `pass_func` returns true or an iteration's wait time has reached
+    the `max_wait` seconds per iteration.
 
-    *args and **kwargs are passed to pass_func. pass_func maybe a future, although
-    that is not entirely recommended.
+    `pass_func` may be a future, although that is not entirely recommended.
 
-    It'll return the value of pass_func when it's truthy!
+    Parameters
+    ----------
+    pass_func
+        function that is to be run
+    fail_message : str
+        message for a `TimeoutError`
+    start_wait : optional
+        initial wait time for the first iteration in seconds
+    scale_factor : optional
+        a multiplier to increase the wait time for each iteration
+    max_wait : optional
+        maximum wait time per iteration in seconds
+    timeout : optional
+        maximum time of total wait in seconds
+    timeout_tolerance : optional
+        a small multiplier used to add jitter to `timeout`'s deadline
+    *args, **kwargs
+        passed to `pass_func(*args, **kwargs)`
+
+    Returns
+    -------
+    value of `pass_func(*args, **kwargs)`
+
+    Raises
+    ------
+    TimeoutError
+        If `pass_func` is still false at the end of the `timeout` period.
+
+    Notes
+    -----
+    See https://www.awsarchitectureblog.com/2015/03/backoff.html
+    for information about the algorithm and examples. We're using their
+    full Jitter implementation equivalent.
     """
     loop = ioloop.IOLoop.current()
     deadline = loop.time() + timeout
-    # add some jitter to the deadline itself, so that we don't
-    # re-align a bunch of timing out calls once the deadline is reached.
+    # add jitter to the deadline itself to prevent re-align of a bunch of
+    # timing out calls once the deadline is reached.
     if timeout_tolerance:
         tol = timeout_tolerance * timeout
         deadline = random.uniform(deadline - tol, deadline + tol)
@@ -92,12 +126,9 @@ def exponential_backoff(
         if remaining < 0:
             # timeout exceeded
             break
-        # Add some random jitter to improve performance
-        # This makes sure that we don't overload any single iteration
-        # of the tornado loop with too many things
-        # See https://www.awsarchitectureblog.com/2015/03/backoff.html
-        # for a good example of why and how this helps. We're using their
-        # full Jitter implementation equivalent.
+        # add some random jitter to improve performance
+        # this prevents overloading any single tornado loop iteration with
+        # too many things
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
         scale *= scale_factor
         yield gen.sleep(dt)
