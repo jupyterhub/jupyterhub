@@ -285,7 +285,7 @@ class BaseHandler(RequestHandler):
 
     def set_hub_cookie(self, user):
         """set the login cookie for the Hub"""
-        self._set_user_cookie(user, self.hub.server)
+        self._set_user_cookie(user, self.hub)
 
     def set_login_cookie(self, user):
         """Set login cookies for the Hub and single-user server."""

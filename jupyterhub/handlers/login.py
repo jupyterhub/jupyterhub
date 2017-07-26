@@ -37,7 +37,7 @@ class LoginHandler(BaseHandler):
                 custom_html=self.authenticator.custom_html,
                 login_url=self.settings['login_url'],
                 authenticator_login_url=url_concat(
-                    self.authenticator.login_url(self.hub.server.base_url),
+                    self.authenticator.login_url(self.hub.base_url),
                     {'next': self.get_argument('next', '')},
                 ),
         )
@@ -64,7 +64,7 @@ class LoginHandler(BaseHandler):
             self.redirect(next_url, permanent=False)
         else:
             if self.authenticator.auto_login:
-                auto_login_url = self.authenticator.login_url(self.hub.server.base_url)
+                auto_login_url = self.authenticator.login_url(self.hub.base_url)
                 if auto_login_url == self.settings['login_url']:
                     self.authenticator.auto_login = False
                     self.log.warning("Authenticator.auto_login cannot be used without a custom login_url")

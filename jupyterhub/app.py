@@ -852,7 +852,6 @@ class JupyterHub(Application):
             ip=self.hub_ip,
             port=self.hub_port,
             base_url=self.hub_prefix,
-            cookie_name='jupyter-hub-token',
             public_host=self.subdomain_host,
         )
         if self.hub_connect_ip:
@@ -1164,7 +1163,7 @@ class JupyterHub(Application):
         db.commit()
 
     def init_oauth(self):
-        base_url = self.hub.server.base_url
+        base_url = self.hub.base_url
         self.oauth_provider = make_provider(
             self.session_factory,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
