@@ -159,41 +159,20 @@ class MockHub(JupyterHub):
 
     def load_config_file(self, *args, **kwargs):
         pass
-
-    def start(self, argv=None):
+    
+    @gen.coroutine
+    def initialize(self, argv=None):
         self.db_file = NamedTemporaryFile()
         self.pid_file = NamedTemporaryFile(delete=False).name
         self.db_url = self.db_file.name
+        yield super().initialize([])
         
-        evt = threading.Event()
-        
-        @gen.coroutine
-        def _start_co():
-            assert self.io_loop._running
-            # put initialize in start for SQLAlchemy threading reasons
-            yield super(MockHub, self).initialize(argv=argv)
-            # add an initial user
-            user = orm.User(name='user')
-            self.db.add(user)
-            self.db.commit()
-            yield super(MockHub, self).start()
-            yield self.hub.wait_up(http=True)
-            self.io_loop.add_callback(evt.set)
-        
-        def _start():
-            self.io_loop = IOLoop()
-            self.io_loop.make_current()
-            self.io_loop.add_callback(_start_co)
-            self.io_loop.start()
-        
-        self._thread = threading.Thread(target=_start)
-        self._thread.start()
-        ready = evt.wait(timeout=10)
-        assert ready
-    
+        user = orm.User(name='user')
+        self.db.add(user)
+        self.db.commit()
+
     def stop(self):
         super().stop()
-        self._thread.join()
         IOLoop().run_sync(self.cleanup)
         # ignore the call that will fire in atexit
         self.cleanup = lambda : None
