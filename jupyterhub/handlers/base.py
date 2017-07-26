@@ -301,6 +301,50 @@ class BaseHandler(RequestHandler):
     def authenticate(self, data):
         return gen.maybe_future(self.authenticator.get_authenticated_user(self, data))
 
+    def get_next_url(self, user=None):
+        """Get the next_url for login redirect
+        
+        Defaults to hub base_url /hub/ if user is not running,
+        otherwise user.url.
+        """
+        next_url = self.get_argument('next', default='')
+        if (next_url + '/').startswith('%s://%s/' % (self.request.protocol, self.request.host)):
+            # treat absolute URLs for our host as absolute paths:
+            next_url = urlparse(next_url).path
+        if not next_url.startswith('/'):
+            next_url = ''
+        if not next_url:
+            if user and user.running(''):
+                next_url = user.url
+            else:
+                next_url = self.hub.base_url
+        return next_url
+
+    @gen.coroutine
+    def login_user(self, data=None):
+        """Login a user"""
+        auth_timer = self.statsd.timer('login.authenticate').start()
+        authenticated = yield self.authenticate(data)
+        auth_timer.stop(send=False)
+
+        if authenticated:
+            username = authenticated['name']
+            auth_state = authenticated.get('auth_state')
+
+            self.statsd.incr('login.success')
+            self.statsd.timing('login.authenticate.success', auth_timer.ms)
+            user = self.user_from_username(username)
+            if auth_state is not None:
+                user.auth_state = auth_state
+                self.db.commit()
+            self.set_login_cookie(user)
+            self.log.info("User logged in: %s", username)
+            return user
+        else:
+            self.statsd.incr('login.failure')
+            self.statsd.timing('login.authenticate.failure', auth_timer.ms)
+            self.log.warning("Failed login for %s", data.get('username', 'unknown user'))
+
 
     #---------------------------------------------------------------
     # spawning-related
