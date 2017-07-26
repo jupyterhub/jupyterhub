@@ -666,6 +666,7 @@ class Spawner(LoggingConfigurable):
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status
 
+    death_interval = Float(0.1)
     @gen.coroutine
     def wait_for_death(self, timeout=10):
         """Wait for the single-user server to die, up to timeout seconds"""
@@ -673,12 +674,16 @@ class Spawner(LoggingConfigurable):
         def _wait_for_death():
             status = yield self.poll()
             return status is not None
-
-        yield exponential_backoff(
-            _wait_for_death,
-            'Process did not die in {timeout} seconds'.format(timeout=timeout),
-            timeout=timeout
-        )
+        try:
+            r = yield exponential_backoff(
+                _wait_for_death,
+                'Process did not die in {timeout} seconds'.format(timeout=timeout),
+                start_wait=self.death_interval,
+                timeout=timeout,
+            )
+            return r
+        except TimeoutError:
+            return False
 
 
 def _try_setcwd(path):
