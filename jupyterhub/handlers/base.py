@@ -248,10 +248,6 @@ class BaseHandler(RequestHandler):
         return user
 
     def clear_login_cookie(self, name=None):
-        if name is None:
-            user = self.get_current_user()
-        else:
-            user = self.find_user(name)
         kwargs = {}
         if self.subdomain_host:
             kwargs['domain'] = self.domain
@@ -327,6 +323,13 @@ class BaseHandler(RequestHandler):
         if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
         tic = IOLoop.current().time()
+        user_server_name = user.name
+        if server_name:
+            user_server_name = '%s:%s' % (user.name, server_name)
+        else:
+            user_server_name = user.name
+
+        self.log.debug("Initiating spawn for %s", user_server_name)
 
         f = user.spawn(server_name, options)
         spawner = user.spawners[server_name]
@@ -343,13 +346,13 @@ class BaseHandler(RequestHandler):
                 # failed, don't add to the proxy
                 return
             toc = IOLoop.current().time()
-            self.log.info("User %s server took %.3f seconds to start", user.name, toc-tic)
+            self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
             try:
                 yield self.proxy.add_user(user, server_name)
             except Exception:
-                self.log.exception("Failed to add user %s to proxy!", user)
-                self.log.error("Stopping user %s to avoid inconsistent state")
+                self.log.exception("Failed to add %s to proxy!", user_server_name)
+                self.log.error("Stopping %s to avoid inconsistent state", user_server_name)
                 yield user.stop()
             else:
                 spawner.add_poll_callback(self.user_stopped, user)
@@ -364,8 +367,8 @@ class BaseHandler(RequestHandler):
             if not spawner._waiting_for_response:
                 # still in Spawner.start, which is taking a long time
                 # we shouldn't poll while spawn is incomplete.
-                self.log.warning("User %s's server is slow to start (timeout=%s)",
-                    user.name, self.slow_spawn_timeout)
+                self.log.warning("User %s is slow to start (timeout=%s)",
+                    user_server_name, self.slow_spawn_timeout)
                 # schedule finish for when the user finishes spawning
                 IOLoop.current().add_future(f, finish_user_spawn)
             else:
@@ -375,9 +378,9 @@ class BaseHandler(RequestHandler):
                 if status is None:
                     # hit timeout, but server's running. Hope that it'll show up soon enough,
                     # though it's possible that it started at the wrong URL
-                    self.log.warning("User %s's server is slow to become responsive (timeout=%s)",
-                        user.name, self.slow_spawn_timeout)
-                    self.log.debug("Expecting server for %s at: %s", user.name, spawner.server.url)
+                    self.log.warning("User %s is slow to become responsive (timeout=%s)",
+                        user_server_name, self.slow_spawn_timeout)
+                    self.log.debug("Expecting server for %s at: %s", user_server_name, spawner.server.url)
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
