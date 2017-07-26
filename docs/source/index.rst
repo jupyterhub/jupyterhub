@@ -51,10 +51,10 @@ Contents
 
 * :doc:`technical-overview`
 * :doc:`websecurity`
-* :doc:`rest`
 * :doc:`authenticators`
 * :doc:`spawners`
 * :doc:`services`
+* :doc:`rest`
 * :doc:`upgrading`
 * :doc:`config-examples`
 

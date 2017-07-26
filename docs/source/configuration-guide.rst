@@ -6,9 +6,9 @@ Configuration Reference
 
    technical-overview
    websecurity
-   rest
    authenticators
    spawners
    services
+   rest
    upgrading
    config-examples
