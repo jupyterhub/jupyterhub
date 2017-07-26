@@ -3,8 +3,9 @@
 This section will help you with basic proxy and network configuration to:
 
 - set the proxy's IP address and port
-- set the proxy's REST API IP address and port
+- set the proxy's REST API URL
 - configure the Hub if the Proxy or Spawners are remote or isolated
+- set the `hub_connect_ip` which services will use to communicate with the hub
 
 ## Set the Proxy's IP address and port
 
@@ -34,12 +35,22 @@ Configuring only the main IP and port of JupyterHub should be sufficient for
 most deployments of JupyterHub. However, more customized scenarios may need
 additional networking details to be configured.
 
-## Set the Proxy's REST API communication IP address and port (optional)
+## Set the Proxy's REST API communication URL (optional)
 
 By default, this REST API listens on port 8081 of `localhost` only.
-The Hub service talks to the proxy via a REST API on a secondary port. This
-network interface and port can be configured separately and override the
-default settings.
+The Hub service talks to the proxy via a REST API on a secondary port. The
+API URL can be configured separately and override the default settings.
+
+### Set api_url
+
+The URL to access the API, `c.configurableHTTPProxy.api_url`, is configurable.
+An example entry to set the proxy's API URL in `jupyterhub_config.py` is:
+
+```python
+c.ConfigurableHTTPProxy.api_url = 'http://10.0.1.4:5432'
+```
+
+### proxy_api_ip and proxy_api_port (Deprecated in 0.8)
 
 If running the Proxy separate from the Hub, configure the REST API communication
 IP address and port by adding this to the `jupyterhub_config.py` file:
@@ -49,6 +60,9 @@ IP address and port by adding this to the `jupyterhub_config.py` file:
 c.JupyterHub.proxy_api_ip = '10.0.1.4'
 c.JupyterHub.proxy_api_port = 5432
 ```
+
+We recommend using the proxy's `api_url` setting instead of the deprecated
+settings, `proxy_api_ip` and `proxy_api_port`.
 
 ## Configure the Hub if the Proxy or Spawners are remote or isolated
 
@@ -62,4 +76,13 @@ isolated in containers, the Hub must listen on an IP that is accessible.
 ```python
 c.JupyterHub.hub_ip = '10.0.1.4'
 c.JupyterHub.hub_port = 54321
+```
+
+**Added in 0.8:** The `c.JupyterHub.hub_connect_ip` setting is the ip address or
+hostname that other services should use to connect to the Hub. A common
+configuration for, e.g. docker, is:
+
+```python
+c.JupyterHub.hub_ip = '0.0.0.0'  # listen on all interfaces
+c.JupyterHub.hub_connect_ip = '10.0.1.4'  # ip as seen on the docker network. Can also be a hostname.
 ```
