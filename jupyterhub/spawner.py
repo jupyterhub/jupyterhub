@@ -24,6 +24,7 @@ from traitlets import (
     validate,
 )
 
+from .objects import Server
 from .traitlets import Command, ByteSpecification
 from .utils import random_port, url_path_join, DT_MIN, DT_MAX, DT_SCALE
 
@@ -43,11 +44,27 @@ class Spawner(LoggingConfigurable):
     is created for each user. If there are 20 JupyterHub users, there will be 20
     instances of the subclass.
     """
+    
+    # private attributes for tracking status
+    _spawn_pending = False
+    _stop_pending = False
+    _proxy_pending = False
+    _waiting_for_response = False
 
-    db = Any()
-    user = Any()
-    hub = Any()
     authenticator = Any()
+    hub = Any()
+    orm_spawner = Any()
+    user = Any()
+
+    @property
+    def server(self):
+        if self.orm_spawner and self.orm_spawner.server:
+            return Server(orm_server=self.orm_spawner.server)
+    @property
+    def name(self):
+        if self.orm_spawner:
+            return self.orm_spawner.name
+        return ''
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -368,11 +385,6 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    def __init__(self, **kwargs):
-        super(Spawner, self).__init__(**kwargs)
-        if self.user.state:
-            self.load_state(self.user.state)
-
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -451,13 +463,14 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
-            url_path_join(self.user.url, 'oauth_callback')
+            url_path_join(self.user.url, self.name, 'oauth_callback')
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_API_URL'] = self.hub.api_url
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
-        env['JUPYTERHUB_SERVICE_PREFIX'] = self.user.base_url
+        if self.server:
+            env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -493,8 +506,8 @@ class Spawner(LoggingConfigurable):
             ns (dict): namespace for string formatting.
         """
         d = {'username': self.user.name}
-        if self.user.server:
-            d['base_url'] = self.user.server.base_url
+        if self.server:
+            d['base_url'] = self.server.base_url
         return d
 
     def format_string(self, s):
@@ -518,14 +531,15 @@ class Spawner(LoggingConfigurable):
         Doesn't expect shell expansion to happen.
         """
         args = []
+
         if self.ip:
             args.append('--ip="%s"' % self.ip)
 
         if self.port:
             args.append('--port=%i' % self.port)
-        elif self.user.server.port:
+        elif self.server.port:
             self.log.warning("Setting port from user.server is deprecated as of JupyterHub 0.7.")
-            args.append('--port=%i' % self.user.server.port)
+            args.append('--port=%i' % self.server.port)
 
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
@@ -897,8 +911,8 @@ class LocalProcessSpawner(Spawner):
             # A deprecation warning will be shown if the subclass
             # does not return ip, port.
             if self.ip:
-                self.user.server.ip = self.ip
-            self.user.server.port = self.port
+                self.server.ip = self.ip
+            self.server.port = self.port
         return (self.ip or '127.0.0.1', self.port)
 
     @gen.coroutine

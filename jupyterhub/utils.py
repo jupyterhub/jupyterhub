@@ -235,7 +235,7 @@ def default_server_name(user):
 
     Will be the first available integer string, e.g. '1' or '2'.
     """
-    existing_names = { server.name for server in user.servers }
+    existing_names = set(user.spawners)
     # if there are 5 servers, count from 1 to 6
     for n in range(1, len(existing_names) + 2):
         name = str(n)

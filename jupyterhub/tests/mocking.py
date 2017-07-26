@@ -156,7 +156,10 @@ class MockHub(JupyterHub):
     
     def init_signal(self):
         pass
-    
+
+    def load_config_file(self, *args, **kwargs):
+        pass
+
     def start(self, argv=None):
         self.db_file = NamedTemporaryFile()
         self.pid_file = NamedTemporaryFile(delete=False).name
@@ -226,7 +229,7 @@ def public_url(app, user_or_service=None, path=''):
             host = user_or_service.host
         else:
             host = public_host(app)
-        prefix = user_or_service.server.base_url
+        prefix = user_or_service.prefix
     else:
         host = public_host(app)
         prefix = Server.from_url(app.proxy.public_url).base_url

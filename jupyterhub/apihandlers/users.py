@@ -146,11 +146,11 @@ class UserAPIHandler(APIHandler):
             raise web.HTTPError(404)
         if user.name == self.get_current_user().name:
             raise web.HTTPError(400, "Cannot delete yourself!")
-        if user.stop_pending:
+        if user.spawner._stop_pending:
             raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
-        if user.running:
+        if user.running(''):
             yield self.stop_single_user(user)
-            if user.stop_pending:
+            if user.spawner._stop_pending:
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
         
         yield gen.maybe_future(self.authenticator.delete_user(user))
@@ -185,7 +185,7 @@ class UserServerAPIHandler(APIHandler):
     @admin_or_self
     def post(self, name):
         user = self.find_user(name)
-        if user.running:
+        if user.running(''):
             # include notify, so that a server that died is noticed immediately
             state = yield user.spawner.poll_and_notify()
             if state is None:
@@ -193,72 +193,69 @@ class UserServerAPIHandler(APIHandler):
 
         options = self.get_json_body()
         yield self.spawn_single_user(user, options=options)
-        status = 202 if user.spawn_pending else 201
+        status = 202 if user.spawner._spawn_pending else 201
         self.set_status(status)
 
     @gen.coroutine
     @admin_or_self
     def delete(self, name):
         user = self.find_user(name)
-        if user.stop_pending:
+        if user.spawner._stop_pending:
             self.set_status(202)
             return
-        if not user.running:
+        if not user.running(''):
             raise web.HTTPError(400, "%s's server is not running" % name)
         # include notify, so that a server that died is noticed immediately
         status = yield user.spawner.poll_and_notify()
         if status is not None:
             raise web.HTTPError(400, "%s's server is not running" % name)
         yield self.stop_single_user(user)
-        status = 202 if user.stop_pending else 204
+        status = 202 if user.spawner._stop_pending else 204
         self.set_status(status)
 
 
-class UserCreateNamedServerAPIHandler(APIHandler):
-    """Create a named single-user server
+class UserNamedServerAPIHandler(APIHandler):
+    """Manage named single-user servers
     
     This handler should be used when c.JupyterHub.allow_named_servers = True
     """
     @gen.coroutine
     @admin_or_self
-    def post(self, name):
+    def post(self, name, server_name):
+        if not self.allow_named_servers:
+            raise web.HTTPError(400, "Named servers are not enabled.")
         user = self.find_user(name)
         if user is None:
-            raise web.HTTPError(404, "No such user %r" % name)
-        if user.running:
-            # include notify, so that a server that died is noticed immediately
-            state = yield user.spawner.poll_and_notify()
-            if state is None:
-                raise web.HTTPError(400, "%s's server is already running" % name)
-
+            raise web.HTTPError(404, "No such user '%s'" % name)
+        
         options = self.get_json_body()
-        yield self.spawn_single_user(user, options=options)
-        status = 202 if user.spawn_pending else 201
+        yield self.spawn_single_user(user, server_name, options=options)
+        spawner = user.spawners[server_name]
+        status = 202 if spawner._spawn_pending else 201
         self.set_status(status)
 
-
-class UserDeleteNamedServerAPIHandler(APIHandler):
-    """Delete a named single-user server
-    
-    Expect a server_name inside the url /user/:user/servers/:server_name
-    
-    This handler should be used when c.JupyterHub.allow_named_servers = True
-    """
     @gen.coroutine
     @admin_or_self
     def delete(self, name, server_name):
+        if not self.allow_named_servers:
+            raise web.HTTPError(400, "Named servers are not enabled.")
         user = self.find_user(name)
-        if user.stop_pending:
+        if user is None:
+            raise web.HTTPError(404, "No such user '%s'" % name)
+        if server_name not in user.spawners:
+            raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
+        spawner = user.spawners[server_name]
+        if spawner._stop_pending:
             self.set_status(202)
             return
-        if not user.running:
-            raise web.HTTPError(400, "%s's server is not running" % name)
+        if not user.running(server_name):
+           raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
         # include notify, so that a server that died is noticed immediately
-        status = yield user.spawner.poll_and_notify()
+        status = yield spawner.poll_and_notify()
         if status is not None:
-            raise web.HTTPError(400, "%s's server is not running" % name)
-        yield self.stop_single_user(user)
-        status = 202 if user.stop_pending else 204
+            raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
+        yield self.stop_single_user(user, server_name)
+        status = 202 if spawner._stop_pending else 204
         self.set_status(status)
 
 class UserAdminAccessAPIHandler(APIHandler):
@@ -279,8 +276,6 @@ class UserAdminAccessAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
-        if not user.running:
-            raise web.HTTPError(400, "%s's server is not running" % name)
 
 
 default_handlers = [
@@ -288,7 +283,6 @@ default_handlers = [
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
-    (r"/api/users/([^/]+)/servers", UserCreateNamedServerAPIHandler),
-    (r"/api/users/([^/]+)/servers/([^/]+)", UserDeleteNamedServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]*)", UserNamedServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]

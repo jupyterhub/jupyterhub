@@ -100,14 +100,26 @@ class APIHandler(BaseHandler):
             'name': user.name,
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
-            'server': user.url if user.running else None,
+            'server': user.url if user.running('') else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
-        if user.spawn_pending:
+        if user.spawners['']._spawn_pending:
             model['pending'] = 'spawn'
-        elif user.stop_pending:
+        elif user.spawners['']._stop_pending:
             model['pending'] = 'stop'
+
+        if self.allow_named_servers:
+            servers = model['servers'] = {}
+            for name, spawner in user.spawners.items():
+                if user.running(name):
+                    servers[name] = s = {'name': name}
+                    if spawner._spawn_pending:
+                        s['pending'] = 'spawn'
+                    elif spawner._stop_pending:
+                        s['pending'] = 'stop'
+                    if spawner.server:
+                        s['url'] = user.url + name
         return model
 
     def group_model(self, group):

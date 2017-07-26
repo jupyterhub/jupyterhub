@@ -9,6 +9,7 @@ import binascii
 from datetime import datetime
 from getpass import getuser
 import logging
+from operator import itemgetter
 import os
 import re
 import shutil
@@ -520,8 +521,8 @@ class JupyterHub(Application):
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
     
-    allow_multiple_servers = Bool(False,
-        help="Allow multiple single-server per user"
+    allow_named_servers = Bool(False,
+        help="Allow named single-user servers per user"
     ).tag(config=True)
     
     # class for spawning single-user servers
@@ -686,6 +687,9 @@ class JupyterHub(Application):
             if handler.formatter is None:
                 handler.setFormatter(_formatter)
             self.log.addHandler(handler)
+
+        # disable curl debug, which is TOO MUCH
+        logging.getLogger('tornado.curl_httpclient').setLevel(max(self.log_level, logging.INFO))
 
         # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
@@ -924,9 +928,9 @@ class JupyterHub(Application):
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
-                self.log.exception("Error adding user %r already in db", user.name)
+                self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
-                    self.log.warning("Deleting invalid user %r from the Hub database", user.name)
+                    self.log.warning("Deleting invalid user %s from the Hub database", user.name)
                     db.delete(user)
                 else:
                     self.log.warning(dedent("""
@@ -989,7 +993,7 @@ class JupyterHub(Application):
                 created = False
                 if obj is None:
                     created = True
-                    self.log.debug("Adding %s %r to database", kind, name)
+                    self.log.debug("Adding %s %s to database", kind, name)
                     obj = Class(name=name)
                     db.add(obj)
                     db.commit()
@@ -1112,8 +1116,9 @@ class JupyterHub(Application):
             parts = ['{0: >8}'.format(user.name)]
             if user.admin:
                 parts.append('admin')
-            if user.server:
-                parts.append('running at %s' % user.server)
+            for name, spawner in sorted(user.spawners.items(), key=itemgetter(0)):
+                if spawner.server:
+                    parts.append('%s:%s running at %s' % (user.name, name, spawner.server))
             return ' '.join(parts)
 
         @gen.coroutine
@@ -1128,29 +1133,30 @@ class JupyterHub(Application):
         for orm_user in db.query(orm.User):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             self.log.debug("Loading state for %s from db", user.name)
-            spawner = user.spawner
-            status = 0
-            if user.server:
-                try:
-                    status = yield spawner.poll()
-                except Exception:
-                    self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.", user.name)
-                    status = -1
+            for name, spawner in user.spawners.items():
+                status = 0
+                if spawner.server:
+                    try:
+                        status = yield spawner.poll()
+                    except Exception:
+                        self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.",
+                            user.name if name else '%s|%s' % (user.name, name))
+                        status = -1
 
-            if status is None:
-                self.log.info("%s still running", user.name)
-                spawner.add_poll_callback(user_stopped, user)
-                spawner.start_polling()
-            else:
-                # user not running. This is expected if server is None,
-                # but indicates the user's server died while the Hub wasn't running
-                # if user.server is defined.
-                log = self.log.warning if user.server else self.log.debug
-                log("%s not running.", user.name)
-                # remove all server or servers entry from db related to the user
-                for server in user.servers:
-                    db.delete(server)
-                db.commit()
+                if status is None:
+                    self.log.info("%s still running", user.name)
+                    spawner.add_poll_callback(user_stopped, user)
+                    spawner.start_polling()
+                else:
+                    # user not running. This is expected if server is None,
+                    # but indicates the user's server died while the Hub wasn't running
+                    # if spawner.server is defined.
+                    log = self.log.warning if spawner.server else self.log.debug
+                    log("%s not running.", user.name)
+                    # remove all server or servers entry from db related to the user
+                    if spawner.server:
+                        db.delete(spawner.orm_spawner.server)
+            db.commit()
 
             user_summaries.append(_user_summary(user))
 
@@ -1234,7 +1240,7 @@ class JupyterHub(Application):
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             statsd=self.statsd,
-            allow_multiple_servers=self.allow_multiple_servers,
+            allow_named_servers=self.allow_named_servers,
             oauth_provider=self.oauth_provider,
         )
         # allow configured settings to have priority
@@ -1313,6 +1319,7 @@ class JupyterHub(Application):
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
             for uid, user in self.users.items():
+                user.db = self.db
                 if user.spawner is not None:
                     futures.append(user.stop())
         else:

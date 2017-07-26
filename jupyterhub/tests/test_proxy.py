@@ -158,18 +158,18 @@ def test_check_routes(app, io_loop, username, endpoints):
     # check a valid route exists for user
     test_user = app.users[username]
     before = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert test_user.proxy_spec in before
+    assert test_user.proxy_spec() in before
 
     # check if a route is removed when user deleted
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     io_loop.run_sync(lambda: proxy.delete_user(test_user))
     during = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert test_user.proxy_spec not in during
+    assert test_user.proxy_spec() not in during
 
     # check if a route exists for user
     io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
     after = sorted(io_loop.run_sync(app.proxy.get_all_routes))
-    assert test_user.proxy_spec in after
+    assert test_user.proxy_spec() in after
 
     # check that before and after state are the same
     assert before == after

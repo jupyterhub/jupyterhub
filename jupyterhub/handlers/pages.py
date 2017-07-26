@@ -45,7 +45,7 @@ class RootHandler(BaseHandler):
             return
         user = self.get_current_user()
         if user:
-            if user.running:
+            if user.running(''):
                 url = user.url
                 self.log.debug("User is running: %s", url)
                 self.set_login_cookie(user) # set cookie
@@ -64,7 +64,7 @@ class HomeHandler(BaseHandler):
     @gen.coroutine
     def get(self):
         user = self.get_current_user()
-        if user.running:
+        if user.running(''):
             # trigger poll_and_notify event in case of a server that died
             yield user.spawner.poll_and_notify()
         html = self.render_template('home.html',
@@ -94,7 +94,7 @@ class SpawnHandler(BaseHandler):
     def get(self):
         """GET renders form for spawning with user-specified options"""
         user = self.get_current_user()
-        if user.running:
+        if not self.allow_named_servers and user.running(''):
             url = user.url
             self.log.debug("User is running: %s", url)
             self.redirect(url)
@@ -110,7 +110,7 @@ class SpawnHandler(BaseHandler):
     def post(self):
         """POST spawns with user-specified options"""
         user = self.get_current_user()
-        if user.running:
+        if not self.allow_named_servers and user.running(''):
             url = user.url
             self.log.warning("User is already running: %s", url)
             self.redirect(url)
@@ -182,7 +182,7 @@ class AdminHandler(BaseHandler):
 
         users = self.db.query(orm.User).order_by(*ordered)
         users = [ self._user_from_orm(u) for u in users ]
-        running = [ u for u in users if u.running ]
+        running = [ u for u in users if u.running('') ]
 
         html = self.render_template('admin.html',
             user=self.get_current_user(),
