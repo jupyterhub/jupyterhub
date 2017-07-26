@@ -674,6 +674,7 @@ class Spawner(LoggingConfigurable):
         def _wait_for_death():
             status = yield self.poll()
             return status is not None
+
         try:
             r = yield exponential_backoff(
                 _wait_for_death,

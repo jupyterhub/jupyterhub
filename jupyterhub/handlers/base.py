@@ -597,6 +597,7 @@ class UserSpawnHandler(BaseHandler):
             # record redirect count in query parameter
             if redirects:
                 self.log.warning("Redirect loop detected on %s", self.request.uri)
+                # add capped exponential backoff where cap is 10s
                 yield gen.sleep(min(1 * (2 ** redirects), 10))
                 # rewrite target url with new `redirects` query value
                 url_parts = urlparse(target)
