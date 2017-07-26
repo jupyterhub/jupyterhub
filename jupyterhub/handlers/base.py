@@ -20,7 +20,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..utils import url_path_join, DT_SCALE
+from ..utils import url_path_join, exponential_backoff
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -597,7 +597,7 @@ class UserSpawnHandler(BaseHandler):
             # record redirect count in query parameter
             if redirects:
                 self.log.warning("Redirect loop detected on %s", self.request.uri)
-                yield gen.sleep(min(1 * (DT_SCALE ** redirects), 10))
+                yield gen.sleep(min(1 * (2 ** redirects), 10))
                 # rewrite target url with new `redirects` query value
                 url_parts = urlparse(target)
                 query_parts = parse_qs(url_parts.query)
