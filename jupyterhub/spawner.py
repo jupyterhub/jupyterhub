@@ -51,11 +51,11 @@ class Spawner(LoggingConfigurable):
     _proxy_pending = False
     _waiting_for_response = False
 
+    authenticator = Any()
+    hub = Any()
     orm_spawner = Any()
     user = Any()
-    hub = Any()
-    authenticator = Any()
-    orm_spawner = Any()
+
     @property
     def server(self):
         if self.orm_spawner and self.orm_spawner.server:

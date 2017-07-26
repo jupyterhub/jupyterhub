@@ -928,9 +928,9 @@ class JupyterHub(Application):
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
-                self.log.exception("Error adding user %r already in db", user.name)
+                self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
-                    self.log.warning("Deleting invalid user %r from the Hub database", user.name)
+                    self.log.warning("Deleting invalid user %s from the Hub database", user.name)
                     db.delete(user)
                 else:
                     self.log.warning(dedent("""
@@ -993,7 +993,7 @@ class JupyterHub(Application):
                 created = False
                 if obj is None:
                     created = True
-                    self.log.debug("Adding %s %r to database", kind, name)
+                    self.log.debug("Adding %s %s to database", kind, name)
                     obj = Class(name=name)
                     db.add(obj)
                     db.commit()
@@ -1118,7 +1118,7 @@ class JupyterHub(Application):
                 parts.append('admin')
             for name, spawner in sorted(user.spawners.items(), key=itemgetter(0)):
                 if spawner.server:
-                    parts.append('%r running at %s' % (name, spawner.server))
+                    parts.append('%s:%s running at %s' % (user.name, name, spawner.server))
             return ' '.join(parts)
 
         @gen.coroutine

@@ -226,7 +226,7 @@ class UserNamedServerAPIHandler(APIHandler):
             raise web.HTTPError(400, "Named servers are not enabled.")
         user = self.find_user(name)
         if user is None:
-            raise web.HTTPError(404, "No such user %r" % name)
+            raise web.HTTPError(404, "No such user '%s'" % name)
         
         options = self.get_json_body()
         yield self.spawn_single_user(user, server_name, options=options)
@@ -241,19 +241,19 @@ class UserNamedServerAPIHandler(APIHandler):
             raise web.HTTPError(400, "Named servers are not enabled.")
         user = self.find_user(name)
         if user is None:
-            raise web.HTTPError(404, "No such user %r" % name)
+            raise web.HTTPError(404, "No such user '%s'" % name)
         if server_name not in user.spawners:
-            raise web.HTTPError(404, "%s has no server named %r" % (name, server_name))
+            raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
         spawner = user.spawners[server_name]
         if spawner._stop_pending:
             self.set_status(202)
             return
         if not user.running(server_name):
-           raise web.HTTPError(400, "%s's server %r is not running" % (name, server_name))
+           raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
         # include notify, so that a server that died is noticed immediately
         status = yield spawner.poll_and_notify()
         if status is not None:
-            raise web.HTTPError(400, "%s's server %r is not running" % (name, server_name))
+            raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
         yield self.stop_single_user(user, server_name)
         status = 202 if spawner._stop_pending else 204
         self.set_status(status)
