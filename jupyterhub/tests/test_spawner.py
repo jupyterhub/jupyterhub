@@ -13,7 +13,6 @@ import time
 from unittest import mock
 
 import pytest
-import requests
 from tornado import gen
 
 from ..user import User
@@ -21,6 +20,7 @@ from ..objects import Hub
 from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner
 from .. import orm
+from .utils import async_requests
 
 _echo_sleep = """
 import sys, time
@@ -239,7 +239,7 @@ def test_shell_cmd(db, tmpdir, request):
     s.server.port = port
     db.commit()
     yield wait_for_spawner(s)
-    r = requests.get('http://%s:%i/env' % (ip, port))
+    r = yield async_requests.get('http://%s:%i/env' % (ip, port))
     r.raise_for_status()
     env = r.json()
     assert env['TESTVAR'] == 'foo'

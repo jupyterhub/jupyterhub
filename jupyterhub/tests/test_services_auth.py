@@ -8,6 +8,7 @@ import time
 from unittest import mock
 from urllib.parse import urlparse
 
+import pytest
 from pytest import raises
 import requests
 import requests_mock
@@ -20,6 +21,7 @@ from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
 from .mocking import public_url, public_host
 from .test_api import add_user
+from .utils import async_requests
 
 # mock for sending monotonic counter way into the future
 monotonic_future = mock.patch('time.monotonic', lambda : sys.maxsize)
@@ -215,10 +217,11 @@ def test_hub_authenticated(request):
         assert r.status_code == 403
 
 
+@pytest.mark.gen_test
 def test_hubauth_cookie(app, mockservice_url):
     """Test HubAuthenticated service with user cookies"""
-    cookies = app.login_user('badger')
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/', cookies=cookies)
+    cookies = yield app.login_user('badger')
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/', cookies=cookies)
     r.raise_for_status()
     print(r.text)
     reply = r.json()
@@ -229,6 +232,7 @@ def test_hubauth_cookie(app, mockservice_url):
     }
 
 
+@pytest.mark.gen_test
 def test_hubauth_token(app, mockservice_url):
     """Test HubAuthenticated service with user API tokens"""
     u = add_user(app.db, name='river')
@@ -236,7 +240,7 @@ def test_hubauth_token(app, mockservice_url):
     app.db.commit()
 
     # token in Authorization header
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/',
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/',
         headers={
             'Authorization': 'token %s' % token,
         })
@@ -248,7 +252,7 @@ def test_hubauth_token(app, mockservice_url):
     }
 
     # token in ?token parameter
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
     r.raise_for_status()
     reply = r.json()
     sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
@@ -257,7 +261,7 @@ def test_hubauth_token(app, mockservice_url):
         'admin': False,
     }
 
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -267,16 +271,17 @@ def test_hubauth_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-def test_hubauth_service_token(app, mockservice_url, io_loop):
+@pytest.mark.gen_test
+def test_hubauth_service_token(app, mockservice_url):
     """Test HubAuthenticated service with service API tokens"""
     
     token = hexlify(os.urandom(5)).decode('utf8')
     name = 'test-api-service'
     app.service_tokens[token] = name
-    io_loop.run_sync(app.init_api_tokens)
+    yield app.init_api_tokens()
     
     # token in Authorization header
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/',
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/',
         headers={
             'Authorization': 'token %s' % token,
         })
@@ -289,7 +294,7 @@ def test_hubauth_service_token(app, mockservice_url, io_loop):
     }
 
     # token in ?token parameter
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
     r.raise_for_status()
     reply = r.json()
     assert reply == {
@@ -298,7 +303,7 @@ def test_hubauth_service_token(app, mockservice_url, io_loop):
         'admin': False,
     }
 
-    r = requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -308,16 +313,19 @@ def test_hubauth_service_token(app, mockservice_url, io_loop):
     assert path.endswith('/hub/login')
 
 
+@pytest.mark.gen_test
 def test_oauth_service(app, mockservice_url):
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/')
     # first request is only going to set login cookie
     # FIXME: redirect to originating URL (OAuth loses this info)
     s = requests.Session()
-    s.cookies = app.login_user('link')
-    r = s.get(url)
+    s.cookies = yield app.login_user('link')
+    # run session.get in async_requests thread
+    s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
+    r = yield s_get(url)
     r.raise_for_status()
     # second request should be authenticated
-    r = s.get(url, allow_redirects=False)
+    r = yield s_get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()
