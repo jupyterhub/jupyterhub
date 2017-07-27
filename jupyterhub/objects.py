@@ -28,6 +28,7 @@ class Server(HasTraits):
 
     ip = Unicode()
     connect_ip = Unicode()
+    connect_port = Integer()
     proto = Unicode('http')
     port = Integer()
     base_url = URLPrefix('/')
@@ -49,6 +50,17 @@ class Server(HasTraits):
             return socket.gethostname()
         else:
             return self.ip
+
+    @property
+    def _connect_port(self):
+        """
+        The port to use when connecting to this server.
+
+        Defaults to self.port, but can be overridden by setting self.connect_port
+        """
+        if self.connect_port:
+            return self.connect_port
+        return self.port
 
     @classmethod
     def from_url(cls, url):
@@ -93,7 +105,7 @@ class Server(HasTraits):
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
             ip=self._connect_ip,
-            port=self.port,
+            port=self._connect_port,
         )
 
     @property

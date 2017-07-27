@@ -400,6 +400,7 @@ class JupyterHub(Application):
         See `hub_connect_ip` for cases where the bind and connect address should differ.
         """
     ).tag(config=True)
+
     hub_connect_ip = Unicode('',
         help="""The ip or hostname for proxies and spawners to use
         for connecting to the Hub.
@@ -412,6 +413,18 @@ class JupyterHub(Application):
         .. versionadded:: 0.8
         """
     ).tag(config=True)
+
+    hub_connect_port = Integer(
+        0,
+        help="""
+        The port for proxies & spawners to connect to the hub on.
+
+        Used alongside `hub_connect_ip`
+
+        .. versionadded:: 0.8
+        """
+    ).tag(config=True)
+
     hub_prefix = URLPrefix('/hub/',
         help="The prefix for the hub server.  Always /base_url/hub/"
     )
@@ -856,6 +869,8 @@ class JupyterHub(Application):
         )
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
+        if self.hub_connect_port:
+            self.hub.connect_port = self.hub_connect_port
 
     @gen.coroutine
     def init_users(self):
