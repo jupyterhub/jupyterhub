@@ -5,6 +5,9 @@ python:
   - 3.6
   - 3.5
   - 3.4
+env:
+  global:
+    - ASYNC_TEST_TIMEOUT=15
 
 # installing dependencies
 before_install:
