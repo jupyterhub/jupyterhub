@@ -63,16 +63,35 @@ class JSONDict(TypeDecorator):
 def _fernet_key(key):
     """Generate a Fernet key from a secret
     
-    Will always be 32 bytes (via sha256), url-safe base64-encoded,
-    per fernet spec.
+    Fernet keys are 32 bytes encoded in url-safe base64 (44 characters).
+    
+    If a given key is not already a fernet key,
+    it will be passed through HKDF to generate the 32 bytes.
     """
     from cryptography.hazmat.primitives import hashes
     from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
     if isinstance(key, str):
         key = key.encode()
-    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
-    digest.update(key)
-    return base64.urlsafe_b64encode(digest.finalize())
+    if len(key) == 44:
+        # already a fernet key, pass it along
+        try:
+            base64.urlsafe_b64decode(key)
+        except Exception:
+            pass
+        else:
+            return key
+    elif len(key) != 32:
+        # not the right size, pass through HKDF
+        kdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=None,
+            info=b'jupyterhub auth state',
+            backend=default_backend(),
+        )
+        key = kdf.derive(key)
+    return base64.urlsafe_b64encode(key)
 
 
 class MultiFernetEngine(FernetEngine):
