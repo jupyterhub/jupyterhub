@@ -28,6 +28,9 @@ def test_external_proxy(request):
     cfg.ConfigurableHTTPProxy.should_start = False
 
     app = MockHub.instance(config=cfg)
+    # disable last_activity polling to avoid check_routes being called during the test,
+    # which races with some of our test conditions
+    app.last_activity_interval = 0
 
     def fin():
         MockHub.clear_instance()
@@ -53,10 +56,7 @@ def test_external_proxy(request):
 
     def _cleanup_proxy():
         if proxy.poll() is None:
-            print("Terminating proxy")
             proxy.terminate()
-        else:
-            print("Not stopping proxy", proxy)
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
