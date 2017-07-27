@@ -366,6 +366,20 @@ class BaseHandler(RequestHandler):
     def spawn_single_user(self, user, server_name='', options=None):
         if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
+
+        if self.settings['concurrent_spawn_limit'] is not None and \
+           self.hub.pending_spawns > self.settings['concurrent_spawn_limit']:
+            # This will throw an error if we hit our timeout
+            self.log.info(
+                'More than %s pending spawns, throttling',
+                self.settings['concurrent_spawn_limit']
+            )
+            yield exponential_backoff(
+                lambda: self.hub.pending_spawns < self.settings['concurrent_spawn_limit'],
+                'Too many users are starting right now, try again later',
+            )
+
+        self.hub.pending_spawns += 1
         tic = IOLoop.current().time()
         user_server_name = user.name
         if server_name:
@@ -402,6 +416,7 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user)
             finally:
                 spawner._proxy_pending = False
+                self.hub.pending_spawns -= 1
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
