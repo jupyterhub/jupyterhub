@@ -22,6 +22,7 @@ from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
+from .utils import async_requests
 
 from pamela import PAMError
 
@@ -178,10 +179,11 @@ class MockHub(JupyterHub):
         self.cleanup = lambda : None
         self.db_file.close()
     
+    @gen.coroutine
     def login_user(self, name):
         """Login a user by name, returning her cookies."""
         base_url = public_url(self)
-        r = requests.post(base_url + 'hub/login',
+        r = yield async_requests.post(base_url + 'hub/login',
             data={
                 'username': name,
                 'password': name,

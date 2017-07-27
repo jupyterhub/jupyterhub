@@ -38,8 +38,7 @@ def db():
 
 @fixture(scope='module')
 def io_loop(request):
-    """Same as pytest-tornado.gen"""
-    print("my io_loop fixture")
+    """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
     io_loop = ioloop.IOLoop()
     io_loop.make_current()
 
@@ -78,7 +77,7 @@ class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
 
 _mock_service_counter = 0
 
-def _mockservice(request, app, io_loop, url=False):
+def _mockservice(request, app, url=False):
     global _mock_service_counter
     _mock_service_counter += 1
     name = 'mock-service-%i' % _mock_service_counter
@@ -90,6 +89,8 @@ def _mockservice(request, app, io_loop, url=False):
     if url:
         spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
+    io_loop = app.io_loop
+
     with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
         app.services = [spec]
         app.init_services()
@@ -100,20 +101,17 @@ def _mockservice(request, app, io_loop, url=False):
             # wait for proxy to be updated before starting the service
             yield app.proxy.add_all_services(app._service_map)
             service.start()
-        app.io_loop.add_callback(start)
+        io_loop.run_sync(start)
         def cleanup():
             service.stop()
             app.services[:] = []
             app._service_map.clear()
         request.addfinalizer(cleanup)
-        for i in range(20):
-            if not getattr(service, 'proc', False):
-                time.sleep(0.2)
         # ensure process finishes starting
         with raises(TimeoutExpired):
             service.proc.wait(1)
         if url:
-            ioloop.IOLoop().run_sync(service.server.wait_up)
+            io_loop.run_sync(service.server.wait_up)
     return service
 
 
