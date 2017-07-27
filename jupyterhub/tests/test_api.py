@@ -462,7 +462,7 @@ def test_slow_spawn(app, no_patience, request):
 
     @gen.coroutine
     def wait_spawn():
-        while app_user.spawner._spawn_pending:
+        while not app_user.running(''):
             yield gen.sleep(0.1)
 
     yield wait_spawn()
