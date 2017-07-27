@@ -592,7 +592,7 @@ class UserSpawnHandler(BaseHandler):
             port = host_info.port
             if not port:
                 port = 443 if host_info.scheme == 'https' else 80
-            if port != Server.from_url(self.proxy.public_url).port and port == self.hub.port:
+            if port != Server.from_url(self.proxy.public_url).connect_port and port == self.hub.connect_port:
                 self.log.warning("""
                     Detected possible direct connection to Hub's private ip: %s, bypassing proxy.
                     This will result in a redirect loop.
