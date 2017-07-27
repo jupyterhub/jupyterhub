@@ -16,7 +16,6 @@ import shutil
 import signal
 import sys
 from textwrap import dedent
-import threading
 from urllib.parse import urlparse
 
 if sys.version_info[:2] < (3, 3):
@@ -423,7 +422,6 @@ class JupyterHub(Application):
     @observe('base_url')
     def _update_hub_prefix(self, change):
         """add base URL to hub prefix"""
-        base_url = change['new']
         self.hub_prefix = self._hub_prefix_default()
 
     cookie_secret = Bytes(
@@ -813,15 +811,6 @@ class JupyterHub(Application):
         # store the loaded trait value
         self.cookie_secret = secret
 
-    # thread-local storage of db objects
-    _local = Instance(threading.local, ())
-
-    @property
-    def db(self):
-        if not hasattr(self._local, 'db'):
-            self._local.db = scoped_session(self.session_factory)()
-        return self._local.db
-
     def init_db(self):
         """Create the database connection"""
         self.log.debug("Connecting to db: %s", self.db_url)
@@ -833,7 +822,7 @@ class JupyterHub(Application):
                 **self.db_kwargs
             )
             # trigger constructing thread local db property
-            _ = self.db
+            self.db = scoped_session(self.session_factory)()
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)

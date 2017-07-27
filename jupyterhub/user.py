@@ -98,27 +98,7 @@ class User(HasTraits):
         if self.orm_user:
             return inspect(self.orm_user).session
 
-    @observe('db')
-    def _db_changed(self, change):
-        """Changing db session reacquires ORM User object"""
-        # db session changed, re-get orm User
-        db = change.new
-        if self._user_id is not None:
-            # fetch our orm.User from the new db session
-            self.orm_user = db.query(orm.User).filter(orm.User.id == self._user_id).first()
-        # update our spawners' ORM objects with the new session,
-        # which can be found on our new orm_user.
-        for name, spawner in self.spawners.items():
-            spawner.orm_spawner = self.orm_user.orm_spawners[name]
-
-    _user_id = None
     orm_user = Any(allow_none=True)
-    @observe('orm_user')
-    def _orm_user_changed(self, change):
-        if change.new:
-            self._user_id = change.new.id
-        else:
-            self._user_id = None
 
     @property
     def authenticator(self):
