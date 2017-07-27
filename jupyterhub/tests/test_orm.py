@@ -3,6 +3,9 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import base64
+import cryptography
+import os
 import socket
 
 import pytest
@@ -175,3 +178,55 @@ def test_groups(db):
     db.commit()
     assert group.users == [user]
     assert user.groups == [group]
+
+
+def test_auth_state(db):
+    user = orm.User(name='eve')
+    db.add(user)
+    db.commit()
+    # starts empty
+    assert user.auth_state is None
+    
+    # can't set auth_state without keys
+    state = {'key': 'value'}
+    orm.encryption_config.key_list = []
+    with pytest.raises(orm.EncryptionUnavailable):
+        user.auth_state = state
+        db.commit()
+    assert user.auth_state is None
+    
+    #
+    first_key = 'first-key'
+    second_key = 'second-key'
+    orm.encryption_config.key_list = [first_key]
+    user.auth_state = state
+    db.commit()
+    assert user.auth_state == state
+    
+    # can't read auth_state without keys
+    orm.encryption_config.key_list = []
+    with pytest.raises(orm.EncryptionUnavailable):
+        print(user.auth_state)
+
+    # key rotation works
+    db.rollback()
+    orm.encryption_config.key_list = [second_key, first_key]
+    assert user.auth_state == state
+
+    user.auth_state = new_state = {'key': 'newvalue'}
+    db.commit()
+
+    orm.encryption_config.key_list = [first_key]
+    db.rollback()
+    # can't read anymore with new-key after encrypting with second-key
+    assert user.auth_state is None
+
+    user.auth_state = new_state
+    db.commit()
+    assert user.auth_state == new_state
+
+    orm.encryption_config.key_list = []
+    db.rollback()
+
+    assert user.auth_state is None
+

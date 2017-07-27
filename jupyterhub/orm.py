@@ -3,14 +3,18 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import base64
 from datetime import datetime
 import enum
 import os
 import json
 
-from tornado import gen
+try:
+    import cryptography
+except ImportError:
+    cryptography = None
+
 from tornado.log import app_log
-from tornado.httpclient import HTTPRequest, AsyncHTTPClient
 
 from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy import (
@@ -19,17 +23,17 @@ from sqlalchemy import (
     DateTime, Enum
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.schema import Index, UniqueConstraint
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import bindparam
-from sqlalchemy_utils.types.encrypted import EncryptedType
+from sqlalchemy_utils.types.encrypted import EncryptedType, FernetEngine
 from sqlalchemy import create_engine, Table
 
+from traitlets import HasTraits, List
+
 from .utils import (
-    random_port, url_path_join, wait_for_server, wait_for_http_server,
-    new_token, hash_token, compare_token, can_connect,
+    random_port,
+    new_token, hash_token, compare_token,
 )
 
 
@@ -38,7 +42,7 @@ class JSONDict(TypeDecorator):
 
     Usage::
 
-        JSONEncodedDict(255)
+        JSONDict(255)
 
     """
 
@@ -56,37 +60,84 @@ class JSONDict(TypeDecorator):
         return value
 
 
-class OptionalEncrypted(EncryptedType):
-    def __init__(self, type_in=None, key=None, engine=None, **kwargs):
-        try:
-            import cryptography
-        except ImportError:
-            # not installed, so no encryption!
-            self.encrypted = False
-            print("Cryptography module not installed, auth_state will be disabled")
+def _fernet_key(key):
+    """Generate a Fernet key from a secret
+    
+    Will always be 32 bytes (via sha256), url-safe base64-encoded,
+    per fernet spec.
+    """
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.backends import default_backend
+    if isinstance(key, str):
+        key = key.encode()
+    digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
+    digest.update(key)
+    return base64.urlsafe_b64encode(digest.finalize())
+
+
+class MultiFernetEngine(FernetEngine):
+    """Extend SQLAlchemy-Utils FernetEngine to use MultiFernet,
+
+    which supports key rotation.
+    """
+    key_list = None
+
+    def _update_key(self, key):
+        if key == self.key_list:
             return
+        return self._initialize_engine(key)
 
-        if 'AUTH_STATE_ENCRYPTION_KEY' not in os.environ:
-            print("Encryption key not set, Auth state will be disabled")
-            self.encrypted = False
-            return
+    def _initialize_engine(self, parent_class_key):
+        from cryptography.fernet import MultiFernet, Fernet
+        # key will be a *list* of keys
+        self.key_list = parent_class_key
+        self.fernet = MultiFernet([Fernet(_fernet_key(key)) for key in self.key_list])
 
-        if key is None:
-            key = os.environ['AUTH_STATE_ENCRYPTION_KEY']
-        super().__init__(type_in, key, engine, **kwargs)
+class EncryptionUnavailable(Exception):
+    pass
 
+class EncryptionConfig(HasTraits):
+    """Encapsulate encryption configuration
+    
+    Use via the encryption_config singleton below.
+    """
+    key_list = List()
+    def _key_list_default(self):
+        if 'AUTH_STATE_KEY' not in os.environ:
+            return []
+        # key can be a ;-separated sequence for key rotation.
+        # First item in the list is used for encryption.
+        return os.environ['AUTH_STATE_KEY'].split(';')
+
+    @property
+    def available(self):
+        if not self.key_list:
+            return False
+        return cryptography is not None
+
+encryption_config = EncryptionConfig()
+
+class Encrypted(EncryptedType):
+    def __init__(self, type_in=None, key=None, **kwargs):
+        super().__init__(type_in, key=lambda : encryption_config.key_list, engine=MultiFernetEngine, **kwargs)
+
+
+class CantEncrypt(TypeDecorator):
+    """Use in place of Encrypted when Encrypted types can't even be instantiated (crypto unavailable)"""
     def process_bind_param(self, value, dialect):
-        if not self.encrypted and value:
-            # If we aren't encrypted and get a non-empty value, just set an empty value
-            # FIXME: Warn in logs here
-            return None
-        return super().process_bind_param(value, dialect)
+        if value is None:
+            return value
+        raise EncryptionUnavailable("cryptography library is unavailable")
 
     def process_result_value(self, value, dialect):
-        if not self.encrypted:
-            # If we don't have encryption support, don't even try to decrypt it
-            return None
-        return super().process_result_value(value, dialect)
+        if value is None:
+            return value
+        raise EncryptionUnavailable("cryptography library is unavailable")
+
+
+# if cryptography library is unavailable, use CantEncrypt
+if cryptography is None:
+    Encrypted = CantEncrypt
 
 Base = declarative_base()
 Base.log = app_log
@@ -180,7 +231,38 @@ class User(Base):
     # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
     # Authenticators can store their state here:
-    auth_state = OptionalEncrypted(JSONDict)
+    _auth_state = Column('auth_state', Encrypted(JSONDict))
+    
+    # check for availability of encryption on a property
+    # to get better errors than raising in the TypeDecorator methods,
+    # which won't raise until `db.commit()`
+
+    @property
+    def auth_state(self):
+        # TODO: handle decryption failure
+        try:
+            value = self._auth_state
+        except Exception as e:
+            if encryption_config.available:
+                why = str(e)
+            else:
+                why = "encryption is unavailable"
+            app_log.warning("Failed to retrieve encrypted auth_state for %s because %s",
+                self.name, why)
+            return None
+        if value is not None and not encryption_config.available:
+            raise EncryptionUnavailable("auth_state requires cryptography library and AUTH_STATE_KEY")
+        return value
+    
+    @auth_state.setter
+    def auth_state(self, value):
+        if value is None:
+            self._auth_state = value
+            return
+        if value is not None and not encryption_config.available:
+            raise EncryptionUnavailable("auth_state requires cryptography library and AUTH_STATE_KEY")
+        self._auth_state = value
+
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
