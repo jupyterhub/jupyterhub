@@ -56,7 +56,9 @@ def test_generate_config():
     assert 'Spawner.cmd' in cfg_text
     assert 'Authenticator.whitelist' in cfg_text
 
-def test_init_tokens(io_loop):
+
+@pytest.mark.gen_test
+def test_init_tokens():
     with TemporaryDirectory() as td:
         db_file = os.path.join(td, 'jupyterhub.sqlite')
         tokens = {
@@ -65,7 +67,7 @@ def test_init_tokens(io_loop):
             'boagasdfasdf': 'chell',
         }
         app = MockHub(db_url=db_file, api_tokens=tokens)
-        io_loop.run_sync(lambda : app.initialize([]))
+        yield app.initialize([])
         db = app.db
         for token, username in tokens.items():
             api_token = orm.APIToken.find(db, token)
@@ -75,7 +77,7 @@ def test_init_tokens(io_loop):
 
         # simulate second startup, reloading same tokens:
         app = MockHub(db_url=db_file, api_tokens=tokens)
-        io_loop.run_sync(lambda : app.initialize([]))
+        yield app.initialize([])
         db = app.db
         for token, username in tokens.items():
             api_token = orm.APIToken.find(db, token)
@@ -87,7 +89,7 @@ def test_init_tokens(io_loop):
         tokens['short'] = 'gman'
         app = MockHub(db_url=db_file, api_tokens=tokens)
         with pytest.raises(ValueError):
-            io_loop.run_sync(lambda : app.initialize([]))
+            yield app.initialize([])
         assert orm.User.find(app.db, 'gman') is None
 
 
@@ -141,15 +143,16 @@ def test_cookie_secret_env(tmpdir):
     assert not os.path.exists(hub.cookie_secret_file)
 
 
-def test_load_groups(io_loop):
+@pytest.mark.gen_test
+def test_load_groups():
     to_load = {
         'blue': ['cyclops', 'rogue', 'wolverine'],
         'gold': ['storm', 'jean-grey', 'colossus'],
     }
     hub = MockHub(load_groups=to_load)
     hub.init_db()
-    io_loop.run_sync(hub.init_users)
-    hub.init_groups()
+    yield hub.init_users()
+    yield hub.init_groups()
     db = hub.db
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
@@ -158,6 +161,3 @@ def test_load_groups(io_loop):
     assert gold is not None
     assert sorted([ u.name for u in gold.users ]) == sorted(to_load['gold'])
 
-def test_version():
-    if sys.version_info[:2] < (3, 3):
-        assertRaises(ValueError)

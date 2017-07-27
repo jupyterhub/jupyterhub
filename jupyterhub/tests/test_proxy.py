@@ -16,7 +16,8 @@ from .test_api import api_request
 from ..utils import wait_for_http_server, url_path_join as ujoin
 
 
-def test_external_proxy(request, io_loop):
+@pytest.mark.gen_test
+def test_external_proxy(request):
 
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
@@ -27,10 +28,13 @@ def test_external_proxy(request, io_loop):
     cfg.ConfigurableHTTPProxy.should_start = False
 
     app = MockHub.instance(config=cfg)
+    # disable last_activity polling to avoid check_routes being called during the test,
+    # which races with some of our test conditions
+    app.last_activity_interval = 0
 
     def fin():
         MockHub.clear_instance()
-        app.stop()
+        app.http_server.stop()
 
     request.addfinalizer(fin)
 
@@ -56,24 +60,25 @@ def test_external_proxy(request, io_loop):
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
-        io_loop.run_sync(lambda: wait_for_http_server('http://%s:%i' % (proxy_ip, proxy_port)))
-    wait_for_proxy()
+        return wait_for_http_server('http://%s:%i' % (proxy_ip, proxy_port))
+    yield wait_for_proxy()
 
-    app.start([])
+    yield app.initialize([])
+    yield app.start()
     assert app.proxy.proxy_process is None
 
     # test if api service has a root route '/'
-    routes = io_loop.run_sync(app.proxy.get_all_routes)
+    routes = yield app.proxy.get_all_routes()
     assert list(routes.keys()) == ['/']
     
     # add user to the db and start a single user server
     name = 'river'
-    r = api_request(app, 'users', name, method='post')
+    r = yield api_request(app, 'users', name, method='post')
     r.raise_for_status()
-    r = api_request(app, 'users', name, 'server', method='post')
+    r = yield api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     
-    routes = io_loop.run_sync(app.proxy.get_all_routes)
+    routes = yield app.proxy.get_all_routes()
     # sets the desired path result
     user_path = ujoin(app.base_url, 'user/river') + '/'
     print(app.base_url, user_path)
@@ -86,18 +91,18 @@ def test_external_proxy(request, io_loop):
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
     proxy = Popen(cmd, env=env)
-    wait_for_proxy()
+    yield wait_for_proxy()
 
-    routes = io_loop.run_sync(app.proxy.get_all_routes)
+    routes = yield app.proxy.get_all_routes()
 
     assert list(routes.keys()) == []
     
     # poke the server to update the proxy
-    r = api_request(app, 'proxy', method='post')
+    r = yield api_request(app, 'proxy', method='post')
     r.raise_for_status()
 
     # check that the routes are correct
-    routes = io_loop.run_sync(app.proxy.get_all_routes)
+    routes = yield app.proxy.get_all_routes()
     assert sorted(routes.keys()) == ['/', user_spec]
 
     # teardown the proxy, and start a new one with different auth and port
@@ -115,41 +120,35 @@ def test_external_proxy(request, io_loop):
     if app.subdomain_host:
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
-    wait_for_proxy()
+    yield wait_for_proxy()
 
     # tell the hub where the new proxy is
     new_api_url = 'http://{}:{}'.format(proxy_ip, proxy_port)
-    r = api_request(app, 'proxy', method='patch', data=json.dumps({
+    r = yield api_request(app, 'proxy', method='patch', data=json.dumps({
         'api_url': new_api_url,
         'auth_token': new_auth_token,
     }))
     r.raise_for_status()
     assert app.proxy.api_url == new_api_url
 
-    # get updated auth token from main thread
-    def get_app_proxy_token():
-        q = Queue()
-        app.io_loop.add_callback(lambda: q.put(app.proxy.auth_token))
-        return q.get(timeout=2)
-
-    assert get_app_proxy_token() == new_auth_token
-    app.proxy.auth_token = new_auth_token
+    assert app.proxy.auth_token == new_auth_token
 
     # check that the routes are correct
-    routes = io_loop.run_sync(app.proxy.get_all_routes)
+    routes = yield app.proxy.get_all_routes()
     assert sorted(routes.keys()) == ['/', user_spec]
 
 
+@pytest.mark.gen_test
 @pytest.mark.parametrize("username, endpoints", [
     ('zoe', ['users/zoe', 'users/zoe/server']),
     ('50fia', ['users/50fia', 'users/50fia/server']),
     ('秀樹', ['users/秀樹', 'users/秀樹/server']),
 ])
-def test_check_routes(app, io_loop, username, endpoints):
+def test_check_routes(app,  username, endpoints):
     proxy = app.proxy
 
     for endpoint in endpoints:
-        r = api_request(app, endpoint, method='post')
+        r = yield api_request(app, endpoint, method='post')
         r.raise_for_status()
 
     test_user = orm.User.find(app.db, username)
@@ -157,18 +156,21 @@ def test_check_routes(app, io_loop, username, endpoints):
 
     # check a valid route exists for user
     test_user = app.users[username]
-    before = sorted(io_loop.run_sync(app.proxy.get_all_routes))
+    routes = yield app.proxy.get_all_routes()
+    before = sorted(routes)
     assert test_user.proxy_spec() in before
 
     # check if a route is removed when user deleted
-    io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
-    io_loop.run_sync(lambda: proxy.delete_user(test_user))
-    during = sorted(io_loop.run_sync(app.proxy.get_all_routes))
+    yield app.proxy.check_routes(app.users, app._service_map)
+    yield proxy.delete_user(test_user)
+    routes = yield app.proxy.get_all_routes()
+    during = sorted(routes)
     assert test_user.proxy_spec() not in during
 
     # check if a route exists for user
-    io_loop.run_sync(lambda: app.proxy.check_routes(app.users, app._service_map))
-    after = sorted(io_loop.run_sync(app.proxy.get_all_routes))
+    yield app.proxy.check_routes(app.users, app._service_map)
+    routes = yield app.proxy.get_all_routes()
+    after = sorted(routes)
     assert test_user.proxy_spec() in after
 
     # check that before and after state are the same
@@ -222,7 +224,8 @@ def test_add_get_delete(app, routespec):
         assert route is None
 
 
+@pytest.mark.gen_test
 @pytest.mark.parametrize("test_data", [None, 'notjson', json.dumps([])])
 def test_proxy_patch_bad_request_data(app, test_data):
-    r = api_request(app, 'proxy', method='patch', data=test_data)
+    r = yield api_request(app, 'proxy', method='patch', data=test_data)
     assert r.status_code == 400

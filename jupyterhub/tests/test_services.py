@@ -8,12 +8,14 @@ import sys
 from threading import Event
 import time
 
+import pytest
 import requests
 from tornado import gen
 from tornado.ioloop import IOLoop
 
 from .mocking import public_url
 from ..utils import url_path_join, wait_for_http_server, random_port
+from .utils import async_requests
 
 mockservice_path = os.path.dirname(os.path.abspath(__file__))
 mockservice_py = os.path.join(mockservice_path, 'mockservice.py')
@@ -38,6 +40,7 @@ def external_service(app, name='mockservice'):
         proc.terminate()
 
 
+@pytest.mark.gen_test
 def test_managed_service(mockservice):
     service = mockservice
     proc = service.proc
@@ -55,18 +58,19 @@ def test_managed_service(mockservice):
         if service.proc is not proc:
             break
         else:
-            time.sleep(0.2)
+            yield gen.sleep(0.2)
     
     assert service.proc.pid != first_pid
     assert service.proc.poll() is None
 
 
-def test_proxy_service(app, mockservice_url, io_loop):
+@pytest.mark.gen_test
+def test_proxy_service(app, mockservice_url):
     service = mockservice_url
     name = service.name
-    io_loop.run_sync(app.proxy.get_all_routes)
+    yield app.proxy.get_all_routes()
     url = public_url(app, service) + '/foo'
-    r = requests.get(url, allow_redirects=False)
+    r = yield async_requests.get(url, allow_redirects=False)
     path = '/services/{}/foo'.format(name)
     r.raise_for_status()
 
@@ -74,6 +78,7 @@ def test_proxy_service(app, mockservice_url, io_loop):
     assert r.text.endswith(path)
 
 
+@pytest.mark.gen_test
 def test_external_service(app):
     name = 'external'
     with external_service(app, name=name) as env:
@@ -85,17 +90,11 @@ def test_external_service(app):
         }]
         app.init_services()
         app.init_api_tokens()
-        evt = Event()
+        yield app.proxy.add_all_services(app._service_map)
 
-        @gen.coroutine
-        def add_services():
-            yield app.proxy.add_all_services(app._service_map)
-            evt.set()
-        app.io_loop.add_callback(add_services)
-        assert evt.wait(10)
         service = app._service_map[name]
         url = public_url(app, service) + '/api/users'
-        r = requests.get(url, allow_redirects=False)
+        r = yield async_requests.get(url, allow_redirects=False)
         r.raise_for_status()
         assert r.status_code == 200
         resp = r.json()

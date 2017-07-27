@@ -140,7 +140,8 @@ def test_token_find(db):
     assert found is None
 
 
-def test_spawn_fails(db, io_loop):
+@pytest.mark.gen_test
+def test_spawn_fails(db):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
@@ -156,7 +157,7 @@ def test_spawn_fails(db, io_loop):
     })
     
     with pytest.raises(RuntimeError) as exc:
-        io_loop.run_sync(user.spawn)
+        yield user.spawn()
     assert user.spawners[''].server is None
     assert not user.running('')
 
