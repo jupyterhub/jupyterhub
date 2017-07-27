@@ -96,7 +96,7 @@ def wait_for_spawner(spawner, timeout=10):
     yield wait()
 
 
-@pytest.mark.gen_test(run_sync=False)
+@pytest.mark.gen_test
 def test_single_user_spawner(app, request):
     user = next(iter(app.users.values()), None)
     spawner = user.spawner
@@ -112,42 +112,45 @@ def test_single_user_spawner(app, request):
     assert status == 0
 
 
-def test_stop_spawner_sigint_fails(db, io_loop):
+@pytest.mark.gen_test
+def test_stop_spawner_sigint_fails(db):
     spawner = new_spawner(db, cmd=[sys.executable, '-c', _uninterruptible])
-    io_loop.run_sync(spawner.start)
-    
+    yield spawner.start()
+
     # wait for the process to get to the while True: loop
-    time.sleep(1)
-    
-    status = io_loop.run_sync(spawner.poll)
+    yield gen.sleep(1)
+
+    status = yield spawner.poll()
     assert status is None
     
-    io_loop.run_sync(spawner.stop)
-    status = io_loop.run_sync(spawner.poll)
+    yield spawner.stop()
+    status = yield spawner.poll()
     assert status == -signal.SIGTERM
 
 
-def test_stop_spawner_stop_now(db, io_loop):
+@pytest.mark.gen_test
+def test_stop_spawner_stop_now(db):
     spawner = new_spawner(db)
-    io_loop.run_sync(spawner.start)
-    
+    yield spawner.start()
+
     # wait for the process to get to the while True: loop
-    time.sleep(1)
-    
-    status = io_loop.run_sync(spawner.poll)
+    yield gen.sleep(1)
+
+    status = yield spawner.poll()
     assert status is None
     
-    io_loop.run_sync(lambda : spawner.stop(now=True))
-    status = io_loop.run_sync(spawner.poll)
+    yield spawner.stop(now=True)
+    status = yield spawner.poll()
     assert status == -signal.SIGTERM
 
 
-def test_spawner_poll(db, io_loop):
+@pytest.mark.gen_test
+def test_spawner_poll(db):
     first_spawner = new_spawner(db)
     user = first_spawner.user
-    io_loop.run_sync(first_spawner.start)
+    yield first_spawner.start()
     proc = first_spawner.proc
-    status = io_loop.run_sync(first_spawner.poll)
+    status = yield first_spawner.poll()
     assert status is None
     if user.state is None:
         user.state = {}
@@ -159,21 +162,21 @@ def test_spawner_poll(db, io_loop):
     spawner.start_polling()
     
     # wait for the process to get to the while True: loop
-    io_loop.run_sync(lambda : gen.sleep(1))
-    status = io_loop.run_sync(spawner.poll)
+    yield gen.sleep(1)
+    status = yield spawner.poll()
     assert status is None
     
     # kill the process
     proc.terminate()
     for i in range(10):
         if proc.poll() is None:
-            time.sleep(1)
+            yield gen.sleep(1)
         else:
             break
     assert proc.poll() is not None
 
-    io_loop.run_sync(lambda : gen.sleep(2))
-    status = io_loop.run_sync(spawner.poll)
+    yield gen.sleep(2)
+    status = yield spawner.poll()
     assert status is not None
 
 

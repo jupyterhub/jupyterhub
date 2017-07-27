@@ -3,6 +3,8 @@ import os
 import shutil
 
 from sqlalchemy.exc import OperationalError
+
+import pytest
 from pytest import raises
 
 from ..dbutil import upgrade
@@ -24,7 +26,8 @@ def test_upgrade(tmpdir):
     print(db_url)
     upgrade(db_url)
 
-def test_upgrade_entrypoint(tmpdir, io_loop):
+@pytest.mark.gen_test
+def test_upgrade_entrypoint(tmpdir):
     generate_old_db(str(tmpdir))
     tmpdir.chdir()
     tokenapp = NewToken()
@@ -36,7 +39,7 @@ def test_upgrade_entrypoint(tmpdir, io_loop):
     assert len(sqlite_files) == 1
 
     upgradeapp = UpgradeDB()
-    io_loop.run_sync(lambda : upgradeapp.initialize([]))
+    yield upgradeapp.initialize([])
     upgradeapp.start()
 
     # check that backup was created:

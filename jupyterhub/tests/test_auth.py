@@ -10,38 +10,42 @@ from .mocking import MockPAMAuthenticator
 
 from jupyterhub import auth, orm
 
-def test_pam_auth(io_loop):
+
+@pytest.mark.gen_test
+def test_pam_auth():
     authenticator = MockPAMAuthenticator()
-    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+    authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'match',
         'password': 'match',
-    }))
+    })
     assert authorized['name'] == 'match'
     
-    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+    authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'match',
         'password': 'nomatch',
-    }))
+    })
     assert authorized is None
 
-def test_pam_auth_whitelist(io_loop):
+
+@pytest.mark.gen_test
+def test_pam_auth_whitelist():
     authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
-    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+    authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'kaylee',
         'password': 'kaylee',
-    }))
+    })
     assert authorized['name'] == 'kaylee'
     
-    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+    authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'wash',
         'password': 'nomatch',
-    }))
+    })
     assert authorized is None
     
-    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+    authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'mal',
         'password': 'mal',
-    }))
+    })
     assert authorized is None
 
 
@@ -50,7 +54,8 @@ class MockGroup:
         self.gr_mem = names
 
 
-def test_pam_auth_group_whitelist(io_loop):
+@pytest.mark.gen_test
+def test_pam_auth_group_whitelist():
     g = MockGroup('kaylee')
     def getgrnam(name):
         return g
@@ -58,38 +63,41 @@ def test_pam_auth_group_whitelist(io_loop):
     authenticator = MockPAMAuthenticator(group_whitelist={'group'})
     
     with mock.patch.object(auth, 'getgrnam', getgrnam):
-        authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+        authorized = yield authenticator.get_authenticated_user(None, {
             'username': 'kaylee',
             'password': 'kaylee',
-        }))
+        })
     assert authorized['name'] == 'kaylee'
 
     with mock.patch.object(auth, 'getgrnam', getgrnam):
-        authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+        authorized = yield authenticator.get_authenticated_user(None, {
             'username': 'mal',
             'password': 'mal',
-        }))
+        })
     assert authorized is None
 
 
-def test_pam_auth_no_such_group(io_loop):
+@pytest.mark.gen_test
+def test_pam_auth_no_such_group():
     authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
-    authorized = io_loop.run_sync(lambda : authenticator.get_authenticated_user(None, {
+    authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'kaylee',
         'password': 'kaylee',
-    }))
+    })
     assert authorized is None
 
 
-def test_wont_add_system_user(io_loop):
+@pytest.mark.gen_test
+def test_wont_add_system_user():
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.create_system_users = False
     with pytest.raises(KeyError):
-        io_loop.run_sync(lambda : authenticator.add_user(user))
+        yield authenticator.add_user(user)
 
 
-def test_cant_add_system_user(io_loop):
+@pytest.mark.gen_test
+def test_cant_add_system_user():
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.add_user_cmd = ['jupyterhub-fake-command']
@@ -111,11 +119,12 @@ def test_cant_add_system_user(io_loop):
     
     with mock.patch.object(auth, 'Popen', DummyPopen):
         with pytest.raises(RuntimeError) as exc:
-            io_loop.run_sync(lambda : authenticator.add_user(user))
+            yield authenticator.add_user(user)
         assert str(exc.value) == 'Failed to create system user lioness4321: dummy error'
 
 
-def test_add_system_user(io_loop):
+@pytest.mark.gen_test
+def test_add_system_user():
     user = orm.User(name='lioness4321')
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.create_system_users = True
@@ -131,11 +140,12 @@ def test_add_system_user(io_loop):
             return
     
     with mock.patch.object(auth, 'Popen', DummyPopen):
-        io_loop.run_sync(lambda : authenticator.add_user(user))
+        yield authenticator.add_user(user)
     assert record['cmd'] == ['echo', '/home/lioness4321', 'lioness4321']
 
 
-def test_delete_user(io_loop):
+@pytest.mark.gen_test
+def test_delete_user():
     user = orm.User(name='zoe')
     a = MockPAMAuthenticator(whitelist={'mal'})
     
@@ -160,49 +170,52 @@ def test_handlers(app):
     assert handlers[0][0] == '/login'
 
 
-def test_normalize_names(io_loop):
+@pytest.mark.gen_test
+def test_normalize_names():
     a = MockPAMAuthenticator()
-    authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
+    authorized = yield a.get_authenticated_user(None, {
         'username': 'ZOE',
         'password': 'ZOE',
-    }))
+    })
     assert authorized['name'] == 'zoe'
 
-    authorized = io_loop.run_sync(lambda: a.get_authenticated_user(None, {
+    authorized = yield a.get_authenticated_user(None, {
         'username': 'Glenn',
         'password': 'Glenn',
-    }))
+    })
     assert authorized['name'] == 'glenn'
 
-    authorized = io_loop.run_sync(lambda: a.get_authenticated_user(None, {
+    authorized = yield a.get_authenticated_user(None, {
         'username': 'hExi',
         'password': 'hExi',
-    }))
+    })
     assert authorized['name'] == 'hexi'
 
-    authorized = io_loop.run_sync(lambda: a.get_authenticated_user(None, {
+    authorized = yield a.get_authenticated_user(None, {
         'username': 'Test',
         'password': 'Test',
-    }))
+    })
     assert authorized['name'] == 'test'
 
-def test_username_map(io_loop):
+
+@pytest.mark.gen_test
+def test_username_map():
     a = MockPAMAuthenticator(username_map={'wash': 'alpha'})
-    authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
+    authorized = yield a.get_authenticated_user(None, {
         'username': 'WASH',
         'password': 'WASH',
-    }))
+    })
 
     assert authorized['name'] == 'alpha'
 
-    authorized = io_loop.run_sync(lambda : a.get_authenticated_user(None, {
+    authorized = yield a.get_authenticated_user(None, {
         'username': 'Inara',
         'password': 'Inara',
-    }))
+    })
     assert authorized['name'] == 'inara'
 
 
-def test_validate_names(io_loop):
+def test_validate_names():
     a = auth.PAMAuthenticator()
     assert a.validate_username('willow')
     assert a.validate_username('giles')

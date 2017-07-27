@@ -134,7 +134,7 @@ def test_auth_api(app):
 
 
 @mark.gen_test
-def test_referer_check(app, io_loop):
+def test_referer_check(app):
     url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
     user = find_user(app.db, 'admin')
@@ -390,7 +390,7 @@ def test_make_admin(app):
 
 
 @mark.gen_test
-def test_spawn(app, io_loop):
+def test_spawn(app):
     db = app.db
     name = 'wash'
     user = add_user(db, app=app, name=name)
@@ -445,7 +445,7 @@ def test_spawn(app, io_loop):
 
 
 @mark.gen_test
-def test_slow_spawn(app, io_loop, no_patience, request):
+def test_slow_spawn(app, no_patience, request):
     patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.SlowSpawner})
     patch.start()
     request.addfinalizer(patch.stop)
@@ -495,7 +495,7 @@ def test_slow_spawn(app, io_loop, no_patience, request):
 
 
 @mark.gen_test
-def test_never_spawn(app, io_loop, no_patience, request):
+def test_never_spawn(app, no_patience, request):
     patch = mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.NeverSpawner})
     patch.start()
     request.addfinalizer(patch.stop)
@@ -520,7 +520,7 @@ def test_never_spawn(app, io_loop, no_patience, request):
 
 
 @mark.gen_test
-def test_get_proxy(app, io_loop):
+def test_get_proxy(app):
     r = yield api_request(app, 'proxy')
     r.raise_for_status()
     reply = r.json()
