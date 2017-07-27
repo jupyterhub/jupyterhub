@@ -18,7 +18,7 @@ from tornado import gen
 from ..user import User
 from ..objects import Hub
 from .. import spawner as spawnermod
-from ..spawner import LocalProcessSpawner
+from ..spawner import LocalProcessSpawner, Spawner
 from .. import orm
 from .utils import async_requests
 
@@ -246,3 +246,24 @@ def test_shell_cmd(db, tmpdir, request):
     r.raise_for_status()
     env = r.json()
     assert env['TESTVAR'] == 'foo'
+
+
+def test_inherit_overwrite():
+    """On 3.6+ we check things are overwritten at import time
+    """
+    if sys.version_info >= (3,6):
+        with pytest.raises(NotImplementedError):
+            class S(Spawner):
+                pass
+
+
+def test_inherit_ok():
+    class S(Spawner):
+        def start():
+            pass
+
+        def stop():
+            pass
+
+        def poll():
+            pass

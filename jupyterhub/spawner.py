@@ -56,6 +56,18 @@ class Spawner(LoggingConfigurable):
     orm_spawner = Any()
     user = Any()
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__()
+
+        missing = []
+        for attr in ('start','stop', 'poll'):
+            if getattr(Spawner, attr) is getattr(cls, attr):
+                missing.append(attr)
+
+        if missing:
+            raise NotImplementedError("class `{}` needs to redefine the `start`,"
+                  "`stop` and `poll` methods. `{}` not redefined.".format(cls.__name__, '`, `'.join(missing)))
+
     @property
     def server(self):
         if self.orm_spawner and self.orm_spawner.server:
