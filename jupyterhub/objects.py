@@ -131,11 +131,11 @@ class Server(HasTraits):
         if http:
             return wait_for_http_server(self.url, timeout=timeout)
         else:
-            return wait_for_server(self._connect_ip, self.port, timeout=timeout)
+            return wait_for_server(self._connect_ip, self._connect_port, timeout=timeout)
 
     def is_up(self):
         """Is the server accepting connections?"""
-        return can_connect(self.ip or '127.0.0.1', self.port)
+        return can_connect(self._connect_ip, self._connect_port)
 
 
 class Hub(Server):
