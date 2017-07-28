@@ -545,16 +545,14 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     concurrent_spawn_limit = Integer(
-        None,
-        allow_none=True,
+        0,
         help="""
         Maximum number of concurrent users that can be spawning at a time.
 
-        If more than this many users attempt to spawn at a time, they
-        enter an exponential delay with a timeout.
+        If more than this many users attempt to spawn at a time, their
+        request is rejected with a 429 error asking them to try again.
 
-        If set to `None`, no concurrent limit is enforced. If set to 0,
-        then no spawning is allowed.
+        If set to 0, no concurrent_spawn_limit is enforced.
         """
     ).tag(config=True)
 

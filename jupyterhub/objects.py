@@ -149,15 +149,6 @@ class Hub(Server):
 
     cookie_name = 'jupyter-hub-token'
 
-    spawn_pending_count = Integer(
-        0,
-        help="""
-        Number of users currently attempting to spawn.
-
-        Tracked by BaseHandler.spawn_single_user. It's in the Hub object
-        since this needs a central place for it to be kept track of.
-        """
-    )
     @property
     def server(self):
         warnings.warn("Hub.server is deprecated in JupyterHub 0.8. Access attributes on the Hub directly.",
