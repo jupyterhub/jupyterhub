@@ -103,6 +103,7 @@ class FormSpawner(MockSpawner):
 
 
 class MockPAMAuthenticator(PAMAuthenticator):
+    auth_state = None
     @default('admin_users')
     def _admin_users_default(self):
         return {'admin'}
@@ -111,13 +112,23 @@ class MockPAMAuthenticator(PAMAuthenticator):
         # skip the add-system-user bit
         return not user.name.startswith('dne')
     
+    @gen.coroutine
     def authenticate(self, *args, **kwargs):
         with mock.patch.multiple('pamela',
                 authenticate=mock_authenticate,
                 open_session=mock_open_session,
                 close_session=mock_open_session,
                 ):
-            return super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
+            username = yield super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
+        if username is None:
+            return
+        if self.auth_state:
+            return {
+                'name': username,
+                'auth_state': self.auth_state,
+            }
+        else:
+            return username
 
 
 class MockHub(JupyterHub):

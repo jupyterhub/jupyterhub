@@ -180,7 +180,7 @@ def test_groups(db):
 
 
 @pytest.mark.gen_test
-def test_auth_state_crypto(db):
+def test_auth_state(db):
     user = User(orm.User(name='eve'))
     db.add(user.orm_user)
     db.commit()
