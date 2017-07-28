@@ -1,15 +1,23 @@
 
+import base64
+from binascii import a2b_hex
 from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 
 from traitlets.config import SingletonConfigurable, Config
-from traitlets import Any, Dict, Integer, List, default, validate
+from traitlets import (
+    Any, Dict, Integer, List,
+    default, observe, validate,
+)
 
 try:
-    import privy
+    import cryptography
+    from cryptography.fernet import Fernet, MultiFernet, InvalidToken
 except ImportError:
-    privy = None
+    cryptography = None
+    class InvalidToken(Exception):
+        pass
 
 
 KEY_ENV = 'JUPYTERHUB_CRYPT_KEY'
@@ -17,13 +25,49 @@ KEY_ENV = 'JUPYTERHUB_CRYPT_KEY'
 class EncryptionUnavailable(Exception):
     pass
 
-class PrivyUnavailable(EncryptionUnavailable):
+class CryptographyUnavailable(EncryptionUnavailable):
     def __str__(self):
-        return "privy library is required for encryption"
+        return "cryptography library is required for encryption"
 
 class NoEncryptionKeys(EncryptionUnavailable):
     def __str__(self):
         return "Encryption keys must be specified in %s env" % KEY_ENV
+
+
+def _validate_key(key):
+    """Validate and return a 32B key
+
+    Args:
+    key (bytes): The key to be validated.
+        Can be:
+        - base64-encoded (44 bytes)
+        - hex-encoded (64 bytes)
+        - raw 32 byte key
+
+    Returns:
+    key (bytes): raw 32B key
+    """
+    if isinstance(key, str):
+        key = key.encode('ascii')
+
+    if len(key) == 44:
+        try:
+            key = base64.urlsafe_b64decode(key)
+        except ValueError:
+            pass
+
+    elif len(key) == 64:
+        try:
+            # 64B could be 32B, hex-encoded
+            return a2b_hex(key)
+        except ValueError:
+            # not 32B hex
+            pass
+
+    if len(key) != 32:
+        raise ValueError("Encryption keys must be 32 bytes, hex or base64-encoded.")
+
+    return key
 
 class CryptKeeper(SingletonConfigurable):
     """Encapsulate encryption configuration
@@ -31,16 +75,8 @@ class CryptKeeper(SingletonConfigurable):
     Use via the encryption_config singleton below.
     """
 
-    privy_kwargs = Dict({'server': True},
-        help="""Keyword arguments to pass to privy.hide.
-        
-        For example, to 
-        """
-    )
-
-    n_threads = Integer(max(os.cpu_count(), 1),
+    n_threads = Integer(max(os.cpu_count(), 1), config=True,
         help="The number of threads to allocate for encryption",
-        config=True,
     )
 
     @default('config')
@@ -62,16 +98,26 @@ class CryptKeeper(SingletonConfigurable):
             return []
         # key can be a ;-separated sequence for key rotation.
         # First item in the list is used for encryption.
-        return [ k.encode('ascii') for k in os.environ[KEY_ENV].split(';') if k.strip() ]
+        return [ _validate_key(key) for key in os.environ[KEY_ENV].split(';') if key.strip() ]
 
     @validate('keys')
     def _ensure_bytes(self, proposal):
         # cast str to bytes
-        return [ (k.encode('ascii') if isinstance(k, str) else k) for k in proposal.value ]
+        return [ _validate_key(key) for key in proposal.value ]
+    
+    fernet = Any()
+    def _fernet_default(self):
+        if cryptography is None or not self.keys:
+            return None
+        return MultiFernet([Fernet(base64.urlsafe_b64encode(key)) for key in self.keys])
+
+    @observe('keys')
+    def _update_fernet(self, change):
+        self.fernet = self._fernet_default()
 
     def check_available(self):
-        if privy is None:
-            raise PrivyUnavailable()
+        if cryptography is None:
+            raise CryptographyUnavailable()
         if not self.keys:
             raise NoEncryptionKeys()
 
@@ -81,27 +127,19 @@ class CryptKeeper(SingletonConfigurable):
         data is serialized to bytes with pickle.
         bytes are returned.
         """
-        return privy.hide(json.dumps(data).encode('utf8'), self.keys[0], **self.privy_kwargs).encode('ascii')
+        return self.fernet.encrypt(json.dumps(data).encode('utf8'))
 
     def encrypt(self, data):
-        """Encrypt an object with privy"""
+        """Encrypt an object with cryptography"""
         self.check_available()
         return self.executor.submit(self._encrypt, data)
 
     def _decrypt(self, encrypted):
-        for key in self.keys:
-            try:
-                decrypted = privy.peek(encrypted, key)
-            except ValueError as e:
-                continue
-            else:
-                break
-        else:
-            raise ValueError("Failed to decrypt %r" % encrypted)
+        decrypted = self.fernet.decrypt(encrypted)
         return json.loads(decrypted.decode('utf8'))
 
     def decrypt(self, encrypted):
-        """Decrypt an object with privy"""
+        """Decrypt an object with cryptography"""
         self.check_available()
         return self.executor.submit(self._decrypt, encrypted)
 

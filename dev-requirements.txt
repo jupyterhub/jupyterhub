@@ -1,7 +1,7 @@
 -r requirements.txt
 mock
 codecov
-privy
+cryptography
 pytest-cov
 pytest-tornado
 pytest>=2.8

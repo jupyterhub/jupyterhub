@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import os
 import socket
 
 import pytest
@@ -201,8 +202,8 @@ def test_auth_state_crypto(db):
     current = yield user.get_auth_state()
     assert current is None
 
-    first_key = 'first-key'
-    second_key = 'second-key'
+    first_key = os.urandom(32)
+    second_key = os.urandom(32)
     ck.keys = [first_key]
     yield user.save_auth_state(state)
     assert user.encrypted_auth_state is not None

@@ -15,7 +15,7 @@ from . import orm
 from ._version import _check_version, __version__
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
-from .crypto import encrypt, decrypt, CryptKeeper, EncryptionUnavailable
+from .crypto import encrypt, decrypt, CryptKeeper, EncryptionUnavailable, InvalidToken
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -119,7 +119,7 @@ class User(HasTraits):
             return None
         try:
             auth_state = yield decrypt(encrypted)
-        except (ValueError, EncryptionUnavailable) as e:
+        except (ValueError, InvalidToken, EncryptionUnavailable) as e:
             self.log.warning("Failed to retrieve encrypted auth_state for %s because %s",
                 self.name, e,
             )
