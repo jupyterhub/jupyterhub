@@ -149,7 +149,7 @@ class Hub(Server):
 
     cookie_name = 'jupyter-hub-token'
 
-    pending_spawns = Integer(
+    spawn_pending_count = Integer(
         0,
         help="""
         Number of users currently attempting to spawn.

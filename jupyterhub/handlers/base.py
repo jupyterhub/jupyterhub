@@ -367,17 +367,17 @@ class BaseHandler(RequestHandler):
         if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
 
-        if self.settings['concurrent_spawn_limit'] is not None and \
-           self.hub.pending_spawns > self.settings['concurrent_spawn_limit']:
+        concurrent_spawn_limit = self.settings['concurrent_spawn_limit']
+        if concurrent_spawn_limit is not None and self.hub.spawn_pending_count > concurrent_spawn_limit:
             self.log.info(
                 'More than %s pending spawns, throttling',
                 self.settings['concurrent_spawn_limit']
             )
             raise web.HTTPError(
                 429,
-                "Too many users are starting now, try again shortly")
+                "User startup rate limit exceeded. Try to start again in a few minutes.")
 
-        self.hub.pending_spawns += 1
+        self.hub.spawn_pending_count += 1
         tic = IOLoop.current().time()
         user_server_name = user.name
         if server_name:
@@ -414,7 +414,7 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user)
             finally:
                 spawner._proxy_pending = False
-                self.hub.pending_spawns -= 1
+                self.hub.spawn_pending_count -= 1
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
