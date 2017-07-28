@@ -54,7 +54,7 @@ from the Hub's database, either by deleting the user from JupyterHub's
 admin page, or you can clear the `jupyterhub.sqlite` database and start
 fresh.
 
-## Use LocalAuthenticator to create systems users
+## Use LocalAuthenticator to create system users
 
 The `LocalAuthenticator` is a special kind of authenticator that has
 the ability to manage users on the local system. When you try to add a
