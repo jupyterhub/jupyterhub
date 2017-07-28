@@ -599,5 +599,9 @@ def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
     check_db_revision(engine)
     Base.metadata.create_all(engine)
 
-    session_factory = sessionmaker(bind=engine)
+    # We set expire_on_commit=False, since we don't actually need
+    # SQLAlchemy to expire objects after commiting - we don't expect
+    # concurrent runs of the hub talking to the same db. Turning
+    # this off gives us a major performance boost
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     return session_factory
