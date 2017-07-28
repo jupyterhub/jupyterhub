@@ -3,20 +3,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import base64
 from datetime import datetime
 import enum
-import os
 import json
-
-try:
-    import cryptography
-except ImportError:
-    cryptography = None
 
 from tornado.log import app_log
 
-from sqlalchemy.types import TypeDecorator, TEXT
+from sqlalchemy.types import TypeDecorator, TEXT, LargeBinary
 from sqlalchemy import (
     inspect,
     Column, Integer, ForeignKey, Unicode, Boolean,
@@ -26,10 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
-from sqlalchemy_utils.types.encrypted import EncryptedType, FernetEngine
 from sqlalchemy import create_engine, Table
-
-from traitlets import HasTraits, List
 
 from .utils import (
     random_port,
@@ -42,7 +32,7 @@ class JSONDict(TypeDecorator):
 
     Usage::
 
-        JSONDict(255)
+        JSONEncodedDict(255)
 
     """
 
@@ -59,104 +49,6 @@ class JSONDict(TypeDecorator):
             value = json.loads(value)
         return value
 
-
-def _fernet_key(key):
-    """Generate a Fernet key from a secret
-    
-    Fernet keys are 32 bytes encoded in url-safe base64 (44 characters).
-    
-    If a given key is not already a fernet key,
-    it will be passed through HKDF to generate the 32 bytes.
-    """
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.backends import default_backend
-    from cryptography.hazmat.primitives.kdf.hkdf import HKDF
-    if isinstance(key, str):
-        key = key.encode()
-    if len(key) == 44:
-        # already a fernet key, pass it along
-        try:
-            base64.urlsafe_b64decode(key)
-        except Exception:
-            pass
-        else:
-            return key
-    elif len(key) != 32:
-        # not the right size, pass through HKDF
-        kdf = HKDF(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=None,
-            info=b'jupyterhub auth state',
-            backend=default_backend(),
-        )
-        key = kdf.derive(key)
-    return base64.urlsafe_b64encode(key)
-
-
-class MultiFernetEngine(FernetEngine):
-    """Extend SQLAlchemy-Utils FernetEngine to use MultiFernet,
-
-    which supports key rotation.
-    """
-    key_list = None
-
-    def _update_key(self, key):
-        if key == self.key_list:
-            return
-        return self._initialize_engine(key)
-
-    def _initialize_engine(self, parent_class_key):
-        from cryptography.fernet import MultiFernet, Fernet
-        # key will be a *list* of keys
-        self.key_list = parent_class_key
-        self.fernet = MultiFernet([Fernet(_fernet_key(key)) for key in self.key_list])
-
-class EncryptionUnavailable(Exception):
-    pass
-
-class EncryptionConfig(HasTraits):
-    """Encapsulate encryption configuration
-    
-    Use via the encryption_config singleton below.
-    """
-    key_list = List()
-    def _key_list_default(self):
-        if 'AUTH_STATE_KEY' not in os.environ:
-            return []
-        # key can be a ;-separated sequence for key rotation.
-        # First item in the list is used for encryption.
-        return os.environ['AUTH_STATE_KEY'].split(';')
-
-    @property
-    def available(self):
-        if not self.key_list:
-            return False
-        return cryptography is not None
-
-encryption_config = EncryptionConfig()
-
-class Encrypted(EncryptedType):
-    def __init__(self, type_in=None, key=None, **kwargs):
-        super().__init__(type_in, key=lambda : encryption_config.key_list, engine=MultiFernetEngine, **kwargs)
-
-
-class CantEncrypt(TypeDecorator):
-    """Use in place of Encrypted when Encrypted types can't even be instantiated (crypto unavailable)"""
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        raise EncryptionUnavailable("cryptography library is unavailable")
-
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return value
-        raise EncryptionUnavailable("cryptography library is unavailable")
-
-
-# if cryptography library is unavailable, use CantEncrypt
-if cryptography is None:
-    Encrypted = CantEncrypt
 
 Base = declarative_base()
 Base.log = app_log
@@ -250,38 +142,8 @@ class User(Base):
     # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
     # Authenticators can store their state here:
-    _auth_state = Column('auth_state', Encrypted(JSONDict))
-    
-    # check for availability of encryption on a property
-    # to get better errors than raising in the TypeDecorator methods,
-    # which won't raise until `db.commit()`
-
-    @property
-    def auth_state(self):
-        # TODO: handle decryption failure
-        try:
-            value = self._auth_state
-        except Exception as e:
-            if encryption_config.available:
-                why = str(e)
-            else:
-                why = "encryption is unavailable"
-            app_log.warning("Failed to retrieve encrypted auth_state for %s because %s",
-                self.name, why)
-            return None
-        if value is not None and not encryption_config.available:
-            raise EncryptionUnavailable("auth_state requires cryptography library and AUTH_STATE_KEY")
-        return value
-    
-    @auth_state.setter
-    def auth_state(self, value):
-        if value is None:
-            self._auth_state = value
-            return
-        if value is not None and not encryption_config.available:
-            raise EncryptionUnavailable("auth_state requires cryptography library and AUTH_STATE_KEY")
-        self._auth_state = value
-
+    # Encryption is handled elsewhere
+    encrypted_auth_state = Column(LargeBinary)
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 

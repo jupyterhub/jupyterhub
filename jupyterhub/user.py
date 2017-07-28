@@ -15,6 +15,7 @@ from . import orm
 from ._version import _check_version, __version__
 from traitlets import HasTraits, Any, Dict, observe, default
 from .spawner import LocalProcessSpawner
+from .crypto import encrypt, decrypt, CryptKeeper, EncryptionUnavailable
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -82,6 +83,7 @@ class _SpawnerDict(dict):
             self[key] = self.spawner_factory(key)
         return super().__getitem__(key)
 
+
 class User(HasTraits):
 
     @default('log')
@@ -99,6 +101,35 @@ class User(HasTraits):
             return inspect(self.orm_user).session
 
     orm_user = Any(allow_none=True)
+
+    @gen.coroutine
+    def save_auth_state(self, auth_state):
+        """Encrypt and store auth_state"""
+        if auth_state is None:
+            self.encrypted_auth_state = None
+        else:
+            self.encrypted_auth_state = yield encrypt(auth_state)
+        self.db.commit()
+
+    @gen.coroutine
+    def get_auth_state(self):
+        """Retrieve and decrypt auth_state for the user"""
+        encrypted = self.encrypted_auth_state
+        if encrypted is None:
+            return None
+        try:
+            auth_state = yield decrypt(encrypted)
+        except (ValueError, EncryptionUnavailable) as e:
+            self.log.warning("Failed to retrieve encrypted auth_state for %s because %s",
+                self.name, e,
+            )
+            return
+        # loading auth_state
+        if auth_state:
+            # Crypt has multiple keys, store again with new key for rotation.
+            if len(CryptKeeper.instance().keys) > 1:
+                yield self.save_auth_state(auth_state)
+        return auth_state
 
     @property
     def authenticator(self):

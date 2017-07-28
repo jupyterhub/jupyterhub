@@ -334,7 +334,7 @@ class BaseHandler(RequestHandler):
             # always set auth_state and commit,
             # because there could be key-rotation or clearing of previous values
             # going on.
-            user.auth_state = auth_state
+            yield user.save_auth_state(auth_state)
             self.db.commit()
             self.set_login_cookie(user)
             self.statsd.incr('login.success')

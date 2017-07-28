@@ -3,9 +3,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import base64
-import cryptography
-import os
 import socket
 
 import pytest
@@ -13,6 +10,7 @@ from tornado import gen
 
 from .. import orm
 from .. import objects
+from .. import crypto
 from ..user import User
 from .mocking import MockSpawner
 
@@ -180,53 +178,65 @@ def test_groups(db):
     assert user.groups == [group]
 
 
-def test_auth_state(db):
-    user = orm.User(name='eve')
-    db.add(user)
+@pytest.mark.gen_test
+def test_auth_state_crypto(db):
+    user = User(orm.User(name='eve'))
+    db.add(user.orm_user)
     db.commit()
+    
+    ck = crypto.CryptKeeper.instance()
+
     # starts empty
-    assert user.auth_state is None
+    assert user.encrypted_auth_state is None
     
     # can't set auth_state without keys
     state = {'key': 'value'}
-    orm.encryption_config.key_list = []
-    with pytest.raises(orm.EncryptionUnavailable):
-        user.auth_state = state
-        db.commit()
-    assert user.auth_state is None
-    
-    #
+    ck.keys = []
+    with pytest.raises(crypto.EncryptionUnavailable):
+        yield user.save_auth_state(state)
+
+    assert user.encrypted_auth_state is None
+    # saving/loading None doesn't require keys
+    yield user.save_auth_state(None)
+    current = yield user.get_auth_state()
+    assert current is None
+
     first_key = 'first-key'
     second_key = 'second-key'
-    orm.encryption_config.key_list = [first_key]
-    user.auth_state = state
-    db.commit()
-    assert user.auth_state == state
+    ck.keys = [first_key]
+    yield user.save_auth_state(state)
+    assert user.encrypted_auth_state is not None
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state == state
     
     # can't read auth_state without keys
-    orm.encryption_config.key_list = []
-    with pytest.raises(orm.EncryptionUnavailable):
-        print(user.auth_state)
+    ck.keys = []
+    auth_state = yield user.get_auth_state()
+    assert auth_state is None
 
     # key rotation works
     db.rollback()
-    orm.encryption_config.key_list = [second_key, first_key]
-    assert user.auth_state == state
+    ck.keys = [second_key, first_key]
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state == state
 
-    user.auth_state = new_state = {'key': 'newvalue'}
+    new_state = {'key': 'newvalue'}
+    yield user.save_auth_state(new_state)
     db.commit()
 
-    orm.encryption_config.key_list = [first_key]
+    ck.keys = [first_key]
     db.rollback()
     # can't read anymore with new-key after encrypting with second-key
-    assert user.auth_state is None
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state is None
 
-    user.auth_state = new_state
-    db.commit()
-    assert user.auth_state == new_state
+    yield user.save_auth_state(new_state)
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state == new_state
 
-    orm.encryption_config.key_list = []
+    ck.keys = []
     db.rollback()
 
-    assert user.auth_state is None
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state is None
 
