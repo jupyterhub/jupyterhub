@@ -37,6 +37,25 @@ class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
 
     db = Any()
+    
+    enable_auth_state = Bool(False, config=True,
+        help="""Enable persisting auth_state (if available).
+
+        auth_state will be encrypted and stored in the Hub's database.
+        This can include things like authentication tokens, etc.
+        to be passed to Spawners as environment variables.
+
+        Encrypting auth_state requires the cryptography package.
+
+        Additionally, the JUPYTERHUB_CRYPTO_KEY envirionment variable must
+        contain one (or more, separated by ;) 32B encryption keys.
+        These can be either base64 or hex-encoded.
+
+        If encryption is unavailable, auth_state cannot be persisted.
+
+        New in JupyterHub 0.8
+        """,
+    )
 
     admin_users = Set(
         help="""
