@@ -77,6 +77,7 @@ class UserListAPIHandler(APIHandler):
             if admin:
                 user.admin = True
                 self.db.commit()
+                # No need to expire anything here, no relationships changed
             try:
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception as e:
@@ -173,6 +174,8 @@ class UserAPIHandler(APIHandler):
         for key, value in data.items():
             setattr(user, key, value)
         self.db.commit()
+        # We might've modified relationships, so expire the user
+        self.db.expire(user)
         self.write(json.dumps(self.user_model(user)))
         
 

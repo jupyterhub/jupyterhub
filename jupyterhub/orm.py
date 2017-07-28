@@ -374,6 +374,12 @@ class APIToken(Hashed, Base):
             orm_token.service_id = service.id
         db.add(orm_token)
         db.commit()
+        # Refresh the user or service, so the new relationship
+        # we just created propogates properly!
+        if user:
+            db.refresh(user)
+        if service:
+            db.refresh(service)
         return token
 
 

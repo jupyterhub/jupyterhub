@@ -76,6 +76,8 @@ class GroupAPIHandler(_GroupAPIHandler):
         group = orm.Group(name=name, users=users)
         self.db.add(group)
         self.db.commit()
+        for u in users:
+            self.db.expire(u)
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
 
@@ -86,6 +88,8 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.log.info("Deleting group %s", name)
         self.db.delete(group)
         self.db.commit()
+        for u in group.users:
+            self.db.expire(u)
         self.set_status(204)
 
 
@@ -107,6 +111,8 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             else:
                 self.log.warning("User %s already in group %s", user.name, name)
         self.db.commit()
+        for u in group.users:
+            self.db.expire(u)
         self.write(json.dumps(self.group_model(group)))
 
     @gen.coroutine
@@ -126,6 +132,8 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             else:
                 self.log.warning("User %s already not in group %s", user.name, name)
         self.db.commit()
+        for u in group.users:
+            self.db.expire(u)
         self.write(json.dumps(self.group_model(group)))
 
 
