@@ -411,9 +411,11 @@ paths:
               token:
                 type: string
                 description: The new API token.
+        '403':
+          description: The user can not be authenticated.
   /authorizations/token/{token}:
     get:
-      summary: Identify a user from an API token
+      summary: Identify a user or service from an API token
       parameters:
       - name: token
         in: path
@@ -421,9 +423,12 @@ paths:
         type: string
       responses:
         '200':
-          description: The user identified by the API token
+          description: The user or service identified by the API token
           schema:
             $ref: '#/definitions/User'
+            $ref: '#/definitions/Service'
+        '404':
+          description: A user or service is not found.
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
       summary: Identify a user from a cookie
@@ -442,45 +447,70 @@ paths:
           description: The user identified by the cookie
           schema:
             $ref: '#/definitions/User'
+        '404':
+          description: A user is not found.
   /oath2/authorize:
-      get:
-      summary:
-      description:
+    get:
+      summary: 'OAuth 2.0 authorize endpoint'
+      description: 'OAuth 2.0 authorize endpoint'
       parameters:
+        - name: client_id
+          description: The client id
+          in: path
+          required: true
+          type: string
+        - name: response_type
+          description: The response type (token | code)
+          in: path
+          required: true
+          type: string
+        - name: state
+          description: A state string
+          in: path
+          required: false
+          type: string
+        - name: redirect_uri
+          description: The redirect url
+          in: path
+          required: false
+          type: string
+        - name: scope
+          description: The requested scopes
+          in: path
+          required: false
+          type: string
       responses:
-        '200':
-          description:
   /oath2/token:
-      post:
-      summary: Request an OAuth2 token
-      description: |
-        Request an OAuth2 token.
-      parameters:  ????
-      responses:
-        '200':
-          description: The new OAuth2 token
-          schema:
-            type: object
-            properties:
-              token:
-                type: string
-                description: The new OAuth2 token.
-        '400': ??
-  /shutdown:
     post:
-      summary: Shutdown the Hub
+      summary: Request an OAuth2 token
+      description: Request an OAuth2 token
       parameters:
-        - name: proxy
-          in: body
-          type: boolean
-          description: Whether the proxy should be shutdown as well (default from Hub config)
-        - name: servers
-          in: body
-          type: boolean
-          description: Whether users's notebook servers should be shutdown as well (default from Hub config)
+        - name: client_id
+          description: The client id
+          in: path
+          required: true
+          type: string
+        - name: response_type
+          description: The response type (token | code)
+          in: path
+          required: true
+          type: string
+        - name: state
+          description: A state string
+          in: path
+          required: false
+          type: string
+        - name: redirect_uri
+          description: The redirect url
+          in: path
+          required: false
+          type: string
+        - name: scope
+          description: The requested scopes
+          in: path
+          required: false
+          type: string
       responses:
-        '200':
-          description: Hub has shutdown
 definitions:
   User:
     type: object
