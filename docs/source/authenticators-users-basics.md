@@ -76,4 +76,24 @@ launching the service. This approach is not recommended when running
 JupyterHub in situations where JupyterHub users map directly onto the
 system's UNIX users.
 
+## Use OAuthenticator to support OAuth with popular service providers
+
+JupyterHub's [OAuthenticator][] currently supports the following
+popular services:
+
+- Auth0
+- Bitbucket
+- CILogon
+- GitHub
+- GitLab
+- Globus
+- Google
+- MediaWiki
+- Okpy
+- OpenShift
+
+A generic implementation, which you can use for OAuth authentication
+with any provider, is also available.
+
 [PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[OAuthenticator]: https://github.com/jupyterhub/oauthenticator

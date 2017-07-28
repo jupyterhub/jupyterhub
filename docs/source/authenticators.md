@@ -1,24 +1,53 @@
 # Authenticators
 
-## Basics of Authenticators
+The [Authenticator][] is the mechanism for authorizing users to use the
+Hub and single user notebook servers.
 
-The [Authenticator][] is the mechanism for authorizing users.
-Basic authenticators use simple username and password authentication.
+## The default PAM Authenticator
+
 JupyterHub ships only with the default [PAM][]-based Authenticator,
-for logging in with local user accounts.
+for logging in with local user accounts via a username and password.
 
-You can use custom Authenticator subclasses to enable authentication
-via other mechanisms. One such example is using [GitHub OAuth][].
+## The OAuthenticator
 
-Because the username is passed from the Authenticator to the Spawner,
-a custom Authenticator and Spawner are often used together.
+Some login mechanisms, such as [OAuth][], don't map onto username and
+password authentication, and instead use tokens. When using these
+mechanisms, you can override the login handlers.
 
-See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
+You can see an example implementation of an Authenticator that uses
+[GitHub OAuth][] at [OAuthenticator][].
 
+JupyterHub's [OAuthenticator][] currently supports the following
+popular services:
 
-A basic Authenticator has one central method:
+- Auth0
+- Bitbucket
+- CILogon
+- GitHub
+- GitLab
+- Globus
+- Google
+- MediaWiki
+- Okpy
+- OpenShift
 
-### Authenticator.authenticate
+A generic implementation, which you can use for OAuth authentication
+with any provider, is also available.
+
+## Additional Authenticators
+
+- ldapauthenticator for LDAP
+- tmpauthenticator for temporary accounts
+
+## Technical Overview of Authentication
+
+### How the Base Authenticator works
+
+The base authenticator uses simple username and password authentication.
+
+The base Authenticator has one central method:
+
+#### Authenticator.authenticate method
 
     Authenticator.authenticate(handler, data)
 
@@ -55,7 +84,7 @@ class DictionaryAuthenticator(Authenticator):
             return data['username']
 ```
 
-## Normalize usernames
+#### Normalize usernames
 
 Since the Authenticator and Spawner both use the same username,
 sometimes you want to transform the name coming from the authentication service
@@ -71,7 +100,7 @@ c.Authenticator.username_map  = {
 }
 ```
 
-## Validate usernames
+#### Validate usernames
 
 In most cases, there is a very limited set of acceptable usernames.
 Authenticators can define `validate_username(username)`,
@@ -87,19 +116,24 @@ To only allow usernames that start with 'w':
 c.Authenticator.username_pattern = r'w.*'
 ```
 
-## How to use OAuth and other non-password logins
+### How to write a custom authenticator
 
-Some login mechanisms, such as [OAuth][], don't map onto username and
-password authentication, and instead use tokens. When using these
-mechanisms, you can override the login handlers.
+You can use custom Authenticator subclasses to enable authentication
+via other mechanisms. One such example is using [GitHub OAuth][].
 
-You can see an example implementation of an Authenticator that uses
-[GitHub OAuth][] at [OAuthenticator][].
+Because the username is passed from the Authenticator to the Spawner,
+a custom Authenticator and Spawner are often used together.
 
-## How to write a custom authenticator
+See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 If you are interested in writing a custom authenticator, you can read
 [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
+
+
+## JupyterHub as an OAuth provider
+
+Beginning with version 0.8, JupyterHub is an OAuth provider.
+
 
 [Authenticator]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/auth.py
 [PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
