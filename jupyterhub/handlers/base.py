@@ -369,15 +369,13 @@ class BaseHandler(RequestHandler):
 
         if self.settings['concurrent_spawn_limit'] is not None and \
            self.hub.pending_spawns > self.settings['concurrent_spawn_limit']:
-            # This will throw an error if we hit our timeout
             self.log.info(
                 'More than %s pending spawns, throttling',
                 self.settings['concurrent_spawn_limit']
             )
-            yield exponential_backoff(
-                lambda: self.hub.pending_spawns < self.settings['concurrent_spawn_limit'],
-                'Too many users are starting right now, try again later',
-            )
+            raise web.HTTPError(
+                429,
+                "Too many users are starting now, try again shortly")
 
         self.hub.pending_spawns += 1
         tic = IOLoop.current().time()
