@@ -66,7 +66,7 @@ settings, `proxy_api_ip` and `proxy_api_port`.
 
 ## Configure the Hub if the Proxy or Spawners are remote or isolated
 
-The Hub service listens only on `localhost` (port 8080) by default.
+The Hub service listens only on `localhost` (port 8081) by default.
 The Hub needs to be accessible from both the proxy and all Spawners.
 When spawning local servers, an IP address setting of `localhost` is fine.
 
