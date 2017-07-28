@@ -60,6 +60,7 @@ from .utils import (
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
+from .crypto import CryptKeeper
 from .spawner import Spawner, LocalProcessSpawner
 from .objects import Hub
 
@@ -228,6 +229,7 @@ class JupyterHub(Application):
         LocalProcessSpawner,
         Authenticator,
         PAMAuthenticator,
+        CryptKeeper,
     ])
 
     load_groups = Dict(List(Unicode()),
