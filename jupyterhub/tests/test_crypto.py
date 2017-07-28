@@ -7,7 +7,7 @@ from unittest.mock import patch
 from .. import crypto
 from ..crypto import encrypt, decrypt
 
-keys = [(b'%i' % i) * 32 for i in range(3)]
+keys = [('%i' % i).encode('ascii') * 32 for i in range(3)]
 hex_keys = [ b2a_hex(key).decode('ascii') for key in keys ]
 b64_keys = [ b2a_base64(key).decode('ascii').strip() for key in keys ]
 
