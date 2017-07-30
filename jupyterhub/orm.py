@@ -7,27 +7,23 @@ from datetime import datetime
 import enum
 import json
 
-from tornado import gen
 from tornado.log import app_log
-from tornado.httpclient import HTTPRequest, AsyncHTTPClient
 
-from sqlalchemy.types import TypeDecorator, TEXT
+from sqlalchemy.types import TypeDecorator, TEXT, LargeBinary
 from sqlalchemy import (
     inspect,
     Column, Integer, ForeignKey, Unicode, Boolean,
     DateTime, Enum
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
-from sqlalchemy.schema import Index, UniqueConstraint
-from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine, Table
 
 from .utils import (
-    random_port, url_path_join, wait_for_server, wait_for_http_server,
-    new_token, hash_token, compare_token, can_connect,
+    random_port,
+    new_token, hash_token, compare_token,
 )
 
 
@@ -146,7 +142,8 @@ class User(Base):
     # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
     # Authenticators can store their state here:
-    auth_state = Column(JSONDict)
+    # Encryption is handled elsewhere
+    encrypted_auth_state = Column(LargeBinary)
     # group mapping
     groups = relationship('Group', secondary='user_group_map', back_populates='users')
 

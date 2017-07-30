@@ -330,14 +330,15 @@ class BaseHandler(RequestHandler):
         if authenticated:
             username = authenticated['name']
             auth_state = authenticated.get('auth_state')
-
+            user = self.user_from_username(username)
+            # always set auth_state and commit,
+            # because there could be key-rotation or clearing of previous values
+            # going on.
+            yield user.save_auth_state(auth_state)
+            self.db.commit()
+            self.set_login_cookie(user)
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
-            user = self.user_from_username(username)
-            if auth_state is not None:
-                user.auth_state = auth_state
-                self.db.commit()
-            self.set_login_cookie(user)
             self.log.info("User logged in: %s", username)
             return user
         else:

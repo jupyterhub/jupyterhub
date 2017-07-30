@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import os
 import socket
 
 import pytest
@@ -10,6 +11,7 @@ from tornado import gen
 
 from .. import orm
 from .. import objects
+from .. import crypto
 from ..user import User
 from .mocking import MockSpawner
 
@@ -175,3 +177,67 @@ def test_groups(db):
     db.commit()
     assert group.users == [user]
     assert user.groups == [group]
+
+
+@pytest.mark.gen_test
+def test_auth_state(db):
+    user = User(orm.User(name='eve'))
+    db.add(user.orm_user)
+    db.commit()
+    
+    ck = crypto.CryptKeeper.instance()
+
+    # starts empty
+    assert user.encrypted_auth_state is None
+    
+    # can't set auth_state without keys
+    state = {'key': 'value'}
+    ck.keys = []
+    with pytest.raises(crypto.EncryptionUnavailable):
+        yield user.save_auth_state(state)
+
+    assert user.encrypted_auth_state is None
+    # saving/loading None doesn't require keys
+    yield user.save_auth_state(None)
+    current = yield user.get_auth_state()
+    assert current is None
+
+    first_key = os.urandom(32)
+    second_key = os.urandom(32)
+    ck.keys = [first_key]
+    yield user.save_auth_state(state)
+    assert user.encrypted_auth_state is not None
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state == state
+    
+    # can't read auth_state without keys
+    ck.keys = []
+    auth_state = yield user.get_auth_state()
+    assert auth_state is None
+
+    # key rotation works
+    db.rollback()
+    ck.keys = [second_key, first_key]
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state == state
+
+    new_state = {'key': 'newvalue'}
+    yield user.save_auth_state(new_state)
+    db.commit()
+
+    ck.keys = [first_key]
+    db.rollback()
+    # can't read anymore with new-key after encrypting with second-key
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state is None
+
+    yield user.save_auth_state(new_state)
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state == new_state
+
+    ck.keys = []
+    db.rollback()
+
+    decrypted_state = yield user.get_auth_state()
+    assert decrypted_state is None
+

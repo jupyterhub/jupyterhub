@@ -3,13 +3,16 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import os
 from unittest import mock
 
 import pytest
+from requests import HTTPError
+
+from jupyterhub import auth, crypto, orm
+
 from .mocking import MockPAMAuthenticator
-
-from jupyterhub import auth, orm
-
+from .test_api import add_user
 
 @pytest.mark.gen_test
 def test_pam_auth():
@@ -168,6 +171,62 @@ def test_handlers(app):
     a = auth.PAMAuthenticator()
     handlers = a.get_handlers(app)
     assert handlers[0][0] == '/login'
+
+
+@pytest.fixture
+def auth_state_enabled(app):
+    app.authenticator.auth_state = {
+        'who': 'cares',
+    }
+    ck = crypto.CryptKeeper.instance()
+    before_keys = ck.keys
+    ck.keys = [os.urandom(32)]
+    try:
+        yield
+    finally:
+        ck.keys = before_keys
+        app.authenticator.auth_state = None
+
+
+@pytest.mark.gen_test
+def test_auth_state(app, auth_state_enabled):
+    """auth_state enabled and available"""
+    name = 'kiwi'
+    user = add_user(app.db, app, name=name)
+    assert user.encrypted_auth_state is None
+    cookies = yield app.login_user(name)
+    auth_state = yield user.get_auth_state()
+    assert auth_state == app.authenticator.auth_state
+
+
+@pytest.fixture
+def auth_state_unavailable(app):
+    """auth_state enabled at the Authenticator level,
+    
+    but unavailable due to no crypto keys.
+    """
+    app.authenticator.auth_state = {
+        'who': 'cares',
+    }
+    ck = crypto.CryptKeeper.instance()
+    before_keys = ck.keys
+    ck.keys = []
+    try:
+        yield
+    finally:
+        ck.keys = before_keys
+        app.authenticator.auth_state = None
+
+
+@pytest.mark.gen_test
+def test_auth_state_disabled(app, auth_state_unavailable):
+    name = 'driebus'
+    user = add_user(app.db, app, name=name)
+    assert user.encrypted_auth_state is None
+    with pytest.raises(HTTPError):
+        cookies = yield app.login_user(name)
+    auth_state = yield user.get_auth_state()
+    assert auth_state is None
 
 
 @pytest.mark.gen_test

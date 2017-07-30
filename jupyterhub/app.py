@@ -47,6 +47,7 @@ from . import handlers, apihandlers
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .services.service import Service
 
+from . import crypto
 from . import dbutil, orm
 from .user import User, UserDict
 from .oauth.store import make_provider
@@ -60,6 +61,7 @@ from .utils import (
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
+from .crypto import CryptKeeper
 from .spawner import Spawner, LocalProcessSpawner
 from .objects import Hub
 
@@ -228,6 +230,7 @@ class JupyterHub(Application):
         LocalProcessSpawner,
         Authenticator,
         PAMAuthenticator,
+        CryptKeeper,
     ])
 
     load_groups = Dict(List(Unicode()),
@@ -865,6 +868,15 @@ class JupyterHub(Application):
     def init_users(self):
         """Load users into and from the database"""
         db = self.db
+
+        if self.authenticator.enable_auth_state:
+            # check that auth_state encryption is available
+            # if it's not, exit with an informative error.
+            ck = crypto.CryptKeeper.instance()
+            try:
+                ck.check_available()
+            except Exception as e:
+                self.exit("auth_state is enabled, but encryption is not available: %s" % e)
 
         if self.admin_users and not self.authenticator.admin_users:
             self.log.warning(
