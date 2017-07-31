@@ -390,8 +390,6 @@ class BaseHandler(RequestHandler):
                     429,
                     "User startup rate limit exceeded. Try to start again in a few minutes.")
 
-        # FIXME: Move this out of settings, since this isn't really a setting
-        self.spawn_pending_count += 1
         tic = IOLoop.current().time()
         user_server_name = user.name
         if server_name:
@@ -402,6 +400,14 @@ class BaseHandler(RequestHandler):
         self.log.debug("Initiating spawn for %s", user_server_name)
 
         f = user.spawn(server_name, options)
+
+        # increment spawn_pending only after spawn starts
+        self.log.debug("%i%s concurrent spawns",
+            self.spawn_pending_count,
+            '/%i' % concurrent_spawn_limit if concurrent_spawn_limit else '')
+        # FIXME: Move this out of settings, since this isn't really a setting
+        self.spawn_pending_count += 1
+
         spawner = user.spawners[server_name]
         spawner._proxy_pending = True
 
@@ -414,6 +420,7 @@ class BaseHandler(RequestHandler):
             """
             if f and f.exception() is not None:
                 # failed, don't add to the proxy
+                self.spawn_pending_count -= 1
                 return
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
@@ -455,9 +462,14 @@ class BaseHandler(RequestHandler):
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
+                    self.spawn_pending_count -= 1
                     toc = IOLoop.current().time()
                     self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                     raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
+        except Exception:
+            # error in start
+            self.spawn_pending_count -= 1
+            raise
         else:
             yield finish_user_spawn()
 
