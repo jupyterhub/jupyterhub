@@ -76,14 +76,22 @@ class SlowSpawner(MockSpawner):
 
 class NeverSpawner(MockSpawner):
     """A spawner that will never start"""
-    
+
     @default('start_timeout')
     def _start_timeout_default(self):
         return 1
-    
+
     def start(self):
         """Return a Future that will never finish"""
         return Future()
+
+    @gen.coroutine
+    def stop(self):
+        pass
+
+    @gen.coroutine
+    def poll(self):
+        return 0
 
 
 class FormSpawner(MockSpawner):
