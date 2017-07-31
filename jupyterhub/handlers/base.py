@@ -363,23 +363,35 @@ class BaseHandler(RequestHandler):
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
+    @property
+    def concurrent_spawn_limit(self):
+        return self.settings.get('concurrent_spawn_limit', 0)
+
+    @property
+    def spawn_pending_count(self):
+        return self.settings.setdefault('_spawn_pending_count', 0)
+
+    @spawn_pending_count.setter
+    def spawn_pending_count(self, value):
+        self.settings['_spawn_pending_count'] = value
+
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
         if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
 
-        concurrent_spawn_limit = self.settings['concurrent_spawn_limit']
-        if concurrent_spawn_limit and self.settings.get('_spawn_pending_count', 0) > concurrent_spawn_limit:
-            self.log.info(
-                'More than %s pending spawns, throttling',
-                self.settings['concurrent_spawn_limit']
-            )
-            raise web.HTTPError(
-                429,
-                "User startup rate limit exceeded. Try to start again in a few minutes.")
+        concurrent_spawn_limit = self.concurrent_spawn_limit
+        if concurrent_spawn_limit and self.spawn_pending_count >= concurrent_spawn_limit:
+                self.log.info(
+                    '%s pending spawns, throttling',
+                    concurrent_spawn_limit,
+                )
+                raise web.HTTPError(
+                    429,
+                    "User startup rate limit exceeded. Try to start again in a few minutes.")
 
         # FIXME: Move this out of settings, since this isn't really a setting
-        self.settings['_spawn_pending_count'] = self.settings.get('_spawn_pending_count', 0) + 1
+        self.spawn_pending_count += 1
         tic = IOLoop.current().time()
         user_server_name = user.name
         if server_name:
@@ -416,7 +428,7 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user)
             finally:
                 spawner._proxy_pending = False
-                self.settings['_spawn_pending_count'] -= 1
+                self.spawn_pending_count -= 1
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
