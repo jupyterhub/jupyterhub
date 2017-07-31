@@ -367,6 +367,19 @@ class BaseHandler(RequestHandler):
     def spawn_single_user(self, user, server_name='', options=None):
         if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
+
+        concurrent_spawn_limit = self.settings['concurrent_spawn_limit']
+        if concurrent_spawn_limit and self.settings.get('_spawn_pending_count', 0) > concurrent_spawn_limit:
+            self.log.info(
+                'More than %s pending spawns, throttling',
+                self.settings['concurrent_spawn_limit']
+            )
+            raise web.HTTPError(
+                429,
+                "User startup rate limit exceeded. Try to start again in a few minutes.")
+
+        # FIXME: Move this out of settings, since this isn't really a setting
+        self.settings['_spawn_pending_count'] = self.settings.get('_spawn_pending_count', 0) + 1
         tic = IOLoop.current().time()
         user_server_name = user.name
         if server_name:
@@ -403,6 +416,7 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user)
             finally:
                 spawner._proxy_pending = False
+                self.settings['_spawn_pending_count'] -= 1
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)

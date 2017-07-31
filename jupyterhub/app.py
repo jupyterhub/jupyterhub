@@ -534,16 +534,28 @@ class JupyterHub(Application):
     @default('authenticator')
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
-    
+
     allow_named_servers = Bool(False,
         help="Allow named single-user servers per user"
     ).tag(config=True)
-    
+
     # class for spawning single-user servers
     spawner_class = Type(LocalProcessSpawner, Spawner,
         help="""The class to use for spawning single-user servers.
 
         Should be a subclass of Spawner.
+        """
+    ).tag(config=True)
+
+    concurrent_spawn_limit = Integer(
+        0,
+        help="""
+        Maximum number of concurrent users that can be spawning at a time.
+
+        If more than this many users attempt to spawn at a time, their
+        request is rejected with a 429 error asking them to try again.
+
+        If set to 0, no concurrent_spawn_limit is enforced.
         """
     ).tag(config=True)
 
@@ -1257,6 +1269,7 @@ class JupyterHub(Application):
             statsd=self.statsd,
             allow_named_servers=self.allow_named_servers,
             oauth_provider=self.oauth_provider,
+            concurrent_spawn_limit=self.concurrent_spawn_limit,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
