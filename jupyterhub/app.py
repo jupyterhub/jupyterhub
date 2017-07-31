@@ -1449,10 +1449,13 @@ class JupyterHub(Application):
         routes = yield self.proxy.get_all_routes()
         users_count = 0
         active_users_count = 0
+        now = datetime.utcnow()
         for prefix, route in routes.items():
             route_data = route['data']
             if 'user' not in route_data:
                 # not a user route, ignore it
+                continue
+            if 'server_name' not in route_data:
                 continue
             users_count += 1
             if 'last_activity' not in route_data:
@@ -1462,13 +1465,18 @@ class JupyterHub(Application):
             if user is None:
                 self.log.warning("Found no user for route: %s", route)
                 continue
+            spawner = user.orm_spawners.get(route_data['server_name'])
+            if spawner is None:
+                self.log.warning("Found no spawner for route: %s", route)
+                continue
             try:
                 dt = datetime.strptime(route_data['last_activity'], ISO8601_ms)
             except Exception:
                 dt = datetime.strptime(route_data['last_activity'], ISO8601_s)
             user.last_activity = max(user.last_activity, dt)
+            spawner.last_activity = max(spawner.last_activity, dt)
             # FIXME: Make this configurable duration. 30 minutes for now!
-            if (datetime.now() - user.last_activity).total_seconds() < 30 * 60:
+            if (now - user.last_activity).total_seconds() < 30 * 60:
                 active_users_count += 1
         self.statsd.gauge('users.running', users_count)
         self.statsd.gauge('users.active', active_users_count)

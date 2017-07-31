@@ -65,15 +65,12 @@ class Server(Base):
     """
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
-    
+
     proto = Column(Unicode(15), default='http')
     ip = Column(Unicode(255), default='')  # could also be a DNS name
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode(255), default='/')
     cookie_name = Column(Unicode(255), default='cookie')
-
-    # added to handle multi-server feature
-    last_activity = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)
@@ -185,6 +182,8 @@ class Spawner(Base):
 
     state = Column(JSONDict)
     name = Column(Unicode(512))
+
+    last_activity = Column(DateTime, default=datetime.utcnow)
 
 
 class Service(Base):
