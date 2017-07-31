@@ -862,6 +862,8 @@ class JupyterHub(Application):
                 "to upgrade your JupyterHub database schema",
             ]))
             self.exit(1)
+        except orm.DatabaseSchemaMismatch as e:
+            self.exit(e)
 
     def init_hub(self):
         """Load the Hub config into the database"""
