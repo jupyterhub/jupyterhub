@@ -392,7 +392,6 @@ def test_make_admin(app):
 
 @mark.gen_test
 def test_spawn(app):
-    settings = app.tornado_application.settings
     db = app.db
     name = 'wash'
     user = add_user(db, app=app, name=name)
@@ -444,12 +443,11 @@ def test_spawn(app):
     assert before_servers == after_servers
     tokens = list(db.query(orm.APIToken).filter(orm.APIToken.user_id == user.id))
     assert tokens == []
-    assert settings['_spawn_pending_count'] == 0
+    assert app.users.count_active_users()['pending'] == 0
 
 
 @mark.gen_test
 def test_slow_spawn(app, no_patience, slow_spawn):
-    settings = app.tornado_application.settings
     db = app.db
     name = 'zoe'
     app_user = add_user(db, app=app, name=name)
@@ -459,7 +457,7 @@ def test_slow_spawn(app, no_patience, slow_spawn):
     assert app_user.spawner is not None
     assert app_user.spawner._spawn_pending
     assert not app_user.spawner._stop_pending
-    assert settings['_spawn_pending_count'] == 1
+    assert app.users.count_active_users()['pending'] == 1
 
     @gen.coroutine
     def wait_spawn():
@@ -493,31 +491,29 @@ def test_slow_spawn(app, no_patience, slow_spawn):
     assert app_user.spawner is not None
     r = yield api_request(app, 'users', name, 'server', method='delete')
     assert r.status_code == 400
-    assert settings['_spawn_pending_count'] == 0
+    assert app.users.count_active_users()['pending'] == 0
+    assert app.users.count_active_users()['active'] == 0
 
 
 @mark.gen_test
 def test_never_spawn(app, no_patience, never_spawn):
-    settings = app.tornado_application.settings
     db = app.db
     name = 'badger'
     app_user = add_user(db, app=app, name=name)
     r = yield api_request(app, 'users', name, 'server', method='post')
     assert app_user.spawner is not None
     assert app_user.spawner._spawn_pending
-    assert settings['_spawn_pending_count'] == 1
+    assert app.users.count_active_users()['pending'] == 1
 
-    @gen.coroutine
-    def wait_pending():
-        while app_user.spawner._spawn_pending:
-            yield gen.sleep(0.1)
+    while app_user.spawner.pending:
+        yield gen.sleep(0.1)
+        print(app_user.spawner.pending)
 
-    yield wait_pending()
     assert not app_user.spawner._spawn_pending
     status = yield app_user.spawner.poll()
     assert status is not None
     # failed spawn should decrements pending count
-    assert settings['_spawn_pending_count'] == 0
+    assert app.users.count_active_users()['pending'] == 0
 
 
 @mark.gen_test
@@ -528,7 +524,7 @@ def test_bad_spawn(app, no_patience, bad_spawn):
     user = add_user(db, app=app, name=name)
     r = yield api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 500
-    assert settings['_spawn_pending_count'] == 0
+    assert app.users.count_active_users()['pending'] == 0
 
 
 @mark.gen_test
@@ -539,11 +535,11 @@ def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
     user = add_user(db, app=app, name=name)
     r = yield api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
-    while user.spawner._spawn_pending:
+    while user.spawner.pending:
         yield gen.sleep(0.1)
     # spawn failed
     assert not user.running('')
-    assert settings['_spawn_pending_count'] == 0
+    assert app.users.count_active_users()['pending'] == 0
 
 
 @mark.gen_test
@@ -561,7 +557,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     for name in names:
         yield api_request(app, 'users', name, 'server', method='post')
         yield gen.sleep(0.5)
-    assert settings['_spawn_pending_count'] == 2
+    assert app.users.count_active_users()['pending'] == 2
 
     # ykka and hjarka's spawns are pending. Essun should fail with 429
     name = 'essun'
@@ -575,16 +571,16 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
 
     # race? hjarka could finish in this time
     # come back to this if we see intermittent failures here
-    assert settings['_spawn_pending_count'] == 1
+    assert app.users.count_active_users()['pending'] == 1
     r = yield api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
-    assert settings['_spawn_pending_count'] == 2
+    assert app.users.count_active_users()['pending'] == 2
     users.append(user)
     while not all(u.running('') for u in users):
         yield gen.sleep(0.1)
 
     # everybody's running, pending count should be back to 0
-    assert settings['_spawn_pending_count'] == 0
+    assert app.users.count_active_users()['pending'] == 0
     for u in users:
         r = yield api_request(app, 'users', u.name, 'server', method='delete')
         yield r.raise_for_status()
