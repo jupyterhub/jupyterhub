@@ -67,6 +67,8 @@ def test_tokens(db):
     assert found.match(token)
     assert found.user is user
     assert found.service is None
+    assert found.hashed.startswith('%s:1::' % orm.APIToken.algorithm)
+
     found = orm.APIToken.find(db, 'something else')
     assert found is None
 
@@ -74,6 +76,12 @@ def test_tokens(db):
     token = user.new_api_token(secret)
     assert token == secret
     assert len(user.api_tokens) == 3
+    found = orm.APIToken.find(db, token=token)
+    assert found.match(secret)
+    algo, rounds, salt, _ = found.hashed.split(':')
+    assert algo == orm.APIToken.algorithm
+    assert rounds == str(orm.APIToken.rounds)
+    assert len(salt) == 2 * orm.APIToken.salt_bytes
 
     # raise ValueError on collision
     with pytest.raises(ValueError):

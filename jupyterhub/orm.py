@@ -236,6 +236,12 @@ class Hashed(object):
     salt_bytes = 8
     min_length = 8
 
+    # values to use for internally generated tokens,
+    # which have good entropy as UUIDs
+    generated = False
+    generated_salt_bytes = b''
+    generated_rounds = 1
+
     @property
     def token(self):
         raise AttributeError("token is write-only")
@@ -244,16 +250,13 @@ class Hashed(object):
     def token(self, token):
         """Store the hashed value and prefix for a token"""
         self.prefix = token[:self.prefix_length]
-        if len(token) >= 32:
-            # Tokens are generally UUIDs, which have sufficient entropy on their own
+        if self.generated:
+            # Generated tokens are UUIDs, which have sufficient entropy on their own
             # and don't need salt & hash rounds.
             # ref: https://security.stackexchange.com/a/151262/155114
-            rounds = 1
-            salt_bytes = b''
+            rounds = self.generated_rounds
+            salt_bytes = self.generated_salt_bytes
         else:
-            # users can still specify API tokens in a few ways,
-            # so trigger salt & hash rounds if they provide a short token
-            app_log.warning("Applying salt & hash rounds to %sB token" % len(token))
             rounds = self.rounds
             salt_bytes = self.salt_bytes
         self.hashed = hash_token(token, rounds=rounds, salt=salt_bytes, algorithm=self.algorithm)
@@ -360,9 +363,14 @@ class APIToken(Hashed, Base):
         db = inspect(user or service).session
         if token is None:
             token = new_token()
+            # Don't need hash + salt rounds on generated tokens,
+            # which already have good entropy
+            generated = True
         else:
+            generated = False
             cls.check_token(db, token)
-        orm_token = cls(token=token)
+        orm_token = cls(generated=generated)
+        orm_token.token = token
         if user:
             assert user.id is not None
             orm_token.user_id = user.id
