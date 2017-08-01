@@ -51,6 +51,41 @@ class Spawner(LoggingConfigurable):
     _proxy_pending = False
     _waiting_for_response = False
 
+    @property
+    def pending(self):
+        """Return the current pending event, if any
+
+        Return False if nothing is pending.
+        """
+        if self._spawn_pending:
+            return 'spawn'
+        elif self._proxy_pending:
+            return 'proxy'
+        elif self._stop_pending:
+            return 'stop'
+        return False
+
+    @property
+    def ready(self):
+        """Is this server ready to use?
+
+        A server is not ready if an event is pending.
+        """
+        if self.pending:
+            return False
+        if self.server is None:
+            return False
+        return True
+
+    @property
+    def active(self):
+        """Return True if the server is active.
+
+        This includes fully running and ready or any pending start/stop event.
+        """
+        return bool(self.pending or self.ready)
+
+
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
