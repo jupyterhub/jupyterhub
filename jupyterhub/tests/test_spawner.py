@@ -16,7 +16,7 @@ import pytest
 from tornado import gen
 
 from ..user import User
-from ..objects import Hub
+from ..objects import Hub, Server
 from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner, Spawner
 from .. import orm
@@ -234,7 +234,10 @@ def test_shell_cmd(db, tmpdir, request):
         cmd=[sys.executable, '-m', 'jupyterhub.tests.mocksu'],
         shell_cmd=['bash', '--rcfile', str(f), '-i', '-c'],
     )
-    s.orm_spawner.server = orm.Server()
+    server = orm.Server()
+    db.add(server)
+    db.commit()
+    s.server = Server.from_orm(server)
     db.commit()
     (ip, port) = yield s.start()
     request.addfinalizer(s.stop)

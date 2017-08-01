@@ -235,7 +235,7 @@ class Service(LoggingConfigurable):
     @property
     def server(self):
         if self.orm.server:
-            return Server(orm_server=self.orm.server)
+            return Server.from_orm(self.orm.server)
         else:
             return None
 

@@ -63,6 +63,11 @@ class Server(HasTraits):
         return self.port
 
     @classmethod
+    def from_orm(cls, orm_server):
+        """Create a server from an orm.Server"""
+        return cls(orm_server=orm_server)
+
+    @classmethod
     def from_url(cls, url):
         """Create a Server from a given URL"""
         urlinfo = urlparse(url)

@@ -15,13 +15,15 @@ import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
+from sqlalchemy import inspect
+
 from tornado import gen
 from tornado.ioloop import PeriodicCallback, IOLoop
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
     Any, Bool, Dict, Instance, Integer, Float, List, Unicode,
-    validate,
+    observe, validate,
 )
 
 from .objects import Server
@@ -89,6 +91,14 @@ class Spawner(LoggingConfigurable):
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
+
+    @observe('orm_spawner')
+    def _orm_spawner_changed(self, change):
+        if change.new and change.new.server:
+            self._server = Server(orm_server=change.new.server)
+        else:
+            self._server = None
+
     user = Any()
 
     def __init_subclass__(cls, **kwargs):
@@ -105,8 +115,24 @@ class Spawner(LoggingConfigurable):
 
     @property
     def server(self):
+        if hasattr(self, '_server'):
+            return self._server
         if self.orm_spawner and self.orm_spawner.server:
             return Server(orm_server=self.orm_spawner.server)
+    
+    @server.setter
+    def server(self, server):
+        self._server = server
+        if self.orm_spawner:
+            if self.orm_spawner.server is not None:
+                # delete the old value
+                db = inspect(self.orm_spawner.server).session
+                db.delete(self.orm_spawner.server)
+            if server is None:
+                self.orm_spawner.server = None
+            else:
+                self.orm_spawner.server = server.orm_server
+
     @property
     def name(self):
         if self.orm_spawner:
