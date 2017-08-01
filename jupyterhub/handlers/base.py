@@ -334,6 +334,9 @@ class BaseHandler(RequestHandler):
             # always set auth_state and commit,
             # because there could be key-rotation or clearing of previous values
             # going on.
+            if not self.authenticator.enable_auth_state:
+                # auth_state is not enabled. Force None.
+                auth_state = None
             yield user.save_auth_state(auth_state)
             self.db.commit()
             self.set_login_cookie(user)
