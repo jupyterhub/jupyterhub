@@ -94,6 +94,22 @@ class NeverSpawner(MockSpawner):
         return 0
 
 
+class BadSpawner(MockSpawner):
+    """Spawner that fails immediately"""
+    def start(self):
+        raise RuntimeError("I don't work!")
+
+
+class SlowBadSpawner(MockSpawner):
+    """Spawner that fails after a short delay"""
+
+    @gen.coroutine
+    def start(self):
+        yield gen.sleep(0.1)
+        raise RuntimeError("I don't work!")
+
+
+
 class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
     options_form = "IMAFORM"

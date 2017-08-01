@@ -548,7 +548,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     concurrent_spawn_limit = Integer(
-        0,
+        100,
         help="""
         Maximum number of concurrent users that can be spawning at a time.
 

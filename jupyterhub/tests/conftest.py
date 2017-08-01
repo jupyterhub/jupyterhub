@@ -14,6 +14,7 @@ from tornado import ioloop, gen
 from .. import orm
 from ..utils import random_port
 
+from . import mocking
 from .mocking import MockHub
 from .test_services import mockservice_cmd
 
@@ -134,3 +135,36 @@ def no_patience(app):
                          {'slow_spawn_timeout': 0,
                           'slow_stop_timeout': 0}):
         yield
+
+
+@fixture
+def slow_spawn(app):
+    """Fixture enabling SlowSpawner"""
+    with mock.patch.dict(app.tornado_settings,
+                         {'spawner_class': mocking.SlowSpawner}):
+        yield
+
+
+@fixture
+def never_spawn(app):
+    """Fixture enabling NeverSpawner"""
+    with mock.patch.dict(app.tornado_settings,
+                         {'spawner_class': mocking.NeverSpawner}):
+        yield
+
+
+@fixture
+def bad_spawn(app):
+    """Fixture enabling BadSpawner"""
+    with mock.patch.dict(app.tornado_settings,
+                         {'spawner_class': mocking.BadSpawner}):
+        yield
+
+
+@fixture
+def slow_bad_spawn(app):
+    """Fixture enabling SlowBadSpawner"""
+    with mock.patch.dict(app.tornado_settings,
+                         {'spawner_class': mocking.SlowBadSpawner}):
+        yield
+
