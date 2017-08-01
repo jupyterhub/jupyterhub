@@ -131,9 +131,12 @@ class MockPAMAuthenticator(PAMAuthenticator):
         if username is None:
             return
         if self.auth_state:
+            state = {}
+            state.update(self.auth_state)
+            state['env'] = {'AUTH_NAME': username}
             return {
                 'name': username,
-                'auth_state': self.auth_state,
+                'auth_state': state,
             }
         else:
             return username
