@@ -178,6 +178,7 @@ def auth_state_enabled(app):
     app.authenticator.auth_state = {
         'who': 'cares',
     }
+    app.authenticator.enable_auth_state = True
     ck = crypto.CryptKeeper.instance()
     before_keys = ck.keys
     ck.keys = [os.urandom(32)]
@@ -185,6 +186,7 @@ def auth_state_enabled(app):
         yield
     finally:
         ck.keys = before_keys
+        app.authenticator.enable_auth_state = False
         app.authenticator.auth_state = None
 
 
@@ -200,22 +202,13 @@ def test_auth_state(app, auth_state_enabled):
 
 
 @pytest.fixture
-def auth_state_unavailable(app):
+def auth_state_unavailable(auth_state_enabled):
     """auth_state enabled at the Authenticator level,
     
     but unavailable due to no crypto keys.
     """
-    app.authenticator.auth_state = {
-        'who': 'cares',
-    }
-    ck = crypto.CryptKeeper.instance()
-    before_keys = ck.keys
-    ck.keys = []
-    try:
-        yield
-    finally:
-        ck.keys = before_keys
-        app.authenticator.auth_state = None
+    crypto.CryptKeeper.instance().keys = []
+    yield
 
 
 @pytest.mark.gen_test
