@@ -185,6 +185,7 @@ class UpgradeDB(Application):
     def start(self):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
+        self.log = hub.log
         if (hub.db_url.startswith('sqlite:///')):
             db_file = hub.db_url.split(':///', 1)[1]
             self._backup_db_file(db_file)
@@ -862,6 +863,8 @@ class JupyterHub(Application):
                 "to upgrade your JupyterHub database schema",
             ]))
             self.exit(1)
+        except orm.DatabaseSchemaMismatch as e:
+            self.exit(e)
 
     def init_hub(self):
         """Load the Hub config into the database"""

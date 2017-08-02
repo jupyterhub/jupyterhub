@@ -2,8 +2,6 @@ from glob import glob
 import os
 import shutil
 
-from sqlalchemy.exc import OperationalError
-
 import pytest
 from pytest import raises
 
@@ -32,7 +30,7 @@ def test_upgrade_entrypoint(tmpdir):
     tmpdir.chdir()
     tokenapp = NewToken()
     tokenapp.initialize(['kaylee'])
-    with raises(OperationalError):
+    with raises(SystemExit):
         tokenapp.start()
 
     sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
