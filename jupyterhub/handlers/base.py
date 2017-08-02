@@ -314,7 +314,7 @@ class BaseHandler(RequestHandler):
         if not next_url.startswith('/'):
             next_url = ''
         if not next_url:
-            if user and user.running(''):
+            if user and user.running:
                 next_url = user.url
             else:
                 next_url = self.hub.base_url

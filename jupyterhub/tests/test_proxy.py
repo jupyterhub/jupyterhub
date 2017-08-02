@@ -158,20 +158,20 @@ def test_check_routes(app,  username, endpoints):
     test_user = app.users[username]
     routes = yield app.proxy.get_all_routes()
     before = sorted(routes)
-    assert test_user.proxy_spec() in before
+    assert test_user.proxy_spec in before
 
     # check if a route is removed when user deleted
     yield app.proxy.check_routes(app.users, app._service_map)
     yield proxy.delete_user(test_user)
     routes = yield app.proxy.get_all_routes()
     during = sorted(routes)
-    assert test_user.proxy_spec() not in during
+    assert test_user.proxy_spec not in during
 
     # check if a route exists for user
     yield app.proxy.check_routes(app.users, app._service_map)
     routes = yield app.proxy.get_all_routes()
     after = sorted(routes)
-    assert test_user.proxy_spec() in after
+    assert test_user.proxy_spec in after
 
     # check that before and after state are the same
     assert before == after

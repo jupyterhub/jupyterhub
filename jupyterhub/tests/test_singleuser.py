@@ -21,7 +21,7 @@ def test_singleuser_auth(app):
     # login, start the server
     cookies = yield app.login_user('nandy')
     user = app.users['nandy']
-    if not user.running(''):
+    if not user.running:
         yield user.spawn()
     url = public_url(app, user)
     
@@ -56,7 +56,7 @@ def test_disable_user_config(app):
     cookies = yield app.login_user('nandy')
     user = app.users['nandy']
     # stop spawner, if running:
-    if user.running(''):
+    if user.running:
         print("stopping")
         yield user.stop()
     # start with new config:

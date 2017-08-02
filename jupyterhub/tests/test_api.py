@@ -461,7 +461,7 @@ def test_slow_spawn(app, no_patience, slow_spawn):
 
     @gen.coroutine
     def wait_spawn():
-        while not app_user.running(''):
+        while not app_user.running:
             yield gen.sleep(0.1)
 
     yield wait_spawn()
@@ -538,7 +538,7 @@ def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
     while user.spawner.pending:
         yield gen.sleep(0.1)
     # spawn failed
-    assert not user.running('')
+    assert not user.running
     assert app.users.count_active_users()['pending'] == 0
 
 
@@ -566,7 +566,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     assert r.status_code == 429
 
     # wait for ykka to finish
-    while not users[0].running(''):
+    while not users[0].running:
         yield gen.sleep(0.1)
 
     # race? hjarka could finish in this time
@@ -576,7 +576,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     r.raise_for_status()
     assert app.users.count_active_users()['pending'] == 2
     users.append(user)
-    while not all(u.running('') for u in users):
+    while not all(u.running for u in users):
         yield gen.sleep(0.1)
 
     # everybody's running, pending count should be back to 0

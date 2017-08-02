@@ -199,6 +199,7 @@ class User(HasTraits):
             hub=self.settings.get('hub'),
             authenticator=self.authenticator,
             config=self.settings.get('config'),
+            proxy_spec=url_path_join(self.proxy_spec, name, '/'),
         )
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
@@ -231,16 +232,15 @@ class User(HasTraits):
     def __repr__(self):
         return repr(self.orm_user)
 
-    def running(self, name):
-        """property for whether a user has a running server"""
-        if name not in self.spawners:
-            return False
-        spawner = self.spawners[name]
-        if spawner._spawn_pending or spawner._stop_pending or spawner._proxy_pending:
-            return False  # server is not running if spawn or stop is still pending
-        if spawner.server is None:
-            return False
-        return True
+    @property
+    def running(self):
+        """property for whether the user's default server is running"""
+        return self.spawner.ready
+    
+    @property
+    def active(self):
+        """True if any server is active"""
+        return any(s.active for s in self.spawners.values())
 
     @property
     def server(self):
@@ -251,11 +251,13 @@ class User(HasTraits):
         """My name, escaped for use in URLs, cookies, etc."""
         return quote(self.name, safe='@')
 
-    def proxy_spec(self, name=''):
+    @property
+    def proxy_spec(self):
+        """The proxy routespec for my default server"""
         if self.settings.get('subdomain_host'):
-            return url_path_join(self.domain, self.base_url, name, '/')
+            return url_path_join(self.domain, self.base_url, '/')
         else:
-            return url_path_join(self.base_url, name, '/')
+            return url_path_join(self.base_url, '/')
 
     @property
     def domain(self):
