@@ -295,9 +295,15 @@ class Proxy(LoggingConfigurable):
 
         good_routes = {'/'}
 
+        hub = self.app.hub
         if '/' not in routes:
             self.log.warning("Adding missing default route")
-            self.add_hub_route(self.app.hub)
+            futures.append(self.add_hub_route(hub))
+        else:
+            route = routes['/']
+            if route['target'] != hub.host:
+                self.log.warning("Updating default route %s → %s", route['target'], hub.host)
+                futures.append(self.add_hub_route(hub))
 
         for orm_user in db.query(User):
             user = user_dict[orm_user]
@@ -309,11 +315,19 @@ class Proxy(LoggingConfigurable):
                         self.log.warning(
                             "Adding missing route for %s (%s)", spec, spawner.server)
                         futures.append(self.add_user(user, name))
+                    else:
+                        route = routes[spec]
+                        if route['target'] != spawner.server.host:
+                            self.log.warning(
+                                "Updating route for %s (%s → %s)",
+                                spec, route['target'], spawner.server,
+                            )
+                            futures.append(self.add_user(user, name))
                 elif spawner._proxy_pending:
                     good_routes.add(user.proxy_spec(name))
 
         # check service routes
-        service_routes = {r['data']['service']
+        service_routes = {r['data']['service']: r
                           for r in routes.values() if 'service' in r['data']}
         for orm_service in db.query(Service).filter(Service.server != None):
             service = service_dict[orm_service.name]
@@ -329,6 +343,14 @@ class Proxy(LoggingConfigurable):
                 self.log.warning("Adding missing route for %s (%s)",
                                  service.name, service.server)
                 futures.append(self.add_service(service))
+            else:
+                route = service_routes[service.name]
+                if route['target'] != service.server.host:
+                    self.log.warning(
+                        "Updating route for %s (%s → %s)",
+                        route['routespec'], route['target'], spawner.server.host,
+                    )
+                    futures.append(self.add_service(service))
 
         # Now delete the routes that shouldn't be there
         for routespec in routes:
