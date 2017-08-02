@@ -448,7 +448,7 @@ class BaseHandler(RequestHandler):
                 self.log.error("Stopping %s to avoid inconsistent state", user_server_name)
                 yield user.stop()
             else:
-                spawner.add_poll_callback(self.user_stopped, user)
+                spawner.add_poll_callback(self.user_stopped, user, server_name)
             finally:
                 spawner._proxy_pending = False
 
@@ -484,16 +484,17 @@ class BaseHandler(RequestHandler):
             yield finish_user_spawn()
 
     @gen.coroutine
-    def user_stopped(self, user):
+    def user_stopped(self, user, server_name):
         """Callback that fires when the spawner has stopped"""
-        status = yield user.spawner.poll()
+        spawner = user.spawners[server_name]
+        status = yield spawner.poll()
         if status is None:
             status = 'unknown'
         self.log.warning("User %s server stopped, with exit code: %s",
             user.name, status,
         )
-        yield self.proxy.delete_user(user)
-        yield user.stop()
+        yield self.proxy.delete_user(user, server_name)
+        yield user.stop(server_name)
 
     @gen.coroutine
     def stop_single_user(self, user, name=''):

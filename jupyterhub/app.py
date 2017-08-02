@@ -1181,13 +1181,14 @@ class JupyterHub(Application):
             return ' '.join(parts)
 
         @gen.coroutine
-        def user_stopped(user):
-            status = yield user.spawner.poll()
+        def user_stopped(user, server_name):
+            spawner = user.spawners[server_name]
+            status = yield spawner.poll()
             self.log.warning("User %s server stopped with exit code: %s",
                 user.name, status,
             )
-            yield self.proxy.delete_user(user)
-            yield user.stop()
+            yield self.proxy.delete_user(user, server_name)
+            yield user.stop(server_name)
 
         for orm_user in db.query(orm.User):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
@@ -1204,7 +1205,7 @@ class JupyterHub(Application):
 
                 if status is None:
                     self.log.info("%s still running", user.name)
-                    spawner.add_poll_callback(user_stopped, user)
+                    spawner.add_poll_callback(user_stopped, user, name)
                     spawner.start_polling()
                 else:
                     # user not running. This is expected if server is None,
