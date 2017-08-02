@@ -156,9 +156,9 @@ class UserAPIHandler(APIHandler):
         yield gen.maybe_future(self.authenticator.delete_user(user))
         # remove from registry
         del self.users[user]
-        
+
         self.set_status(204)
-    
+
     @admin_only
     def patch(self, name):
         user = self.find_user(name)
@@ -194,6 +194,8 @@ class UserServerAPIHandler(APIHandler):
         options = self.get_json_body()
         yield self.spawn_single_user(user, options=options)
         status = 202 if user.spawner._spawn_pending else 201
+        if status == 202:
+            self.write(json.dumps({"message": "Server is slow to start"}))
         self.set_status(status)
 
     @gen.coroutine
@@ -211,6 +213,8 @@ class UserServerAPIHandler(APIHandler):
             raise web.HTTPError(400, "%s's server is not running" % name)
         yield self.stop_single_user(user)
         status = 202 if user.spawner._stop_pending else 204
+        if status == 202:
+            self.write(json.dumps({"message": "Server is slow to stop"}))
         self.set_status(status)
 
 
@@ -232,6 +236,8 @@ class UserNamedServerAPIHandler(APIHandler):
         yield self.spawn_single_user(user, server_name, options=options)
         spawner = user.spawners[server_name]
         status = 202 if spawner._spawn_pending else 201
+        if status == 202:
+            self.write(json.dumps({"message": "Server is slow to start"}))
         self.set_status(status)
 
     @gen.coroutine
@@ -256,6 +262,8 @@ class UserNamedServerAPIHandler(APIHandler):
             raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
         yield self.stop_single_user(user, server_name)
         status = 202 if spawner._stop_pending else 204
+        if status == 202:
+            self.write(json.dumps({"message": "Server is slow to stop"}))
         self.set_status(status)
 
 
