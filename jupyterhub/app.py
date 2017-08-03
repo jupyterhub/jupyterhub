@@ -558,7 +558,7 @@ class JupyterHub(Application):
         to spawn too many servers at the same time.
 
         This does not limit the number of total running servers.
-        See concurrent_user_limit for that.
+        See active_server_limit for that.
 
         If more than this many users attempt to spawn at a time, their
         requests will be rejected with a 429 error asking them to try again.
@@ -569,12 +569,16 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
-    concurrent_user_limit = Integer(
+    active_server_limit = Integer(
         0,
         help="""
-        Maximum number of concurrent users that can be active at a time.
+        Maximum number of concurrent servers that can be active at a time.
 
-        This can limit the total resources your users can consume.
+        Setting this can limit the total resources your users can consume.
+
+        An active server is any server that's not fully stopped.
+        It is considered active from the time it has been requested
+        until the time that it has completely stopped.
 
         If this many user servers are active, users will not be able to
         launch new servers until a server is shutdown.
@@ -1295,7 +1299,7 @@ class JupyterHub(Application):
             allow_named_servers=self.allow_named_servers,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
-            concurrent_user_limit=self.concurrent_user_limit,
+            active_server_limit=self.active_server_limit,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

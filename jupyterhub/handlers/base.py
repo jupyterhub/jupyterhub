@@ -368,15 +368,15 @@ class BaseHandler(RequestHandler):
         return self.settings.get('concurrent_spawn_limit', 0)
 
     @property
-    def concurrent_user_limit(self):
-        return self.settings.get('concurrent_user_limit', 0)
+    def active_server_limit(self):
+        return self.settings.get('active_server_limit', 0)
 
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
         if server_name in user.spawners and user.spawners[server_name].pending:
             raise RuntimeError("Spawn already pending for: %s" % user.name)
 
-        # count active users and pending spawns
+        # count active servers and pending spawns
         # we could do careful bookkeeping to avoid
         # but for 10k users this takes ~5ms
         # and saves us from bookkeeping errors
@@ -385,7 +385,7 @@ class BaseHandler(RequestHandler):
         active_count = active_counts['active']
 
         concurrent_spawn_limit = self.concurrent_spawn_limit
-        concurrent_user_limit = self.concurrent_user_limit
+        active_server_limit = self.active_server_limit
 
         if concurrent_spawn_limit and spawn_pending_count >= concurrent_spawn_limit:
                 self.log.info(
@@ -395,7 +395,7 @@ class BaseHandler(RequestHandler):
                 raise web.HTTPError(
                     429,
                     "User startup rate limit exceeded. Try again in a few minutes.")
-        if concurrent_user_limit and active_count >= concurrent_user_limit:
+        if active_server_limit and active_count >= active_server_limit:
                 self.log.info(
                     '%s servers active, no space available',
                     active_count,
@@ -418,9 +418,9 @@ class BaseHandler(RequestHandler):
         self.log.debug("%i%s concurrent spawns",
             spawn_pending_count,
             '/%i' % concurrent_spawn_limit if concurrent_spawn_limit else '')
-        self.log.debug("%i%s active users",
+        self.log.debug("%i%s active servers",
             active_count,
-            '/%i' % concurrent_user_limit if concurrent_user_limit else '')
+            '/%i' % active_server_limit if active_server_limit else '')
 
         spawner = user.spawners[server_name]
 
