@@ -449,68 +449,77 @@ paths:
             $ref: '#/definitions/User'
         '404':
           description: A user is not found.
-  /oath2/authorize:
+  /oauth2/authorize:
     get:
       summary: 'OAuth 2.0 authorize endpoint'
       description: 'OAuth 2.0 authorize endpoint'
       parameters:
         - name: client_id
           description: The client id
-          in: path
+          in: query
           required: true
           type: string
         - name: response_type
           description: The response type (token | code)
-          in: path
+          in: query
           required: true
           type: string
         - name: state
           description: A state string
-          in: path
+          in: query
           required: false
           type: string
         - name: redirect_uri
           description: The redirect url
-          in: path
-          required: false
-          type: string
-        - name: scope
-          description: The requested scopes
-          in: path
-          required: false
+          in: query
+          required: true
           type: string
       responses:
-  /oath2/token:
+  /oauth2/token:
     post:
       summary: Request an OAuth2 token
       description: Request an OAuth2 token
       parameters:
         - name: client_id
           description: The client id
-          in: path
+          in: body
           required: true
           type: string
-        - name: response_type
-          description: The response type (token | code)
-          in: path
+        - name: client_secret
+          description:
+          in: body
           required: true
           type: string
-        - name: state
-          description: A state string
-          in: path
-          required: false
+        - name: grant_type
+          description: The grant type (authorization_code)
+          in: body
+          required: true
           type: string
-        - name: redirect_uri
+        - name: code
+          description:
+          in: body
+          required: true
+          type: string
+        - name: redirect_url
           description: The redirect url
-          in: path
-          required: false
-          type: string
-        - name: scope
-          description: The requested scopes
-          in: path
-          required: false
+          in: body
+          required: true
           type: string
       responses:
+        - {'access_token': token}
+          description: JSON response including the tokk
+  /shutdown:
+    post:
+      summary: Shutdown the Hub
+      parameters:
+        - name: proxy
+          in: body
+          type: boolean
+          description: Whether the proxy should be shutdown as well (default from Hub config)
+        - name: servers
+          in: body
+          type: boolean
+          description: Whether users' notebook servers should be shutdown as well (default from Hub config)
 definitions:
   User:
     type: object
