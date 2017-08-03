@@ -1,6 +1,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from collections import defaultdict
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 
@@ -8,12 +9,13 @@ from oauth2.error import ClientNotFoundError
 from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
+from traitlets import HasTraits, Any, Dict, default
 
 from .utils import url_path_join, default_server_name
 
 from . import orm
 from ._version import _check_version, __version__
-from traitlets import HasTraits, Any, Dict, observe, default
+from .objects import Server
 from .spawner import LocalProcessSpawner
 from .crypto import encrypt, decrypt, CryptKeeper, EncryptionUnavailable, InvalidToken
 
@@ -72,6 +74,25 @@ class UserDict(dict):
         db.delete(user.orm_user)
         db.commit()
         dict.__delitem__(self, user_id)
+
+    def count_active_users(self):
+        """Count the number of user servers that are active/pending/ready
+        
+        Returns dict with counts of active/pending/ready servers
+        """
+        counts = defaultdict(lambda : 0)
+        for user in self.values():
+            for spawner in user.spawners.values():
+                pending = spawner.pending
+                if pending:
+                    counts['pending'] += 1
+                    counts[pending + '_pending'] += 1
+                if spawner.active:
+                    counts['active'] += 1
+                if spawner.ready:
+                    counts['ready'] += 1
+
+        return counts
 
 
 class _SpawnerDict(dict):
@@ -294,8 +315,8 @@ class User(HasTraits):
 
 
         spawner = self.spawners[server_name]
-        spawner.orm_spawner.server = orm_server
-        server = spawner.server
+        spawner.server = server = Server(orm_server=orm_server)
+        assert spawner.orm_spawner.server is orm_server
 
         # Passing user_options to the spawner
         spawner.user_options = options or {}
@@ -432,9 +453,7 @@ class User(HasTraits):
             spawner.orm_spawner.state = spawner.get_state()
             self.last_activity = datetime.utcnow()
             # remove server entry from db
-            if spawner.server is not None:
-                self.db.delete(spawner.orm_spawner.server)
-            spawner.orm_spawner.server = None
+            spawner.server = None
             if not spawner.will_resume:
                 # find and remove the API token if the spawner isn't
                 # going to re-use it next time

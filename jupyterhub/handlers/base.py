@@ -371,27 +371,41 @@ class BaseHandler(RequestHandler):
         return self.settings.get('concurrent_spawn_limit', 0)
 
     @property
-    def spawn_pending_count(self):
-        return self.settings.setdefault('_spawn_pending_count', 0)
-
-    @spawn_pending_count.setter
-    def spawn_pending_count(self, value):
-        self.settings['_spawn_pending_count'] = value
+    def active_server_limit(self):
+        return self.settings.get('active_server_limit', 0)
 
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
-        if server_name in user.spawners and user.spawners[server_name]._spawn_pending:
+        if server_name in user.spawners and user.spawners[server_name].pending == 'spawn':
             raise RuntimeError("Spawn already pending for: %s" % user.name)
 
+        # count active servers and pending spawns
+        # we could do careful bookkeeping to avoid
+        # but for 10k users this takes ~5ms
+        # and saves us from bookkeeping errors
+        active_counts = self.users.count_active_users()
+        spawn_pending_count = active_counts['spawn_pending'] + active_counts['proxy_pending']
+        active_count = active_counts['active']
+
         concurrent_spawn_limit = self.concurrent_spawn_limit
-        if concurrent_spawn_limit and self.spawn_pending_count >= concurrent_spawn_limit:
+        active_server_limit = self.active_server_limit
+
+        if concurrent_spawn_limit and spawn_pending_count >= concurrent_spawn_limit:
                 self.log.info(
                     '%s pending spawns, throttling',
-                    concurrent_spawn_limit,
+                    spawn_pending_count,
                 )
                 raise web.HTTPError(
                     429,
-                    "User startup rate limit exceeded. Try to start again in a few minutes.")
+                    "User startup rate limit exceeded. Try again in a few minutes.")
+        if active_server_limit and active_count >= active_server_limit:
+                self.log.info(
+                    '%s servers active, no space available',
+                    active_count,
+                )
+                raise web.HTTPError(
+                    429,
+                    "Active user limit exceeded. Try again in a few minutes.")
 
         tic = IOLoop.current().time()
         user_server_name = user.name
@@ -404,15 +418,14 @@ class BaseHandler(RequestHandler):
 
         f = user.spawn(server_name, options)
 
-        # increment spawn_pending only after spawn starts
         self.log.debug("%i%s concurrent spawns",
-            self.spawn_pending_count,
+            spawn_pending_count,
             '/%i' % concurrent_spawn_limit if concurrent_spawn_limit else '')
-        # FIXME: Move this out of settings, since this isn't really a setting
-        self.spawn_pending_count += 1
+        self.log.debug("%i%s active servers",
+            active_count,
+            '/%i' % active_server_limit if active_server_limit else '')
 
         spawner = user.spawners[server_name]
-        spawner._proxy_pending = True
 
         @gen.coroutine
         def finish_user_spawn(f=None):
@@ -423,12 +436,12 @@ class BaseHandler(RequestHandler):
             """
             if f and f.exception() is not None:
                 # failed, don't add to the proxy
-                self.spawn_pending_count -= 1
                 return
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
             try:
+                spawner._proxy_pending = True
                 yield self.proxy.add_user(user, server_name)
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
@@ -438,7 +451,6 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user)
             finally:
                 spawner._proxy_pending = False
-                self.spawn_pending_count -= 1
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
@@ -465,14 +477,9 @@ class BaseHandler(RequestHandler):
                     # schedule finish for when the user finishes spawning
                     IOLoop.current().add_future(f, finish_user_spawn)
                 else:
-                    self.spawn_pending_count -= 1
                     toc = IOLoop.current().time()
                     self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                     raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
-        except Exception:
-            # error in start
-            self.spawn_pending_count -= 1
-            raise
         else:
             yield finish_user_spawn()
 
