@@ -59,10 +59,8 @@ class Spawner(LoggingConfigurable):
 
         Return False if nothing is pending.
         """
-        if self._spawn_pending:
+        if self._spawn_pending or self._proxy_pending:
             return 'spawn'
-        elif self._proxy_pending:
-            return 'proxy'
         elif self._stop_pending:
             return 'stop'
         return False

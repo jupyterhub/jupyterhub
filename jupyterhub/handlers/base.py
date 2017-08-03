@@ -373,7 +373,7 @@ class BaseHandler(RequestHandler):
 
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
-        if server_name in user.spawners and user.spawners[server_name].pending:
+        if server_name in user.spawners and user.spawners[server_name].pending == 'spawn':
             raise RuntimeError("Spawn already pending for: %s" % user.name)
 
         # count active servers and pending spawns
