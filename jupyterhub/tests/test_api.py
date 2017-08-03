@@ -584,8 +584,67 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     for u in users:
         r = yield api_request(app, 'users', u.name, 'server', method='delete')
         yield r.raise_for_status()
-    while any(u.running('') for u in users):
+    while any(u.spawner.active for u in users):
         yield gen.sleep(0.1)
+
+
+@mark.gen_test
+def test_active_server_limit(app, request):
+    db = app.db
+    settings = app.tornado_application.settings
+    settings['active_server_limit'] = 2
+    def _restore_limit():
+        settings['active_server_limit'] = 0
+    request.addfinalizer(_restore_limit)
+
+    # start two pending spawns
+    names = ['ykka', 'hjarka']
+    users = [ add_user(db, app=app, name=name) for name in names ]
+    for name in names:
+        r = yield api_request(app, 'users', name, 'server', method='post')
+        r.raise_for_status()
+    counts = app.users.count_active_users()
+    assert counts['active'] == 2
+    assert counts['ready'] == 2
+    assert counts['pending'] == 0
+
+    # ykka and hjarka's servers are running. Essun should fail with 429
+    name = 'essun'
+    user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 429
+    counts = app.users.count_active_users()
+    assert counts['active'] == 2
+    assert counts['ready'] == 2
+    assert counts['pending'] == 0
+
+    # stop one server
+    yield api_request(app, 'users', names[0], 'server', method='delete')
+    counts = app.users.count_active_users()
+    assert counts['active'] == 1
+    assert counts['ready'] == 1
+    assert counts['pending'] == 0
+
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    counts = app.users.count_active_users()
+    assert counts['active'] == 2
+    assert counts['ready'] == 2
+    assert counts['pending'] == 0
+    users.append(user)
+
+    # everybody's running, pending count should be back to 0
+    assert app.users.count_active_users()['pending'] == 0
+    for u in users:
+        if not u.spawner.active:
+            continue
+        r = yield api_request(app, 'users', u.name, 'server', method='delete')
+        r.raise_for_status()
+
+    counts = app.users.count_active_users()
+    assert counts['active'] == 0
+    assert counts['ready'] == 0
+    assert counts['pending'] == 0
 
 
 @mark.gen_test
