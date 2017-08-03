@@ -1,5 +1,6 @@
 """Tests for the REST API."""
 
+from concurrent.futures import Future
 import json
 import time
 import sys
@@ -554,34 +555,40 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     # start two pending spawns
     names = ['ykka', 'hjarka']
     users = [ add_user(db, app=app, name=name) for name in names ]
+    users[0].spawner._start_future = Future()
+    users[1].spawner._start_future = Future()
     for name in names:
         yield api_request(app, 'users', name, 'server', method='post')
-        yield gen.sleep(0.5)
     assert app.users.count_active_users()['pending'] == 2
 
-    # ykka and hjarka's spawns are pending. Essun should fail with 429
+    # ykka and hjarka's spawns are both pending. Essun should fail with 429
     name = 'essun'
     user = add_user(db, app=app, name=name)
+    user.spawner._start_future = Future()
     r = yield api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 429
-
+    
+    # allow ykka to start
+    users[0].spawner._start_future.set_result(None)
     # wait for ykka to finish
     while not users[0].running:
         yield gen.sleep(0.1)
 
-    # race? hjarka could finish in this time
-    # come back to this if we see intermittent failures here
     assert app.users.count_active_users()['pending'] == 1
     r = yield api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     assert app.users.count_active_users()['pending'] == 2
     users.append(user)
+    # allow hjarka and essun to finish starting
+    for user in users[1:]:
+        user.spawner._start_future.set_result(None)
     while not all(u.running for u in users):
         yield gen.sleep(0.1)
 
     # everybody's running, pending count should be back to 0
     assert app.users.count_active_users()['pending'] == 0
     for u in users:
+        u.spawner.delay = 0
         r = yield api_request(app, 'users', u.name, 'server', method='delete')
         yield r.raise_for_status()
     while any(u.spawner.active for u in users):

@@ -61,16 +61,21 @@ class MockSpawner(LocalProcessSpawner):
 
 class SlowSpawner(MockSpawner):
     """A spawner that takes a few seconds to start"""
-    
+
+    delay = 2
+    _start_future = None
     @gen.coroutine
     def start(self):
         (ip, port) = yield super().start()
-        yield gen.sleep(2)
+        if self._start_future is not None:
+            yield self._start_future
+        else:
+            yield gen.sleep(self.delay)
         return ip, port
-    
+
     @gen.coroutine
     def stop(self):
-        yield gen.sleep(2)
+        yield gen.sleep(self.delay)
         yield super().stop()
 
 
