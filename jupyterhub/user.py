@@ -4,6 +4,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
+import warnings
 
 from oauth2.error import ClientNotFoundError
 from sqlalchemy import inspect
@@ -241,6 +242,20 @@ class User(HasTraits):
     def active(self):
         """True if any server is active"""
         return any(s.active for s in self.spawners.values())
+
+    @property
+    def spawn_pending(self):
+        warnings.warn("User.spawn_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
+            DeprecationWarning,
+        )
+        return self.spawner.pending == 'spawn'
+
+    @property
+    def stop_pending(self):
+        warnings.warn("User.stop_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
+            DeprecationWarning,
+        )
+        return self.spawner.pending == 'stop'
 
     @property
     def server(self):
