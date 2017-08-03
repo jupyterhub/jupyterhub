@@ -110,6 +110,8 @@ class Spawner(LoggingConfigurable):
         if missing:
             raise NotImplementedError("class `{}` needs to redefine the `start`,"
                   "`stop` and `poll` methods. `{}` not redefined.".format(cls.__name__, '`, `'.join(missing)))
+    
+    proxy_spec = Unicode()
 
     @property
     def server(self):
@@ -117,7 +119,7 @@ class Spawner(LoggingConfigurable):
             return self._server
         if self.orm_spawner and self.orm_spawner.server:
             return Server(orm_server=self.orm_spawner.server)
-    
+
     @server.setter
     def server(self, server):
         self._server = server

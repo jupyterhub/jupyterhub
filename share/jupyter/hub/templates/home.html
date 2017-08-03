@@ -5,11 +5,11 @@
 <div class="container">
   <div class="row">
     <div class="text-center">
-      {% if user.running('') %}
+      {% if user.running %}
       <a id="stop" class="btn btn-lg btn-danger">Stop My Server</a>
       {% endif %}
       <a id="start" class="btn btn-lg btn-success" href="{{ url }}">
-      {% if not user.running('') %}
+      {% if not user.running %}
       Start
       {% endif %}
         My Server

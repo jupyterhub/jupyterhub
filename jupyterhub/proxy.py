@@ -228,7 +228,7 @@ class Proxy(LoggingConfigurable):
         """Add a user's server to the proxy table."""
         spawner = user.spawners[server_name]
         self.log.info("Adding user %s to proxy %s => %s",
-                      user.name, user.proxy_spec(server_name), spawner.server.host,
+                      user.name, spawner.proxy_spec, spawner.server.host,
                       )
 
         if spawner._spawn_pending:
@@ -236,7 +236,7 @@ class Proxy(LoggingConfigurable):
                 "User %s's spawn is pending, shouldn't be added to the proxy yet!", user.name)
 
         yield self.add_route(
-            user.proxy_spec(server_name),
+            spawner.proxy_spec,
             spawner.server.host,
             {
                 'user': user.name,
@@ -247,8 +247,11 @@ class Proxy(LoggingConfigurable):
     @gen.coroutine
     def delete_user(self, user, server_name=''):
         """Remove a user's server from the proxy table."""
-        self.log.info("Removing user %s from proxy", user.name)
-        yield self.delete_route(user.proxy_spec(server_name))
+        routespec = user.proxy_spec
+        if server_name:
+            routespec = url_path_join(user.proxy_spec, server_name, '/')
+        self.log.info("Removing user %s from proxy (%s)", user.name, routespec)
+        yield self.delete_route(routespec)
 
     @gen.coroutine
     def add_all_services(self, service_dict):
@@ -277,7 +280,7 @@ class Proxy(LoggingConfigurable):
         for orm_user in db.query(User):
             user = user_dict[orm_user]
             for name, spawner in user.spawners.items():
-                if user.running(name):
+                if spawner.ready:
                     futures.append(self.add_user(user, name))
         # wait after submitting them all
         for f in futures:
@@ -308,8 +311,8 @@ class Proxy(LoggingConfigurable):
         for orm_user in db.query(User):
             user = user_dict[orm_user]
             for name, spawner in user.spawners.items():
-                if user.running(name):
-                    spec = user.proxy_spec(name)
+                if spawner.ready:
+                    spec = spawner.proxy_spec
                     good_routes.add(spec)
                     if spec not in user_routes:
                         self.log.warning(
@@ -324,7 +327,7 @@ class Proxy(LoggingConfigurable):
                             )
                             futures.append(self.add_user(user, name))
                 elif spawner._proxy_pending:
-                    good_routes.add(user.proxy_spec(name))
+                    good_routes.add(spawner.proxy_spec)
 
         # check service routes
         service_routes = {r['data']['service']: r

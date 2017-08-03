@@ -169,7 +169,7 @@ def test_spawn_fails(db):
     with pytest.raises(RuntimeError) as exc:
         yield user.spawn()
     assert user.spawners[''].server is None
-    assert not user.running('')
+    assert not user.running
 
 
 def test_groups(db):
