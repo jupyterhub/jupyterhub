@@ -452,7 +452,9 @@ paths:
   /oauth2/authorize:
     get:
       summary: 'OAuth 2.0 authorize endpoint'
-      description: 'OAuth 2.0 authorize endpoint'
+      description: |
+        Redirect users to this URL to begin the OAuth process.
+        It is not an API endpoint.
       parameters:
         - name: client_id
           description: The client id
@@ -460,7 +462,7 @@ paths:
           required: true
           type: string
         - name: response_type
-          description: The response type (token | code)
+          description: The response type (always 'code')
           in: query
           required: true
           type: string
@@ -474,40 +476,52 @@ paths:
           in: query
           required: true
           type: string
-      responses:
   /oauth2/token:
     post:
       summary: Request an OAuth2 token
-      description: Request an OAuth2 token
+      description: |
+        Request an OAuth2 token from an authorization code.
+        This request completes the OAuth process.
+      consumes:
+        - application/x-www-form-urlencoded
       parameters:
         - name: client_id
           description: The client id
-          in: body
+          in: form
           required: true
           type: string
         - name: client_secret
-          description:
-          in: body
+          description: The client secret
+          in: form
           required: true
           type: string
         - name: grant_type
-          description: The grant type (authorization_code)
-          in: body
+          description: The grant type (always 'authorization_code')
+          in: form
           required: true
           type: string
         - name: code
-          description:
-          in: body
+          description: The code provided by the authorization redirect
+          in: form
           required: true
           type: string
-        - name: redirect_url
+        - name: redirect_uri
           description: The redirect url
-          in: body
+          in: form
           required: true
           type: string
       responses:
-        - {'access_token': token}
-          description: JSON response including the tokk
+        '200':
+          description: JSON response including the token
+          schema:
+            type: object
+            properties:
+              access_token:
+                type: string
+                description: The new API token for the user
+              token_type:
+                type: string
+                description: Will always be 'Bearer'
   /shutdown:
     post:
       summary: Shutdown the Hub
