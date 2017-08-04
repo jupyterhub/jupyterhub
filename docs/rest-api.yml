@@ -3,7 +3,7 @@ swagger: '2.0'
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
-  version: 0.7.0
+  version: 0.8.0dev
   license:
     name: BSD-3-Clause
 schemes:
@@ -215,6 +215,13 @@ paths:
       responses:
         '200':
           description: Sets a cookie granting the requesting administrator access to the user's notebook server
+  /user:
+    summary: Return authenticated user's model
+    description:
+    parameters:
+    responses:
+      '200':
+        description: The authenticated user's model is returned.
   /groups:
     get:
       summary: List groups
@@ -404,9 +411,11 @@ paths:
               token:
                 type: string
                 description: The new API token.
+        '403':
+          description: The user can not be authenticated.
   /authorizations/token/{token}:
     get:
-      summary: Identify a user from an API token
+      summary: Identify a user or service from an API token
       parameters:
       - name: token
         in: path
@@ -414,9 +423,12 @@ paths:
         type: string
       responses:
         '200':
-          description: The user identified by the API token
+          description: The user or service identified by the API token
           schema:
             $ref: '#/definitions/User'
+            $ref: '#/definitions/Service'
+        '404':
+          description: A user or service is not found.
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
       summary: Identify a user from a cookie
@@ -435,6 +447,67 @@ paths:
           description: The user identified by the cookie
           schema:
             $ref: '#/definitions/User'
+        '404':
+          description: A user is not found.
+  /oauth2/authorize:
+    get:
+      summary: 'OAuth 2.0 authorize endpoint'
+      description: 'OAuth 2.0 authorize endpoint'
+      parameters:
+        - name: client_id
+          description: The client id
+          in: query
+          required: true
+          type: string
+        - name: response_type
+          description: The response type (token | code)
+          in: query
+          required: true
+          type: string
+        - name: state
+          description: A state string
+          in: query
+          required: false
+          type: string
+        - name: redirect_uri
+          description: The redirect url
+          in: query
+          required: true
+          type: string
+      responses:
+  /oauth2/token:
+    post:
+      summary: Request an OAuth2 token
+      description: Request an OAuth2 token
+      parameters:
+        - name: client_id
+          description: The client id
+          in: body
+          required: true
+          type: string
+        - name: client_secret
+          description:
+          in: body
+          required: true
+          type: string
+        - name: grant_type
+          description: The grant type (authorization_code)
+          in: body
+          required: true
+          type: string
+        - name: code
+          description:
+          in: body
+          required: true
+          type: string
+        - name: redirect_url
+          description: The redirect url
+          in: body
+          required: true
+          type: string
+      responses:
+        - {'access_token': token}
+          description: JSON response including the tokk
   /shutdown:
     post:
       summary: Shutdown the Hub
@@ -446,10 +519,7 @@ paths:
         - name: servers
           in: body
           type: boolean
-          description: Whether users's notebook servers should be shutdown as well (default from Hub config)
-      responses:
-        '200':
-          description: Hub has shutdown
+          description: Whether users' notebook servers should be shutdown as well (default from Hub config)
 definitions:
   User:
     type: object
