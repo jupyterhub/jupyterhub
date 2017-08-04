@@ -1,7 +1,7 @@
 include README.md
 include COPYING.md
 include setupegg.py
-include bower.json
+include bower-lite
 include package.json
 include *requirements.txt
 include Dockerfile
@@ -18,12 +18,13 @@ graft docs
 prune docs/node_modules
 
 # prune some large unused files from components
-prune share/jupyter/hub/static/components/bootstrap/css
-exclude share/jupyter/hub/static/components/components/fonts/*.svg
-exclude share/jupyter/hub/static/components/bootstrap/less/*.js
-exclude share/jupyter/hub/static/components/font-awesome/css
+prune share/jupyter/hub/static/components/bootstrap/dist/css
+exclude share/jupyter/hub/static/components/bootstrap/dist/fonts/*.svg
+prune share/jupyter/hub/static/components/font-awesome/css
+prune share/jupyter/hub/static/components/font-awesome/scss
 exclude share/jupyter/hub/static/components/font-awesome/fonts/*.svg
-exclude share/jupyter/hub/static/components/jquery/*migrate*.js
+prune share/jupyter/hub/static/components/jquery/external
+prune share/jupyter/hub/static/components/jquery/src
 prune share/jupyter/hub/static/components/moment/lang
 prune share/jupyter/hub/static/components/moment/min
 

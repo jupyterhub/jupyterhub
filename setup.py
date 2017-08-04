@@ -149,45 +149,34 @@ class BaseCommand(Command):
         return []
 
 
-class Bower(BaseCommand):
+class NPM(BaseCommand):
     description = "fetch static client-side components with bower"
 
     user_options = []
-    bower_dir = pjoin(static, 'components')
     node_modules = pjoin(here, 'node_modules')
+    bower_dir = pjoin(static, 'components')
 
     def should_run(self):
-        if not os.path.exists(self.bower_dir):
-            return True
-        return mtime(self.bower_dir) < mtime(pjoin(here, 'bower.json'))
-
-    def should_run_npm(self):
         if not shutil.which('npm'):
             print("npm unavailable", file=sys.stderr)
             return False
+        if not os.path.exists(self.bower_dir):
+            return True
         if not os.path.exists(self.node_modules):
+            return True
+        if mtime(self.bower_dir) < mtime(self.node_modules):
             return True
         return mtime(self.node_modules) < mtime(pjoin(here, 'package.json'))
 
     def run(self):
         if not self.should_run():
-            print("bower dependencies up to date")
+            print("npm dependencies up to date")
             return
 
-        if self.should_run_npm():
-            print("installing build dependencies with npm")
-            check_call(['npm', 'install', '--progress=false'], cwd=here, shell=shell)
-            os.utime(self.node_modules)
+        print("installing js dependencies with npm")
+        check_call(['npm', 'install', '--progress=false'], cwd=here, shell=shell)
+        os.utime(self.node_modules)
 
-        env = os.environ.copy()
-        env['PATH'] = npm_path
-        args = ['bower', 'install', '--allow-root', '--config.interactive=false']
-        try:
-            check_call(args, cwd=here, env=env, shell=shell)
-        except OSError as e:
-            print("Failed to run bower: %s" % e, file=sys.stderr)
-            print("You can install js dependencies with `npm install`", file=sys.stderr)
-            raise
         os.utime(self.bower_dir)
         # update data-files in case this created new files
         self.distribution.data_files = get_data_files()
@@ -275,7 +264,7 @@ class bdist_egg_disabled(bdist_egg):
 
 
 setup_args['cmdclass'] = {
-    'js': Bower,
+    'js': NPM,
     'css': CSS,
     'build_py': js_css_first(build_py, strict=is_repo),
     'sdist': js_css_first(sdist, strict=True),
