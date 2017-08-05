@@ -219,17 +219,15 @@ class CSS(BaseCommand):
         style_css = pjoin(static, 'css', 'style.min.css')
         sourcemap = style_css + '.map'
 
-        env = os.environ.copy()
-        env['PATH'] = npm_path
         args = [
-            'lessc', '--clean-css',
+            'npm', 'run', 'lessc', '--', '--clean-css',
             '--source-map-basepath={}'.format(static),
             '--source-map={}'.format(sourcemap),
             '--source-map-rootpath=../',
             style_less, style_css,
         ]
         try:
-            check_call(args, cwd=here, env=env, shell=shell)
+            check_call(args, cwd=here, shell=shell)
         except OSError as e:
             print("Failed to run lessc: %s" % e, file=sys.stderr)
             print("You can install js dependencies with `npm install`", file=sys.stderr)
