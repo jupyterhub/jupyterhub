@@ -411,7 +411,7 @@ class OAuthAccessToken(Hashed, Base):
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     user = relationship(User)
-    session = None # for API-equivalence with APIToken
+    service = None # for API-equivalence with APIToken
 
     # from Hashed
     hashed = Column(Unicode(64))
