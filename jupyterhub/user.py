@@ -414,7 +414,7 @@ class User(HasTraits):
         if self.state is None:
             self.state = {}
         spawner.orm_spawner.state = spawner.get_state()
-        self.last_activity = datetime.utcnow()
+        self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
         db.commit()
         spawner._waiting_for_response = True
         try:
@@ -468,7 +468,7 @@ class User(HasTraits):
                 yield spawner.stop()
             spawner.clear_state()
             spawner.orm_spawner.state = spawner.get_state()
-            self.last_activity = datetime.utcnow()
+            self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
             # remove server entry from db
             spawner.server = None
             if not spawner.will_resume:
