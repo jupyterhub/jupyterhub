@@ -73,7 +73,7 @@ def test_tokens(db):
     assert found is None
 
     secret = 'super-secret-preload-token'
-    token = user.new_api_token(secret)
+    token = user.new_api_token(secret, generated=False)
     assert token == secret
     assert len(user.api_tokens) == 3
     found = orm.APIToken.find(db, token=token)
