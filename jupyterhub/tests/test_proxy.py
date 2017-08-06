@@ -1,5 +1,6 @@
 """Test a proxy being started before the Hub"""
 
+from contextlib import contextmanager
 import json
 import os
 from queue import Queue
@@ -15,6 +16,14 @@ from .mocking import MockHub
 from .test_api import api_request
 from ..utils import wait_for_http_server, url_path_join as ujoin
 
+@pytest.fixture
+def disable_check_routes(app):
+    # disable periodic check_routes while we are testing
+    app.last_activity_callback.stop()
+    try:
+        yield
+    finally:
+        app.last_activity_callback.start()
 
 @pytest.mark.gen_test
 def test_external_proxy(request):
@@ -144,7 +153,7 @@ def test_external_proxy(request):
     ('50fia', ['users/50fia', 'users/50fia/server']),
     ('秀樹', ['users/秀樹', 'users/秀樹/server']),
 ])
-def test_check_routes(app,  username, endpoints):
+def test_check_routes(app,  username, endpoints, disable_check_routes):
     proxy = app.proxy
 
     for endpoint in endpoints:
@@ -176,7 +185,6 @@ def test_check_routes(app,  username, endpoints):
     # check that before and after state are the same
     assert before == after
 
-from contextlib import contextmanager
 
 @pytest.mark.gen_test
 @pytest.mark.parametrize("routespec", [
@@ -187,7 +195,7 @@ from contextlib import contextmanager
     'host.name/path/',
     'other.host/path/no/slash',
 ])
-def test_add_get_delete(app, routespec):
+def test_add_get_delete(app, routespec, disable_check_routes):
     arg = routespec
     if not routespec.endswith('/'):
         routespec = routespec + '/'

@@ -1557,6 +1557,7 @@ class JupyterHub(Application):
 
         if self.last_activity_interval:
             pc = PeriodicCallback(self.update_last_activity, 1e3 * self.last_activity_interval)
+            self.last_activity_callback = pc
             pc.start()
 
         self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
