@@ -1402,9 +1402,9 @@ class JupyterHub(Application):
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
             for uid, user in self.users.items():
-                user.db = self.db
-                if user.spawner is not None:
-                    futures.append(user.stop())
+                for name, spawner in user.spawners.items():
+                    if spawner.active:
+                        futures.append(user.stop(name))
         else:
             self.log.info("Leaving single-user servers running")
 
