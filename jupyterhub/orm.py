@@ -407,14 +407,14 @@ class OAuthAccessToken(Hashed, Base):
     client_id = Column(Unicode(1023))
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
-    refresh_token = Column(Unicode(64))
+    refresh_token = Column(Unicode(1023))
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     user = relationship(User)
     service = None # for API-equivalence with APIToken
 
     # from Hashed
-    hashed = Column(Unicode(64))
+    hashed = Column(Unicode(1023))
     prefix = Column(Unicode(16), index=True)
     
     def __repr__(self):
