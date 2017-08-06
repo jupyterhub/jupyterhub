@@ -87,7 +87,7 @@ class Group(Base):
     """User Groups"""
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(Unicode(1023), unique=True)
+    name = Column(Unicode(255), unique=True)
     users = relationship('User', secondary='user_group_map', back_populates='groups')
 
     def __repr__(self):
@@ -127,7 +127,7 @@ class User(Base):
     """
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(Unicode(1023), unique=True)
+    name = Column(Unicode(255), unique=True)
 
     _orm_spawners = relationship("Spawner", backref="user")
     @property
@@ -138,7 +138,7 @@ class User(Base):
     last_activity = Column(DateTime, default=datetime.utcnow)
 
     api_tokens = relationship("APIToken", backref="user")
-    cookie_id = Column(Unicode(1023), default=new_token, nullable=False, unique=True)
+    cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
     # We will need to figure something else out if/when we have multiple spawners per user
     state = Column(JSONDict)
@@ -181,7 +181,7 @@ class Spawner(Base):
     server = relationship(Server)
 
     state = Column(JSONDict)
-    name = Column(Unicode(512))
+    name = Column(Unicode(255))
 
     last_activity = Column(DateTime, default=datetime.utcnow)
 
@@ -207,7 +207,7 @@ class Service(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # common user interface:
-    name = Column(Unicode(1023), unique=True)
+    name = Column(Unicode(255), unique=True)
     admin = Column(Boolean, default=False)
 
     api_tokens = relationship("APIToken", backref="service")
@@ -317,8 +317,8 @@ class APIToken(Hashed, Base):
         return Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
 
     id = Column(Integer, primary_key=True)
-    hashed = Column(Unicode(1023))
-    prefix = Column(Unicode(16))
+    hashed = Column(Unicode(255), unique=True)
+    prefix = Column(Unicode(16), index=True)
 
     def __repr__(self):
         if self.user is not None:
@@ -404,17 +404,17 @@ class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    client_id = Column(Unicode(1023))
+    client_id = Column(Unicode(255))
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
-    refresh_token = Column(Unicode(1023))
+    refresh_token = Column(Unicode(255))
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     user = relationship(User)
     service = None # for API-equivalence with APIToken
 
     # from Hashed
-    hashed = Column(Unicode(1023))
+    hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
     
     def __repr__(self):
@@ -428,7 +428,7 @@ class OAuthAccessToken(Hashed, Base):
 class OAuthCode(Base):
     __tablename__ = 'oauth_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    client_id = Column(Unicode(1023))
+    client_id = Column(Unicode(255))
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
@@ -438,8 +438,8 @@ class OAuthCode(Base):
 class OAuthClient(Base):
     __tablename__ = 'oauth_clients'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    identifier = Column(Unicode(1023), unique=True)
-    secret = Column(Unicode(1023))
+    identifier = Column(Unicode(255), unique=True)
+    secret = Column(Unicode(255))
     redirect_uri = Column(Unicode(1023))
 
 
