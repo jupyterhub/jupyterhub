@@ -67,13 +67,16 @@ def test_tokens(db):
     assert found.match(token)
     assert found.user is user
     assert found.service is None
-    assert found.hashed.startswith('%s:1::' % orm.APIToken.algorithm)
+    algo, rounds, salt, checksum = found.hashed.split(':')
+    assert algo == orm.APIToken.algorithm
+    assert rounds == '1'
+    assert len(salt) == orm.APIToken.generated_salt_bytes * 2
 
     found = orm.APIToken.find(db, 'something else')
     assert found is None
 
     secret = 'super-secret-preload-token'
-    token = user.new_api_token(secret)
+    token = user.new_api_token(secret, generated=False)
     assert token == secret
     assert len(user.api_tokens) == 3
     found = orm.APIToken.find(db, token=token)

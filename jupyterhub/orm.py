@@ -156,12 +156,12 @@ class User(Base):
             running=sum(bool(s.server) for s in self._orm_spawners),
         )
 
-    def new_api_token(self, token=None):
+    def new_api_token(self, token=None, generated=True):
         """Create a new API token
 
         If `token` is given, load that token.
         """
-        return APIToken.new(token=token, user=self)
+        return APIToken.new(token=token, user=self, generated=generated)
 
     @classmethod
     def find(cls, db, name):
@@ -217,11 +217,11 @@ class Service(Base):
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     pid = Column(Integer)
 
-    def new_api_token(self, token=None):
+    def new_api_token(self, token=None, generated=True):
         """Create a new API token
         If `token` is given, load that token.
         """
-        return APIToken.new(token=token, service=self)
+        return APIToken.new(token=token, service=self, generated=generated)
 
     @classmethod
     def find(cls, db, name):
@@ -241,8 +241,8 @@ class Hashed(object):
 
     # values to use for internally generated tokens,
     # which have good entropy as UUIDs
-    generated = False
-    generated_salt_bytes = b''
+    generated = True
+    generated_salt_bytes = 8
     generated_rounds = 1
 
     @property
@@ -359,7 +359,7 @@ class APIToken(Hashed, Base):
                 return orm_token
 
     @classmethod
-    def new(cls, token=None, user=None, service=None):
+    def new(cls, token=None, user=None, service=None, generated=True):
         """Generate a new API token for a user or service"""
         assert user or service
         assert not (user and service)
@@ -370,8 +370,9 @@ class APIToken(Hashed, Base):
             # which already have good entropy
             generated = True
         else:
-            generated = False
             cls.check_token(db, token)
+        # two stages to ensure orm_token.generated has been set
+        # before token setter is called
         orm_token = cls(generated=generated)
         orm_token.token = token
         if user:
