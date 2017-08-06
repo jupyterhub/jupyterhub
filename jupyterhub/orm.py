@@ -243,7 +243,7 @@ class Hashed(object):
     # values to use for internally generated tokens,
     # which have good entropy as UUIDs
     generated = True
-    generated_salt_bytes = b''
+    generated_salt_bytes = 8
     generated_rounds = 1
 
     @property
