@@ -10,7 +10,7 @@ Module: :mod:`jupyterhub.user`
 .. currentmodule:: jupyterhub.user
 
 :class:`UserDict`
--------------
+-----------------
 
 .. autoclass:: UserDict
     :members:
