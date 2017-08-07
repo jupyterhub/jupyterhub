@@ -1,17 +1,14 @@
-"""A service is a process that talks to JupyterHub
+"""A service is a process that talks to JupyterHub.
 
-Cases
------
+Types of services:
+    Managed:
+      - managed by JupyterHub (always subprocess, no custom Spawners)
+      - always a long-running process
+      - managed services are restarted automatically if they exit unexpectedly
 
-Managed:
-  - managed by JupyterHub (always subprocess, no custom Spawners)
-  - always a long-running process
-  - managed services are restarted automatically if they exit unexpectedly
-
-Unmanaged:
-  - managed by external service (docker, systemd, etc.)
-  - do not need to be long-running processes, or processes at all
-
+    Unmanaged:
+      - managed by external service (docker, systemd, etc.)
+      - do not need to be long-running processes, or processes at all
 
 URL: needs a route added to the proxy.
   - Public route will always be /services/service-name
@@ -22,9 +19,6 @@ API access:
   - admin: tokens will have admin-access to the API
   - not admin: tokens will only have non-admin access
     (not much they can do other than defer to Hub for auth)
-
-Examples
---------
 
 An externally managed service running on a URL::
 
