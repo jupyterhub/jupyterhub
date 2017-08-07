@@ -218,7 +218,7 @@ def test_user_redirect_deprecated(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s' % name)
+    assert path == ujoin(app.base_url, '/user/%s/' % name)
 
     r = yield get_page('/user/baduser/test.ipynb', app, cookies=cookies, hub=False)
     r.raise_for_status()
