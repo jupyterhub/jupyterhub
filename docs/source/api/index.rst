@@ -31,6 +31,7 @@ JupyterHub API Reference:
     spawner
     proxy
     user
+    service
     services.auth
 
 

@@ -1,11 +1,13 @@
 """A service is a process that talks to JupyterHub
 
-Cases:
+Cases
+-----
 
 Managed:
   - managed by JupyterHub (always subprocess, no custom Spawners)
   - always a long-running process
   - managed services are restarted automatically if they exit unexpectedly
+
 Unmanaged:
   - managed by external service (docker, systemd, etc.)
   - do not need to be long-running processes, or processes at all
@@ -21,6 +23,9 @@ API access:
   - not admin: tokens will only have non-admin access
     (not much they can do other than defer to Hub for auth)
 
+Examples
+--------
+
 An externally managed service running on a URL::
 
     {
@@ -30,13 +35,14 @@ An externally managed service running on a URL::
         'api_token': 'super-secret',
     }
 
-A hub-managed service with no URL:
+A hub-managed service with no URL::
 
     {
         'name': 'cull-idle',
         'command': ['python', '/path/to/cull-idle']
         'admin': True,
     }
+
 """
 
 import pipes
