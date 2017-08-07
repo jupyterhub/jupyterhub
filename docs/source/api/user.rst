@@ -1,6 +1,6 @@
-=============
-   Users
-=============
+=====
+Users
+=====
 
 Module: :mod:`jupyterhub.user`
 ==============================
@@ -9,10 +9,15 @@ Module: :mod:`jupyterhub.user`
 
 .. currentmodule:: jupyterhub.user
 
-:class:`User`
+:class:`UserDict`
 -------------
 
-.. class:: Server
+.. autoclass:: UserDict
+    :members:
+
+
+:class:`User`
+-------------
 
 .. autoclass:: User
     :members: escaped_name
@@ -29,3 +34,4 @@ Module: :mod:`jupyterhub.user`
     .. attribute:: spawner
     
         The user's :class:`~.Spawner` instance.
+

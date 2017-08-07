@@ -14,3 +14,4 @@ Module: :mod:`jupyterhub.services.service`
 
 .. autoconfigurable:: Service
     :members:
+

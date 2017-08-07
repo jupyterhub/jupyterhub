@@ -22,3 +22,4 @@ Module: :mod:`jupyterhub.services.auth`
 
 .. autoclass:: HubAuthenticated
     :members:
+
