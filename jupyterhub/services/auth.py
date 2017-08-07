@@ -3,9 +3,6 @@
 Cookies are sent to the Hub for verification. The Hub replies with a JSON
 model describing the authenticated user.
 
-Classes
--------
-
 ``HubAuth`` can be used in any application, even outside tornado.
 
 ``HubAuthenticated`` is a mixin class for tornado handlers that should
