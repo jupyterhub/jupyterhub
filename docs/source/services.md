@@ -348,12 +348,14 @@ and taking note of the following process:
    ```
 
 An example of using an Externally-Managed Service and authentication is
-[nbviewer](https://github.com/jupyter/nbviewer#securing-the-notebook-viewer),
+in [nbviewer README]_ section on securing the notebook viewer,
 and an example of its configuration is found [here](https://github.com/jupyter/nbviewer/blob/master/nbviewer/providers/base.py#L94).
-nbviewer can also be run as a Hub-Managed Service as described [here](https://github.com/jupyter/nbviewer#securing-the-notebook-viewer).
+nbviewer can also be run as a Hub-Managed Service as described [nbviewer README]_
+section on securing the notebook viewer.
 
 
 [requests]: http://docs.python-requests.org/en/master/
 [services_auth]: api/services.auth.html
 [HubAuth]: api/services.auth.html#jupyterhub.services.auth.HubAuth
 [HubAuthenticated]: api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
+[nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer

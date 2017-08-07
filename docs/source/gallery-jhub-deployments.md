@@ -33,8 +33,7 @@ Please submit pull requests to update information or to add new institutions or 
 ### Clemson University
 
 - Advanced Computing
-    - [Palmetto cluster and JupyterHub](https://www.palmetto.clemson.edu)
-    - [Docs for JupyterHub on Palmetto cluster](https://www.palmetto.clemson.edu/jupyterhub/docs/) 
+    - [Palmetto cluster and JupyterHub](http://citi.sites.clemson.edu/2016/08/18/JupyterHub-for-Palmetto-Cluster.html)
 
 ### University of Colorado Boulder
 
@@ -47,7 +46,7 @@ Please submit pull requests to update information or to add new institutions or 
     - [Parallel Programming with JupyterHub document](https://www.rc.colorado.edu/book/export/html/833)
 
 - Earth Lab at CU
-    - [Tutorial on Parallel R on JupyterHub](https://earthlab.github.io/tutorials/parallel-r-on-jupyterhub/)
+    - [Tutorial on Parallel R on JupyterHub](https://earthdatascience.org/tutorials/parallel-r-on-jupyterhub/)
 
 
 ### University of Illinois
@@ -63,7 +62,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### University of Minnesota
 
-- [JupyterHub Inside HPC](http://insidehpc.com/tag/jupyterhub/)
+- [JupyterHub Inside HPC](https://insidehpc.com/tag/jupyterhub/)
 
 ### University of Missouri
 
@@ -71,7 +70,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### University of Rochester CIRC 
 
-- [JupyterHub Userguide](https://info.circ.rochester.edu/Web_Applicatons/JupyterHub.html) - Slurm, beehive
+- [JupyterHub Userguide](https://info.circ.rochester.edu/Web_Applications/JupyterHub.html) - Slurm, beehive
 
 ### University of California San Diego
 
@@ -104,7 +103,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### Everware
 
-[Everware](https://github.com/everware) Reproducible and reusable science powered by jupyterhub and docker. Like nbviewer, but executable. CERN, Geneva [website](http://www.everware.xyz/)
+[Everware](https://github.com/everware) Reproducible and reusable science powered by jupyterhub and docker. Like nbviewer, but executable. CERN, Geneva [website](http://everware.xyz/)
 
 
 ### Microsoft Azure

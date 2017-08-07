@@ -7,7 +7,7 @@ Before installing JupyterHub, you will need:
 - a Linux/Unix based system
 - [Python](https://www.python.org/downloads/) 3.4 or greater. An understanding
   of using [`pip`](https://pip.pypa.io/en/stable/) or
-  [`conda`](http://conda.pydata.org/docs/get-started.html) for
+  [`conda`](https://conda.io/docs/get-started.html) for
   installing Python packages is helpful.
 - [nodejs/npm](https://www.npmjs.com/). [Install nodejs/npm](https://docs.npmjs.com/getting-started/installing-node),
   using your operating system's package manager. For example, install on Linux
