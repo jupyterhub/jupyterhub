@@ -13,6 +13,8 @@ JupyterHub has a REST API that can be used by external services. This
 document will:
 
 - explain some basic information about API tokens
+- clarify that API tokens can be used to authenticate to
+  single-user servers as of [version 0.8.0](./changelog.html)
 - show how the [cull_idle_servers]_ script can be:
     - used in a Hub-managed service
     - run as a standalone script
@@ -56,6 +58,7 @@ the **key** is the 'token' while the **value** is the 'username'):
 c.JupyterHub.api_tokens = {'token' : 'username'}
 ```
 
+
 ### Restart JupyterHub
 
 Upon restarting JupyterHub, you should see a message like below in the
@@ -65,6 +68,12 @@ logs:
 Adding API token for <username>
 ```
 
+## Authenticating to single-user servers using API token
+
+In JupyterHub 0.7, there is no mechanism for token authentication to
+single-user servers, and only cookies can be used for authentication.
+0.8 supports using JupyterHub API tokens to authenticate to single-user
+servers.
 
 ## Configure `cull-idle` to run as a Hub-Managed Service
 
