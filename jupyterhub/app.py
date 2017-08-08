@@ -307,11 +307,11 @@ class JupyterHub(Application):
     subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
 
-        This should be the full https://hub.domain.tld[:port]
+        This should be the full `https://hub.domain.tld[:port]`.
 
         Provides additional cross-site protections for javascript served by single-user servers.
 
-        Requires <username>.hub.domain.tld to resolve to the same host as hub.domain.tld.
+        Requires `<username>.hub.domain.tld` to resolve to the same host as `hub.domain.tld`.
 
         In general, this is most easily achieved with wildcard DNS.
 

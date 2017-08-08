@@ -247,7 +247,7 @@ Users will need a GitHub account to login and be authenticated by the Hub.
 
 ### How do I set up rotating daily logs?
 
-You can do this with [logrotate](http://www.linuxcommand.org/man_pages/logrotate8.html),
+You can do this with [logrotate](https://linux.die.net/man/8/logrotate),
 or pipe to `logger` to use syslog instead of directly to a file.
 
 For example, with this logrotate config file:

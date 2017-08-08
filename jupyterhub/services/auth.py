@@ -136,7 +136,7 @@ class HubAuth(Configurable):
     api_url = Unicode(os.getenv('JUPYTERHUB_API_URL') or 'http://127.0.0.1:8081/hub/api',
         help="""The base API URL of the Hub.
 
-        Typically http://hub-ip:hub-port/hub/api
+        Typically `http://hub-ip:hub-port/hub/api`
         """
     ).tag(config=True)
     @default('api_url')
@@ -645,7 +645,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
 
     Finishes the OAuth flow, setting a cookie to record the user's info.
 
-    Should be registered at SERVICE_PREFIX/oauth_callback
+    Should be registered at ``SERVICE_PREFIX/oauth_callback``
 
     .. versionadded: 0.8
     """
