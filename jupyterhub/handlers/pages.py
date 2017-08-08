@@ -237,7 +237,7 @@ class ProxyErrorHandler(BaseHandler):
 
 
 default_handlers = [
-    (r'/', RootHandler),
+    (r'/?', RootHandler),
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
     (r'/spawn', SpawnHandler),
