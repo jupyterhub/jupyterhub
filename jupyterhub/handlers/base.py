@@ -631,6 +631,8 @@ class UserSpawnHandler(BaseHandler):
 
     @gen.coroutine
     def get(self, name, user_path):
+        if not user_path:
+            user_path = '/'
         current_user = self.get_current_user()
 
         if current_user and current_user.name == name:

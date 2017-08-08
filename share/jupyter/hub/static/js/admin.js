@@ -77,7 +77,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         var el = $(this);
         var row = get_row(el);
         var user = row.data('user');
-        var w = window.open(utils.url_path_join(prefix, 'user', user));
+        var w = window.open(utils.url_path_join(prefix, 'user', user) + '/');
     });
     
     $(".start-server").click(function () {
