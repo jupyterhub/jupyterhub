@@ -1247,7 +1247,7 @@ class JupyterHub(Application):
     def init_oauth(self):
         base_url = self.hub.base_url
         self.oauth_provider = make_provider(
-            self.session_factory,
+            lambda : self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login')
         )
@@ -1402,9 +1402,9 @@ class JupyterHub(Application):
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
             for uid, user in self.users.items():
-                user.db = self.db
-                if user.spawner is not None:
-                    futures.append(user.stop())
+                for name, spawner in user.spawners.items():
+                    if spawner.active:
+                        futures.append(user.stop(name))
         else:
             self.log.info("Leaving single-user servers running")
 

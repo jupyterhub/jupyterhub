@@ -13,7 +13,7 @@ import pytest
 
 from .. import orm
 from .mocking import MockHub
-from .test_api import api_request
+from .test_api import api_request, add_user
 from ..utils import wait_for_http_server, url_path_join as ujoin
 
 @pytest.fixture
@@ -82,8 +82,7 @@ def test_external_proxy(request):
     
     # add user to the db and start a single user server
     name = 'river'
-    r = yield api_request(app, 'users', name, method='post')
-    r.raise_for_status()
+    add_user(app.db, app, name=name)
     r = yield api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     
@@ -148,23 +147,18 @@ def test_external_proxy(request):
 
 
 @pytest.mark.gen_test
-@pytest.mark.parametrize("username, endpoints", [
-    ('zoe', ['users/zoe', 'users/zoe/server']),
-    ('50fia', ['users/50fia', 'users/50fia/server']),
-    ('秀樹', ['users/秀樹', 'users/秀樹/server']),
+@pytest.mark.parametrize("username", [
+    'zoe',
+    '50fia',
+    '秀樹',
 ])
-def test_check_routes(app,  username, endpoints, disable_check_routes):
+def test_check_routes(app,  username, disable_check_routes):
     proxy = app.proxy
-
-    for endpoint in endpoints:
-        r = yield api_request(app, endpoint, method='post')
-        r.raise_for_status()
-
-    test_user = orm.User.find(app.db, username)
-    assert test_user is not None
+    test_user = add_user(app.db, app, name=username)
+    r = yield api_request(app, 'users/%s/server' % username, method='post')
+    r.raise_for_status()
 
     # check a valid route exists for user
-    test_user = app.users[username]
     routes = yield app.proxy.get_all_routes()
     before = sorted(routes)
     assert test_user.proxy_spec in before

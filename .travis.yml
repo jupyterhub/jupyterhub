@@ -8,12 +8,23 @@ python:
 env:
   global:
     - ASYNC_TEST_TIMEOUT=15
+services:
+  - mysql
+  - postgresql
 
 # installing dependencies
 before_install:
   - nvm install 6; nvm use 6
   - npm install
   - npm install -g configurable-http-proxy
+  - |
+    if [[ $JUPYTERHUB_TEST_DB_URL == mysql* ]]; then
+      mysql -e 'CREATE DATABASE jupyterhub CHARACTER SET utf8 COLLATE utf8_general_ci;'
+      pip install 'mysql-connector<2.2'
+    elif [[ $JUPYTERHUB_TEST_DB_URL == postgresql* ]]; then
+      psql -c 'create database jupyterhub;' -U postgres
+      pip install psycopg2
+    fi
 install:
   - pip install -U pip
   - pip install --pre -r dev-requirements.txt .
@@ -29,3 +40,7 @@ matrix:
   include:
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
+    - python: 3.6
+      env: JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1/jupyterhub
+    - python: 3.6
+      env: JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub
