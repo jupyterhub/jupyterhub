@@ -58,6 +58,16 @@ the **key** is the 'token' while the **value** is the 'username'):
 c.JupyterHub.api_tokens = {'token' : 'username'}
 ```
 
+### Use API tokens for services and tasks that require external access
+
+While API tokens are often associated with a specific user, API tokens
+can be used by services that require external access for activities
+that may not correspond to a specific human, e.g. adding users during
+setup for a tutorial or workshop:
+
+c.JupyterHub.services = [
+    {'name': 'adding-users', 'api_token': 'super-secret-token'},
+]
 
 ### Restart JupyterHub
 
