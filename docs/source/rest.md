@@ -68,6 +68,26 @@ r.raise_for_status()
 users = r.json()
 ```
 
+This example provides a slightly more complicated request, yet the
+process is very similar:
+
+```python
+import requests
+
+api_url = 'http://127.0.0.1:8081/hub/api'
+
+data = {'name': 'mygroup', 'users': ['user1', 'user2']}
+
+r = requests.post(api_url + '/groups/formgrade-data301/users',
+    headers={
+             'Authorization': 'token %s' % token,
+            },
+    json=data
+)
+r.raise_for_status()
+r.json()
+```
+
 Note that the API token authorizes **JupyterHub** REST API requests. The same
 token does **not** authorize access to the [Jupyter Notebook REST API][]
 provided by notebook servers managed by JupyterHub. A different token is used
