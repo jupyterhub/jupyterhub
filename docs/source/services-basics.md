@@ -36,34 +36,23 @@ generating an API token is:
 openssl rand -hex 32
 ```
 
-Alternatively, use the `jupyterhub token` (*deprecated in version 0.8.0*)
-command to generate a token for a specific hub user:
+In [version 0.8.0](./changelog.html), a TOKEN request page for
+generating an API token is available from the JupyterHub user interface:
 
-```bash
-jupyterhub token <username>
-```
+![Request API TOKEN page](images/api-token-request.png)
 
 ### Pass environment variable with token to the Hub
 
 In the case of `cull_idle_servers`, it is passed as the environment
-variable called `JPY_API_TOKEN`.
-
-### Pass token using a configuration file
-
-You can write the API token to your JupyterHub
-configuration file, `jupyterhub_config.py` (note that
-the **key** is the 'token' while the **value** is the 'username'):
-
-```python
-c.JupyterHub.api_tokens = {'token' : 'username'}
-```
+variable called `JUPYTERHUB_API_TOKEN`.
 
 ### Use API tokens for services and tasks that require external access
 
 While API tokens are often associated with a specific user, API tokens
 can be used by services that require external access for activities
 that may not correspond to a specific human, e.g. adding users during
-setup for a tutorial or workshop:
+setup for a tutorial or workshop. Add a service and its API token to the
+JupyterHub configuration file, `jupyterhub_config.py`:
 
 ```python
 c.JupyterHub.services = [
@@ -105,7 +94,8 @@ c.JupyterHub.services = [
 where:
 
 - `'admin': True` indicates that the Service has 'admin' permissions, and
-- `'command'` indicates that the Service will be managed by the Hub.
+- `'command'` indicates that the Service will be launched as a
+  subprocess, managed by the Hub.
 
 ## Run `cull-idle` manually as a standalone script
 
