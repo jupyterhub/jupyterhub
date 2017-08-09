@@ -34,12 +34,14 @@ Contents
 
 **Installation Guide**
 
+* :doc:`installation-guide`
 * :doc:`quickstart`
 * :doc:`quickstart-docker`
 * :doc:`installation-basics`
 
 **Getting Started**
 
+* :doc:`getting-started-index`
 * :doc:`config-basics`
 * :doc:`networking-basics`
 * :doc:`security-basics`
@@ -47,8 +49,9 @@ Contents
 * :doc:`spawners-basics`
 * :doc:`services-basics`
 
-**Configuration Reference**
+**Technical Reference**
 
+* :doc:`reference-index`
 * :doc:`technical-overview`
 * :doc:`websecurity`
 * :doc:`authenticators`
@@ -62,22 +65,22 @@ Contents
 
 * :doc:`api/index`
 
+**Tutorials**
+
+* :doc:`tutorials/index`
 
 **Troubleshooting**
 
 * :doc:`troubleshooting`
-
-
-**Changelog**
-
-* :doc:`changelog`
-
 
 **About JupyterHub**
 
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
 
+**Changelog**
+
+* :doc:`changelog`
 
 Indices and tables
 ------------------
@@ -101,13 +104,14 @@ Full Table of Contents
    :maxdepth: 2
 
    installation-guide
-   getting-started
-   configuration-guide
+   getting-started/index
+   reference/index
    api/index
+   tutorials/index
    troubleshooting
-   changelog
    contributor-list
    gallery-jhub-deployments
+   changelog
 
 
 .. _JupyterHub: https://github.com/jupyterhub/jupyterhub
