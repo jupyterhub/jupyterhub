@@ -24,16 +24,28 @@ Hub.
 
 ## Create an API token
 
-To send requests using JupyterHub API, you must pass an API token with the
-request. You can create a token for an individual user using the following
-command:
+To send requests using JupyterHub API, you must pass an API token with
+the request.
 
-    jupyterhub token USERNAME
+As of [version 0.6.0](./changelog.html), the preferred way of
+generating an API token is:
+
+```bash
+openssl rand -hex 32
+```
+
+Alternatively, use the `jupyterhub token` (*deprecated in version 0.8.0*)
+command to generate a token for a specific hub user:
+
+```bash
+jupyterhub token <username>
+```
 
 ## Add API tokens to the config file
 
 You may also add a dictionary of API tokens and usernames to the hub's
-configuration file, `jupyterhub_config.py`:
+configuration file, `jupyterhub_config.py` (note that
+the **key** is the 'secret-token' while the **value** is the 'username'):
 
 ```python
 c.JupyterHub.api_tokens = {
