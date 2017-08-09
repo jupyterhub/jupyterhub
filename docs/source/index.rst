@@ -25,9 +25,8 @@ JupyterHub performs the following functions:
 - The Hub configures the proxy to forward URL prefixes to the single-user
   notebook servers
 
-For convenient administration of the Hub, its users, and :doc:`services`,
-JupyterHub also provides a
-`REST API`_.
+For convenient administration of the Hub, its users, and services,
+JupyterHub also provides a `REST API`_.
 
 Contents
 --------
@@ -41,25 +40,25 @@ Contents
 
 **Getting Started**
 
-* :doc:`getting-started-index`
-* :doc:`config-basics`
-* :doc:`networking-basics`
-* :doc:`security-basics`
-* :doc:`authenticators-users-basics`
-* :doc:`spawners-basics`
-* :doc:`services-basics`
+* :doc:`getting-started/index`
+* :doc:`getting-started/config-basics`
+* :doc:`getting-started/networking-basics`
+* :doc:`getting-started/security-basics`
+* :doc:`getting-started/authenticators-users-basics`
+* :doc:`getting-started/spawners-basics`
+* :doc:`getting-started/services-basics`
 
 **Technical Reference**
 
-* :doc:`reference-index`
-* :doc:`technical-overview`
-* :doc:`websecurity`
-* :doc:`authenticators`
-* :doc:`spawners`
-* :doc:`services`
-* :doc:`rest`
-* :doc:`upgrading`
-* :doc:`config-examples`
+* :doc:`reference/index`
+* :doc:`reference/technical-overview`
+* :doc:`reference/websecurity`
+* :doc:`reference/authenticators`
+* :doc:`reference/spawners`
+* :doc:`reference/services`
+* :doc:`reference/rest`
+* :doc:`reference/upgrading`
+* :doc:`reference/config-examples`
 
 **API Reference**
 
