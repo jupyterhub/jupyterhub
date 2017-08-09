@@ -77,6 +77,9 @@ easy to do with RStudio too.
 - Earth Lab at CU
     - [Tutorial on Parallel R on JupyterHub](https://earthdatascience.org/tutorials/parallel-r-on-jupyterhub/)
 
+### HTCondor
+
+- [HTCondor Python Bindings Tutorial from HTCondor Week 2017 includes information on their JupyterHub tutorials](https://research.cs.wisc.edu/htcondor/HTCondorWeek2017/presentations/TueBockelman_Python.pdf)
 
 ### University of Illinois
 
