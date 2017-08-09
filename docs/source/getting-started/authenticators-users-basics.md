@@ -1,4 +1,4 @@
-# Authentication and Users
+# Authentication and User Basics
 
 The default Authenticator uses [PAM][] to authenticate system users with
 their username and password. With the default Authenticator, any user

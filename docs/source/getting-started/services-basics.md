@@ -29,14 +29,14 @@ Hub via the REST API.
 To run such an external service, an API token must be created and
 provided to the service.
 
-As of [version 0.6.0](./changelog.html), the preferred way of
-generating an API token is:
+As of [version 0.6.0](../changelog.html), the preferred way of doing
+this is to first generate an API token:
 
 ```bash
 openssl rand -hex 32
 ```
 
-In [version 0.8.0](./changelog.html), a TOKEN request page for
+In [version 0.8.0](../changelog.html), a TOKEN request page for
 generating an API token is available from the JupyterHub user interface:
 
 ![Request API TOKEN page](images/api-token-request.png)
@@ -115,7 +115,5 @@ variable. Run `cull_idle_servers.py` manually.
     export JUPYTERHUB_API_TOKEN='token'
     python cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 ```
-
-
 
 [cull_idle_servers]: https://github.com/jupyterhub/jupyterhub/blob/master/examples/cull-idle/cull_idle_servers.py

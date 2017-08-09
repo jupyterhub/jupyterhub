@@ -111,7 +111,7 @@ working directory:
   This file needs to persist so that a **Hub** server restart will avoid
   invalidating cookies. Conversely, deleting this file and restarting the server
   effectively invalidates all login cookies. The cookie secret file is discussed
-  in the [Cookie Secret section of the Security Settings document](./security-basics.html).
+  in the [Cookie Secret section of the Security Settings document](../getting-started/security-basics.html).
 
 The location of these files can be specified via configuration settings. It is
 recommended that these files be stored in standard UNIX filesystem locations,

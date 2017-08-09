@@ -8,7 +8,7 @@ The JupyterHub API
 :Date: |today|
 
 JupyterHub also provides a REST API for administration of the Hub and users.
-The documentation on `Using JupyterHub's REST API <../rest.html>`_ provides
+The documentation on `Using JupyterHub's REST API <../reference/rest.html>`_ provides
 information on:
 
 - what you can do with the API
