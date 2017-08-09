@@ -4,7 +4,7 @@ When working with JupyterHub, a **Service** is defined as a process
 that interacts with the Hub's REST API. A Service may perform a specific
 or action or task. For example, shutting down individuals' single user
 notebook servers that have been is a good example of a task that could
-be automated by a Service. Let's look at how the [cull_idle_servers]_
+be automated by a Service. Let's look at how the [cull_idle_servers][]
 script can be used as a Service.
 
 ## Real-world example to cull idle servers
@@ -15,7 +15,7 @@ document will:
 - explain some basic information about API tokens
 - clarify that API tokens can be used to authenticate to
   single-user servers as of [version 0.8.0](./changelog.html)
-- show how the [cull_idle_servers]_ script can be:
+- show how the [cull_idle_servers][] script can be:
     - used in a Hub-managed service
     - run as a standalone script
 
@@ -36,7 +36,7 @@ generating an API token is:
 openssl rand -hex 32
 ```
 
-Alternatively (*deprecated in version 0.8.0*), use the `jupyterhub`
+Alternatively, use the `jupyterhub token` (*deprecated in version 0.8.0*)
 command to generate a token for a specific hub user:
 
 ```bash
@@ -65,9 +65,11 @@ can be used by services that require external access for activities
 that may not correspond to a specific human, e.g. adding users during
 setup for a tutorial or workshop:
 
+```python
 c.JupyterHub.services = [
     {'name': 'adding-users', 'api_token': 'super-secret-token'},
 ]
+```
 
 ### Restart JupyterHub
 
@@ -126,4 +128,4 @@ variable. Run `cull_idle_servers.py` manually.
 
 
 
-_cull_idle_servers: https://github.com/jupyterhub/jupyterhub/blob/master/examples/cull-idle/cull_idle_servers.py
+[cull_idle_servers]: https://github.com/jupyterhub/jupyterhub/blob/master/examples/cull-idle/cull_idle_servers.py
