@@ -4,6 +4,7 @@ channels:
 dependencies:
 - nodejs
 - python=3.5
+- alembic
 - jinja2
 - pamela
 - requests
