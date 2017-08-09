@@ -1,12 +1,14 @@
-"""Authenticating services with JupyterHub
+"""Authenticating services with JupyterHub.
 
-Cookies are sent to the Hub for verification, replying with a JSON model describing the authenticated user.
+Cookies are sent to the Hub for verification. The Hub replies with a JSON
+model describing the authenticated user.
 
-HubAuth can be used in any application, even outside tornado.
+``HubAuth`` can be used in any application, even outside tornado.
 
-HubAuthenticated is a mixin class for tornado handlers that should authenticate with the Hub.
+``HubAuthenticated`` is a mixin class for tornado handlers that should
+authenticate with the Hub.
+
 """
-
 import os
 import re
 import socket

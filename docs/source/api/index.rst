@@ -1,8 +1,8 @@
 .. _api-index:
 
-####################
- The JupyterHub API
-####################
+##################
+The JupyterHub API
+##################
 
 :Release: |release|
 :Date: |today|
@@ -31,6 +31,7 @@ JupyterHub API Reference:
     spawner
     proxy
     user
+    service
     services.auth
 
 

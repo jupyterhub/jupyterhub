@@ -424,9 +424,6 @@ paths:
       responses:
         '200':
           description: The user or service identified by the API token
-          schema:
-            $ref: '#/definitions/User'
-            $ref: '#/definitions/Service'
         '404':
           description: A user or service is not found.
   /authorizations/cookie/{cookie_name}/{cookie_value}:
