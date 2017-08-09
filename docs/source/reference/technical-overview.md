@@ -30,7 +30,7 @@ by the `jupyterhub` command line program:
   when the user logs in. The object that starts the single-user notebook
   servers is called a **Spawner**.    
 
-![JupyterHub subsystems](images/jhub-parts.png)
+![JupyterHub subsystems](../images/jhub-parts.png)
 
 ## How the Subsystems Interact
 
