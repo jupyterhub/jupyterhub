@@ -34,12 +34,26 @@ generating an API token is:
 openssl rand -hex 32
 ```
 
-Alternatively, use the `jupyterhub token` (*deprecated in version 0.8.0*)
-command to generate a token for a specific hub user:
+This `openssl` command generates a potential token that can then be
+added to JupyterHub using `.api_tokens` configuration setting in
+`jupyterhub_config.py`.
+
+
+Alternatively, use the `jupyterhub token` command to generate a token
+for a specific hub user by passing the 'username':
 
 ```bash
 jupyterhub token <username>
 ```
+
+This command generates a random string to use as a token and registers
+it for the given user with the Hub's database.
+
+In [version 0.8.0](./changelog.html), a TOKEN request page for
+generating an API token is available from the JupyterHub user interface:
+
+![Request API TOKEN page](images/api-token-request.png)
+
 
 ## Add API tokens to the config file
 
