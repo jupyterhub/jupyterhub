@@ -26,6 +26,35 @@ Please submit pull requests to update information or to add new institutions or 
 - [Research IT](http://research-it.berkeley.edu)
     - [JupyterHub server supports campus research computation](http://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
 
+### University of California Davis
+
+- [Spinning up multiple Jupyter Notebooks on AWS for a tutorial](https://github.com/mblmicdiv/course2017/blob/master/exercises/sourmash-setup.md)
+
+Although not technically a JupyterHub deployment, this tutorial setup
+may be helpful to others in the Jupyter community.
+
+Thank you C. Titus Brown for sharing this with the Software Carpentry
+mailing list.
+
+```
+* I started a big Amazon machine;
+* I installed Docker and built a custom image containing my software of
+  interest;
+* I ran multiple containers, one connected to port 8000, one on 8001,
+  etc. and gave each student a different port;
+* students could connect in and use the Terminal program in Jupyter to
+  execute commands, and could upload/download files via the Jupyter
+  console interface;
+* in theory I could have used notebooks too, but for this I didn’t have
+  need.
+
+I am aware that JupyterHub can probably do all of this including manage
+the containers, but I’m still a bit shy of diving into that; this was
+fairly straightforward, gave me disposable containers that were isolated
+for each individual student, and worked almost flawlessly.  Should be
+easy to do with RStudio too.
+```
+
 ### Cal Poly San Luis Obispo
 
 - [jupyterhub-deploy-teaching](https://github.com/jupyterhub/jupyterhub-deploy-teaching) based on work by Brian Granger for Cal Poly's Data Science 301 Course
