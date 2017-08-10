@@ -113,6 +113,9 @@ easy to do with RStudio too.
     - [Jupyterhub deployment on multiple nodes with Docker Swarm](https://zonca.github.io/2016/05/jupyterhub-docker-swarm.html)
     - [Sample deployment of Jupyterhub in HPC on SDSC Comet](https://zonca.github.io/2017/02/sample-deployment-jupyterhub-hpc.html)
 
+- Educational Technology Services - Paul Jamason
+    - [jupyterhub.ucsd.edu](https://jupyterhub.ucsd.edu)
+    
 ### TACC University of Texas
 
 ### Texas A&M
