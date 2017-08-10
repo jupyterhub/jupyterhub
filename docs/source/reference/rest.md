@@ -51,7 +51,9 @@ it for the given user with the Hub's database.
 In [version 0.8.0](../changelog.html), a TOKEN request page for
 generating an API token is available from the JupyterHub user interface:
 
-![Request API TOKEN page](images/api-token-request.png)
+![Request API TOKEN page](../images/token-request.png)
+
+![API TOKEN success page](../images/token-request-success.png)
 
 ## Add API tokens to the config file
 

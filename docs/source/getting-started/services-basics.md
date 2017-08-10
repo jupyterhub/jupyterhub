@@ -39,7 +39,9 @@ openssl rand -hex 32
 In [version 0.8.0](../changelog.html), a TOKEN request page for
 generating an API token is available from the JupyterHub user interface:
 
-![Request API TOKEN page](images/api-token-request.png)
+![Request API TOKEN page](../images/token-request.png)
+
+![API TOKEN success page](../images/token-request-success.png)
 
 ### Pass environment variable with token to the Hub
 
