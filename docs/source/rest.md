@@ -24,16 +24,42 @@ Hub.
 
 ## Create an API token
 
-To send requests using JupyterHub API, you must pass an API token with the
-request. You can create a token for an individual user using the following
-command:
+To send requests using JupyterHub API, you must pass an API token with
+the request.
 
-    jupyterhub token USERNAME
+As of [version 0.6.0](./changelog.html), the preferred way of
+generating an API token is:
+
+```bash
+openssl rand -hex 32
+```
+
+This `openssl` command generates a potential token that can then be
+added to JupyterHub using `.api_tokens` configuration setting in
+`jupyterhub_config.py`.
+
+
+Alternatively, use the `jupyterhub token` command to generate a token
+for a specific hub user by passing the 'username':
+
+```bash
+jupyterhub token <username>
+```
+
+This command generates a random string to use as a token and registers
+it for the given user with the Hub's database.
+
+In [version 0.8.0](./changelog.html), a TOKEN request page for
+generating an API token is available from the JupyterHub user interface:
+
+![Request API TOKEN page](images/api-token-request.png)
+
 
 ## Add API tokens to the config file
 
 You may also add a dictionary of API tokens and usernames to the hub's
-configuration file, `jupyterhub_config.py`:
+configuration file, `jupyterhub_config.py` (note that
+the **key** is the 'secret-token' while the **value** is the 'username'):
 
 ```python
 c.JupyterHub.api_tokens = {
@@ -66,6 +92,26 @@ r = requests.get(api_url + '/users',
 
 r.raise_for_status()
 users = r.json()
+```
+
+This example provides a slightly more complicated request, yet the
+process is very similar:
+
+```python
+import requests
+
+api_url = 'http://127.0.0.1:8081/hub/api'
+
+data = {'name': 'mygroup', 'users': ['user1', 'user2']}
+
+r = requests.post(api_url + '/groups/formgrade-data301/users',
+    headers={
+             'Authorization': 'token %s' % token,
+            },
+    json=data
+)
+r.raise_for_status()
+r.json()
 ```
 
 Note that the API token authorizes **JupyterHub** REST API requests. The same
