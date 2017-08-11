@@ -34,7 +34,11 @@ def write_alembic_ini(alembic_ini='alembic.ini', db_url='sqlite:///jupyterhub.sq
         f.write(
             alembic_ini_tpl.format(
                 alembic_dir=ALEMBIC_DIR,
-                db_url=db_url,
+                # If there are any %s in the URL, they should be replaced with %%, since ConfigParser
+                # by default uses %() for substitution. You'll get %s in your URL when you have usernames
+                # with special chars (such as '@') that need to be URL encoded. URL Encoding is done with %s.
+                # YAY for nested templates?
+                db_url=str(db_url).replace('%', '%%'),
             )
         )
 
