@@ -28,6 +28,7 @@ before_install:
 install:
   - pip install -U pip
   - pip install --pre -r dev-requirements.txt .
+  - pip freeze
 
 # running tests
 script:
