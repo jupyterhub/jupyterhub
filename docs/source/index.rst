@@ -25,59 +25,61 @@ JupyterHub performs the following functions:
 - The Hub configures the proxy to forward URL prefixes to the single-user
   notebook servers
 
-For convenient administration of the Hub, its users, and :doc:`services`,
-JupyterHub also provides a
-`REST API`_.
+For convenient administration of the Hub, its users, and services,
+JupyterHub also provides a `REST API`_.
 
 Contents
 --------
 
 **Installation Guide**
 
+* :doc:`installation-guide`
 * :doc:`quickstart`
 * :doc:`quickstart-docker`
 * :doc:`installation-basics`
 
 **Getting Started**
 
-* :doc:`config-basics`
-* :doc:`networking-basics`
-* :doc:`security-basics`
-* :doc:`authenticators-users-basics`
-* :doc:`spawners-basics`
-* :doc:`services-basics`
+* :doc:`getting-started/index`
+* :doc:`getting-started/config-basics`
+* :doc:`getting-started/networking-basics`
+* :doc:`getting-started/security-basics`
+* :doc:`getting-started/authenticators-users-basics`
+* :doc:`getting-started/spawners-basics`
+* :doc:`getting-started/services-basics`
 
-**Configuration Reference**
+**Technical Reference**
 
-* :doc:`technical-overview`
-* :doc:`websecurity`
-* :doc:`authenticators`
-* :doc:`spawners`
-* :doc:`services`
-* :doc:`rest`
-* :doc:`upgrading`
-* :doc:`config-examples`
+* :doc:`reference/index`
+* :doc:`reference/technical-overview`
+* :doc:`reference/websecurity`
+* :doc:`reference/authenticators`
+* :doc:`reference/spawners`
+* :doc:`reference/services`
+* :doc:`reference/rest`
+* :doc:`reference/upgrading`
+* :doc:`reference/config-examples`
 
 **API Reference**
 
 * :doc:`api/index`
 
+**Tutorials**
+
+* :doc:`tutorials/index`
 
 **Troubleshooting**
 
 * :doc:`troubleshooting`
-
-
-**Changelog**
-
-* :doc:`changelog`
-
 
 **About JupyterHub**
 
 * :doc:`contributor-list`
 * :doc:`gallery-jhub-deployments`
 
+**Changelog**
+
+* :doc:`changelog`
 
 Indices and tables
 ------------------
@@ -101,13 +103,14 @@ Full Table of Contents
    :maxdepth: 2
 
    installation-guide
-   getting-started
-   configuration-guide
+   getting-started/index
+   reference/index
    api/index
+   tutorials/index
    troubleshooting
-   changelog
    contributor-list
    gallery-jhub-deployments
+   changelog
 
 
 .. _JupyterHub: https://github.com/jupyterhub/jupyterhub

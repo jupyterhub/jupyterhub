@@ -27,7 +27,7 @@ Hub.
 To send requests using JupyterHub API, you must pass an API token with
 the request.
 
-As of [version 0.6.0](./changelog.html), the preferred way of
+As of [version 0.6.0](../changelog.html), the preferred way of
 generating an API token is:
 
 ```bash
@@ -37,7 +37,6 @@ openssl rand -hex 32
 This `openssl` command generates a potential token that can then be
 added to JupyterHub using `.api_tokens` configuration setting in
 `jupyterhub_config.py`.
-
 
 Alternatively, use the `jupyterhub token` command to generate a token
 for a specific hub user by passing the 'username':
@@ -49,11 +48,12 @@ jupyterhub token <username>
 This command generates a random string to use as a token and registers
 it for the given user with the Hub's database.
 
-In [version 0.8.0](./changelog.html), a TOKEN request page for
+In [version 0.8.0](../changelog.html), a TOKEN request page for
 generating an API token is available from the JupyterHub user interface:
 
-![Request API TOKEN page](images/api-token-request.png)
+![Request API TOKEN page](../images/token-request.png)
 
+![API TOKEN success page](../images/token-request-success.png)
 
 ## Add API tokens to the config file
 
@@ -128,5 +128,5 @@ Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
 [interactive style on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
 [OpenAPI Initiative]: https://www.openapis.org/
-[JupyterHub REST API]: ./_static/rest-api/index.html
+[JupyterHub REST API]: ../_static/rest-api/index.html
 [Jupyter Notebook REST API]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/master/notebook/services/api/api.yaml

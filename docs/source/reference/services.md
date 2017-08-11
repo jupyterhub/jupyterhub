@@ -355,7 +355,7 @@ section on securing the notebook viewer.
 
 
 [requests]: http://docs.python-requests.org/en/master/
-[services_auth]: api/services.auth.html
-[HubAuth]: api/services.auth.html#jupyterhub.services.auth.HubAuth
-[HubAuthenticated]: api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
+[services_auth]: ../api/services.auth.html
+[HubAuth]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth
+[HubAuthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer

@@ -1,5 +1,5 @@
-Configuration Reference
-=======================
+Technical Reference
+===================
 
 .. toctree::
    :maxdepth: 2
