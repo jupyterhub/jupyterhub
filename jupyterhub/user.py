@@ -343,9 +343,11 @@ class User(HasTraits):
         # create API and OAuth tokens
         spawner.api_token = api_token
         spawner.admin_access = self.settings.get('admin_access', False)
-        client_id = 'user-%s' % self.escaped_name
+        # use fully quoted name for client_id because it will be used in cookie-name
+        # self.escaped_name may contain @ which is legal in URLs but not cookie keys
+        client_id = 'user-%s' % quote(self.name)
         if server_name:
-            client_id = '%s-%s' % (client_id, server_name)
+            client_id = '%s-%s' % (client_id, quote(server_name))
         spawner.oauth_client_id = client_id
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
