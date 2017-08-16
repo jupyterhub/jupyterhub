@@ -67,6 +67,8 @@ Contents
 **Tutorials**
 
 * :doc:`tutorials/index`
+* :doc:`tutorials/upgrade-dot-eight`
+* `Zero to JupyterHub with Kubernetes <https://zero-to-jupyterhub.readthedocs.io/en/latest/>`_
 
 **Troubleshooting**
 
