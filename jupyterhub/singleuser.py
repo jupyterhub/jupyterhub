@@ -22,6 +22,7 @@ except ImportError:
 
 from traitlets import (
     Bool,
+    Bytes,
     Unicode,
     CUnicode,
     default,
@@ -192,6 +193,15 @@ class SingleUserNotebookApp(NotebookApp):
     subcommands = {}
     version = __version__
     classes = NotebookApp.classes + [HubOAuth]
+    
+    # don't store cookie secrets
+    cookie_secret_file = ''
+    # always generate a new cookie secret on launch
+    # ensures that each spawn clears any cookies from previous session,
+    # triggering OAuth again
+    cookie_secret = Bytes()
+    def _cookie_secret_default(self):
+        return os.urandom(32)
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)
