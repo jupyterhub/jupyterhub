@@ -7,11 +7,89 @@ command line for details.
 
 ## [Unreleased] 0.8
 
+JupyterHub 0.8 is a big release!
+
+Perhaps the biggest change is the use of OAuth to negotiate authentication
+between the Hub and single-user services.
+Due to this change, it is important that the single-user server
+and Hub are both running the same version of JupyterHub.
+If you are using containers (e.g. via DockerSpawner or KubeSpawner),
+this means upgrading jupyterhub in your user images at the same time as the Hub.
+In most cases, a
+
+    pip install jupyterhub==version
+
+in your Dockerfile is sufficient.
+
 #### Added
+
+- JupyterHub now defined a `.Proxy` API for custom
+  proxy implementations other than the default.
+  The defaults are unchanged,
+  but configuration of the proxy is now done on the `ConfigurableHTTPProxy` class instead of the top-level JupyterHub.
+  TODO: docs for writing a custom proxy.
+- Single-user servers and services
+  (anything that uses HubAuth)
+  can now accept token-authenticated requests via the Authentication header.
+- Authenticators can now store state in the Hub's database.
+  To do so, the `.authenticate` method should return a dict of the form
+
+  ```python
+  {
+      'username': 'name'
+      'state': {}
+  }
+  ```
+
+  This data will be encrypted and requires `JUPYTERHUB_CRYPT_KEY` environment variable to be set
+  and the `Authenticator.enable_auth_state` flag to be True.
+  If these are not set, auth_state returned by the Authenticator will not be stored.
+- There is preliminary support for multiple (named) servers per user in the REST API.
+  Named servers can be created via API requests, but there is currently no UI for managing them.
+- Add `LocalProcessSpawner.popen_kwargs` and `LocalProcessSpawner.shell_cmd`
+  for customizing how user server processes are launched.
+- Add `Authenticator.auto_login` flag for skipping the "Login with..." page explicitly.
+- Add `JupyterHub.hub_connect_ip` configuration
+  for the ip that should be used when connecting to the Hub.
+  This is promoting (and deprecating) `DockerSpawner.hub_ip_connect`
+  for use by all Spawners.
+- Add `Spawner.pre_spawn_hook(spawner)` hook for customizing
+  pre-spawn events.
+- Add `JupyterHub.active_server_limit` and `JupyterHub.concurrent_spawn_limit`
+  for limiting the total number of running user servers and the number of pending spawns, respectively.
+
 
 #### Changed
 
+- more arguments to spawners are now passed via environment variables (`.get_env()`)
+  rather than CLI arguments (`.get_args()`)
+- internally generated tokens no longer get extra hash rounds,
+  significantly speeding up authentication.
+  The hash rounds were deemed unnecessary because the tokens were already
+  generated with high entropy.
+- `JUPYTERHUB_API_TOKEN` env is available at all times,
+  rather than being removed during single-user start.
+  The token is now accessible to kernel processes,
+  enabling user kernels to make authenticated API requests to Hub-authenticated services.
+- Cookie secrets should be 32B hex instead of large base64 secrets.
+- pycurl is used by default, if available.
+
 #### Fixed
+
+So many things fixed!
+
+- Collisions are checked when users are renamed
+- Fix bug where OAuth authenticators could not logout users
+  due to being redirected right back through the login process.
+- If there are errors loading your config files,
+  JupyterHub will refuse to start with an informative error.
+  Previously, the bad config would be ignored and JupyterHub would launch with default configuration.
+- Raise 403 error on unauthorized user rather than redirect to login,
+  which could cause redirect loop.
+- Set `httponly` on cookies because it's prudent.
+- Improve support for MySQL as the database backend
+- Many race conditions and performance problems under heavy load have been fixed.
+- Fix alembic tagging of database schema versions.
 
 #### Removed
 
