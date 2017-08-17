@@ -45,3 +45,5 @@ matrix:
       env: JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1/jupyterhub
     - python: 3.6
       env: JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub
+  allow_failures:
+    - python: nightly
