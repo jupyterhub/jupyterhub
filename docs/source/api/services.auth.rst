@@ -16,10 +16,26 @@ Module: :mod:`jupyterhub.services.auth`
 .. autoconfigurable:: HubAuth
     :members:
 
+:class:`HubOAuth`
+----------------
+
+.. autoconfigurable:: HubOAuth
+    :members:
+
 
 :class:`HubAuthenticated`
 -------------------------
 
 .. autoclass:: HubAuthenticated
     :members:
+
+:class:`HubOAuthenticated`
+-------------------------
+
+.. autoclass:: HubOAuthenticated
+
+:class:`HubOAuthCallbackHandler`
+--------------------------------
+
+.. autoclass:: HubOAuthCallbackHandler
 
