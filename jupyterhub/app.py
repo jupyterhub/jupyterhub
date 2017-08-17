@@ -62,7 +62,7 @@ from .utils import (
 from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
 from .spawner import Spawner, LocalProcessSpawner
-from .objects import Hub
+from .objects import Hub, Server
 
 # For faking stats
 from .emptyclass import EmptyClass
@@ -1180,7 +1180,7 @@ class JupyterHub(Application):
             if not service.url:
                 continue
             try:
-                yield service.orm.server.wait_up(timeout=1)
+                yield Server.from_orm(service.orm.server).wait_up(timeout=1)
             except TimeoutError:
                 self.log.warning("Cannot connect to %s service %s at %s", service.kind, name, service.url)
             else:
@@ -1557,7 +1557,7 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        yield service.orm.server.wait_up(http=True, timeout=1)
+                        yield Server.from_orm(service.orm.server).wait_up(http=True, timeout=1)
                     except TimeoutError:
                         if service.managed:
                             status = yield service.spawner.poll()
