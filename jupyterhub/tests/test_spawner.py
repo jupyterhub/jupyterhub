@@ -15,11 +15,14 @@ from unittest import mock
 import pytest
 from tornado import gen
 
-from ..user import User
 from ..objects import Hub, Server
+from .. import orm
 from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner, Spawner
-from .. import orm
+from ..user import User
+from ..utils import new_token
+from .mocking import MockSpawner
+from .test_api import add_user
 from .utils import async_requests
 
 _echo_sleep = """
@@ -270,3 +273,90 @@ def test_inherit_ok():
 
         def poll():
             pass
+
+
+class MockAPITokenSpawner(MockSpawner):
+    """Mock Spawner that sets its own API token"""
+    use_this_api_token = None
+    will_resume = True
+    def start(self):
+        if self.use_this_api_token:
+            self.api_token = self.use_this_api_token
+        else:
+            self.use_this_api_token = self.api_token
+        return super().start()
+
+
+@pytest.mark.gen_test
+def test_spawner_reuse_api_token(db, app):
+    user = add_user(app.db, app, name='snoopy')
+    if user.running:
+        yield user.stop()
+    assert user.api_tokens == []
+    spawner = user._new_spawner(name='', spawner_class=MockAPITokenSpawner)
+    user.spawners[''] = spawner
+    assert user.spawner is spawner
+    # first start: gets a new API token
+    yield user.spawn()
+    api_token = spawner.api_token
+    found = orm.APIToken.find(app.db, api_token)
+    assert found
+    assert found.user.name == user.name
+    assert user.api_tokens == [found]
+    yield user.stop()
+    yield user.spawn()
+    # verify re-use of API token
+    assert spawner.api_token == api_token
+    # verify that a new token was not created
+    assert user.api_tokens == [found]
+
+
+@pytest.mark.gen_test
+def test_spawner_insert_api_token(db, app):
+    user = add_user(app.db, app, name='tonkee')
+    if user.running:
+        yield user.stop()
+    assert user.api_tokens == []
+
+    spawner = user._new_spawner(name='', spawner_class=MockAPITokenSpawner)
+    user.spawners[''] = spawner
+    assert user.spawner is spawner
+
+    api_token = new_token()
+    assert not orm.APIToken.find(app.db, api_token)
+    user.spawner.use_this_api_token = api_token
+    # Spawner's provided API token is inserted into the db
+    # This shouldn't happen unless there are bugs elsewhere (in the Spawner),
+    # but handle it anyway.
+    yield user.spawn()
+    assert spawner.api_token == api_token
+    found = orm.APIToken.find(app.db, api_token)
+    assert found
+    assert found.user.name == user.name
+    assert user.api_tokens == [found]
+    yield user.stop()
+
+
+@pytest.mark.gen_test
+def test_spawner_bad_api_token(db, app):
+    """Tokens are revoked when a Spawner gets another user's token"""
+    user = add_user(app.db, app, name='hoa')
+    if user.running:
+        yield user.stop()
+
+    spawner = user._new_spawner(name='', spawner_class=MockAPITokenSpawner)
+    user.spawners[''] = spawner
+    assert user.spawner is spawner
+
+    other_user = add_user(app.db, app, name='greystone')
+    assert user.api_tokens == []
+    assert other_user.api_tokens == []
+    other_token = other_user.new_api_token()
+    spawner.use_this_api_token = other_token
+    
+    assert len(other_user.api_tokens) == 1
+    
+    with pytest.raises(ValueError):
+        yield user.spawn()
+    assert orm.APIToken.find(app.db, other_token) is None
+    assert other_user.api_tokens == []
