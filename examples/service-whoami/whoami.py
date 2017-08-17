@@ -27,7 +27,7 @@ def main():
     app = Application([
         (os.environ['JUPYTERHUB_SERVICE_PREFIX'] + '/?', WhoAmIHandler),
         (r'.*', WhoAmIHandler),
-    ], login_url='/hub/login')
+    ])
     
     http_server = HTTPServer(app)
     url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])

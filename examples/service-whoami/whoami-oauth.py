@@ -13,10 +13,10 @@ from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.web import RequestHandler, Application, authenticated
 
-from jupyterhub.services.auth import HubAuthenticated
+from jupyterhub.services.auth import HubOAuthenticated, HubOAuthCallbackHandler
+from jupyterhub.utils import url_path_join
 
-
-class WhoAmIHandler(HubAuthenticated, RequestHandler):
+class WhoAmIHandler(HubOAuthenticated, RequestHandler):
     hub_users = {getuser()} # the users allowed to access this service
 
     @authenticated
@@ -27,9 +27,10 @@ class WhoAmIHandler(HubAuthenticated, RequestHandler):
 
 def main():
     app = Application([
-        (os.environ['JUPYTERHUB_SERVICE_PREFIX'] + '/?', WhoAmIHandler),
+        (os.environ['JUPYTERHUB_SERVICE_PREFIX'], WhoAmIHandler),
+        (url_path_join(os.environ['JUPYTERHUB_SERVICE_PREFIX'], 'oauth_callback'), HubOAuthCallbackHandler),
         (r'.*', WhoAmIHandler),
-    ])
+    ], cookie_secret=os.urandom(32))
     
     http_server = HTTPServer(app)
     url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
