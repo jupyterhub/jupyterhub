@@ -85,9 +85,23 @@ def test_admin_not_admin(app):
 @pytest.mark.gen_test
 def test_admin(app):
     cookies = yield app.login_user('admin')
-    r = yield get_page('admin', app, cookies=cookies)
+    r = yield get_page('admin', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.url.endswith('/admin')
+
+
+@pytest.mark.parametrize('sort', [
+    'running',
+    'last_activity',
+    'admin',
+    'name',
+])
+@pytest.mark.gen_test
+def test_admin_sort(app, sort):
+    cookies = yield app.login_user('admin')
+    r = yield get_page('admin?sort=%s' % sort, app, cookies=cookies)
+    r.raise_for_status()
+    assert r.status_code == 200
 
 
 @pytest.mark.gen_test
