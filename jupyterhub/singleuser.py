@@ -116,20 +116,6 @@ class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
     @property
     def hub_auth(self):
         return self.settings['hub_auth']
-    
-    def get(self):
-        code = self.get_argument("code", False)
-        if not code:
-            raise HTTPError(400, "oauth callback made without a token")
-        # TODO: make async (in a Thread?)
-        token = self.hub_auth.token_for_code(code)
-        user_model = self.hub_auth.user_for_token(token)
-        if user_model is None:
-            raise HTTPError(500, "oauth callback failed to identify a user")
-        self.log.info("Logged-in user %s", user_model)
-        self.hub_auth.set_cookie(self, token)
-        next_url = self.get_argument('next', '') or self.base_url
-        self.redirect(next_url)
 
 
 # register new hub related command-line aliases
