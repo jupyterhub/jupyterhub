@@ -146,14 +146,19 @@ class AdminHandler(BaseHandler):
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
         mapping = {
-            'running': '_server_id'
+            'running': orm.Spawner.server_id,
         }
+        for name in available:
+            if name not in mapping:
+                mapping[name] = getattr(orm.User, name)
+
         default_order = {
             'name': 'asc',
             'last_activity': 'desc',
             'admin': 'desc',
             'running': 'desc',
         }
+
         sorts = self.get_arguments('sort') or default_sort
         orders = self.get_arguments('order')
 
@@ -176,11 +181,11 @@ class AdminHandler(BaseHandler):
 
         # this could be one incomprehensible nested list comprehension
         # get User columns
-        cols = [ getattr(orm.User, mapping.get(c, c)) for c in sorts ]
+        cols = [ mapping[c] for c in sorts ]
         # get User.col.desc() order objects
         ordered = [ getattr(c, o)() for c, o in zip(cols, orders) ]
 
-        users = self.db.query(orm.User).order_by(*ordered)
+        users = self.db.query(orm.User).join(orm.Spawner).order_by(*ordered)
         users = [ self._user_from_orm(u) for u in users ]
         running = [ u for u in users if u.running ]
 
