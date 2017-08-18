@@ -10,6 +10,7 @@ graft onbuild
 graft jupyterhub
 graft scripts
 graft share
+graft singleuser
 
 # Documentation
 graft docs
