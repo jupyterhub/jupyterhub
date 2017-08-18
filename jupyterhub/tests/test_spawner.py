@@ -21,7 +21,6 @@ from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner, Spawner
 from ..user import User
 from ..utils import new_token
-from .mocking import MockSpawner
 from .test_api import add_user
 from .utils import async_requests
 
@@ -275,27 +274,14 @@ def test_inherit_ok():
             pass
 
 
-class MockAPITokenSpawner(MockSpawner):
-    """Mock Spawner that sets its own API token"""
-    use_this_api_token = None
-    will_resume = True
-    def start(self):
-        if self.use_this_api_token:
-            self.api_token = self.use_this_api_token
-        else:
-            self.use_this_api_token = self.api_token
-        return super().start()
-
-
 @pytest.mark.gen_test
 def test_spawner_reuse_api_token(db, app):
+    # setup: user with no tokens, whose spawner has set the .will_resume flag
     user = add_user(app.db, app, name='snoopy')
-    if user.running:
-        yield user.stop()
+    spawner = user.spawner
     assert user.api_tokens == []
-    spawner = user._new_spawner(name='', spawner_class=MockAPITokenSpawner)
-    user.spawners[''] = spawner
-    assert user.spawner is spawner
+    # will_resume triggers reuse of tokens
+    spawner.will_resume = True
     # first start: gets a new API token
     yield user.spawn()
     api_token = spawner.api_token
@@ -304,6 +290,7 @@ def test_spawner_reuse_api_token(db, app):
     assert found.user.name == user.name
     assert user.api_tokens == [found]
     yield user.stop()
+    # second start: should reuse the token
     yield user.spawn()
     # verify re-use of API token
     assert spawner.api_token == api_token
@@ -313,20 +300,21 @@ def test_spawner_reuse_api_token(db, app):
 
 @pytest.mark.gen_test
 def test_spawner_insert_api_token(db, app):
+    """Token provided by spawner is not in the db
+    
+    Insert token into db as a user-provided token.
+    """
+    # setup: new user, double check that they don't have any tokens registered
     user = add_user(app.db, app, name='tonkee')
-    if user.running:
-        yield user.stop()
+    spawner = user.spawner
     assert user.api_tokens == []
 
-    spawner = user._new_spawner(name='', spawner_class=MockAPITokenSpawner)
-    user.spawners[''] = spawner
-    assert user.spawner is spawner
-
+    # setup: spawner's going to use a token that's not in the db
     api_token = new_token()
     assert not orm.APIToken.find(app.db, api_token)
     user.spawner.use_this_api_token = api_token
-    # Spawner's provided API token is inserted into the db
-    # This shouldn't happen unless there are bugs elsewhere (in the Spawner),
+    # The spawner's provided API token would already be in the db
+    # unless there is a bug somewhere else (in the Spawner),
     # but handle it anyway.
     yield user.spawn()
     assert spawner.api_token == api_token
@@ -340,22 +328,20 @@ def test_spawner_insert_api_token(db, app):
 @pytest.mark.gen_test
 def test_spawner_bad_api_token(db, app):
     """Tokens are revoked when a Spawner gets another user's token"""
-    user = add_user(app.db, app, name='hoa')
-    if user.running:
-        yield user.stop()
-
-    spawner = user._new_spawner(name='', spawner_class=MockAPITokenSpawner)
-    user.spawners[''] = spawner
-    assert user.spawner is spawner
-
-    other_user = add_user(app.db, app, name='greystone')
+    # we need two users for this one
+    user = add_user(app.db, app, name='antimone')
+    spawner = user.spawner
+    other_user = add_user(app.db, app, name='alabaster')
     assert user.api_tokens == []
     assert other_user.api_tokens == []
+
+    # create a token owned by alabaster that antimone's going to try to use
     other_token = other_user.new_api_token()
     spawner.use_this_api_token = other_token
-    
     assert len(other_user.api_tokens) == 1
-    
+
+    # starting a user's server with another user's token
+    # should revoke it
     with pytest.raises(ValueError):
         yield user.spawn()
     assert orm.APIToken.find(app.db, other_token) is None
