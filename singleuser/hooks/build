@@ -1,0 +1,11 @@
+#!/bin/bash
+set -ex
+
+stable=0.7
+
+for V in master 0.7; do
+    docker build --build-arg JUPYTERHUB_VERSION=$V -t $DOCKER_REPO:$V .
+done
+
+echo "tagging $IMAGE_NAME"
+docker tag $DOCKER_REPO:$stable $IMAGE_NAME

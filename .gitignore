@@ -3,7 +3,7 @@ node_modules
 *~
 .cache
 .DS_Store
-build
+/build
 dist
 docs/_build
 docs/source/_static/rest-api
