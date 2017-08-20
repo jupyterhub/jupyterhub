@@ -244,7 +244,7 @@ class HubAuth(Configurable):
         try:
             r = requests.request(method, url, **kwargs)
         except requests.ConnectionError as e:
-            self.log.error("Error connecting to %s: %s", self.api_url, e)
+            app_log.error("Error connecting to %s: %s", self.api_url, e)
             msg = "Failed to connect to Hub API at %r." % self.api_url
             msg += "  Is the Hub accessible at this URL (from host: %s)?" % socket.gethostname()
             if '127.0.0.1' in self.api_url:
