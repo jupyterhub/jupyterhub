@@ -7,8 +7,6 @@ import threading
 from unittest import mock
 from urllib.parse import urlparse
 
-import requests
-
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
@@ -58,6 +56,13 @@ class MockSpawner(LocalProcessSpawner):
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
+    use_this_api_token = None
+    def start(self):
+        if self.use_this_api_token:
+            self.api_token = self.use_this_api_token
+        elif self.will_resume:
+            self.use_this_api_token = self.api_token
+        return super().start()
 
 class SlowSpawner(MockSpawner):
     """A spawner that takes a few seconds to start"""

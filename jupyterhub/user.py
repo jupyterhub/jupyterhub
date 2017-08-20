@@ -385,12 +385,31 @@ class User(HasTraits):
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
                 self.log.warning("DEPRECATION: Spawner.start should return (ip, port) in JupyterHub >= 0.7")
-            if spawner.api_token != api_token:
+            if spawner.api_token and spawner.api_token != api_token:
                 # Spawner re-used an API token, discard the unused api_token
                 orm_token = orm.APIToken.find(self.db, api_token)
                 if orm_token is not None:
                     self.db.delete(orm_token)
                     self.db.commit()
+                # check if the re-used API token is valid
+                found = orm.APIToken.find(self.db, spawner.api_token)
+                if found:
+                    if found.user is not self.orm_user:
+                        self.log.error("%s's server is using %s's token! Revoking this token.",
+                            self.name, (found.user or found.service).name)
+                        self.db.delete(found)
+                        self.db.commit()
+                        raise ValueError("Invalid token for %s!" % self.name)
+                else:
+                    # Spawner.api_token has changed, but isn't in the db.
+                    # What happened? Maybe something unclean in a resumed container.
+                    self.log.warning("%s's server specified its own API token that's not in the database",
+                        self.name
+                    )
+                    # use generated=False because we don't trust this token
+                    # to have been generated properly
+                    self.new_api_token(spawner.api_token, generated=False)
+
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
                 self.log.warning("{user}'s server failed to start in {s} seconds, giving up".format(
