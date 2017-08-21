@@ -356,12 +356,11 @@ class User(HasTraits):
                 oauth_client = client_store.fetch_by_client_id(client_id)
             except ClientNotFoundError:
                 oauth_client = None
-            # create a new OAuth client + secret on every launch,
-            # except for resuming containers.
-            if oauth_client is None or not spawner.will_resume:
-                client_store.add_client(client_id, api_token,
-                                        url_path_join(self.url, 'oauth_callback'),
-                                        )
+            # create a new OAuth client + secret on every launch
+            # containers that resume will be updated below
+            client_store.add_client(client_id, api_token,
+                                    url_path_join(self.url, server_name, 'oauth_callback'),
+                                    )
         db.commit()
 
         # trigger pre-spawn hook on authenticator
@@ -409,6 +408,13 @@ class User(HasTraits):
                     # use generated=False because we don't trust this token
                     # to have been generated properly
                     self.new_api_token(spawner.api_token, generated=False)
+                # update OAuth client secret with updated API token
+                if oauth_provider:
+                    client_store = oauth_provider.client_authenticator.client_store
+                    client_store.add_client(client_id, spawner.api_token,
+                                            url_path_join(self.url, server_name, 'oauth_callback'),
+                                            )
+                    db.commit()
 
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
