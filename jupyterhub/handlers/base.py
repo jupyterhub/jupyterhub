@@ -416,7 +416,7 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Initiating spawn for %s", user_server_name)
 
-        f = user.spawn(server_name, options)
+        spawn_future = user.spawn(server_name, options)
 
         self.log.debug("%i%s concurrent spawns",
             spawn_pending_count,
@@ -426,22 +426,27 @@ class BaseHandler(RequestHandler):
             '/%i' % active_server_limit if active_server_limit else '')
 
         spawner = user.spawners[server_name]
+        # set proxy_pending now, so there's no gap where _spawn_pending is False
+        # while we are waiting for _proxy_pending to be set
+        spawner._proxy_pending = True
 
         @gen.coroutine
-        def finish_user_spawn(f=None):
+        def finish_user_spawn():
             """Finish the user spawn by registering listeners and notifying the proxy.
 
             If the spawner is slow to start, this is passed as an async callback,
             otherwise it is called immediately.
             """
-            if f and f.exception() is not None:
-                # failed, don't add to the proxy
-                return
+            # wait for spawn Future
+            try:
+                yield spawn_future
+            except Exception:
+                spawner._proxy_pending = False
+                raise
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
             try:
-                spawner._proxy_pending = True
                 yield self.proxy.add_user(user, server_name)
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
@@ -453,35 +458,37 @@ class BaseHandler(RequestHandler):
                 spawner._proxy_pending = False
 
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), f)
+            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_user_spawn())
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
-            if not spawner._waiting_for_response:
+            if spawner._spawn_pending and not spawner._waiting_for_response:
                 # still in Spawner.start, which is taking a long time
                 # we shouldn't poll while spawn is incomplete.
                 self.log.warning("User %s is slow to start (timeout=%s)",
                     user_server_name, self.slow_spawn_timeout)
-                # schedule finish for when the user finishes spawning
-                IOLoop.current().add_future(f, finish_user_spawn)
-            else:
-                # start has finished, but the server hasn't come up
-                # check if the server died while we were waiting
-                status = yield user.spawner.poll()
-                if status is None:
-                    # hit timeout, but server's running. Hope that it'll show up soon enough,
-                    # though it's possible that it started at the wrong URL
-                    self.log.warning("User %s is slow to become responsive (timeout=%s)",
-                        user_server_name, self.slow_spawn_timeout)
-                    self.log.debug("Expecting server for %s at: %s", user_server_name, spawner.server.url)
-                    # schedule finish for when the user finishes spawning
-                    IOLoop.current().add_future(f, finish_user_spawn)
-                else:
-                    toc = IOLoop.current().time()
-                    self.statsd.timing('spawner.failure', (toc - tic) * 1000)
-                    raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
-        else:
-            yield finish_user_spawn()
+                return
+
+            # start has finished, but the server hasn't come up
+            # check if the server died while we were waiting
+            status = yield spawner.poll()
+            if status is not None:
+                toc = IOLoop.current().time()
+                self.statsd.timing('spawner.failure', (toc - tic) * 1000)
+                raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
+
+            if spawner._waiting_for_response:
+                # hit timeout waiting for response, but server's running.
+                # Hope that it'll show up soon enough,
+                # though it's possible that it started at the wrong URL
+                self.log.warning("User %s is slow to become responsive (timeout=%s)",
+                    user_server_name, self.slow_spawn_timeout)
+                self.log.debug("Expecting server for %s at: %s", user_server_name, spawner.server.url)
+            if spawner._proxy_pending and not spawner._spawn_pending:
+                # User.spawn finished, but it hasn't been added to the proxy
+                # Could be due to load or a slow proxy
+                self.log.warning("User %s is slow to be added to the proxy (timeout=%s)",
+                    user_server_name, self.slow_spawn_timeout)
 
     @gen.coroutine
     def user_stopped(self, user, server_name):
@@ -653,7 +660,7 @@ class UserSpawnHandler(BaseHandler):
 
             # logged in as correct user, spawn the server
             spawner = current_user.spawner
-            if spawner._spawn_pending or spawner._proxy_pending:
+            if spawner.pending == 'spawn':
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
                 html = self.render_template("spawn_pending.html", user=current_user)
