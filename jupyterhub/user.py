@@ -221,8 +221,7 @@ class User(HasTraits):
     def __getattr__(self, attr):
         if hasattr(self.orm_user, attr):
             return getattr(self.orm_user, attr)
-        else:
-            raise AttributeError(attr)
+        return object.__getattribute__(self, attr)
 
     def __setattr__(self, attr, value):
         if not attr.startswith('_') and self.orm_user and hasattr(self.orm_user, attr):
