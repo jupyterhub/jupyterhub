@@ -511,33 +511,30 @@ class BaseHandler(RequestHandler):
         if spawner._stop_pending:
             raise RuntimeError("Stop already pending for: %s:%s" % (user.name, name))
         tic = IOLoop.current().time()
-        yield self.proxy.delete_user(user, name)
-        f = user.stop()
+        # set user._stop_pending before doing anything async,
+        # to avoid races
+        spawner._stop_pending = True
         @gen.coroutine
-        def finish_stop(f=None):
-            """Finish the stop action by noticing that the user is stopped.
+        def stop(f=None):
+            """Stop the server
 
-            If the spawner is slow to stop, this is passed as an async callback,
-            otherwise it is called immediately.
+            1. remove it from the proxy
+            2. stop the server
+            3. notice that it stopped
             """
-            if f and f.exception() is not None:
-                # failed, don't do anything
-                return
+            yield self.proxy.delete_user(user, name)
+            yield user.stop(name)
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc-tic)
 
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), f)
+            yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop)
         except gen.TimeoutError:
             if spawner._stop_pending:
                 # hit timeout, but stop is still pending
                 self.log.warning("User %s:%s server is slow to stop", user.name, name)
-                # schedule finish for when the server finishes stopping
-                IOLoop.current().add_future(f, finish_stop)
             else:
                 raise
-        else:
-            yield finish_stop()
 
     #---------------------------------------------------------------
     # template rendering
