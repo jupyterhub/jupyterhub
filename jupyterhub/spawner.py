@@ -49,9 +49,21 @@ class Spawner(LoggingConfigurable):
     
     # private attributes for tracking status
     _spawn_pending = False
+    _start_pending = False
     _stop_pending = False
     _proxy_pending = False
     _waiting_for_response = False
+
+    @property
+    def _log_name(self):
+        """Return username:servername or username
+
+        Used in logging for consistency with named servers.
+        """
+        if self.name:
+            return '%s:%s' % (self.user.name, self.name)
+        else:
+            return self.user.name
 
     @property
     def pending(self):
@@ -59,7 +71,7 @@ class Spawner(LoggingConfigurable):
 
         Return False if nothing is pending.
         """
-        if self._spawn_pending or self._proxy_pending:
+        if self._spawn_pending:
             return 'spawn'
         elif self._stop_pending:
             return 'stop'

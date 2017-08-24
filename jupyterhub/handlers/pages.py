@@ -115,6 +115,10 @@ class SpawnHandler(BaseHandler):
             self.log.warning("User is already running: %s", url)
             self.redirect(url)
             return
+        if user.spawner.pending:
+            raise web.HTTPError(
+                400, "%s is pending %s" % (user.spawner._log_name, user.spawner.pending)
+            )
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
             form_options[key] = [ bs.decode('utf8') for bs in byte_list ]

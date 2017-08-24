@@ -178,19 +178,34 @@ class UserAPIHandler(APIHandler):
 
 class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
+
     @gen.coroutine
     @admin_or_self
     def post(self, name, server_name=''):
         user = self.find_user(name)
-        if server_name:
-            if not self.allow_named_servers:
-                raise web.HTTPError(400, "Named servers are not enabled.")
+        if server_name and not self.allow_named_servers:
+            raise web.HTTPError(400, "Named servers are not enabled.")
         spawner = user.spawners[server_name]
+        pending = spawner.pending
+        if pending == 'spawn':
+            self.set_header('Content-Type', 'text/plain')
+            self.set_status(202)
+            return
+        elif pending:
+            raise web.HTTPError(400, "%s is pending %s" % (spawner._log_name, pending))
+
+        self._check_pending(spawner, accepted='spawn')
+
         if spawner.ready:
             # include notify, so that a server that died is noticed immediately
-            state = yield spawner.poll_and_notify()
+            # set _spawn_pending flag to prevent races while we wait
+            spawner._spawn_pending = True
+            try:
+                state = yield spawner.poll_and_notify()
+            finally:
+                spawner._spawn_pending = False
             if state is None:
-                raise web.HTTPError(400, "%s's server %s is already running" % (name, server_name))
+                raise web.HTTPError(400, "%s is already running" % spawner._log_name)
 
         options = self.get_json_body()
         yield self.spawn_single_user(user, server_name, options=options)
@@ -209,17 +224,18 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
 
         spawner = user.spawners[server_name]
-
-        if spawner._stop_pending:
+        if spawner.pending == 'stop':
+            self.log.debug("%s already stopping", spawner._log_name)
             self.set_header('Content-Type', 'text/plain')
             self.set_status(202)
             return
+
         if not spawner.ready:
-            raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
+            raise web.HTTPError(400, "%s is not running" % spawner._log_name)
         # include notify, so that a server that died is noticed immediately
         status = yield spawner.poll_and_notify()
         if status is not None:
-            raise web.HTTPError(400, "%s's server %s is not running" % (name, server_name))
+            raise web.HTTPError(400, "%s is not running" % spawner._log_name)
         yield self.stop_single_user(user, server_name)
         status = 202 if spawner._stop_pending else 204
         self.set_header('Content-Type', 'text/plain')
