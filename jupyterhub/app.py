@@ -291,13 +291,13 @@ class JupyterHub(Application):
     ssl_key = Unicode('',
         help="""Path to SSL key file for the public facing interface of the proxy
 
-        Use with ssl_cert
+        Use with ssl_key
         """
     ).tag(config=True)
     ssl_cert = Unicode('',
         help="""Path to SSL certificate file for the public facing interface of the proxy
 
-        Use with ssl_key
+        Use with ssl_cert
         """
     ).tag(config=True)
     ip = Unicode('',
