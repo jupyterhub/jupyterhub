@@ -111,9 +111,10 @@ class APIHandler(BaseHandler):
             for name, spawner in user.spawners.items():
                 if spawner.ready:
                     servers[name] = s = {'name': name}
-                    s['pending'] = spawner.pending or None
+                    if spawner.pending:
+                        s['pending'] = spawner.pending
                     if spawner.server:
-                        s['url'] = user.url + name
+                        s['url'] = user.url + name + '/'
         return model
 
     def group_model(self, group):

@@ -185,6 +185,8 @@ class UserServerAPIHandler(APIHandler):
         user = self.find_user(name)
         if server_name and not self.allow_named_servers:
             raise web.HTTPError(400, "Named servers are not enabled.")
+        if self.allow_named_servers and not server_name:
+            server_name = user.default_server_name()
         spawner = user.spawners[server_name]
         pending = spawner.pending
         if pending == 'spawn':
@@ -193,8 +195,6 @@ class UserServerAPIHandler(APIHandler):
             return
         elif pending:
             raise web.HTTPError(400, "%s is pending %s" % (spawner._log_name, pending))
-
-        self._check_pending(spawner, accepted='spawn')
 
         if spawner.ready:
             # include notify, so that a server that died is noticed immediately

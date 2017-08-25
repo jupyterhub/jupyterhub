@@ -231,9 +231,9 @@ class Proxy(LoggingConfigurable):
                       user.name, spawner.proxy_spec, spawner.server.host,
                       )
 
-        if spawner.pending:
+        if spawner.pending and spawner.pending != 'spawn':
             raise RuntimeError(
-                "%s is pending %s, shouldn't be added to the proxy yet!" % (spawner._log_name)
+                "%s is pending %s, shouldn't be added to the proxy yet!" % (spawner._log_name, spawner.pending)
             )
 
         yield self.add_route(

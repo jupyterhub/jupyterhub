@@ -317,8 +317,6 @@ class User(HasTraits):
         url of the server will be /user/:name/:server_name
         """
         db = self.db
-        if self.allow_named_servers and not server_name:
-            server_name = default_server_name(self)
 
         base_url = url_path_join(self.base_url, server_name) + '/'
 

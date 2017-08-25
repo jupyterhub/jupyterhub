@@ -20,7 +20,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..utils import url_path_join, exponential_backoff
+from ..utils import default_server_name, url_path_join, exponential_backoff
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -377,6 +377,9 @@ class BaseHandler(RequestHandler):
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
         user_server_name = user.name
+        if self.allow_named_servers and not server_name:
+            server_name = default_server_name(user)
+
         if server_name:
             user_server_name = '%s:%s' % (user.name, server_name)
 
@@ -517,20 +520,24 @@ class BaseHandler(RequestHandler):
         spawner._stop_pending = True
 
         @gen.coroutine
-        def stop(f=None):
+        def stop():
             """Stop the server
 
             1. remove it from the proxy
             2. stop the server
             3. notice that it stopped
             """
-            yield self.proxy.delete_user(user, name)
-            yield user.stop(name)
+            tic = IOLoop.current().time()
+            try:
+                yield self.proxy.delete_user(user, name)
+                yield user.stop(name)
+            finally:
+                spawner._stop_pending = False
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
 
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop)
+            yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
         except gen.TimeoutError:
             if spawner._stop_pending:
                 # hit timeout, but stop is still pending
