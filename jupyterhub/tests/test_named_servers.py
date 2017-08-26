@@ -38,6 +38,27 @@ def test_create_named_server(app, named_servers):
     assert prefix == user.spawners[servername].server.base_url
     assert prefix.endswith('/user/%s/%s/' % (username, servername))
 
+    r = yield api_request(app, 'users', username)
+    r.raise_for_status()
+
+    user_model = r.json()
+    user_model.pop('last_activity')
+    assert user_model == {
+        'name': username,
+        'groups': [],
+        'kind': 'user',
+        'admin': False,
+        'pending': None,
+        'server': None,
+        'servers': {
+            name: {
+                'name': name,
+                'url': url_path_join(user.url, name, '/'),
+            }
+            for name in ['1', servername]
+        },
+    }
+
 
 @pytest.mark.gen_test
 def test_delete_named_server(app, named_servers):
@@ -69,9 +90,9 @@ def test_delete_named_server(app, named_servers):
         'servers': {
             name: {
                 'name': name,
-                'url': url_path_join(user.url, name),
+                'url': url_path_join(user.url, name, '/'),
             }
-            for name in ['1', servername]
+            for name in ['1']
         },
     }
 

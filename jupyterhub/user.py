@@ -237,7 +237,7 @@ class User(HasTraits):
     def running(self):
         """property for whether the user's default server is running"""
         return self.spawner.ready
-    
+
     @property
     def active(self):
         """True if any server is active"""
@@ -317,8 +317,6 @@ class User(HasTraits):
         url of the server will be /user/:name/:server_name
         """
         db = self.db
-        if self.allow_named_servers and not server_name:
-            server_name = default_server_name(self)
 
         base_url = url_path_join(self.base_url, server_name) + '/'
 
@@ -368,7 +366,7 @@ class User(HasTraits):
         if (authenticator):
             yield gen.maybe_future(authenticator.pre_spawn_start(self, spawner))
 
-        spawner._spawn_pending = True
+        spawner._start_pending = True
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
@@ -434,6 +432,7 @@ class User(HasTraits):
                     user=self.name,
                 ), exc_info=True)
             # raise original exception
+            spawner._start_pending = False
             raise e
         spawner.start_polling()
 
@@ -475,7 +474,7 @@ class User(HasTraits):
             _check_version(__version__, server_version, self.log)
         finally:
             spawner._waiting_for_response = False
-            spawner._spawn_pending = False
+            spawner._start_pending = False
         return self
 
     @gen.coroutine
@@ -486,6 +485,7 @@ class User(HasTraits):
         """
         spawner = self.spawners[server_name]
         spawner._spawn_pending = False
+        spawner._start_pending = False
         spawner.stop_polling()
         spawner._stop_pending = True
         try:
