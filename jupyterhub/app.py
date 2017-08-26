@@ -291,13 +291,13 @@ class JupyterHub(Application):
     ssl_key = Unicode('',
         help="""Path to SSL key file for the public facing interface of the proxy
 
-        Use with ssl_cert
+        When setting this, you should also set ssl_cert
         """
     ).tag(config=True)
     ssl_cert = Unicode('',
         help="""Path to SSL certificate file for the public facing interface of the proxy
 
-        Use with ssl_key
+        When setting this, you should also set ssl_key
         """
     ).tag(config=True)
     ip = Unicode('',
@@ -360,7 +360,7 @@ class JupyterHub(Application):
     proxy_cmd = Command([], config=True,
         help="DEPRECATED since version 0.8. Use ConfigurableHTTPProxy.command",
     ).tag(config=True)
-    
+
     debug_proxy = Bool(False,
         help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.debug",
     ).tag(config=True)
@@ -465,7 +465,7 @@ class JupyterHub(Application):
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
-        
+
         Should be exactly 256 bits (32 bytes).
         """
     ).tag(
@@ -1568,7 +1568,7 @@ class JupyterHub(Application):
                         break
                 else:
                     self.log.error("Cannot connect to %s service %s at %s. Is it running?", service.kind, service_name, service.url)
-        
+
         yield self.proxy.check_routes(self.users, self._service_map)
 
 
