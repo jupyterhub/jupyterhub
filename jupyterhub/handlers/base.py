@@ -514,7 +514,7 @@ class BaseHandler(RequestHandler):
             raise KeyError("User %s has no such spawner %r", user.name, name)
         spawner = user.spawners[name]
         if spawner.pending:
-            raise RuntimeError("%s pending %s" % (user_server_name, spawner.pending))
+            raise RuntimeError("%s pending %s" % (spawner._log_name, spawner.pending))
         # set user._stop_pending before doing anything async
         # to avoid races
         spawner._stop_pending = True
