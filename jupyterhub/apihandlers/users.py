@@ -231,7 +231,10 @@ class UserServerAPIHandler(APIHandler):
             return
 
         if not spawner.ready:
-            raise web.HTTPError(400, "%s is not running" % spawner._log_name)
+            raise web.HTTPError(
+                400, "%s is not running %s" %
+                (spawner._log_name, '(pending: %s)' % spawner.pending if spawner.pending else '')
+            )
         # include notify, so that a server that died is noticed immediately
         status = yield spawner.poll_and_notify()
         if status is not None:

@@ -655,6 +655,50 @@ def test_active_server_limit(app, request):
 
 
 @mark.gen_test
+def test_start_stop_race(app, no_patience, slow_spawn):
+    user = add_user(app.db, app, name='panda')
+    spawner = user.spawner
+    # start the server
+    r = yield api_request(app, 'users', user.name, 'server', method='post')
+    assert r.status_code == 202
+    assert spawner.pending == 'spawn'
+    # additional spawns while spawning shouldn't trigger a new spawn
+    with mock.patch.object(spawner, 'start') as m:
+        r = yield api_request(app, 'users', user.name, 'server', method='post')
+    assert r.status_code == 202
+    assert m.call_count == 0
+
+    # stop while spawning is not okay
+    r = yield api_request(app, 'users', user.name, 'server', method='delete')
+    assert r.status_code == 400
+    while not spawner.ready:
+        yield gen.sleep(0.1)
+
+    spawner.delay = 3
+    # stop the spawner
+    r = yield api_request(app, 'users', user.name, 'server', method='delete')
+    assert r.status_code == 202
+    assert spawner.pending == 'stop'
+    # make sure we get past deleting from the proxy
+    yield gen.sleep(1)
+    # additional stops while stopping shouldn't trigger a new stop
+    with mock.patch.object(spawner, 'stop') as m:
+        r = yield api_request(app, 'users', user.name, 'server', method='delete')
+    assert r.status_code == 202
+    assert m.call_count == 0
+    # start while stopping is not allowed
+    with mock.patch.object(spawner, 'start') as m:
+        r = yield api_request(app, 'users', user.name, 'server', method='post')
+    assert r.status_code == 400
+
+    while spawner.active:
+        yield gen.sleep(0.1)
+    # start after stop is okay
+    r = yield api_request(app, 'users', user.name, 'server', method='post')
+    assert r.status_code == 202
+
+
+@mark.gen_test
 def test_get_proxy(app):
     r = yield api_request(app, 'proxy')
     r.raise_for_status()
