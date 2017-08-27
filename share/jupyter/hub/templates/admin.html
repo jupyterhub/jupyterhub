@@ -32,9 +32,9 @@
     <tbody>
       <tr class="user-row add-user-row">
         <td colspan="12">
-          <a id="add-users" class="col-xs-2 btn btn-default">Add Users</a>
-          <a id="stop-all-servers" class="col-xs-2 col-xs-offset-5 btn btn-danger">Stop All</a>
-          <a id="shutdown-hub" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
+          <a id="add-users" role="button" class="col-xs-2 btn btn-default">Add Users</a>
+          <a id="stop-all-servers" role="button" class="col-xs-2 col-xs-offset-5 btn btn-danger">Stop All</a>
+          <a id="shutdown-hub" role="button" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
         </td>
       </tr>
   {% for u in users %}
@@ -44,20 +44,20 @@
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
       <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
       <td class="server-col col-sm-2 text-center">
-        <span class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
-        <span class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
+        <span role="button" class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
+        <span role="button" class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
       </td>
       <td class="server-col col-sm-1 text-center">
         {% if admin_access %}
-        <span class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
+        <span role="button" class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
         {% endif %}
       </td>
       <td class="edit-col col-sm-1 text-center">
-        <span class="edit-user btn btn-xs btn-primary">edit</span>
+        <span role="button" class="edit-user btn btn-xs btn-primary">edit</span>
       </td>
       <td class="edit-col col-sm-1 text-center">
         {% if u.name != user.name %}
-        <span class="delete-user btn btn-xs btn-danger">delete</span>
+        <span role="button" class="delete-user btn btn-xs btn-danger">delete</span>
         {% endif %}
       </td>
       {% endblock user_row %}

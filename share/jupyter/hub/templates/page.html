@@ -109,9 +109,9 @@
             {% block login_widget %}
               <span id="login_widget">
                 {% if user %}
-                  <a id="logout" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
+                  <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                 {% else %}
-                  <a id="login" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
+                  <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
                 {% endif %}
               </span>
               {% endblock %}
