@@ -375,7 +375,7 @@ class Proxy(LoggingConfigurable):
         self.log.info("Setting up routes on new proxy")
         yield self.add_hub_route(self.app.hub)
         yield self.add_all_users(self.app.users)
-        yield self.add_all_services(self.app.services)
+        yield self.add_all_services(self.app._service_map)
         self.log.info("New proxy back up and good to go")
 
 
