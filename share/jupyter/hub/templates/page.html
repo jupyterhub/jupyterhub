@@ -99,9 +99,9 @@
         <ul class="nav navbar-nav">
           <li><a href="{{base_url}}home">Home</a></li>
           <li><a href="{{base_url}}token">Token</a></li>
-          {% endif %}
           {% if user.admin %}
           <li><a href="{{base_url}}admin">Admin</a></li>
+          {% endif %}
         </ul>
         {% endif %}
         <ul class="nav navbar-nav navbar-right">
