@@ -472,6 +472,9 @@ class User(HasTraits):
         else:
             server_version = resp.headers.get('X-JupyterHub-Version')
             _check_version(__version__, server_version, self.log)
+            # record the Spawner version for better error messages
+            # if it doesn't work
+            spawner._jupyterhub_version = server_version
         finally:
             spawner._waiting_for_response = False
             spawner._start_pending = False

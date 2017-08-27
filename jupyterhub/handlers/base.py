@@ -20,7 +20,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..utils import default_server_name, url_path_join, exponential_backoff
+from ..utils import default_server_name, url_path_join
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -675,7 +675,10 @@ class UserSpawnHandler(BaseHandler):
                 return
 
             # spawn has supposedly finished, check on the status
-            status = yield spawner.poll()
+            if spawner.ready:
+                status = yield spawner.poll()
+            else:
+                status = 0
             if status is not None:
                 if spawner.options_form:
                     self.redirect(url_concat(url_path_join(self.hub.base_url, 'spawn'),
@@ -693,9 +696,23 @@ class UserSpawnHandler(BaseHandler):
                 self.log.warning("Invalid redirects argument %r", self.get_argument('redirects'))
                 redirects = 0
 
-            if redirects >= self.settings.get('user_redirect_limit', 5):
+            # check redirect limit to prevent browser-enforced limits.
+            # In case of version mismatch, raise on only two redirects.
+            if redirects >= self.settings.get(
+                'user_redirect_limit', 4
+            ) or (redirects >= 2 and spawner._jupyterhub_version != __version__):
                 # We stop if we've been redirected too many times.
-                raise web.HTTPError(500, "Redirect loop detected.")
+                msg = "Redirect loop detected."
+                if spawner._jupyterhub_version != __version__:
+                    msg += (
+                        " Notebook has jupyterhub version {singleuser}, but the Hub expects {hub}."
+                        " Try installing jupyterhub=={hub} in the user environment"
+                        " if you continue to have problems."
+                    ).format(
+                        singleuser=spawner._jupyterhub_version or 'unknown (likely < 0.8)',
+                        hub=__version__,
+                    )
+                raise web.HTTPError(500, msg)
 
             # set login cookie anew
             self.set_login_cookie(current_user)
