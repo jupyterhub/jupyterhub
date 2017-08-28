@@ -28,6 +28,7 @@ def _check_version(hub_version, singleuser_version, log):
         from distutils.version import LooseVersion as V
         hub_major_minor = V(hub_version).version[:2]
         singleuser_major_minor = V(singleuser_version).version[:2]
+        extra = ""
         if singleuser_major_minor == hub_major_minor:
             # patch-level mismatch or lower, log difference at debug-level
             # because this should be fine
