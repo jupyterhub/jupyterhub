@@ -35,8 +35,11 @@ def _check_version(hub_version, singleuser_version, log):
         else:
             # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
             log_method = log.warning
-        log_method("jupyterhub version %s != jupyterhub-singleuser version %s",
-            hub_version, singleuser_version,
+            extra = " This could cause failure to authenticate and result in redirect loops!"
+        log_method(
+            "jupyterhub version %s != jupyterhub-singleuser version %s." + extra,
+            hub_version,
+            singleuser_version,
         )
     else:
         log.debug("jupyterhub and jupyterhub-singleuser both on version %s" % hub_version)
