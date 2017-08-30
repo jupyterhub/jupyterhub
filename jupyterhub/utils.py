@@ -142,7 +142,8 @@ def wait_for_server(ip, port, timeout=10):
         ip = '127.0.0.1'
     yield exponential_backoff(
         lambda: can_connect(ip, port),
-        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(ip=ip, port=port, timeout=timeout)
+        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(ip=ip, port=port, timeout=timeout),
+        timeout=timeout
     )
 
 
@@ -175,7 +176,8 @@ def wait_for_http_server(url, timeout=10):
         return False
     re = yield exponential_backoff(
         is_reachable,
-        "Server at {url} didn't respond in {timeout} seconds".format(url=url, timeout=timeout)
+        "Server at {url} didn't respond in {timeout} seconds".format(url=url, timeout=timeout),
+        timeout=timeout
     )
     return re
 
