@@ -48,8 +48,19 @@ class TokenAPIHandler(APIHandler):
             if authenticated is None:
                 raise web.HTTPError(403)
             user = self.find_user(authenticated['name'])
+        else:
+            data = self.get_json_body()
+            # admin users can request 
+            if data and data.get('username') != user.name:
+                if user.admin:
+                    user = self.find_user(data['username'])
+                else:
+                    raise web.HTTPError(403, "Only admins can request tokens for other users.")
         api_token = user.new_api_token()
-        self.write(json.dumps({'token': api_token}))
+        self.write(json.dumps({
+            'token': api_token,
+            'user': self.user_model(user),
+        }))
 
 
 class CookieAPIHandler(APIHandler):
