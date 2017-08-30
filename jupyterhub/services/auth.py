@@ -731,6 +731,11 @@ class HubAuthenticated(object):
         except Exception:
             self._hub_auth_user_cache = None
             raise
+        token = self.get_argument('token', '')
+        if user_model and token and getattr(self, '_token_authenticated', False):
+            # authenticated via `?token=`
+            # set a cookie for future requests
+            self.hub_auth.set_cookie(self, token)
         return self._hub_auth_user_cache
 
 
