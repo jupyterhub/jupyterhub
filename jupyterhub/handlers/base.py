@@ -347,7 +347,7 @@ class BaseHandler(RequestHandler):
         else:
             self.statsd.incr('login.failure')
             self.statsd.timing('login.authenticate.failure', auth_timer.ms)
-            self.log.warning("Failed login for %s", data.get('username', 'unknown user'))
+            self.log.warning("Failed login for %s", (data or {}).get('username', 'unknown user'))
 
 
     #---------------------------------------------------------------
