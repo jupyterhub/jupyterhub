@@ -201,6 +201,7 @@ class User(HasTraits):
             authenticator=self.authenticator,
             config=self.settings.get('config'),
             proxy_spec=url_path_join(self.proxy_spec, name, '/'),
+            db=self.db,
         )
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)

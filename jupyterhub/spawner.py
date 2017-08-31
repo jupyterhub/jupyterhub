@@ -18,7 +18,7 @@ from tempfile import mkdtemp
 from sqlalchemy import inspect
 
 from tornado import gen
-from tornado.ioloop import PeriodicCallback, IOLoop
+from tornado.ioloop import PeriodicCallback
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
@@ -102,6 +102,7 @@ class Spawner(LoggingConfigurable):
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
+    db = Any()
 
     @observe('orm_spawner')
     def _orm_spawner_changed(self, change):
