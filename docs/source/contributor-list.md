@@ -31,6 +31,7 @@ contribution on JupyterHub:
 - JamiesHQ
 - jbweston
 - jdavidheiser
+- jencabral
 - jhamrick
 - josephtate
 - kinuax
