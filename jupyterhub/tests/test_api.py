@@ -89,7 +89,7 @@ def api_request(app, *api_path, **kwargs):
     base_url = app.hub.url
     headers = kwargs.setdefault('headers', {})
 
-    if 'Authorization' not in headers:
+    if 'Authorization' not in headers and not kwargs.pop('noauth', False):
         headers.update(auth_header(app.db, 'admin'))
 
     url = ujoin(base_url, 'api', *api_path)
@@ -755,16 +755,16 @@ def test_token(app):
 
 
 @mark.gen_test
-@mark.parametrize("headers, data, status", [
-    ({}, None, 200),
-    ({'Authorization': ''}, None, 403),
-    ({}, {'username': 'fake', 'password': 'fake'}, 200),
+@mark.parametrize("headers, status", [
+    ({}, 200),
+    ({'Authorization': 'token bad'}, 403),
 ])
-def test_get_new_token(app, headers, data, status):
-    if data:
-        data = json.dumps(data)
+def test_get_new_token(app, headers, status):
     # request a new token
-    r = yield api_request(app, 'authorizations', 'token', method='post', data=data, headers=headers)
+    r = yield api_request(app, 'authorizations', 'token',
+        method='post',
+        headers=headers,
+    )
     assert r.status_code == status
     if status != 200:
         return
@@ -772,7 +772,61 @@ def test_get_new_token(app, headers, data, status):
     assert 'token' in reply
     r = yield api_request(app, 'authorizations', 'token', reply['token'])
     r.raise_for_status()
-    assert 'name' in r.json()
+    reply = r.json()
+    assert reply['name'] == 'admin'
+
+
+@mark.gen_test
+def test_token_formdata(app):
+    """Create a token for a user with formdata and no auth header"""
+    data = {
+        'username': 'fake',
+        'password': 'fake',
+    }
+    r = yield api_request(app, 'authorizations', 'token',
+        method='post',
+        data=json.dumps(data) if data else None,
+        noauth=True,
+    )
+    assert r.status_code == 200
+    reply = r.json()
+    assert 'token' in reply
+    r = yield api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == data['username']
+
+
+@mark.gen_test
+@mark.parametrize("as_user, for_user, status", [
+    ('admin', 'other', 200),
+    ('admin', 'missing', 400),
+    ('user', 'other', 403),
+    ('user', 'user', 200),
+])
+def test_token_as_user(app, as_user, for_user, status):
+    # ensure both users exist
+    u = add_user(app.db, app, name=as_user)
+    if for_user != 'missing':
+        add_user(app.db, app, name=for_user)
+    data = {'username': for_user}
+    headers = {
+        'Authorization': 'token %s' % u.new_api_token(),
+    }
+    r = yield api_request(app, 'authorizations', 'token',
+        method='post',
+        data=json.dumps(data),
+        headers=headers,
+    )
+    assert r.status_code == status
+    reply = r.json()
+    if status != 200:
+        return
+    assert 'token' in reply
+    r = yield api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == data['username']
 
 
 # ---------------
