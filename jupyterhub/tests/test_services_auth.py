@@ -279,7 +279,7 @@ def test_hubauth_service_token(app, mockservice_url):
     name = 'test-api-service'
     app.service_tokens[token] = name
     yield app.init_api_tokens()
-    
+
     # token in Authorization header
     r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/',
         headers={
@@ -292,6 +292,7 @@ def test_hubauth_service_token(app, mockservice_url):
         'name': name,
         'admin': False,
     }
+    assert not r.cookies
 
     # token in ?token parameter
     r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
@@ -319,7 +320,8 @@ def test_oauth_service(app, mockservice_url):
     # first request is only going to set login cookie
     # FIXME: redirect to originating URL (OAuth loses this info)
     s = requests.Session()
-    s.cookies = yield app.login_user('link')
+    name = 'link'
+    s.cookies = yield app.login_user(name)
     # run session.get in async_requests thread
     s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
     r = yield s_get(url)
@@ -334,4 +336,24 @@ def test_oauth_service(app, mockservice_url):
         'name': 'link',
         'kind': 'user',
     }
+
+    # token-authenticated request to HubOAuth
+    token = app.users[name].new_api_token()
+    # token in ?token parameter
+    r = yield async_requests.get(public_url(app, mockservice_url) + 'owhoami/?token=%s' % token)
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+
+    # verify that ?token= requests set a cookie
+    assert len(r.cookies) != 0
+    # ensure cookie works in future requests
+    r = yield async_requests.get(
+        public_url(app, mockservice_url) + 'owhoami/',
+        cookies=r.cookies,
+        allow_redirects=False,
+    )
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
 
