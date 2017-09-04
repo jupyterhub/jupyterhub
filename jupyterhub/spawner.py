@@ -54,6 +54,7 @@ class Spawner(LoggingConfigurable):
     _proxy_pending = False
     _waiting_for_response = False
     _jupyterhub_version = None
+    _spawn_future = None
 
     @property
     def _log_name(self):

@@ -461,8 +461,17 @@ class BaseHandler(RequestHandler):
                 spawner._proxy_pending = False
                 spawner._spawn_pending = False
 
+        # hook up spawner._spawn_future so that other requests can await
+        # this result
+        finish_spawn_future = spawner._spawn_future = finish_user_spawn()
+        def _clear_spawn_future(f):
+            # clear spawner._spawn_future when it's done
+            spawner._spawn_future = None
+        finish_spawn_future.add_done_callback(_clear_spawn_future)
+        
+
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_user_spawn())
+            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
@@ -652,7 +661,7 @@ class UserSpawnHandler(BaseHandler):
             # If people visit /user/:name directly on the Hub,
             # the redirects will just loop, because the proxy is bypassed.
             # Try to check for that and warn,
-            # though the user-facing behavior is unchainged
+            # though the user-facing behavior is unchanged
             host_info = urlparse(self.request.full_url())
             port = host_info.port
             if not port:
@@ -664,8 +673,18 @@ class UserSpawnHandler(BaseHandler):
                     Make sure to connect to the proxied public URL %s
                     """, self.request.full_url(), self.proxy.public_url)
 
-            # logged in as correct user, spawn the server
+            # logged in as correct user, check for pending spawn
             spawner = current_user.spawner
+            if spawner.pending and spawner._spawn_future:
+                # wait on the pending spawn
+                self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
+                try:
+                    yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
+                except gen.TimeoutError:
+                    self.log.info("Pending spawn for %s didn't finish in %.1f seconds", spawner._log_name, self.slow_spawn_timeout)
+                    pass
+
+            # we may have waited above, check pending again:
             if spawner.pending:
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
@@ -679,6 +698,8 @@ class UserSpawnHandler(BaseHandler):
                 status = yield spawner.poll()
             else:
                 status = 0
+
+            # server is not running, trigger spawn
             if status is not None:
                 if spawner.options_form:
                     self.redirect(url_concat(url_path_join(self.hub.base_url, 'spawn'),
