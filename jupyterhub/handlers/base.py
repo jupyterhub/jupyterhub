@@ -708,6 +708,15 @@ class UserSpawnHandler(BaseHandler):
                 else:
                     yield self.spawn_single_user(current_user)
 
+            # spawn didn't finish, show pending page
+            if spawner.pending:
+                self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
+                # spawn has started, but not finished
+                self.statsd.incr('redirects.user_spawn_pending', 1)
+                html = self.render_template("spawn_pending.html", user=current_user)
+                self.finish(html)
+                return
+
             # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
             # This is important in many distributed proxy implementations - those are often eventually
             # consistent and can take upto a couple of seconds to actually apply throughout the cluster.
