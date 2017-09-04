@@ -488,7 +488,8 @@ class BaseHandler(RequestHandler):
             if status is not None:
                 toc = IOLoop.current().time()
                 self.statsd.timing('spawner.failure', (toc - tic) * 1000)
-                raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
+                raise web.HTTPError(500, "Spawner failed to start [status=%s]. The logs for %s may contain details." % (
+                    status, spawner._log_name))
 
             if spawner._waiting_for_response:
                 # hit timeout waiting for response, but server's running.
