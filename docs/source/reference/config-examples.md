@@ -49,9 +49,6 @@ c.JupyterHub.cookie_secret_file = pjoin(runtime_dir, 'cookie_secret')
 c.JupyterHub.db_url = pjoin(runtime_dir, 'jupyterhub.sqlite')
 # or `--db=/path/to/jupyterhub.sqlite` on the command-line
 
-# put the log file in /var/log
-c.JupyterHub.extra_log_file = '/var/log/jupyterhub.log'
-
 # use GitHub OAuthenticator for local users
 c.JupyterHub.authenticator_class = 'oauthenticator.LocalGitHubOAuthenticator'
 c.GitHubOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
@@ -79,7 +76,8 @@ export GITHUB_CLIENT_ID=github_id
 export GITHUB_CLIENT_SECRET=github_secret
 export OAUTH_CALLBACK_URL=https://example.com/hub/oauth_callback
 export CONFIGPROXY_AUTH_TOKEN=super-secret
-jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
+# append log output to log file /var/log/jupyterhub.log
+jupyterhub -f /etc/jupyterhub/jupyterhub_config.py &>> /var/log/jupyterhub.log
 ```
 
 ## Using nginx reverse proxy
