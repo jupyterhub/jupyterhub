@@ -689,7 +689,7 @@ class UserSpawnHandler(BaseHandler):
                 # if the most recent spawn
                 self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
                     spawner._log_name, spawner._spawn_future.exception())
-                raise web.HTTPError(500, "Last spawn failed. Try spawning again from the Home page.")
+                raise spawner._spawn_future.exception()
 
             # check for pending spawn
             if spawner.pending and spawner._spawn_future:
