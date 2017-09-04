@@ -440,11 +440,7 @@ class BaseHandler(RequestHandler):
             otherwise it is called immediately.
             """
             # wait for spawn Future
-            try:
-                yield spawn_future
-            except Exception:
-                spawner._spawn_pending = False
-                raise
+            yield spawn_future
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
@@ -459,16 +455,19 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user, server_name)
             finally:
                 spawner._proxy_pending = False
-                spawner._spawn_pending = False
 
         # hook up spawner._spawn_future so that other requests can await
         # this result
         finish_spawn_future = spawner._spawn_future = finish_user_spawn()
         def _clear_spawn_future(f):
             # clear spawner._spawn_future when it's done
-            spawner._spawn_future = None
+            # keep an exception around, though, to prevent repeated implicit spawns
+            # if spawn is failing
+            if f.exception() is None:
+                spawner._spawn_future = None
+            # Now we're all done. clear _spawn_pending flag
+            spawner._spawn_pending = False
         finish_spawn_future.add_done_callback(_clear_spawn_future)
-        
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
@@ -676,6 +675,23 @@ class UserSpawnHandler(BaseHandler):
 
             # logged in as correct user, check for pending spawn
             spawner = current_user.spawner
+
+            # First, check for previous failure.
+            if (
+                not spawner.active
+                and spawner._spawn_future
+                and spawner._spawn_future.done()
+                and spawner._spawn_future.exception()
+            ):
+                # Condition: spawner not active and _spawn_future exists and contains an Exception
+                # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
+                # Point the user to Home
+                # if the most recent spawn
+                self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
+                    spawner._log_name, spawner._spawn_future.exception())
+                raise web.HTTPError(500, "Last spawn failed. Try spawning again from the Home page.")
+
+            # check for pending spawn
             if spawner.pending and spawner._spawn_future:
                 # wait on the pending spawn
                 self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
