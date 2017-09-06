@@ -376,6 +376,9 @@ class BaseHandler(RequestHandler):
 
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
+        # in case of error, include 'try again from /hub/home' message
+        self.extra_error_html = self.spawn_home_error
+
         user_server_name = user.name
         if self.allow_named_servers and not server_name:
             server_name = default_server_name(user)
@@ -558,6 +561,19 @@ class BaseHandler(RequestHandler):
     # template rendering
     #---------------------------------------------------------------
 
+    @property
+    def spawn_home_error(self):
+        """Extra message pointing users to try spawning again from /hub/home.
+
+        Should be added to `self.extra_error_html` for any handler
+        that could serve a failed spawn message.
+        """
+        home = url_path_join(self.hub.base_url, 'home')
+        return (
+            "You can try restarting your server from the "
+            "<a href='{home}'>home page</a>.".format(home=home)
+        )
+
     def get_template(self, name):
         """Return the jinja template object for a given name"""
         return self.settings['jinja2_env'].get_template(name)
@@ -605,6 +621,7 @@ class BaseHandler(RequestHandler):
             status_code=status_code,
             status_message=status_message,
             message=message,
+            extra_error_html=getattr(self, 'extra_error_html', ''),
             exception=exception,
         )
 
@@ -658,6 +675,9 @@ class UserSpawnHandler(BaseHandler):
         current_user = self.get_current_user()
 
         if current_user and current_user.name == name:
+            # if spawning fails for any reason, point users to /hub/home to retry
+            self.extra_error_html = self.spawn_home_error
+
             # If people visit /user/:name directly on the Hub,
             # the redirects will just loop, because the proxy is bypassed.
             # Try to check for that and warn,
@@ -685,8 +705,7 @@ class UserSpawnHandler(BaseHandler):
             ):
                 # Condition: spawner not active and _spawn_future exists and contains an Exception
                 # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
-                # Point the user to Home
-                # if the most recent spawn
+                # We should point the user to Home if the most recent spawn failed.
                 self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
                     spawner._log_name, spawner._spawn_future.exception())
                 raise spawner._spawn_future.exception()

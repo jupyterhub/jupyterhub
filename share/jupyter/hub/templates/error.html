@@ -22,6 +22,11 @@
     {{message_html | safe}}
   </p>
   {% endif %}
+  {% if extra_error_html %}
+  <p>
+    {{extra_error_html | safe}}
+  </p>
+  {% endif %}
   {% endblock error_detail %}
 </div>
 
