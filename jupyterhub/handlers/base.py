@@ -786,6 +786,13 @@ class CSPReportHandler(BaseHandler):
         self.statsd.incr('csp_report')
 
 
+class AddSlashHandler(BaseHandler):
+    """Handler for adding trailing slash to URLs that need them"""
+    def get(self, *args):
+        src = urlparse(self.request.uri)
+        dest = src._replace(path=src.path + '/')
+        self.redirect(urlunparse(dest))
+
 default_handlers = [
     (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
     (r'/user-redirect/(.*)?', UserRedirectHandler),

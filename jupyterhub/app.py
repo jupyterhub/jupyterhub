@@ -801,12 +801,10 @@ class JupyterHub(Application):
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
-            (r"%s" % self.hub_prefix.rstrip('/'), web.RedirectHandler,
-                {
-                    "url": self.hub_prefix,
-                    "permanent": False,
-                }
-            ),
+            # add trailing / to `/hub`
+            (self.hub_prefix.rstrip('/'), handlers.AddSlashHandler),
+            # add trailing / to ``/user|services/:name`
+            (r"%s(user|services)/([^/]+)" % self.base_url, handlers.AddSlashHandler),
             (r"(?!%s).*" % self.hub_prefix, handlers.PrefixRedirectHandler),
             (r'(.*)', handlers.Template404),
         ])
