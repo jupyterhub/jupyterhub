@@ -376,6 +376,9 @@ class BaseHandler(RequestHandler):
 
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
+        # in case of error, include 'try again from /hub/home' message
+        self.extra_error_html = self.spawn_home_error
+
         user_server_name = user.name
         if self.allow_named_servers and not server_name:
             server_name = default_server_name(user)
@@ -440,11 +443,7 @@ class BaseHandler(RequestHandler):
             otherwise it is called immediately.
             """
             # wait for spawn Future
-            try:
-                yield spawn_future
-            except Exception:
-                spawner._spawn_pending = False
-                raise
+            yield spawn_future
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
@@ -459,10 +458,22 @@ class BaseHandler(RequestHandler):
                 spawner.add_poll_callback(self.user_stopped, user, server_name)
             finally:
                 spawner._proxy_pending = False
-                spawner._spawn_pending = False
+
+        # hook up spawner._spawn_future so that other requests can await
+        # this result
+        finish_spawn_future = spawner._spawn_future = finish_user_spawn()
+        def _clear_spawn_future(f):
+            # clear spawner._spawn_future when it's done
+            # keep an exception around, though, to prevent repeated implicit spawns
+            # if spawn is failing
+            if f.exception() is None:
+                spawner._spawn_future = None
+            # Now we're all done. clear _spawn_pending flag
+            spawner._spawn_pending = False
+        finish_spawn_future.add_done_callback(_clear_spawn_future)
 
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_user_spawn())
+            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
@@ -479,7 +490,8 @@ class BaseHandler(RequestHandler):
             if status is not None:
                 toc = IOLoop.current().time()
                 self.statsd.timing('spawner.failure', (toc - tic) * 1000)
-                raise web.HTTPError(500, "Spawner failed to start [status=%s]" % status)
+                raise web.HTTPError(500, "Spawner failed to start [status=%s]. The logs for %s may contain details." % (
+                    status, spawner._log_name))
 
             if spawner._waiting_for_response:
                 # hit timeout waiting for response, but server's running.
@@ -549,6 +561,19 @@ class BaseHandler(RequestHandler):
     # template rendering
     #---------------------------------------------------------------
 
+    @property
+    def spawn_home_error(self):
+        """Extra message pointing users to try spawning again from /hub/home.
+
+        Should be added to `self.extra_error_html` for any handler
+        that could serve a failed spawn message.
+        """
+        home = url_path_join(self.hub.base_url, 'home')
+        return (
+            "You can try restarting your server from the "
+            "<a href='{home}'>home page</a>.".format(home=home)
+        )
+
     def get_template(self, name):
         """Return the jinja template object for a given name"""
         return self.settings['jinja2_env'].get_template(name)
@@ -596,6 +621,7 @@ class BaseHandler(RequestHandler):
             status_code=status_code,
             status_message=status_message,
             message=message,
+            extra_error_html=getattr(self, 'extra_error_html', ''),
             exception=exception,
         )
 
@@ -649,10 +675,13 @@ class UserSpawnHandler(BaseHandler):
         current_user = self.get_current_user()
 
         if current_user and current_user.name == name:
+            # if spawning fails for any reason, point users to /hub/home to retry
+            self.extra_error_html = self.spawn_home_error
+
             # If people visit /user/:name directly on the Hub,
             # the redirects will just loop, because the proxy is bypassed.
             # Try to check for that and warn,
-            # though the user-facing behavior is unchainged
+            # though the user-facing behavior is unchanged
             host_info = urlparse(self.request.full_url())
             port = host_info.port
             if not port:
@@ -664,8 +693,34 @@ class UserSpawnHandler(BaseHandler):
                     Make sure to connect to the proxied public URL %s
                     """, self.request.full_url(), self.proxy.public_url)
 
-            # logged in as correct user, spawn the server
+            # logged in as correct user, check for pending spawn
             spawner = current_user.spawner
+
+            # First, check for previous failure.
+            if (
+                not spawner.active
+                and spawner._spawn_future
+                and spawner._spawn_future.done()
+                and spawner._spawn_future.exception()
+            ):
+                # Condition: spawner not active and _spawn_future exists and contains an Exception
+                # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
+                # We should point the user to Home if the most recent spawn failed.
+                self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
+                    spawner._log_name, spawner._spawn_future.exception())
+                raise spawner._spawn_future.exception()
+
+            # check for pending spawn
+            if spawner.pending and spawner._spawn_future:
+                # wait on the pending spawn
+                self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
+                try:
+                    yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
+                except gen.TimeoutError:
+                    self.log.info("Pending spawn for %s didn't finish in %.1f seconds", spawner._log_name, self.slow_spawn_timeout)
+                    pass
+
+            # we may have waited above, check pending again:
             if spawner.pending:
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
@@ -679,6 +734,8 @@ class UserSpawnHandler(BaseHandler):
                 status = yield spawner.poll()
             else:
                 status = 0
+
+            # server is not running, trigger spawn
             if status is not None:
                 if spawner.options_form:
                     self.redirect(url_concat(url_path_join(self.hub.base_url, 'spawn'),
@@ -686,6 +743,15 @@ class UserSpawnHandler(BaseHandler):
                     return
                 else:
                     yield self.spawn_single_user(current_user)
+
+            # spawn didn't finish, show pending page
+            if spawner.pending:
+                self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
+                # spawn has started, but not finished
+                self.statsd.incr('redirects.user_spawn_pending', 1)
+                html = self.render_template("spawn_pending.html", user=current_user)
+                self.finish(html)
+                return
 
             # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
             # This is important in many distributed proxy implementations - those are often eventually
