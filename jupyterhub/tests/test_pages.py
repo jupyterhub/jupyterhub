@@ -126,11 +126,17 @@ def test_spawn_redirect(app):
     # should have started server
     status = yield u.spawner.poll()
     assert status is None
-    
+
     # test spawn page when server is already running (just redirect)
     r = yield get_page('spawn', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, '/user/%s/' % name)
+
+    # test handing of trailing slash on `/user/name`
+    r = yield get_page('user/' + name, app, cookies=cookies)
+    r.raise_for_status()
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
 
