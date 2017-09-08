@@ -123,6 +123,11 @@ via other mechanisms. One such example is using [GitHub OAuth][].
 
 Because the username is passed from the Authenticator to the Spawner,
 a custom Authenticator and Spawner are often used together.
+For example, the Authenticator methods, [pre_spawn_start(user, spawner)][]
+and [post_spawn_stop(user, spawner)][], are hooks that can be used to do
+auth-related startup (e.g. opening PAM sessions) and cleanup
+(e.g. closing PAM sessions).
+
 
 See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
@@ -140,3 +145,5 @@ Beginning with version 0.8, JupyterHub is an OAuth provider.
 [OAuth]: https://en.wikipedia.org/wiki/OAuth
 [GitHub OAuth]: https://developer.github.com/v3/oauth/
 [OAuthenticator]: https://github.com/jupyterhub/oauthenticator
+[pre_spawn_start(user, spawner)]: http://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.pre_spawn_start
+[post_spawn_stop(user, spawner)]: http://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.post_spawn_stop
