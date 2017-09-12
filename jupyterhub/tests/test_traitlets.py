@@ -42,6 +42,9 @@ def test_memoryspec():
     c.mem = '1024M'
     assert c.mem == 1024 * 1024 * 1024
 
+    c.mem = '1.5M'
+    assert c.mem == 1.5 * 1024 * 1024
+
     c.mem = '1024G'
     assert c.mem == 1024 * 1024 * 1024 * 1024
 

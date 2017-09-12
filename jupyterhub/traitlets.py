@@ -4,7 +4,7 @@ Traitlets that are used in JupyterHub
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from traitlets import List, Unicode, Integer, TraitError
+from traitlets import List, Unicode, Float, TraitError
 
 
 class URLPrefix(Unicode):
@@ -33,7 +33,7 @@ class Command(List):
         return super().validate(obj, value)
 
 
-class ByteSpecification(Integer):
+class ByteSpecification(Float):
     """
     Allow easily specifying bytes in units of 1024 with suffixes
 
@@ -62,11 +62,14 @@ class ByteSpecification(Integer):
         If it has one of the suffixes, it is converted into the appropriate
         pure byte value.
         """
-        if isinstance(value, int):
-            return value
-        num = value[:-1]
+        if isinstance(value, float) or isinstance(value, int):
+            return float(value)
+        try:
+            num = float(value[:-1])
+        except ValueError:
+            raise TraitError('{val} is not a valid memory specification. Must be an float or a string with suffix K, M, G, T'.format(val=value))
         suffix = value[-1]
-        if not num.isdigit() and suffix not in ByteSpecification.UNIT_SUFFIXES:
-            raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
+        if suffix not in ByteSpecification.UNIT_SUFFIXES:
+            raise TraitError('{val} is not a valid memory specification. Must be an float or a string with suffix K, M, G, T'.format(val=value))
         else:
-            return int(num) * ByteSpecification.UNIT_SUFFIXES[suffix]
+            return float(num) * ByteSpecification.UNIT_SUFFIXES[suffix]
