@@ -28,8 +28,11 @@ def authenticated(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         cookie = request.cookies.get(auth.cookie_name)
+        token = request.headers.get(auth.auth_header_name)
         if cookie:
             user = auth.user_for_cookie(cookie)
+        elif token:
+            user = auth.user_for_token(token)
         else:
             user = None
         if user:
