@@ -657,13 +657,12 @@ class HubAuthenticated(object):
     def get_login_url(self):
         """Return the Hub's login URL"""
         login_url = self.hub_auth.login_url
-        app_log.debug("Redirecting to login url: %s", login_url)
-        if isinstance(self.hub_auth, HubOAuthenticated):
+        if isinstance(self.hub_auth, HubOAuth):
             # add state argument to OAuth url
             state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
-            return url_concat(login_url, {'state': state})
-        else:
-            return login_url
+            login_url = url_concat(login_url, {'state': state})
+        app_log.debug("Redirecting to login url: %s", login_url)
+        return login_url
 
     def check_hub_user(self, model):
         """Check whether Hub-authenticated user or service should be allowed.
