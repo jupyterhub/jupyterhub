@@ -774,7 +774,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         next_url = None
         if arg_state or cookie_state:
             # clear cookie state now that we've consumed it
-            self.clear_cookie(self.hub_auth.state_cookie_name)
+            self.clear_cookie(self.hub_auth.state_cookie_name, path=self.hub_auth.base_url)
             if isinstance(cookie_state, bytes):
                 cookie_state = cookie_state.decode('ascii', 'replace')
             # check that state matches
