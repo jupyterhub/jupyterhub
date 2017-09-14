@@ -12,9 +12,16 @@ config = context.config
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if 'jupyterhub' in sys.modules:
+    from traitlets.config import MultipleInstanceError
     from jupyterhub.app import JupyterHub
+    app = None
     if JupyterHub.initialized():
-        app = JupyterHub.instance()
+        try:
+            app = JupyterHub.instance()
+        except MultipleInstanceError:
+            # could have been another Application
+            pass
+    if app is not None:
         alembic_logger = logging.getLogger('alembic')
         alembic_logger.propagate = True
         alembic_logger.parent = app.log
