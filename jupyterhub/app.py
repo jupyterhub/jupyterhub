@@ -1219,7 +1219,7 @@ class JupyterHub(Application):
                         status = yield spawner.poll()
                     except Exception:
                         self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.",
-                            user.name if name else '%s|%s' % (user.name, name))
+                            spawner._log_name)
                         status = -1
 
                 if status is None:
@@ -1230,11 +1230,13 @@ class JupyterHub(Application):
                     # user not running. This is expected if server is None,
                     # but indicates the user's server died while the Hub wasn't running
                     # if spawner.server is defined.
-                    log = self.log.warning if spawner.server else self.log.debug
-                    log("%s not running.", user.name)
-                    # remove all server or servers entry from db related to the user
                     if spawner.server:
+                        self.log.warning("%s appears to have stopped while the Hub was down", spawner._log_name)
+                        # remove server entry from db
                         db.delete(spawner.orm_spawner.server)
+                        spawner.server = None
+                    else:
+                        self.log.debug("%s not running", spawner._log_name)
             db.commit()
 
             user_summaries.append(_user_summary(user))

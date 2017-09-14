@@ -8,9 +8,11 @@ from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
 
+from tornado import gen
 import pytest
 
 from .mocking import MockHub
+from .test_api import add_user
 from .. import orm
 from ..app import COOKIE_SECRET_BYTES
 
@@ -161,3 +163,57 @@ def test_load_groups():
     assert gold is not None
     assert sorted([ u.name for u in gold.users ]) == sorted(to_load['gold'])
 
+
+@pytest.mark.gen_test
+def test_resume_spawners(tmpdir, request):
+    if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
+        p = patch.dict(os.environ, {
+            'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s' % tmpdir.join('jupyterhub.sqlite'),
+        })
+        p.start()
+        request.addfinalizer(p.stop)
+    @gen.coroutine
+    def new_hub():
+        app = MockHub()
+        app.config.ConfigurableHTTPProxy.should_start = False
+        yield app.initialize([])
+        return app
+    app = yield new_hub()
+    db = app.db
+    # spawn a user's server
+    name = 'kurt'
+    user = add_user(db, app, name=name)
+    yield user.spawn()
+    proc = user.spawner.proc
+    assert proc is not None
+
+    # stop the Hub without cleaning up servers
+    app.cleanup_servers = False
+    yield app.stop()
+
+    # proc is still running
+    assert proc.poll() is None
+
+    # resume Hub, should still be running
+    app = yield new_hub()
+    db = app.db
+    user = app.users[name]
+    assert user.running
+    assert user.spawner.server is not None
+
+    # stop the Hub without cleaning up servers
+    app.cleanup_servers = False
+    yield app.stop()
+
+    # stop the server while the Hub is down. BAMF!
+    proc.terminate()
+    proc.wait(timeout=10)
+    assert proc.poll() is not None
+
+    # resume Hub, should be stopped
+    app = yield new_hub()
+    db = app.db
+    user = app.users[name]
+    assert not user.running
+    assert user.spawner.server is None
+    assert list(db.query(orm.Server)) == []

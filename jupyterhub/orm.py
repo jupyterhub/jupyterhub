@@ -177,7 +177,7 @@ class Spawner(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
-    server_id = Column(Integer, ForeignKey('servers.id'))
+    server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
     server = relationship(Server)
 
     state = Column(JSONDict)
@@ -213,7 +213,7 @@ class Service(Base):
     api_tokens = relationship("APIToken", backref="service")
 
     # service-specific interface
-    _server_id = Column(Integer, ForeignKey('servers.id'))
+    _server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     pid = Column(Integer)
 

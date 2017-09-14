@@ -46,4 +46,3 @@ def test_upgrade_entrypoint(tmpdir):
 
     # run tokenapp again, it should work
     tokenapp.start()
-    
