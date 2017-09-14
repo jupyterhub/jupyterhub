@@ -16,6 +16,7 @@ import requests_mock
 from tornado.ioloop import IOLoop
 from tornado.httpserver import HTTPServer
 from tornado.web import RequestHandler, Application, authenticated, HTTPError
+from tornado.httputil import url_concat
 
 from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
@@ -316,7 +317,8 @@ def test_hubauth_service_token(app, mockservice_url):
 
 @pytest.mark.gen_test
 def test_oauth_service(app, mockservice_url):
-    url = url_path_join(public_url(app, mockservice_url) + 'owhoami/')
+    service = mockservice_url
+    url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     # first request is only going to set login cookie
     # FIXME: redirect to originating URL (OAuth loses this info)
     s = requests.Session()
@@ -326,6 +328,14 @@ def test_oauth_service(app, mockservice_url):
     s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
     r = yield s_get(url)
     r.raise_for_status()
+    assert r.url == url
+    # verify oauth cookie is set
+    assert 'service-%s' % service.name in set(s.cookies.keys())
+    # verify oauth state cookie has been consumed
+    assert 'service-%s-oauth-state' % service.name not in set(s.cookies.keys())
+    # verify oauth state cookie was set at some point
+    assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
+
     # second request should be authenticated
     r = yield s_get(url, allow_redirects=False)
     r.raise_for_status()
@@ -340,7 +350,7 @@ def test_oauth_service(app, mockservice_url):
     # token-authenticated request to HubOAuth
     token = app.users[name].new_api_token()
     # token in ?token parameter
-    r = yield async_requests.get(public_url(app, mockservice_url) + 'owhoami/?token=%s' % token)
+    r = yield async_requests.get(url_concat(url, {'token': token}))
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
@@ -349,11 +359,12 @@ def test_oauth_service(app, mockservice_url):
     assert len(r.cookies) != 0
     # ensure cookie works in future requests
     r = yield async_requests.get(
-        public_url(app, mockservice_url) + 'owhoami/',
+        url,
         cookies=r.cookies,
         allow_redirects=False,
     )
     r.raise_for_status()
+    assert r.url == url
     reply = r.json()
     assert reply['name'] == name
 
