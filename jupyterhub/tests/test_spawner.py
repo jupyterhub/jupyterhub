@@ -299,7 +299,7 @@ def test_spawner_reuse_api_token(db, app):
 
 
 @pytest.mark.gen_test
-def test_spawner_insert_api_token(db, app):
+def test_spawner_insert_api_token(app):
     """Token provided by spawner is not in the db
     
     Insert token into db as a user-provided token.
@@ -326,7 +326,7 @@ def test_spawner_insert_api_token(db, app):
 
 
 @pytest.mark.gen_test
-def test_spawner_bad_api_token(db, app):
+def test_spawner_bad_api_token(app):
     """Tokens are revoked when a Spawner gets another user's token"""
     # we need two users for this one
     user = add_user(app.db, app, name='antimone')
@@ -346,3 +346,37 @@ def test_spawner_bad_api_token(db, app):
         yield user.spawn()
     assert orm.APIToken.find(app.db, other_token) is None
     assert other_user.api_tokens == []
+
+
+@pytest.mark.gen_test
+def test_spawner_delete_server(app):
+    """Test deleting spawner.server
+
+    This can occur during app startup if their server has been deleted.
+    """
+    db = app.db
+    user = add_user(app.db, app, name='gaston')
+    spawner = user.spawner
+    orm_server = orm.Server()
+    db.add(orm_server)
+    db.commit()
+    server_id = orm_server.id
+    spawner.server = Server.from_orm(orm_server)
+    db.commit()
+
+    assert spawner.server is not None
+    assert spawner.orm_spawner.server is not None
+
+    # trigger delete via db
+    db.delete(spawner.orm_spawner.server)
+    db.commit()
+    assert spawner.orm_spawner.server is None
+
+    # setting server = None also triggers delete
+    spawner.server = None
+    db.commit()
+    # verify that the server was actually deleted from the db
+    assert db.query(orm.Server).filter(orm.Server.id == server_id).first() is None
+    # verify that both ORM and top-level references are None
+    assert spawner.orm_spawner.server is None
+    assert spawner.server is None
