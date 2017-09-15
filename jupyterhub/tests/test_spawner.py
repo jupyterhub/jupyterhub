@@ -51,9 +51,9 @@ def new_spawner(db, **kwargs):
     kwargs.setdefault('notebook_dir', os.getcwd())
     kwargs.setdefault('default_url', '/user/{username}/lab')
     kwargs.setdefault('oauth_client_id', 'mock-client-id')
-    kwargs.setdefault('INTERRUPT_TIMEOUT', 1)
-    kwargs.setdefault('TERM_TIMEOUT', 1)
-    kwargs.setdefault('KILL_TIMEOUT', 1)
+    kwargs.setdefault('interrupt_timeout', 1)
+    kwargs.setdefault('term_timeout', 1)
+    kwargs.setdefault('kill_timeout', 1)
     kwargs.setdefault('poll_interval', 1)
     return user._new_spawner('', spawner_class=LocalProcessSpawner, **kwargs)
 

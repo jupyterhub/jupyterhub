@@ -839,7 +839,7 @@ class LocalProcessSpawner(Spawner):
     This is the default spawner for JupyterHub.
     """
 
-    INTERRUPT_TIMEOUT = Integer(10,
+    interrupt_timeout = Integer(10,
         help="""
         Seconds to wait for single-user server process to halt after SIGINT.
 
@@ -847,7 +847,7 @@ class LocalProcessSpawner(Spawner):
         """
     ).tag(config=True)
 
-    TERM_TIMEOUT = Integer(5,
+    term_timeout = Integer(5,
         help="""
         Seconds to wait for single-user server process to halt after SIGTERM.
 
@@ -855,7 +855,7 @@ class LocalProcessSpawner(Spawner):
         """
     ).tag(config=True)
 
-    KILL_TIMEOUT = Integer(5,
+    kill_timeout = Integer(5,
         help="""
         Seconds to wait for process to halt after SIGKILL before giving up.
 
@@ -1071,7 +1071,7 @@ class LocalProcessSpawner(Spawner):
                 return
             self.log.debug("Interrupting %i", self.pid)
             yield self._signal(signal.SIGINT)
-            yield self.wait_for_death(self.INTERRUPT_TIMEOUT)
+            yield self.wait_for_death(self.interrupt_timeout)
 
         # clean shutdown failed, use TERM
         status = yield self.poll()
@@ -1079,7 +1079,7 @@ class LocalProcessSpawner(Spawner):
             return
         self.log.debug("Terminating %i", self.pid)
         yield self._signal(signal.SIGTERM)
-        yield self.wait_for_death(self.TERM_TIMEOUT)
+        yield self.wait_for_death(self.term_timeout)
 
         # TERM failed, use KILL
         status = yield self.poll()
@@ -1087,7 +1087,7 @@ class LocalProcessSpawner(Spawner):
             return
         self.log.debug("Killing %i", self.pid)
         yield self._signal(signal.SIGKILL)
-        yield self.wait_for_death(self.KILL_TIMEOUT)
+        yield self.wait_for_death(self.kill_timeout)
 
         status = yield self.poll()
         if status is None:
