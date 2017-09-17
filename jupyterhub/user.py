@@ -12,7 +12,7 @@ from tornado import gen
 from tornado.log import app_log
 from traitlets import HasTraits, Any, Dict, default
 
-from .utils import url_path_join, default_server_name
+from .utils import url_path_join
 
 from . import orm
 from ._version import _check_version, __version__

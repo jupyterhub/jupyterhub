@@ -49,13 +49,13 @@ def test_create_named_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
-        'server': None,
+        'server': user.url,
         'servers': {
             name: {
                 'name': name,
                 'url': url_path_join(user.url, name, '/'),
             }
-            for name in ['1', servername]
+            for name in ['', servername]
         },
     }
 
@@ -86,13 +86,13 @@ def test_delete_named_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
-        'server': None,
+        'server': user.url,
         'servers': {
             name: {
                 'name': name,
                 'url': url_path_join(user.url, name, '/'),
             }
-            for name in ['1']
+            for name in ['']
         },
     }
 
