@@ -70,7 +70,7 @@ class ByteSpecification(Integer):
         except ValueError:
             raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
         suffix = value[-1]
-        if suffix not in ByteSpecification.UNIT_SUFFIXES:
+        if suffix not in self.UNIT_SUFFIXES:
             raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
         else:
-            return int(float(num) * ByteSpecification.UNIT_SUFFIXES[suffix])
+            return int(float(num) * self.UNIT_SUFFIXES[suffix])
