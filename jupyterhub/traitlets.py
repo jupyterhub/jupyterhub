@@ -4,7 +4,7 @@ Traitlets that are used in JupyterHub
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from traitlets import List, Unicode, Float, TraitError
+from traitlets import List, Unicode, Integer, TraitError
 
 
 class URLPrefix(Unicode):
@@ -33,7 +33,7 @@ class Command(List):
         return super().validate(obj, value)
 
 
-class ByteSpecification(Float):
+class ByteSpecification(Integer):
     """
     Allow easily specifying bytes in units of 1024 with suffixes
 
@@ -48,7 +48,7 @@ class ByteSpecification(Float):
         'K': 1024,
         'M': 1024 * 1024,
         'G': 1024 * 1024 * 1024,
-        'T': 1024 * 1024 * 1024 * 1024
+        'T': 1024 * 1024 * 1024 * 1024,
     }
 
     # Default to allowing None as a value
@@ -62,14 +62,15 @@ class ByteSpecification(Float):
         If it has one of the suffixes, it is converted into the appropriate
         pure byte value.
         """
-        if isinstance(value, float) or isinstance(value, int):
-            return float(value)
+        if isinstance(value, (int, float)):
+            return int(value)
+
         try:
             num = float(value[:-1])
         except ValueError:
-            raise TraitError('{val} is not a valid memory specification. Must be an float or a string with suffix K, M, G, T'.format(val=value))
+            raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
         suffix = value[-1]
         if suffix not in ByteSpecification.UNIT_SUFFIXES:
-            raise TraitError('{val} is not a valid memory specification. Must be an float or a string with suffix K, M, G, T'.format(val=value))
+            raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
         else:
-            return float(num) * ByteSpecification.UNIT_SUFFIXES[suffix]
+            return int(float(num) * ByteSpecification.UNIT_SUFFIXES[suffix])
