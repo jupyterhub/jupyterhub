@@ -34,18 +34,27 @@ def test_memoryspec():
     c = C()
 
     c.mem = 1024
+    assert isinstance(c.mem, int)
     assert c.mem == 1024
 
     c.mem = '1024K'
+    assert isinstance(c.mem, int)
     assert c.mem == 1024 * 1024
 
     c.mem = '1024M'
+    assert isinstance(c.mem, int)
     assert c.mem == 1024 * 1024 * 1024
 
+    c.mem = '1.5M'
+    assert isinstance(c.mem, int)
+    assert c.mem == 1.5 * 1024 * 1024
+
     c.mem = '1024G'
+    assert isinstance(c.mem, int)
     assert c.mem == 1024 * 1024 * 1024 * 1024
 
     c.mem = '1024T'
+    assert isinstance(c.mem, int)
     assert c.mem == 1024 * 1024 * 1024 * 1024 * 1024
 
     with pytest.raises(TraitError):
