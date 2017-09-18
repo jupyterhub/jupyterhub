@@ -20,7 +20,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..utils import default_server_name, url_path_join
+from ..utils import url_path_join
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -380,8 +380,6 @@ class BaseHandler(RequestHandler):
         self.extra_error_html = self.spawn_home_error
 
         user_server_name = user.name
-        if self.allow_named_servers and not server_name:
-            server_name = default_server_name(user)
 
         if server_name:
             user_server_name = '%s:%s' % (user.name, server_name)

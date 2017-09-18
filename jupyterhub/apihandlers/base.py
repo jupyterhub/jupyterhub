@@ -114,7 +114,7 @@ class APIHandler(BaseHandler):
                     if spawner.pending:
                         s['pending'] = spawner.pending
                     if spawner.server:
-                        s['url'] = user.url + name + '/'
+                        s['url'] = url_path_join(user.url, name, '/')
         return model
 
     def group_model(self, group):

@@ -298,17 +298,3 @@ def url_path_join(*pieces):
 
     return result
 
-
-def default_server_name(user):
-    """Return the default name for a new server for a given user.
-
-    Will be the first available integer string, e.g. '1' or '2'.
-    """
-    existing_names = set(user.spawners)
-    # if there are 5 servers, count from 1 to 6
-    for n in range(1, len(existing_names) + 2):
-        name = str(n)
-        if name not in existing_names:
-            return name
-    raise RuntimeError("It should be impossible to get here")
-
