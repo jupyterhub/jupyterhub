@@ -119,6 +119,41 @@ token does **not** authorize access to the [Jupyter Notebook REST API][]
 provided by notebook servers managed by JupyterHub. A different token is used
 to access the **Jupyter Notebook** API.
 
+## Enabling users to spawn multiple named-servers via the API
+
+With JupyterHub version 0.8, support for multiple servers per user has landed.
+Prior to that, each user could only launch a single default server via the API
+like this:
+
+```bash
+curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/server"
+```
+
+With the named-server functionality, it's now possible to launch more than one
+specifically named servers against a given user.  This could be used, for instance,
+to launch each server based on a different image.
+
+It's activated like this:
+```bash
+curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverA>"
+curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverB>"
+```
+
+The same servers can be stopped by substituting `DELETE` for `POST` above.
+
+### Some caveats for using named-servers
+
+The named-server capabilities are not fully implemented for JupyterHub as yet.
+While it's possible to start/stop a server via the API, the UI on the 
+JupyterHub control-panel has not been implemented, and so it may not be obvious
+to those viewing that panel and a named-server may be running for a given user.
+
+For named-servers via the API to work, the spawner used to spawn these servers
+will need to be able to handle the case of multiple servers per user and ensure
+uniqueness of names, particularly if servers are spawned via docker containers
+or kubernetes pods.
+
+
 ## Learn more about the API
 
 You can see the full [JupyterHub REST API][] for details. This REST API Spec can
