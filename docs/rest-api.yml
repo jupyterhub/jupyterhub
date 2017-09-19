@@ -203,6 +203,43 @@ paths:
           description: The user's notebook server has stopped
         '202':
           description: The user's notebook server has not yet stopped as it is taking a while to stop
+  /users/{name}/servers/{server_name}:
+    post:
+      summary: Start a user's single-user named-server notebook server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+        - name: server_name
+          description: name given to a named-server
+          in: path
+          required: true
+          type: string
+      responses:
+        '201':
+          description: The user's notebook named-server has started
+        '202':
+          description: The user's notebook named-server has not yet started, but has been requested
+    delete:
+      summary: Stop a user's named-server
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+        - name: server_name
+          description: name given to a named-server
+          in: path
+          required: true
+          type: string
+      responses:
+        '204':
+          description: The user's notebook named-server has stopped
+        '202':
+          description: The user's notebook named-server has not yet stopped as it is taking a while to stop
   /users/{name}/admin-access:
     post:
       summary: Grant admin access to this user's notebook server
