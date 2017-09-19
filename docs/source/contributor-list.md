@@ -3,6 +3,7 @@
 Project Jupyter thanks the following people for their help and
 contribution on JupyterHub:
 
+- Analect
 - anderbubble
 - apetresc
 - barrachri
