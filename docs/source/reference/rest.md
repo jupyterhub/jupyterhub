@@ -146,7 +146,7 @@ The same servers can be stopped by substituting `DELETE` for `POST` above.
 The named-server capabilities are not fully implemented for JupyterHub as yet.
 While it's possible to start/stop a server via the API, the UI on the 
 JupyterHub control-panel has not been implemented, and so it may not be obvious
-to those viewing that panel and a named-server may be running for a given user.
+to those viewing the panel that a named-server may be running for a given user.
 
 For named-servers via the API to work, the spawner used to spawn these servers
 will need to be able to handle the case of multiple servers per user and ensure
