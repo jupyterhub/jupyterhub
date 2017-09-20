@@ -133,7 +133,21 @@ With the named-server functionality, it's now possible to launch more than one
 specifically named servers against a given user.  This could be used, for instance,
 to launch each server based on a different image.
 
-It's activated like this:
+First you must enable named-servers by including the following setting in the `jupyterhub_config.py` file.
+
+`c.JupyterHub.allow_named_servers = True`
+
+If using the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) set-up to run JupyterHub, 
+then instead of editing the `jupyterhub_config.py` file directly, you could pass 
+the following as part of the `config.yaml` file, as per the [tutorial](https://zero-to-jupyterhub.readthedocs.io/en/latest/):
+
+```bash
+hub:
+  extraConfig: |
+    c.JupyterHub.allow_named_servers = True
+```
+
+With that setting in place, a new named-server is activated like this:
 ```bash
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverA>"
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverB>"
