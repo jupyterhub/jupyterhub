@@ -368,3 +368,61 @@ def test_oauth_service(app, mockservice_url):
     reply = r.json()
     assert reply['name'] == name
 
+
+@pytest.mark.gen_test
+def test_oauth_cookie_collision(app, mockservice_url):
+    service = mockservice_url
+    url = url_path_join(public_url(app, mockservice_url) + 'owhoami/')
+    print(url)
+    s = requests.Session()
+    name = 'mypha'
+    s.cookies = yield app.login_user(name)
+    # run session.get in async_requests thread
+    s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
+    state_cookie_name = 'service-%s-oauth-state' % service.name
+    service_cookie_name = 'service-%s' % service.name
+    oauth_1 = yield s_get(url, allow_redirects=False)
+    print(oauth_1.headers)
+    print(oauth_1.cookies, oauth_1.url, url)
+    assert state_cookie_name in s.cookies
+    state_cookies = [ s for s in s.cookies.keys() if s.startswith(state_cookie_name) ]
+    # only one state cookie
+    assert state_cookies == [state_cookie_name]
+    state_1 = s.cookies[state_cookie_name]
+
+    # start second oauth login before finishing the first
+    oauth_2 = yield s_get(url, allow_redirects=False)
+    state_cookies = [ s for s in s.cookies.keys() if s.startswith(state_cookie_name) ]
+    assert len(state_cookies) == 2
+    # get the random-suffix cookie name
+    state_cookie_2 = sorted(state_cookies)[-1]
+    # we didn't clobber the default cookie
+    assert s.cookies[state_cookie_name] == state_1
+
+    # finish oauth 2
+    url = oauth_2.headers['Location']
+    if not urlparse(url).netloc:
+        url = public_host(app) + url
+    r = yield s_get(url)
+    r.raise_for_status()
+    # after finishing, state cookie is cleared
+    assert state_cookie_2 not in s.cookies
+    # service login cookie is set
+    assert service_cookie_name in s.cookies
+    service_cookie_2 = s.cookies[service_cookie_name]
+
+    # finish oauth 1
+    url = oauth_1.headers['Location']
+    if not urlparse(url).netloc:
+        url = public_host(app) + url
+    r = yield s_get(url)
+    r.raise_for_status()
+    # after finishing, state cookie is cleared (again)
+    assert state_cookie_name not in s.cookies
+    # service login cookie is set (again, to a different value)
+    assert service_cookie_name in s.cookies
+    assert s.cookies[service_cookie_name] != service_cookie_2
+
+    # after completing both OAuth logins, no OAuth state cookies remain
+    state_cookies = [ s for s in s.cookies.keys() if s.startswith(state_cookie_name) ]
+    assert state_cookies == []
