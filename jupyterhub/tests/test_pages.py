@@ -134,8 +134,12 @@ def test_spawn_redirect(app):
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
 
+    # stop server to ensure /user/name is handled by the Hub
+    r = yield api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
+    r.raise_for_status()
+
     # test handing of trailing slash on `/user/name`
-    r = yield get_page('user/' + name, app, cookies=cookies)
+    r = yield get_page('user/' + name, app, hub=False, cookies=cookies)
     r.raise_for_status()
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
