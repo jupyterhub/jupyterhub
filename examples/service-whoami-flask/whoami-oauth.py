@@ -59,7 +59,7 @@ def oauth_callback():
     # validate state field
     arg_state = request.args.get('state', None)
     cookie_state = request.cookies.get(auth.state_cookie_name)
-    if arg_state != cookie_state:
+    if arg_state is None or arg_state != cookie_state:
         # state doesn't match
         return 403
 
