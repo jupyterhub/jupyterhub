@@ -13,8 +13,10 @@ authenticate with the Hub.
 import base64
 import json
 import os
+import random
 import re
 import socket
+import string
 import time
 from urllib.parse import quote, urlencode
 import uuid
@@ -531,22 +533,37 @@ class HubOAuth(HubAuth):
         -------
         state (str): The OAuth state that has been stored in the cookie (url safe, base64-encoded)
         """
-        b64_state = self.generate_state(next_url)
+        extra_state = {}
+        if handler.get_cookie(self.state_cookie_name):
+            # oauth state cookie is already set
+            # use a randomized cookie suffix to avoid collisions
+            # in case of concurrent logins
+            app_log.warning("Detected unused OAuth state cookies")
+            cookie_suffix = ''.join(random.choice(string.ascii_letters) for i in range(8))
+            cookie_name = '{}-{}'.format(self.state_cookie_name, cookie_suffix)
+            extra_state['cookie_name'] = cookie_name
+        else:
+            cookie_name = self.state_cookie_name
+        b64_state = self.generate_state(next_url, **extra_state)
         kwargs = {
             'path': self.base_url,
             'httponly': True,
-            'expires_days': 1,
+            # Expire oauth state cookie in ten minutes.
+            # Usually this will be cleared by completed login
+            # in less than a few seconds.
+            # OAuth that doesn't complete shouldn't linger too long.
+            'max_age': 600,
         }
         if handler.request.protocol == 'https':
             kwargs['secure'] = True
         handler.set_secure_cookie(
-            self.state_cookie_name,
+            cookie_name,
             b64_state,
             **kwargs
         )
         return b64_state
 
-    def generate_state(self, next_url=None):
+    def generate_state(self, next_url=None, **extra_state):
         """Generate a state string, given a next_url redirect target
 
         Parameters
@@ -557,15 +574,26 @@ class HubOAuth(HubAuth):
         -------
         state (str): The base64-encoded state string.
         """
-        return self._encode_state({
+        state = {
             'uuid': uuid.uuid4().hex,
-            'next_url': next_url
-        })
+            'next_url': next_url,
+        }
+        state.update(extra_state)
+        return self._encode_state(state)
 
     def get_next_url(self, b64_state=''):
         """Get the next_url for redirection, given an encoded OAuth state"""
         state = self._decode_state(b64_state)
         return state.get('next_url') or self.base_url
+
+    def get_state_cookie_name(self, b64_state=''):
+        """Get the cookie name for oauth state, given an encoded OAuth state
+
+        Cookie name is stored in the state itself because the cookie name
+        is randomized to deal with races between concurrent oauth sequences.
+        """
+        state = self._decode_state(b64_state)
+        return state.get('cookie_name') or self.state_cookie_name
 
     def set_cookie(self, handler, access_token):
         """Set a cookie recording OAuth result"""
@@ -769,18 +797,19 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
 
         # validate OAuth state
         arg_state = self.get_argument("state", None)
-        cookie_state = self.get_secure_cookie(self.hub_auth.state_cookie_name)
-        next_url = None
-        if arg_state or cookie_state:
-            # clear cookie state now that we've consumed it
-            self.clear_cookie(self.hub_auth.state_cookie_name, path=self.hub_auth.base_url)
-            if isinstance(cookie_state, bytes):
-                cookie_state = cookie_state.decode('ascii', 'replace')
-            # check that state matches
-            if arg_state != cookie_state:
-                app_log.debug("oauth state %r != %r", arg_state, cookie_state)
-                raise HTTPError(403, "oauth state does not match")
-            next_url = self.hub_auth.get_next_url(cookie_state)
+        if arg_state is None:
+            raise HTTPError("oauth state is missing. Try logging in again.")
+        cookie_name = self.hub_auth.get_state_cookie_name(arg_state)
+        cookie_state = self.get_secure_cookie(cookie_name)
+        # clear cookie state now that we've consumed it
+        self.clear_cookie(cookie_name, path=self.hub_auth.base_url)
+        if isinstance(cookie_state, bytes):
+            cookie_state = cookie_state.decode('ascii', 'replace')
+        # check that state matches
+        if arg_state != cookie_state:
+            app_log.warning("oauth state %r != %r", arg_state, cookie_state)
+            raise HTTPError(403, "oauth state does not match. Try logging in again.")
+        next_url = self.hub_auth.get_next_url(cookie_state)
         # TODO: make async (in a Thread?)
         token = self.hub_auth.token_for_code(code)
         user_model = self.hub_auth.user_for_token(token)
