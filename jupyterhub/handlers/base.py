@@ -545,6 +545,7 @@ class BaseHandler(RequestHandler):
                 spawner._stop_pending = False
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
+            self.statsd.timing('spawner.stop', (toc - tic) * 1000)
 
         try:
             yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
