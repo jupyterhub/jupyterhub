@@ -1,0 +1,47 @@
+<!-- Task: UI for the cull service
+Version : 1.0
+Author : Vigneshwer
+Date : 12th August 2016 -->
+
+<html>
+<head>
+	<title>{{ title }}</title>
+	<meta charset="utf-8"/>
+	<link rel="stylesheet" type="text/css" href="{{ static_url("css/style.css") }}">
+	<script src="{{ static_url("js/script.js") }}"></script>
+</head>
+
+<body>
+
+	<div class="header">
+		
+		<!-- Start button for cull service -->
+		<button id="cull_btn" onclick="set_cull_button_color('cull_btn')">Cull Service</button>
+
+		<!-- Enter time value for timer value -->
+			<strong><span id="time_name">Timer Value:</span></strong><input id="timer_value" type="text" name="timer_value" value="">
+
+	</div>
+
+	<div class="table">
+		<!-- Session table -->
+		<table>
+			<!-- Session list + Timer value -->
+			<thead>
+				<tr>
+					<th>Note Book Users</th>
+					<th>Last Activity</th>
+				</tr>
+			</thead>
+			<!-- Enteries will be populated by the js script -->
+			<tbody>
+				
+			</tbody>
+
+		</table>
+
+	</div>
+
+</body>
+
+</html>

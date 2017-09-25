@@ -1,0 +1,71 @@
+/*Task : css file for div tag of cull service page
+Version : 1.0 
+Date : 11 August
+Author : Vigneshwer */
+
+html,body {
+	font-weight: 300;
+	line-height: 1.5;
+}
+
+body {
+	font-family: 'Lato',sans-serif;
+}
+
+input[type=text], select {
+    width: 12%;
+    padding: 8px 18px;
+    margin-left: 10px;
+    margin-top: 13px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+table, td, th {
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    padding: 15px;
+}
+
+#time_name{
+	float: left
+	margin-top:12px;
+	margin-left:100px;
+}
+.header {
+	margin: 20px;
+	padding: 15px;
+	border:2px solid #ccc;
+	border-radius: 4px;
+}
+
+#cull_btn {
+	float: left;
+	background-color:#f44336;
+	margin: 10px 10px 10px 30%;
+	border: 2px;
+	border-radius: 4px;
+	color: white;
+	padding: 8px 18px;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	font-size: 16px;
+	cursor: pointer;
+	transition-duration: 0.4s;
+}
+
+#cull_btn:hover {
+    background-color: #4CAF50;
+    color: white;
+}
+
