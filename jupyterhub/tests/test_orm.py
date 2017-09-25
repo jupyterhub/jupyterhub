@@ -14,6 +14,7 @@ from .. import objects
 from .. import crypto
 from ..user import User
 from .mocking import MockSpawner
+from ..emptyclass import EmptyClass
 
 
 def test_server(db):
@@ -167,6 +168,7 @@ def test_spawn_fails(db):
     user = User(orm_user, {
         'spawner_class': BadSpawner,
         'config': None,
+        'statsd': EmptyClass(),
     })
     
     with pytest.raises(RuntimeError) as exc:
