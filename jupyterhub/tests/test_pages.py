@@ -344,6 +344,19 @@ def test_auto_login(app, request):
         r = yield async_requests.get(base_url)
     assert r.url == public_url(app, path='hub/dummy')
 
+@pytest.mark.gen_test
+def test_auto_login_logout(app):
+    name = 'burnham'
+    cookies = yield app.login_user(name)
+
+    with mock.patch.dict(app.tornado_application.settings, {
+        'authenticator': Authenticator(auto_login=True),
+    }):
+        r = yield async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
+    r.raise_for_status()
+    logout_url = public_host(app) + app.tornado_settings['logout_url']
+    assert r.url == logout_url
+    assert r.cookies == {}
 
 @pytest.mark.gen_test
 def test_logout(app):
