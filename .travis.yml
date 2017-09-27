@@ -13,6 +13,7 @@ env:
 services:
   - mysql
   - postgresql
+  - docker
 
 # installing dependencies
 before_install:
@@ -29,12 +30,22 @@ before_install:
     fi
 install:
   - pip install -U pip
+  - |
+    if [[ "$TEST" == "db-upgrade" ]]; then
+      pip install pymysql psycopg2
+    fi
   - pip install --pre -r dev-requirements.txt .
   - pip freeze
 
 # running tests
 script:
-  - pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+  - |
+    if [[ "$TEST" == "db-upgrade" ]]; then
+      cd test-db-upgrade
+      bash test.sh
+    else
+      pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    fi
 after_success:
   - codecov
 
@@ -47,5 +58,7 @@ matrix:
       env: JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1/jupyterhub
     - python: 3.6
       env: JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub
+    - python: 3.6
+      env: TEST=db-upgrade
   allow_failures:
     - python: nightly
