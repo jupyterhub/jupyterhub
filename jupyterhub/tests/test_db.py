@@ -21,12 +21,15 @@ def generate_old_db(path):
 def test_upgrade(tmpdir):
     print(tmpdir)
     db_url = generate_old_db(str(tmpdir))
-    print(db_url)
     upgrade(db_url)
 
 @pytest.mark.gen_test
 def test_upgrade_entrypoint(tmpdir):
-    generate_old_db(str(tmpdir))
+    db_url = os.getenv('JUPYTERHUB_TEST_UPGRADE_DB_URL')
+    if not db_url:
+        # default: sqlite
+        db_url = generate_old_db(str(tmpdir))
+
     tmpdir.chdir()
     tokenapp = NewToken()
     tokenapp.initialize(['kaylee'])

@@ -23,29 +23,36 @@ before_install:
   - |
     if [[ $JUPYTERHUB_TEST_DB_URL == mysql* ]]; then
       mysql -e 'CREATE DATABASE jupyterhub CHARACTER SET utf8 COLLATE utf8_general_ci;'
+      mysql -e 'CREATE DATABASE jupyterhub_upgrade CHARACTER SET utf8 COLLATE utf8_general_ci;'
       pip install 'mysql-connector<2.2'
+      ./old-hub-env/bin/python -m pip install 'mysql-connector<2.2'
     elif [[ $JUPYTERHUB_TEST_DB_URL == postgresql* ]]; then
       psql -c 'create database jupyterhub;' -U postgres
+      psql -c 'create database jupyterhub_upgrade;' -U postgres
       pip install psycopg2
+      ./old-hub-env/bin/python -m pip install psycopg2
     fi
 install:
   - pip install -U pip
-  - |
-    if [[ "$TEST" == "db-upgrade" ]]; then
-      pip install pymysql psycopg2
-    fi
   - pip install --pre -r dev-requirements.txt .
   - pip freeze
 
 # running tests
 script:
   - |
-    if [[ "$TEST" == "db-upgrade" ]]; then
-      cd test-db-upgrade
-      bash test.sh
-    else
-      pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    if [[ ! -z "$JUPYTERHUB_TEST_DB_URL" ]]; then
+      # if testing upgrade-db, run `jupyterhub token` with 0.7
+      # to initialize an old db. Used in upgrade-tests
+      export JUPYTERHUB_TEST_UPGRADE_DB_URL=${JUPYTERHUB_TEST_DB_URL}_upgrade
+      python -m pip install virtualenv
+      python -m virtualenv old-hub-env
+      ./old-hub-env/bin/python -m pip install jupyterhub==0.7.2 psycopg2 'mysql-connector<2.2'
+      ./old-hub-env/bin/jupyterhub token kaylee \
+        --JupyterHub.db_url=$JUPYTERHUB_TEST_UPGRADE_DB_URL \
+        --Authenticator.whitelist="{'kaylee'}" \
+        --JupyterHub.authenticator_class=jupyterhub.auth.Authenticator
     fi
+  - pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
 after_success:
   - codecov
 
