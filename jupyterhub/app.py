@@ -23,6 +23,7 @@ if sys.version_info[:2] < (3, 3):
 
 from jinja2 import Environment, FileSystemLoader
 
+from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 
 from tornado.httpclient import AsyncHTTPClient
@@ -189,6 +190,13 @@ class UpgradeDB(Application):
             db_file = hub.db_url.split(':///', 1)[1]
             self._backup_db_file(db_file)
         self.log.info("Upgrading %s", hub.db_url)
+        # run check-db-revision first
+        engine = create_engine(hub.db_url)
+        try:
+            orm.check_db_revision(engine)
+        except orm.DatabaseSchemaMismatch:
+            # ignore mismatch error because that's what we are here for!
+            pass
         dbutil.upgrade(hub.db_url)
 
 
