@@ -36,16 +36,18 @@ def test_upgrade_entrypoint(tmpdir):
     with raises(SystemExit):
         tokenapp.start()
 
-    sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
-    assert len(sqlite_files) == 1
+    if 'sqlite' in db_url:
+        sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
+        assert len(sqlite_files) == 1
 
     upgradeapp = UpgradeDB()
     yield upgradeapp.initialize([])
     upgradeapp.start()
 
     # check that backup was created:
-    sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
-    assert len(sqlite_files) == 2
+    if 'sqlite' in db_url:
+        sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
+        assert len(sqlite_files) == 2
 
     # run tokenapp again, it should work
     tokenapp.start()
