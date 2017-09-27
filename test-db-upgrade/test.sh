@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -e
+
 TMPDIR=$(mktemp -d)
 ENVDIR="$TMPDIR/env"
 
-# start mysql and postgres (do this first, so they have time to startup)
-for DB in postgres mysql; do
-  export DB
-  bash docker-db.sh
-done
+# initialize the databases
+bash "$(dirname $0)"/init-db.sh
 
 # create virtualenv with jupyterhub 0.7
 echo "creating virutalenv in $ENVDIR"
@@ -20,16 +18,9 @@ echo "jupyterhub-$(jupyterhub --version)"
 set -x
 # launch jupyterhub-0.7 token entrypoint to ensure db is initialized
 for DB in sqlite postgres mysql; do
-  export $DB
+  export DB
   echo -e "\n\n\nupgrade-db test: $DB"
-  for i in {1..60}; do
-    if "$ENVDIR/bin/jupyterhub" token alpha; then
-      break
-    else
-      echo "waiting for $DB"
-      sleep 2
-    fi
-  done
+  "$ENVDIR/bin/jupyterhub" token alpha
 
   # run upgrade-db
   jupyterhub upgrade-db
@@ -39,5 +30,4 @@ for DB in sqlite postgres mysql; do
   echo -e "\n\n$DB OK"
 done
 
-docker rm -f hub-test-postgres hub-test-mysql
 rm -rf $ENVDIR
