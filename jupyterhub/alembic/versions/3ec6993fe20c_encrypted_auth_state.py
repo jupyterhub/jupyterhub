@@ -36,6 +36,10 @@ def upgrade():
     # drop some columns no longer in use
     try:
         op.drop_column('users', 'auth_state')
+        # mysql cannot drop _server_id without also dropping
+        # implicitly created foreign key
+        if op.get_context().dialect.name == 'mysql':
+            op.drop_constraint('users_ibfk_1', 'users',  type_='foreignkey')
         op.drop_column('users', '_server_id')
     except sa.exc.OperationalError:
         # this won't be a problem moving forward, but downgrade will fail
