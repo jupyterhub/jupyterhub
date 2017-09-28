@@ -9,7 +9,7 @@ bash "$(dirname $0)"/init-db.sh
 
 # create virtualenv with jupyterhub 0.7
 echo "creating virutalenv in $ENVDIR"
-python -m virtualenv "$ENVDIR"
+python -m venv "$ENVDIR"
 $ENVDIR/bin/pip install -q -r old-requirements.txt
 
 echo "env-jupyterhub: $($ENVDIR/bin/jupyterhub --version)"
