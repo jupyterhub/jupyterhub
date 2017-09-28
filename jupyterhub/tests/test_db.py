@@ -4,6 +4,7 @@ import shutil
 
 import pytest
 from pytest import raises
+from traitlets.config import Config
 
 from ..dbutil import upgrade
 from ..app import NewToken, UpgradeDB, JupyterHub
@@ -29,9 +30,11 @@ def test_upgrade_entrypoint(tmpdir):
     if not db_url:
         # default: sqlite
         db_url = generate_old_db(str(tmpdir))
+    cfg = Config()
+    cfg.JupyterHub.db_url = db_url
 
     tmpdir.chdir()
-    tokenapp = NewToken()
+    tokenapp = NewToken(config=cfg)
     tokenapp.initialize(['kaylee'])
     with raises(SystemExit):
         tokenapp.start()
@@ -40,7 +43,7 @@ def test_upgrade_entrypoint(tmpdir):
         sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
         assert len(sqlite_files) == 1
 
-    upgradeapp = UpgradeDB()
+    upgradeapp = UpgradeDB(config=cfg)
     yield upgradeapp.initialize([])
     upgradeapp.start()
 
