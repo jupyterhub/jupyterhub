@@ -2,21 +2,35 @@
 # source this file to setup postgres and mysql
 # for local testing (as similar as possible to docker)
 
-DOCKER="docker run --rm -d --name"
+set -e
 
 export MYSQL_HOST=127.0.0.1
+export MYSQL_TCP_PORT=13306
 export PGHOST=127.0.0.1
+NAME="hub-test-$DB"
+DOCKER_RUN="docker run --rm -d --name $NAME"
 
-set -ex
-docker rm -f hub-test-mysql hub-test-postgres 2>/dev/null || true
+docker rm -f "$NAME" 2>/dev/null || true
 
-$DOCKER hub-test-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=1 -p 3306:3306 mysql:5.7
-$DOCKER hub-test-postgres -p 5432:5432 postgres:9.5
-set +x
+case "$DB" in
+"mysql")
+  RUN_ARGS="-e MYSQL_ALLOW_EMPTY_PASSWORD=1 -p $MYSQL_TCP_PORT:3306 mysql:5.7"
+  CHECK="mysql --user root -e \q"
+  ;;
+"postgres")
+  RUN_ARGS="-p 5432:5432 postgres:9.5"
+  CHECK="psql --user postgres -c \q"
+  ;;
+*)
+  echo '$DB must be mysql or postgres'
+  exit 1
+esac
 
-echo -n 'waiting for postgres'
+$DOCKER_RUN $RUN_ARGS
+
+echo -n "waiting for $DB "
 for i in {1..60}; do
-  if psql --user postgres -c '\q' 2>/dev/null; then
+  if $CHECK; then
     echo 'done'
     break
   else
@@ -24,21 +38,13 @@ for i in {1..60}; do
     sleep 1
   fi
 done
+$CHECK
 
-echo -n 'waiting for mysql'
-for i in {1..60}; do
-  if mysql --user root -e '\q' 2>/dev/null; then
-    echo 'done'
-    break
-  else
-    echo -n '.'
-    sleep 1
-  fi
-done
 
 echo -e "
 Set these environment variables:
 
     export MYSQL_HOST=127.0.0.1
+    export MYSQL_TCP_PORT=13306
     export PGHOST=127.0.0.1
 "
