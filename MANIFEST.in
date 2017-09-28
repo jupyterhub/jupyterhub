@@ -11,6 +11,7 @@ graft jupyterhub
 graft scripts
 graft share
 graft singleuser
+graft ci
 
 # Documentation
 graft docs
