@@ -167,6 +167,9 @@ server {
 }
 ```
 
+If `nginx` is not running on port 443, substitute `$http_host` for `$host` on
+the lines setting the `Host` header.
+
 `nginx` will now be the front facing element of JupyterHub on `443` which means
 it is also free to bind other servers, like `NO_HUB.DOMAIN.TLD` to the same port
 on the same machine and network interface. In fact, one can simply use the same
