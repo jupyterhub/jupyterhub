@@ -5,7 +5,7 @@
 set -e
 
 export MYSQL_HOST=127.0.0.1
-export MYSQL_TCP_PORT=13306
+export MYSQL_TCP_PORT=${MYSQL_TCP_PORT:-13306}
 export PGHOST=127.0.0.1
 NAME="hub-test-$DB"
 DOCKER_RUN="docker run --rm -d --name $NAME"
@@ -15,7 +15,7 @@ docker rm -f "$NAME" 2>/dev/null || true
 case "$DB" in
 "mysql")
   RUN_ARGS="-e MYSQL_ALLOW_EMPTY_PASSWORD=1 -p $MYSQL_TCP_PORT:3306 mysql:5.7"
-  CHECK="mysql --user root -e \q"
+  CHECK="mysql --host $MYSQL_HOST --port $MYSQL_TCP_PORT --user root -e \q"
   ;;
 "postgres")
   RUN_ARGS="-p 5432:5432 postgres:9.5"
@@ -45,6 +45,6 @@ echo -e "
 Set these environment variables:
 
     export MYSQL_HOST=127.0.0.1
-    export MYSQL_TCP_PORT=13306
+    export MYSQL_TCP_PORT=$MYSQL_TCP_PORT
     export PGHOST=127.0.0.1
 "

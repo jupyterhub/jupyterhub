@@ -21,6 +21,7 @@ before_install:
   - npm install -g configurable-http-proxy
   - |
     if [[ $JUPYTERHUB_TEST_DB_URL == mysql* ]]; then
+      unset MYSQL_UNIX_PORT
       DB=mysql bash ci/docker-db.sh
       DB=mysql bash ci/init-db.sh
       pip install 'mysql-connector<2.2'
@@ -60,8 +61,9 @@ matrix:
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
       env:
+        - MYSQL_HOST=127.0.0.1
         - MYSQL_TCP_PORT=13306
-        - JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:13306/jupyterhub
+        - JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:$MYSQL_TCP_PORT/jupyterhub
     - python: 3.6
       env:
         - JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub

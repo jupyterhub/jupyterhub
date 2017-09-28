@@ -3,7 +3,7 @@
 
 set -e
 
-MYSQL="mysql --user root -e "
+MYSQL="mysql --user root --host $MYSQL_HOST --port $MYSQL_TCP_PORT -e "
 PSQL="psql --user postgres -c "
 
 case "$DB" in
