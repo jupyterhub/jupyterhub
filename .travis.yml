@@ -44,6 +44,7 @@ script:
       # if testing upgrade-db, run `jupyterhub token` with 0.7
       # to initialize an old db. Used in upgrade-tests
       export JUPYTERHUB_TEST_UPGRADE_DB_URL=${JUPYTERHUB_TEST_DB_URL}_upgrade
+      # use virtualenv instead of venv because venv doesn't work here
       python -m pip install virtualenv
       python -m virtualenv old-hub-env
       ./old-hub-env/bin/python -m pip install jupyterhub==0.7.2 psycopg2 'mysql-connector<2.2'
