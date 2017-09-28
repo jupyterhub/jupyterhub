@@ -11,7 +11,7 @@ graft jupyterhub
 graft scripts
 graft share
 graft singleuser
-graft test-db-upgrade
+graft ci
 
 # Documentation
 graft docs

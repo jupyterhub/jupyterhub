@@ -11,8 +11,7 @@ env:
   global:
     - ASYNC_TEST_TIMEOUT=15
 services:
-  - mysql
-  - postgresql
+  - postgres
   - docker
 
 # installing dependencies
@@ -22,24 +21,11 @@ before_install:
   - npm install -g configurable-http-proxy
   - |
     if [[ $JUPYTERHUB_TEST_DB_URL == mysql* ]]; then
-      service stop mysql || echo 'mysql not running'
-      docker run -d -e MYSQL_ALLOW_EMPTY_PASSWORD=1 -p 3306:3306 mysql:5.7
-      echo -n 'waiting for mysql'
-      for i in {1..60}; do
-        if mysql --user root -e '\q' 2>/dev/null; then
-          echo 'done'
-          break
-        else
-          echo -n '.'
-          sleep 1
-        fi
-      done
-      mysql -e 'CREATE DATABASE jupyterhub CHARACTER SET utf8 COLLATE utf8_general_ci;'
-      mysql -e 'CREATE DATABASE jupyterhub_upgrade CHARACTER SET utf8 COLLATE utf8_general_ci;'
+      DB=mysql bash ci/docker-db.sh
+      DB=mysql bash ci/init-db.sh
       pip install 'mysql-connector<2.2'
     elif [[ $JUPYTERHUB_TEST_DB_URL == postgresql* ]]; then
-      psql -c 'create database jupyterhub;' -U postgres
-      psql -c 'create database jupyterhub_upgrade;' -U postgres
+      DB=postgres bash ci/init-db.sh
       pip install psycopg2
     fi
 install:
@@ -73,10 +59,11 @@ matrix:
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
-      env: JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1/jupyterhub
+      env:
+        - MYSQL_TCP_PORT=13306
+        - JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:13306/jupyterhub
     - python: 3.6
-      env: JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub
-    - python: 3.6
-      env: TEST=db-upgrade
+      env:
+        - JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub
   allow_failures:
     - python: nightly

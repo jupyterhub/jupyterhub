@@ -1,4 +1,0 @@
-jupyterhub-dummyauthenticator
-jupyterhub==0.7.2
-psycopg2
-pymysql
