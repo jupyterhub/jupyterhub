@@ -23,7 +23,7 @@ in your Dockerfile is sufficient.
 
 #### Added
 
-- JupyterHub now defined a `.Proxy` API for custom
+- JupyterHub now defined a `Proxy` API for custom
   proxy implementations other than the default.
   The defaults are unchanged,
   but configuration of the proxy is now done on the `ConfigurableHTTPProxy` class instead of the top-level JupyterHub.
@@ -32,7 +32,7 @@ in your Dockerfile is sufficient.
   (anything that uses HubAuth)
   can now accept token-authenticated requests via the Authentication header.
 - Authenticators can now store state in the Hub's database.
-  To do so, the `.authenticate` method should return a dict of the form
+  To do so, the `authenticate` method should return a dict of the form
 
   ```python
   {
