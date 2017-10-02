@@ -107,6 +107,12 @@ The **`nginx` server config file** is fairly standard fare except for the two
 `location` blocks within the `HUB.DOMAIN.TLD` config file:
 
 ```bash
+# top-level http config for websocket headers
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
 # HTTP server to redirect all 80 traffic to SSL/HTTPS
 server {
     listen 80;
@@ -138,32 +144,20 @@ server {
 
     # Managing literal requests to the JupyterHub front end
     location / {
-        proxy_pass https://127.0.0.1:8000;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
 
-    # Managing WebHook/Socket requests between hub user servers and external proxy
-    location ~* /(api/kernels/[^/]+/(channels|iopub|shell|stdin)|terminals/websocket)/? {
-        proxy_pass https://127.0.0.1:8000;
-
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        # WebSocket support
-        proxy_http_version 1.1;
+        # websocket headers
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
-
     }
 
     # Managing requests to verify letsencrypt host
     location ~ /.well-known {
         allow all;
     }
-
-
 }
 ```
 
@@ -207,6 +201,6 @@ server {
 }
 ```
 
-Now just restart `nginx`, restart the JupyterHub, and enjoy accessing
+Now restart `nginx`, restart the JupyterHub, and enjoy accessing
 `https://HUB.DOMAIN.TLD` while serving other content securely on
 `https://NO_HUB.DOMAIN.TLD`.
