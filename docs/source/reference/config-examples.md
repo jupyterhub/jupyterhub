@@ -80,7 +80,7 @@ export CONFIGPROXY_AUTH_TOKEN=super-secret
 jupyterhub -f /etc/jupyterhub/jupyterhub_config.py &>> /var/log/jupyterhub.log
 ```
 
-## Using nginx reverse proxy
+## Using a reverse proxy
 
 In the following example, we show configuration files for a JupyterHub server
 running locally on port `8000` but accessible from the outside on the standard
@@ -91,9 +91,9 @@ satisfy the following:
 * JupyterHub is running on a server, accessed *only* via `HUB.DOMAIN.TLD:443`
 * On the same machine, `NO_HUB.DOMAIN.TLD` strictly serves different content,
   also on port `443`
-* `nginx` is used to manage the web servers / reverse proxy (which means that
-  only nginx will be able to bind two servers to `443`)
-* After testing, the server in question should be able to score an A+ on the
+* `nginx` or `apache` is used as the public access point (which means that
+  only nginx/apache will bind  to `443`)
+* After testing, the server in question should be able to score at least an A on the
   Qualys SSL Labs [SSL Server Test](https://www.ssllabs.com/ssltest/)
 
 Let's start out with needed JupyterHub configuration in `jupyterhub_config.py`:
@@ -109,6 +109,8 @@ This can take a few minutes:
 ```bash
 openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
 ```
+
+### nginx
 
 The **`nginx` server config file** is fairly standard fare except for the two
 `location` blocks within the `HUB.DOMAIN.TLD` config file:
@@ -211,3 +213,52 @@ server {
 Now restart `nginx`, restart the JupyterHub, and enjoy accessing
 `https://HUB.DOMAIN.TLD` while serving other content securely on
 `https://NO_HUB.DOMAIN.TLD`.
+
+
+### Apache
+
+As with nginx above, you can use [Apache](https://httpd.apache.org) as the reverse proxy.
+First, we will need to enable the apache modules that we are going to need:
+
+```bash
+a2enmod ssl rewrite proxy proxy_http proxy_wstunnel
+```
+
+Our Apache configuration listes
+
+```bash
+# redirect HTTP to HTTPS
+Listen 80
+<VirtualHost HUB.DOMAIN.TLD:80>
+  ServerName HUB.DOMAIN.TLD
+  Redirect / https://HUB.DOMAIN.TLD/
+</VirtualHost>
+
+Listen 443
+<VirtualHost HUB.DOMAIN.TLD:443>
+
+  ServerName HUB.DOMAIN.TLD
+
+  # configure SSL
+  SSLEngine on
+  SSLCertificateFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem
+  SSLCertificateKeyFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem
+  SSLProtocol All -SSLv2 -SSLv3
+  SSLOpenSSLConfCmd DHParameters /etc/ssl/certs/dhparam.pem
+  SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+
+  # Use RewriteEngine to handle websocket connection upgrades
+  RewriteEngine On
+  RewriteCond %{HTTP:Connection} Upgrade [NC]
+  RewriteCond %{HTTP:Upgrade} websocket [NC]
+  RewriteRule /(.*) ws://127.0.0.1:8000/$1 [P,L]
+
+  <Location "/">
+    # preserve Host header to avoid cross-origin problems
+    ProxyPreserveHost on
+    # proxy to JupyterHub
+    ProxyPass         http://127.0.0.1:8000/
+    ProxyPassReverse  http://127.0.0.1:8000/
+  </Location>
+</VirtualHost>
+```
