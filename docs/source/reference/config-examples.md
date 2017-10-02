@@ -103,6 +103,13 @@ Let's start out with needed JupyterHub configuration in `jupyterhub_config.py`:
 c.JupyterHub.ip = '127.0.0.1'
 ```
 
+For high-quality SSL configuration, we also generate Diffie-Helman parameters.
+This can take a few minutes:
+
+```bash
+openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
+```
+
 The **`nginx` server config file** is fairly standard fare except for the two
 `location` blocks within the `HUB.DOMAIN.TLD` config file:
 
