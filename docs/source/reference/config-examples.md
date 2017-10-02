@@ -109,24 +109,24 @@ The **`nginx` server config file** is fairly standard fare except for the two
 ```bash
 # HTTP server to redirect all 80 traffic to SSL/HTTPS
 server {
-	listen 80;
-	server_name HUB.DOMAIN.TLD;
+    listen 80;
+    server_name HUB.DOMAIN.TLD;
 
-	# Tell all requests to port 80 to be 302 redirected to HTTPS
-	return 302 https://$host$request_uri;
+    # Tell all requests to port 80 to be 302 redirected to HTTPS
+    return 302 https://$host$request_uri;
 }
 
 # HTTPS server to handle JupyterHub
 server {
-	listen 443;
-	ssl on;
+    listen 443;
+    ssl on;
 
-	server_name HUB.DOMAIN.TLD;
+    server_name HUB.DOMAIN.TLD;
 
-	ssl_certificate /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem;
-	ssl_certificate_key /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem;
 
-	ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+    ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
     ssl_prefer_server_ciphers on;
     ssl_dhparam /etc/ssl/certs/dhparam.pem;
     ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
@@ -136,31 +136,31 @@ server {
     ssl_stapling_verify on;
     add_header Strict-Transport-Security max-age=15768000;
 
-	# Managing literal requests to the JupyterHub front end
-	location / {
-		proxy_pass https://127.0.0.1:8000;
-		proxy_set_header X-Real-IP $remote_addr;
-		proxy_set_header Host $host;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    # Managing literal requests to the JupyterHub front end
+    location / {
+        proxy_pass https://127.0.0.1:8000;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }
 
-	# Managing WebHook/Socket requests between hub user servers and external proxy
+    # Managing WebHook/Socket requests between hub user servers and external proxy
     location ~* /(api/kernels/[^/]+/(channels|iopub|shell|stdin)|terminals/websocket)/? {
-		proxy_pass https://127.0.0.1:8000;
+        proxy_pass https://127.0.0.1:8000;
 
-		proxy_set_header X-Real-IP $remote_addr;
-		proxy_set_header Host $host;
-		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-		# WebSocket support
-		proxy_http_version 1.1;
-		proxy_set_header Upgrade $http_upgrade;
-		proxy_set_header Connection $connection_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # WebSocket support
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
 
     }
 
-	# Managing requests to verify letsencrypt host
+    # Managing requests to verify letsencrypt host
     location ~ /.well-known {
-		allow all;
+        allow all;
     }
 
 
@@ -178,30 +178,30 @@ of the site as well as the applicable location call:
 
 ```bash
 server {
-	listen 80;
-	server_name NO_HUB.DOMAIN.TLD;
+    listen 80;
+    server_name NO_HUB.DOMAIN.TLD;
 
-	# Tell all requests to port 80 to be 302 redirected to HTTPS
-	return 302 https://$host$request_uri;
+    # Tell all requests to port 80 to be 302 redirected to HTTPS
+    return 302 https://$host$request_uri;
 }
 
 server {
-	listen 443;
-	ssl on;
+    listen 443;
+    ssl on;
 
-	# INSERT OTHER SSL PARAMETERS HERE AS ABOVE
+    # INSERT OTHER SSL PARAMETERS HERE AS ABOVE
 
-	# Set the appropriate root directory
-	root /var/www/html
+    # Set the appropriate root directory
+    root /var/www/html
 
-	# Set URI handling
-	location / {
-		try_files $uri $uri/ =404;
-	}
+    # Set URI handling
+    location / {
+        try_files $uri $uri/ =404;
+    }
 
-	# Managing requests to verify letsencrypt host
+    # Managing requests to verify letsencrypt host
     location ~ /.well-known {
-		allow all;
+        allow all;
     }
 
 }
