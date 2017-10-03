@@ -5,7 +5,9 @@ its link will bring up a GitHub listing of changes. Use `git log` on the
 command line for details.
 
 
-## [Unreleased] 0.8
+## [Unreleased]
+
+## [0.8.0] 2017-10-03
 
 JupyterHub 0.8 is a big release!
 
@@ -233,7 +235,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.7.2...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...HEAD
+[0.8.0]: https://github.com/jupyterhub/jupyterhub/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/jupyterhub/jupyterhub/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/jupyterhub/jupyterhub/compare/0.7.0...0.7.1
 [0.7.0]: https://github.com/jupyterhub/jupyterhub/compare/0.6.1...0.7.0
