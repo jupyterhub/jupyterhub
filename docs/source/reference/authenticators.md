@@ -84,6 +84,7 @@ class DictionaryAuthenticator(Authenticator):
             return data['username']
 ```
 
+
 #### Normalize usernames
 
 Since the Authenticator and Spawner both use the same username,
@@ -116,6 +117,7 @@ To only allow usernames that start with 'w':
 c.Authenticator.username_pattern = r'w.*'
 ```
 
+
 ### How to write a custom authenticator
 
 You can use custom Authenticator subclasses to enable authentication
@@ -133,6 +135,77 @@ See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/
 
 If you are interested in writing a custom authenticator, you can read
 [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
+
+
+### Authentication state
+
+JupyterHub 0.8 adds the ability to persist state related to authentication,
+such as auth-related tokens.
+If such state should be persisted, `.authenticate()` should return a dictionary of the form:
+
+```python
+{
+  'username': 'name',
+  'auth_state': {
+    'key': 'value',
+  }
+}
+```
+
+where `username` is the username that has been authenticated,
+and `auth_state` is any JSON-serializable dictionary.
+
+Because `auth_state` may contain sensitive information,
+it is encrypted before being stored in the database.
+To store auth_state, two conditions must be met:
+
+1. persisting auth state must be enabled explicitly via configuration
+   ```python
+   c.Authenticator.enable_auth_state = True
+   ```
+2. encryption must be enabled by the presence of `JUPYTERHUB_CRYPT_KEY` environment variable,
+   which should be a hex-encoded 32-byte key.
+   For example:
+   ```bash
+   export JUPYTERHUB_CRYPT_KEY=$(openssl rand -hex 32)
+   ```
+
+
+JupyterHub uses [Fernet](https://cryptography.io/en/latest/fernet/) to encrypt auth_state.
+To facilitate key-rotation, `JUPYTERHUB_CRYPT_KEY` may be a semicolon-separated list of encryption keys.
+If there are multiple keys present, the **first** key is always used to persist any new auth_state.
+
+
+#### Using auth_state
+
+Typically, if `auth_state` is persisted it is desirable to affect the Spawner environment in some way.
+This may mean defining environment variables, placing certificate in the user's home directory, etc.
+The `Authenticator.pre_spawn_start` method can be used to pass information from authenticator state
+to Spawner environment:
+
+```python
+class MyAuthenticator(Authenticator):
+    @gen.coroutine
+    def authenticate(self, handler, data=None):
+        username = yield identify_user(handler, data)
+        upstream_token = yield token_for_user(username)
+        return {
+            'username': username,
+            'auth_state': {
+                'upstream_token': upstream_token,
+            },
+        }
+
+    @gen.coroutine
+    def pre_spawn_start(self, user, spawner):
+        """Pass upstream_token to spawner via environment variable"""
+        auth_state = yield user.get_auth_state()
+        if not auth_state:
+            # auth_state not enabled
+            return
+        spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
+```
+
 
 
 ## JupyterHub as an OAuth provider
