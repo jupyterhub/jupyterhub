@@ -9,6 +9,7 @@ Technical Reference
    authenticators
    spawners
    services
+   proxy
    rest
    upgrading
    config-examples

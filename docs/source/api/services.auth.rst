@@ -17,7 +17,7 @@ Module: :mod:`jupyterhub.services.auth`
     :members:
 
 :class:`HubOAuth`
-----------------
+-----------------
 
 .. autoconfigurable:: HubOAuth
     :members:
@@ -30,7 +30,7 @@ Module: :mod:`jupyterhub.services.auth`
     :members:
 
 :class:`HubOAuthenticated`
--------------------------
+--------------------------
 
 .. autoclass:: HubOAuthenticated
 
