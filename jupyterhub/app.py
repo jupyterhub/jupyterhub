@@ -31,6 +31,8 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
 import tornado.options
 from tornado import gen, web
+from tornado.platform.asyncio import AsyncIOMainLoop
+AsyncIOMainLoop().install()
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
@@ -1629,7 +1631,6 @@ class JupyterHub(Application):
     @classmethod
     def launch_instance(cls, argv=None):
         self = cls.instance()
-        IOLoop.configure('tornado.platform.asyncio.AsyncIOLoop')
         loop = IOLoop.current()
         loop.add_callback(self.launch_instance_async, argv)
         try:
