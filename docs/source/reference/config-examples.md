@@ -117,6 +117,8 @@ The **`nginx` server config file** is fairly standard fare except for the two
 
 ```bash
 # top-level http config for websocket headers
+# If Upgrade is defined, Connection = upgrade
+# If Upgrade is empty, Connection = close
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
@@ -193,6 +195,7 @@ server {
     ssl on;
 
     # INSERT OTHER SSL PARAMETERS HERE AS ABOVE
+    # SSL cert may differ
 
     # Set the appropriate root directory
     root /var/www/html
@@ -224,7 +227,12 @@ First, we will need to enable the apache modules that we are going to need:
 a2enmod ssl rewrite proxy proxy_http proxy_wstunnel
 ```
 
-Our Apache configuration listes
+Our Apache configuration is equivalent to the nginx configuration above:
+
+- Redirect HTTP to HTTPS
+- Good SSL Configuration
+- Support for websockets on any proxied URL
+- JupyterHub is running locally at http://127.0.0.1:8000
 
 ```bash
 # redirect HTTP to HTTPS
