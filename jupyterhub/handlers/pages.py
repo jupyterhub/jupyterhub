@@ -201,7 +201,7 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [ getattr(c, o)() for c, o in zip(cols, orders) ]
 
-        users = self.db.query(orm.User).join(orm.Spawner).order_by(*ordered)
+        users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered)
         users = [ self._user_from_orm(u) for u in users ]
         running = [ u for u in users if u.running ]
 
