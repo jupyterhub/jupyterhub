@@ -190,7 +190,7 @@ class MyAuthenticator(Authenticator):
         username = yield identify_user(handler, data)
         upstream_token = yield token_for_user(username)
         return {
-            'username': username,
+            'name': username,
             'auth_state': {
                 'upstream_token': upstream_token,
             },
