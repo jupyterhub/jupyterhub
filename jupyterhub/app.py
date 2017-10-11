@@ -18,6 +18,7 @@ import sys
 from textwrap import dedent
 from urllib.parse import urlparse
 
+
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
@@ -32,6 +33,7 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
 import tornado.options
 from tornado import gen, web
+from tornado.netutil import bind_unix_socket
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
@@ -408,6 +410,13 @@ class JupyterHub(Application):
         help="""The ip address for the Hub process to *bind* to.
 
         See `hub_connect_ip` for cases where the bind and connect address should differ.
+        """
+    ).tag(config=True)
+
+    hub_socket = Unicode('',
+        help="""Set the tornado application to listen on a unix socket.
+
+        If set, take precedence over the `hub_port` and `hub_ip` settings.
         """
     ).tag(config=True)
 
@@ -1531,12 +1540,16 @@ class JupyterHub(Application):
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
         try:
-            self.http_server.listen(self.hub_port, address=self.hub_ip)
+            if self.hub_socket:
+                socket = bind_unix_socket(self.hub_socket)
+                self.http_server.add_socket(socket)
+                self.log.info("Hub API listening on %s", self.hub_socket)
+            else:
+                self.http_server.listen(self.hub_port, address=self.hub_ip)
+                self.log.info("Hub API listening on %s", self.hub.bind_url)
         except Exception:
             self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
-        else:
-            self.log.info("Hub API listening on %s", self.hub.bind_url)
 
         # start the proxy
         if self.proxy.should_start:
