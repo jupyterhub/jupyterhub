@@ -402,7 +402,7 @@ class HubOAuth(HubAuth):
         because we don't want to use the same cookie name
         across OAuth clients.
         """
-        return self.oauth_client_id
+        return self.oauth_client_id.replace('/','')
 
     @property
     def state_cookie_name(self):
