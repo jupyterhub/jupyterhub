@@ -144,6 +144,12 @@ class Authenticator(LoggingConfigurable):
 
         Return True if username is valid, False otherwise.
         """
+        if '/' in username:
+            # / is not allowed in usernames
+            return False
+        if not username:
+            # empty usernames are not allowed
+            return False
         if not self.username_regex:
             return True
         return bool(self.username_regex.match(username))
