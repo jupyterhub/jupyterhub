@@ -32,6 +32,8 @@ from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.log import app_log, access_log, gen_log
 import tornado.options
 from tornado import gen, web
+from tornado.platform.asyncio import AsyncIOMainLoop
+AsyncIOMainLoop().install()
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
