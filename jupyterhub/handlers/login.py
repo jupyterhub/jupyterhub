@@ -20,7 +20,8 @@ class LogoutHandler(BaseHandler):
             self.clear_login_cookie()
             self.statsd.incr('logout')
         if self.authenticator.auto_login:
-            self.render_template('logout.html')
+            html = self.render_template('logout.html')
+            self.finish(html)
         else:
             self.redirect(self.settings['login_url'], permanent=False)
 
