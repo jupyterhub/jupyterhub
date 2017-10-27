@@ -351,6 +351,9 @@ class JupyterHub(Application):
     base_url = URLPrefix('/',
         help="The base URL of the entire application"
     ).tag(config=True)
+    allow_origin = Unicode(
+        help="Origin to allow executing Cross-origin resource sharing"
+    ).tag(config=True)
     logo_file = Unicode('',
         help="Specify path to a logo image to override the Jupyter logo in the banner."
     ).tag(config=True)
@@ -1318,6 +1321,7 @@ class JupyterHub(Application):
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,
+            allow_origin=self.allow_origin,
             cookie_secret=self.cookie_secret,
             cookie_max_age_days=self.cookie_max_age_days,
             login_url=login_url,
