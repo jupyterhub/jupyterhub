@@ -99,6 +99,13 @@ flags = {
     'no-db': ({'JupyterHub': {'db_url': 'sqlite:///:memory:'}},
         "disable persisting state database to disk"
     ),
+    'upgrade-db': ({'JupyterHub': {'upgrade_db': True}},
+        """Automatically upgrade the database if needed on startup.
+
+        Only safe if the database has been backed up.
+        sqlite database files will be backed up automatically.
+        """
+    ),
     'no-ssl': ({'JupyterHub': {'confirm_no_ssl': True}},
         "[DEPRECATED in 0.7: does nothing]"
     ),
@@ -606,6 +613,12 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    upgrade_db = Bool(False,
+        help="""Upgrade the database automatically on start.
+
+        Only safe if database is regularly backed up.
+        sqlite databases will be backed up to a local file automatically.
+    """).tag(config=True)
     reset_db = Bool(False,
         help="Purge and reset the database."
     ).tag(config=True)
@@ -869,7 +882,11 @@ class JupyterHub(Application):
 
     def init_db(self):
         """Create the database connection"""
+
         self.log.debug("Connecting to db: %s", self.db_url)
+        if self.upgrade_db:
+            dbutil.upgrade_if_needed(self.db_url, log=self.log)
+
         try:
             self.session_factory = orm.new_session_factory(
                 self.db_url,
