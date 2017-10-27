@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import copy
 import re
 from datetime import timedelta
 from http.client import responses
@@ -705,9 +706,11 @@ class UserSpawnHandler(BaseHandler):
                 # Condition: spawner not active and _spawn_future exists and contains an Exception
                 # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
                 # We should point the user to Home if the most recent spawn failed.
+                exc = spawner._spawn_future.exception()
                 self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
-                    spawner._log_name, spawner._spawn_future.exception())
-                raise spawner._spawn_future.exception()
+                    spawner._log_name, exc)
+                # raise a copy because each time an Exception object is re-raised, its traceback grows
+                raise copy.copy(exc).with_traceback(exc.__traceback__)
 
             # check for pending spawn
             if spawner.pending and spawner._spawn_future:
