@@ -103,7 +103,7 @@ flags = {
         """Automatically upgrade the database if needed on startup.
 
         Only safe if the database has been backed up.
-        sqlite database files will be backed up automatically.
+        Only SQLite database files will be backed up automatically.
         """
     ),
     'no-ssl': ({'JupyterHub': {'confirm_no_ssl': True}},
@@ -617,7 +617,7 @@ class JupyterHub(Application):
         help="""Upgrade the database automatically on start.
 
         Only safe if database is regularly backed up.
-        sqlite databases will be backed up to a local file automatically.
+        Only SQLite databases will be backed up to a local file automatically.
     """).tag(config=True)
     reset_db = Bool(False,
         help="Purge and reset the database."
