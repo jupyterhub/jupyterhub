@@ -24,7 +24,6 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine, Table
 
-from .dbutil import _temp_alembic_ini
 from .utils import (
     random_port,
     new_token, hash_token, compare_token,
@@ -462,6 +461,8 @@ def check_db_revision(engine):
     # Check database schema version
     current_table_names = set(engine.table_names())
     my_table_names = set(Base.metadata.tables.keys())
+
+    from .dbutil import _temp_alembic_ini
 
     with _temp_alembic_ini(engine.url) as ini:
         cfg = alembic.config.Config(ini)

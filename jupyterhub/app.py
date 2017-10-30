@@ -12,7 +12,6 @@ import logging
 from operator import itemgetter
 import os
 import re
-import shutil
 import signal
 import sys
 from textwrap import dedent
@@ -23,7 +22,6 @@ if sys.version_info[:2] < (3, 3):
 
 from jinja2 import Environment, FileSystemLoader
 
-from sqlalchemy import create_engine
 from sqlalchemy.exc import OperationalError
 
 from tornado.httpclient import AsyncHTTPClient
@@ -101,6 +99,13 @@ flags = {
     'no-db': ({'JupyterHub': {'db_url': 'sqlite:///:memory:'}},
         "disable persisting state database to disk"
     ),
+    'upgrade-db': ({'JupyterHub': {'upgrade_db': True}},
+        """Automatically upgrade the database if needed on startup.
+
+        Only safe if the database has been backed up.
+        Only SQLite database files will be backed up automatically.
+        """
+    ),
     'no-ssl': ({'JupyterHub': {'confirm_no_ssl': True}},
         "[DEPRECATED in 0.7: does nothing]"
     ),
@@ -167,39 +172,11 @@ class UpgradeDB(Application):
     aliases = common_aliases
     classes = []
 
-    def _backup_db_file(self, db_file):
-        """Backup a database file"""
-        if not os.path.exists(db_file):
-            return
-
-        timestamp = datetime.now().strftime('.%Y-%m-%d-%H%M%S')
-        backup_db_file = db_file + timestamp
-        for i in range(1, 10):
-            if not os.path.exists(backup_db_file):
-                break
-            backup_db_file = '{}.{}.{}'.format(db_file, timestamp, i)
-        if os.path.exists(backup_db_file):
-            self.exit("backup db file already exists: %s" % backup_db_file)
-
-        self.log.info("Backing up %s => %s", db_file, backup_db_file)
-        shutil.copy(db_file, backup_db_file)
-
     def start(self):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         self.log = hub.log
-        if (hub.db_url.startswith('sqlite:///')):
-            db_file = hub.db_url.split(':///', 1)[1]
-            self._backup_db_file(db_file)
-        self.log.info("Upgrading %s", hub.db_url)
-        # run check-db-revision first
-        engine = create_engine(hub.db_url)
-        try:
-            orm.check_db_revision(engine)
-        except orm.DatabaseSchemaMismatch:
-            # ignore mismatch error because that's what we are here for!
-            pass
-        dbutil.upgrade(hub.db_url)
+        dbutil.upgrade_if_needed(hub.db_url, log=self.log)
 
 
 class JupyterHub(Application):
@@ -636,6 +613,12 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    upgrade_db = Bool(False,
+        help="""Upgrade the database automatically on start.
+
+        Only safe if database is regularly backed up.
+        Only SQLite databases will be backed up to a local file automatically.
+    """).tag(config=True)
     reset_db = Bool(False,
         help="Purge and reset the database."
     ).tag(config=True)
@@ -899,7 +882,11 @@ class JupyterHub(Application):
 
     def init_db(self):
         """Create the database connection"""
+
         self.log.debug("Connecting to db: %s", self.db_url)
+        if self.upgrade_db:
+            dbutil.upgrade_if_needed(self.db_url, log=self.log)
+
         try:
             self.session_factory = orm.new_session_factory(
                 self.db_url,
