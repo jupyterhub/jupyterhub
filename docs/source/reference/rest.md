@@ -115,11 +115,10 @@ r.json()
 ```
 
 The same API token can also authorize access to the [Jupyter Notebook REST API][]
-provided by notebook servers managed by JupyterHub.
-To do so, the following must be true:
+provided by notebook servers managed by JupyterHub if one of the following is true:
 
-1. The token used is tied to an admin user or service
-2. `c.JupyterHub.admin_access` must be set to `True`
+1. The token is for the same user as the owner of the notebook
+2. The token is tied to an admin user or service **and** `c.JupyterHub.admin_access` is set to `True`
 
 ## Enabling users to spawn multiple named-servers via the API
 
