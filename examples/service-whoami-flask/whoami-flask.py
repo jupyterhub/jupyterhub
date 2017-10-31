@@ -43,7 +43,7 @@ def authenticated(f):
     return decorated
 
 
-@app.route(prefix + '/')
+@app.route(prefix)
 @authenticated
 def whoami(user):
     return Response(
