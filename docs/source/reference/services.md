@@ -178,7 +178,13 @@ When you run a service that has a url, it will be accessible under a
 your service to route proxied requests properly, it must take
 `JUPYTERHUB_SERVICE_PREFIX` into account when routing requests. For example, a
 web service would normally service its root handler at `'/'`, but the proxied
-service would need to serve `JUPYTERHUB_SERVICE_PREFIX + '/'`.
+service would need to serve `JUPYTERHUB_SERVICE_PREFIX`.
+
+Note that `JUPYTERHUB_SERVICE_PREFIX` will contain a trailing slash. This must
+be taken into consideration when creating the service routes. If you include an
+extra slash you might get unexpected behavior. For example if your service has a
+`/foo` endpoint, the route would be `JUPYTERHUB_SERVICE_PREFIX + foo`, and
+`/foo/bar` would be `JUPYTERHUB_SERVICE_PREFIX + foo/bar`.
 
 ## Hub Authentication and Services
 
@@ -269,7 +275,7 @@ def authenticated(f):
     return decorated
 
 
-@app.route(prefix + '/')
+@app.route(prefix)
 @authenticated
 def whoami(user):
     return Response(
