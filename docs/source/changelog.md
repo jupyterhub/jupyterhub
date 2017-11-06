@@ -7,7 +7,31 @@ command line for details.
 
 ## [Unreleased]
 
-## [0.8.0] 2017-10-03
+## 0.8
+
+### [0.8.1] 2017-11-03
+
+JupyterHub 0.8.1 is a collection of bugfixes and small improvements on 0.8.
+
+#### Added
+
+- Run tornado with AsyncIO by default
+- Add `jupyterhub --upgrade-db` flag for automatically upgrading the database as part of startup.
+  This is useful for cases where manually running `jupyterhub upgrade-db`
+  as a separate step is unwieldy.
+- Avoid creating backups of the database when no changes are to be made by
+  `jupyterhub upgrade-db`.
+
+#### Fixed
+
+- Add some further validation to usernames - `/` is not allowed in usernames.
+- Fix empty logout page when using auto_login
+- Fix autofill of username field in default login form.
+- Fix listing of users on the admin page who have not yet started their server.
+- Fix ever-growing traceback when re-raising Exceptions from spawn failures.
+
+
+### [0.8.0] 2017-10-03
 
 JupyterHub 0.8 is a big release!
 
@@ -235,7 +259,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...HEAD
+[0.8.1]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/jupyterhub/jupyterhub/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/jupyterhub/jupyterhub/compare/0.7.1...0.7.2
 [0.7.1]: https://github.com/jupyterhub/jupyterhub/compare/0.7.0...0.7.1
