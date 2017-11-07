@@ -29,6 +29,7 @@ JupyterHub 0.8.1 is a collection of bugfixes and small improvements on 0.8.
 - Fix autofill of username field in default login form.
 - Fix listing of users on the admin page who have not yet started their server.
 - Fix ever-growing traceback when re-raising Exceptions from spawn failures.
+- Remove use of deprecated `bower` for javascript client dependencies.
 
 
 ### [0.8.0] 2017-10-03
