@@ -13,7 +13,8 @@ def get_data_files():
         # walk up, looking for prefix/share/jupyter
         while path != '/':
             share_jupyter = join(path, 'share', 'jupyter', 'hub')
-            if exists(join(share_jupyter, 'static', 'components')):
+            static = join(share_jupyter, 'static')
+            if all(exists(join(static, f)) for f in ['components', 'css']):
                 return share_jupyter
             path, _ = split(path)
     # didn't find it, give up
