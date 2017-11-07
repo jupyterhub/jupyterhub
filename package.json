@@ -1,17 +1,27 @@
 {
- "name": "jupyterhub-deps",
- "version": "0.0.0",
- "description": "JupyterHub nodejs dependencies",
- "author": "Jupyter Developers",
- "license": "BSD",
- "repository": {
-  "type": "git",
-  "url": "https://github.com/jupyter/jupyterhub.git"
- },
- "devDependencies": {
-  "bower": "*",
-  "less": "^2.7.1",
-  "less-plugin-clean-css": "^1.5.1",
-  "clean-css": "^3.4.13"
- }
+  "name": "jupyterhub-deps",
+  "version": "0.0.0",
+  "description": "JupyterHub nodejs dependencies",
+  "author": "Jupyter Developers",
+  "license": "BSD",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jupyter/jupyterhub.git"
+  },
+  "scripts": {
+    "postinstall": "./bower-lite",
+    "lessc": "lessc"
+  },
+  "devDependencies": {
+    "less": "^2.7.1",
+    "less-plugin-clean-css": "^1.5.1",
+    "clean-css": "^3.4.13"
+  },
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "font-awesome": "^4.7.0",
+    "jquery": "^3.2.1",
+    "moment": "^2.18.1",
+    "requirejs": "^2.3.4"
+  }
 }
