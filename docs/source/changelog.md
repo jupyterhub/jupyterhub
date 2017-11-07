@@ -9,7 +9,7 @@ command line for details.
 
 ## 0.8
 
-### [0.8.1] 2017-11-03
+### [0.8.1] 2017-11-07
 
 JupyterHub 0.8.1 is a collection of bugfixes and small improvements on 0.8.
 
