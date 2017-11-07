@@ -214,6 +214,7 @@ class CSS(BaseCommand):
             return
 
         self.run_command('js')
+        print("Building css with less")
 
         style_less = pjoin(static, 'less', 'style.less')
         style_css = pjoin(static, 'css', 'style.min.css')
