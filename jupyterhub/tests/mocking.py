@@ -297,25 +297,26 @@ class StubSingleUserSpawner(MockSpawner):
             io_loop = IOLoop()
             io_loop.make_current()
             io_loop.add_callback(lambda : evt.set())
-            
+
             with mock.patch.dict(os.environ, env):
                 app = self._app = MockSingleUserServer()
                 app.initialize(args)
                 assert app.hub_auth.oauth_client_id
                 assert app.hub_auth.api_token
                 app.start()
-        
+
         self._thread = threading.Thread(target=_run)
         self._thread.start()
         ready = evt.wait(timeout=3)
         assert ready
         return (ip, port)
-    
+
     @gen.coroutine
     def stop(self):
         self._app.stop()
-        self._thread.join()
-    
+        self._thread.join(timeout=30)
+        assert not self._thread.is_alive()
+
     @gen.coroutine
     def poll(self):
         if self._thread is None:

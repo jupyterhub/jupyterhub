@@ -4,7 +4,6 @@ import os
 from queue import Queue
 import sys
 from threading import Thread
-import time
 from unittest import mock
 from urllib.parse import urlparse
 
@@ -64,7 +63,6 @@ def test_expiring_dict():
 
 
 def test_hub_auth():
-    start = time.monotonic()
     auth = HubAuth(cookie_name='foo')
     mock_model = {
         'name': 'onyxia'
@@ -139,8 +137,9 @@ def test_hub_authenticated(request):
     t.start()
 
     def finish_thread():
-        loop.stop()
-        t.join()
+        loop.add_callback(loop.stop)
+        t.join(timeout=30)
+        assert not t.is_alive()
     request.addfinalizer(finish_thread)
 
     # wait for thread to start
@@ -154,7 +153,7 @@ def test_hub_authenticated(request):
         r.raise_for_status()
         assert r.status_code == 302
         assert auth.login_url in r.headers['Location']
-        
+
         # wrong cookie
         m.get(bad_url, status_code=404)
         r = requests.get('http://127.0.0.1:%i' % port,
