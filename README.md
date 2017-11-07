@@ -20,7 +20,7 @@
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** which spawns, manages, and proxies multiple instances of the
-single-user [Jupyter notebook (IPython notebook)](https://jupyter-notebook.readthedocs.io)
+single-user [Jupyter notebook](https://jupyter-notebook.readthedocs.io)
 server.
 
 [Project Jupyter](https://jupyter.org) created JupyterHub to support many
@@ -34,7 +34,7 @@ Three main actors make up JupyterHub:
 
 - multi-user **Hub** (tornado process)
 - configurable http **proxy** (node-http-proxy)
-- multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
+- multiple **single-user Jupyter notebook servers** (Python/Jupyter/tornado)
 
 Basic principles for operation are:
 
