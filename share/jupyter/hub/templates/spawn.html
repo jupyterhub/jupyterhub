@@ -15,18 +15,10 @@
     <form enctype="multipart/form-data" id="spawn_form" action="{{url}}" method="post" role="form">
       {{spawner_options_form | safe}}
       <br>
-      <input type="submit" value="Spawn" class="btn btn-jupyter">
+      <input type="submit" value="Spawn" class="btn btn-jupyter form-control">
     </form>
   </div>
 </div>
 
 {% endblock %}
 
-{% block script %}
-<script type="text/javascript">
-require(["jquery"], function ($) {
-  // add bootstrap form-control class to inputs
-  $("#spawn_form").find("input, select, textarea, button").addClass("form-control");
-});
-</script>
-{% endblock %}
