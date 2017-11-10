@@ -172,9 +172,25 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         $("#stop-all-servers-dialog").modal();
     });
 
+    $("#start-all-servers").click(function () {
+        $("#start-all-servers-dialog").modal();
+    });
+
     $("#stop-all-servers-dialog").find(".stop-all-button").click(function () {
         // stop all clicks all the active stop buttons
         $('.stop-server').not('.hidden').click();
+    });
+
+    function start(el) {
+        return function(){
+            $(el).click();
+        }
+    }
+
+    $("#start-all-servers-dialog").find(".start-all-button").click(function () {
+        $('.start-server').not('.hidden').each(function(i){
+           setTimeout(start(this), i * 500);
+        });
     });
 
     $("#shutdown-hub").click(function () {
