@@ -121,12 +121,6 @@ from distutils.command.build_py import build_py
 from distutils.command.sdist import sdist
 
 
-npm_path = os.pathsep.join([
-    pjoin(here, 'node_modules', '.bin'),
-    os.environ.get("PATH", os.defpath),
-])
-
-
 def mtime(path):
     """shorthand for mtime"""
     return os.stat(path).st_mtime
@@ -174,7 +168,7 @@ class NPM(BaseCommand):
             return
 
         print("installing js dependencies with npm")
-        check_call(['npm', 'install', '--progress=false'], cwd=here, shell=shell)
+        check_call(['npm', 'install', '--progress=false', '--unsafe-perm'], cwd=here, shell=shell)
         os.utime(self.node_modules)
 
         os.utime(self.bower_dir)
