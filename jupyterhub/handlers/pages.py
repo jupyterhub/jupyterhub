@@ -67,6 +67,12 @@ class HomeHandler(BaseHandler):
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             yield user.spawner.poll_and_notify()
+
+        # send user to /hub/user/:name if spawner is pending
+        if user.spawner.pending:
+            url = url_path_join(self.hub.base_url, user.url)
+            self.redirect(url)
+            return
         # send the user to /spawn if they aren't running,
         # to establish that this is an explicit spawn request rather
         # than an implicit one, which can be caused by any link to `/user/:name`
@@ -226,12 +232,12 @@ class TokenPageHandler(BaseHandler):
 
 class ProxyErrorHandler(BaseHandler):
     """Handler for rendering proxy error pages"""
-    
+
     def get(self, status_code_s):
         status_code = int(status_code_s)
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         # build template namespace
-        
+
         hub_home = url_path_join(self.hub.base_url, 'home')
         message_html = ''
         if status_code == 503:
