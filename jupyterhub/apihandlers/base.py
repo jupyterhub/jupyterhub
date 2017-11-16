@@ -18,14 +18,14 @@ class APIHandler(BaseHandler):
         return '; '.join([super().content_security_policy, "default-src 'none'"])
 
     def set_default_headers(self):
-        self.set_header('Content-Type', 'application/json')
         super().set_default_headers()
+        self.set_header('Content-Type', 'application/json')
 
     def check_referer(self):
         """Check Origin for cross-site API requests.
-        
+
         Copied from WebSocket with changes:
-        
+
         - allow unspecified host/referer (e.g. scripts)
         """
         host = self.request.headers.get("Host")
@@ -39,7 +39,7 @@ class APIHandler(BaseHandler):
         if not referer:
             self.log.warning("Blocking API request with no referer")
             return False
-        
+
         host_path = url_path_join(host, self.hub.base_url)
         referer_path = referer.split('://', 1)[-1]
         if not (referer_path + '/').startswith(host_path):
@@ -47,7 +47,7 @@ class APIHandler(BaseHandler):
                 referer, host_path)
             return False
         return True
-    
+
     def get_current_user_cookie(self):
         """Override get_user_cookie to check Referer header"""
         cookie_user = super().get_current_user_cookie()
@@ -178,5 +178,4 @@ class APIHandler(BaseHandler):
 
 
     def options(self, *args, **kwargs):
-        self.set_header('Access-Control-Allow-Headers', 'accept, content-type')
         self.finish()

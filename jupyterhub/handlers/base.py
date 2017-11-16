@@ -12,7 +12,7 @@ from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 from jinja2 import TemplateNotFound
 
 from tornado.log import app_log
-from tornado.httputil import url_concat
+from tornado.httputil import url_concat, HTTPHeaders
 from tornado.ioloop import IOLoop
 from tornado.web import RequestHandler
 from tornado import gen, web
@@ -131,12 +131,15 @@ class BaseHandler(RequestHandler):
 
         By default sets Content-Security-Policy of frame-ancestors 'self'.
         """
-        headers = self.settings.get('headers', {})
+        # wrap in HTTPHeaders for case-insensitivity
+        headers = HTTPHeaders(self.settings.get('headers', {}))
         headers.setdefault("X-JupyterHub-Version", __version__)
 
         for header_name, header_content in headers.items():
             self.set_header(header_name, header_content)
 
+        if 'Access-Control-Allow-Headers' not in headers:
+            self.set_header('Access-Control-Allow-Headers', 'accept, content-type, authorization')
         if 'Content-Security-Policy' not in headers:
             self.set_header('Content-Security-Policy', self.content_security_policy)
 
