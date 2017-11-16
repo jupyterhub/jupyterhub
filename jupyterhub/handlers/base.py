@@ -265,6 +265,8 @@ class BaseHandler(RequestHandler):
             kwargs['secure'] = True
         if self.subdomain_host:
             kwargs['domain'] = self.domain
+
+        kwargs.update(self.settings.get('cookie_options', {}))
         self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
         self.set_secure_cookie(
             server.cookie_name,
