@@ -675,7 +675,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     statsd_host = Unicode(
-        help="Host to send statsd metrics to"
+        help="Host to send statsd metrics to. An empty string (the default) disables sending metrics."
     ).tag(config=True)
 
     statsd_port = Integer(
