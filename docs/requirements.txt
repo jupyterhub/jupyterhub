@@ -1,3 +1,4 @@
 -r ../requirements.txt
 sphinx>=1.4
 recommonmark==0.4.0
+jupyter-alabaster-theme==0.4.0
