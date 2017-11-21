@@ -7,16 +7,15 @@ Dockerfile.base contains base image for jupyterhub. It does not work independent
 2. A jupyterhub_config file.
 3. Authentication and other libraries required by the specific jupyterhub_config file.
 
-## Example
-* An example of how to use this base image and add customizations is in Dockerfile.config.
-* A complete example on how to use this base image and config image is in docker-compose.yaml. To test it you can run 
-```
-docker-compose up
-```
 
-## Reference
-* Build an image from Dockerfile.base and push it to a docker registry (e.g https://hub.docker.com/r/ankitml/jupyterhub-base/)
-* Build the config image from Dockerfile.config and push it to a docker registry (e.g https://hub.docker.com/r/ankitml/jupyterhub-config)
-* Use this image in your cluster either from docker-compose example or kubernetes tutorial.
+## Steps to test it outside a cluster
 
+* start configurable-http-proxy in another container
+* specify CONFIGPROXY_AUTH_TOKEN env in both containers
+* put both containers on the same network (e.g. docker create network jupyterhub; docker run ... --net jupyterhub)
+* tell jupyterhub where CHP is (e.g. c.ConfigurableHTTPProxy.api_url = 'http://chp:8001')
+* tell jupyterhub not to start the proxy itself (`c.ConfigurableHTTPProxy.should_start = False)
+* Use dummy authenticator for ease of testing. Update following in jupyterhub_config file
+    - c.JupyterHub.authenticator_class = 'dummyauthenticator.DummyAuthenticator'
+    - c.DummyAuthenticator.password = "your strong password"
 
