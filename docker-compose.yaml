@@ -7,6 +7,11 @@ services:
       image: jupyter/configurable-http-proxy
       networks:
         - jupyterhub
+    # override entrypoint to expose api to the network
+      entrypoint:
+        - "configurable-http-proxy"
+        - "--api-ip=0.0.0.0"
+        - "--api-port=8001"
 
   hub:
       depends_on:
@@ -17,10 +22,8 @@ services:
       networks:
         - jupyterhub
       command: "python -m http.server"
+      volumes:
+        - ./:/home/jupyterhub
 
 networks:
   jupyterhub:
-
-
-
-
