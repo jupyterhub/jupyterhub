@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  proxy:
+      env_file:
+        - auth_token.env
+      image: jupyter/configurable-http-proxy
+
