@@ -16,6 +16,7 @@
 {% endblock %}
 
 {% block script %}
+{{ super() }}
 <script type="text/javascript">
 require(["jquery"], function ($) {
   $("#refresh").click(function () {
