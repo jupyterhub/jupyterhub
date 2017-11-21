@@ -213,13 +213,13 @@ pytest jupyterhub/tests
 Install the dependencies:
 
 ```bash
-cd docs
-pip3 install -r requirements.txt
+python3 -m pip install -r docs/requirements.txt
 ```
 
 Build the docs:
 
 ```bash
+cd docs
 make clean
 make html
 ```
