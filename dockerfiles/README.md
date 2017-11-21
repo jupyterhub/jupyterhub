@@ -1,5 +1,5 @@
-## What is Dockerfile.base
-Dockerfile.base contains base image for jupyterhub. It does not work independently, but only as part of a full jupyterhub cluster
+## What is Dockerfile.alpine
+Dockerfile.alpine  contains base image for jupyterhub. It does not work independently, but only as part of a full jupyterhub cluster
 
 ## How to use it?
 
