@@ -14,7 +14,7 @@ Dockerfile.base contains base image for jupyterhub. It does not work independent
 * specify CONFIGPROXY_AUTH_TOKEN env in both containers
 * put both containers on the same network (e.g. docker create network jupyterhub; docker run ... --net jupyterhub)
 * tell jupyterhub where CHP is (e.g. c.ConfigurableHTTPProxy.api_url = 'http://chp:8001')
-* tell jupyterhub not to start the proxy itself (`c.ConfigurableHTTPProxy.should_start = False)
+* tell jupyterhub not to start the proxy itself (c.ConfigurableHTTPProxy.should_start = False)
 * Use dummy authenticator for ease of testing. Update following in jupyterhub_config file
     - c.JupyterHub.authenticator_class = 'dummyauthenticator.DummyAuthenticator'
     - c.DummyAuthenticator.password = "your strong password"
