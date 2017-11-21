@@ -5,4 +5,22 @@ services:
       env_file:
         - auth_token.env
       image: jupyter/configurable-http-proxy
+      networks:
+        - jupyterhub
+
+  hub:
+      depends_on:
+        - proxy
+      env_file:
+        - auth_token.env
+      image: python:3.6.3-alpine3.6
+      networks:
+        - jupyterhub
+      command: "python -m http.server"
+
+networks:
+  jupyterhub:
+
+
+
 
