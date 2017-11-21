@@ -208,6 +208,22 @@ We use [pytest](http://doc.pytest.org/en/latest/) for **running tests**:
 pytest jupyterhub/tests
 ```
 
+### Building the Docs locally
+
+Install the dependencies:
+
+```bash
+cd docs
+pip3 install -r requirements.txt
+```
+
+Build the docs:
+
+```bash
+make clean
+make html
+```
+
 ### A note about platform support
 
 JupyterHub is supported on Linux/Unix based systems.
