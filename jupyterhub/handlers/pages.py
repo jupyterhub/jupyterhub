@@ -68,15 +68,10 @@ class HomeHandler(BaseHandler):
             # trigger poll_and_notify event in case of a server that died
             yield user.spawner.poll_and_notify()
 
-        # send user to /hub/user/:name if spawner is pending
-        if user.spawner.pending:
-            url = url_path_join(self.hub.base_url, user.url)
-            self.redirect(url)
-            return
-        # send the user to /spawn if they aren't running,
+        # send the user to /spawn if they aren't running or pending a spawn,
         # to establish that this is an explicit spawn request rather
         # than an implicit one, which can be caused by any link to `/user/:name`
-        url = user.url if user.running else url_path_join(self.hub.base_url, 'spawn')
+        url = user.url if user.running or user.spawner.pending else url_path_join(self.hub.base_url, 'spawn')
         html = self.render_template('home.html',
             user=user,
             url=url,
