@@ -710,12 +710,29 @@ class JupyterHub(Application):
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
     extra_log_file = Unicode(
-        help="""Send JupyterHub's logs to this file.
+        help="""
+        DEPRECATED: use output redirection instead, e.g.
 
-        This will *only* include the logs of the Hub itself,
-        not the logs of the proxy or any single-user servers.
+        jupyterhub &>> /var/log/jupyterhub.log
         """
     ).tag(config=True)
+
+    @observe('extra_log_file')
+    def _log_file_changed(self, change):
+        if change.new:
+            self.log.warning(dedent("""
+                extra_log_file is DEPRECATED in jupyterhub-0.8.2.
+
+                extra_log_file only redirects logs of the Hub itself,
+                and will discard any other output, such as
+                that of subprocess spawners or the proxy.
+
+                It is STRONGLY recommended that you redirect process
+                output instead, e.g.
+
+                    jupyterhub &>> '{}'
+            """.format(change.new)))
+
     extra_log_handlers = List(
         Instance(logging.Handler),
         help="Extra log handlers to set on JupyterHub logger",
