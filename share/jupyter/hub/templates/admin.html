@@ -33,7 +33,10 @@
       <tr class="user-row add-user-row">
         <td colspan="12">
           <a id="add-users" role="button" class="col-xs-2 btn btn-default">Add Users</a>
-          <a id="stop-all-servers" role="button" class="col-xs-2 col-xs-offset-5 btn btn-danger">Stop All</a>
+          <span class="col-xs-offset-4 col-xs-3">
+            <a id="start-all-servers" role="button" class="btn btn-success col-xs-5 col-xs-offset-1">Start All</a>
+            <a id="stop-all-servers" role="button" class="btn btn-danger col-xs-5 col-xs-offset-1">Stop All</a>
+          </span>
           <a id="shutdown-hub" role="button" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
         </td>
       </tr>
@@ -74,6 +77,10 @@
 
 {% call modal('Stop All Servers', btn_label='Stop All', btn_class='btn-danger stop-all-button') %}
   Are you sure you want to stop all your users' servers? Kernels will be shutdown and unsaved data may be lost.
+{% endcall %}
+
+{% call modal('Start All Servers', btn_label='Start All', btn_class='btn-success start-all-button') %}
+  Are you sure you want to start all servers? This can slam your server resources.
 {% endcall %}
 
 {% call modal('Shutdown Hub', btn_label='Shutdown', btn_class='btn-danger shutdown-button') %}
