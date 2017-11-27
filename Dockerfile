@@ -52,8 +52,7 @@ ENV PATH=/opt/conda/bin:$PATH
 ADD . /src/jupyterhub
 WORKDIR /src/jupyterhub
 
-RUN npm install --unsafe-perm && \
-    pip install . && \
+RUN pip install . && \
     rm -rf $PWD ~/.cache ~/.npm
 
 RUN mkdir -p /srv/jupyterhub/
