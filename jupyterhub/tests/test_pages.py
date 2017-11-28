@@ -307,14 +307,14 @@ def test_login_redirect(app):
     r.raise_for_status()
     assert r.status_code == 302
     assert '/user/river' in r.headers['Location']
-    
+
     # no next_url, server not running
     yield user.stop()
     r = yield get_page('login', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 302
     assert '/hub/' in r.headers['Location']
-    
+
     # next URL given, use it
     r = yield get_page('login?next=/hub/admin', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
@@ -392,3 +392,22 @@ def test_static_files(app):
     r = yield async_requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'text/css'
+
+
+@pytest.mark.gen_test
+def test_token_auth(app):
+    cookies = yield app.login_user('token')
+    r = yield get_page('token', app, cookies=cookies)
+    r.raise_for_status()
+    assert r.status_code == 200
+
+
+@pytest.mark.parametrize("error_status", [
+    503,
+    404,
+])
+
+@pytest.mark.gen_test
+def test_proxy_error(app, error_status):
+    r = yield get_page('/error/%i' % error_status, app)
+    assert r.status_code == 200
