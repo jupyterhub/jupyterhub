@@ -66,6 +66,7 @@ def test_external_proxy(request):
     def _cleanup_proxy():
         if proxy.poll() is None:
             proxy.terminate()
+            proxy.wait(timeout=10)
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
@@ -95,16 +96,17 @@ def test_external_proxy(request):
         host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
     user_spec = host + user_path
     assert sorted(routes.keys()) == ['/', user_spec]
-    
+
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
+    proxy.wait(timeout=10)
     proxy = Popen(cmd, env=env)
     yield wait_for_proxy()
 
     routes = yield app.proxy.get_all_routes()
 
     assert list(routes.keys()) == []
-    
+
     # poke the server to update the proxy
     r = yield api_request(app, 'proxy', method='post')
     r.raise_for_status()
@@ -115,6 +117,7 @@ def test_external_proxy(request):
 
     # teardown the proxy, and start a new one with different auth and port
     proxy.terminate()
+    proxy.wait(timeout=10)
     new_auth_token = 'different!'
     env['CONFIGPROXY_AUTH_TOKEN'] = new_auth_token
     proxy_port = 55432
