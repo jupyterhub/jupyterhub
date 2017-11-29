@@ -235,6 +235,7 @@ class Authenticator(LoggingConfigurable):
                 'name': authenticated,
             }
         authenticated.setdefault('auth_state', None)
+        authenticated.setdefault('admin', None)
 
         # normalize the username
         authenticated['name'] = username = self.normalize_username(authenticated['name'])
@@ -269,10 +270,10 @@ class Authenticator(LoggingConfigurable):
         Returns:
             user (str or dict or None): The username of the authenticated user,
                 or None if Authentication failed.
-                If the Authenticator has state associated with the user,
-                it can return a dict with the keys 'name' and 'auth_state',
-                where 'name' is the username and 'auth_state' is a dictionary
-                of auth state that will be persisted.
+                The Authenticator may return a dict instead, which MUST have a
+                key 'name' holding the username, and may have two optional keys
+                set - 'auth_state', a dictionary of of auth state that will be
+                persisted; and 'admin', the admin setting value for the user.
         """
 
     def pre_spawn_start(self, user, spawner):

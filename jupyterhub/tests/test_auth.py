@@ -202,6 +202,49 @@ def test_auth_state(app, auth_state_enabled):
 
 
 @pytest.fixture
+def use_auth_admin(app):
+    before_admin = app.authenticator.return_admin
+    app.authenticator.return_admin = True
+    try:
+        yield
+    finally:
+        app.authenticator.return_admin = before_admin
+
+
+@pytest.mark.gen_test
+def test_auth_admin_non_admin(app, use_auth_admin):
+    """admin should be passed through for non-admin users"""
+    name = 'kiwi'
+    user = add_user(app.db, app, name=name, admin=False)
+    assert user.admin is False
+    cookies = yield app.login_user(name)
+    assert user.admin is False
+
+
+@pytest.mark.gen_test
+def test_auth_admin_is_admin(app, use_auth_admin):
+    """admin should be passed through for admin users"""
+    # Admin user defined in MockPAMAuthenticator.
+    name = 'admin'
+    user = add_user(app.db, app, name=name, admin=False)
+    assert user.admin is False
+    cookies = yield app.login_user(name)
+    assert user.admin is True
+
+
+@pytest.mark.gen_test
+def test_auth_admin_retained_if_unset(app):
+    """admin should be unchanged if authenticator doesn't return admin value"""
+    name = 'kiwi'
+    # Add user as admin.
+    user = add_user(app.db, app, name=name, admin=True)
+    assert user.admin is True
+    # User should remain unchanged.
+    cookies = yield app.login_user(name)
+    assert user.admin is True
+
+
+@pytest.fixture
 def auth_state_unavailable(auth_state_enabled):
     """auth_state enabled at the Authenticator level,
     
