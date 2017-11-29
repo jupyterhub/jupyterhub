@@ -208,6 +208,15 @@ We use [pytest](http://doc.pytest.org/en/latest/) for **running tests**:
 pytest jupyterhub/tests
 ```
 
+If you see test failures because of timeouts, you may wish to increase the
+`ASYNC_TEST_TIMEOUT` used by the
+[pytest-tornado-plugin](https://github.com/eugeniy/pytest-tornado/blob/c79f68de2222eb7cf84edcfe28650ebf309a4d0c/README.rst#markers)
+from the default of 5 seconds:
+
+```bash
+export ASYNC_TEST_TIMEOUT=15
+```
+
 ### Building the Docs locally
 
 Install the dependencies:
