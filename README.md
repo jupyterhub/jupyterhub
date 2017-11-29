@@ -208,6 +208,12 @@ We use [pytest](http://doc.pytest.org/en/latest/) for **running tests**:
 pytest jupyterhub/tests
 ```
 
+If you see test failures because of timeouts, you may wish to increase the timeout from the default of 5 seconds:
+
+```bash
+export ASYNC_TEST_TIMEOUT=30
+```
+
 ### Building the Docs locally
 
 Install the dependencies:
