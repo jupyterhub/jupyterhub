@@ -151,7 +151,7 @@ not, Jupyter Notebook version 4 or greater must be installed.
 
 The JupyterHub docker image can be started with the following command:
 
-    docker run -d --name jupyterhub jupyterhub/jupyterhub jupyterhub
+    docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub
 
 This command will create a container named `jupyterhub` that you can
 **stop and resume** with `docker stop/start`.
