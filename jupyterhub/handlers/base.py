@@ -339,8 +339,9 @@ class BaseHandler(RequestHandler):
             admin = authenticated.get('admin')
             user = self.user_from_username(username)
             # Only set `admin` if the authenticator returned an explicit value.
-            if admin is not None:
+            if admin is not None and admin != user.admin:
                 user.admin = admin
+                self.db.commit()
             # always set auth_state and commit,
             # because there could be key-rotation or clearing of previous values
             # going on.
