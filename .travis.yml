@@ -51,6 +51,12 @@ script:
         --JupyterHub.authenticator_class=jupyterhub.auth.Authenticator
     fi
   - pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+  # Verify docs build
+  - |
+    pushd docs
+    pip install -r requirements.txt
+    make html
+    popd
 after_success:
   - codecov
 
