@@ -138,6 +138,8 @@ class FormSpawner(MockSpawner):
 
 class MockPAMAuthenticator(PAMAuthenticator):
     auth_state = None
+    # If true, return admin users marked as admin.
+    return_admin = False
     @default('admin_users')
     def _admin_users_default(self):
         return {'admin'}
@@ -160,6 +162,11 @@ class MockPAMAuthenticator(PAMAuthenticator):
             return {
                 'name': username,
                 'auth_state': self.auth_state,
+            }
+        elif self.return_admin:
+            return {
+                'name': username,
+                'admin': username in self.admin_users,
             }
         else:
             return username
