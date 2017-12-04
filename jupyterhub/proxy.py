@@ -424,6 +424,8 @@ class ConfigurableHTTPProxy(Proxy):
                       help="""The command to start the proxy"""
                       )
 
+    _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
+
     @gen.coroutine
     def start(self):
         public_server = Server.from_url(self.public_url)
@@ -490,10 +492,13 @@ class ConfigurableHTTPProxy(Proxy):
         _check_process()
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)
+        self._check_running_callback = pc
         pc.start()
 
     def stop(self):
         self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
+        if self._check_running_callback is not None:
+            self._check_running_callback.stop()
         if self.proxy_process.poll() is None:
             try:
                 self.proxy_process.terminate()
