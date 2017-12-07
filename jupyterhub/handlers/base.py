@@ -8,6 +8,7 @@ import re
 from datetime import timedelta
 from http.client import responses
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
+import uuid
 
 from jinja2 import TemplateNotFound
 
@@ -33,6 +34,9 @@ reasons = {
         "  Contact admin if the issue persists.",
     'error': "Failed to start your server.  Please contact admin.",
 }
+
+# constant, not configurable
+SESSION_COOKIE_NAME = 'jupyterhub-session-id'
 
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
@@ -77,6 +81,7 @@ class BaseHandler(RequestHandler):
     @property
     def services(self):
         return self.settings.setdefault('services', {})
+
     @property
     def hub(self):
         return self.settings['hub']
@@ -255,10 +260,39 @@ class BaseHandler(RequestHandler):
         kwargs = {}
         if self.subdomain_host:
             kwargs['domain'] = self.domain
+        user = self.get_current_user_cookie()
+        session_id = self.get_session_cookie()
+        if session_id:
+            # clear session id
+            self.clear_cookie(SESSION_COOKIE_NAME)
+
+            if user:
+                # user is logged in, clear any tokens associated with the current session
+                # don't clear session tokens if not logged in,
+                # because that could be a malicious logout request!
+                count = 0
+                for access_token in (
+                    self.db.query(orm.OAuthAccessToken)
+                    .filter(orm.OAuthAccessToken.user_id==user.id)
+                    .filter(orm.OAuthAccessToken.session_id==session_id)
+                ):
+                    self.db.delete(access_token)
+                    count += 1
+                if count:
+                    self.log.debug("Deleted %s access tokens for %s", count, user.name)
+                    self.db.commit()
+
+
+        # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
         self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'))
 
-    def _set_user_cookie(self, user, server):
+    def _set_cookie(self, key, value, encrypted=True, **overrides):
+        """Setting any cookie should go through here
+
+        if encrypted use tornado's set_secure_cookie,
+        otherwise set plaintext cookies.
+        """
         # tornado <4.2 have a bug that consider secure==True as soon as
         # 'secure' kwarg is passed to set_secure_cookie
         kwargs = {
@@ -270,13 +304,44 @@ class BaseHandler(RequestHandler):
             kwargs['domain'] = self.domain
 
         kwargs.update(self.settings.get('cookie_options', {}))
-        self.log.debug("Setting cookie for %s: %s, %s", user.name, server.cookie_name, kwargs)
-        self.set_secure_cookie(
+        kwargs.update(overrides)
+
+        if encrypted:
+            set_cookie = self.set_secure_cookie
+        else:
+            set_cookie = self.set_cookie
+
+        self.log.debug("Setting cookie %s: %s", key, kwargs)
+        set_cookie(key, value, **kwargs)
+
+
+    def _set_user_cookie(self, user, server):
+        self.log.debug("Setting cookie for %s: %s", user.name, server.cookie_name)
+        self._set_cookie(
             server.cookie_name,
             user.cookie_id,
+            encrypted=True,
             path=server.base_url,
-            **kwargs
         )
+
+    def get_session_cookie(self):
+        """Get the session id from a cookie
+
+        Returns None if no session id is stored
+        """
+        return self.get_cookie(SESSION_COOKIE_NAME, None)
+
+    def set_session_cookie(self):
+        """Set a new session id cookie
+
+        new session id is returned
+
+        Session id cookie is *not* encrypted,
+        so other services on this domain can read it.
+        """
+        session_id = uuid.uuid4().hex
+        self._set_cookie(SESSION_COOKIE_NAME, session_id, encrypted=False)
+        return session_id
 
     def set_service_cookie(self, user):
         """set the login cookie for services"""
@@ -299,6 +364,9 @@ class BaseHandler(RequestHandler):
         # set single cookie for services
         if self.db.query(orm.Service).filter(orm.Service.server != None).first():
             self.set_service_cookie(user)
+
+        if not self.get_session_cookie():
+            self.set_session_cookie()
 
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():

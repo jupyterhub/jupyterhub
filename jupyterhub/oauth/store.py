@@ -39,15 +39,19 @@ class JupyterHubSiteAdapter(AuthorizationCodeGrantSiteAdapter):
     def authenticate(self, request, environ, scopes, client):
         handler = request.handler
         user = handler.get_current_user()
+        # ensure session_id is set
+        session_id = handler.get_session_cookie()
+        if session_id is None:
+            session_id = handler.set_session_cookie()
         if user:
-            return {}, user.id
+            return {'session_id': session_id}, user.id
         else:
             raise UserNotAuthenticated()
 
     def user_has_denied_access(self, request):
         # user can't deny access
         return False
-    
+
 
 class HubDBMixin(object):
     """Mixin for connecting to the hub database"""
@@ -65,7 +69,7 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
         :param access_token: An instance of :class:`oauth2.datatype.AccessToken`.
 
         """
-        
+
         user = self.db.query(orm.User).filter(orm.User.id == access_token.user_id).first()
         if user is None:
             raise ValueError("No user for access token: %s" % access_token.user_id)
@@ -76,6 +80,7 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
             refresh_token=access_token.refresh_token,
             refresh_expires_at=access_token.refresh_expires_at,
             token=access_token.token,
+            session_id=access_token.data['session_id'],
             user=user,
         )
         self.db.add(orm_access_token)
@@ -110,6 +115,7 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
                 redirect_uri=orm_code.redirect_uri,
                 scopes=[],
                 user_id=orm_code.user_id,
+                data={'session_id': orm_code.session_id},
             )
 
 
@@ -126,6 +132,7 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
             expires_at=authorization_code.expires_at,
             user_id=authorization_code.user_id,
             redirect_uri=authorization_code.redirect_uri,
+            session_id=authorization_code.data.get('session_id', ''),
         )
         self.db.add(orm_code)
         self.db.commit()
