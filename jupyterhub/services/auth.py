@@ -57,6 +57,17 @@ class _ExpiringDict(dict):
         self.timestamps[key] = time.monotonic()
         self.values[key] = value
 
+    def __repr__(self):
+        """include values and timestamps in repr"""
+        now = time.monotonic()
+        return repr({
+            key: '{value} (age={age:.0f}s)'.format(
+                value=repr(value)[:16] + '...',
+                age=now-self.timestamps[key],
+            )
+            for key, value in self.values.items()
+        })
+
     def _check_age(self, key):
         """Check timestamp for a key"""
         if key not in self.values:
