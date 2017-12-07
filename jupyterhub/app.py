@@ -1308,7 +1308,7 @@ class JupyterHub(Application):
         if os.path.isdir(os.path.join(parent, '.git')):
             version_hash = ''
         else:
-            version_hash = datetime.now().strftime("%Y%m%d%H%M%S"),
+            version_hash = datetime.now().strftime("%Y%m%d%H%M%S")
 
         settings = dict(
             log_function=log_request,
