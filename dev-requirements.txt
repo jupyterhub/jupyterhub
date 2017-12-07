@@ -2,9 +2,8 @@
 mock
 codecov
 cryptography
-pytest-catchlog
 pytest-cov
 pytest-tornado
-pytest>=2.8
+pytest>=3.3
 notebook
 requests-mock
