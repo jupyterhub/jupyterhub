@@ -16,6 +16,12 @@ SPAWN_DURATION_SECONDS = Histogram(
     buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, float("inf")]
 )
 
+PROXY_ADD_DURATION_SECONDS = Histogram(
+    'proxy_add_duration_seconds',
+    'duration for adding user routes to proxy',
+    ['status']
+)
+
 def prometheus_log_method(handler):
     """
     Tornado log handler for recording RED metrics

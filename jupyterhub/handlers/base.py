@@ -23,7 +23,7 @@ from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..utils import url_path_join
-from ..metrics import SPAWN_DURATION_SECONDS
+from ..metrics import SPAWN_DURATION_SECONDS, PROXY_ADD_DURATION_SECONDS
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -479,13 +479,25 @@ class BaseHandler(RequestHandler):
             ).observe(
                 time.perf_counter() - spawn_starttime
             )
+            proxy_add_starttime = time.perf_counter()
             spawner._proxy_pending = True
             try:
                 yield self.proxy.add_user(user, server_name)
+
+                PROXY_ADD_DURATION_SECONDS.labels(
+                    status='success'
+                ).observe(
+                    time.perf_counter() - proxy_add_starttime
+                )
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
                 self.log.error("Stopping %s to avoid inconsistent state", user_server_name)
                 yield user.stop()
+                PROXY_ADD_DURATION_SECONDS.labels(
+                    status='failure'
+                ).observe(
+                    time.perf_counter() - proxy_add_starttime
+                )
             else:
                 spawner.add_poll_callback(self.user_stopped, user, server_name)
             finally:
