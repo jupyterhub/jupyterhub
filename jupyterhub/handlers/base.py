@@ -5,6 +5,7 @@
 
 import copy
 import re
+import time
 from datetime import timedelta
 from http.client import responses
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
@@ -22,6 +23,7 @@ from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..utils import url_path_join
+from ..metrics import SPAWN_DURATION_SECONDS
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -388,6 +390,7 @@ class BaseHandler(RequestHandler):
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
         # in case of error, include 'try again from /hub/home' message
+        spawn_starttime = time.perf_counter()
         self.extra_error_html = self.spawn_home_error
 
         user_server_name = user.name
@@ -397,6 +400,11 @@ class BaseHandler(RequestHandler):
 
         if server_name in user.spawners and user.spawners[server_name].pending:
             pending = user.spawners[server_name].pending
+            SPAWN_DURATION_SECONDS.labels(
+                status='already-pending'
+            ).observe(
+                time.perf_counter() - spawn_starttime
+            )
             raise RuntimeError("%s pending %s" % (user_server_name, pending))
 
         # count active servers and pending spawns
@@ -415,6 +423,11 @@ class BaseHandler(RequestHandler):
                 '%s pending spawns, throttling',
                 spawn_pending_count,
             )
+            SPAWN_DURATION_SECONDS.labels(
+                status='throttled'
+            ).observe(
+                time.perf_counter() - spawn_starttime
+            )
             raise web.HTTPError(
                 429,
                 "User startup rate limit exceeded. Try again in a few minutes.",
@@ -423,6 +436,11 @@ class BaseHandler(RequestHandler):
             self.log.info(
                 '%s servers active, no space available',
                 active_count,
+            )
+            SPAWN_DURATION_SECONDS.labels(
+                status='too-many-users'
+            ).observe(
+                time.perf_counter() - spawn_starttime
             )
             raise web.HTTPError(429, "Active user limit exceeded. Try again in a few minutes.")
 
@@ -456,6 +474,11 @@ class BaseHandler(RequestHandler):
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
+            SPAWN_DURATION_SECONDS.labels(
+                status='success'
+            ).observe(
+                time.perf_counter() - spawn_starttime
+            )
             spawner._proxy_pending = True
             try:
                 yield self.proxy.add_user(user, server_name)
@@ -499,6 +522,11 @@ class BaseHandler(RequestHandler):
             if status is not None:
                 toc = IOLoop.current().time()
                 self.statsd.timing('spawner.failure', (toc - tic) * 1000)
+                SPAWN_DURATION_SECONDS.labels(
+                    status='failed'
+                ).observe(
+                    time.perf_counter() - spawn_starttime
+                )
                 raise web.HTTPError(500, "Spawner failed to start [status=%s]. The logs for %s may contain details." % (
                     status, spawner._log_name))
 
