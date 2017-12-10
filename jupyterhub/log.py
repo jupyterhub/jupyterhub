@@ -8,6 +8,7 @@ import traceback
 from tornado.log import LogFormatter, access_log
 from tornado.web import StaticFileHandler, HTTPError
 
+from .metrics import prometheus_log_method
 
 def coroutine_traceback(typ, value, tb):
     """Scrub coroutine frames from a traceback
@@ -120,3 +121,4 @@ def log_request(handler):
         if location:
             ns['location'] = ' → {}'.format(location)
     log_method(msg.format(**ns))
+    prometheus_log_method(handler)
