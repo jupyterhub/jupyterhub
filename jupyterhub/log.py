@@ -69,6 +69,7 @@ def log_request(handler):
     - get proxied IP instead of proxy IP
     - log referer for redirect and failed requests
     - log user-agent for failed requests
+    - record per-request metrics in prometheus
     """
     status = handler.get_status()
     request = handler.request
