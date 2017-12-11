@@ -1,5 +1,8 @@
 """
 Prometheus metrics exported by JupyterHub
+
+Read https://prometheus.io/docs/practices/naming/ for naming
+conventions for metrics & labels.
 """
 from prometheus_client import Histogram
 
