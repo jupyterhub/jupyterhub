@@ -29,7 +29,7 @@ from tornado.log import app_log
 from tornado.httputil import url_concat
 from tornado.web import HTTPError, RequestHandler
 
-from traitlets.config import Configurable
+from traitlets.config import SingletonConfigurable
 from traitlets import Unicode, Integer, Instance, default, observe, validate
 
 from ..utils import url_path_join
@@ -97,7 +97,7 @@ class _ExpiringDict(dict):
             return default
 
 
-class HubAuth(Configurable):
+class HubAuth(SingletonConfigurable):
     """A class for authenticating with JupyterHub
 
     This can be used by any application.
@@ -699,7 +699,7 @@ class HubAuthenticated(object):
     @property
     def hub_auth(self):
         if self._hub_auth is None:
-            self._hub_auth = self.hub_auth_class()
+            self._hub_auth = self.hub_auth_class.instance()
         return self._hub_auth
 
     @hub_auth.setter
