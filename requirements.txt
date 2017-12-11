@@ -6,3 +6,4 @@ pamela
 python-oauth2>=1.0
 SQLAlchemy>=1.1
 requests
+prometheus_client>=0.0.21
