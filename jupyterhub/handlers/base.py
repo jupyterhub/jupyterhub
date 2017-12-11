@@ -390,7 +390,7 @@ class BaseHandler(RequestHandler):
     @gen.coroutine
     def spawn_single_user(self, user, server_name='', options=None):
         # in case of error, include 'try again from /hub/home' message
-        spawn_starttime = time.perf_counter()
+        spawn_start_time = time.perf_counter()
         self.extra_error_html = self.spawn_home_error
 
         user_server_name = user.name
@@ -403,7 +403,7 @@ class BaseHandler(RequestHandler):
             SPAWN_DURATION_SECONDS.labels(
                 status='already-pending'
             ).observe(
-                time.perf_counter() - spawn_starttime
+                time.perf_counter() - spawn_start_time
             )
             raise RuntimeError("%s pending %s" % (user_server_name, pending))
 
@@ -426,7 +426,7 @@ class BaseHandler(RequestHandler):
             SPAWN_DURATION_SECONDS.labels(
                 status='throttled'
             ).observe(
-                time.perf_counter() - spawn_starttime
+                time.perf_counter() - spawn_start_time
             )
             raise web.HTTPError(
                 429,
@@ -440,7 +440,7 @@ class BaseHandler(RequestHandler):
             SPAWN_DURATION_SECONDS.labels(
                 status='too-many-users'
             ).observe(
-                time.perf_counter() - spawn_starttime
+                time.perf_counter() - spawn_start_time
             )
             raise web.HTTPError(429, "Active user limit exceeded. Try again in a few minutes.")
 
@@ -477,9 +477,9 @@ class BaseHandler(RequestHandler):
             SPAWN_DURATION_SECONDS.labels(
                 status='success'
             ).observe(
-                time.perf_counter() - spawn_starttime
+                time.perf_counter() - spawn_start_time
             )
-            proxy_add_starttime = time.perf_counter()
+            proxy_add_start_time = time.perf_counter()
             spawner._proxy_pending = True
             try:
                 yield self.proxy.add_user(user, server_name)
@@ -487,7 +487,7 @@ class BaseHandler(RequestHandler):
                 PROXY_ADD_DURATION_SECONDS.labels(
                     status='success'
                 ).observe(
-                    time.perf_counter() - proxy_add_starttime
+                    time.perf_counter() - proxy_add_start_time
                 )
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
@@ -496,7 +496,7 @@ class BaseHandler(RequestHandler):
                 PROXY_ADD_DURATION_SECONDS.labels(
                     status='failure'
                 ).observe(
-                    time.perf_counter() - proxy_add_starttime
+                    time.perf_counter() - proxy_add_start_time
                 )
             else:
                 spawner.add_poll_callback(self.user_stopped, user, server_name)
@@ -537,7 +537,7 @@ class BaseHandler(RequestHandler):
                 SPAWN_DURATION_SECONDS.labels(
                     status='failed'
                 ).observe(
-                    time.perf_counter() - spawn_starttime
+                    time.perf_counter() - spawn_start_time
                 )
                 raise web.HTTPError(500, "Spawner failed to start [status=%s]. The logs for %s may contain details." % (
                     status, spawner._log_name))
