@@ -151,9 +151,9 @@ easy to do with RStudio too.
 - https://getcarina.com/blog/learning-how-to-whale/
 - http://carolynvanslyck.com/talk/carina/jupyterhub/#/
 
-### Red Hat
-
-
+### Jcloud
+- Open to public JupyterHub server
+    - https://jcloud.io
 ## Miscellaneous
 
 - https://medium.com/@ybarraud/setting-up-jupyterhub-with-sudospawner-and-anaconda-844628c0dbee#.rm3yt87e1
