@@ -151,7 +151,7 @@ easy to do with RStudio too.
 - https://getcarina.com/blog/learning-how-to-whale/
 - http://carolynvanslyck.com/talk/carina/jupyterhub/#/
 
-### Jcloud
+### jcloud.io
 - Open to public JupyterHub server
     - https://jcloud.io
 ## Miscellaneous
