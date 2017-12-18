@@ -193,8 +193,8 @@ to provide a guarantee that at minimum this much memory will always be
 available for the single-user notebook server to use. The environment variable
 `MEM_GUARANTEE` will also be set in the single-user notebook server.
 
-The spawner's underlying system or cluster is responsible for enforcing these
-limits and providing these guarantees. If these values are set to `None`, no
+**The spawner's underlying system or cluster is responsible for enforcing these
+limits and providing these guarantees.** If these values are set to `None`, no
 limits or guarantees are provided, and no environment values are set.
 
 ### CPU Limits & Guarantees
@@ -211,6 +211,6 @@ higher priority applications might be taking up CPU.
 guarantee for CPU usage. The environment variable `CPU_GUARANTEE` will be set
 in the single-user notebook server when a guarantee is being provided.
 
-The spawner's underlying system or cluster is responsible for enforcing these
-limits and providing these guarantees. If these values are set to `None`, no
+**The spawner's underlying system or cluster is responsible for enforcing these
+limits and providing these guarantees.** If these values are set to `None`, no
 limits or guarantees are provided, and no environment values are set.
