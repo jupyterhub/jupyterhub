@@ -170,9 +170,12 @@ If you are interested in building a custom spawner, you can read [this tutorial]
 Some spawners of the single-user notebook servers allow setting limits or
 guarantees on resources, such as CPU and memory. To provide a consistent
 experience for sysadmins and users, we provide a standard way to set and
-discover these resource limits and guarantees, such as for memory and CPU. For
-the limits and guarantees to be useful, the spawner must implement support for
-them.
+discover these resource limits and guarantees, such as for memory and CPU.
+For the limits and guarantees to be useful, **the spawner must implement
+support for them**. For example, LocalProcessSpawner, the default
+spawner, does not support limits and guarantees. One of the spawners
+that supports limits and guarantees is the `systemdspawner`.
+
 
 ### Memory Limits & Guarantees
 
