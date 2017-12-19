@@ -1197,13 +1197,15 @@ class JupyterHub(Application):
                 )
                 self.db.add(server)
 
+            else:
+                service.orm.server = None
+
+            if service.oauth_available:
                 client_store.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
-                    redirect_uri=host + url_path_join(service.prefix, 'oauth_callback'),
+                    redirect_uri=service.oauth_redirect_uri,
                 )
-            else:
-                service.orm.server = None
 
             self._service_map[name] = service
 
