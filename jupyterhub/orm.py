@@ -408,7 +408,7 @@ class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    client_id = Column(Unicode(255))
+    client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(255))
@@ -438,7 +438,7 @@ class OAuthAccessToken(Hashed, Base):
 class OAuthCode(Base):
     __tablename__ = 'oauth_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    client_id = Column(Unicode(255))
+    client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))

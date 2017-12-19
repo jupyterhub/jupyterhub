@@ -1309,6 +1309,26 @@ class JupyterHub(Application):
             login_url=url_path_join(base_url, 'login')
         )
 
+    def cleanup_oauth_clients(self):
+        """Cleanup any OAuth clients that shouldn't be in the database.
+
+        This should mainly be services that have been removed from configuration or renamed.
+        """
+        oauth_client_ids = set()
+        for service in self._service_map.values():
+            if service.oauth_available:
+                oauth_client_ids.add(service.oauth_client_id)
+        for user in self.users.values():
+            for spawner in user.spawners.values():
+                oauth_client_ids.add(spawner.oauth_client_id)
+
+        client_store = self.oauth_provider.client_authenticator.client_store
+        for oauth_client in self.db.query(orm.OAuthClient):
+            if oauth_client.identifier not in oauth_client_ids:
+                self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
+                self.db.delete(oauth_client)
+        self.db.commit()
+
     def init_proxy(self):
         """Load the Proxy config"""
         # FIXME: handle deprecated config here
@@ -1448,6 +1468,7 @@ class JupyterHub(Application):
         yield self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
+        self.cleanup_oauth_clients()
         self.init_handlers()
         self.init_tornado_application()
 
