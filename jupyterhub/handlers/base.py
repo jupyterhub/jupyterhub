@@ -264,7 +264,7 @@ class BaseHandler(RequestHandler):
         session_id = self.get_session_cookie()
         if session_id:
             # clear session id
-            self.clear_cookie(SESSION_COOKIE_NAME)
+            self.clear_cookie(SESSION_COOKIE_NAME, **kwargs)
 
             if user:
                 # user is logged in, clear any tokens associated with the current session
@@ -285,7 +285,8 @@ class BaseHandler(RequestHandler):
 
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
-        self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'))
+        # clear services cookie
+        self.clear_cookie('jupyterhub-services', path=url_path_join(self.base_url, 'services'), **kwargs)
 
     def _set_cookie(self, key, value, encrypted=True, **overrides):
         """Setting any cookie should go through here
