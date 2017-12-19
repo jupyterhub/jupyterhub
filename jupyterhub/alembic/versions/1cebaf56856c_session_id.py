@@ -29,8 +29,8 @@ def add_column_if_table_exists(table, column):
         ctx = op.get_context()
         try:
             ctx.execute('SELECT 1 FROM {table} LIMIT 1'.format(table=table))
-        except (sa.exc.OperationalError, sa.exc.ProgrammingError) as e2:
-            if e.args == e2.args:
+        except Exception as e2:
+            if type(e) is type(e2) and e.args == e2.args:
                 # table doesn't exist, no need to upgrade
                 # because jupyterhub will create it on launch
                 logger.warning("Skipping upgrade of absent table: %s" % e)
