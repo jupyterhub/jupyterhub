@@ -319,6 +319,11 @@ class APIToken(Hashed, Base):
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
 
+    # token metadata for bookkeeping
+    created = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime)
+    note = Column(Unicode(1023))
+
     def __repr__(self):
         if self.user is not None:
             kind = 'user'
@@ -418,6 +423,9 @@ class OAuthAccessToken(Hashed, Base):
     # from Hashed
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
+
+    created = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, nullable=True)
 
     def __repr__(self):
         return "<{cls}('{prefix}...', user='{user}'>".format(

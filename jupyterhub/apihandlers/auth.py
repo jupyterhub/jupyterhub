@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from datetime import datetime
 import json
 from urllib.parse import quote
 
@@ -31,6 +32,9 @@ class TokenAPIHandler(APIHandler):
             self.db.delete(orm_token)
             self.db.commit()
             raise web.HTTPError(404)
+        # record activity whenever we see a token
+        orm_token.last_activity = datetime.utcnow()
+        self.db.commit()
         self.write(json.dumps(model))
 
     @gen.coroutine
@@ -49,7 +53,7 @@ class TokenAPIHandler(APIHandler):
                 raise web.HTTPError(403)
         else:
             data = self.get_json_body()
-            # admin users can request 
+            # admin users can request tokens for other usrs
             if data and data.get('username') != user.name:
                 if user.admin:
                     user = self.find_user(data['username'])
