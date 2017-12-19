@@ -1,4 +1,5 @@
 from binascii import hexlify
+import copy
 import json
 import os
 from queue import Queue
@@ -17,6 +18,7 @@ from tornado.httpserver import HTTPServer
 from tornado.web import RequestHandler, Application, authenticated, HTTPError
 from tornado.httputil import url_concat
 
+from .. import orm
 from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
 from .mocking import public_url, public_host
@@ -198,7 +200,7 @@ def test_hub_authenticated(request):
             allow_redirects=False,
         )
         assert r.status_code == 403
-        
+
         # pass group whitelist
         TestHandler.hub_groups = {'lions'}
         r = requests.get('http://127.0.0.1:%i' % port,
@@ -319,7 +321,6 @@ def test_oauth_service(app, mockservice_url):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     # first request is only going to set login cookie
-    # FIXME: redirect to originating URL (OAuth loses this info)
     s = requests.Session()
     name = 'link'
     s.cookies = yield app.login_user(name)
@@ -371,7 +372,7 @@ def test_oauth_service(app, mockservice_url):
 @pytest.mark.gen_test
 def test_oauth_cookie_collision(app, mockservice_url):
     service = mockservice_url
-    url = url_path_join(public_url(app, mockservice_url) + 'owhoami/')
+    url = url_path_join(public_url(app, mockservice_url), 'owhoami/')
     print(url)
     s = requests.Session()
     name = 'mypha'
@@ -425,3 +426,93 @@ def test_oauth_cookie_collision(app, mockservice_url):
     # after completing both OAuth logins, no OAuth state cookies remain
     state_cookies = [ s for s in s.cookies.keys() if s.startswith(state_cookie_name) ]
     assert state_cookies == []
+
+
+@pytest.mark.gen_test
+def test_oauth_logout(app, mockservice_url):
+    """Verify that logout via the Hub triggers logout for oauth services
+
+    1. clears session id cookie
+    2. revokes oauth tokens
+    3. cleared session id ensures cached auth miss
+    4. cache hit
+    """
+    service = mockservice_url
+    service_cookie_name = 'service-%s' % service.name
+    url = url_path_join(public_url(app, mockservice_url), 'owhoami/?foo=bar')
+    # first request is only going to set login cookie
+    s = requests.Session()
+    name = 'propha'
+    app_user = add_user(app.db, app=app, name=name)
+    def auth_tokens():
+        """Return list of OAuth access tokens for the user"""
+        return list(
+            app.db.query(orm.OAuthAccessToken).filter(
+                orm.OAuthAccessToken.user_id == app_user.id)
+        )
+
+    # ensure we start empty
+    assert auth_tokens() == []
+
+    s.cookies = yield app.login_user(name)
+    assert 'jupyterhub-session-id' in s.cookies
+    # run session.get in async_requests thread
+    s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
+    r = yield s_get(url)
+    r.raise_for_status()
+    assert r.url == url
+    # second request should be authenticated
+    r = yield s_get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 200
+    reply = r.json()
+    sub_reply = {
+        key: reply.get(key, 'missing')
+        for key in ('kind', 'name')
+    }
+    assert sub_reply == {
+        'name': name,
+        'kind': 'user',
+    }
+    # save cookies to verify cache
+    saved_cookies = copy.deepcopy(s.cookies)
+    session_id = s.cookies['jupyterhub-session-id']
+
+    assert len(auth_tokens()) == 1
+
+    # hit hub logout URL
+    r = yield s_get(public_url(app, path='hub/logout'))
+    r.raise_for_status()
+    # verify that all cookies other than the service cookie are cleared
+    assert list(s.cookies.keys()) == [service_cookie_name]
+    # verify that clearing session id invalidates service cookie
+    # i.e. redirect back to login page
+    r = yield s_get(url)
+    r.raise_for_status()
+    assert r.url.split('?')[0] == public_url(app, path='hub/login')
+
+    # verify that oauth tokens have been revoked
+    assert auth_tokens() == []
+
+    # double check that if we hadn't cleared session id
+    # login would have been cached.
+    # it's not important that the old login is still cached,
+    # but what is important is that the above logout was successful
+    # due to session-id causing a cache miss
+    # and not a failure to cache auth at all.
+    s.cookies = saved_cookies
+    # check that we got the old session id back
+    assert session_id == s.cookies['jupyterhub-session-id']
+
+    r = yield s_get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 200
+    reply = r.json()
+    sub_reply = {
+        key: reply.get(key, 'missing')
+        for key in ('kind', 'name')
+    }
+    assert sub_reply == {
+        'name': name,
+        'kind': 'user',
+    }

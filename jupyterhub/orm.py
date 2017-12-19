@@ -412,10 +412,13 @@ class OAuthAccessToken(Hashed, Base):
     user = relationship(User)
     service = None # for API-equivalence with APIToken
 
+    # the browser session id associated with a given token
+    session_id = Column(Unicode(255))
+
     # from Hashed
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
-    
+
     def __repr__(self):
         return "<{cls}('{prefix}...', user='{user}'>".format(
             cls=self.__class__.__name__,
@@ -431,6 +434,7 @@ class OAuthCode(Base):
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
+    session_id = Column(Unicode(255))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
 
