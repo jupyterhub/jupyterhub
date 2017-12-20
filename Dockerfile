@@ -22,7 +22,8 @@
 # from your docker directory.
 
 FROM debian:jessie
-MAINTAINER Jupyter Project <jupyter@googlegroups.com>
+# MAINTAINER Jupyter Project <jupyter@googlegroups.com>
+MAINTAINER Don Kelly <karfai@gmail.com>
 
 # install nodejs, utf8 locale, set CDN because default httpredir is unreliable
 ENV DEBIAN_FRONTEND noninteractive
