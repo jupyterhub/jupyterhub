@@ -271,6 +271,20 @@ class Spawner(LoggingConfigurable):
         their server.
         """)
 
+    spawn_pending_message = Unicode(
+        help="""
+        An HTML snippet to be displayed on the spawn_pending page.
+
+        This will appear in a `div.text-center` along with a spinner and a refresh button.
+
+        The default page is essentially equivalent to:
+
+        .. code:: html
+
+            <p>Your server is starting up.</p>
+            <p>You will be redirected automatically when it's ready for you.</p>
+    """).tag(config=True)
+
     env_keep = List([
         'PATH',
         'PYTHONPATH',
