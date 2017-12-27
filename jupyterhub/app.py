@@ -265,7 +265,10 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     template_paths = List(
-        help="Paths to search for jinja templates.",
+        help="""Paths to search for jinja templates.
+
+        Use the special string '%DEFAULT%' to include the default path in this list.
+        """
     ).tag(config=True)
 
     @default('template_paths')
@@ -1294,8 +1297,11 @@ class JupyterHub(Application):
             autoescape=True,
         )
         jinja_options.update(self.jinja_environment_options)
+        template_paths = [p if p != '%DEFAULT%'
+                            else self._template_paths_default()[0]
+                          for p in self.template_paths]
         jinja_env = Environment(
-            loader=FileSystemLoader(self.template_paths),
+            loader=FileSystemLoader(template_paths),
             **jinja_options
         )
 
@@ -1329,7 +1335,7 @@ class JupyterHub(Application):
             static_path=os.path.join(self.data_files_path, 'static'),
             static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
-            template_path=self.template_paths,
+            template_path=template_paths,
             jinja2_env=jinja_env,
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
