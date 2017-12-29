@@ -20,7 +20,7 @@ from urllib.parse import urlparse
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
 
 from sqlalchemy.exc import OperationalError
 
@@ -271,6 +271,10 @@ class JupyterHub(Application):
     @default('template_paths')
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
+
+    base_templates = Bool(False,
+        help="Allow tempates to extend the base versions, by referencing 'BASE:name.html'."
+    ).tag(config=True)
 
     confirm_no_ssl = Bool(False,
         help="""DEPRECATED: does nothing"""
@@ -1294,8 +1298,18 @@ class JupyterHub(Application):
             autoescape=True,
         )
         jinja_options.update(self.jinja_environment_options)
+        if self.base_templates:
+            base_path = self._template_paths_default()[0]
+            if base_path not in self.template_paths:
+                self.template_paths.append(base_path)
+            loader = ChoiceLoader([
+                PrefixLoader({'BASE': FileSystemLoader([base_path])}, ':'),
+                FileSystemLoader(self.template_paths)
+            ])
+        else:
+            loader = FileSystemLoader(self.template_paths)
         jinja_env = Environment(
-            loader=FileSystemLoader(self.template_paths),
+            loader=loader,
             **jinja_options
         )
 
