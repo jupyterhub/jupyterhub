@@ -1,6 +1,6 @@
 alembic
 traitlets>=4.3.2
-tornado>=4.1
+tornado>=4.1,<5.0
 jinja2
 pamela
 python-oauth2>=1.0
