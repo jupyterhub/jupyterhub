@@ -778,7 +778,14 @@ class HubAuthenticated(object):
         except UserNotAllowed as e:
             # cache None, in case get_user is called again while processing the error
             self._hub_auth_user_cache = None
-            raise HTTPError(403, "{kind} {name} is not allowed.".format(**e.model))
+            # Override redirect so if/when tornado @web.authenticated
+            # tries to redirect to login URL, 403 will be raised instead.
+            # This is not the best, but avoids problems that can be caused
+            # when get_current_user is allowed to raise.
+            def raise_on_redirect(*args, **kwargs):
+                raise HTTPError(403, "{kind} {name} is not allowed.".format(**user_model))
+            self.redirect = raise_on_redirect
+            return
         except Exception:
             self._hub_auth_user_cache = None
             raise
