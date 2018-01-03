@@ -1,5 +1,6 @@
 """mock utilities for testing"""
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 import sys
 from tempfile import NamedTemporaryFile
@@ -202,11 +203,11 @@ class MockHub(JupyterHub):
     @default('authenticator_class')
     def _authenticator_class_default(self):
         return MockPAMAuthenticator
-    
+
     @default('spawner_class')
     def _spawner_class_default(self):
         return MockSpawner
-    
+
     def init_signal(self):
         pass
 
@@ -229,11 +230,25 @@ class MockHub(JupyterHub):
 
     def stop(self):
         super().stop()
-        IOLoop().run_sync(self.cleanup)
+
+        # run cleanup in a background thread
+        # to avoid multiple eventloops in the same thread errors from asyncio
+
+        def cleanup():
+            loop = IOLoop.current()
+            loop.run_sync(self.cleanup)
+            loop.close()
+
+        pool = ThreadPoolExecutor(1)
+        f = pool.submit(cleanup)
+        # wait for cleanup to finish
+        f.result()
+        pool.shutdown()
+
         # ignore the call that will fire in atexit
         self.cleanup = lambda : None
         self.db_file.close()
-    
+
     @gen.coroutine
     def login_user(self, name):
         """Login a user by name, returning her cookies."""

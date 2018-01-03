@@ -1625,10 +1625,7 @@ class JupyterHub(Application):
         if not self.io_loop:
             return
         if self.http_server:
-            if self.io_loop._running:
-                self.io_loop.add_callback(self.http_server.stop)
-            else:
-                self.http_server.stop()
+            self.http_server.stop()
         self.io_loop.add_callback(self.io_loop.stop)
 
     @gen.coroutine
