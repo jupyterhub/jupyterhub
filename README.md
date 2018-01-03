@@ -175,63 +175,9 @@ These accounts will be used for authentication in JupyterHub's default configura
 
 If you would like to contribute to the project, please read our
 [contributor documentation](http://jupyter.readthedocs.io/en/latest/contributor/content-contributor.html)
-and the [`CONTRIBUTING.md`](CONTRIBUTING.md).
-
-For a **development install**, clone the [repository](https://github.com/jupyterhub/jupyterhub)
-and then install from source:
-
-```bash
-git clone https://github.com/jupyterhub/jupyterhub
-cd jupyterhub
-pip3 install -r dev-requirements.txt -e .
-```
-
-If the `pip3 install` command fails and complains about `lessc` being
-unavailable, you may need to explicitly install some additional JavaScript
-dependencies:
-
-    npm install
-
-This will fetch client-side JavaScript dependencies necessary to compile CSS.
-
-You may also need to manually update JavaScript and CSS after some development
-updates, with:
-
-```bash
-python3 setup.py js    # fetch updated client-side js
-python3 setup.py css   # recompile CSS from LESS sources
-```
-
-We use [pytest](http://doc.pytest.org/en/latest/) for **running tests**:
-
-```bash
-pytest jupyterhub/tests
-```
-
-If you see test failures because of timeouts, you may wish to increase the
-`ASYNC_TEST_TIMEOUT` used by the
-[pytest-tornado-plugin](https://github.com/eugeniy/pytest-tornado/blob/c79f68de2222eb7cf84edcfe28650ebf309a4d0c/README.rst#markers)
-from the default of 5 seconds:
-
-```bash
-export ASYNC_TEST_TIMEOUT=15
-```
-
-### Building the Docs locally
-
-Install the dependencies:
-
-```bash
-python3 -m pip install -r docs/requirements.txt
-```
-
-Build the docs:
-
-```bash
-cd docs
-make clean
-make html
-```
+and the [`CONTRIBUTING.md`](CONTRIBUTING.md). The `CONTRIBUTING.md` file
+explains how to set up a development installation, how to run the test suite,
+and how to contribute to documentation.
 
 ### A note about platform support
 
