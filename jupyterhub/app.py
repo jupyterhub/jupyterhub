@@ -399,6 +399,9 @@ class JupyterHub(Application):
 
         Default: when `hub_ip` is 0.0.0.0, use `socket.gethostname()`, otherwise use `hub_ip`.
 
+        Note: Some spawners or proxy implementations might not support hostnames. Check your
+        spawner or proxy documentation to see if they have extra requirements.
+
         .. versionadded:: 0.8
         """
     ).tag(config=True)
