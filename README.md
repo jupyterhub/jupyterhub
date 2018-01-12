@@ -163,7 +163,7 @@ If you want to run docker on a computer that has a public IP then you should
 (as in MUST) **secure it with ssl** by adding ssl options to your docker
 configuration or by using a ssl enabled proxy.
 
-[Mounting volumes](https://docs.docker.com/engine/userguide/containers/dockervolumes/) will
+[Mounting volumes](https://docs.docker.com/engine/admin/volumes/volumes/) will
 allow you to **store data outside the docker image (host system) so it will be persistent**, even when you start
 a new image.
 
