@@ -352,7 +352,7 @@ class Proxy(LoggingConfigurable):
                 if route['target'] != service.server.host:
                     self.log.warning(
                         "Updating route for %s (%s → %s)",
-                        route['routespec'], route['target'], spawner.server.host,
+                        route['routespec'], route['target'], service.server.host,
                     )
                     futures.append(self.add_service(service))
 
