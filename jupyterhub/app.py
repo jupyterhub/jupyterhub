@@ -153,7 +153,7 @@ class NewToken(Application):
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)
             self.exit(1)
-        token = user.new_api_token()
+        token = user.new_api_token(note="command-line generated")
         print(token)
 
 
@@ -1119,7 +1119,7 @@ class JupyterHub(Application):
                 try:
                     # set generated=False to ensure that user-provided tokens
                     # get extra hashing (don't trust entropy of user-provided tokens)
-                    obj.new_api_token(token, generated=self.trust_user_provided_tokens)
+                    obj.new_api_token(token, note="from config", generated=self.trust_user_provided_tokens)
                 except Exception:
                     if created:
                         # don't allow bad tokens to create users
@@ -1173,7 +1173,8 @@ class JupyterHub(Application):
             if service.managed:
                 if not service.api_token:
                     # generate new token
-                    service.api_token = service.orm.new_api_token()
+                    # TODO: revoke old tokens?
+                    service.api_token = service.orm.new_api_token(note="generated at startup")
                 else:
                     # ensure provided token is registered
                     self.service_tokens[service.api_token] = service.name

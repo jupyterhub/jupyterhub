@@ -11,6 +11,7 @@ from oauth2.web.tornado import OAuth2Handler
 from tornado import web, gen
 
 from .. import orm
+from ..user import User
 from ..utils import token_authenticated
 from .base import BaseHandler, APIHandler
 
@@ -39,13 +40,13 @@ class TokenAPIHandler(APIHandler):
 
     @gen.coroutine
     def post(self):
-        user = self.get_current_user()
+        requester = user = self.get_current_user()
         if user is None:
             # allow requesting a token with username and password
             # for authenticators where that's possible
             data = self.get_json_body()
             try:
-                user = yield self.login_user(data)
+                requester = user = yield self.login_user(data)
             except Exception as e:
                 self.log.error("Failure trying to authenticate with form data: %s" % e)
                 user = None
@@ -53,15 +54,22 @@ class TokenAPIHandler(APIHandler):
                 raise web.HTTPError(403)
         else:
             data = self.get_json_body()
-            # admin users can request tokens for other usrs
-            if data and data.get('username') != user.name:
-                if user.admin:
-                    user = self.find_user(data['username'])
-                    if user is None:
-                        raise web.HTTPError(400, "No such user '%s'" % data['username'])
-                else:
+            # admin users can request tokens for other users
+            if data and data.get('username'):
+                user = self.find_user(data['username'])
+                if user is not requester and not requester.admin:
                     raise web.HTTPError(403, "Only admins can request tokens for other users.")
-        api_token = user.new_api_token()
+                if requester.admin and user is None:
+                    raise web.HTTPError(400, "No such user '%s'" % data['username'])
+
+        note = (data or {}).get('note')
+        if not note:
+            note = "via api"
+            if requester is not user:
+                kind = 'user' if isinstance(user, User) else 'service'
+                note += " by %s %s" % (kind, requester.name)
+
+        api_token = user.new_api_token(note=note)
         self.write(json.dumps({
             'token': api_token,
             'user': self.user_model(user),

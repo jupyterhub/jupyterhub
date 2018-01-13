@@ -344,8 +344,10 @@ class User:
             base_url=base_url,
         )
         db.add(orm_server)
-
-        api_token = self.new_api_token()
+        note = "server token"
+        if server_name:
+            note += " for server %s" % server_name
+        api_token = self.new_api_token(note=note)
         db.commit()
 
 
@@ -420,7 +422,10 @@ class User:
                     )
                     # use generated=False because we don't trust this token
                     # to have been generated properly
-                    self.new_api_token(spawner.api_token, generated=False)
+                    self.new_api_token(spawner.api_token,
+                        generated=False,
+                        note="retrieved from spawner %s" % server_name,
+                    )
                 # update OAuth client secret with updated API token
                 if oauth_provider:
                     client_store = oauth_provider.client_authenticator.client_store
