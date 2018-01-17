@@ -145,7 +145,7 @@ If such state should be persisted, `.authenticate()` should return a dictionary 
 
 ```python
 {
-  'username': 'name',
+  'name': username,
   'auth_state': {
     'key': 'value',
   }
