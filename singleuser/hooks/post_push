@@ -1,6 +1,7 @@
 #!/bin/bash
 
-for V in master 0.7; do
+stable=0.8
+for V in master $stable; do
   docker push $DOCKER_REPO:$V
 done
 
@@ -12,12 +13,12 @@ function get_hub_version() {
   split=( ${hub_xyz//./ } )
   hub_xy="${split[0]}.${split[1]}"
 }
-# tag e.g. 0.7.2 with 0.7
-get_hub_version 0.7
-docker tag $DOCKER_REPO:0.7 $DOCKER_REPO:$hub_xyz
+# tag e.g. 0.8.1 with 0.8
+get_hub_version $stable
+docker tag $DOCKER_REPO:$stable $DOCKER_REPO:$hub_xyz
 docker push $DOCKER_REPO:$hub_xyz
 
-# tag e.g. 0.8 with master
+# tag e.g. 0.9 with master
 get_hub_version master
 docker tag $DOCKER_REPO:master $DOCKER_REPO:$hub_xy
 docker push $DOCKER_REPO:$hub_xy
