@@ -1204,8 +1204,6 @@ class JupyterHub(Application):
     def init_spawners(self):
         db = self.db
 
-        user_summaries = ['']
-
         def _user_summary(user):
             parts = ['{0: >8}'.format(user.name)]
             if user.admin:
@@ -1225,39 +1223,49 @@ class JupyterHub(Application):
             yield self.proxy.delete_user(user, server_name)
             yield user.stop(server_name)
 
+        @gen.coroutine
+        def check_spawner(user, name, spawner):
+            status = 0
+            if spawner.server:
+                try:
+                    status = yield spawner.poll()
+                except Exception:
+                    self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.",
+                        spawner._log_name)
+                    status = -1
+
+            if status is None:
+                self.log.info("%s still running", user.name)
+                spawner.add_poll_callback(user_stopped, user, name)
+                spawner.start_polling()
+            else:
+                # user not running. This is expected if server is None,
+                # but indicates the user's server died while the Hub wasn't running
+                # if spawner.server is defined.
+                if spawner.server:
+                    self.log.warning("%s appears to have stopped while the Hub was down", spawner._log_name)
+                    # remove server entry from db
+                    db.delete(spawner.orm_spawner.server)
+                    spawner.server = None
+                else:
+                    self.log.debug("%s not running", spawner._log_name)
+
+        # parallelize checks for running Spawners
+        check_futures = []
         for orm_user in db.query(orm.User):
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             self.log.debug("Loading state for %s from db", user.name)
             for name, spawner in user.spawners.items():
-                status = 0
-                if spawner.server:
-                    try:
-                        status = yield spawner.poll()
-                    except Exception:
-                        self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.",
-                            spawner._log_name)
-                        status = -1
+                f = check_spawner(user, name, spawner)
+                check_futures.append(f)
 
-                if status is None:
-                    self.log.info("%s still running", user.name)
-                    spawner.add_poll_callback(user_stopped, user, name)
-                    spawner.start_polling()
-                else:
-                    # user not running. This is expected if server is None,
-                    # but indicates the user's server died while the Hub wasn't running
-                    # if spawner.server is defined.
-                    if spawner.server:
-                        self.log.warning("%s appears to have stopped while the Hub was down", spawner._log_name)
-                        # remove server entry from db
-                        db.delete(spawner.orm_spawner.server)
-                        spawner.server = None
-                    else:
-                        self.log.debug("%s not running", spawner._log_name)
-            db.commit()
+        # await checks after submitting them all
+        for f in check_futures:
+            yield f
 
-            user_summaries.append(_user_summary(user))
+        user_summaries = map(_user_summary, self.users.values())
 
-        self.log.debug("Loaded users: %s", '\n'.join(user_summaries))
+        self.log.debug("Loaded users:\n%s", '\n'.join(user_summaries))
         db.commit()
 
     def init_oauth(self):
