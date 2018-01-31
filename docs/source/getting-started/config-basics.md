@@ -25,7 +25,7 @@ jupyterhub --generate-config
 This default `jupyterhub_config.py` file contains comments and guidance for all
 configuration variables and their default values. We recommend storing
 configuration files in the standard UNIX filesystem location, i.e.
-`/etc/jupyterhub`.
+`/etc/jupyter/jupyterhub`.
 
 ## Start with a specific config file
 
@@ -36,11 +36,11 @@ jupyterhub -f /path/to/jupyterhub_config.py
 ```
 
 If you have stored your configuration file in the recommended UNIX filesystem
-location, `/etc/jupyterhub`, the following command will start JupyterHub using
+location, `/etc/jupyter/jupyterhub`, the following command will start JupyterHub using
 the configuration file:
 
 ```bash
-jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
+jupyterhub -f /etc/jupyter/jupyterhub/jupyterhub_config.py
 ```
 
 The IPython documentation provides additional information on the
