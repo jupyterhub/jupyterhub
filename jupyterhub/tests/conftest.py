@@ -45,9 +45,7 @@ def io_loop(request):
 
     def _close():
         io_loop.clear_current()
-        if (not ioloop.IOLoop.initialized() or
-                io_loop is not ioloop.IOLoop.instance()):
-            io_loop.close(all_fds=True)
+        io_loop.close(all_fds=True)
 
     request.addfinalizer(_close)
     return io_loop

@@ -1,3 +1,4 @@
+import asyncio
 from binascii import hexlify
 import copy
 import json
@@ -125,6 +126,7 @@ def test_hub_authenticated(request):
     port = 50505
     q = Queue()
     def run():
+        asyncio.set_event_loop(asyncio.new_event_loop())
         app = Application([
             ('/*', TestHandler),
         ], login_url=auth.login_url)
