@@ -1,5 +1,6 @@
 """mock utilities for testing"""
 
+import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import os
 import sys
@@ -235,6 +236,7 @@ class MockHub(JupyterHub):
         # to avoid multiple eventloops in the same thread errors from asyncio
 
         def cleanup():
+            asyncio.set_event_loop(asyncio.new_event_loop())
             loop = IOLoop.current()
             loop.run_sync(self.cleanup)
             loop.close()
