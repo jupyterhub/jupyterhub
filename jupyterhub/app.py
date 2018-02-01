@@ -1205,10 +1205,11 @@ class JupyterHub(Application):
         db = self.db
 
         def _user_summary(user):
+            """user is an orm.User, not a full user"""
             parts = ['{0: >8}'.format(user.name)]
             if user.admin:
                 parts.append('admin')
-            for name, spawner in sorted(user.spawners.items(), key=itemgetter(0)):
+            for name, spawner in sorted(user.orm_spawners.items(), key=itemgetter(0)):
                 if spawner.server:
                     parts.append('%s:%s running at %s' % (user.name, name, spawner.server))
             return ' '.join(parts)
@@ -1252,7 +1253,16 @@ class JupyterHub(Application):
 
         # parallelize checks for running Spawners
         check_futures = []
-        for orm_user in db.query(orm.User):
+        seen = set()
+        # query by Spawner, since we only want Spawners with a server set
+        for orm_spawner in (
+            db.query(orm.Spawner)
+              .filter(orm.Spawner.server != None)
+        ):
+            if orm_spawner.user_id in seen:
+                continue
+            seen.add(orm_spawner.user_id)
+            orm_user = orm_spawner.user
             self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
             self.log.debug("Loading state for %s from db", user.name)
             for name, spawner in user.spawners.items():
@@ -1260,13 +1270,13 @@ class JupyterHub(Application):
                 check_futures.append(f)
 
         # await checks after submitting them all
-        for f in check_futures:
-            yield f
+        yield gen.multi(check_futures)
 
-        user_summaries = map(_user_summary, self.users.values())
-
-        self.log.debug("Loaded users:\n%s", '\n'.join(user_summaries))
         db.commit()
+        # only perform this query if we are going to log it
+        if self.log_level <= logging.DEBUG:
+            user_summaries = map(_user_summary, db.query(orm.User))
+            self.log.debug("Loaded users:\n%s", '\n'.join(user_summaries))
 
     def init_oauth(self):
         base_url = self.hub.base_url
