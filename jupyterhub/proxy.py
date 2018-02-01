@@ -24,7 +24,7 @@ from subprocess import Popen
 from urllib.parse import quote
 
 from tornado import gen
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.ioloop import PeriodicCallback
 
 
@@ -576,7 +576,16 @@ class ConfigurableHTTPProxy(Proxy):
 
     def delete_route(self, routespec):
         path = self._routespec_to_chp_path(routespec)
-        return self.api_request(path, method='DELETE')
+        try:
+            return self.api_request(path, method='DELETE')
+        except HTTPError as e:
+            if e.status_code == 404:
+                # Warn about 404s because something might be wrong
+                # but don't raise because the route is gone,
+                # which is the goal.
+                self.log.warning("Route %s already deleted", routespec)
+            else:
+                raise
 
     def _reformat_routespec(self, routespec, chp_data):
         """Reformat CHP data format to JupyterHub's proxy API."""
