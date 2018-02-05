@@ -8,6 +8,7 @@ from http.client import responses
 
 from tornado import web
 
+from .. import orm
 from ..handlers import BaseHandler
 from ..utils import url_path_join
 
@@ -95,21 +96,31 @@ class APIHandler(BaseHandler):
 
     def user_model(self, user):
         """Get the JSON model for a User object"""
+        orm_only = False
+        if isinstance(user, orm.User):
+            # we've already built the wrapper, use it.
+            if user.id in self.users:
+                user = self.users[user.id]
+            else:
+                orm_only = True
+
         model = {
             'kind': 'user',
             'name': user.name,
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
-            'server': user.url if user.running else None,
+            'server': None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
-        if '' in user.spawners:
-            model['pending'] = user.spawners[''].pending or None
-        else:
-            model['pending'] = False
+        if not orm_only:
+            model['server'] = user.url if user.running else None
+            if '' in user.spawners:
+                model['pending'] = user.spawners[''].pending or None
+            else:
+                model['pending'] = None
 
-        if self.allow_named_servers:
+        if self.allow_named_servers and not orm_only:
             servers = model['servers'] = {}
             for name, spawner in user.spawners.items():
                 if spawner.ready:

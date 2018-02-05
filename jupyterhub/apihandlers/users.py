@@ -31,8 +31,7 @@ class SelfAPIHandler(APIHandler):
 class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
-        users = [ self._user_from_orm(u) for u in self.db.query(orm.User) ]
-        data = [ self.user_model(u) for u in users ]
+        data = [ self.user_model(u) for u in self.db.query(orm.User) ]
         self.write(json.dumps(data))
     
     @admin_only
