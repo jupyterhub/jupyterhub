@@ -104,7 +104,10 @@ class APIHandler(BaseHandler):
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
-        model['pending'] = user.spawners[''].pending or None
+        if '' in user.spawners:
+            model['pending'] = user.spawners[''].pending or None
+        else:
+            model['pending'] = False
 
         if self.allow_named_servers:
             servers = model['servers'] = {}

@@ -81,7 +81,7 @@ class UserListAPIHandler(APIHandler):
                 yield gen.maybe_future(self.authenticator.add_user(user))
             except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
-                del self.users[user]
+                self.users.delete(user)
                 raise web.HTTPError(400, "Failed to create user %s: %s" % (name, str(e)))
             else:
                 created.append(user)
@@ -132,12 +132,12 @@ class UserAPIHandler(APIHandler):
         except Exception:
             self.log.error("Failed to create user: %s" % name, exc_info=True)
             # remove from registry
-            del self.users[user]
+            self.users.delete(user)
             raise web.HTTPError(400, "Failed to create user: %s" % name)
-        
+
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
-    
+
     @admin_only
     @gen.coroutine
     def delete(self, name):
@@ -152,10 +152,10 @@ class UserAPIHandler(APIHandler):
             yield self.stop_single_user(user)
             if user.spawner._stop_pending:
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
-        
+
         yield gen.maybe_future(self.authenticator.delete_user(user))
         # remove from registry
-        del self.users[user]
+        self.users.delete(user)
 
         self.set_status(204)
 

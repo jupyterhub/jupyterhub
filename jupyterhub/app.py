@@ -1034,6 +1034,8 @@ class JupyterHub(Application):
                     without notifying JupyterHub.
                     """))
         db.commit()
+        # expunge User objects from the db session
+        db.expunge_all()
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
@@ -1060,6 +1062,8 @@ class JupyterHub(Application):
                     db.add(user)
                 group.users.append(user)
         db.commit()
+        # expunge Group objects from the db session
+        db.expunge_all()
 
     @gen.coroutine
     def _add_tokens(self, token_dict, kind):
@@ -1263,7 +1267,7 @@ class JupyterHub(Application):
                 continue
             seen.add(orm_spawner.user_id)
             orm_user = orm_spawner.user
-            self.users[orm_user.id] = user = User(orm_user, self.tornado_settings)
+            user = self.users.add(orm_user)
             self.log.debug("Loading state for %s from db", user.name)
             for name, spawner in user.spawners.items():
                 f = check_spawner(user, name, spawner)
@@ -1271,6 +1275,15 @@ class JupyterHub(Application):
 
         # await checks after submitting them all
         yield gen.multi(check_futures)
+        to_expunge = []
+        for user in self.users.values():
+            if not user.active:
+                to_expunge.append(user)
+        if to_expunge:
+            self.log.debug("expunging users from db session: %s",
+                           ', '.join(u.name for u in to_expunge))
+            for user in to_expunge:
+                del self.users[user.id]
 
         db.commit()
         # only perform this query if we are going to log it

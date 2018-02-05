@@ -34,6 +34,15 @@ class UserDict(dict):
     def db(self):
         return self.db_factory()
 
+    def from_orm(self, orm_user):
+        return User(orm_user, self.settings)
+
+    def add(self, orm_user):
+        """Add a user to the UserDict"""
+        if orm_user.id not in self:
+            self[orm_user.id] = self.from_orm(orm_user)
+        return self[orm_user.id]
+
     def __contains__(self, key):
         if isinstance(key, (User, orm.User)):
             key = key.id
@@ -63,22 +72,34 @@ class UserDict(dict):
                 orm_user = self.db.query(orm.User).filter(orm.User.id == id).first()
                 if orm_user is None:
                     raise KeyError("No such user: %s" % id)
-                user = self[id] = User(orm_user, self.settings)
-            return dict.__getitem__(self, id)
+                user = self.add(orm_user)
+            else:
+                user = dict.__getitem__(self, id)
+            return user
         else:
             raise KeyError(repr(key))
 
     def __delitem__(self, key):
         user = self[key]
+        for orm_spawner in user.orm_user._orm_spawners:
+            if orm_spawner in self.db:
+                self.db.expunge(orm_spawner)
+        if user.orm_user in self.db:
+            self.db.expunge(user.orm_user)
+        dict.__delitem__(self, user.id)
+
+    def delete(self, key):
+        """Delete a user from the cache and the database"""
+        user = self[key]
         user_id = user.id
-        db = self.db
-        db.delete(user.orm_user)
-        db.commit()
-        dict.__delitem__(self, user_id)
+        self.db.delete(user)
+        self.db.commit()
+        # delete from dict after commit
+        del self[user_id]
 
     def count_active_users(self):
         """Count the number of user servers that are active/pending/ready
-        
+
         Returns dict with counts of active/pending/ready servers
         """
         counts = defaultdict(lambda : 0)
@@ -237,11 +258,15 @@ class User(HasTraits):
     @property
     def running(self):
         """property for whether the user's default server is running"""
+        if not self.spawners:
+            return False
         return self.spawner.ready
 
     @property
     def active(self):
         """True if any server is active"""
+        if not self.spawners:
+            return False
         return any(s.active for s in self.spawners.values())
 
     @property
@@ -371,7 +396,7 @@ class User(HasTraits):
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
-            yield gen.maybe_future(self.spawner.run_pre_spawn_hook())
+            yield gen.maybe_future(spawner.run_pre_spawn_hook())
             f = spawner.start()
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
@@ -524,3 +549,5 @@ class User(HasTraits):
             except Exception:
                 self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
             spawner._stop_pending = False
+            # pop the Spawner object
+            self.spawners.pop(server_name)

@@ -262,13 +262,11 @@ class Proxy(LoggingConfigurable):
         """
         db = self.db
         futures = []
-        for orm_service in db.query(Service):
-            service = service_dict[orm_service.name]
+        for service in service_dict.values():
             if service.server:
                 futures.append(self.add_service(service))
         # wait after submitting them all
-        for f in futures:
-            yield f
+        yield gen.multi(futures)
 
     @gen.coroutine
     def add_all_users(self, user_dict):
@@ -278,14 +276,12 @@ class Proxy(LoggingConfigurable):
         """
         db = self.db
         futures = []
-        for orm_user in db.query(User):
-            user = user_dict[orm_user]
+        for user in user_dict.values():
             for name, spawner in user.spawners.items():
                 if spawner.ready:
                     futures.append(self.add_user(user, name))
         # wait after submitting them all
-        for f in futures:
-            yield f
+        yield gen.multi(futures)
 
     @gen.coroutine
     def check_routes(self, user_dict, service_dict, routes=None):
@@ -309,8 +305,7 @@ class Proxy(LoggingConfigurable):
                 self.log.warning("Updating default route %s → %s", route['target'], hub.host)
                 futures.append(self.add_hub_route(hub))
 
-        for orm_user in db.query(User):
-            user = user_dict[orm_user]
+        for user in user_dict.values():
             for name, spawner in user.spawners.items():
                 if spawner.ready:
                     spec = spawner.proxy_spec
@@ -333,14 +328,8 @@ class Proxy(LoggingConfigurable):
         # check service routes
         service_routes = {r['data']['service']: r
                           for r in routes.values() if 'service' in r['data']}
-        for orm_service in db.query(Service).filter(Service.server != None):
-            service = service_dict[orm_service.name]
+        for service in service_dict.values():
             if service.server is None:
-                # This should never be True, but seems to be on rare occasion.
-                # catch filter bug, either in sqlalchemy or my understanding of
-                # its behavior
-                self.log.error(
-                    "Service %s has no server, but wasn't filtered out.", service)
                 continue
             good_routes.add(service.proxy_spec)
             if service.name not in service_routes:
