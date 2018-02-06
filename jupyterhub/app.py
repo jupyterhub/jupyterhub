@@ -249,6 +249,9 @@ class JupyterHub(Application):
         Default is two weeks.
         """
     ).tag(config=True)
+    redirect_to_server = Bool(True,
+        help="Redirect user to server (if running), instead of control panel."
+    ).tag(config=True)
     last_activity_interval = Integer(300,
         help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
@@ -1326,6 +1329,7 @@ class JupyterHub(Application):
             base_url=self.base_url,
             cookie_secret=self.cookie_secret,
             cookie_max_age_days=self.cookie_max_age_days,
+            redirect_to_server=self.redirect_to_server,
             login_url=login_url,
             logout_url=logout_url,
             static_path=os.path.join(self.data_files_path, 'static'),
