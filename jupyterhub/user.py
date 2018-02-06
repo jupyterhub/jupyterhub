@@ -136,13 +136,10 @@ class User:
     log = app_log
     settings = None
 
-    def __init__(self, orm_user, settings=None, **kwargs):
-        self.orm_user = orm_user
-        self.db = inspect(orm_user).session
+    def __init__(self, orm_user, settings=None, db=None):
+        self.db = db or inspect(orm_user).session
         self.settings = settings or {}
-        for key, attr in kwargs:
-            print('setting', key, attr)
-            setattr(self, key, attr)
+        self.orm_user = orm_user
 
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
@@ -225,7 +222,7 @@ class User:
     @property
     def spawner(self):
         return self.spawners['']
-    
+
     @spawner.setter
     def spawner(self, spawner):
         self.spawners[''] = spawner
