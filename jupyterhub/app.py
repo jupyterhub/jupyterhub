@@ -1253,31 +1253,24 @@ class JupyterHub(Application):
 
         # parallelize checks for running Spawners
         check_futures = []
-        seen = set()
-        # query by Spawner, since we only want Spawners with a server set
-        for orm_spawner in (
-            db.query(orm.Spawner)
-              .filter(orm.Spawner.server != None)
-        ):
-            if orm_spawner.user_id in seen:
-                continue
-            seen.add(orm_spawner.user_id)
-            orm_user = orm_spawner.user
-            user = self.users.add(orm_user)
+        for orm_user in db.query(orm.User):
+            user = self.users[orm_user]
             self.log.debug("Loading state for %s from db", user.name)
             for name, orm_spawner in user.orm_spawners.items():
                 if orm_spawner.server is not None:
+                    # spawner should be running
+                    # instantiate Spawner wrapper and check if it's still alive
                     spawner = user.spawners[name]
                     f = check_spawner(user, name, spawner)
                     check_futures.append(f)
 
         # await checks after submitting them all
         yield gen.multi(check_futures)
-
         db.commit()
+
         # only perform this query if we are going to log it
         if self.log_level <= logging.DEBUG:
-            user_summaries = map(_user_summary, db.query(orm.User))
+            user_summaries = map(_user_summary, self.users.values())
             self.log.debug("Loaded users:\n%s", '\n'.join(user_summaries))
 
     def init_oauth(self):
