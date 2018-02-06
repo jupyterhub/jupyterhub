@@ -165,6 +165,10 @@ class BaseHandler(RequestHandler):
     def cookie_max_age_days(self):
         return self.settings.get('cookie_max_age_days', None)
 
+    @property
+    def redirect_to_server(self):
+        return self.settings.get('redirect_to_server', True)
+
     def get_auth_token(self):
         """Get the authorization token from Authorization header"""
         auth_header = self.request.headers.get('Authorization', '')
@@ -394,7 +398,7 @@ class BaseHandler(RequestHandler):
         if not next_url.startswith('/'):
             next_url = ''
         if not next_url:
-            if user and user.running:
+            if user and user.running and self.redirect_to_server:
                 next_url = user.url
             else:
                 next_url = self.hub.base_url

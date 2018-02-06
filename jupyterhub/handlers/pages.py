@@ -45,12 +45,13 @@ class RootHandler(BaseHandler):
             return
         user = self.get_current_user()
         if user:
+            url = url_path_join(self.hub.base_url, 'home')
             if user.running:
-                url = user.url
-                self.log.debug("User is running: %s", url)
+                if self.redirect_to_server:
+                    url = user.url
+                self.log.debug("User is running: %s", user.url)
                 self.set_login_cookie(user) # set cookie
             else:
-                url = url_path_join(self.hub.base_url, 'home')
                 self.log.debug("User is not running: %s", url)
         else:
             url = self.settings['login_url']
