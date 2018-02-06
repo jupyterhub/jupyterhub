@@ -127,23 +127,38 @@ class _SpawnerDict(dict):
         return super().__getitem__(key)
 
 
-class User(HasTraits):
+class User:
+    """High-level wrapper around an orm.User object"""
 
-    @default('log')
-    def _log_default(self):
-        return app_log
+    # declare instance attributes
+    db = None
+    orm_user = None
+    log = app_log
+    settings = None
 
-    spawners = None
-    settings = Dict()
+    def __init__(self, orm_user, settings=None, **kwargs):
+        self.orm_user = orm_user
+        self.db = inspect(orm_user).session
+        self.settings = settings or {}
+        for key, attr in kwargs:
+            print('setting', key, attr)
+            setattr(self, key, attr)
 
-    db = Any(allow_none=True)
 
-    @default('db')
-    def _db_default(self):
-        if self.orm_user:
-            return inspect(self.orm_user).session
+        self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
-    orm_user = Any(allow_none=True)
+        self.base_url = self.prefix = url_path_join(
+            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
+
+        self.spawners = _SpawnerDict(self._new_spawner)
+
+    @property
+    def authenticator(self):
+        return self.settings.get('authenticator', None)
+
+    @property
+    def spawner_class(self):
+        return self.settings.get('spawner_class', LocalProcessSpawner)
 
     @gen.coroutine
     def save_auth_state(self, auth_state):
@@ -174,36 +189,12 @@ class User(HasTraits):
                 yield self.save_auth_state(auth_state)
         return auth_state
 
-    @property
-    def authenticator(self):
-        return self.settings.get('authenticator', None)
-
-    @property
-    def spawner_class(self):
-        return self.settings.get('spawner_class', LocalProcessSpawner)
-
-    def __init__(self, orm_user, settings=None, **kwargs):
-        if settings:
-            kwargs['settings'] = settings
-        kwargs['orm_user'] = orm_user
-        super().__init__(**kwargs)
-
-        self.allow_named_servers = self.settings.get('allow_named_servers', False)
-
-        self.base_url = self.prefix = url_path_join(
-            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
-
-        self.spawners = _SpawnerDict(self._new_spawner)
-        # load existing named spawners
-        for name in self.orm_spawners:
-            self.spawners[name] = self._new_spawner(name)
-
     def _new_spawner(self, name, spawner_class=None, **kwargs):
         """Create a new spawner"""
         if spawner_class is None:
             spawner_class = self.spawner_class
         self.log.debug("Creating %s for %s:%s", spawner_class, self.name, name)
-        
+
         orm_spawner = self.orm_spawners.get(name)
         if orm_spawner is None:
             orm_spawner = orm.Spawner(user=self.orm_user, name=name)
@@ -214,7 +205,7 @@ class User(HasTraits):
             # migrate user.state to spawner.state
             orm_spawner.state = self.state
             self.state = None
-        
+
         spawn_kwargs = dict(
             user=self,
             orm_spawner=orm_spawner,

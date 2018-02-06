@@ -1265,9 +1265,11 @@ class JupyterHub(Application):
             orm_user = orm_spawner.user
             user = self.users.add(orm_user)
             self.log.debug("Loading state for %s from db", user.name)
-            for name, spawner in user.spawners.items():
-                f = check_spawner(user, name, spawner)
-                check_futures.append(f)
+            for name, orm_spawner in user.orm_spawners.items():
+                if orm_spawner.server is not None:
+                    spawner = user.spawners[name]
+                    f = check_spawner(user, name, spawner)
+                    check_futures.append(f)
 
         # await checks after submitting them all
         yield gen.multi(check_futures)
