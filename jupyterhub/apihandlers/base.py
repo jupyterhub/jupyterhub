@@ -96,31 +96,22 @@ class APIHandler(BaseHandler):
 
     def user_model(self, user):
         """Get the JSON model for a User object"""
-        orm_only = False
         if isinstance(user, orm.User):
-            # we've already built the wrapper, use it.
-            if user.id in self.users:
-                user = self.users[user.id]
-            else:
-                orm_only = True
+            user = self.users[user.id]
 
         model = {
             'kind': 'user',
             'name': user.name,
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
-            'server': None,
+            'server': user.url if user.running else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
-        if not orm_only:
-            model['server'] = user.url if user.running else None
-            if '' in user.spawners:
-                model['pending'] = user.spawners[''].pending or None
-            else:
-                model['pending'] = None
+        if '' in user.spawners:
+            model['pending'] = user.spawners[''].pending or None
 
-        if self.allow_named_servers and not orm_only:
+        if self.allow_named_servers:
             servers = model['servers'] = {}
             for name, spawner in user.spawners.items():
                 if spawner.ready:
