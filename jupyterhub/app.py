@@ -1431,7 +1431,7 @@ class JupyterHub(Application):
             self.log.info("Cleaning up single-user servers...")
             # request (async) process termination
             for uid, user in self.users.items():
-                for name, spawner in user.spawners.items():
+                for name, spawner in list(user.spawners.items()):
                     if spawner.active:
                         futures.append(user.stop(name))
         else:
