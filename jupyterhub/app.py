@@ -1034,8 +1034,6 @@ class JupyterHub(Application):
                     without notifying JupyterHub.
                     """))
         db.commit()
-        # expunge User objects from the db session
-        db.expunge_all()
 
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
@@ -1062,8 +1060,6 @@ class JupyterHub(Application):
                     db.add(user)
                 group.users.append(user)
         db.commit()
-        # expunge Group objects from the db session
-        db.expunge_all()
 
     @gen.coroutine
     def _add_tokens(self, token_dict, kind):
@@ -1275,15 +1271,6 @@ class JupyterHub(Application):
 
         # await checks after submitting them all
         yield gen.multi(check_futures)
-        to_expunge = []
-        for user in self.users.values():
-            if not user.active:
-                to_expunge.append(user)
-        if to_expunge:
-            self.log.debug("expunging users from db session: %s",
-                           ', '.join(u.name for u in to_expunge))
-            for user in to_expunge:
-                del self.users[user.id]
 
         db.commit()
         # only perform this query if we are going to log it
