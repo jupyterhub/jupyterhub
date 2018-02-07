@@ -410,7 +410,10 @@ class BaseHandler(RequestHandler):
             username = authenticated['name']
             auth_state = authenticated.get('auth_state')
             admin = authenticated.get('admin')
+            new_user = username not in self.users
             user = self.user_from_username(username)
+            if new_user:
+                yield gen.maybe_future(self.authenticator.add_user(user))
             # Only set `admin` if the authenticator returned an explicit value.
             if admin is not None and admin != user.admin:
                 user.admin = admin
