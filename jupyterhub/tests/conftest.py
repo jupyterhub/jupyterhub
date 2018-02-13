@@ -50,6 +50,7 @@ def io_loop(request):
     request.addfinalizer(_close)
     return io_loop
 
+
 @fixture(scope='module')
 def app(request, io_loop):
     """Mock a jupyterhub app for testing"""
@@ -166,3 +167,10 @@ def slow_bad_spawn(app):
                          {'spawner_class': mocking.SlowBadSpawner}):
         yield
 
+
+@fixture
+def admin_access(app):
+    """Grant admin-access with this fixture"""
+    with mock.patch.dict(app.tornado_settings,
+                         {'admin_access': True}):
+        yield
