@@ -13,7 +13,7 @@ import mock
 import pytest
 
 from .mocking import FormSpawner, public_url, public_host
-from .test_api import api_request
+from .test_api import api_request, add_user
 from .utils import async_requests
 
 def get_page(path, app, hub=True, **kw):
@@ -109,20 +109,20 @@ def test_spawn_redirect(app):
     name = 'wash'
     cookies = yield app.login_user(name)
     u = app.users[orm.User.find(app.db, name)]
-    
+
     # ensure wash's server isn't running:
     r = yield api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
     r.raise_for_status()
     status = yield u.spawner.poll()
     assert status is not None
-    
+
     # test spawn page when no server is running
     r = yield get_page('spawn', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, 'user/%s/' % name)
-    
+
     # should have started server
     status = yield u.spawner.poll()
     assert status is None
@@ -143,6 +143,22 @@ def test_spawn_redirect(app):
     r.raise_for_status()
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
+
+
+@pytest.mark.gen_test
+def test_spawn_admin_access(app, admin_access):
+    """GET /user/:name as admin with admin-access spawns user's server"""
+    cookies = yield app.login_user('admin')
+    name = 'mariel'
+    user = add_user(app.db, app=app, name=name)
+    app.db.commit()
+    r = yield get_page('user/' + name, app, cookies=cookies)
+    r.raise_for_status()
+    assert (r.url + '/').startswith(public_url(app, user))
+    r = yield get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
+    r.raise_for_status()
+    env = r.json()
+    assert env['JUPYTERHUB_USER'] == name
 
 
 @pytest.mark.gen_test

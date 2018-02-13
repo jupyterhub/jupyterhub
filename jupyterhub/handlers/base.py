@@ -796,8 +796,30 @@ class UserSpawnHandler(BaseHandler):
         if not user_path:
             user_path = '/'
         current_user = self.get_current_user()
+        if (
+            current_user
+            and current_user.name != name
+            and current_user.admin
+            and self.settings.get('admin_access', False)
+        ):
+            # allow admins to spawn on behalf of users
+            user = self.find_user(name)
+            if user is None:
+                # no such user
+                raise web.HTTPError(404, "No such user %s" % name)
+            self.log.info("Admin %s requesting spawn on behalf of %s",
+                          current_user.name, user.name)
+            admin_spawn = True
+            should_spawn = True
+        else:
+            user = current_user
+            admin_spawn = False
+            # For non-admins, we should spawn if the user matches
+            # otherwise redirect users to their own server
+            should_spawn = (current_user.name == name)
 
-        if current_user and current_user.name == name:
+
+        if should_spawn:
             # if spawning fails for any reason, point users to /hub/home to retry
             self.extra_error_html = self.spawn_home_error
 
@@ -816,8 +838,8 @@ class UserSpawnHandler(BaseHandler):
                     Make sure to connect to the proxied public URL %s
                     """, self.request.full_url(), self.proxy.public_url)
 
-            # logged in as correct user, check for pending spawn
-            spawner = current_user.spawner
+            # logged in as valid user, check for pending spawn
+            spawner = user.spawner
 
             # First, check for previous failure.
             if (
@@ -850,7 +872,7 @@ class UserSpawnHandler(BaseHandler):
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template("spawn_pending.html", user=current_user)
+                html = self.render_template("spawn_pending.html", user=user)
                 self.finish(html)
                 return
 
@@ -867,20 +889,20 @@ class UserSpawnHandler(BaseHandler):
                                              {'next': self.request.uri}))
                     return
                 else:
-                    yield self.spawn_single_user(current_user)
+                    yield self.spawn_single_user(user)
 
             # spawn didn't finish, show pending page
             if spawner.pending:
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template("spawn_pending.html", user=current_user)
+                html = self.render_template("spawn_pending.html", user=user)
                 self.finish(html)
                 return
 
             # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
             # This is important in many distributed proxy implementations - those are often eventually
-            # consistent and can take upto a couple of seconds to actually apply throughout the cluster.
+            # consistent and can take up to a couple of seconds to actually apply throughout the cluster.
             try:
                 redirects = int(self.get_argument('redirects', 0))
             except ValueError:
@@ -905,12 +927,10 @@ class UserSpawnHandler(BaseHandler):
                     )
                 raise web.HTTPError(500, msg)
 
-            # set login cookie anew
-            self.set_login_cookie(current_user)
             without_prefix = self.request.uri[len(self.hub.base_url):]
             target = url_path_join(self.base_url, without_prefix)
             if self.subdomain_host:
-                target = current_user.host + target
+                target = user.host + target
 
             # record redirect count in query parameter
             if redirects:
@@ -945,13 +965,13 @@ class UserSpawnHandler(BaseHandler):
 
 class UserRedirectHandler(BaseHandler):
     """Redirect requests to user servers.
-    
+
     Allows public linking to "this file on your server".
-    
+
     /user-redirect/path/to/foo will redirect to /user/:name/path/to/foo
-    
+
     If the user is not logged in, send to login URL, redirecting back here.
-    
+
     .. versionadded:: 0.7
     """
     @web.authenticated
