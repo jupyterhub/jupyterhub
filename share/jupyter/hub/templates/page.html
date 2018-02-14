@@ -104,19 +104,9 @@
           {% endif %}
         </ul>
         {% endif %}
-        <ul class="nav navbar-nav navbar-right">
-          <li>
-            {% block login_widget %}
-              <span id="login_widget">
-                {% if user %}
-                  <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
-                {% else %}
-                  <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
-                {% endif %}
-              </span>
-              {% endblock %}
-          </li>
-        </ul>
+        {% block navbar_right %}
+          {% include "navbar_right.html" %}
+        {% endblock navbar_right %}
       </div>
 
   {% block header %}

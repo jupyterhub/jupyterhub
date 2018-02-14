@@ -1,0 +1,16 @@
+<ul class="nav navbar-nav navbar-right">
+  {% if user %}
+  <li><span class="navbar-text">{{ user.name }}</span></li>
+  {% endif %}
+  <li>
+    {% block login_widget %}
+      <span id="login_widget">
+        {% if user %}
+          <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{ logout_url }}"><i aria-hidden="true" class="fa fa-sign-out"></i>Logout</a>
+        {% else %}
+          <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{ login_url }}">Login</a>
+        {% endif %}
+      </span>
+    {% endblock login_widget %}
+  </li>
+</ul>
