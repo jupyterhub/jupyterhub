@@ -290,7 +290,11 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
     ip = Unicode('',
-        help="The public facing ip of the whole application (the proxy)"
+        help="""The public facing ip of the whole application (the proxy)
+        
+        This is the address on which the proxy will listen. The default is to 
+        listen on all interfaces. This is the only address through which jupyterhub 
+        should be accessed. """
     ).tag(config=True)
 
     subdomain_host = Unicode('',
@@ -325,10 +329,19 @@ class JupyterHub(Application):
         return urlparse(self.subdomain_host).hostname
 
     port = Integer(8000,
-        help="The public facing port of the proxy"
+        help="""The public facing port of the proxy.
+        
+        This is the port on which the proxy will listen. 
+        This is the only port through which jupyterhub 
+        should be accessed.
+        """
     ).tag(config=True)
     base_url = URLPrefix('/',
-        help="The base URL of the entire application"
+        help="""The base URL of the entire application.
+        
+        Add this to the begining of all jupyterhub URLs. 
+        Use base_url to run jupyterhub within an existing website.
+        """
     ).tag(config=True)
     logo_file = Unicode('',
         help="Specify path to a logo image to override the Jupyter logo in the banner."
@@ -383,10 +396,19 @@ class JupyterHub(Application):
         )
 
     hub_port = Integer(8081,
-        help="The port for the Hub process"
+        help="""The internal port for the Hub process.
+        
+        This is the internal port of the hub itself. It should never be accessed directly.
+        See JupyterHub.port for the public port to use when accessing jupyterhub.
+        It is rare that this port should be set except in cases of port conflict.
+        """
     ).tag(config=True)
     hub_ip = Unicode('127.0.0.1',
         help="""The ip address for the Hub process to *bind* to.
+        
+        The hub listens on localhost only by default. This address must be accessible from 
+        the proxy and user servers. You may need to set this to a public ip or '' for all 
+        interfaces if the proxy or user servers are in containers or on a different host.
 
         See `hub_connect_ip` for cases where the bind and connect address should differ.
         """
@@ -413,7 +435,7 @@ class JupyterHub(Application):
         help="""
         The port for proxies & spawners to connect to the hub on.
 
-        Used alongside `hub_connect_ip`
+        Used alongside `hub_connect_ip` and only when different from hub_port.
 
         .. versionadded:: 0.8
         """
