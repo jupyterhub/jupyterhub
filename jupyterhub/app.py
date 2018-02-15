@@ -265,16 +265,12 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     template_paths = List(
-        help="Paths to search for jinja templates.",
+        help="Paths to search for jinja templates, before using the default templates.",
     ).tag(config=True)
 
     @default('template_paths')
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
-
-    base_templates = Bool(False,
-        help="Allow tempates to extend the base versions, by referencing 'BASE:name.html'."
-    ).tag(config=True)
 
     confirm_no_ssl = Bool(False,
         help="""DEPRECATED: does nothing"""
@@ -1298,16 +1294,13 @@ class JupyterHub(Application):
             autoescape=True,
         )
         jinja_options.update(self.jinja_environment_options)
-        if self.base_templates:
-            base_path = self._template_paths_default()[0]
-            if base_path not in self.template_paths:
-                self.template_paths.append(base_path)
-            loader = ChoiceLoader([
-                PrefixLoader({'BASE': FileSystemLoader([base_path])}, ':'),
-                FileSystemLoader(self.template_paths)
-            ])
-        else:
-            loader = FileSystemLoader(self.template_paths)
+        base_path = self._template_paths_default()[0]
+        if base_path not in self.template_paths:
+            self.template_paths.append(base_path)
+        loader = ChoiceLoader([
+            PrefixLoader({'BASE': FileSystemLoader([base_path])}, ':'),
+            FileSystemLoader(self.template_paths)
+        ])
         jinja_env = Environment(
             loader=loader,
             **jinja_options
