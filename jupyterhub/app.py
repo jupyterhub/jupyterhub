@@ -1298,7 +1298,7 @@ class JupyterHub(Application):
         if base_path not in self.template_paths:
             self.template_paths.append(base_path)
         loader = ChoiceLoader([
-            PrefixLoader({'BASE': FileSystemLoader([base_path])}, ':'),
+            PrefixLoader({'templates': FileSystemLoader([base_path])}, '/'),
             FileSystemLoader(self.template_paths)
         ])
         jinja_env = Environment(
