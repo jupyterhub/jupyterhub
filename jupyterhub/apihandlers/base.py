@@ -8,6 +8,7 @@ from http.client import responses
 
 from tornado import web
 
+from .. import orm
 from ..handlers import BaseHandler
 from ..utils import url_path_join
 
@@ -95,6 +96,9 @@ class APIHandler(BaseHandler):
 
     def user_model(self, user):
         """Get the JSON model for a User object"""
+        if isinstance(user, orm.User):
+            user = self.users[user.id]
+
         model = {
             'kind': 'user',
             'name': user.name,
@@ -104,7 +108,8 @@ class APIHandler(BaseHandler):
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
         }
-        model['pending'] = user.spawners[''].pending or None
+        if '' in user.spawners:
+            model['pending'] = user.spawners[''].pending or None
 
         if self.allow_named_servers:
             servers = model['servers'] = {}

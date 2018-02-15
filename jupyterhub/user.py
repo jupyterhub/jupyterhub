@@ -34,6 +34,15 @@ class UserDict(dict):
     def db(self):
         return self.db_factory()
 
+    def from_orm(self, orm_user):
+        return User(orm_user, self.settings)
+
+    def add(self, orm_user):
+        """Add a user to the UserDict"""
+        if orm_user.id not in self:
+            self[orm_user.id] = self.from_orm(orm_user)
+        return self[orm_user.id]
+
     def __contains__(self, key):
         if isinstance(key, (User, orm.User)):
             key = key.id
@@ -63,22 +72,34 @@ class UserDict(dict):
                 orm_user = self.db.query(orm.User).filter(orm.User.id == id).first()
                 if orm_user is None:
                     raise KeyError("No such user: %s" % id)
-                user = self[id] = User(orm_user, self.settings)
-            return dict.__getitem__(self, id)
+                user = self.add(orm_user)
+            else:
+                user = dict.__getitem__(self, id)
+            return user
         else:
             raise KeyError(repr(key))
 
     def __delitem__(self, key):
         user = self[key]
+        for orm_spawner in user.orm_user._orm_spawners:
+            if orm_spawner in self.db:
+                self.db.expunge(orm_spawner)
+        if user.orm_user in self.db:
+            self.db.expunge(user.orm_user)
+        dict.__delitem__(self, user.id)
+
+    def delete(self, key):
+        """Delete a user from the cache and the database"""
+        user = self[key]
         user_id = user.id
-        db = self.db
-        db.delete(user.orm_user)
-        db.commit()
-        dict.__delitem__(self, user_id)
+        self.db.delete(user)
+        self.db.commit()
+        # delete from dict after commit
+        del self[user_id]
 
     def count_active_users(self):
         """Count the number of user servers that are active/pending/ready
-        
+
         Returns dict with counts of active/pending/ready servers
         """
         counts = defaultdict(lambda : 0)
@@ -106,23 +127,35 @@ class _SpawnerDict(dict):
         return super().__getitem__(key)
 
 
-class User(HasTraits):
+class User:
+    """High-level wrapper around an orm.User object"""
 
-    @default('log')
-    def _log_default(self):
-        return app_log
+    # declare instance attributes
+    db = None
+    orm_user = None
+    log = app_log
+    settings = None
 
-    spawners = None
-    settings = Dict()
+    def __init__(self, orm_user, settings=None, db=None):
+        self.db = db or inspect(orm_user).session
+        self.settings = settings or {}
+        self.orm_user = orm_user
 
-    db = Any(allow_none=True)
 
-    @default('db')
-    def _db_default(self):
-        if self.orm_user:
-            return inspect(self.orm_user).session
+        self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
-    orm_user = Any(allow_none=True)
+        self.base_url = self.prefix = url_path_join(
+            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
+
+        self.spawners = _SpawnerDict(self._new_spawner)
+
+    @property
+    def authenticator(self):
+        return self.settings.get('authenticator', None)
+
+    @property
+    def spawner_class(self):
+        return self.settings.get('spawner_class', LocalProcessSpawner)
 
     @gen.coroutine
     def save_auth_state(self, auth_state):
@@ -153,36 +186,12 @@ class User(HasTraits):
                 yield self.save_auth_state(auth_state)
         return auth_state
 
-    @property
-    def authenticator(self):
-        return self.settings.get('authenticator', None)
-
-    @property
-    def spawner_class(self):
-        return self.settings.get('spawner_class', LocalProcessSpawner)
-
-    def __init__(self, orm_user, settings=None, **kwargs):
-        if settings:
-            kwargs['settings'] = settings
-        kwargs['orm_user'] = orm_user
-        super().__init__(**kwargs)
-
-        self.allow_named_servers = self.settings.get('allow_named_servers', False)
-
-        self.base_url = self.prefix = url_path_join(
-            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
-
-        self.spawners = _SpawnerDict(self._new_spawner)
-        # load existing named spawners
-        for name in self.orm_spawners:
-            self.spawners[name] = self._new_spawner(name)
-
     def _new_spawner(self, name, spawner_class=None, **kwargs):
         """Create a new spawner"""
         if spawner_class is None:
             spawner_class = self.spawner_class
         self.log.debug("Creating %s for %s:%s", spawner_class, self.name, name)
-        
+
         orm_spawner = self.orm_spawners.get(name)
         if orm_spawner is None:
             orm_spawner = orm.Spawner(user=self.orm_user, name=name)
@@ -193,7 +202,7 @@ class User(HasTraits):
             # migrate user.state to spawner.state
             orm_spawner.state = self.state
             self.state = None
-        
+
         spawn_kwargs = dict(
             user=self,
             orm_spawner=orm_spawner,
@@ -213,7 +222,7 @@ class User(HasTraits):
     @property
     def spawner(self):
         return self.spawners['']
-    
+
     @spawner.setter
     def spawner(self, spawner):
         self.spawners[''] = spawner
@@ -237,11 +246,15 @@ class User(HasTraits):
     @property
     def running(self):
         """property for whether the user's default server is running"""
+        if not self.spawners:
+            return False
         return self.spawner.ready
 
     @property
     def active(self):
         """True if any server is active"""
+        if not self.spawners:
+            return False
         return any(s.active for s in self.spawners.values())
 
     @property
@@ -371,7 +384,7 @@ class User(HasTraits):
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
-            yield gen.maybe_future(self.spawner.run_pre_spawn_hook())
+            yield gen.maybe_future(spawner.run_pre_spawn_hook())
             f = spawner.start()
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
@@ -524,3 +537,5 @@ class User(HasTraits):
             except Exception:
                 self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
             spawner._stop_pending = False
+            # pop the Spawner object
+            self.spawners.pop(server_name)

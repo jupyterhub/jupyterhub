@@ -290,6 +290,9 @@ def test_spawner_reuse_api_token(db, app):
     assert found.user.name == user.name
     assert user.api_tokens == [found]
     yield user.stop()
+    # stop now deletes unused spawners.
+    # put back the mock spawner!
+    user.spawners[''] = spawner
     # second start: should reuse the token
     yield user.spawn()
     # verify re-use of API token

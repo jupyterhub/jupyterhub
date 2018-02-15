@@ -42,9 +42,10 @@ def test_server(db):
 
 
 def test_user(db):
-    user = User(orm.User(name='kaylee'))
-    db.add(user)
+    orm_user = orm.User(name='kaylee')
+    db.add(orm_user)
     db.commit()
+    user = User(orm_user)
     spawner = user.spawners['']
     spawner.orm_spawner.state = {'pid': 4234}
     assert user.name == 'kaylee'
@@ -164,13 +165,13 @@ def test_spawn_fails(db):
         @gen.coroutine
         def start(self):
             raise RuntimeError("Split the party")
-    
+
     user = User(orm_user, {
         'spawner_class': BadSpawner,
         'config': None,
         'statsd': EmptyClass(),
     })
-    
+
     with pytest.raises(RuntimeError) as exc:
         yield user.spawn()
     assert user.spawners[''].server is None
@@ -194,15 +195,16 @@ def test_groups(db):
 
 @pytest.mark.gen_test
 def test_auth_state(db):
-    user = User(orm.User(name='eve'))
-    db.add(user.orm_user)
+    orm_user = orm.User(name='eve')
+    db.add(orm_user)
     db.commit()
-    
+    user = User(orm_user)
+
     ck = crypto.CryptKeeper.instance()
 
     # starts empty
     assert user.encrypted_auth_state is None
-    
+
     # can't set auth_state without keys
     state = {'key': 'value'}
     ck.keys = []
