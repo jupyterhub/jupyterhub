@@ -12,4 +12,5 @@ Technical Reference
    proxy
    rest
    upgrading
+   templates
    config-examples
