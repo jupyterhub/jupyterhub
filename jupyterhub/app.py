@@ -241,7 +241,7 @@ class JupyterHub(Application):
     ).tag(config=True)
     pid_file = Unicode('',
         help="""File to write PID
-        Useful for daemonizing jupyterhub.
+        Useful for daemonizing JupyterHub.
         """
     ).tag(config=True)
     cookie_max_age_days = Float(14,
@@ -290,11 +290,12 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
     ip = Unicode('',
-        help="""The public facing ip of the whole application (the proxy)
+        help="""The public facing ip of the whole JupyterHub application 
+        (specifically referred to as the proxy).
         
         This is the address on which the proxy will listen. The default is to 
-        listen on all interfaces. This is the only address through which jupyterhub 
-        should be accessed. """
+        listen on all interfaces. This is the only address through which JupyterHub 
+        should be accessed by users. """
     ).tag(config=True)
 
     subdomain_host = Unicode('',
@@ -332,15 +333,15 @@ class JupyterHub(Application):
         help="""The public facing port of the proxy.
         
         This is the port on which the proxy will listen. 
-        This is the only port through which jupyterhub 
-        should be accessed.
+        This is the only port through which JupyterHub 
+        should be accessed by users.
         """
     ).tag(config=True)
     base_url = URLPrefix('/',
         help="""The base URL of the entire application.
         
-        Add this to the begining of all jupyterhub URLs. 
-        Use base_url to run jupyterhub within an existing website.
+        Add this to the begining of all JupyterHub URLs. 
+        Use base_url to run JupyterHub within an existing website.
         """
     ).tag(config=True)
     logo_file = Unicode('',
@@ -406,7 +407,7 @@ class JupyterHub(Application):
     hub_ip = Unicode('127.0.0.1',
         help="""The ip address for the Hub process to *bind* to.
         
-        The hub listens on localhost only by default. This address must be accessible from 
+        By default, the hub listens on localhost only. This address must be accessible from 
         the proxy and user servers. You may need to set this to a public ip or '' for all 
         interfaces if the proxy or user servers are in containers or on a different host.
 
