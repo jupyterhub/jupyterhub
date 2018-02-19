@@ -5,8 +5,10 @@
 <div class="container">
   <div class="row">
     <div class="text-center">
+      {% block message %}
       <p>Your server is starting up.</p>
       <p>You will be redirected automatically when it's ready for you.</p>
+      {% endblock %}
       <p><i class="fa fa-spinner fa-pulse fa-fw fa-3x" aria-hidden="true"></i></p>
       <a role="button" id="refresh" class="btn btn-lg btn-primary" href="#">refresh</a>
     </div>
