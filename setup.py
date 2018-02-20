@@ -38,7 +38,7 @@ from setuptools.command.bdist_egg import bdist_egg
 pjoin = os.path.join
 
 here = os.path.abspath(os.path.dirname(__file__))
-share_jupyter = pjoin(here, 'share', 'jupyter', 'hub')
+share_jupyterhub = pjoin(here, 'share', 'jupyterhub')
 static = pjoin(share_jupyter, 'static')
 
 is_repo = os.path.exists(pjoin(here, '.git'))
@@ -53,7 +53,7 @@ def get_data_files():
     data_files = []
     ntrim = len(here + os.path.sep)
 
-    for (d, dirs, filenames) in os.walk(share_jupyter):
+    for (d, dirs, filenames) in os.walk(share_jupyterhub):
         data_files.append((
             d[ntrim:],
             [ pjoin(d, f) for f in filenames ]

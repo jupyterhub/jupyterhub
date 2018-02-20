@@ -263,7 +263,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     data_files_path = Unicode(DATA_FILES_PATH,
-        help="The location of jupyterhub data files (e.g. /usr/local/share/jupyter/hub)"
+        help="The location of jupyterhub data files (e.g. /usr/local/share/jupyterhub)"
     ).tag(config=True)
 
     template_paths = List(

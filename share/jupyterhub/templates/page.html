@@ -30,7 +30,7 @@
     <title>{% block title %}JupyterHub{% endblock %}</title>
     <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     {% block stylesheet %}
     <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
     {% endblock %}
@@ -57,7 +57,7 @@
           }
       });
     </script>
-    
+
     <script type="text/javascript">
       window.jhdata = {
         base_url: "{{base_url}}",
