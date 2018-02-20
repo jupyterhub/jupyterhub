@@ -18,7 +18,7 @@ import shutil
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
-components = join(HERE, "share", "jupyter", "hub", "static", "components")
+components = join(HERE, "share", "jupyterhub", "static", "components")
 node_modules = join(HERE, "node_modules")
 
 if os.path.exists(components):
