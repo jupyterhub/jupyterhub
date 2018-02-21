@@ -4,7 +4,7 @@ The pages of the JupyterHub application are generated from [Jinja](http://jinja.
 
 ## Custom Templates
 
-JupyterHub will look for custom templates in all of the paths in the `JupyterHub.template_paths` configuration option, falling back on the [default templates](https://github.com/jupyterhub/jupyterhub/tree/master/share/jupyter/hub/templates) if no custom template with that name is found.  This means you can override as many or as few templates as you desire.
+JupyterHub will look for custom templates in all of the paths in the `JupyterHub.template_paths` configuration option, falling back on the [default templates](https://github.com/jupyterhub/jupyterhub/tree/master/share/jupyter/hub/templates) if no custom template with that name is found.  (This fallback behavior is new in version 0.9; previous versions searched only those paths explicitly included in `template_paths`.)  This means you can override as many or as few templates as you desire.
 
 ## Extending Templates
 
@@ -14,7 +14,7 @@ In general, a child template can extend a base template, `base.html`, by beginni
 ```
 {% extends "base.html" %}
 ```
-This works, unless you are trying to extend the default template for the same file name.  In this case, refer to the base file with a `templates/` prefix.  Thus, if you are writing a custom `base.html`, start it with
+This works, unless you are trying to extend the default template for the same file name.  Starting in version 0.9, you may refer to the base file with a `templates/` prefix.  Thus, if you are writing a custom `base.html`, start it with
 ```
 {% extends "templates/base.html" %}
 ```
