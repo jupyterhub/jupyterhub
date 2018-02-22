@@ -1579,8 +1579,14 @@ class JupyterHub(Application):
                 dt = datetime.strptime(route_data['last_activity'], ISO8601_ms)
             except Exception:
                 dt = datetime.strptime(route_data['last_activity'], ISO8601_s)
-            user.last_activity = max(user.last_activity, dt)
-            spawner.last_activity = max(spawner.last_activity, dt)
+            if user.last_activity:
+                user.last_activity = max(user.last_activity, dt)
+            else:
+                user.last_activity = dt
+            if spawner.last_activity:
+                spawner.last_activity = max(spawner.last_activity, dt)
+            else:
+                spawner.last_activity = dt
             # FIXME: Make this configurable duration. 30 minutes for now!
             if (now - user.last_activity).total_seconds() < 30 * 60:
                 active_users_count += 1

@@ -99,6 +99,12 @@ class APIHandler(BaseHandler):
         if isinstance(user, orm.User):
             user = self.users[user.id]
 
+
+        last_activity = user.last_activity
+        # don't call isoformat if last_activity is None
+        if last_activity:
+            last_activity = last_activity.isoformat()
+
         model = {
             'kind': 'user',
             'name': user.name,
@@ -106,7 +112,7 @@ class APIHandler(BaseHandler):
             'groups': [ g.name for g in user.groups ],
             'server': user.url if user.running else None,
             'pending': None,
-            'last_activity': user.last_activity.isoformat(),
+            'last_activity': last_activity,
         }
         if '' in user.spawners:
             model['pending'] = user.spawners[''].pending or None
@@ -114,8 +120,14 @@ class APIHandler(BaseHandler):
         if self.allow_named_servers:
             servers = model['servers'] = {}
             for name, spawner in user.spawners.items():
+                last_activity = spawner.orm_spawner.last_activity
+                if last_activity:
+                    last_activity = last_activity.isoformat()
                 if spawner.ready:
-                    servers[name] = s = {'name': name}
+                    servers[name] = s = {
+                        'name': name,
+                        'last_activity': last_activity,
+                    }
                     if spawner.pending:
                         s['pending'] = spawner.pending
                     if spawner.server:
