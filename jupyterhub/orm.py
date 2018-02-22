@@ -160,7 +160,7 @@ class User(Base):
 
         If `token` is given, load that token.
         """
-        return APIToken.new(token=token, user=self, note='', generated=generated)
+        return APIToken.new(token=token, user=self, note=note, generated=generated)
 
     @classmethod
     def find(cls, db, name):
@@ -172,7 +172,7 @@ class User(Base):
 class Spawner(Base):
     """"State about a Spawner"""
     __tablename__ = 'spawners'
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
