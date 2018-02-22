@@ -1067,6 +1067,12 @@ class JupyterHub(Application):
                     such as when user accounts are deleted from the external system
                     without notifying JupyterHub.
                     """))
+            else:
+                # handle database upgrades where user.created is undefined.
+                # we don't want to allow user.created to be undefined,
+                # so initialize it to last_activity (if defined) or now.
+                if not user.created:
+                    user.created = user.last_activity or datetime.utcnow()
         db.commit()
 
         # The whitelist set and the users in the db are now the same.
