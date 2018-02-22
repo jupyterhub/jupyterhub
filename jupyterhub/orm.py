@@ -134,7 +134,8 @@ class User(Base):
         return {s.name: s for s in self._orm_spawners}
 
     admin = Column(Boolean, default=False)
-    last_activity = Column(DateTime, default=datetime.utcnow)
+    created = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, nullable=True)
 
     api_tokens = relationship("APIToken", backref="user")
     cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
@@ -182,7 +183,7 @@ class Spawner(Base):
     state = Column(JSONDict)
     name = Column(Unicode(255))
 
-    last_activity = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, nullable=True)
 
 
 class Service(Base):

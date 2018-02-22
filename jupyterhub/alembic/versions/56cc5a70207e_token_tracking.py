@@ -18,6 +18,7 @@ import sqlalchemy as sa
 
 def upgrade():
     tables = op.get_bind().engine.table_names()
+    op.add_column('users', sa.Column('created', sa.DateTime(), nullable=True))
     op.add_column('api_tokens', sa.Column('created', sa.DateTime(), nullable=True))
     op.add_column('api_tokens', sa.Column('last_activity', sa.DateTime(), nullable=True))
     op.add_column('api_tokens', sa.Column('note', sa.Unicode(length=1023), nullable=True))
@@ -31,6 +32,7 @@ def upgrade():
 def downgrade():
     op.drop_constraint(None, 'oauth_codes', type_='foreignkey')
     op.drop_constraint(None, 'oauth_access_tokens', type_='foreignkey')
+    op.add_column('users', 'created')
     op.drop_column('oauth_access_tokens', 'last_activity')
     op.drop_column('oauth_access_tokens', 'created')
     op.drop_column('api_tokens', 'note')
