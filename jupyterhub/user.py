@@ -459,7 +459,6 @@ class User:
         if self.state is None:
             self.state = {}
         spawner.orm_spawner.state = spawner.get_state()
-        self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
         db.commit()
         spawner._waiting_for_response = True
         try:
