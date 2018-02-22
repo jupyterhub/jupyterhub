@@ -39,7 +39,7 @@ pjoin = os.path.join
 
 here = os.path.abspath(os.path.dirname(__file__))
 share_jupyterhub = pjoin(here, 'share', 'jupyterhub')
-static = pjoin(share_jupyter, 'static')
+static = pjoin(share_jupyterhub, 'static')
 
 is_repo = os.path.exists(pjoin(here, '.git'))
 
