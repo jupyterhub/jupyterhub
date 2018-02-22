@@ -304,7 +304,7 @@ class SingleUserNotebookApp(NotebookApp):
 
     def _confirm_exit(self):
         # disable the exit confirmation for background notebook processes
-        ioloop.IOLoop.instance().stop()
+        self.io_loop.add_callback_from_signal(self.io_loop.stop)
 
     def migrate_config(self):
         if self.disable_user_config:
