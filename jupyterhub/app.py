@@ -790,7 +790,7 @@ class JupyterHub(Application):
 
         if self.extra_log_file:
             self.extra_log_handlers.append(
-                logging.FileHandler(self.extra_log_file)
+                logging.FileHandler(self.extra_log_file, encoding='utf8')
             )
 
         _formatter = self._log_formatter_cls(
