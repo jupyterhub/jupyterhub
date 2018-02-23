@@ -276,11 +276,23 @@ class Authenticator(LoggingConfigurable):
                 persisted; and 'admin', the admin setting value for the user.
         """
 
+    @gen.coroutine
     def pre_spawn_start(self, user, spawner):
         """Hook called before spawning a user's server
 
-        Can be used to do auth-related startup, e.g. opening PAM sessions.
+        Can be used to do auth-related startup, e.g. opening PAM sessions
+        or specifying auth-related environment variables.
+
+        Default: load environment variables from auth_state.env
+        if auth_state is enabled and auth_state.env is defined.
         """
+        if not self.enable_auth_state:
+            return
+        auth_state = yield user.get_auth_state()
+        if not auth_state:
+            return
+        if 'env' in auth_state:
+            spawner.environment.update(auth_state['env'])
 
     def post_spawn_stop(self, user, spawner):
         """Hook called after stopping a user container
@@ -567,8 +579,11 @@ class PAMAuthenticator(LocalAuthenticator):
         else:
             return username
 
+    @gen.coroutine
     def pre_spawn_start(self, user, spawner):
         """Open PAM session for user if so configured"""
+        yield super().pre_spawn_start(user, spawner)
+
         if not self.open_sessions:
             return
         try:

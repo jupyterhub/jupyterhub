@@ -198,7 +198,10 @@ def test_auth_state(app, auth_state_enabled):
     assert user.encrypted_auth_state is None
     cookies = yield app.login_user(name)
     auth_state = yield user.get_auth_state()
+    assert auth_state is not None
+    auth_env = auth_state.pop('env')
     assert auth_state == app.authenticator.auth_state
+    assert user.spawner.environment == auth_env
 
 
 @pytest.fixture
