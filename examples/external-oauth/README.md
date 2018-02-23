@@ -1,11 +1,13 @@
 # Using JupyterHub as an OAuth provider
 
-JupyterHub 0.9 introduces
-Uses `jupyterhub.services.HubAuthenticated` to authenticate requests with the Hub.
+JupyterHub 0.9 introduces the ability to use JupyterHub as an OAuth provider
+for external services that may not be otherwise integrated with JupyterHub.
+The main feature this enables is using JupyterHub like a 'regular' OAuth 2
+provider for services running anywhere.
 
-There is an implementation each of cookie-based `HubAuthenticated` and OAuth-based `HubOAuthenticated`.
+This example uses `jupyterhub.services.HubOAuthenticated` to authenticate requests with the Hub for a service run on its own host.
 
-## Run
+## Run the example
 
 1. generate an API token:
 
@@ -16,6 +18,8 @@ There is an implementation each of cookie-based `HubAuthenticated` and OAuth-bas
         bash launch-service.sh &
 
 3. Launch JupyterHub:
+
+        jupyterhub
 
 4. Visit http://127.0.0.1:5555/
 
