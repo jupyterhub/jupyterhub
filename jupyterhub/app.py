@@ -153,7 +153,7 @@ class NewToken(Application):
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)
             self.exit(1)
-        token = user.new_api_token()
+        token = user.new_api_token(note="command-line generated")
         print(token)
 
 
@@ -1119,7 +1119,7 @@ class JupyterHub(Application):
                 try:
                     # set generated=False to ensure that user-provided tokens
                     # get extra hashing (don't trust entropy of user-provided tokens)
-                    obj.new_api_token(token, generated=self.trust_user_provided_tokens)
+                    obj.new_api_token(token, note="from config", generated=self.trust_user_provided_tokens)
                 except Exception:
                     if created:
                         # don't allow bad tokens to create users
@@ -1173,7 +1173,8 @@ class JupyterHub(Application):
             if service.managed:
                 if not service.api_token:
                     # generate new token
-                    service.api_token = service.orm.new_api_token()
+                    # TODO: revoke old tokens?
+                    service.api_token = service.orm.new_api_token(note="generated at startup")
                 else:
                     # ensure provided token is registered
                     self.service_tokens[service.api_token] = service.name
@@ -1197,13 +1198,15 @@ class JupyterHub(Application):
                 )
                 self.db.add(server)
 
+            else:
+                service.orm.server = None
+
+            if service.oauth_available:
                 client_store.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
-                    redirect_uri=host + url_path_join(service.prefix, 'oauth_callback'),
+                    redirect_uri=service.oauth_redirect_uri,
                 )
-            else:
-                service.orm.server = None
 
             self._service_map[name] = service
 
@@ -1306,6 +1309,26 @@ class JupyterHub(Application):
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login')
         )
+
+    def cleanup_oauth_clients(self):
+        """Cleanup any OAuth clients that shouldn't be in the database.
+
+        This should mainly be services that have been removed from configuration or renamed.
+        """
+        oauth_client_ids = set()
+        for service in self._service_map.values():
+            if service.oauth_available:
+                oauth_client_ids.add(service.oauth_client_id)
+        for user in self.users.values():
+            for spawner in user.spawners.values():
+                oauth_client_ids.add(spawner.oauth_client_id)
+
+        client_store = self.oauth_provider.client_authenticator.client_store
+        for oauth_client in self.db.query(orm.OAuthClient):
+            if oauth_client.identifier not in oauth_client_ids:
+                self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
+                self.db.delete(oauth_client)
+        self.db.commit()
 
     def init_proxy(self):
         """Load the Proxy config"""
@@ -1446,6 +1469,7 @@ class JupyterHub(Application):
         yield self.init_api_tokens()
         self.init_tornado_settings()
         yield self.init_spawners()
+        self.cleanup_oauth_clients()
         self.init_handlers()
         self.init_tornado_application()
 

@@ -223,7 +223,7 @@ class Service(LoggingConfigurable):
 
     oauth_client_id = Unicode(
         help="""OAuth client ID for this service.
-        
+
         You shouldn't generally need to change this.
         Default: `service-<name>`
         """
@@ -231,6 +231,28 @@ class Service(LoggingConfigurable):
     @default('oauth_client_id')
     def _default_client_id(self):
         return 'service-%s' % self.name
+
+    oauth_redirect_uri = Unicode(
+        help="""OAuth redirect URI for this service.
+
+        You shouldn't generally need to change this.
+        Default: `/services/:name/oauth_callback`
+        """
+    ).tag(input=True)
+    @default('oauth_redirect_uri')
+    def _default_redirect_uri(self):
+        if self.server is None:
+            return ''
+        print(self.domain, self.host, self.server)
+        return self.host + url_path_join(self.prefix, 'oauth_callback')
+
+    @property
+    def oauth_available(self):
+        """Is OAuth available for this client?
+
+        Returns True if a server is defined or oauth_redirect_uri is specified manually
+        """
+        return bool(self.server is not None or self.oauth_redirect_uri)
 
     @property
     def server(self):

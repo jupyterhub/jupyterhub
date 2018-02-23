@@ -155,12 +155,12 @@ class User(Base):
             running=sum(bool(s.server) for s in self._orm_spawners),
         )
 
-    def new_api_token(self, token=None, generated=True):
+    def new_api_token(self, token=None, generated=True, note=''):
         """Create a new API token
 
         If `token` is given, load that token.
         """
-        return APIToken.new(token=token, user=self, generated=generated)
+        return APIToken.new(token=token, user=self, note=note, generated=generated)
 
     @classmethod
     def find(cls, db, name):
@@ -172,7 +172,7 @@ class User(Base):
 class Spawner(Base):
     """"State about a Spawner"""
     __tablename__ = 'spawners'
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
@@ -216,11 +216,11 @@ class Service(Base):
     server = relationship(Server, primaryjoin=_server_id == Server.id)
     pid = Column(Integer)
 
-    def new_api_token(self, token=None, generated=True):
+    def new_api_token(self, token=None, generated=True, note=''):
         """Create a new API token
         If `token` is given, load that token.
         """
-        return APIToken.new(token=token, service=self, generated=generated)
+        return APIToken.new(token=token, service=self, note=note, generated=generated)
 
     @classmethod
     def find(cls, db, name):
@@ -229,6 +229,7 @@ class Service(Base):
         Returns None if not found.
         """
         return db.query(cls).filter(cls.name == name).first()
+
 
 class Hashed(object):
     """Mixin for tables with hashed tokens"""
@@ -266,7 +267,7 @@ class Hashed(object):
     def match(self, token):
         """Is this my token?"""
         return compare_token(self.hashed, token)
-    
+
     @classmethod
     def check_token(cls, db, token):
         """Check if a token is acceptable"""
@@ -281,7 +282,7 @@ class Hashed(object):
     @classmethod
     def find_prefix(cls, db, token):
         """Start the query for matching token.
-        
+
         Returns an SQLAlchemy query already filtered by prefix-matches.
         """
         prefix = token[:cls.prefix_length]
@@ -303,6 +304,7 @@ class Hashed(object):
             if orm_token.match(token):
                 return orm_token
 
+
 class APIToken(Hashed, Base):
     """An API token"""
     __tablename__ = 'api_tokens'
@@ -318,6 +320,11 @@ class APIToken(Hashed, Base):
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
+
+    # token metadata for bookkeeping
+    created = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime)
+    note = Column(Unicode(1023))
 
     def __repr__(self):
         if self.user is not None:
@@ -358,7 +365,7 @@ class APIToken(Hashed, Base):
                 return orm_token
 
     @classmethod
-    def new(cls, token=None, user=None, service=None, generated=True):
+    def new(cls, token=None, user=None, service=None, note='', generated=True):
         """Generate a new API token for a user or service"""
         assert user or service
         assert not (user and service)
@@ -372,7 +379,7 @@ class APIToken(Hashed, Base):
             cls.check_token(db, token)
         # two stages to ensure orm_token.generated has been set
         # before token setter is called
-        orm_token = cls(generated=generated)
+        orm_token = cls(generated=generated, note=note or '')
         orm_token.token = token
         if user:
             assert user.id is not None
@@ -403,7 +410,7 @@ class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    client_id = Column(Unicode(255))
+    client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(255))
@@ -419,6 +426,9 @@ class OAuthAccessToken(Hashed, Base):
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
 
+    created = Column(DateTime, default=datetime.utcnow)
+    last_activity = Column(DateTime, nullable=True)
+
     def __repr__(self):
         return "<{cls}('{prefix}...', user='{user}'>".format(
             cls=self.__class__.__name__,
@@ -430,7 +440,7 @@ class OAuthAccessToken(Hashed, Base):
 class OAuthCode(Base):
     __tablename__ = 'oauth_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    client_id = Column(Unicode(255))
+    client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))

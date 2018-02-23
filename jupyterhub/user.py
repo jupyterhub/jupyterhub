@@ -203,6 +203,11 @@ class User:
             orm_spawner.state = self.state
             self.state = None
 
+        # use fully quoted name for client_id because it will be used in cookie-name
+        # self.escaped_name may contain @ which is legal in URLs but not cookie keys
+        client_id = 'user-%s' % quote(self.name)
+        if name:
+            client_id = '%s-%s' % (client_id, quote(name))
         spawn_kwargs = dict(
             user=self,
             orm_spawner=orm_spawner,
@@ -211,6 +216,7 @@ class User:
             config=self.settings.get('config'),
             proxy_spec=url_path_join(self.proxy_spec, name, '/'),
             db=self.db,
+            oauth_client_id=client_id,
         )
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
@@ -338,8 +344,10 @@ class User:
             base_url=base_url,
         )
         db.add(orm_server)
-
-        api_token = self.new_api_token()
+        note = "server token"
+        if server_name:
+            note += " for server %s" % server_name
+        api_token = self.new_api_token(note=note)
         db.commit()
 
 
@@ -355,12 +363,7 @@ class User:
         # create API and OAuth tokens
         spawner.api_token = api_token
         spawner.admin_access = self.settings.get('admin_access', False)
-        # use fully quoted name for client_id because it will be used in cookie-name
-        # self.escaped_name may contain @ which is legal in URLs but not cookie keys
-        client_id = 'user-%s' % quote(self.name)
-        if server_name:
-            client_id = '%s-%s' % (client_id, quote(server_name))
-        spawner.oauth_client_id = client_id
+        client_id = spawner.oauth_client_id
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
             client_store = oauth_provider.client_authenticator.client_store
@@ -419,7 +422,10 @@ class User:
                     )
                     # use generated=False because we don't trust this token
                     # to have been generated properly
-                    self.new_api_token(spawner.api_token, generated=False)
+                    self.new_api_token(spawner.api_token,
+                        generated=False,
+                        note="retrieved from spawner %s" % server_name,
+                    )
                 # update OAuth client secret with updated API token
                 if oauth_provider:
                     client_store = oauth_provider.client_authenticator.client_store

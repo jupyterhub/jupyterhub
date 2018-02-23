@@ -6,7 +6,7 @@
 import copy
 import re
 import time
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http.client import responses
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import uuid
@@ -179,7 +179,7 @@ class BaseHandler(RequestHandler):
 
     def get_current_user_oauth_token(self):
         """Get the current user identified by OAuth access token
-        
+
         Separate from API token because OAuth access tokens
         can only be used for identifying users,
         not using the API.
@@ -191,8 +191,10 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
+            orm_token.last_activity = datetime.utcnow()
+            self.db.commit()
             return self._user_from_orm(orm_token.user)
-    
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
         token = self.get_auth_token()
@@ -202,6 +204,9 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
+            # record token activity
+            orm_token.last_activity = datetime.utcnow()
+            self.db.commit()
             return orm_token.service or self._user_from_orm(orm_token.user)
 
     def _user_for_cookie(self, cookie_name, cookie_value=None):
