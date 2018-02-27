@@ -17,17 +17,17 @@ from tempfile import mkdtemp
 
 from sqlalchemy import inspect
 
-from tornado import gen
+from tornado import gen, concurrent
 from tornado.ioloop import PeriodicCallback
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
-    Any, Bool, Dict, Instance, Integer, Float, List, Unicode,
+    Any, Bool, Dict, Instance, Integer, Float, List, Unicode, Union,
     observe, validate,
 )
 
 from .objects import Server
-from .traitlets import Command, ByteSpecification
+from .traitlets import Command, ByteSpecification, Callable
 from .utils import random_port, url_path_join, exponential_backoff
 
 
@@ -227,7 +227,10 @@ class Spawner(LoggingConfigurable):
         help="Enable debug-logging of the single-user server"
     ).tag(config=True)
 
-    options_form = Unicode(
+    options_form = Union([
+            Unicode(),
+            Callable()
+        ],
         help="""
         An HTML form for options a user can specify on launching their server.
 
@@ -247,7 +250,31 @@ class Spawner(LoggingConfigurable):
             </select>
 
         The data from this form submission will be passed on to your spawner in `self.user_options`
+
+        Instead of a form snippet string, this could also be a callable that takes as one
+        parameter the current spawner instance and returns a string. The callable will
+        be called asynchronously if it returns a future, rather than a str. Note that
+        the interface of the spawner class is not deemed stable across versions,
+        so using this functionality might cause your JupyterHub upgrades to break.
     """).tag(config=True)
+
+    @gen.coroutine
+    def get_options_form(self):
+        """Get the options form
+
+        Returns:
+          (Future(str)): the content of the options form presented to the user
+          prior to starting a Spawner.
+
+        .. versionchanged:: 0.8.2
+            Introduced.
+        """
+        if callable(self.options_form):
+            options_form = yield gen.maybe_future(self.options_form(self))
+        else:
+            options_form = self.options_form
+
+        return options_form
 
     def options_from_form(self, form_data):
         """Interpret HTTP form data
