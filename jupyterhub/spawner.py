@@ -266,7 +266,7 @@ class Spawner(LoggingConfigurable):
           (Future(str)): the content of the options form presented to the user
           prior to starting a Spawner.
 
-        .. versionchanged:: 0.8.2
+        .. versionadded:: 0.9.0
             Introduced.
         """
         if callable(self.options_form):
