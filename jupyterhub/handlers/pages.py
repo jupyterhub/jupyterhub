@@ -89,7 +89,7 @@ class SpawnHandler(BaseHandler):
     """
     @gen.coroutine
     def _render_form(self, message='', for_user=None):
-        user = self.get_current_user()
+        user = for_user or self.get_current_user()
         spawner_options_form = yield user.spawner.get_options_form()
         return self.render_template('spawn.html',
             for_user=for_user,
