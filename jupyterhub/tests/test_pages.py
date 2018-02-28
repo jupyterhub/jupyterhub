@@ -175,6 +175,17 @@ def test_spawn_page(app):
 
 
 @pytest.mark.gen_test
+def test_spawn_page_admin(app):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        cookies = yield app.login_user('admin')
+        u = add_user(app.db, app=app, name='melanie')
+        r = yield get_page('spawn/' + u.name, app, cookies=cookies)
+        assert r.url.endswith('/spawn/' + u.name)
+        assert FormSpawner.options_form in r.text
+        assert "Spawning server for {}".format(u.name) in r.text
+
+
+@pytest.mark.gen_test
 def test_spawn_form(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)

@@ -7,11 +7,14 @@
     <h1>Spawner options</h1>
   </div>
   <div class="row col-sm-offset-2 col-sm-8">
-      {% if error_message %}
-        <p class="spawn-error-msg text-danger">
-          Error: {{error_message}}
-        </p>
-      {% endif %}
+    {% if for_user and user.name != for_user.name -%}
+      <p>Spawning server for {{ for_user.name }}</p>
+    {% endif -%}
+    {% if error_message -%}
+      <p class="spawn-error-msg text-danger">
+        Error: {{error_message}}
+      </p>
+    {% endif %}
     <form enctype="multipart/form-data" id="spawn_form" action="{{url}}" method="post" role="form">
       {{spawner_options_form | safe}}
       <br>
