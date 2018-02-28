@@ -139,7 +139,9 @@ class SpawnHandler(BaseHandler):
         if for_user is not None and for_user != user.name:
             if not user.admin:
                 raise web.HTTPError(403, "Only admins can spawn on behalf of other users")
-            user = self.user_from_username(for_user)
+            user = self.find_user(for_user)
+            if user is None:
+                raise web.HTTPError(404, "No such user: %s" % for_user)
         if not self.allow_named_servers and user.running:
             url = user.url
             self.log.warning("User is already running: %s", url)
