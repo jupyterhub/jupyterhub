@@ -218,7 +218,7 @@ class MockHub(JupyterHub):
         """Instantiate the tornado Application object"""
         super().init_tornado_application()
         # reconnect tornado_settings so that mocks can update the real thing
-        self.tornado_settings = self.tornado_application.settings
+        self.tornado_settings = self.users.settings = self.tornado_application.settings
 
     @gen.coroutine
     def initialize(self, argv=None):

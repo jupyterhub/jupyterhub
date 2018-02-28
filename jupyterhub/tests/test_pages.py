@@ -209,7 +209,7 @@ def test_spawn_form(app):
 
 @pytest.mark.gen_test
 def test_spawn_form_admin_access(app, admin_access):
-    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = yield app.login_user('admin')
         u = add_user(app.db, app=app, name='martha')
@@ -232,7 +232,7 @@ def test_spawn_form_admin_access(app, admin_access):
 
 @pytest.mark.gen_test
 def test_spawn_form_with_file(app):
-    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = yield app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
@@ -386,7 +386,7 @@ def test_auto_login(app, request):
     authenticator = Authenticator(auto_login=True)
     authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
 
-    with mock.patch.dict(app.tornado_application.settings, {
+    with mock.patch.dict(app.tornado_settings, {
         'authenticator': authenticator,
     }):
         r = yield async_requests.get(base_url)
@@ -397,7 +397,7 @@ def test_auto_login_logout(app):
     name = 'burnham'
     cookies = yield app.login_user(name)
 
-    with mock.patch.dict(app.tornado_application.settings, {
+    with mock.patch.dict(app.tornado_settings, {
         'authenticator': Authenticator(auto_login=True),
     }):
         r = yield async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
