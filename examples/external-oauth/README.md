@@ -5,7 +5,14 @@ for external services that may not be otherwise integrated with JupyterHub.
 The main feature this enables is using JupyterHub like a 'regular' OAuth 2
 provider for services running anywhere.
 
-This example uses `jupyterhub.services.HubOAuthenticated` to authenticate requests with the Hub for a service run on its own host.
+There are two examples here. `whoami-oauth` uses `jupyterhub.services.HubOAuthenticated`
+to authenticate requests with the Hub for a service run on its own host.
+This is an implementation of OAuth 2.0 provided by the jupyterhub package,
+which configures all of the necessary URLs from environment variables.
+
+The second is `whoami-oauth-basic`, which implements the full OAuth process
+without any inheritance, so it can be used as a reference for other OAuth
+implementations.
 
 ## Run the example
 
@@ -16,6 +23,8 @@ This example uses `jupyterhub.services.HubOAuthenticated` to authenticate reques
 2. launch the whoami service:
 
         bash launch-service.sh &
+        # or
+        bash launch-service-basic.sh &
 
 3. Launch JupyterHub:
 
