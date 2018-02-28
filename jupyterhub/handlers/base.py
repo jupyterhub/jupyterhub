@@ -702,9 +702,11 @@ class BaseHandler(RequestHandler):
         return self.settings['jinja2_env'].get_template(name)
 
     def render_template(self, name, **ns):
-        ns.update(self.template_namespace)
+        template_ns = {}
+        template_ns.update(self.template_namespace)
+        template_ns.update(ns)
         template = self.get_template(name)
-        return template.render(**ns)
+        return template.render(**template_ns)
 
     @property
     def template_namespace(self):
