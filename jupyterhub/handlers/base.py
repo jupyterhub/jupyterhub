@@ -885,7 +885,11 @@ class UserSpawnHandler(BaseHandler):
             # server is not running, trigger spawn
             if status is not None:
                 if spawner.options_form:
-                    self.redirect(url_concat(url_path_join(self.hub.base_url, 'spawn'),
+                    url_parts = [self.hub.base_url, 'spawn']
+                    if current_user.name != user.name:
+                        # spawning on behalf of another user
+                        url_parts.append(user.name)
+                    self.redirect(url_concat(url_path_join(*url_parts),
                                              {'next': self.request.uri}))
                     return
                 else:

@@ -34,7 +34,7 @@ class RootHandler(BaseHandler):
             next_url = ''
         if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
             # add /hub/ prefix, to ensure we redirect to the right user's server.
-            # The next request will be handled by UserSpawnHandler,
+            # The next request will be handled by SpawnHandler,
             # ultimately redirecting to the logged-in user's server.
             without_prefix = next_url[len(self.base_url):]
             next_url = url_path_join(self.hub.base_url, without_prefix)
@@ -100,12 +100,20 @@ class SpawnHandler(BaseHandler):
 
     @web.authenticated
     @gen.coroutine
-    def get(self):
+    def get(self, for_user=None):
         """GET renders form for spawning with user-specified options
 
         or triggers spawn via redirect if there is no form.
         """
         user = self.get_current_user()
+        if for_user is not None and for_user != user.name:
+            if not user.admin:
+                raise web.HTTPError(403, "Only admins can spawn on behalf of other users")
+
+            user = self.find_user(for_user)
+            if user is None:
+                raise web.HTTPError(404, "No such user: %s" % for_user)
+
         if not self.allow_named_servers and user.running:
             url = user.url
             self.log.debug("User is running: %s", url)
@@ -125,9 +133,13 @@ class SpawnHandler(BaseHandler):
 
     @web.authenticated
     @gen.coroutine
-    def post(self):
+    def post(self, for_user=None):
         """POST spawns with user-specified options"""
         user = self.get_current_user()
+        if for_user is not None and for_user != user.name:
+            if not user.admin:
+                raise web.HTTPError(403, "Only admins can spawn on behalf of other users")
+            user = self.user_from_username(for_user)
         if not self.allow_named_servers and user.running:
             url = user.url
             self.log.warning("User is already running: %s", url)
@@ -159,6 +171,7 @@ class SpawnHandler(BaseHandler):
             url = next_url
 
         self.redirect(url)
+
 
 class AdminHandler(BaseHandler):
     """Render the admin page."""
@@ -268,6 +281,7 @@ default_handlers = [
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
     (r'/spawn', SpawnHandler),
+    (r'/spawn/([^/]+)', SpawnHandler),
     (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
 ]
