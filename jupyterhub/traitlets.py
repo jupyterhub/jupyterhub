@@ -4,7 +4,7 @@ Traitlets that are used in JupyterHub
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from traitlets import List, Unicode, Integer, TraitError
+from traitlets import List, Unicode, Integer, TraitType, TraitError
 
 
 class URLPrefix(Unicode):
@@ -74,3 +74,20 @@ class ByteSpecification(Integer):
             raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
         else:
             return int(float(num) * self.UNIT_SUFFIXES[suffix])
+
+
+class Callable(TraitType):
+    """
+    A trait which is callable.
+
+    Classes are callable, as are instances
+    with a __call__() method.
+    """
+
+    info_text = 'a callable'
+
+    def validate(self, obj, value):
+        if callable(value):
+           return value
+        else:
+            self.error(obj, value)

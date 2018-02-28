@@ -87,16 +87,19 @@ class SpawnHandler(BaseHandler):
 
     Only enabled when Spawner.options_form is defined.
     """
+    @gen.coroutine
     def _render_form(self, message=''):
         user = self.get_current_user()
+        spawner_options_form = yield user.spawner.get_options_form()
         return self.render_template('spawn.html',
             user=user,
-            spawner_options_form=user.spawner.options_form,
+            spawner_options_form=spawner_options_form,
             error_message=message,
             url=self.request.uri,
         )
 
     @web.authenticated
+    @gen.coroutine
     def get(self):
         """GET renders form for spawning with user-specified options
 
@@ -109,7 +112,8 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
         if user.spawner.options_form:
-            self.finish(self._render_form())
+            form = yield self._render_form()
+            self.finish(form)
         else:
             # Explicit spawn request: clear _spawn_future
             # which may have been saved to prevent implicit spawns
