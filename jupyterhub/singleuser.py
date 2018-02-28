@@ -340,7 +340,7 @@ class SingleUserNotebookApp(NotebookApp):
     @gen.coroutine
     def check_hub_version(self):
         """Test a connection to my Hub
-        
+
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
@@ -357,9 +357,15 @@ class SingleUserNotebookApp(NotebookApp):
                 break
         else:
             self.exit(1)
-        
+
         hub_version = resp.headers.get('X-JupyterHub-Version')
         _check_version(hub_version, __version__, self.log)
+
+    def initialize(self, argv=None):
+        # disable trash by default
+        # this can be re-enabled by config
+        self.config.FileContentsManager.delete_to_trash = False
+        return super().initialize(argv)
 
     def start(self):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
