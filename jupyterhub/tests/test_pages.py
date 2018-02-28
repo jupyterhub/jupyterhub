@@ -182,18 +182,39 @@ def test_spawn_form(app):
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
         yield u.stop()
-    
+
         r = yield async_requests.post(ujoin(base_url, 'spawn?next=/user/jones/tree'), cookies=cookies, data={
             'bounds': ['-1', '1'],
             'energy': '511keV',
         })
         r.raise_for_status()
         assert r.history
-        print(u.spawner)
-        print(u.spawner.user_options)
         assert u.spawner.user_options == {
             'energy': '511keV',
             'bounds': [-1, 1],
+            'notspecified': 5,
+        }
+
+
+@pytest.mark.gen_test
+def test_spawn_form_admin_access(app, admin_access):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        base_url = ujoin(public_host(app), app.hub.base_url)
+        cookies = yield app.login_user('admin')
+        u = add_user(app.db, app=app, name='martha')
+
+        r = yield async_requests.post(
+            ujoin(base_url, 'spawn/{0}?next=/user/{0}/tree'.format(u.name)),
+            cookies=cookies, data={
+            'bounds': ['-3', '3'],
+            'energy': '938MeV',
+        })
+        r.raise_for_status()
+        assert r.history
+        assert r.url.startswith(public_url(app, u))
+        assert u.spawner.user_options == {
+            'energy': '938MeV',
+            'bounds': [-3, 3],
             'notspecified': 5,
         }
 
