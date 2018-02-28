@@ -47,20 +47,20 @@
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
       <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
       <td class="server-col col-sm-2 text-center">
-        <span role="button" class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
-        <span role="button" class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
+        <a role="button" class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
+        <a role="button" class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
       </td>
       <td class="server-col col-sm-1 text-center">
         {% if admin_access %}
-        <span role="button" class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
+        <a role="button" class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
         {% endif %}
       </td>
       <td class="edit-col col-sm-1 text-center">
-        <span role="button" class="edit-user btn btn-xs btn-primary">edit</span>
+        <a role="button" class="edit-user btn btn-xs btn-primary">edit</span>
       </td>
       <td class="edit-col col-sm-1 text-center">
         {% if u.name != user.name %}
-        <span role="button" class="delete-user btn btn-xs btn-danger">delete</span>
+        <a role="button" class="delete-user btn btn-xs btn-danger">delete</span>
         {% endif %}
       </td>
       {% endblock user_row %}

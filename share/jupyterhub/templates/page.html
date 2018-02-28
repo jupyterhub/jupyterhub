@@ -65,6 +65,16 @@
         {% if user %}
         user: "{{user.name}}",
         {% endif %}
+        {% if admin_access %}
+        admin_access: true,
+        {% else %}
+        admin_access: false,
+        {% endif %}
+        {% if user and user.spawner.options_form %}
+        options_form: true,
+        {% else %}
+        options_form: false,
+        {% endif %}
       }
     </script>
 

@@ -6,6 +6,8 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
 
     var base_url = window.jhdata.base_url;
     var prefix = window.jhdata.prefix;
+    var admin_access = window.jhdata.admin_access;
+    var options_form = window.jhdata.options_form;
 
     var api = new JHAPI(base_url);
 
@@ -73,26 +75,38 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         });
     });
 
-    $(".access-server").click(function () {
-        var el = $(this);
-        var row = get_row(el);
-        var user = row.data('user');
-        var w = window.open(utils.url_path_join(prefix, 'user', user) + '/');
+    $(".access-server").map(function (i, el) {
+        el = $(el);
+        var user = get_row(el).data('user');
+        el.attr('href', utils.url_path_join(prefix, 'user', user) + '/');
     });
 
-    $(".start-server").click(function () {
-        var el = $(this);
-        var row = get_row(el);
-        var user = row.data('user');
-        el.text("starting...");
-        api.start_server(user, {
-            success: function () {
-                el.text('start server').addClass('hidden');
-                row.find('.stop-server').removeClass('hidden');
-                row.find('.access-server').removeClass('hidden');
-            }
+    if (admin_access && options_form) {
+        // if admin access and options form are enabled
+        // link to spawn page instead of making API requests
+        $('.start-server').map(function (i, el) {
+            el = $(el);
+            var user = get_row(el).data('user');
+            el.attr('href', utils.url_path_join(prefix, 'hub/spawn', user));
+        })
+        // cannot start all servers in this case
+        // since it would mean opening a bunch of tabs
+        $('#start-all-servers').addClass('hidden');
+    } else {
+        $(".start-server").click(function () {
+            var el = $(this);
+            var row = get_row(el);
+            var user = row.data('user');
+            el.text("starting...");
+            api.start_server(user, {
+                success: function () {
+                    el.text('start server').addClass('hidden');
+                    row.find('.stop-server').removeClass('hidden');
+                    row.find('.access-server').removeClass('hidden');
+                }
+            });
         });
-    });
+    }
 
     $(".edit-user").click(function () {
         var el = $(this);
@@ -120,7 +134,6 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         });
     });
-
 
     $(".delete-user").click(function () {
         var el = $(this);
