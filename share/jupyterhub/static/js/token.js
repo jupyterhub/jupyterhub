@@ -3,17 +3,17 @@
 
 require(["jquery", "jhapi"], function ($, JHAPI) {
     "use strict";
-    
+
     var base_url = window.jhdata.base_url;
     var user = window.jhdata.user;
     var api = new JHAPI(base_url);
-    
-    $("#stop").click(function () {
-        api.stop_server(user, {
-            success: function () {
-                $("#stop").hide();
+
+    $("#request-token").click(function () {
+        api.request_token({
+            success: function (reply) {
+                $("#token-result").text(reply.token);
+                $("#token-area").show();
             }
         });
     });
-    
 });

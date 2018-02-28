@@ -7,7 +7,7 @@
 
 define(['jquery'], function($){
     "use strict";
-    
+
     var url_path_join = function () {
         // join a sequence of url components with '/'
         var url = '';
@@ -24,7 +24,7 @@ define(['jquery'], function($){
         url = url.replace(/\/\/+/, '/');
         return url;
     };
-    
+
     var parse_url = function (url) {
         // an `a` element with an href allows attr-access to the parsed segments of a URL
         // a = parse_url("http://localhost:8888/path/name#hash")
@@ -38,13 +38,13 @@ define(['jquery'], function($){
         a.href = url;
         return a;
     };
-    
+
     var encode_uri_components = function (uri) {
         // encode just the components of a multi-segment uri,
         // leaving '/' separators
         return uri.split('/').map(encodeURIComponent).join('/');
     };
-    
+
     var url_join_encode = function () {
         // join a sequence of url components with '/',
         // encoding each component with encodeURIComponent
@@ -63,8 +63,8 @@ define(['jquery'], function($){
         // until we are building an actual request
         return decodeURIComponent($('body').data(key));
     };
-    
-    
+
+
     // http://stackoverflow.com/questions/2400935/browser-detection-in-javascript
     var browser = (function() {
         if (typeof navigator === 'undefined') {
@@ -101,7 +101,7 @@ define(['jquery'], function($){
             return jqXHR.statusText;
         }
     };
-    
+
     var log_ajax_error = function (jqXHR, status, error) {
         // log ajax failures with informative messages
         var msg = "API request failed (" + jqXHR.status + "): ";
@@ -110,7 +110,7 @@ define(['jquery'], function($){
         console.log(msg);
         return msg;
     };
-    
+
     var ajax_error_dialog = function (jqXHR, status, error) {
         console.log("ajax dialog", arguments);
         var msg = log_ajax_error(jqXHR, status, error);
@@ -132,6 +132,6 @@ define(['jquery'], function($){
         log_ajax_error : log_ajax_error,
         ajax_error_dialog : ajax_error_dialog,
     };
-    
+
     return utils;
-}); 
+});

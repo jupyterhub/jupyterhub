@@ -18,15 +18,15 @@ graft docs
 prune docs/node_modules
 
 # prune some large unused files from components
-prune share/jupyter/hub/static/components/bootstrap/dist/css
-exclude share/jupyter/hub/static/components/bootstrap/dist/fonts/*.svg
-prune share/jupyter/hub/static/components/font-awesome/css
-prune share/jupyter/hub/static/components/font-awesome/scss
-exclude share/jupyter/hub/static/components/font-awesome/fonts/*.svg
-prune share/jupyter/hub/static/components/jquery/external
-prune share/jupyter/hub/static/components/jquery/src
-prune share/jupyter/hub/static/components/moment/lang
-prune share/jupyter/hub/static/components/moment/min
+prune share/jupyterhub/static/components/bootstrap/dist/css
+exclude share/jupyterhub/static/components/bootstrap/dist/fonts/*.svg
+prune share/jupyterhub/static/components/font-awesome/css
+prune share/jupyterhub/static/components/font-awesome/scss
+exclude share/jupyterhub/static/components/font-awesome/fonts/*.svg
+prune share/jupyterhub/static/components/jquery/external
+prune share/jupyterhub/static/components/jquery/src
+prune share/jupyterhub/static/components/moment/lang
+prune share/jupyterhub/static/components/moment/min
 
 # Patterns to exclude from any directory
 global-exclude *~

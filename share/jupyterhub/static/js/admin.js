@@ -3,19 +3,19 @@
 
 require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, moment, JHAPI, utils) {
     "use strict";
-    
+
     var base_url = window.jhdata.base_url;
     var prefix = window.jhdata.prefix;
-    
+
     var api = new JHAPI(base_url);
-    
+
     function get_row (element) {
         while (!element.hasClass("user-row")) {
             element = element.parent();
         }
         return element;
     }
-    
+
     function resort (col, order) {
         var query = window.location.search.slice(1).split('&');
         // if col already present in args, remove it
@@ -38,7 +38,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         // reload page with new order
         window.location = window.location.pathname + '?' + query.join('&');
     }
-    
+
     $("th").map(function (i, th) {
         th = $(th);
         var col = th.data('sort');
@@ -52,13 +52,13 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         );
     });
-    
+
     $(".time-col").map(function (i, el) {
         // convert ISO datestamps to nice momentjs ones
         el = $(el);
         el.text(moment(new Date(el.text())).fromNow());
     });
-    
+
     $(".stop-server").click(function () {
         var el = $(this);
         var row = get_row(el);
@@ -72,14 +72,14 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         });
     });
-    
+
     $(".access-server").click(function () {
         var el = $(this);
         var row = get_row(el);
         var user = row.data('user');
         var w = window.open(utils.url_path_join(prefix, 'user', user) + '/');
     });
-    
+
     $(".start-server").click(function () {
         var el = $(this);
         var row = get_row(el);
@@ -93,7 +93,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         });
     });
-    
+
     $(".edit-user").click(function () {
         var el = $(this);
         var row = get_row(el);
@@ -105,7 +105,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         dialog.find(".admin-checkbox").attr("checked", admin==='True');
         dialog.modal();
     });
-    
+
     $("#edit-user-dialog").find(".save-button").click(function () {
         var dialog = $("#edit-user-dialog");
         var user = dialog.data('user');
@@ -120,8 +120,8 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         });
     });
-    
-    
+
+
     $(".delete-user").click(function () {
         var el = $(this);
         var row = get_row(el);
@@ -141,7 +141,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             }
         });
     });
-    
+
     $("#add-users").click(function () {
         var dialog = $("#add-users-dialog");
         dialog.find(".username-input").val('');
@@ -160,7 +160,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
                 usernames.push(username);
             }
         });
-        
+
         api.add_users(usernames, {admin: admin}, {
             success: function () {
                 window.location.reload();
@@ -208,5 +208,5 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
             servers: servers,
         });
     });
-    
+
 });

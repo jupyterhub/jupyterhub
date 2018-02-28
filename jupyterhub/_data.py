@@ -2,7 +2,7 @@
 
 
 def get_data_files():
-    """Walk up until we find share/jupyter/hub"""
+    """Walk up until we find share/jupyterhub"""
     import sys
     from os.path import join, abspath, dirname, exists, split
     path = abspath(dirname(__file__))
@@ -12,10 +12,10 @@ def get_data_files():
     for path in starting_points:
         # walk up, looking for prefix/share/jupyter
         while path != '/':
-            share_jupyter = join(path, 'share', 'jupyter', 'hub')
-            static = join(share_jupyter, 'static')
+            share_jupyterhub = join(path, 'share', 'jupyterhub')
+            static = join(share_jupyterhub, 'static')
             if all(exists(join(static, f)) for f in ['components', 'css']):
-                return share_jupyter
+                return share_jupyterhub
             path, _ = split(path)
     # didn't find it, give up
     return ''
