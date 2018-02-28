@@ -154,7 +154,7 @@ def test_spawn_admin_access(app, admin_access):
     app.db.commit()
     r = yield get_page('user/' + name, app, cookies=cookies)
     r.raise_for_status()
-    assert (r.url + '/').startswith(public_url(app, user))
+    assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
     r = yield get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
     r.raise_for_status()
     env = r.json()
@@ -175,7 +175,7 @@ def test_spawn_page(app):
 
 
 @pytest.mark.gen_test
-def test_spawn_page_admin(app):
+def test_spawn_page_admin(app, admin_access):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         cookies = yield app.login_user('admin')
         u = add_user(app.db, app=app, name='melanie')
