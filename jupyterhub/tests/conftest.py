@@ -139,7 +139,7 @@ def no_patience(app):
 @fixture
 def slow_spawn(app):
     """Fixture enabling SlowSpawner"""
-    with mock.patch.dict(app.tornado_settings,
+    with mock.patch.dict(app.users.settings,
                          {'spawner_class': mocking.SlowSpawner}):
         yield
 
@@ -147,7 +147,7 @@ def slow_spawn(app):
 @fixture
 def never_spawn(app):
     """Fixture enabling NeverSpawner"""
-    with mock.patch.dict(app.tornado_settings,
+    with mock.patch.dict(app.users.settings,
                          {'spawner_class': mocking.NeverSpawner}):
         yield
 
@@ -155,7 +155,7 @@ def never_spawn(app):
 @fixture
 def bad_spawn(app):
     """Fixture enabling BadSpawner"""
-    with mock.patch.dict(app.tornado_settings,
+    with mock.patch.dict(app.users.settings,
                          {'spawner_class': mocking.BadSpawner}):
         yield
 
@@ -163,7 +163,7 @@ def bad_spawn(app):
 @fixture
 def slow_bad_spawn(app):
     """Fixture enabling SlowBadSpawner"""
-    with mock.patch.dict(app.tornado_settings,
+    with mock.patch.dict(app.users.settings,
                          {'spawner_class': mocking.SlowBadSpawner}):
         yield
 
@@ -171,6 +171,6 @@ def slow_bad_spawn(app):
 @fixture
 def admin_access(app):
     """Grant admin-access with this fixture"""
-    with mock.patch.dict(app.tornado_settings,
+    with mock.patch.dict(app.users.settings,
                          {'admin_access': True}):
         yield
