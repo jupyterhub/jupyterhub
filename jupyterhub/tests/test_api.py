@@ -67,8 +67,7 @@ def add_user(db, app=None, **kwargs):
             setattr(orm_user, attr, value)
     db.commit()
     if app:
-        user = app.users[orm_user.id] = User(orm_user, app.tornado_settings)
-        return user
+        return app.users[orm_user.id]
     else:
         return orm_user
 
