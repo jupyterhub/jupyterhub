@@ -818,7 +818,7 @@ class UserSpawnHandler(BaseHandler):
             admin_spawn = False
             # For non-admins, we should spawn if the user matches
             # otherwise redirect users to their own server
-            should_spawn = (current_user.name == name)
+            should_spawn = (current_user and current_user.name == name)
 
 
         if should_spawn:
