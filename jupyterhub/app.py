@@ -7,6 +7,7 @@
 import asyncio
 import atexit
 import binascii
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from getpass import getuser
 import logging
@@ -151,7 +152,10 @@ class NewToken(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         hub.init_db()
-        hub.init_users()
+        def init_users():
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(hub.init_users())
+        ThreadPoolExecutor(1).submit(init_users).result()
         user = orm.User.find(hub.db, self.name)
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)

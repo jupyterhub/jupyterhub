@@ -103,7 +103,8 @@ def _mockservice(request, app, url=False):
             service.start()
         io_loop.run_sync(start)
         def cleanup():
-            service.stop()
+            import asyncio
+            asyncio.get_event_loop().run_until_complete(service.stop())
             app.services[:] = []
             app._service_map.clear()
         request.addfinalizer(cleanup)
