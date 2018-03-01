@@ -3,11 +3,14 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 from binascii import b2a_hex
+import concurrent.futures
 import random
 import errno
 import hashlib
 from hmac import compare_digest
+import inspect
 import os
 import socket
 import sys
@@ -16,7 +19,8 @@ from threading import Thread
 import uuid
 import warnings
 
-from tornado import web, gen, ioloop
+from tornado import gen, ioloop, web
+from tornado.concurrent import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
@@ -409,3 +413,24 @@ def print_stacks(file=sys.stderr):
         for task in tasks:
             task.print_stack(file=file)
 
+
+def awaitable(obj):
+    """Wrap an object in something that's awaitable
+
+    Use instead of gen.maybe_future
+
+    For our compatibility, this must accept:
+
+    - asyncio coroutine (gen.maybe_future doesn't work)
+    - tornado coroutine (asyncio.ensure_future doesn't work)
+    - scalar (asyncio.ensure_future doesn't work)
+    - tornado Future (works both ways)
+    - asyncio Future (works both ways)
+    """
+    if inspect.isawaitable(obj):
+        # return obj that's already awaitable
+        return obj
+    elif isinstance(obj, concurrent.futures.Future):
+        return asyncio.wrap_future(obj)
+    else:
+        return to_asyncio_future(gen.maybe_future(obj))
