@@ -10,6 +10,8 @@ import hashlib
 from hmac import compare_digest
 import os
 import socket
+import sys
+import threading
 from threading import Thread
 import uuid
 import warnings
@@ -297,4 +299,107 @@ def url_path_join(*pieces):
         result = '/'
 
     return result
+
+
+def print_ps_info(file=sys.stderr):
+    """Print process summary info from psutil
+
+    warns if psutil is unavailable
+    """
+    try:
+        import psutil
+    except ImportError:
+        # nothing to print
+        warnings.warn(
+            "psutil unavailable. Install psutil to get CPU and memory stats",
+            stacklevel=2
+        )
+        return
+    p = psutil.Process()
+    # format CPU percentage
+    cpu = p.cpu_percent(0.1)
+    if cpu >= 10:
+        cpu_s = "%i" % cpu
+    else:
+        cpu_s = "%.1f" % cpu
+
+    # format memory (only resident set)
+    rss = p.memory_info().rss
+    if rss >= 1e9:
+        mem_s = '%.1fG' % (rss/1e9)
+    elif rss >= 1e7:
+        mem_s = '%.0fM' % (rss/1e6)
+    elif rss >= 1e6:
+        mem_s = '%.1fM' % (rss/1e6)
+    else:
+        mem_s = '%.0fk' % (rss/1e3)
+
+    # left-justify and shrink-to-fit columns
+    cpulen = max(len(cpu_s), 4)
+    memlen = max(len(mem_s), 3)
+    fd_s = str(p.num_fds())
+    fdlen = max(len(fd_s), 3)
+    threadlen = len('threads')
+
+    print("%s %s %s %s" % (
+        '%CPU'.ljust(cpulen),
+        'MEM'.ljust(memlen),
+        'FDs'.ljust(fdlen),
+        'threads',
+    ), file=file)
+
+    print("%s %s %s %s" % (
+        cpu_s.ljust(cpulen),
+        mem_s.ljust(memlen),
+        fd_s.ljust(fdlen),
+        str(p.num_threads()).ljust(7),
+    ), file=file)
+
+    # trailing blank line
+    print('', file=file)
+
+
+def print_stacks(file=sys.stderr):
+    """Print current status of the process
+
+    For debugging purposes.
+    Used as part of SIGINFO handler.
+
+    - Shows active thread count
+    - Shows current stack for all threads
+
+    Parameters:
+
+    file: file to write output to (default: stderr)
+
+    """
+    # local imports because these will not be used often,
+    # no need to add them to startup
+    import resource
+    import traceback
+    from .log import coroutine_frames
+
+    print("Active threads: %i" % threading.active_count(), file=file)
+    for thread in threading.enumerate():
+        print("Thread %s:" % thread.name, end='', file=file)
+        frame = sys._current_frames()[thread.ident]
+        stack = traceback.extract_stack(frame)
+        if thread is threading.current_thread():
+            # truncate last two frames of the current thread
+            # which are this function and its caller
+            stack = stack[:-2]
+        stack = coroutine_frames(stack)
+        if stack:
+            last_frame = stack[-1]
+            if (
+                last_frame[0].endswith('threading.py')
+                and last_frame[-1] == 'waiter.acquire()'
+            ):
+                # thread is waiting on a condition
+                # call it idle rather than showing the uninteresting stack
+                # most threadpools will be in this state
+                print(' idle', file=file)
+                continue
+
+        print(''.join(['\n'] + traceback.format_list(stack)), file=file)
 
