@@ -385,7 +385,7 @@ class User:
         try:
             # run optional preparation work to bootstrap the notebook
             await awaitable(spawner.run_pre_spawn_hook())
-            f = spawner.start()
+            f = awaitable(spawner.start())
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
             ip_port = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)

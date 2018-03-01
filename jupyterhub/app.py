@@ -4,6 +4,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import atexit
 import binascii
 from datetime import datetime
@@ -1286,7 +1287,7 @@ class JupyterHub(Application):
                     # spawner should be running
                     # instantiate Spawner wrapper and check if it's still alive
                     spawner = user.spawners[name]
-                    f = check_spawner(user, name, spawner)
+                    f = asyncio.ensure_future(check_spawner(user, name, spawner))
                     check_futures.append(f)
 
         # await checks after submitting them all
@@ -1477,7 +1478,7 @@ class JupyterHub(Application):
         if managed_services:
             self.log.info("Cleaning up %i services...", len(managed_services))
             for service in managed_services:
-                futures.append(service.stop())
+                futures.append(asyncio.ensure_future(service.stop()))
 
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
@@ -1485,7 +1486,7 @@ class JupyterHub(Application):
             for uid, user in self.users.items():
                 for name, spawner in list(user.spawners.items()):
                     if spawner.active:
-                        futures.append(user.stop(name))
+                        futures.append(asyncio.ensure_future(user.stop(name)))
         else:
             self.log.info("Leaving single-user servers running")
 
