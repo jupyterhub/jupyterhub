@@ -10,6 +10,25 @@ from tornado.web import StaticFileHandler, HTTPError
 
 from .metrics import prometheus_log_method
 
+def coroutine_frames(all_frames):
+    """Extract coroutine boilerplate frames from a frame list
+
+    for better stack/traceback printing of coroutines
+    """
+    useful_frames = []
+    for frame in all_frames:
+        if frame[0] == '<string>' and frame[2] == 'raise_exc_info':
+            continue
+        # start out conservative with filename + function matching
+        # maybe just filename matching would be sufficient
+        elif frame[0].endswith('tornado/gen.py') and frame[2] in {'run', 'wrapper', '__init__'}:
+            continue
+        elif frame[0].endswith('tornado/concurrent.py') and frame[2] == 'result':
+            continue
+        useful_frames.append(frame)
+    return useful_frames
+
+
 def coroutine_traceback(typ, value, tb):
     """Scrub coroutine frames from a traceback
 
@@ -20,17 +39,8 @@ def coroutine_traceback(typ, value, tb):
     Returns a list of strings (like traceback.format_tb)
     """
     all_frames = traceback.extract_tb(tb)
-    useful_frames = []
-    for frame in all_frames:
-        if frame[0] == '<string>' and frame[2] == 'raise_exc_info':
-            continue
-        # start out conservative with filename + function matching
-        # maybe just filename matching would be sufficient
-        elif frame[0].endswith('tornado/gen.py') and frame[2] in {'run', 'wrapper'}:
-            continue
-        elif frame[0].endswith('tornado/concurrent.py') and frame[2] == 'result':
-            continue
-        useful_frames.append(frame)
+    useful_frames = coroutine_frames(all_frames)
+
     tb_list = ['Traceback (most recent call last):\n']
     tb_list.extend(traceback.format_list(useful_frames))
     tb_list.extend(traceback.format_exception_only(typ, value))
