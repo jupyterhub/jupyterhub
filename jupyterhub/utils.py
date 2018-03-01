@@ -375,6 +375,7 @@ def print_stacks(file=sys.stderr):
     """
     # local imports because these will not be used often,
     # no need to add them to startup
+    import asyncio
     import resource
     import traceback
     from .log import coroutine_frames
@@ -402,4 +403,13 @@ def print_stacks(file=sys.stderr):
                 continue
 
         print(''.join(['\n'] + traceback.format_list(stack)), file=file)
+
+    # also show asyncio tasks, if any
+    # this will increase over time as we transition from tornado
+    # coroutines to native `async def`
+    tasks = asyncio.Task.all_tasks()
+    if tasks:
+        print("AsyncIO tasks: %i" % len(tasks))
+        for task in tasks:
+            task.print_stack(file=file)
 
