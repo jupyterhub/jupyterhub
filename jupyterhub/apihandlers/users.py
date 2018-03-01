@@ -8,13 +8,13 @@ import json
 from tornado import gen, web
 
 from .. import orm
-from ..utils import admin_only
+from ..utils import admin_only, awaitable
 from .base import APIHandler
 
 
 class SelfAPIHandler(APIHandler):
     """Return the authenticated user's model
-    
+
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
     @web.authenticated
@@ -33,13 +33,13 @@ class UserListAPIHandler(APIHandler):
     def get(self):
         data = [ self.user_model(u) for u in self.db.query(orm.User) ]
         self.write(json.dumps(data))
-    
+
     @admin_only
     async def post(self):
         data = self.get_json_body()
         if not data or not isinstance(data, dict) or not data.get('usernames'):
             raise web.HTTPError(400, "Must specify at least one user to create")
-        
+
         usernames = data.pop('usernames')
         self._check_user_model(data)
         # admin is set for all users
@@ -76,7 +76,7 @@ class UserListAPIHandler(APIHandler):
                 user.admin = True
                 self.db.commit()
             try:
-                await gen.maybe_future(self.authenticator.add_user(user))
+                await awaitable(self.authenticator.add_user(user))
             except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
@@ -125,7 +125,7 @@ class UserAPIHandler(APIHandler):
                 self.db.commit()
 
         try:
-            await gen.maybe_future(self.authenticator.add_user(user))
+            await awaitable(self.authenticator.add_user(user))
         except Exception:
             self.log.error("Failed to create user: %s" % name, exc_info=True)
             # remove from registry
@@ -149,7 +149,7 @@ class UserAPIHandler(APIHandler):
             if user.spawner._stop_pending:
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
 
-        await gen.maybe_future(self.authenticator.delete_user(user))
+        await awaitable(self.authenticator.delete_user(user))
         # remove from registry
         self.users.delete(user)
 

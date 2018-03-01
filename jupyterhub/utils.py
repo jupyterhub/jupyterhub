@@ -20,7 +20,7 @@ import uuid
 import warnings
 
 from tornado import gen, ioloop, web
-from tornado.concurrent import to_asyncio_future
+from tornado.platform.asyncio import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
@@ -123,7 +123,7 @@ async def exponential_backoff(
         deadline = random.uniform(deadline - tol, deadline + tol)
     scale = 1
     while True:
-        ret = await gen.maybe_future(pass_func(*args, **kwargs))
+        ret = await awaitable(pass_func(*args, **kwargs))
         # Truthy!
         if ret:
             return ret
@@ -428,8 +428,8 @@ def awaitable(obj):
     - asyncio Future (works both ways)
     """
     if inspect.isawaitable(obj):
-        # return obj that's already awaitable
-        return obj
+        # already awaitable, use ensure_future
+        return asyncio.ensure_future(obj)
     elif isinstance(obj, concurrent.futures.Future):
         return asyncio.wrap_future(obj)
     else:

@@ -55,6 +55,7 @@ from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command
 from .utils import (
+    awaitable,
     url_path_join,
     ISO8601_ms, ISO8601_s,
     print_stacks, print_ps_info,
@@ -1046,7 +1047,7 @@ class JupyterHub(Application):
         # and persist across sessions.
         for user in db.query(orm.User):
             try:
-                await gen.maybe_future(self.authenticator.add_user(user))
+                await awaitable(self.authenticator.add_user(user))
             except Exception:
                 self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
@@ -1077,7 +1078,7 @@ class JupyterHub(Application):
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (await gen.maybe_future(self.authenticator.check_whitelist(username))):
+                if not (await awaitable(self.authenticator.check_whitelist(username))):
                     raise ValueError("Username %r is not in whitelist" % username)
                 user = orm.User.find(db, name=username)
                 if user is None:
@@ -1101,7 +1102,7 @@ class JupyterHub(Application):
         for token, name in token_dict.items():
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
-                if not (await gen.maybe_future(self.authenticator.check_whitelist(name))):
+                if not (await awaitable(self.authenticator.check_whitelist(name))):
                     raise ValueError("Token name %r is not in whitelist" % name)
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token name %r is not valid" % name)
@@ -1491,7 +1492,7 @@ class JupyterHub(Application):
         # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
             if self.proxy.should_start:
-                await gen.maybe_future(self.proxy.stop())
+                await awaitable(self.proxy.stop())
             else:
                 self.log.info("I didn't start the proxy, I can't clean it up")
         else:

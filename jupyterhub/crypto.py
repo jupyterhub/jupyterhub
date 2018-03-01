@@ -19,6 +19,7 @@ except ImportError:
     class InvalidToken(Exception):
         pass
 
+from .utils import awaitable
 
 KEY_ENV = 'JUPYTERHUB_CRYPT_KEY'
 
@@ -104,7 +105,7 @@ class CryptKeeper(SingletonConfigurable):
     def _ensure_bytes(self, proposal):
         # cast str to bytes
         return [ _validate_key(key) for key in proposal.value ]
-    
+
     fernet = Any()
     def _fernet_default(self):
         if cryptography is None or not self.keys:
@@ -123,7 +124,7 @@ class CryptKeeper(SingletonConfigurable):
 
     def _encrypt(self, data):
         """Actually do the encryption. Runs in a background thread.
-        
+
         data is serialized to bytes with pickle.
         bytes are returned.
         """
@@ -132,7 +133,7 @@ class CryptKeeper(SingletonConfigurable):
     def encrypt(self, data):
         """Encrypt an object with cryptography"""
         self.check_available()
-        return self.executor.submit(self._encrypt, data)
+        return awaitable(self.executor.submit(self._encrypt, data))
 
     def _decrypt(self, encrypted):
         decrypted = self.fernet.decrypt(encrypted)
@@ -141,12 +142,12 @@ class CryptKeeper(SingletonConfigurable):
     def decrypt(self, encrypted):
         """Decrypt an object with cryptography"""
         self.check_available()
-        return self.executor.submit(self._decrypt, encrypted)
+        return awaitable(self.executor.submit(self._decrypt, encrypted))
 
 
 def encrypt(data):
     """encrypt some data with the crypt keeper.
-    
+
     data will be serialized with pickle.
     Returns a Future whose result will be bytes.
     """
@@ -158,4 +159,3 @@ def decrypt(data):
     Returns a Future whose result will be the decrypted, deserialized data.
     """
     return CryptKeeper.instance().decrypt(data)
-    
