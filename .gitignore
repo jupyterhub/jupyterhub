@@ -14,11 +14,12 @@ docs/source/_static/rest-api
 /jupyterhub_config.py
 jupyterhub_cookie_secret
 jupyterhub.sqlite
-share/jupyter/hub/static/components
-share/jupyter/hub/static/css/style.min.css
-share/jupyter/hub/static/css/style.min.css.map
+share/jupyterhub/static/components
+share/jupyterhub/static/css/style.min.css
+share/jupyterhub/static/css/style.min.css.map
 *.egg-info
 MANIFEST
 .coverage
 htmlcov
 .idea/
+.pytest_cache
