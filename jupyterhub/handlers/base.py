@@ -408,11 +408,10 @@ class BaseHandler(RequestHandler):
                 next_url = self.hub.base_url
         return next_url
 
-    @gen.coroutine
-    def login_user(self, data=None):
+    async def login_user(self, data=None):
         """Login a user"""
         auth_timer = self.statsd.timer('login.authenticate').start()
-        authenticated = yield self.authenticate(data)
+        authenticated = await self.authenticate(data)
         auth_timer.stop(send=False)
 
         if authenticated:
@@ -422,7 +421,7 @@ class BaseHandler(RequestHandler):
             new_user = username not in self.users
             user = self.user_from_username(username)
             if new_user:
-                yield gen.maybe_future(self.authenticator.add_user(user))
+                await gen.maybe_future(self.authenticator.add_user(user))
             # Only set `admin` if the authenticator returned an explicit value.
             if admin is not None and admin != user.admin:
                 user.admin = admin
@@ -433,7 +432,7 @@ class BaseHandler(RequestHandler):
             if not self.authenticator.enable_auth_state:
                 # auth_state is not enabled. Force None.
                 auth_state = None
-            yield user.save_auth_state(auth_state)
+            await user.save_auth_state(auth_state)
             self.db.commit()
             self.set_login_cookie(user)
             self.statsd.incr('login.success')
@@ -470,8 +469,7 @@ class BaseHandler(RequestHandler):
     def active_server_limit(self):
         return self.settings.get('active_server_limit', 0)
 
-    @gen.coroutine
-    def spawn_single_user(self, user, server_name='', options=None):
+    async def spawn_single_user(self, user, server_name='', options=None):
         # in case of error, include 'try again from /hub/home' message
         spawn_start_time = time.perf_counter()
         self.extra_error_html = self.spawn_home_error
@@ -539,15 +537,14 @@ class BaseHandler(RequestHandler):
         # while we are waiting for _proxy_pending to be set
         spawner._spawn_pending = True
 
-        @gen.coroutine
-        def finish_user_spawn():
+        async def finish_user_spawn():
             """Finish the user spawn by registering listeners and notifying the proxy.
 
             If the spawner is slow to start, this is passed as an async callback,
             otherwise it is called immediately.
             """
             # wait for spawn Future
-            yield spawn_future
+            await spawn_future
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
@@ -557,7 +554,7 @@ class BaseHandler(RequestHandler):
             proxy_add_start_time = time.perf_counter()
             spawner._proxy_pending = True
             try:
-                yield self.proxy.add_user(user, server_name)
+                await self.proxy.add_user(user, server_name)
 
                 PROXY_ADD_DURATION_SECONDS.labels(
                     status='success'
@@ -567,7 +564,7 @@ class BaseHandler(RequestHandler):
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
                 self.log.error("Stopping %s to avoid inconsistent state", user_server_name)
-                yield user.stop()
+                await user.stop()
                 PROXY_ADD_DURATION_SECONDS.labels(
                     status='failure'
                 ).observe(
@@ -592,7 +589,7 @@ class BaseHandler(RequestHandler):
         finish_spawn_future.add_done_callback(_clear_spawn_future)
 
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
+            await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
@@ -605,7 +602,7 @@ class BaseHandler(RequestHandler):
 
             # start has finished, but the server hasn't come up
             # check if the server died while we were waiting
-            status = yield spawner.poll()
+            status = await spawner.poll()
             if status is not None:
                 toc = IOLoop.current().time()
                 self.statsd.timing('spawner.failure', (toc - tic) * 1000)
@@ -629,21 +626,19 @@ class BaseHandler(RequestHandler):
                 self.log.warning("User %s is slow to be added to the proxy (timeout=%s)",
                                  user_server_name, self.slow_spawn_timeout)
 
-    @gen.coroutine
-    def user_stopped(self, user, server_name):
+    async def user_stopped(self, user, server_name):
         """Callback that fires when the spawner has stopped"""
         spawner = user.spawners[server_name]
-        status = yield spawner.poll()
+        status = await spawner.poll()
         if status is None:
             status = 'unknown'
         self.log.warning("User %s server stopped, with exit code: %s",
             user.name, status,
         )
-        yield self.proxy.delete_user(user, server_name)
-        yield user.stop(server_name)
+        await self.proxy.delete_user(user, server_name)
+        await user.stop(server_name)
 
-    @gen.coroutine
-    def stop_single_user(self, user, name=''):
+    async def stop_single_user(self, user, name=''):
         if name not in user.spawners:
             raise KeyError("User %s has no such spawner %r", user.name, name)
         spawner = user.spawners[name]
@@ -653,8 +648,7 @@ class BaseHandler(RequestHandler):
         # to avoid races
         spawner._stop_pending = True
 
-        @gen.coroutine
-        def stop():
+        async def stop():
             """Stop the server
 
             1. remove it from the proxy
@@ -663,8 +657,8 @@ class BaseHandler(RequestHandler):
             """
             tic = IOLoop.current().time()
             try:
-                yield self.proxy.delete_user(user, name)
-                yield user.stop(name)
+                await self.proxy.delete_user(user, name)
+                await user.stop(name)
             finally:
                 spawner._stop_pending = False
             toc = IOLoop.current().time()
@@ -672,7 +666,7 @@ class BaseHandler(RequestHandler):
             self.statsd.timing('spawner.stop', (toc - tic) * 1000)
 
         try:
-            yield gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
+            await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
         except gen.TimeoutError:
             if spawner._stop_pending:
                 # hit timeout, but stop is still pending
@@ -793,8 +787,7 @@ class UserSpawnHandler(BaseHandler):
     which will in turn send her to /user/alice/notebooks/mynotebook.ipynb.
     """
 
-    @gen.coroutine
-    def get(self, name, user_path):
+    async def get(self, name, user_path):
         if not user_path:
             user_path = '/'
         current_user = self.get_current_user()
@@ -864,7 +857,7 @@ class UserSpawnHandler(BaseHandler):
                 # wait on the pending spawn
                 self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
                 try:
-                    yield gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
+                    await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
                 except gen.TimeoutError:
                     self.log.info("Pending spawn for %s didn't finish in %.1f seconds", spawner._log_name, self.slow_spawn_timeout)
                     pass
@@ -880,7 +873,7 @@ class UserSpawnHandler(BaseHandler):
 
             # spawn has supposedly finished, check on the status
             if spawner.ready:
-                status = yield spawner.poll()
+                status = await spawner.poll()
             else:
                 status = 0
 
@@ -895,7 +888,7 @@ class UserSpawnHandler(BaseHandler):
                                              {'next': self.request.uri}))
                     return
                 else:
-                    yield self.spawn_single_user(user)
+                    await self.spawn_single_user(user)
 
             # spawn didn't finish, show pending page
             if spawner.pending:
@@ -942,7 +935,7 @@ class UserSpawnHandler(BaseHandler):
             if redirects:
                 self.log.warning("Redirect loop detected on %s", self.request.uri)
                 # add capped exponential backoff where cap is 10s
-                yield gen.sleep(min(1 * (2 ** redirects), 10))
+                await gen.sleep(min(1 * (2 ** redirects), 10))
                 # rewrite target url with new `redirects` query value
                 url_parts = urlparse(target)
                 query_parts = parse_qs(url_parts.query)

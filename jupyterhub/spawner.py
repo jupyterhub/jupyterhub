@@ -258,8 +258,7 @@ class Spawner(LoggingConfigurable):
         so using this functionality might cause your JupyterHub upgrades to break.
     """).tag(config=True)
 
-    @gen.coroutine
-    def get_options_form(self):
+    async def get_options_form(self):
         """Get the options form
 
         Returns:
@@ -270,7 +269,7 @@ class Spawner(LoggingConfigurable):
             Introduced.
         """
         if callable(self.options_form):
-            options_form = yield gen.maybe_future(self.options_form(self))
+            options_form = await gen.maybe_future(self.options_form(self))
         else:
             options_form = self.options_form
 
@@ -687,8 +686,7 @@ class Spawner(LoggingConfigurable):
         if self.pre_spawn_hook:
             return self.pre_spawn_hook(self)
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Start the single-user server
 
         Returns:
@@ -699,8 +697,7 @@ class Spawner(LoggingConfigurable):
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
 
-    @gen.coroutine
-    def stop(self, now=False):
+    async def stop(self, now=False):
         """Stop the single-user server
 
         If `now` is False (default), shutdown the server as gracefully as possible,
@@ -713,8 +710,7 @@ class Spawner(LoggingConfigurable):
         """
         raise NotImplementedError("Override in subclass. Must be a Tornado gen.coroutine.")
 
-    @gen.coroutine
-    def poll(self):
+    async def poll(self):
         """Check if the single-user process is running
 
         Returns:
@@ -773,10 +769,9 @@ class Spawner(LoggingConfigurable):
         )
         self._poll_callback.start()
 
-    @gen.coroutine
-    def poll_and_notify(self):
+    async def poll_and_notify(self):
         """Used as a callback to periodically poll the process and notify any watchers"""
-        status = yield self.poll()
+        status = await self.poll()
         if status is None:
             # still running, nothing to do here
             return
@@ -788,22 +783,20 @@ class Spawner(LoggingConfigurable):
 
         for callback in callbacks:
             try:
-                yield gen.maybe_future(callback())
+                await gen.maybe_future(callback())
             except Exception:
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status
 
     death_interval = Float(0.1)
-    @gen.coroutine
-    def wait_for_death(self, timeout=10):
+    async def wait_for_death(self, timeout=10):
         """Wait for the single-user server to die, up to timeout seconds"""
-        @gen.coroutine
-        def _wait_for_death():
-            status = yield self.poll()
+        async def _wait_for_death():
+            status = await self.poll()
             return status is not None
 
         try:
-            r = yield exponential_backoff(
+            r = await exponential_backoff(
                 _wait_for_death,
                 'Process did not die in {timeout} seconds'.format(timeout=timeout),
                 start_wait=self.death_interval,
@@ -1001,8 +994,7 @@ class LocalProcessSpawner(Spawner):
         env = self.user_env(env)
         return env
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Start the single-user server."""
         self.port = random_port()
         cmd = []
@@ -1048,8 +1040,7 @@ class LocalProcessSpawner(Spawner):
             self.server.port = self.port
         return (self.ip or '127.0.0.1', self.port)
 
-    @gen.coroutine
-    def poll(self):
+    async def poll(self):
         """Poll the spawned process to see if it is still running.
 
         If the process is still running, we return None. If it is not running,
@@ -1072,15 +1063,14 @@ class LocalProcessSpawner(Spawner):
 
         # send signal 0 to check if PID exists
         # this doesn't work on Windows, but that's okay because we don't support Windows.
-        alive = yield self._signal(0)
+        alive = await self._signal(0)
         if not alive:
             self.clear_state()
             return 0
         else:
             return None
 
-    @gen.coroutine
-    def _signal(self, sig):
+    async def _signal(self, sig):
         """Send given signal to a single-user server's process.
 
         Returns True if the process still exists, False otherwise.
@@ -1096,8 +1086,7 @@ class LocalProcessSpawner(Spawner):
                 raise
         return True  # process exists
 
-    @gen.coroutine
-    def stop(self, now=False):
+    async def stop(self, now=False):
         """Stop the single-user server process for the current user.
 
         If `now` is False (default), shutdown the server as gracefully as possible,
@@ -1107,30 +1096,30 @@ class LocalProcessSpawner(Spawner):
         The coroutine should return when the process is no longer running.
         """
         if not now:
-            status = yield self.poll()
+            status = await self.poll()
             if status is not None:
                 return
             self.log.debug("Interrupting %i", self.pid)
-            yield self._signal(signal.SIGINT)
-            yield self.wait_for_death(self.interrupt_timeout)
+            await self._signal(signal.SIGINT)
+            await self.wait_for_death(self.interrupt_timeout)
 
         # clean shutdown failed, use TERM
-        status = yield self.poll()
+        status = await self.poll()
         if status is not None:
             return
         self.log.debug("Terminating %i", self.pid)
-        yield self._signal(signal.SIGTERM)
-        yield self.wait_for_death(self.term_timeout)
+        await self._signal(signal.SIGTERM)
+        await self.wait_for_death(self.term_timeout)
 
         # TERM failed, use KILL
-        status = yield self.poll()
+        status = await self.poll()
         if status is not None:
             return
         self.log.debug("Killing %i", self.pid)
-        yield self._signal(signal.SIGKILL)
-        yield self.wait_for_death(self.kill_timeout)
+        await self._signal(signal.SIGKILL)
+        await self.wait_for_death(self.kill_timeout)
 
-        status = yield self.poll()
+        status = await self.poll()
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)

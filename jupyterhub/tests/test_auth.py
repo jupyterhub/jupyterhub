@@ -132,16 +132,16 @@ def test_add_system_user():
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.create_system_users = True
     authenticator.add_user_cmd = ['echo', '/home/USERNAME']
-    
+
     record = {}
     class DummyPopen:
         def __init__(self, cmd, *args, **kwargs):
             record['cmd'] = cmd
             self.returncode = 0
-        
+
         def wait(self):
             return
-    
+
     with mock.patch.object(auth, 'Popen', DummyPopen):
         yield authenticator.add_user(user)
     assert record['cmd'] == ['echo', '/home/lioness4321', 'lioness4321']
@@ -151,9 +151,9 @@ def test_add_system_user():
 def test_delete_user():
     user = orm.User(name='zoe')
     a = MockPAMAuthenticator(whitelist={'mal'})
-    
+
     assert 'zoe' not in a.whitelist
-    a.add_user(user)
+    yield a.add_user(user)
     assert 'zoe' in a.whitelist
     a.delete_user(user)
     assert 'zoe' not in a.whitelist

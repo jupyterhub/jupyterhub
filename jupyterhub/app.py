@@ -558,7 +558,9 @@ class JupyterHub(Application):
 
         - constructor takes one kwarg: `config`, the IPython config object.
 
-        - is a tornado.gen.coroutine
+        with an authenticate method that:
+
+        - is a coroutine (asyncio or tornado)
         - returns username on success, None on failure
         - takes two arguments: (handler, data),
           where `handler` is the calling web.RequestHandler,
@@ -968,8 +970,7 @@ class JupyterHub(Application):
         if self.hub_connect_port:
             self.hub.connect_port = self.hub_connect_port
 
-    @gen.coroutine
-    def init_users(self):
+    async def init_users(self):
         """Load users into and from the database"""
         db = self.db
 
@@ -1045,7 +1046,7 @@ class JupyterHub(Application):
         # and persist across sessions.
         for user in db.query(orm.User):
             try:
-                yield gen.maybe_future(self.authenticator.add_user(user))
+                await gen.maybe_future(self.authenticator.add_user(user))
             except Exception:
                 self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
@@ -1066,8 +1067,7 @@ class JupyterHub(Application):
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
 
-    @gen.coroutine
-    def init_groups(self):
+    async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
         for name, usernames in self.load_groups.items():
@@ -1077,7 +1077,7 @@ class JupyterHub(Application):
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (yield gen.maybe_future(self.authenticator.check_whitelist(username))):
+                if not (await gen.maybe_future(self.authenticator.check_whitelist(username))):
                     raise ValueError("Username %r is not in whitelist" % username)
                 user = orm.User.find(db, name=username)
                 if user is None:
@@ -1088,8 +1088,7 @@ class JupyterHub(Application):
                 group.users.append(user)
         db.commit()
 
-    @gen.coroutine
-    def _add_tokens(self, token_dict, kind):
+    async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
         if kind == 'user':
             Class = orm.User
@@ -1102,7 +1101,7 @@ class JupyterHub(Application):
         for token, name in token_dict.items():
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
-                if not (yield gen.maybe_future(self.authenticator.check_whitelist(name))):
+                if not (await gen.maybe_future(self.authenticator.check_whitelist(name))):
                     raise ValueError("Token name %r is not in whitelist" % name)
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token name %r is not valid" % name)
@@ -1131,11 +1130,10 @@ class JupyterHub(Application):
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
 
-    @gen.coroutine
-    def init_api_tokens(self):
+    async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
-        yield self._add_tokens(self.service_tokens, kind='service')
-        yield self._add_tokens(self.api_tokens, kind='user')
+        await self._add_tokens(self.service_tokens, kind='service')
+        await self._add_tokens(self.api_tokens, kind='user')
 
     def init_services(self):
         self._service_map.clear()
@@ -1217,21 +1215,19 @@ class JupyterHub(Application):
                 self.db.delete(service)
         self.db.commit()
 
-    @gen.coroutine
-    def check_services_health(self):
+    async def check_services_health(self):
         """Check connectivity of all services"""
         for name, service in self._service_map.items():
             if not service.url:
                 continue
             try:
-                yield Server.from_orm(service.orm.server).wait_up(timeout=1)
+                await Server.from_orm(service.orm.server).wait_up(timeout=1)
             except TimeoutError:
                 self.log.warning("Cannot connect to %s service %s at %s", service.kind, name, service.url)
             else:
                 self.log.debug("%s service %s running at %s", service.kind.title(), name, service.url)
 
-    @gen.coroutine
-    def init_spawners(self):
+    async def init_spawners(self):
         db = self.db
 
         def _user_summary(user):
@@ -1244,22 +1240,20 @@ class JupyterHub(Application):
                     parts.append('%s:%s running at %s' % (user.name, name, spawner.server))
             return ' '.join(parts)
 
-        @gen.coroutine
-        def user_stopped(user, server_name):
+        async def user_stopped(user, server_name):
             spawner = user.spawners[server_name]
-            status = yield spawner.poll()
+            status = await spawner.poll()
             self.log.warning("User %s server stopped with exit code: %s",
                 user.name, status,
             )
-            yield self.proxy.delete_user(user, server_name)
-            yield user.stop(server_name)
+            await self.proxy.delete_user(user, server_name)
+            await user.stop(server_name)
 
-        @gen.coroutine
-        def check_spawner(user, name, spawner):
+        async def check_spawner(user, name, spawner):
             status = 0
             if spawner.server:
                 try:
-                    status = yield spawner.poll()
+                    status = await spawner.poll()
                 except Exception:
                     self.log.exception("Failed to poll spawner for %s, assuming the spawner is not running.",
                         spawner._log_name)
@@ -1295,7 +1289,7 @@ class JupyterHub(Application):
                     check_futures.append(f)
 
         # await checks after submitting them all
-        yield gen.multi(check_futures)
+        await gen.multi(check_futures)
         db.commit()
 
         # only perform this query if we are going to log it
@@ -1439,9 +1433,8 @@ class JupyterHub(Application):
             with open(self.pid_file, 'w') as f:
                 f.write('%i' % pid)
 
-    @gen.coroutine
     @catch_config_error
-    def initialize(self, *args, **kwargs):
+    async def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)
         if self.generate_config or self.subapp:
             return
@@ -1464,18 +1457,17 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         self.init_oauth()
-        yield self.init_users()
-        yield self.init_groups()
+        await self.init_users()
+        await self.init_groups()
         self.init_services()
-        yield self.init_api_tokens()
+        await self.init_api_tokens()
         self.init_tornado_settings()
-        yield self.init_spawners()
+        await self.init_spawners()
         self.cleanup_oauth_clients()
         self.init_handlers()
         self.init_tornado_application()
 
-    @gen.coroutine
-    def cleanup(self):
+    async def cleanup(self):
         """Shutdown managed services and various subprocesses. Cleanup runtime files."""
 
         futures = []
@@ -1499,7 +1491,7 @@ class JupyterHub(Application):
         # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
             if self.proxy.should_start:
-                yield gen.maybe_future(self.proxy.stop())
+                await gen.maybe_future(self.proxy.stop())
             else:
                 self.log.info("I didn't start the proxy, I can't clean it up")
         else:
@@ -1508,7 +1500,7 @@ class JupyterHub(Application):
         # wait for the requests to stop finish:
         for f in futures:
             try:
-                yield f
+                await f
             except Exception as e:
                 self.log.error("Failed to stop user: %s", e)
 
@@ -1552,10 +1544,9 @@ class JupyterHub(Application):
         with open(self.config_file, mode='w') as f:
             f.write(config_text)
 
-    @gen.coroutine
-    def update_last_activity(self):
+    async def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
-        routes = yield self.proxy.get_all_routes()
+        routes = await self.proxy.get_all_routes()
         users_count = 0
         active_users_count = 0
         now = datetime.utcnow()
@@ -1591,10 +1582,9 @@ class JupyterHub(Application):
         self.statsd.gauge('users.active', active_users_count)
 
         self.db.commit()
-        yield self.proxy.check_routes(self.users, self._service_map, routes)
+        await self.proxy.check_routes(self.users, self._service_map, routes)
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Start the whole thing"""
         self.io_loop = loop = IOLoop.current()
 
@@ -1621,7 +1611,7 @@ class JupyterHub(Application):
         # start the proxy
         if self.proxy.should_start:
             try:
-                yield self.proxy.start()
+                await self.proxy.start()
             except Exception as e:
                 self.log.critical("Failed to start proxy", exc_info=True)
                 self.exit(1)
@@ -1645,10 +1635,10 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        yield Server.from_orm(service.orm.server).wait_up(http=True, timeout=1)
+                        await Server.from_orm(service.orm.server).wait_up(http=True, timeout=1)
                     except TimeoutError:
                         if service.managed:
-                            status = yield service.spawner.poll()
+                            status = await service.spawner.poll()
                             if status is not None:
                                 self.log.error("Service %s exited with status %s", service_name, status)
                                 break
@@ -1657,7 +1647,7 @@ class JupyterHub(Application):
                 else:
                     self.log.error("Cannot connect to %s service %s at %s. Is it running?", service.kind, service_name, service.url)
 
-        yield self.proxy.check_routes(self.users, self._service_map)
+        await self.proxy.check_routes(self.users, self._service_map)
 
 
         if self.service_check_interval and any(s.url for s in self._service_map.values()):
@@ -1710,11 +1700,10 @@ class JupyterHub(Application):
             self.http_server.stop()
         self.io_loop.add_callback(self.io_loop.stop)
 
-    @gen.coroutine
-    def launch_instance_async(self, argv=None):
+    async def launch_instance_async(self, argv=None):
         try:
-            yield self.initialize(argv)
-            yield self.start()
+            await self.initialize(argv)
+            await self.start()
         except Exception as e:
             self.log.exception("")
             self.exit(1)

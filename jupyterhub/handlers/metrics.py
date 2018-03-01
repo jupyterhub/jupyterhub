@@ -7,8 +7,7 @@ class MetricsHandler(BaseHandler):
     """
     Handler to serve Prometheus metrics
     """
-    @gen.coroutine
-    def get(self):
+    async def get(self):
         self.set_header('Content-Type', CONTENT_TYPE_LATEST)
         self.write(generate_latest(REGISTRY))
 

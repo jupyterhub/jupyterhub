@@ -42,8 +42,7 @@ class LoginHandler(BaseHandler):
                 ),
         )
 
-    @gen.coroutine
-    def get(self):
+    async def get(self):
         self.statsd.incr('login.request')
         user = self.get_current_user()
         if user:
@@ -58,7 +57,7 @@ class LoginHandler(BaseHandler):
                     # auto_login without a custom login handler
                     # means that auth info is already in the request
                     # (e.g. REMOTE_USER header)
-                    user = yield self.login_user()
+                    user = await self.login_user()
                     if user is None:
                         # auto_login failed, just 403
                         raise web.HTTPError(403)
@@ -72,26 +71,25 @@ class LoginHandler(BaseHandler):
             username = self.get_argument('username', default='')
             self.finish(self._render(username=username))
 
-    @gen.coroutine
-    def post(self):
+    async def post(self):
         # parse the arguments dict
         data = {}
         for arg in self.request.arguments:
             data[arg] = self.get_argument(arg, strip=False)
 
         auth_timer = self.statsd.timer('login.authenticate').start()
-        user = yield self.login_user(data)
+        user = await self.login_user(data)
         auth_timer.stop(send=False)
 
         if user:
             already_running = False
             if user.spawner.ready:
-                status = yield user.spawner.poll()
+                status = await user.spawner.poll()
                 already_running = (status is None)
             if not already_running and not user.spawner.options_form \
                     and not user.spawner.pending:
                 # logging in triggers spawn
-                yield self.spawn_single_user(user)
+                await self.spawn_single_user(user)
             self.redirect(self.get_next_url())
         else:
             html = self._render(

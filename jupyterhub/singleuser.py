@@ -337,8 +337,7 @@ class SingleUserNotebookApp(NotebookApp):
             path = list(_exclude_home(path))
         return path
 
-    @gen.coroutine
-    def check_hub_version(self):
+    async def check_hub_version(self):
         """Test a connection to my Hub
 
         - exit if I can't connect at all
@@ -348,11 +347,11 @@ class SingleUserNotebookApp(NotebookApp):
         RETRIES = 5
         for i in range(1, RETRIES+1):
             try:
-                resp = yield client.fetch(self.hub_api_url)
+                resp = await client.fetch(self.hub_api_url)
             except Exception:
                 self.log.exception("Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
                 self.hub_api_url, i, RETRIES)
-                yield gen.sleep(min(2**i, 16))
+                await gen.sleep(min(2**i, 16))
             else:
                 break
         else:

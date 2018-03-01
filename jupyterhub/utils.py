@@ -51,8 +51,7 @@ def can_connect(ip, port):
     else:
         return True
 
-@gen.coroutine
-def exponential_backoff(
+async def exponential_backoff(
         pass_func,
         fail_message,
         start_wait=0.2,
@@ -120,7 +119,7 @@ def exponential_backoff(
         deadline = random.uniform(deadline - tol, deadline + tol)
     scale = 1
     while True:
-        ret = yield gen.maybe_future(pass_func(*args, **kwargs))
+        ret = await gen.maybe_future(pass_func(*args, **kwargs))
         # Truthy!
         if ret:
             return ret
@@ -133,33 +132,30 @@ def exponential_backoff(
         # too many things
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
         scale *= scale_factor
-        yield gen.sleep(dt)
+        await gen.sleep(dt)
     raise TimeoutError(fail_message)
 
 
-@gen.coroutine
-def wait_for_server(ip, port, timeout=10):
+async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
     if ip in {'', '0.0.0.0'}:
         ip = '127.0.0.1'
-    yield exponential_backoff(
+    await exponential_backoff(
         lambda: can_connect(ip, port),
         "Server at {ip}:{port} didn't respond in {timeout} seconds".format(ip=ip, port=port, timeout=timeout),
         timeout=timeout
     )
 
 
-@gen.coroutine
-def wait_for_http_server(url, timeout=10):
+async def wait_for_http_server(url, timeout=10):
     """Wait for an HTTP Server to respond at url.
 
     Any non-5XX response code will do, even 404.
     """
     client = AsyncHTTPClient()
-    @gen.coroutine
-    def is_reachable():
+    async def is_reachable():
         try:
-            r = yield client.fetch(url, follow_redirects=False)
+            r = await client.fetch(url, follow_redirects=False)
             return r
         except HTTPError as e:
             if e.code >= 500:
@@ -176,7 +172,7 @@ def wait_for_http_server(url, timeout=10):
             if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
         return False
-    re = yield exponential_backoff(
+    re = await exponential_backoff(
         is_reachable,
         "Server at {url} didn't respond in {timeout} seconds".format(url=url, timeout=timeout),
         timeout=timeout
