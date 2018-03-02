@@ -3,18 +3,21 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from concurrent.futures import ThreadPoolExecutor
 import pipes
 import re
 from shutil import which
 import sys
 from subprocess import Popen, PIPE, STDOUT
 
-from tornado import gen
 try:
     import pamela
 except Exception as e:
     pamela = None
     _pamela_error = e
+
+from tornado.concurrent import run_on_executor
+from tornado import gen
 
 from traitlets.config import LoggingConfigurable
 from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
@@ -26,7 +29,7 @@ from .traitlets import Command
 
 
 def getgrnam(name):
-    """Wrapper function to protect against `grp` not being available 
+    """Wrapper function to protect against `grp` not being available
     on Windows
     """
     import grp
@@ -37,7 +40,7 @@ class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
 
     db = Any()
-    
+
     enable_auth_state = Bool(False, config=True,
         help="""Enable persisting auth_state (if available).
 
@@ -520,6 +523,12 @@ class LocalAuthenticator(Authenticator):
 class PAMAuthenticator(LocalAuthenticator):
     """Authenticate local UNIX users with PAM"""
 
+    # run PAM in a thread, since it can be slow
+    executor = Any()
+    @default('executor')
+    def _default_executor(self):
+        return ThreadPoolExecutor(1)
+
     encoding = Unicode('utf8',
         help="""
         The text encoding to use when communicating with PAM
@@ -544,13 +553,13 @@ class PAMAuthenticator(LocalAuthenticator):
         this is automatically set to False.
         """
     ).tag(config=True)
-    
+
     def __init__(self, **kwargs):
         if pamela is None:
             raise _pamela_error from None
         super().__init__(**kwargs)
 
-    @gen.coroutine
+    @run_on_executor
     def authenticate(self, handler, data):
         """Authenticate with PAM, and return the username if login is successful.
 
@@ -567,6 +576,7 @@ class PAMAuthenticator(LocalAuthenticator):
         else:
             return username
 
+    @run_on_executor
     def pre_spawn_start(self, user, spawner):
         """Open PAM session for user if so configured"""
         if not self.open_sessions:
@@ -578,6 +588,7 @@ class PAMAuthenticator(LocalAuthenticator):
             self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
 
+    @run_on_executor
     def post_spawn_stop(self, user, spawner):
         """Close PAM session for user if we were configured to opened one"""
         if not self.open_sessions:
