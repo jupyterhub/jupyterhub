@@ -15,8 +15,8 @@ import shutil
 import sys
 
 v = sys.version_info
-if v[:2] < (3,4):
-    error = "ERROR: JupyterHub requires Python version 3.4 or above."
+if v[:2] < (3, 5):
+    error = "ERROR: JupyterHub requires Python version 3.5 or above."
     print(error, file=sys.stderr)
     sys.exit(1)
 
@@ -100,7 +100,7 @@ setup_args = dict(
     license             = "BSD",
     platforms           = "Linux, Mac OS X",
     keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
-    python_requires     = ">=3.4",
+    python_requires     = ">=3.5",
     classifiers         = [
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
