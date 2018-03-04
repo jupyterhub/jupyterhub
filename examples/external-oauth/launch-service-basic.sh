@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# script to launch whoami-oauth-basic service
 set -euo pipefail
 
 # the service needs to know:

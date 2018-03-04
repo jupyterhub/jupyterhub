@@ -1,7 +1,7 @@
 """Basic implementation of OAuth without any inheritance
 
-Implements OAuth handshake directly
-so all URLs and requests should be in one place
+Implements OAuth handshake manually
+so all URLs and requests necessary for OAuth with JupyterHub should be in one place
 """
 
 import json
@@ -69,13 +69,17 @@ class WhoAmIHandler(web.RequestHandler):
     """Serve the JSON model for the authenticated user"""
 
     def get_current_user(self):
-        """The login handler stored a jupyterhub API token
+        """The login handler stored a JupyterHub API token in a cookie
 
-        in a cookie
+        @web.authenticated calls this method.
+        If a Falsy value is returned, the request is redirected to `login_url`.
+        If a Truthy value is returned, the request is allowed to proceed.
         """
-        btoken = self.get_secure_cookie('whoami-oauth-token')
-        if btoken:
-            return btoken.decode('ascii')
+        token = self.get_secure_cookie('whoami-oauth-token')
+
+        if token:
+            # secure cookies are bytes, decode to str
+            return token.decode('ascii', 'replace')
 
     async def user_for_token(self, token):
         """Retrieve the user for a given token, via /hub/api/user"""

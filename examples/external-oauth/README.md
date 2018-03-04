@@ -11,8 +11,8 @@ This is an implementation of OAuth 2.0 provided by the jupyterhub package,
 which configures all of the necessary URLs from environment variables.
 
 The second is `whoami-oauth-basic`, which implements the full OAuth process
-without any inheritance, so it can be used as a reference for other OAuth
-implementations.
+without any inheritance, so it can be used as a reference for OAuth
+implementations in other web servers or languages.
 
 ## Run the example
 
@@ -20,10 +20,13 @@ implementations.
 
         export JUPYTERHUB_API_TOKEN=`openssl rand -hex 32`
 
-2. launch the whoami service:
+2. launch a version of the the whoami service.
+   For `whoami-oauth`:
 
         bash launch-service.sh &
-        # or
+
+    or for `whoami-oauth-basic`:
+
         bash launch-service-basic.sh &
 
 3. Launch JupyterHub:
@@ -73,7 +76,7 @@ The essential pieces for using JupyterHub as an OAuth provider are:
 
 2. Telling your service how to authenticate with JupyterHub.
 
-The relevant OAuth URLs for working with JupyterHub are:
+The relevant OAuth URLs and keys for using JupyterHub as an OAuth provider are:
 
 1. the client_id, used in oauth requests
 2. the api token registered with jupyterhub is the client_secret for oauth requests
