@@ -89,7 +89,7 @@ check if the cookie corresponds to the right user. This request is logged.
 If everything is working, the response logged will be similar to this:
 
 ```
-200 GET /hub/api/authorizations/cookie/jupyter-hub-token-name/[secret] (@10.0.1.4) 6.10ms
+200 GET /hub/api/authorizations/cookie/jupyterhub-token-name/[secret] (@10.0.1.4) 6.10ms
 ```
 
 You should see a similar 200 message, as above, in the Hub log when you first
@@ -99,7 +99,7 @@ may mean that your single-user notebook server isn't connecting to your Hub.
 If you see 403 (forbidden) like this, it's a token problem:
 
 ```
-403 GET /hub/api/authorizations/cookie/jupyter-hub-token-name/[secret] (@10.0.1.4) 4.14ms
+403 GET /hub/api/authorizations/cookie/jupyterhub-token-name/[secret] (@10.0.1.4) 4.14ms
 ```
 
 Check the logs of the single-user notebook server, which may have more detailed

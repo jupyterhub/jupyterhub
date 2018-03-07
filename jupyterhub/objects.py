@@ -152,7 +152,7 @@ class Hub(Server):
     of the server base_url.
     """
 
-    cookie_name = 'jupyter-hub-token'
+    cookie_name = 'jupyterhub-hub-login'
 
     @property
     def server(self):

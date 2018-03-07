@@ -205,7 +205,7 @@ class User:
 
         # use fully quoted name for client_id because it will be used in cookie-name
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
-        client_id = 'user-%s' % quote(self.name)
+        client_id = 'jupyterhub-user-%s' % quote(self.name)
         if name:
             client_id = '%s-%s' % (client_id, quote(name))
         spawn_kwargs = dict(
