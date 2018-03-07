@@ -1,0 +1,4 @@
+FROM ankitml/jupyterhub-alpine
+USER root
+RUN pip3 install jupyterhub-dummyauthenticator
+USER nobody

@@ -1,0 +1,30 @@
+version: '3'
+
+services:
+  proxy:
+      env_file:
+        - auth_token.env
+      image: jupyter/configurable-http-proxy
+      networks:
+        - jupyterhub
+    # override entrypoint to expose api to the network
+      entrypoint:
+        - "configurable-http-proxy"
+        - "--api-ip=0.0.0.0"
+        - "--api-port=8001"
+
+  hub:
+      depends_on:
+        - proxy
+      env_file:
+        - auth_token.env
+      image: ankitml/jupyterhub-example1
+      networks:
+        - jupyterhub
+      command: "jupyterhub"
+      volumes:
+        - ./:/home/jupyterhub
+      working_dir: /home/jupyterhub
+
+networks:
+  jupyterhub:
