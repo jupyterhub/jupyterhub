@@ -57,6 +57,7 @@ from .traitlets import URLPrefix, Command
 from .utils import (
     url_path_join,
     ISO8601_ms, ISO8601_s,
+    print_stacks, print_ps_info,
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -1675,6 +1676,14 @@ class JupyterHub(Application):
 
     def init_signal(self):
         signal.signal(signal.SIGTERM, self.sigterm)
+        if hasattr(signal, 'SIGINFO'):
+            signal.signal(signal.SIGINFO, self.log_status)
+
+    def log_status(self, signum, frame):
+        """Log current status, triggered by SIGINFO (^T in many terminals)"""
+        self.log.debug("Received signal %s[%s]", signum, signal.getsignal(signum))
+        print_ps_info()
+        print_stacks()
 
     def sigterm(self, signum, frame):
         self.log.critical("Received SIGTERM, shutting down")
