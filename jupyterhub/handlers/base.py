@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 from http.client import responses
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import uuid
+import random
 
 from jinja2 import TemplateNotFound
 
@@ -526,17 +527,25 @@ class BaseHandler(RequestHandler):
         active_server_limit = self.active_server_limit
 
         if concurrent_spawn_limit and spawn_pending_count >= concurrent_spawn_limit:
-            self.log.info(
-                '%s pending spawns, throttling',
-                spawn_pending_count,
-            )
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.throttled
             ).observe(time.perf_counter() - spawn_start_time)
-            raise web.HTTPError(
-                429,
-                "User startup rate limit exceeded. Try again in a few minutes.",
+            # Suggest number of seconds client should wait before retrying
+            # This helps prevent thundering herd problems, where users simply
+            # immediately retry when we are overloaded.
+            retry_time = int(random.uniform(
+                self.settings['throttle_retry_suggest_min'],
+                self.settings['throttle_retry_suggest_max']
+            ))
+            self.set_header('Retry-After', str(retry_time))
+            self.log.info(
+                '%s pending spawns, throttling. Retry in %s seconds',
+                spawn_pending_count, retry_time
             )
+            self.set_status(429, "Too many users trying to log in right now. Try again in a {}s".format(retry_time))
+            # We use set_status and then raise web.Finish, since raising web.HTTPError resets any headers we wanna send.
+            raise web.Finish()
+
         if active_server_limit and active_count >= active_server_limit:
             self.log.info(
                 '%s servers active, no space available',

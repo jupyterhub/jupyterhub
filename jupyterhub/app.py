@@ -616,6 +616,31 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    throttle_retry_suggest_min = Integer(
+        30,
+        help="""
+        Minimum seconds after which we suggest the user retry spawning.
+
+        When `concurrent_spawn_limit` is exceeded, we recommend users retry
+        after a random period of time, bounded by throttle_retry_suggest_min
+        and throttle_retry_suggest_max.
+
+        throttle_retry_suggest_min should ideally be set to the median
+        spawn time of servers in your installation.
+        """
+    )
+
+    throttle_retry_suggest_max = Integer(
+        60,
+        help="""
+        Minimum seconds after which we suggest the user retry spawning.
+
+        When `concurrent_spawn_limit` is exceeded, we recommend users retry
+        after a random period of time, bounded by throttle_retry_suggest_min
+        and throttle_retry_suggest_max.
+        """
+    )
+
     active_server_limit = Integer(
         0,
         help="""
@@ -1423,6 +1448,8 @@ class JupyterHub(Application):
             allow_named_servers=self.allow_named_servers,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
+            throttle_retry_suggest_min=self.throttle_retry_suggest_min,
+            throttle_retry_suggest_max=self.throttle_retry_suggest_max,
             active_server_limit=self.active_server_limit,
         )
         # allow configured settings to have priority
