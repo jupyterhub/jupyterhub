@@ -310,6 +310,8 @@ class Spawner(LoggingConfigurable):
         'VIRTUAL_ENV',
         'LANG',
         'LC_ALL',
+        'SYSTEMROOT',
+        'APPDATA',
     ],
         help="""
         Whitelist of environment variables for the single-user server to inherit from the JupyterHub process.
