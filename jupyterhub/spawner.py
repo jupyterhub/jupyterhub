@@ -34,6 +34,7 @@ from .objects import Server
 from .traitlets import Command, ByteSpecification, Callable
 from .utils import iterate_until, maybe_future, random_port, url_path_join, exponential_backoff
 
+_mswindows = (os.name == "nt")
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -1034,10 +1035,15 @@ class LocalProcessSpawner(Spawner):
 
     def user_env(self, env):
         """Augment environment of spawned process with user specific env variables."""
-        import pwd
+        if _mswindows:
+            home = None
+            shell = None
+        else:
+            import pwd
+            home = pwd.getpwnam(self.user.name).pw_dir
+            shell = pwd.getpwnam(self.user.name).pw_shell
+
         env['USER'] = self.user.name
-        home = pwd.getpwnam(self.user.name).pw_dir
-        shell = pwd.getpwnam(self.user.name).pw_shell
         # These will be empty if undefined,
         # in which case don't set the env:
         if home:
