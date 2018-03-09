@@ -8,6 +8,7 @@ import pipes
 import re
 from shutil import which
 import sys
+import os
 from subprocess import Popen, PIPE, STDOUT
 
 try:
@@ -26,14 +27,13 @@ from .handlers.login import LoginHandler
 from .utils import maybe_future, url_path_join
 from .traitlets import Command
 
+_mswindows = (os.name == "nt")
 
-def getgrnam(name):
-    """Wrapper function to protect against `grp` not being available
-    on Windows
-    """
+if _mswindows:
+    import win32net
+else:
     import grp
-    return grp.getgrnam(name)
-
+    import pwd
 
 class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
@@ -429,6 +429,8 @@ class LocalAuthenticator(Authenticator):
         """Guess the most likely-to-work adduser command for each platform"""
         if sys.platform == 'darwin':
             raise ValueError("I don't know how to create users on OS X")
+        elif _mswindows:
+            raise ValueError("I don't know how to create users on Windows")
         elif which('pw'):
             # Probably BSD
             return ['pw', 'useradd', '-m']
@@ -460,21 +462,38 @@ class LocalAuthenticator(Authenticator):
         else:
             return super().check_whitelist(username)
 
-    def check_group_whitelist(self, username):
-        """
-        If group_whitelist is configured, check if authenticating user is part of group.
-        """
-        if not self.group_whitelist:
+    if not _mswindows:
+        def check_group_whitelist(self, username):
+            """
+            If group_whitelist is configured, check if authenticating user is part of group.
+            """
+            if not self.group_whitelist:
+                return False
+            for grnam in self.group_whitelist:
+                try:
+                    group = grp.getgrnam(grnam)
+                except KeyError:
+                    self.log.error('No such group: [%s]' % grnam)
+                    continue
+                if username in group.gr_mem:
+                    return True
             return False
-        for grnam in self.group_whitelist:
-            try:
-                group = getgrnam(grnam)
-            except KeyError:
-                self.log.error('No such group: [%s]' % grnam)
-                continue
-            if username in group.gr_mem:
-                return True
-        return False
+
+    else:
+        def check_group_whitelist(self, username):
+            """ MS Windows Version """
+            if not self.group_whitelist:
+                return False
+            for group in self.group_whitelist:
+                try:
+                    members = win32net.NetLocalGroupGetMembers(None, group, 1)
+                except Exception as exc:
+                    self.log.warning("Failed to get group members for %s: %s", group, exc)
+                for member in members[0]:
+                    if username == member['name']:
+                        return True
+
+            return False
 
     async def add_user(self, user):
         """Hook called whenever a new user is added
@@ -484,7 +503,10 @@ class LocalAuthenticator(Authenticator):
         user_exists = await maybe_future(self.system_user_exists(user))
         if not user_exists:
             if self.create_system_users:
-                await maybe_future(self.add_system_user(user))
+                if _mswindows:
+                    raise KeyError("There is no support for create_system_users on Windows")
+                else:
+                    await maybe_future(self.add_system_user(user))
             else:
                 raise KeyError("User %s does not exist." % user.name)
 
@@ -493,13 +515,19 @@ class LocalAuthenticator(Authenticator):
     @staticmethod
     def system_user_exists(user):
         """Check if the user exists on the system"""
-        import pwd
-        try:
-            pwd.getpwnam(user.name)
-        except KeyError:
+        if _mswindows:
+            local_users = win32net.NetUserEnum(None, 0)[0]
+            for local_user in local_users:
+                if local_user['name'] == user.name:
+                    return True
             return False
         else:
-            return True
+            try:
+                pwd.getpwnam(user.name)
+            except KeyError:
+                return False
+            else:
+                return True
 
     def add_system_user(self, user):
         """Create a new local UNIX user on the system.
