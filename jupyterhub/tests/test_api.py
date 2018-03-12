@@ -586,7 +586,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     for u in users:
         u.spawner.delay = 0
         r = yield api_request(app, 'users', u.name, 'server', method='delete')
-        yield r.raise_for_status()
+        r.raise_for_status()
     while any(u.spawner.active for u in users):
         yield gen.sleep(0.1)
 

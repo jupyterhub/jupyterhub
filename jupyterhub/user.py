@@ -12,7 +12,7 @@ from tornado import gen
 from tornado.log import app_log
 from traitlets import HasTraits, Any, Dict, default
 
-from .utils import url_path_join
+from .utils import maybe_future, url_path_join
 
 from . import orm
 from ._version import _check_version, __version__
@@ -157,23 +157,21 @@ class User:
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
-    @gen.coroutine
-    def save_auth_state(self, auth_state):
+    async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""
         if auth_state is None:
             self.encrypted_auth_state = None
         else:
-            self.encrypted_auth_state = yield encrypt(auth_state)
+            self.encrypted_auth_state = await encrypt(auth_state)
         self.db.commit()
 
-    @gen.coroutine
-    def get_auth_state(self):
+    async def get_auth_state(self):
         """Retrieve and decrypt auth_state for the user"""
         encrypted = self.encrypted_auth_state
         if encrypted is None:
             return None
         try:
-            auth_state = yield decrypt(encrypted)
+            auth_state = await decrypt(encrypted)
         except (ValueError, InvalidToken, EncryptionUnavailable) as e:
             self.log.warning("Failed to retrieve encrypted auth_state for %s because %s",
                 self.name, e,
@@ -183,7 +181,7 @@ class User:
         if auth_state:
             # Crypt has multiple keys, store again with new key for rotation.
             if len(CryptKeeper.instance().keys) > 1:
-                yield self.save_auth_state(auth_state)
+                await self.save_auth_state(auth_state)
         return auth_state
 
     def _new_spawner(self, name, spawner_class=None, **kwargs):
@@ -322,16 +320,15 @@ class User:
         else:
             return self.base_url
 
-    @gen.coroutine
-    def spawn(self, server_name='', options=None):
+    async def spawn(self, server_name='', options=None):
         """Start the user's spawner
-        
+
         depending from the value of JupyterHub.allow_named_servers
-        
+
         if False:
         JupyterHub expects only one single-server per user
         url of the server will be /user/:name
-        
+
         if True:
         JupyterHub expects more than one single-server per user
         url of the server will be /user/:name/:server_name
@@ -381,17 +378,17 @@ class User:
         # trigger pre-spawn hook on authenticator
         authenticator = self.authenticator
         if (authenticator):
-            yield gen.maybe_future(authenticator.pre_spawn_start(self, spawner))
+            await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
         spawner._start_pending = True
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
-            yield gen.maybe_future(spawner.run_pre_spawn_hook())
-            f = spawner.start()
+            await maybe_future(spawner.run_pre_spawn_hook())
+            f = maybe_future(spawner.start())
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
-            ip_port = yield gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            ip_port = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
             if ip_port:
                 # get ip, port info from return value of start()
                 server.ip, server.port = ip_port
@@ -448,7 +445,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
             try:
-                yield self.stop()
+                await self.stop()
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
@@ -466,7 +463,7 @@ class User:
         db.commit()
         spawner._waiting_for_response = True
         try:
-            resp = yield server.wait_up(http=True, timeout=spawner.http_timeout)
+            resp = await server.wait_up(http=True, timeout=spawner.http_timeout)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(
@@ -486,7 +483,7 @@ class User:
                 ))
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
-                yield self.stop()
+                await self.stop()
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
@@ -504,8 +501,7 @@ class User:
             spawner._start_pending = False
         return self
 
-    @gen.coroutine
-    def stop(self, server_name=''):
+    async def stop(self, server_name=''):
         """Stop the user's spawner
 
         and cleanup after it.
@@ -517,9 +513,9 @@ class User:
         spawner._stop_pending = True
         try:
             api_token = spawner.api_token
-            status = yield spawner.poll()
+            status = await spawner.poll()
             if status is None:
-                yield spawner.stop()
+                await spawner.stop()
             spawner.clear_state()
             spawner.orm_spawner.state = spawner.get_state()
             self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
@@ -537,7 +533,7 @@ class User:
             auth = spawner.authenticator
             try:
                 if auth:
-                    yield gen.maybe_future(
+                    await maybe_future(
                         auth.post_spawn_stop(self, spawner)
                     )
             except Exception:

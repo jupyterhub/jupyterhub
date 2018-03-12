@@ -3,11 +3,14 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 from binascii import b2a_hex
+import concurrent.futures
 import random
 import errno
 import hashlib
 from hmac import compare_digest
+import inspect
 import os
 import socket
 import sys
@@ -16,7 +19,8 @@ from threading import Thread
 import uuid
 import warnings
 
-from tornado import web, gen, ioloop
+from tornado import gen, ioloop, web
+from tornado.platform.asyncio import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
@@ -51,8 +55,7 @@ def can_connect(ip, port):
     else:
         return True
 
-@gen.coroutine
-def exponential_backoff(
+async def exponential_backoff(
         pass_func,
         fail_message,
         start_wait=0.2,
@@ -120,7 +123,7 @@ def exponential_backoff(
         deadline = random.uniform(deadline - tol, deadline + tol)
     scale = 1
     while True:
-        ret = yield gen.maybe_future(pass_func(*args, **kwargs))
+        ret = await maybe_future(pass_func(*args, **kwargs))
         # Truthy!
         if ret:
             return ret
@@ -133,33 +136,30 @@ def exponential_backoff(
         # too many things
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
         scale *= scale_factor
-        yield gen.sleep(dt)
+        await gen.sleep(dt)
     raise TimeoutError(fail_message)
 
 
-@gen.coroutine
-def wait_for_server(ip, port, timeout=10):
+async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
     if ip in {'', '0.0.0.0'}:
         ip = '127.0.0.1'
-    yield exponential_backoff(
+    await exponential_backoff(
         lambda: can_connect(ip, port),
         "Server at {ip}:{port} didn't respond in {timeout} seconds".format(ip=ip, port=port, timeout=timeout),
         timeout=timeout
     )
 
 
-@gen.coroutine
-def wait_for_http_server(url, timeout=10):
+async def wait_for_http_server(url, timeout=10):
     """Wait for an HTTP Server to respond at url.
 
     Any non-5XX response code will do, even 404.
     """
     client = AsyncHTTPClient()
-    @gen.coroutine
-    def is_reachable():
+    async def is_reachable():
         try:
-            r = yield client.fetch(url, follow_redirects=False)
+            r = await client.fetch(url, follow_redirects=False)
             return r
         except HTTPError as e:
             if e.code >= 500:
@@ -176,7 +176,7 @@ def wait_for_http_server(url, timeout=10):
             if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
         return False
-    re = yield exponential_backoff(
+    re = await exponential_backoff(
         is_reachable,
         "Server at {url} didn't respond in {timeout} seconds".format(url=url, timeout=timeout),
         timeout=timeout
@@ -413,3 +413,25 @@ def print_stacks(file=sys.stderr):
         for task in tasks:
             task.print_stack(file=file)
 
+
+def maybe_future(obj):
+    """Return an asyncio Future
+
+    Use instead of gen.maybe_future
+
+    For our compatibility, this must accept:
+
+    - asyncio coroutine (gen.maybe_future doesn't work in tornado < 5)
+    - tornado coroutine (asyncio.ensure_future doesn't work)
+    - scalar (asyncio.ensure_future doesn't work)
+    - concurrent.futures.Future (asyncio.ensure_future doesn't work)
+    - tornado Future (works both ways)
+    - asyncio Future (works both ways)
+    """
+    if inspect.isawaitable(obj):
+        # already awaitable, use ensure_future
+        return asyncio.ensure_future(obj)
+    elif isinstance(obj, concurrent.futures.Future):
+        return asyncio.wrap_future(obj)
+    else:
+        return to_asyncio_future(gen.maybe_future(obj))

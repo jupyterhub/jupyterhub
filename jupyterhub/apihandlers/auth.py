@@ -38,15 +38,14 @@ class TokenAPIHandler(APIHandler):
         self.db.commit()
         self.write(json.dumps(model))
 
-    @gen.coroutine
-    def post(self):
+    async def post(self):
         requester = user = self.get_current_user()
         if user is None:
             # allow requesting a token with username and password
             # for authenticators where that's possible
             data = self.get_json_body()
             try:
-                requester = user = yield self.login_user(data)
+                requester = user = await self.login_user(data)
             except Exception as e:
                 self.log.error("Failure trying to authenticate with form data: %s" % e)
                 user = None

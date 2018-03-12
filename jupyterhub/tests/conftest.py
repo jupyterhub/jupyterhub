@@ -103,7 +103,8 @@ def _mockservice(request, app, url=False):
             service.start()
         io_loop.run_sync(start)
         def cleanup():
-            service.stop()
+            import asyncio
+            asyncio.get_event_loop().run_until_complete(service.stop())
             app.services[:] = []
             app._service_map.clear()
         request.addfinalizer(cleanup)
@@ -131,8 +132,8 @@ def mockservice_url(request, app):
 def no_patience(app):
     """Set slow-spawning timeouts to zero"""
     with mock.patch.dict(app.tornado_settings,
-                         {'slow_spawn_timeout': 0,
-                          'slow_stop_timeout': 0}):
+                         {'slow_spawn_timeout': 0.1,
+                          'slow_stop_timeout': 0.1}):
         yield
 
 

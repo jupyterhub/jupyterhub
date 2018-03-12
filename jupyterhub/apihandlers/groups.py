@@ -51,8 +51,7 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.write(json.dumps(self.group_model(group)))
 
     @admin_only
-    @gen.coroutine
-    def post(self, name):
+    async def post(self, name):
         """POST creates a group by name"""
         model = self.get_json_body()
         if model is None:
@@ -109,9 +108,8 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
 
-    @gen.coroutine
     @admin_only
-    def delete(self, name):
+    async def delete(self, name):
         """DELETE removes users from a group"""
         group = self.find_group(name)
         data = self.get_json_body()

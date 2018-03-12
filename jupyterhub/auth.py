@@ -23,9 +23,8 @@ from traitlets.config import LoggingConfigurable
 from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
 
 from .handlers.login import LoginHandler
-from .utils import url_path_join
+from .utils import maybe_future, url_path_join
 from .traitlets import Command
-
 
 
 def getgrnam(name):
@@ -206,8 +205,7 @@ class Authenticator(LoggingConfigurable):
             return True
         return username in self.whitelist
 
-    @gen.coroutine
-    def get_authenticated_user(self, handler, data):
+    async def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
 
         Returns user dict if successful, None otherwise.
@@ -223,11 +221,11 @@ class Authenticator(LoggingConfigurable):
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
          - `check_whitelist` checks against the user whitelist
-        
+
         .. versionchanged:: 0.8
             return dict instead of username
         """
-        authenticated = yield self.authenticate(handler, data)
+        authenticated = await self.authenticate(handler, data)
         if authenticated is None:
             return
         if isinstance(authenticated, dict):
@@ -246,15 +244,14 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
-        whitelist_pass = yield gen.maybe_future(self.check_whitelist(username))
+        whitelist_pass = await maybe_future(self.check_whitelist(username))
         if whitelist_pass:
             return authenticated
         else:
             self.log.warning("User %r not in whitelist.", username)
             return
 
-    @gen.coroutine
-    def authenticate(self, handler, data):
+    async def authenticate(self, handler, data):
         """Authenticate a user with login form data
 
         This must be a tornado gen.coroutine.
@@ -479,20 +476,19 @@ class LocalAuthenticator(Authenticator):
                 return True
         return False
 
-    @gen.coroutine
-    def add_user(self, user):
+    async def add_user(self, user):
         """Hook called whenever a new user is added
 
         If self.create_system_users, the user will attempt to be created if it doesn't exist.
         """
-        user_exists = yield gen.maybe_future(self.system_user_exists(user))
+        user_exists = await maybe_future(self.system_user_exists(user))
         if not user_exists:
             if self.create_system_users:
-                yield gen.maybe_future(self.add_system_user(user))
+                await maybe_future(self.add_system_user(user))
             else:
                 raise KeyError("User %s does not exist." % user.name)
 
-        yield gen.maybe_future(super().add_user(user))
+        await maybe_future(super().add_user(user))
 
     @staticmethod
     def system_user_exists(user):

@@ -88,8 +88,8 @@ def test_external_service(app):
             'url': env['JUPYTERHUB_SERVICE_URL'],
             'api_token': env['JUPYTERHUB_API_TOKEN'],
         }]
-        app.init_services()
-        app.init_api_tokens()
+        yield app.init_services()
+        yield app.init_api_tokens()
         yield app.proxy.add_all_services(app._service_map)
 
         service = app._service_map[name]

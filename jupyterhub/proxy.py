@@ -99,13 +99,13 @@ class Proxy(LoggingConfigurable):
 
         Will be called during teardown if should_start is True.
 
-        **Subclasses must define this method** 
+        **Subclasses must define this method**
         if the proxy is to be started by the Hub
         """
-    
+
     def validate_routespec(self, routespec):
         """Validate a routespec
-        
+
         - Checks host value vs host-based routing.
         - Ensures trailing slash on path.
         """
@@ -125,8 +125,7 @@ class Proxy(LoggingConfigurable):
         else:
             return routespec
 
-    @gen.coroutine
-    def add_route(self, routespec, target, data):
+    async def add_route(self, routespec, target, data):
         """Add a route to the proxy.
 
         **Subclasses must define this method**
@@ -146,16 +145,14 @@ class Proxy(LoggingConfigurable):
         """
         pass
 
-    @gen.coroutine
-    def delete_route(self, routespec):
+    async def delete_route(self, routespec):
         """Delete a route with a given routespec if it exists.
-        
+
         **Subclasses must define this method**
         """
         pass
 
-    @gen.coroutine
-    def get_all_routes(self):
+    async def get_all_routes(self):
         """Fetch and return all the routes associated by JupyterHub from the
         proxy.
 
@@ -172,8 +169,7 @@ class Proxy(LoggingConfigurable):
         """
         pass
 
-    @gen.coroutine
-    def get_route(self, routespec):
+    async def get_route(self, routespec):
         """Return the route info for a given routespec.
 
         Args:
@@ -184,7 +180,7 @@ class Proxy(LoggingConfigurable):
         Returns:
             result (dict):
                 dict with the following keys::
-        
+
                 'routespec': The normalized route specification passed in to add_route
                     ([host]/path/)
                 'target': The target host for this route (proto://host)
@@ -195,13 +191,12 @@ class Proxy(LoggingConfigurable):
         """
         # default implementation relies on get_all_routes
         routespec = self.validate_routespec(routespec)
-        routes = yield self.get_all_routes()
+        routes = await self.get_all_routes()
         return routes.get(routespec)
 
     # Most basic implementers must only implement above methods
 
-    @gen.coroutine
-    def add_service(self, service, client=None):
+    async def add_service(self, service, client=None):
         """Add a service's server to the proxy table."""
         if not service.server:
             raise RuntimeError(
@@ -211,20 +206,18 @@ class Proxy(LoggingConfigurable):
                       service.name, service.proxy_spec, service.server.host,
                       )
 
-        yield self.add_route(
+        await self.add_route(
             service.proxy_spec,
             service.server.host,
             {'service': service.name}
         )
 
-    @gen.coroutine
-    def delete_service(self, service, client=None):
+    async def delete_service(self, service, client=None):
         """Remove a service's server from the proxy table."""
         self.log.info("Removing service %s from proxy", service.name)
-        yield self.delete_route(service.proxy_spec)
+        await self.delete_route(service.proxy_spec)
 
-    @gen.coroutine
-    def add_user(self, user, server_name='', client=None):
+    async def add_user(self, user, server_name='', client=None):
         """Add a user's server to the proxy table."""
         spawner = user.spawners[server_name]
         self.log.info("Adding user %s to proxy %s => %s",
@@ -236,7 +229,7 @@ class Proxy(LoggingConfigurable):
                 "%s is pending %s, shouldn't be added to the proxy yet!" % (spawner._log_name, spawner.pending)
             )
 
-        yield self.add_route(
+        await self.add_route(
             spawner.proxy_spec,
             spawner.server.host,
             {
@@ -245,17 +238,15 @@ class Proxy(LoggingConfigurable):
             }
         )
 
-    @gen.coroutine
-    def delete_user(self, user, server_name=''):
+    async def delete_user(self, user, server_name=''):
         """Remove a user's server from the proxy table."""
         routespec = user.proxy_spec
         if server_name:
             routespec = url_path_join(user.proxy_spec, server_name, '/')
         self.log.info("Removing user %s from proxy (%s)", user.name, routespec)
-        yield self.delete_route(routespec)
+        await self.delete_route(routespec)
 
-    @gen.coroutine
-    def add_all_services(self, service_dict):
+    async def add_all_services(self, service_dict):
         """Update the proxy table from the database.
 
         Used when loading up a new proxy.
@@ -266,10 +257,9 @@ class Proxy(LoggingConfigurable):
             if service.server:
                 futures.append(self.add_service(service))
         # wait after submitting them all
-        yield gen.multi(futures)
+        await gen.multi(futures)
 
-    @gen.coroutine
-    def add_all_users(self, user_dict):
+    async def add_all_users(self, user_dict):
         """Update the proxy table from the database.
 
         Used when loading up a new proxy.
@@ -281,13 +271,12 @@ class Proxy(LoggingConfigurable):
                 if spawner.ready:
                     futures.append(self.add_user(user, name))
         # wait after submitting them all
-        yield gen.multi(futures)
+        await gen.multi(futures)
 
-    @gen.coroutine
-    def check_routes(self, user_dict, service_dict, routes=None):
+    async def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy."""
         if not routes:
-            routes = yield self.get_all_routes()
+            routes = await self.get_all_routes()
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
@@ -352,19 +341,18 @@ class Proxy(LoggingConfigurable):
                 futures.append(self.delete_route(routespec))
 
         for f in futures:
-            yield f
+            await f
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
         self.log.info("Adding default route for Hub: / => %s", hub.host)
         return self.add_route('/', self.hub.host, {'hub': True})
 
-    @gen.coroutine
-    def restore_routes(self):
+    async def restore_routes(self):
         self.log.info("Setting up routes on new proxy")
-        yield self.add_hub_route(self.app.hub)
-        yield self.add_all_users(self.app.users)
-        yield self.add_all_services(self.app._service_map)
+        await self.add_hub_route(self.app.hub)
+        await self.add_all_users(self.app.users)
+        await self.add_all_services(self.app._service_map)
         self.log.info("New proxy back up and good to go")
 
 
@@ -415,8 +403,7 @@ class ConfigurableHTTPProxy(Proxy):
 
     _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         public_server = Server.from_url(self.public_url)
         api_server = Server.from_url(self.api_url)
         env = os.environ.copy()
@@ -448,7 +435,7 @@ class ConfigurableHTTPProxy(Proxy):
                              "  I hope there is SSL termination happening somewhere else...")
         self.log.info("Starting proxy @ %s", public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
-        shell = os.name == 'nt' 
+        shell = os.name == 'nt'
         try:
             self.proxy_process = Popen(cmd, env=env, start_new_session=True, shell=shell)
         except FileNotFoundError as e:
@@ -472,12 +459,12 @@ class ConfigurableHTTPProxy(Proxy):
             for i in range(10):
                 _check_process()
                 try:
-                    yield server.wait_up(1)
+                    await server.wait_up(1)
                 except TimeoutError:
                     continue
                 else:
                     break
-            yield server.wait_up(1)
+            await server.wait_up(1)
         _check_process()
         self.log.debug("Proxy started and appears to be up")
         pc = PeriodicCallback(self.check_running, 1e3 * self.check_running_interval)
@@ -494,16 +481,15 @@ class ConfigurableHTTPProxy(Proxy):
             except Exception as e:
                 self.log.error("Failed to terminate proxy process: %s", e)
 
-    @gen.coroutine
-    def check_running(self):
+    async def check_running(self):
         """Check if the proxy is still running"""
         if self.proxy_process.poll() is None:
             return
         self.log.error("Proxy stopped with exit code %r",
                        'unknown' if self.proxy_process is None else self.proxy_process.poll()
                        )
-        yield self.start()
-        yield self.restore_routes()
+        await self.start()
+        await self.restore_routes()
 
     def _routespec_to_chp_path(self, routespec):
         """Turn a routespec into a CHP API path
@@ -521,7 +507,7 @@ class ConfigurableHTTPProxy(Proxy):
 
     def _routespec_from_chp_path(self, chp_path):
         """Turn a CHP route into a route spec
-        
+
         In the JSON API, CHP route keys are unescaped,
         so re-escape them to raw URLs and ensure slashes are in the right places.
         """
@@ -585,11 +571,10 @@ class ConfigurableHTTPProxy(Proxy):
             'target': target,
             'data': chp_data,
         }
-    
-    @gen.coroutine
-    def get_all_routes(self, client=None):
+
+    async def get_all_routes(self, client=None):
         """Fetch the proxy's routes."""
-        resp = yield self.api_request('', client=client)
+        resp = await self.api_request('', client=client)
         chp_routes = json.loads(resp.body.decode('utf8', 'replace'))
         all_routes = {}
         for chp_path, chp_data in chp_routes.items():
