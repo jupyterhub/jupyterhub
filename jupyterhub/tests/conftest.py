@@ -132,8 +132,8 @@ def mockservice_url(request, app):
 def no_patience(app):
     """Set slow-spawning timeouts to zero"""
     with mock.patch.dict(app.tornado_settings,
-                         {'slow_spawn_timeout': 0,
-                          'slow_stop_timeout': 0}):
+                         {'slow_spawn_timeout': 0.1,
+                          'slow_stop_timeout': 0.1}):
         yield
 
 
