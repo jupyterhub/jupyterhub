@@ -23,7 +23,7 @@ from traitlets.config import LoggingConfigurable
 from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
 
 from .handlers.login import LoginHandler
-from .utils import awaitable, url_path_join
+from .utils import maybe_future, url_path_join
 from .traitlets import Command
 
 
@@ -244,7 +244,7 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
-        whitelist_pass = await awaitable(self.check_whitelist(username))
+        whitelist_pass = await maybe_future(self.check_whitelist(username))
         if whitelist_pass:
             return authenticated
         else:
@@ -481,14 +481,14 @@ class LocalAuthenticator(Authenticator):
 
         If self.create_system_users, the user will attempt to be created if it doesn't exist.
         """
-        user_exists = await awaitable(self.system_user_exists(user))
+        user_exists = await maybe_future(self.system_user_exists(user))
         if not user_exists:
             if self.create_system_users:
-                await awaitable(self.add_system_user(user))
+                await maybe_future(self.add_system_user(user))
             else:
                 raise KeyError("User %s does not exist." % user.name)
 
-        await awaitable(super().add_user(user))
+        await maybe_future(super().add_user(user))
 
     @staticmethod
     def system_user_exists(user):

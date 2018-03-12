@@ -28,7 +28,7 @@ from traitlets import (
 
 from .objects import Server
 from .traitlets import Command, ByteSpecification, Callable
-from .utils import awaitable, random_port, url_path_join, exponential_backoff
+from .utils import maybe_future, random_port, url_path_join, exponential_backoff
 
 
 class Spawner(LoggingConfigurable):
@@ -269,7 +269,7 @@ class Spawner(LoggingConfigurable):
             Introduced.
         """
         if callable(self.options_form):
-            options_form = await awaitable(self.options_form(self))
+            options_form = await maybe_future(self.options_form(self))
         else:
             options_form = self.options_form
 
@@ -783,7 +783,7 @@ class Spawner(LoggingConfigurable):
 
         for callback in callbacks:
             try:
-                await awaitable(callback())
+                await maybe_future(callback())
             except Exception:
                 self.log.exception("Unhandled error in poll callback for %s", self)
         return status

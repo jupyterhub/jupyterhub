@@ -12,7 +12,7 @@ from tornado import gen
 from tornado.log import app_log
 from traitlets import HasTraits, Any, Dict, default
 
-from .utils import awaitable, url_path_join
+from .utils import maybe_future, url_path_join
 
 from . import orm
 from ._version import _check_version, __version__
@@ -378,14 +378,14 @@ class User:
         # trigger pre-spawn hook on authenticator
         authenticator = self.authenticator
         if (authenticator):
-            await awaitable(authenticator.pre_spawn_start(self, spawner))
+            await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
         spawner._start_pending = True
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
-            await awaitable(spawner.run_pre_spawn_hook())
-            f = awaitable(spawner.start())
+            await maybe_future(spawner.run_pre_spawn_hook())
+            f = maybe_future(spawner.start())
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
             ip_port = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
@@ -533,7 +533,7 @@ class User:
             auth = spawner.authenticator
             try:
                 if auth:
-                    await awaitable(
+                    await maybe_future(
                         auth.post_spawn_stop(self, spawner)
                     )
             except Exception:

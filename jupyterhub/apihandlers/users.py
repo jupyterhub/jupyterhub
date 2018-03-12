@@ -8,7 +8,7 @@ import json
 from tornado import gen, web
 
 from .. import orm
-from ..utils import admin_only, awaitable
+from ..utils import admin_only, maybe_future
 from .base import APIHandler
 
 
@@ -76,7 +76,7 @@ class UserListAPIHandler(APIHandler):
                 user.admin = True
                 self.db.commit()
             try:
-                await awaitable(self.authenticator.add_user(user))
+                await maybe_future(self.authenticator.add_user(user))
             except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
@@ -125,7 +125,7 @@ class UserAPIHandler(APIHandler):
                 self.db.commit()
 
         try:
-            await awaitable(self.authenticator.add_user(user))
+            await maybe_future(self.authenticator.add_user(user))
         except Exception:
             self.log.error("Failed to create user: %s" % name, exc_info=True)
             # remove from registry
@@ -149,7 +149,7 @@ class UserAPIHandler(APIHandler):
             if user.spawner._stop_pending:
                 raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
 
-        await awaitable(self.authenticator.delete_user(user))
+        await maybe_future(self.authenticator.delete_user(user))
         # remove from registry
         self.users.delete(user)
 

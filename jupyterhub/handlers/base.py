@@ -23,7 +23,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
-from ..utils import awaitable, url_path_join
+from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus
@@ -387,7 +387,7 @@ class BaseHandler(RequestHandler):
             self.set_hub_cookie(user)
 
     def authenticate(self, data):
-        return awaitable(self.authenticator.get_authenticated_user(self, data))
+        return maybe_future(self.authenticator.get_authenticated_user(self, data))
 
     def get_next_url(self, user=None):
         """Get the next_url for login redirect
@@ -421,7 +421,7 @@ class BaseHandler(RequestHandler):
             new_user = username not in self.users
             user = self.user_from_username(username)
             if new_user:
-                await awaitable(self.authenticator.add_user(user))
+                await maybe_future(self.authenticator.add_user(user))
             # Only set `admin` if the authenticator returned an explicit value.
             if admin is not None and admin != user.admin:
                 user.admin = admin
@@ -577,7 +577,7 @@ class BaseHandler(RequestHandler):
 
         # hook up spawner._spawn_future so that other requests can await
         # this result
-        finish_spawn_future = spawner._spawn_future = awaitable(finish_user_spawn())
+        finish_spawn_future = spawner._spawn_future = maybe_future(finish_user_spawn())
         def _clear_spawn_future(f):
             # clear spawner._spawn_future when it's done
             # keep an exception around, though, to prevent repeated implicit spawns

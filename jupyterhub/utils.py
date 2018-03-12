@@ -123,7 +123,7 @@ async def exponential_backoff(
         deadline = random.uniform(deadline - tol, deadline + tol)
     scale = 1
     while True:
-        ret = await awaitable(pass_func(*args, **kwargs))
+        ret = await maybe_future(pass_func(*args, **kwargs))
         # Truthy!
         if ret:
             return ret
@@ -414,16 +414,17 @@ def print_stacks(file=sys.stderr):
             task.print_stack(file=file)
 
 
-def awaitable(obj):
-    """Wrap an object in something that's awaitable
+def maybe_future(obj):
+    """Return an asyncio Future
 
     Use instead of gen.maybe_future
 
     For our compatibility, this must accept:
 
-    - asyncio coroutine (gen.maybe_future doesn't work)
+    - asyncio coroutine (gen.maybe_future doesn't work in tornado < 5)
     - tornado coroutine (asyncio.ensure_future doesn't work)
     - scalar (asyncio.ensure_future doesn't work)
+    - concurrent.futures.Future (asyncio.ensure_future doesn't work)
     - tornado Future (works both ways)
     - asyncio Future (works both ways)
     """

@@ -19,7 +19,7 @@ except ImportError:
     class InvalidToken(Exception):
         pass
 
-from .utils import awaitable
+from .utils import maybe_future
 
 KEY_ENV = 'JUPYTERHUB_CRYPT_KEY'
 
@@ -133,7 +133,7 @@ class CryptKeeper(SingletonConfigurable):
     def encrypt(self, data):
         """Encrypt an object with cryptography"""
         self.check_available()
-        return awaitable(self.executor.submit(self._encrypt, data))
+        return maybe_future(self.executor.submit(self._encrypt, data))
 
     def _decrypt(self, encrypted):
         decrypted = self.fernet.decrypt(encrypted)
@@ -142,7 +142,7 @@ class CryptKeeper(SingletonConfigurable):
     def decrypt(self, encrypted):
         """Decrypt an object with cryptography"""
         self.check_available()
-        return awaitable(self.executor.submit(self._decrypt, encrypted))
+        return maybe_future(self.executor.submit(self._decrypt, encrypted))
 
 
 def encrypt(data):
