@@ -13,7 +13,7 @@ import mock
 import pytest
 
 from .mocking import FormSpawner, public_url, public_host
-from .test_api import api_request
+from .test_api import api_request, add_user
 from .utils import async_requests
 
 def get_page(path, app, hub=True, **kw):
@@ -109,20 +109,20 @@ def test_spawn_redirect(app):
     name = 'wash'
     cookies = yield app.login_user(name)
     u = app.users[orm.User.find(app.db, name)]
-    
+
     # ensure wash's server isn't running:
     r = yield api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
     r.raise_for_status()
     status = yield u.spawner.poll()
     assert status is not None
-    
+
     # test spawn page when no server is running
     r = yield get_page('spawn', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, 'user/%s/' % name)
-    
+
     # should have started server
     status = yield u.spawner.poll()
     assert status is None
@@ -146,6 +146,22 @@ def test_spawn_redirect(app):
 
 
 @pytest.mark.gen_test
+def test_spawn_admin_access(app, admin_access):
+    """GET /user/:name as admin with admin-access spawns user's server"""
+    cookies = yield app.login_user('admin')
+    name = 'mariel'
+    user = add_user(app.db, app=app, name=name)
+    app.db.commit()
+    r = yield get_page('user/' + name, app, cookies=cookies)
+    r.raise_for_status()
+    assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
+    r = yield get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
+    r.raise_for_status()
+    env = r.json()
+    assert env['JUPYTERHUB_USER'] == name
+
+
+@pytest.mark.gen_test
 def test_spawn_page(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         cookies = yield app.login_user('jones')
@@ -159,6 +175,17 @@ def test_spawn_page(app):
 
 
 @pytest.mark.gen_test
+def test_spawn_page_admin(app, admin_access):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        cookies = yield app.login_user('admin')
+        u = add_user(app.db, app=app, name='melanie')
+        r = yield get_page('spawn/' + u.name, app, cookies=cookies)
+        assert r.url.endswith('/spawn/' + u.name)
+        assert FormSpawner.options_form in r.text
+        assert "Spawning server for {}".format(u.name) in r.text
+
+
+@pytest.mark.gen_test
 def test_spawn_form(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
@@ -166,15 +193,13 @@ def test_spawn_form(app):
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
         yield u.stop()
-    
+
         r = yield async_requests.post(ujoin(base_url, 'spawn?next=/user/jones/tree'), cookies=cookies, data={
             'bounds': ['-1', '1'],
             'energy': '511keV',
         })
         r.raise_for_status()
         assert r.history
-        print(u.spawner)
-        print(u.spawner.user_options)
         assert u.spawner.user_options == {
             'energy': '511keV',
             'bounds': [-1, 1],
@@ -183,8 +208,31 @@ def test_spawn_form(app):
 
 
 @pytest.mark.gen_test
+def test_spawn_form_admin_access(app, admin_access):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
+        base_url = ujoin(public_host(app), app.hub.base_url)
+        cookies = yield app.login_user('admin')
+        u = add_user(app.db, app=app, name='martha')
+
+        r = yield async_requests.post(
+            ujoin(base_url, 'spawn/{0}?next=/user/{0}/tree'.format(u.name)),
+            cookies=cookies, data={
+            'bounds': ['-3', '3'],
+            'energy': '938MeV',
+        })
+        r.raise_for_status()
+        assert r.history
+        assert r.url.startswith(public_url(app, u))
+        assert u.spawner.user_options == {
+            'energy': '938MeV',
+            'bounds': [-3, 3],
+            'notspecified': 5,
+        }
+
+
+@pytest.mark.gen_test
 def test_spawn_form_with_file(app):
-    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = yield app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
@@ -338,7 +386,7 @@ def test_auto_login(app, request):
     authenticator = Authenticator(auto_login=True)
     authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
 
-    with mock.patch.dict(app.tornado_application.settings, {
+    with mock.patch.dict(app.tornado_settings, {
         'authenticator': authenticator,
     }):
         r = yield async_requests.get(base_url)
@@ -349,7 +397,7 @@ def test_auto_login_logout(app):
     name = 'burnham'
     cookies = yield app.login_user(name)
 
-    with mock.patch.dict(app.tornado_application.settings, {
+    with mock.patch.dict(app.tornado_settings, {
         'authenticator': Authenticator(auto_login=True),
     }):
         r = yield async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)

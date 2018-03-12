@@ -1,4 +1,6 @@
 """Tests for named servers"""
+from unittest import mock
+
 import pytest
 
 from ..utils import url_path_join
@@ -9,12 +11,9 @@ from .utils import async_requests
 
 @pytest.fixture
 def named_servers(app):
-    key = 'allow_named_servers'
-    app.tornado_application.settings[key] = app.tornado_settings[key] = True
-    try:
-        yield True
-    finally:
-        app.tornado_application.settings[key] = app.tornado_settings[key] = False
+    with mock.patch.dict(app.tornado_settings,
+                         {'allow_named_servers': True}):
+        yield
 
 
 @pytest.mark.gen_test

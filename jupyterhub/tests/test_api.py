@@ -67,8 +67,7 @@ def add_user(db, app=None, **kwargs):
             setattr(orm_user, attr, value)
     db.commit()
     if app:
-        user = app.users[orm_user.id] = User(orm_user, app.tornado_settings)
-        return user
+        return app.users[orm_user.id]
     else:
         return orm_user
 
@@ -519,7 +518,6 @@ def test_never_spawn(app, no_patience, never_spawn):
 
 @mark.gen_test
 def test_bad_spawn(app, no_patience, bad_spawn):
-    settings = app.tornado_application.settings
     db = app.db
     name = 'prim'
     user = add_user(db, app=app, name=name)
@@ -530,7 +528,6 @@ def test_bad_spawn(app, no_patience, bad_spawn):
 
 @mark.gen_test
 def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
-    settings = app.tornado_application.settings
     db = app.db
     name = 'zaphod'
     user = add_user(db, app=app, name=name)
@@ -546,11 +543,10 @@ def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
 @mark.gen_test
 def test_spawn_limit(app, no_patience, slow_spawn, request):
     db = app.db
-    settings = app.tornado_application.settings
-    settings['concurrent_spawn_limit'] = 2
-    def _restore_limit():
-        settings['concurrent_spawn_limit'] = 100
-    request.addfinalizer(_restore_limit)
+    p = mock.patch.dict(app.tornado_settings,
+                   {'concurrent_spawn_limit': 2})
+    p.start()
+    request.addfinalizer(p.stop)
 
     # start two pending spawns
     names = ['ykka', 'hjarka']
@@ -598,11 +594,10 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
 @mark.gen_test
 def test_active_server_limit(app, request):
     db = app.db
-    settings = app.tornado_application.settings
-    settings['active_server_limit'] = 2
-    def _restore_limit():
-        settings['active_server_limit'] = 0
-    request.addfinalizer(_restore_limit)
+    p = mock.patch.dict(app.tornado_settings,
+                   {'active_server_limit': 2})
+    p.start()
+    request.addfinalizer(p.stop)
 
     # start two pending spawns
     names = ['ykka', 'hjarka']
