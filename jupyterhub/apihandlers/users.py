@@ -17,7 +17,6 @@ class SelfAPIHandler(APIHandler):
 
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
-    @web.authenticated
     def get(self):
         user = self.get_current_user()
         if user is None:

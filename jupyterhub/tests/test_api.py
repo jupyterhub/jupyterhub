@@ -6,6 +6,7 @@ import time
 import sys
 from unittest import mock
 from urllib.parse import urlparse, quote
+import uuid
 
 import pytest
 from pytest import mark
@@ -186,7 +187,6 @@ def test_referer_check(app):
 # User API tests
 # --------------
 
-
 @mark.user
 @mark.gen_test
 def test_get_users(app):
@@ -219,6 +219,40 @@ def test_get_users(app):
     r = yield api_request(app, 'users',
         headers=auth_header(db, 'user'),
     )
+    assert r.status_code == 403
+
+
+@mark.user
+@mark.gen_test
+def test_get_self(app):
+    db = app.db
+
+    # basic get self
+    r = yield api_request(app, 'user')
+    r.raise_for_status()
+    assert r.json()['kind'] == 'user'
+
+    # identifying user via oauth token works
+    u = add_user(db, app=app, name='orpheus')
+    token = uuid.uuid4().hex
+    oauth_token = orm.OAuthAccessToken(
+        user=u.orm_user,
+        token=token,
+        grant_type=orm.GrantType.authorization_code,
+    )
+    db.add(oauth_token)
+    db.commit()
+    r = yield api_request(app, 'user', headers={
+        'Authorization': 'token ' + token,
+    })
+    r.raise_for_status()
+    model = r.json()
+    assert model['name'] == u.name
+
+    # invalid auth gets 403
+    r = yield api_request(app, 'user', headers={
+        'Authorization': 'token notvalid',
+    })
     assert r.status_code == 403
 
 
