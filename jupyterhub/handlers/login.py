@@ -82,15 +82,9 @@ class LoginHandler(BaseHandler):
         auth_timer.stop(send=False)
 
         if user:
-            already_running = False
-            if user.spawner.ready:
-                status = await user.spawner.poll()
-                already_running = (status is None)
-            if not already_running and not user.spawner.options_form \
-                    and not user.spawner.pending:
-                # logging in triggers spawn
-                await self.spawn_single_user(user)
-            self.redirect(self.get_next_url())
+            # register current user for subsequent requests to user (e.g. logging the request)
+            self.get_current_user = lambda: user
+            self.redirect(self.get_next_url(user))
         else:
             html = self._render(
                 login_error='Invalid username or password',
