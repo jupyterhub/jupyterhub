@@ -26,7 +26,7 @@ from .utils import async_requests
 
 from pamela import PAMError
 
-def mock_authenticate(username, password, service='login'):
+def mock_authenticate(username, password, service, encoding):
     # just use equality for testing
     if password == username:
         return True
@@ -34,7 +34,14 @@ def mock_authenticate(username, password, service='login'):
         raise PAMError("Fake")
 
 
-def mock_open_session(username, service):
+def mock_check_account(username, service, encoding):
+    if username.startswith('notallowed'):
+        raise PAMError("Fake")
+    else:
+        return True
+
+
+def mock_open_session(username, service, encoding):
     pass
 
 
@@ -156,6 +163,7 @@ class MockPAMAuthenticator(PAMAuthenticator):
                 authenticate=mock_authenticate,
                 open_session=mock_open_session,
                 close_session=mock_open_session,
+                check_account=mock_check_account,
                 ):
             username = yield super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
         if username is None:

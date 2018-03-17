@@ -29,6 +29,29 @@ def test_pam_auth():
     })
     assert authorized is None
 
+    # Account check is on by default for increased security
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'notallowedmatch',
+        'password': 'notallowedmatch',
+    })
+    assert authorized is None
+
+
+@pytest.mark.gen_test
+def test_pam_auth_account_check_disabled():
+    authenticator = MockPAMAuthenticator(check_account=False)
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'allowedmatch',
+        'password': 'allowedmatch',
+    })
+    assert authorized['name'] == 'allowedmatch'
+
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'notallowedmatch',
+        'password': 'notallowedmatch',
+    })
+    assert authorized['name'] == 'notallowedmatch'
+
 
 @pytest.mark.gen_test
 def test_pam_auth_whitelist():
