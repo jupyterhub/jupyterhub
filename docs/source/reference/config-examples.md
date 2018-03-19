@@ -14,12 +14,15 @@ deployment with the following assumptions:
 * Running JupyterHub on a single cloud server
 * Using SSL on the standard HTTPS port 443
 * Using GitHub OAuth (using oauthenticator) for login
+* Using the default spawner (to configure other spawners, uncomment and edit
+  `spawner_class` as well as follow the instructions for your desired spawner)
 * Users exist locally on the server
 * Users' notebooks to be served from `~/assignments` to allow users to browse
   for notebooks within other users' home directories
 * You want the landing page for each user to be a `Welcome.ipynb` notebook in
   their assignments directory.
 * All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
+
 
 The `jupyterhub_config.py` file would have these settings:
 
@@ -59,6 +62,12 @@ c.LocalAuthenticator.create_system_users = True
 # specify users and admin
 c.Authenticator.whitelist = {'rgbkrk', 'minrk', 'jhamrick'}
 c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
+
+# uses the default spawner
+# To use a different spawner, uncomment `spawner_class` and set to desired
+# spawner (e.g. SudoSpawner). Follow instructions for desired spawner
+# configuration.
+# c.JupyterHub.spawner_class = 'sudospawner.SudoSpawner'
 
 # start single-user notebook servers in ~/assignments,
 # with ~/assignments/Welcome.ipynb as the default landing page
