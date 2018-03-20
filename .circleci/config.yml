@@ -4,6 +4,13 @@
 #
 version: 2
 jobs:
+  build:
+    docker:
+      - image: circleci/python:3.6.1
+    steps:
+      - run:
+          command: |
+            ls
 
   test:
     steps:
