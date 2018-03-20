@@ -8,18 +8,12 @@ jobs:
     docker:
       - image: circleci/python:3.6.1
     steps:
-      - run:
-          command: |
-            ls
+      - run: ls
 
   test:
     steps:
-      - run:
-          name: Test image build
-          command: docker build -t jupyterhub/jupyterhub .
-      - run:
-          name: Test build latest tag
-          command: docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
+      - run: docker build -t jupyterhub/jupyterhub .
+      - run: docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
 
   deploy:
     machine:
@@ -28,20 +22,12 @@ jobs:
       branches:
         only: master
       steps:
-        - run:
-            name: Login to Dockerhub
-            command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
-        - run:
-            name: Push master branch to main image
-            command: docker push jupyterhub/jupyterhub-onbuild
+        - run: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+        - run: docker push jupyterhub/jupyterhub-onbuild
     release:
       filters:
         tags:
           only: /.*/
         steps:
-          - run:
-              name: Login to Dockerhub
-              command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
-          - run:
-              name: Push tagged branch to corresponding image
-              command: docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
+          - run: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+          - run: docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
