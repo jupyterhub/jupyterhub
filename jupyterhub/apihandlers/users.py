@@ -17,20 +17,20 @@ class SelfAPIHandler(APIHandler):
 
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
-    def get(self):
+    async def get(self):
         user = self.get_current_user()
         if user is None:
             # whoami can be accessed via oauth token
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
-        self.write(json.dumps(self.user_model(user)))
+        self.write(json.dumps(await self.user_model(user)))
 
 
 class UserListAPIHandler(APIHandler):
     @admin_only
-    def get(self):
-        data = [ self.user_model(u) for u in self.db.query(orm.User) ]
+    async def get(self):
+        data = [ await self.user_model(u) for u in self.db.query(orm.User) ]
         self.write(json.dumps(data))
 
     @admin_only
@@ -44,7 +44,7 @@ class UserListAPIHandler(APIHandler):
         # admin is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
-        
+
         to_create = []
         invalid_names = []
         for name in usernames:
@@ -83,7 +83,7 @@ class UserListAPIHandler(APIHandler):
             else:
                 created.append(user)
 
-        self.write(json.dumps([ self.user_model(u) for u in created ]))
+        self.write(json.dumps([ await self.user_model(u) for u in created ]))
         self.set_status(201)
 
 
@@ -95,7 +95,7 @@ def admin_or_self(method):
             raise web.HTTPError(403)
         if not (current.name == name or current.admin):
             raise web.HTTPError(403)
-        
+
         # raise 404 if not found
         if not self.find_user(name):
             raise web.HTTPError(404)
@@ -104,10 +104,12 @@ def admin_or_self(method):
 
 class UserAPIHandler(APIHandler):
 
+    #@gen.coroutine
     @admin_or_self
-    def get(self, name):
+    async def get(self, name):
         user = self.find_user(name)
-        self.write(json.dumps(self.user_model(user)))
+        user = await self.user_model(user)
+        self.write(json.dumps(user))
 
     @admin_only
     async def post(self, name):
@@ -131,7 +133,7 @@ class UserAPIHandler(APIHandler):
             self.users.delete(user)
             raise web.HTTPError(400, "Failed to create user: %s" % name)
 
-        self.write(json.dumps(self.user_model(user)))
+        self.write(json.dumps(await self.user_model(user)))
         self.set_status(201)
 
     @admin_only
@@ -155,7 +157,7 @@ class UserAPIHandler(APIHandler):
         self.set_status(204)
 
     @admin_only
-    def patch(self, name):
+    async def patch(self, name):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
@@ -168,7 +170,7 @@ class UserAPIHandler(APIHandler):
         for key, value in data.items():
             setattr(user, key, value)
         self.db.commit()
-        self.write(json.dumps(self.user_model(user)))
+        self.write(json.dumps(await self.user_model(user)))
 
 
 class UserServerAPIHandler(APIHandler):

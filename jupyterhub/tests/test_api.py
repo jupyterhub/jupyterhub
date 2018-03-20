@@ -201,6 +201,7 @@ def test_get_users(app):
             'admin': True,
             'server': None,
             'pending': None,
+            'auth_state': None,
         },
         {
             'kind': 'user',
@@ -209,6 +210,7 @@ def test_get_users(app):
             'admin': False,
             'server': None,
             'pending': None,
+            'auth_state': None,
         }
     ]
 
@@ -280,6 +282,7 @@ def test_get_user(app):
         'admin': False,
         'server': None,
         'pending': None,
+        'auth_state': None,
     }
 
 
@@ -593,7 +596,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     user.spawner._start_future = Future()
     r = yield api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 429
-    
+
     # allow ykka to start
     users[0].spawner._start_future.set_result(None)
     # wait for ykka to finish

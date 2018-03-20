@@ -71,7 +71,7 @@ class APIHandler(BaseHandler):
             self.log.error("Couldn't parse JSON", exc_info=True)
             raise web.HTTPError(400, 'Invalid JSON in body of request')
         return model
-    
+
     def write_error(self, status_code, **kwargs):
         """Write JSON errors instead of HTML"""
         exc_info = kwargs.get('exc_info')
@@ -94,7 +94,7 @@ class APIHandler(BaseHandler):
             'message': message or status_message,
         }))
 
-    def user_model(self, user):
+    async def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
@@ -107,6 +107,7 @@ class APIHandler(BaseHandler):
             'server': user.url if user.running else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
+            'auth_state': await user.get_auth_state(),
         }
         if '' in user.spawners:
             model['pending'] = user.spawners[''].pending or None
@@ -151,7 +152,7 @@ class APIHandler(BaseHandler):
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
-        
+
         Args:
             model (dict): user-provided model
             model_types (dict): dict of key:type used to validate types and keys
