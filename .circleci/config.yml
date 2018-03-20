@@ -25,7 +25,6 @@ jobs:
       branches:
         only: master
       steps:
-        - checkout
         - run:
             name: Push master branch to main image
             command: |
@@ -36,7 +35,6 @@ jobs:
         tags:
           only: /.*/
         steps:
-          - checkout
           - run:
             name: Push tagged branch to corresponding image
             command: |
