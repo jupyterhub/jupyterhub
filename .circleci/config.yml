@@ -1,0 +1,37 @@
+# Python CircleCI 2.0 configuration file
+# Updating CircleCI configuration from v1 to v2
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
+version: 2
+jobs:
+
+  test:
+    steps:
+      - run:
+          name: Test image build
+          command: |
+            docker build -t jupyterhub/jupyterhub .
+            docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
+
+  deploy:
+    hub:
+      branches:
+        only: master
+      steps:
+        - checkout
+        - run:
+            name: Push master branch to main image
+            command: |
+              docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+              docker push jupyterhub/jupyterhub-onbuild
+    release:
+      filters:
+        tags:
+          only: /.*/
+        steps:
+          - checkout
+          - run:
+            name: Push tagged branch to corresponding image
+            command: |
+              docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+              docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
