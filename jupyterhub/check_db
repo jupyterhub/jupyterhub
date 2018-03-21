@@ -952,8 +952,8 @@ class JupyterHub(Application):
         except OperationalError as e:
             self.log.error("Failed to connect to db: %s", self.db_url)
             self.log.debug("Database error was:", exc_info=True)
-            if self.db_url.startswith('sqlite:///'):
-                self._check_db_path(self.db_url.split(':///', 1)[1])
+            if self.db_url.startswith('sqlite://'):
+                self._check_db_path(self.db_url.split('://', 1)[1])
             self.log.critical('\n'.join([
                 "If you recently upgraded JupyterHub, try running",
                 "    jupyterhub upgrade-db",
