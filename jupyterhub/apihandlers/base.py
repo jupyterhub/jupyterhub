@@ -119,16 +119,16 @@ class APIHandler(BaseHandler):
         if '' in user.spawners:
             spawner = user.spawners['']
             model['pending'] = spawner.pending or None
-            if spawner.active and spawner.started:
-                model['started'] = isoformat(spawner.started)
+            if spawner.active and spawner.orm_spawner.started:
+                model['started'] = isoformat(spawner.orm_spawner.started)
 
         if self.allow_named_servers:
             servers = model['servers'] = {}
             for name, spawner in user.spawners.items():
-                last_activity = spawner.orm_spawner.last_activity
-                if last_activity:
-                    last_activity = isoformat(last_activity)
                 if spawner.ready:
+                    last_activity = spawner.orm_spawner.last_activity
+                    if last_activity:
+                        last_activity = isoformat(last_activity)
                     servers[name] = s = {
                         'name': name,
                         'last_activity': last_activity,

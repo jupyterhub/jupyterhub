@@ -380,7 +380,10 @@ class User:
             await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
         spawner._start_pending = True
-        spawner.started = datetime.utcnow()
+        # update spawner start time, and activity for both spawner and user
+        self.last_activity = \
+            spawner.orm_spawner.started = \
+            spawner.orm_spawner.last_activity = datetime.utcnow()
         db.commit()
         # wait for spawner.start to return
         try:
@@ -529,7 +532,7 @@ class User:
                     self.db.delete(orm_token)
             self.db.commit()
         finally:
-            spawner.started = None
+            spawner.orm_spawner.started = None
             self.db.commit()
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
