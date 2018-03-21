@@ -152,9 +152,41 @@ page_template = """
     </a>
 </span>
 {% endblock %}
+
 {% block logo %}
 <img src='{{logo_url}}' alt='Jupyter Notebook'/>
 {% endblock logo %}
+
+{% block script %}
+{{ super() }}
+<script type='text/javascript'>
+  function _remove_redirects_param() {
+    // remove ?redirects= param from URL so that
+    // successful page loads don't increment the redirect loop counter
+    if (window.location.search.length <= 1) {
+      return;
+    }
+    var search_parameters = window.location.search.slice(1).split('&');
+    for (var i = 0; i < search_parameters.length; i++) {
+      if (search_parameters[i].split('=')[0] === 'redirects') {
+        // remote token from search parameters
+        search_parameters.splice(i, 1);
+        var new_search = '';
+        if (search_parameters.length) {
+          new_search = '?' + search_parameters.join('&');
+        }
+        var new_url = window.location.origin +
+                      window.location.pathname +
+                      new_search +
+                      window.location.hash;
+        window.history.replaceState({}, "", new_url);
+        return;
+      }
+    }
+  }
+  _remove_redirects_param();
+</script>
+{% endblock script %}
 """
 
 
