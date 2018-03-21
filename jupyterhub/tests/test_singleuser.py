@@ -2,6 +2,7 @@
 
 from subprocess import check_output
 import sys
+from urllib.parse import urlparse
 
 import pytest
 
@@ -17,25 +18,25 @@ def test_singleuser_auth(app):
     # use StubSingleUserSpawner to launch a single-user app in a thread
     app.spawner_class = StubSingleUserSpawner
     app.tornado_settings['spawner_class'] = StubSingleUserSpawner
-    
+
     # login, start the server
     cookies = yield app.login_user('nandy')
     user = app.users['nandy']
     if not user.running:
         yield user.spawn()
     url = public_url(app, user)
-    
+
     # no cookies, redirects to login page
     r = yield async_requests.get(url)
     r.raise_for_status()
     assert '/hub/login' in r.url
-    
+
     # with cookies, login successful
     r = yield async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert r.url.rstrip('/').endswith('/user/nandy/tree')
+    assert urlparse(r.url).path.rstrip('/').endswith('/user/nandy/tree')
     assert r.status_code == 200
-    
+
     # logout
     r = yield async_requests.get(url_path_join(url, 'logout'), cookies=cookies)
     assert len(r.cookies) == 0
