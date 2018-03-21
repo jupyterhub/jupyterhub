@@ -1,24 +1,21 @@
 """Tests for the REST API."""
 
+from datetime import datetime
 from concurrent.futures import Future
 import json
-import time
+import re
 import sys
 from unittest import mock
 from urllib.parse import urlparse, quote
 import uuid
 
-import pytest
 from pytest import mark
-import requests
 
 from tornado import gen
 
 import jupyterhub
 from .. import orm
-from ..user import User
 from ..utils import url_path_join as ujoin
-from . import mocking
 from .mocking import public_host, public_url
 from .utils import async_requests
 
@@ -187,6 +184,48 @@ def test_referer_check(app):
 # User API tests
 # --------------
 
+def normalize_timestamp(ts):
+    """Normalize a timestamp
+
+    For easier comparison
+    """
+    if ts is None:
+        return
+    return re.sub('\d(\.\d+)?', '0', ts)
+
+def normalize_user(user):
+    """Normalize a user model for comparison
+
+    smooths out user model with things like timestamps
+    for easier comparison
+    """
+    for key in ('created', 'last_activity', 'started'):
+        user[key] = normalize_timestamp(user[key])
+    if 'servers' in user:
+        for server in user['servers'].values():
+            for key in ('started', 'last_activity'):
+                server[key] = normalize_timestamp(server[key])
+    return user
+
+def fill_user(model):
+    """Fill a default user model
+
+    Any unspecified fields will be filled with the defaults
+    """
+    model.setdefault('server', None)
+    model.setdefault('kind', 'user')
+    model.setdefault('groups', [])
+    model.setdefault('admin', False)
+    model.setdefault('server', None)
+    model.setdefault('pending', None)
+    model.setdefault('created', TIMESTAMP)
+    model.setdefault('last_activity', TIMESTAMP)
+    model.setdefault('started', None)
+    return model
+
+
+TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
+
 @mark.user
 @mark.gen_test
 def test_get_users(app):
@@ -195,25 +234,17 @@ def test_get_users(app):
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
-    for u in users:
-        u.pop('last_activity')
+    users = [ normalize_user(u) for u in users ]
     assert users == [
-        {
-            'kind': 'user',
+        fill_user({
             'name': 'admin',
-            'groups': [],
             'admin': True,
-            'server': None,
-            'pending': None,
-        },
-        {
-            'kind': 'user',
+        }),
+        fill_user({
             'name': 'user',
-            'groups': [],
             'admin': False,
-            'server': None,
-            'pending': None,
-        }
+            'last_activity': None,
+        }),
     ]
 
     r = yield api_request(app, 'users',
@@ -275,18 +306,9 @@ def test_get_user(app):
     name = 'user'
     r = yield api_request(app, 'users', name)
     assert r.status_code == 200
-    user = r.json()
-    user.pop('last_activity')
-    assert user == {
-        'kind': 'user',
-        'name': name,
-        'groups': [],
-        'admin': False,
-        'server': None,
-        'pending': None,
-        # auth state is present because requestor is an admin
-        'auth_state': None
-    }
+
+    user = normalize_user(r.json())
+    assert user == fill_user({'name': name, 'auth_state': None})
 
 
 @mark.user

@@ -5,7 +5,7 @@ import pytest
 
 from ..utils import url_path_join
 
-from .test_api import api_request, add_user
+from .test_api import api_request, add_user, fill_user, normalize_user, TIMESTAMP
 from .mocking import public_url
 from .utils import async_requests
 
@@ -28,23 +28,23 @@ def test_default_server(app, named_servers):
     r = yield api_request(app, 'users', username)
     r.raise_for_status()
 
-    user_model = r.json()
-    user_model.pop('last_activity')
-    assert user_model == {
+    user_model = normalize_user(r.json())
+    print(user_model)
+    assert user_model == fill_user({
         'name': username,
-        'groups': [],
-        'kind': 'user',
-        'admin': False,
-        'pending': None,
         'auth_state': None,
         'server': user.url,
+        'started': TIMESTAMP,
         'servers': {
             '': {
                 'name': '',
+                'started': TIMESTAMP,
+                'last_activity': TIMESTAMP,
                 'url': user.url,
             },
         },
-    }
+    })
+
 
     # now stop the server
     r = yield api_request(app, 'users', username, 'server', method='delete')
@@ -54,19 +54,12 @@ def test_default_server(app, named_servers):
     r = yield api_request(app, 'users', username)
     r.raise_for_status()
 
-    user_model = r.json()
-    user_model.pop('last_activity')
-    assert user_model == {
+    user_model = normalize_user(r.json())
+    assert user_model == fill_user({
         'name': username,
-        'groups': [],
-        'kind': 'user',
-        'admin': False,
-        'pending': None,
-        'server': None,
         'servers': {},
         'auth_state': None,
-    }
-
+    })
 
 
 @pytest.mark.gen_test
@@ -93,24 +86,20 @@ def test_create_named_server(app, named_servers):
     r = yield api_request(app, 'users', username)
     r.raise_for_status()
 
-    user_model = r.json()
-    user_model.pop('last_activity')
-    assert user_model == {
+    user_model = normalize_user(r.json())
+    assert user_model == fill_user({
         'name': username,
-        'groups': [],
-        'kind': 'user',
-        'admin': False,
-        'pending': None,
         'auth_state': None,
-        'server': None,
         'servers': {
             servername: {
                 'name': name,
+                'started': TIMESTAMP,
+                'last_activity': TIMESTAMP,
                 'url': url_path_join(user.url, name, '/'),
             }
             for name in [servername]
         },
-    }
+    })
 
 
 @pytest.mark.gen_test
@@ -131,16 +120,10 @@ def test_delete_named_server(app, named_servers):
     r = yield api_request(app, 'users', username)
     r.raise_for_status()
 
-    user_model = r.json()
-    user_model.pop('last_activity')
-    assert user_model == {
+    user_model = normalize_user(r.json())
+    assert user_model == fill_user({
         'name': username,
-        'groups': [],
-        'kind': 'user',
-        'admin': False,
-        'pending': None,
         'auth_state': None,
-        'server': None,
         'servers': {
             name: {
                 'name': name,
@@ -148,7 +131,7 @@ def test_delete_named_server(app, named_servers):
             }
             for name in []
         },
-    }
+    })
 
 @pytest.mark.gen_test
 def test_named_server_disabled(app):
