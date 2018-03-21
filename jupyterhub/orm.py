@@ -389,6 +389,12 @@ class APIToken(Hashed, Base):
             orm_token.service_id = service.id
         db.add(orm_token)
         db.commit()
+        # Refresh the user or service, so the new relationship
+        # we just created propogates properly!
+        if user:
+            db.refresh(user)
+        if service:
+            db.refresh(service)
         return token
 
 
@@ -545,5 +551,9 @@ def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
     check_db_revision(engine)
     Base.metadata.create_all(engine)
 
-    session_factory = sessionmaker(bind=engine)
+    # We set expire_on_commit=False, since we don't actually need
+    # SQLAlchemy to expire objects after commiting - we don't expect
+    # concurrent runs of the hub talking to the same db. Turning
+    # this off gives us a major performance boost
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
     return session_factory

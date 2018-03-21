@@ -1121,6 +1121,7 @@ class JupyterHub(Application):
                     obj = Class(name=name)
                     db.add(obj)
                     db.commit()
+                    # No need to expire here either
                 self.log.info("Adding API token for %s: %s", kind, name)
                 try:
                     # set generated=False to ensure that user-provided tokens
@@ -1135,6 +1136,7 @@ class JupyterHub(Application):
             else:
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
+        # No need to refresh here, since new_api_token does it for us.
 
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
