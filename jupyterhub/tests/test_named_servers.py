@@ -99,13 +99,13 @@ def test_create_named_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
-        'server': user.url,
+        'server': None,
         'servers': {
-            name: {
+            servername: {
                 'name': name,
                 'url': url_path_join(user.url, name, '/'),
             }
-            for name in ['', servername]
+            for name in [servername]
         },
     }
 
@@ -127,7 +127,7 @@ def test_delete_named_server(app, named_servers):
 
     r = yield api_request(app, 'users', username)
     r.raise_for_status()
-    
+
     user_model = r.json()
     user_model.pop('last_activity')
     assert user_model == {
@@ -136,13 +136,13 @@ def test_delete_named_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
-        'server': user.url,
+        'server': None,
         'servers': {
             name: {
                 'name': name,
                 'url': url_path_join(user.url, name, '/'),
             }
-            for name in ['']
+            for name in []
         },
     }
 
