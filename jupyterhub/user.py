@@ -380,6 +380,8 @@ class User:
             await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
         spawner._start_pending = True
+        spawner.started = datetime.utcnow()
+        db.commit()
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
@@ -527,6 +529,8 @@ class User:
                     self.db.delete(orm_token)
             self.db.commit()
         finally:
+            spawner.started = None
+            self.db.commit()
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
             try:
