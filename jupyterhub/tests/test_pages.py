@@ -38,7 +38,7 @@ def test_root_auth(app):
     cookies = yield app.login_user('river')
     r = yield async_requests.get(public_url(app), cookies=cookies)
     r.raise_for_status()
-    assert r.url == public_url(app, app.users['river'])
+    assert r.url.startswith(public_url(app, app.users['river']))
 
 
 @pytest.mark.gen_test
@@ -341,7 +341,7 @@ def test_login_strip(app):
             data=form_data,
             allow_redirects=False,
         )
-    
+
     assert called_with == [form_data]
 
 
@@ -361,7 +361,7 @@ def test_login_redirect(app):
     r = yield get_page('login', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 302
-    assert '/hub/' in r.headers['Location']
+    assert '/user/river' in r.headers['Location']
 
     # next URL given, use it
     r = yield get_page('login?next=/hub/admin', app, cookies=cookies, allow_redirects=False)
