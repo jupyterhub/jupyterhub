@@ -10,7 +10,6 @@ from oauth2.error import ClientNotFoundError
 from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
-from traitlets import HasTraits, Any, Dict, default
 
 from .utils import maybe_future, url_path_join
 

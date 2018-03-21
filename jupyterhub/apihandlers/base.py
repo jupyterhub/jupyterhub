@@ -10,7 +10,7 @@ from tornado import web
 
 from .. import orm
 from ..handlers import BaseHandler
-from ..utils import url_path_join
+from ..utils import isoformat, url_path_join
 
 class APIHandler(BaseHandler):
 
@@ -103,7 +103,7 @@ class APIHandler(BaseHandler):
         last_activity = user.last_activity
         # don't call isoformat if last_activity is None
         if last_activity:
-            last_activity = last_activity.isoformat()
+            last_activity = isoformat(last_activity)
 
         model = {
             'kind': 'user',
@@ -122,7 +122,7 @@ class APIHandler(BaseHandler):
             for name, spawner in user.spawners.items():
                 last_activity = spawner.orm_spawner.last_activity
                 if last_activity:
-                    last_activity = last_activity.isoformat()
+                    last_activity = isoformat(last_activity)
                 if spawner.ready:
                     servers[name] = s = {
                         'name': name,

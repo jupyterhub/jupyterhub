@@ -26,7 +26,7 @@ from ..spawner import LocalProcessSpawner
 from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
-    PROXY_ADD_DURATION_SECONDS, ProxyAddStatus
+    PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
 )
 
 # pattern for the authentication token header

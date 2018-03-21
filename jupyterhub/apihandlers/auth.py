@@ -8,7 +8,7 @@ import json
 from urllib.parse import quote
 
 from oauth2.web.tornado import OAuth2Handler
-from tornado import web, gen
+from tornado import web
 
 from .. import orm
 from ..user import User

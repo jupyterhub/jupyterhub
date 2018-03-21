@@ -6,6 +6,7 @@
 import asyncio
 from binascii import b2a_hex
 import concurrent.futures
+from datetime import datetime, timezone
 import random
 import errno
 import hashlib
@@ -15,7 +16,6 @@ import os
 import socket
 import sys
 import threading
-from threading import Thread
 import uuid
 import warnings
 
@@ -37,6 +37,16 @@ def random_port():
 # ISO8601 for strptime with/without milliseconds
 ISO8601_ms = '%Y-%m-%dT%H:%M:%S.%fZ'
 ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
+
+
+def isoformat(dt):
+    """Render a datetime object as an ISO 8601 UTC timestamp
+
+    Naïve datetime objects are assumed to be UTC
+    """
+    if dt.tzinfo:
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+    return dt.isoformat() + 'Z'
 
 
 def can_connect(ip, port):

@@ -8,7 +8,7 @@ import asyncio
 import atexit
 import binascii
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 from getpass import getuser
 import logging
 from operator import itemgetter
@@ -22,8 +22,8 @@ from urllib.parse import urlparse
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
+from dateutil.parser import parse as parse_date
 from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
-
 from sqlalchemy.exc import OperationalError
 
 from tornado.httpclient import AsyncHTTPClient
@@ -50,7 +50,7 @@ from .services.service import Service
 
 from . import crypto
 from . import dbutil, orm
-from .user import User, UserDict
+from .user import UserDict
 from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
@@ -59,7 +59,6 @@ from .traitlets import URLPrefix, Command
 from .utils import (
     maybe_future,
     url_path_join,
-    ISO8601_ms, ISO8601_s,
     print_stacks, print_ps_info,
 )
 # classes for config
@@ -1581,10 +1580,11 @@ class JupyterHub(Application):
             if spawner is None:
                 self.log.warning("Found no spawner for route: %s", route)
                 continue
-            try:
-                dt = datetime.strptime(route_data['last_activity'], ISO8601_ms)
-            except Exception:
-                dt = datetime.strptime(route_data['last_activity'], ISO8601_s)
+            dt = parse_date(route_data['last_activity'])
+            if dt.tzinfo:
+                # strip timezone info to naïve UTC datetime
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+
             if user.last_activity:
                 user.last_activity = max(user.last_activity, dt)
             else:
