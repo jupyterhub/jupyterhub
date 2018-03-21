@@ -143,10 +143,6 @@ def test_referer_check(app):
     if user is None:
         user = add_user(app.db, name='admin', admin=True)
     cookies = yield app.login_user('admin')
-    app_user = app.users[user]
-    # stop the admin's server so we don't mess up future tests
-    yield app.proxy.delete_user(app_user)
-    yield app_user.stop()
 
     r = yield api_request(app, 'users',
         headers={

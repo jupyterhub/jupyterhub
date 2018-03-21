@@ -392,20 +392,35 @@ class BaseHandler(RequestHandler):
     def get_next_url(self, user=None):
         """Get the next_url for login redirect
 
-        Defaults to hub base_url /hub/ if user is not running,
-        otherwise user.url.
+        Default URL after login:
+
+        - if redirect_to_server (default): send to user's own server
+        - else: /hub/home
         """
         next_url = self.get_argument('next', default='')
         if (next_url + '/').startswith('%s://%s/' % (self.request.protocol, self.request.host)):
             # treat absolute URLs for our host as absolute paths:
             next_url = urlparse(next_url).path
-        if not next_url.startswith('/'):
+        if next_url and not next_url.startswith('/'):
+            self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
+        if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
+            # add /hub/ prefix, to ensure we redirect to the right user's server.
+            # The next request will be handled by SpawnHandler,
+            # ultimately redirecting to the logged-in user's server.
+            without_prefix = next_url[len(self.base_url):]
+            next_url = url_path_join(self.hub.base_url, without_prefix)
+            self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
+                self.request.uri, next_url,
+            )
+
         if not next_url:
-            if user and user.running and self.redirect_to_server:
+            # default URL after login
+            # if self.redirect_to_server, default login URL initiates spawn
+            if user and self.redirect_to_server:
                 next_url = user.url
             else:
-                next_url = self.hub.base_url
+                next_url = url_path_join(self.hub.base_url, 'home')
         return next_url
 
     async def login_user(self, data=None):

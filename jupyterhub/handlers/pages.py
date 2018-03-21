@@ -22,37 +22,15 @@ class RootHandler(BaseHandler):
 
     If logged in, redirects to:
 
-    - single-user server if running
+    - single-user server if settings.redirect_to_server (default)
     - hub home, otherwise
 
     Otherwise, renders login page.
     """
     def get(self):
-        next_url = self.get_argument('next', '')
-        if next_url and not next_url.startswith('/'):
-            self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
-            next_url = ''
-        if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
-            # add /hub/ prefix, to ensure we redirect to the right user's server.
-            # The next request will be handled by SpawnHandler,
-            # ultimately redirecting to the logged-in user's server.
-            without_prefix = next_url[len(self.base_url):]
-            next_url = url_path_join(self.hub.base_url, without_prefix)
-            self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
-                self.request.uri, next_url,
-            )
-            self.redirect(next_url)
-            return
         user = self.get_current_user()
         if user:
-            url = url_path_join(self.hub.base_url, 'home')
-            if user.running:
-                if self.redirect_to_server:
-                    url = user.url
-                self.log.debug("User is running: %s", user.url)
-                self.set_login_cookie(user) # set cookie
-            else:
-                self.log.debug("User is not running: %s", url)
+            url = self.get_next_url(user)
         else:
             url = self.settings['login_url']
         self.redirect(url)
@@ -71,7 +49,7 @@ class HomeHandler(BaseHandler):
         # send the user to /spawn if they aren't running or pending a spawn,
         # to establish that this is an explicit spawn request rather
         # than an implicit one, which can be caused by any link to `/user/:name`
-        url = user.url if user.running or user.spawner.pending else url_path_join(self.hub.base_url, 'spawn')
+        url = user.url if user.spawner.active else url_path_join(self.hub.base_url, 'spawn')
         html = self.render_template('home.html',
             user=user,
             url=url,
