@@ -18,14 +18,14 @@ from .base import BaseHandler, APIHandler
 
 class TokenAPIHandler(APIHandler):
     @token_authenticated
-    async def get(self, token):
+    def get(self, token):
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             raise web.HTTPError(404)
         if orm_token.user:
-            model = await self.user_model(self.users[orm_token.user])
+            model = self.user_model(self.users[orm_token.user])
         elif orm_token.service:
             model = self.service_model(orm_token.service)
         else:
@@ -71,13 +71,13 @@ class TokenAPIHandler(APIHandler):
         api_token = user.new_api_token(note=note)
         self.write(json.dumps({
             'token': api_token,
-            'user': await self.user_model(user),
+            'user': self.user_model(user),
         }))
 
 
 class CookieAPIHandler(APIHandler):
     @token_authenticated
-    async def get(self, cookie_name, cookie_value=None):
+    def get(self, cookie_name, cookie_value=None):
         cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
             self.log.warning("Cookie values in request body is deprecated, use `/cookie_name/cookie_value`")
@@ -87,7 +87,7 @@ class CookieAPIHandler(APIHandler):
         user = self._user_for_cookie(cookie_name, cookie_value)
         if user is None:
             raise web.HTTPError(404)
-        self.write(json.dumps(await self.user_model(user)))
+        self.write(json.dumps(self.user_model(user)))
 
 
 class OAuthHandler(BaseHandler, OAuth2Handler):

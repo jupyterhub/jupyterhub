@@ -201,7 +201,6 @@ def test_get_users(app):
             'admin': True,
             'server': None,
             'pending': None,
-            'auth_state': None,
         },
         {
             'kind': 'user',
@@ -210,7 +209,6 @@ def test_get_users(app):
             'admin': False,
             'server': None,
             'pending': None,
-            'auth_state': None,
         }
     ]
 

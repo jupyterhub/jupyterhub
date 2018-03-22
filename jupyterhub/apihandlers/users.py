@@ -24,13 +24,15 @@ class SelfAPIHandler(APIHandler):
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
-        self.write(json.dumps(await self.user_model(user)))
+        user_ = self.user_model(user)
+        user_['auth_state'] = await user.get_auth_state()
+        self.write(json.dumps(user_))
 
 
 class UserListAPIHandler(APIHandler):
     @admin_only
-    async def get(self):
-        data = [ await self.user_model(u) for u in self.db.query(orm.User) ]
+    def get(self):
+        data = [ self.user_model(u) for u in self.db.query(orm.User) ]
         self.write(json.dumps(data))
 
     @admin_only
@@ -83,7 +85,7 @@ class UserListAPIHandler(APIHandler):
             else:
                 created.append(user)
 
-        self.write(json.dumps([ await self.user_model(u) for u in created ]))
+        self.write(json.dumps([ self.user_model(u) for u in created ]))
         self.set_status(201)
 
 
@@ -104,12 +106,12 @@ def admin_or_self(method):
 
 class UserAPIHandler(APIHandler):
 
-    #@gen.coroutine
     @admin_or_self
     async def get(self, name):
         user = self.find_user(name)
-        user = await self.user_model(user)
-        self.write(json.dumps(user))
+        user_ = self.user_model(user)
+        user_['auth_state'] = await user.get_auth_state()
+        self.write(json.dumps(user_))
 
     @admin_only
     async def post(self, name):
@@ -133,7 +135,7 @@ class UserAPIHandler(APIHandler):
             self.users.delete(user)
             raise web.HTTPError(400, "Failed to create user: %s" % name)
 
-        self.write(json.dumps(await self.user_model(user)))
+        self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
 
     @admin_only
@@ -170,7 +172,9 @@ class UserAPIHandler(APIHandler):
         for key, value in data.items():
             setattr(user, key, value)
         self.db.commit()
-        self.write(json.dumps(await self.user_model(user)))
+        user_ = self.user_model(user)
+        user_['auth_state'] = await user.get_auth_state()
+        self.write(json.dumps(user_))
 
 
 class UserServerAPIHandler(APIHandler):

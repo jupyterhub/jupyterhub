@@ -94,7 +94,7 @@ class APIHandler(BaseHandler):
             'message': message or status_message,
         }))
 
-    async def user_model(self, user):
+    def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
@@ -107,7 +107,6 @@ class APIHandler(BaseHandler):
             'server': user.url if user.running else None,
             'pending': None,
             'last_activity': user.last_activity.isoformat(),
-            'auth_state': await user.get_auth_state(),
         }
         if '' in user.spawners:
             model['pending'] = user.spawners[''].pending or None
