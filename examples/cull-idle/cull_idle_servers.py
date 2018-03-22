@@ -44,6 +44,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
 from tornado.options import define, options, parse_command_line
 
+
 def parse_date(date_string):
     """Parse a timestamp
 
@@ -57,8 +58,25 @@ def parse_date(date_string):
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
 
+
+def format_td(td):
+    """
+    Nicely format a timedelta object
+
+    as HH:MM:SS
+    """
+    if isinstance(td, str):
+        return td
+    seconds = int(td.total_seconds())
+    h = seconds // 3600
+    seconds = seconds % 3600
+    m = seconds // 60
+    seconds = seconds % 60
+    return f"{h:02}:{m:02}:{seconds:02}"
+
+
 @coroutine
-def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
+def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0):
     """Shutdown idle single-user servers
 
     If cull_users, inactive *users* will be deleted as well.
@@ -66,12 +84,11 @@ def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
     auth_header = {
         'Authorization': 'token %s' % api_token,
     }
-    req = HTTPRequest(url=url + '/users',
+    req = HTTPRequest(
+        url=url + '/users',
         headers=auth_header,
     )
     now = datetime.now(timezone.utc)
-    inactive_limit = now - timedelta(seconds=timeout)
-    max_age_limit = now - timedelta(seconds=max_age)
     client = AsyncHTTPClient()
     resp = yield client.fetch(req)
     users = json.loads(resp.body.decode('utf8', 'replace'))
@@ -94,46 +111,46 @@ def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
             return False
 
         if server.get('started'):
-            started = parse_date(server['started'])
+            age = now - parse_date(server['started'])
         else:
             # started may be undefined on jupyterhub < 0.9
-            started = 'unknown'
+            age = 'unknown'
 
         # check last activity
         # last_activity can be None in 0.9
         if server['last_activity']:
-            last_activity = parse_date(server['last_activity'])
+            inactive = now - parse_date(server['last_activity'])
         else:
             # no activity yet, use start date
             # last_activity may be None with jupyterhub 0.9,
             # which introduces the 'started' field which is never None
             # for running servers
-            last_activity = started
+            inactive = age
 
-        should_cull = last_activity < inactive_limit
+        should_cull = inactive.total_seconds() >= inactive_limit
         if should_cull:
             app_log.info(
-                "Culling server %s (inactive since %s)",
-                log_name, last_activity)
+                "Culling server %s (inactive for %s)",
+                log_name, format_td(inactive))
 
         if max_age and not should_cull:
             # only check started if max_age is specified
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
-            print(started, max_age_limit)
-            if started < max_age_limit:
+            if age.total_seconds() >= max_age:
                 app_log.info(
-                    "Culling server %s (started: %s, last active: %s)",
-                    log_name, started, last_activity)
+                    "Culling server %s (age: %s, inactive for %s)",
+                    log_name, format_td(age), format_td(inactive))
                 should_cull = True
 
         if not should_cull:
             app_log.debug(
-                "Not culling server %s (started: %s, last active: %s)",
-                log_name, started, last_activity)
+                "Not culling server %s (age: %s, inactive for %s)",
+                log_name, format_td(age), format_td(inactive))
             return False
 
-        req = HTTPRequest(url=url + '/users/%s/server' % quote(user['name']),
+        req = HTTPRequest(
+            url=url + '/users/%s/server' % quote(user['name']),
             method='DELETE',
             headers=auth_header,
         )
@@ -152,8 +169,10 @@ def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
         """Handle one user"""
         # shutdown servers first.
         # Hub doesn't allow deleting users with running servers.
-        servers = user.get('servers',
-            {'': {
+        servers = user.get(
+            'servers',
+            {
+                '': {
                     'started': user.get('started'),
                     'last_activity': user['last_activity'],
                     'pending': user['pending'],
@@ -165,7 +184,6 @@ def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
             for server_name, server in servers.items()
         ]
         results = yield multi(server_futures)
-        print(results)
         if not cull_users:
             return
         # some servers are still running, cannot cull users
@@ -178,44 +196,45 @@ def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
 
         should_cull = False
         if user.get('created'):
-            created = parse_date(user['created'])
+            age = now - parse_date(user['created'])
         else:
             # created may be undefined on jupyterhub < 0.9
-            created = 'unknown'
+            age = 'unknown'
 
         # check last activity
         # last_activity can be None in 0.9
         if user['last_activity']:
-            last_activity = parse_date(user['last_activity'])
+            inactive = now - parse_date(user['last_activity'])
         else:
             # no activity yet, use start date
             # last_activity may be None with jupyterhub 0.9,
             # which introduces the 'created' field which is never None
-            last_activity = created
+            inactive = age
 
-        should_cull = last_activity < inactive_limit
+        should_cull = inactive.total_seconds() >= inactive_limit
         if should_cull:
             app_log.info(
-                "Culling user %s (inactive since %s)",
-                user['name'], last_activity)
+                "Culling user %s (inactive for %s)",
+                user['name'], inactive)
 
         if max_age and not should_cull:
             # only check created if max_age is specified
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
-            if created < max_age_limit:
+            if age.total_seconds() >= max_age:
                 app_log.info(
-                    "Culling user %s (created: %s, last active: %s)",
-                    user['name'], created, last_activity)
+                    "Culling user %s (age: %s, inactive for %s)",
+                    user['name'], format_td(age), format_td(inactive))
                 should_cull = True
 
         if not should_cull:
             app_log.debug(
                 "Not culling user %s (created: %s, last active: %s)",
-                user['name'], created, last_activity)
+                user['name'], format_td(age), format_td(inactive))
             return False
 
-        req = HTTPRequest(url=url + '/users/%s' % user['name'],
+        req = HTTPRequest(
+            url=url + '/users/%s' % user['name'],
             method='DELETE',
             headers=auth_header,
         )
@@ -236,14 +255,20 @@ def cull_idle(url, api_token, timeout, cull_users=False, max_age=0):
 
 
 if __name__ == '__main__':
-    define('url', default=os.environ.get('JUPYTERHUB_API_URL'), help="The JupyterHub API URL")
-    define('timeout', default=600, help="The idle timeout (in seconds)")
-    define('cull_every', default=0, help="The interval (in seconds) for checking for idle servers to cull")
-    define('max_age', default=0, help="The maximum age (in seconds) of servers that should be culled even if they are active")
-    define('cull_users', default=False,
-        help="""Cull users in addition to servers.
-                This is for use in temporary-user cases such as tmpnb.""",
+    define(
+        'url',
+        default=os.environ.get('JUPYTERHUB_API_URL'),
+        help="The JupyterHub API URL",
     )
+    define('timeout', default=600, help="The idle timeout (in seconds)")
+    define('cull_every', default=0,
+           help="The interval (in seconds) for checking for idle servers to cull")
+    define('max_age', default=0,
+           help="The maximum age (in seconds) of servers that should be culled even if they are active")
+    define('cull_users', default=False,
+           help="""Cull users in addition to servers.
+                This is for use in temporary-user cases such as tmpnb.""",
+           )
 
     parse_command_line()
     if not options.cull_every:
@@ -253,13 +278,17 @@ if __name__ == '__main__':
     try:
         AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     except ImportError as e:
-        app_log.warning("Could not load pycurl: %s\npycurl is recommended if you have a large number of users.", e)
+        app_log.warning(
+            "Could not load pycurl: %s\n"
+            "pycurl is recommended if you have a large number of users.",
+            e)
 
     loop = IOLoop.current()
-    cull = partial(cull_idle,
+    cull = partial(
+        cull_idle,
         url=options.url,
         api_token=api_token,
-        timeout=options.timeout,
+        inactive_limit=options.timeout,
         cull_users=options.cull_users,
         max_age=options.max_age,
     )
