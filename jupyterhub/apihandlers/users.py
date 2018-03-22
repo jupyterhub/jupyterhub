@@ -170,7 +170,10 @@ class UserAPIHandler(APIHandler):
             if self.find_user(data['name']):
                 raise web.HTTPError(400, "User %s already exists, username must be unique" % data['name'])
         for key, value in data.items():
-            setattr(user, key, value)
+            if key == 'auth_state':
+                await user.save_auth_state(value)
+            else:
+                setattr(user, key, value)
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()

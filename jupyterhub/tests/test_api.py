@@ -421,6 +421,31 @@ def test_make_admin(app):
     assert user.admin
 
 
+@mark.user
+@mark.gen_test
+def test_set_auth_state(app):
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'admin'
+    user = find_user(db, name)
+    assert user is not None
+
+    r = yield api_request(app, 'users', name, method='patch',
+        data=json.dumps({'auth_state': auth_state})
+    )
+    assert r.status_code == 200
+    user = find_user(db, name)
+    assert user is not None
+    assert user.name == name
+    encrypted_auth = user.encrypted_auth_state
+    assert encrypted_auth is not None
+
+    r = yield api_request(app, 'users', name)
+    assert r.status_code == 200
+    assert user.name == name
+    assert r.json()['auth_state'] == auth_state
+
+
 @mark.gen_test
 def test_spawn(app):
     db = app.db

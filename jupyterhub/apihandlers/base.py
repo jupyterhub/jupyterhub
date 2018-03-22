@@ -142,6 +142,7 @@ class APIHandler(BaseHandler):
         'name': str,
         'admin': bool,
         'groups': list,
+        'auth_state': dict,
     }
 
     _group_model_types = {
