@@ -115,7 +115,7 @@ def test_auth_api(app):
     assert r.status_code == 404
 
     # make a new cookie token
-    user = db.query(orm.User).first()
+    user = find_user(db, 'admin')
     api_token = user.new_api_token()
 
     # check success:
