@@ -13,6 +13,7 @@ from pytest import mark
 import requests
 
 from tornado import gen
+from tornado.concurrent import Future as tFuture
 
 import jupyterhub
 from .. import orm
@@ -430,17 +431,27 @@ def test_set_auth_state(app):
     user = find_user(db, name)
     assert user is not None
 
-    r = yield api_request(app, 'users', name, method='patch',
-        data=json.dumps({'auth_state': auth_state})
-    )
+    with mock.patch('jupyterhub.user.encrypt') as mock_encrypt:
+        encrypt_future = tFuture()
+        encrypt_future.set_result(b"encrypted_state")
+        mock_encrypt.return_value = encrypt_future
+        r = yield api_request(app, 'users', name, method='patch',
+            data=json.dumps({'auth_state': auth_state})
+        )
+    assert mock_encrypt.call_count == 1
     assert r.status_code == 200
     user = find_user(db, name)
     assert user is not None
     assert user.name == name
-    encrypted_auth = user.encrypted_auth_state
-    assert encrypted_auth is not None
+    assert user.encrypted_auth_state == b"encrypted_state"
 
-    r = yield api_request(app, 'users', name)
+    with mock.patch('jupyterhub.user.decrypt') as mock_decrypt:
+        decrypt_future = tFuture()
+        decrypt_future.set_result(auth_state)
+        mock_decrypt.return_value = decrypt_future
+        r = yield api_request(app, 'users', name)
+
+    assert mock_decrypt.call_count == 1
     assert r.status_code == 200
     assert user.name == name
     assert r.json()['auth_state'] == auth_state
