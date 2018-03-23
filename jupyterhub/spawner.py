@@ -6,6 +6,7 @@ Contains base Spawner class & default implementation
 # Distributed under the terms of the Modified BSD License.
 
 import errno
+import json
 import os
 import pipes
 import shutil
@@ -99,11 +100,12 @@ class Spawner(LoggingConfigurable):
         """
         return bool(self.pending or self.ready)
 
-
+    # options passed by constructor
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
     db = Any()
+    cookie_options = Dict()
 
     @observe('orm_spawner')
     def _orm_spawner_changed(self, change):
@@ -125,7 +127,7 @@ class Spawner(LoggingConfigurable):
         if missing:
             raise NotImplementedError("class `{}` needs to redefine the `start`,"
                   "`stop` and `poll` methods. `{}` not redefined.".format(cls.__name__, '`, `'.join(missing)))
-    
+
     proxy_spec = Unicode()
 
     @property
@@ -587,6 +589,8 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_ADMIN_ACCESS'] = '1'
         # OAuth settings
         env['JUPYTERHUB_CLIENT_ID'] = self.oauth_client_id
+        if self.cookie_options:
+            env['JUPYTERHUB_COOKIE_OPTIONS'] = json.dumps(self.cookie_options)
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
             url_path_join(self.user.url, self.name, 'oauth_callback')

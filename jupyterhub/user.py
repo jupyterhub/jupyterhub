@@ -215,6 +215,7 @@ class User:
             proxy_spec=url_path_join(self.proxy_spec, name, '/'),
             db=self.db,
             oauth_client_id=client_id,
+            cookie_options = self.settings.get('cookie_options', {}),
         )
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)

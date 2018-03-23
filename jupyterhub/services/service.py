@@ -218,6 +218,7 @@ class Service(LoggingConfigurable):
     base_url = Unicode()
     db = Any()
     orm = Any()
+    cookie_options = Dict()
 
     oauth_provider = Any()
 
@@ -299,6 +300,7 @@ class Service(LoggingConfigurable):
             environment=env,
             api_token=self.api_token,
             oauth_client_id=self.oauth_client_id,
+            cookie_options=self.cookie_options,
             cwd=self.cwd,
             hub=self.hub,
             user=_MockUser(

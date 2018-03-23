@@ -30,7 +30,10 @@ from tornado.httputil import url_concat
 from tornado.web import HTTPError, RequestHandler
 
 from traitlets.config import SingletonConfigurable
-from traitlets import Unicode, Integer, Instance, default, observe, validate
+from traitlets import (
+    Unicode, Integer, Instance, Dict,
+    default, observe, validate,
+)
 
 from ..utils import url_path_join
 
@@ -175,7 +178,7 @@ class HubAuth(SingletonConfigurable):
 
     hub_prefix = Unicode('/hub/',
         help="""The URL prefix for the Hub itself.
-        
+
         Typically /hub/
         """
     ).tag(config=True)
@@ -185,7 +188,7 @@ class HubAuth(SingletonConfigurable):
 
     login_url = Unicode('/hub/login',
         help="""The login URL to use
-        
+
         Typically /hub/login
         """
     ).tag(config=True)
@@ -196,6 +199,24 @@ class HubAuth(SingletonConfigurable):
     cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
+
+    cookie_options = Dict(
+        help="""Additional options to pass when setting cookies.
+
+        Can include things like `expires_days=None` for session-expiry
+        or `secure=True` if served on HTTPS and default HTTPS discovery fails
+        (e.g. behind some proxies).
+        """
+    ).tag(config=True)
+
+    @default('cookie_options')
+    def _default_cookie_options(self):
+        # load default from env
+        options_env = os.environ.get('JUPYTERHUB_COOKIE_OPTIONS')
+        if options_env:
+            return json.loads(options_env)
+        else:
+            return {}
 
     cookie_cache_max_age = Integer(help="DEPRECATED. Use cache_max_age")
     @observe('cookie_cache_max_age')
@@ -580,6 +601,8 @@ class HubOAuth(HubAuth):
         }
         if handler.request.protocol == 'https':
             kwargs['secure'] = True
+        # load user cookie overrides
+        kwargs.update(self.cookie_options)
         handler.set_secure_cookie(
             cookie_name,
             b64_state,
@@ -627,6 +650,8 @@ class HubOAuth(HubAuth):
         }
         if handler.request.protocol == 'https':
             kwargs['secure'] = True
+        # load user cookie overrides
+        kwargs.update(self.cookie_options)
         app_log.debug("Setting oauth cookie for %s: %s, %s",
             handler.request.remote_ip, self.cookie_name, kwargs)
         handler.set_secure_cookie(
