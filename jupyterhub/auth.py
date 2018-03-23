@@ -550,6 +550,19 @@ class PAMAuthenticator(LocalAuthenticator):
         """
     ).tag(config=True)
 
+    check_account = Bool(True,
+        help="""
+        Whether to check the user's account status via PAM during authentication.
+
+        The PAM account stack performs non-authentication based account 
+        management. It is typically used to restrict/permit access to a 
+        service and this step is needed to access the host's user access control.
+
+        Disabling this can be dangerous as authenticated but unauthorized users may
+        be granted access and, therefore, arbitrary execution on the system.
+        """
+     ).tag(config=True)
+
     def __init__(self, **kwargs):
         if pamela is None:
             raise _pamela_error from None
@@ -563,14 +576,24 @@ class PAMAuthenticator(LocalAuthenticator):
         """
         username = data['username']
         try:
-            pamela.authenticate(username, data['password'], service=self.service)
+            pamela.authenticate(username, data['password'], service=self.service, encoding=self.encoding)
         except pamela.PAMError as e:
             if handler is not None:
                 self.log.warning("PAM Authentication failed (%s@%s): %s", username, handler.request.remote_ip, e)
             else:
                 self.log.warning("PAM Authentication failed: %s", e)
         else:
-            return username
+            if not self.check_account:
+                return username
+            try:
+                pamela.check_account(username, service=self.service, encoding=self.encoding)
+            except pamela.PAMError as e:
+                if handler is not None:
+                    self.log.warning("PAM Account Check failed (%s@%s): %s", username, handler.request.remote_ip, e)
+                else:
+                    self.log.warning("PAM Account Check failed: %s", e)
+            else:
+                return username
 
     @run_on_executor
     def pre_spawn_start(self, user, spawner):
@@ -578,7 +601,7 @@ class PAMAuthenticator(LocalAuthenticator):
         if not self.open_sessions:
             return
         try:
-            pamela.open_session(user.name, service=self.service)
+            pamela.open_session(user.name, service=self.service, encoding=self.encoding)
         except pamela.PAMError as e:
             self.log.warning("Failed to open PAM session for %s: %s", user.name, e)
             self.log.warning("Disabling PAM sessions from now on.")
@@ -590,7 +613,7 @@ class PAMAuthenticator(LocalAuthenticator):
         if not self.open_sessions:
             return
         try:
-            pamela.close_session(user.name, service=self.service)
+            pamela.close_session(user.name, service=self.service, encoding=self.encoding)
         except pamela.PAMError as e:
             self.log.warning("Failed to close PAM session for %s: %s", user.name, e)
             self.log.warning("Disabling PAM sessions from now on.")
