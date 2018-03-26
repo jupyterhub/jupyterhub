@@ -110,7 +110,12 @@ class UserAPIHandler(APIHandler):
     async def get(self, name):
         user = self.find_user(name)
         user_ = self.user_model(user)
-        user_['auth_state'] = await user.get_auth_state()
+        # auth state will only be shown if the requestor is an admin
+        # this means users can't see their own auth state unless they
+        # are admins, Hub admins often are also marked as admins so they
+        # will see their auth state but normal users won't
+        if user.admin:
+            user_['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(user_))
 
     @admin_only

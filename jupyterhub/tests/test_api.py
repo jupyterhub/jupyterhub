@@ -13,12 +13,12 @@ from pytest import mark
 import requests
 
 from tornado import gen
-from tornado.concurrent import Future as tFuture
 
 import jupyterhub
 from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
+from ..utils import maybe_future
 from . import mocking
 from .mocking import public_host, public_url
 from .utils import async_requests
@@ -53,9 +53,13 @@ def check_db_locks(func):
     return new_func
 
 
-def find_user(db, name):
+def find_user(db, name, app=None):
     """Find user in database."""
-    return db.query(orm.User).filter(orm.User.name == name).first()
+    orm_user = db.query(orm.User).filter(orm.User.name == name).first()
+    if app is None:
+        return orm_user
+    else:
+        return app.users[orm_user.id]
 
 
 def add_user(db, app=None, **kwargs):
@@ -281,7 +285,6 @@ def test_get_user(app):
         'admin': False,
         'server': None,
         'pending': None,
-        'auth_state': None,
     }
 
 
@@ -424,37 +427,77 @@ def test_make_admin(app):
 
 @mark.user
 @mark.gen_test
-def test_set_auth_state(app):
+def test_set_auth_state(app, auth_state_enabled):
     auth_state = {'secret': 'hello'}
     db = app.db
     name = 'admin'
-    user = find_user(db, name)
-    assert user is not None
-
-    with mock.patch('jupyterhub.user.encrypt') as mock_encrypt:
-        encrypt_future = tFuture()
-        encrypt_future.set_result(b"encrypted_state")
-        mock_encrypt.return_value = encrypt_future
-        r = yield api_request(app, 'users', name, method='patch',
-            data=json.dumps({'auth_state': auth_state})
-        )
-    assert mock_encrypt.call_count == 1
-    assert r.status_code == 200
-    user = find_user(db, name)
+    user = find_user(db, name, app=app)
     assert user is not None
     assert user.name == name
-    assert user.encrypted_auth_state == b"encrypted_state"
 
-    with mock.patch('jupyterhub.user.decrypt') as mock_decrypt:
-        decrypt_future = tFuture()
-        decrypt_future.set_result(auth_state)
-        mock_decrypt.return_value = decrypt_future
-        r = yield api_request(app, 'users', name)
+    r = yield api_request(app, 'users', name, method='patch',
+        data=json.dumps({'auth_state': auth_state})
+    )
 
-    assert mock_decrypt.call_count == 1
     assert r.status_code == 200
+    users_auth_state = yield user.get_auth_state()
+    assert users_auth_state == auth_state
+
+
+@mark.user
+@mark.gen_test
+def test_user_set_auth_state(app, auth_state_enabled):
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'user'
+    user = find_user(db, name, app=app)
+    assert user is not None
     assert user.name == name
+    user_auth_state = yield user.get_auth_state()
+    assert user_auth_state is None
+
+    r = yield api_request(app, 'users', name, method='patch',
+        data=json.dumps({'auth_state': auth_state})
+    )
+
+    assert r.status_code == 403
+    user_auth_state = yield user.get_auth_state()
+    assert user_auth_state is None
+
+
+@mark.user
+@mark.gen_test
+def test_admin_get_auth_state(app, auth_state_enabled):
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'admin'
+    user = find_user(db, name, app=app)
+    assert user is not None
+    assert user.name == name
+    yield user.save_auth_state(auth_state)
+
+    r = yield api_request(app, 'users', name)
+
+    assert r.status_code == 200
     assert r.json()['auth_state'] == auth_state
+
+
+@mark.user
+@mark.gen_test
+def test_user_get_auth_state(app, auth_state_enabled):
+    # explicitly check that a user will not get their own auth state via the API
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'user'
+    user = find_user(db, name, app=app)
+    assert user is not None
+    assert user.name == name
+    yield user.save_auth_state(auth_state)
+
+    r = yield api_request(app, 'users', name)
+
+    assert r.status_code == 200
+    assert 'auth_state' not in r.json()
 
 
 @mark.gen_test
