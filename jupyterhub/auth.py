@@ -225,7 +225,7 @@ class Authenticator(LoggingConfigurable):
         .. versionchanged:: 0.8
             return dict instead of username
         """
-        authenticated = await self.authenticate(handler, data)
+        authenticated = await maybe_future(self.authenticate(handler, data))
         if authenticated is None:
             return
         if isinstance(authenticated, dict):
