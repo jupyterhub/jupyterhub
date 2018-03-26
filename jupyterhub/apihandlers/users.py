@@ -112,7 +112,8 @@ class UserAPIHandler(APIHandler):
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
         # will see their auth state but normal users won't
-        if user.admin:
+        requestor = self.get_current_user()
+        if requestor.admin:
             user_['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(user_))
 

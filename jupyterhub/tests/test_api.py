@@ -284,6 +284,8 @@ def test_get_user(app):
         'admin': False,
         'server': None,
         'pending': None,
+        # auth state is present because requestor is an admin
+        'auth_state': None
     }
 
 
@@ -495,7 +497,8 @@ def test_user_get_auth_state(app, auth_state_enabled):
     assert user.name == name
     yield user.save_auth_state(auth_state)
 
-    r = yield api_request(app, 'users', name)
+    r = yield api_request(app, 'users', name,
+                          headers=auth_header(app.db, name))
 
     assert r.status_code == 200
     assert 'auth_state' not in r.json()
