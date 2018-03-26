@@ -18,7 +18,6 @@ import jupyterhub
 from .. import orm
 from ..user import User
 from ..utils import url_path_join as ujoin
-from ..utils import maybe_future
 from . import mocking
 from .mocking import public_host, public_url
 from .utils import async_requests
