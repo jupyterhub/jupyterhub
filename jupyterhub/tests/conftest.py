@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import os
 import logging
 from getpass import getuser
 from subprocess import TimeoutExpired
@@ -12,6 +13,7 @@ from pytest import fixture, raises
 from tornado import ioloop, gen
 
 from .. import orm
+from .. import crypto
 from ..utils import random_port
 
 from . import mocking
@@ -68,6 +70,23 @@ def app(request, io_loop):
         mocked_app.stop()
     request.addfinalizer(fin)
     return mocked_app
+
+
+@fixture
+def auth_state_enabled(app):
+    app.authenticator.auth_state = {
+        'who': 'cares',
+    }
+    app.authenticator.enable_auth_state = True
+    ck = crypto.CryptKeeper.instance()
+    before_keys = ck.keys
+    ck.keys = [os.urandom(32)]
+    try:
+        yield
+    finally:
+        ck.keys = before_keys
+        app.authenticator.enable_auth_state = False
+        app.authenticator.auth_state = None
 
 
 # mock services for testing.
