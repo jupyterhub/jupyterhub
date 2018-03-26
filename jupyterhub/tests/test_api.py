@@ -455,8 +455,10 @@ def test_user_set_auth_state(app, auth_state_enabled):
     user_auth_state = yield user.get_auth_state()
     assert user_auth_state is None
 
-    r = yield api_request(app, 'users', name, method='patch',
-        data=json.dumps({'auth_state': auth_state})
+    r = yield api_request(
+        app, 'users', name, method='patch',
+        data=json.dumps({'auth_state': auth_state}),
+        headers=auth_header(app.db, name),
     )
 
     assert r.status_code == 403
