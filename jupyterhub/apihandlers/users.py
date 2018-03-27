@@ -17,7 +17,7 @@ class SelfAPIHandler(APIHandler):
 
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
-    def get(self):
+    async def get(self):
         user = self.get_current_user()
         if user is None:
             # whoami can be accessed via oauth token
@@ -44,7 +44,7 @@ class UserListAPIHandler(APIHandler):
         # admin is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
-        
+
         to_create = []
         invalid_names = []
         for name in usernames:
@@ -95,7 +95,7 @@ def admin_or_self(method):
             raise web.HTTPError(403)
         if not (current.name == name or current.admin):
             raise web.HTTPError(403)
-        
+
         # raise 404 if not found
         if not self.find_user(name):
             raise web.HTTPError(404)
@@ -105,9 +105,17 @@ def admin_or_self(method):
 class UserAPIHandler(APIHandler):
 
     @admin_or_self
-    def get(self, name):
+    async def get(self, name):
         user = self.find_user(name)
-        self.write(json.dumps(self.user_model(user)))
+        user_ = self.user_model(user)
+        # auth state will only be shown if the requestor is an admin
+        # this means users can't see their own auth state unless they
+        # are admins, Hub admins often are also marked as admins so they
+        # will see their auth state but normal users won't
+        requestor = self.get_current_user()
+        if requestor.admin:
+            user_['auth_state'] = await user.get_auth_state()
+        self.write(json.dumps(user_))
 
     @admin_only
     async def post(self, name):
@@ -155,7 +163,7 @@ class UserAPIHandler(APIHandler):
         self.set_status(204)
 
     @admin_only
-    def patch(self, name):
+    async def patch(self, name):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
@@ -166,9 +174,14 @@ class UserAPIHandler(APIHandler):
             if self.find_user(data['name']):
                 raise web.HTTPError(400, "User %s already exists, username must be unique" % data['name'])
         for key, value in data.items():
-            setattr(user, key, value)
+            if key == 'auth_state':
+                await user.save_auth_state(value)
+            else:
+                setattr(user, key, value)
         self.db.commit()
-        self.write(json.dumps(self.user_model(user)))
+        user_ = self.user_model(user)
+        user_['auth_state'] = await user.get_auth_state()
+        self.write(json.dumps(user_))
 
 
 class UserServerAPIHandler(APIHandler):

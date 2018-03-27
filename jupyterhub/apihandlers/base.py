@@ -71,7 +71,7 @@ class APIHandler(BaseHandler):
             self.log.error("Couldn't parse JSON", exc_info=True)
             raise web.HTTPError(400, 'Invalid JSON in body of request')
         return model
-    
+
     def write_error(self, status_code, **kwargs):
         """Write JSON errors instead of HTML"""
         exc_info = kwargs.get('exc_info')
@@ -142,6 +142,7 @@ class APIHandler(BaseHandler):
         'name': str,
         'admin': bool,
         'groups': list,
+        'auth_state': dict,
     }
 
     _group_model_types = {
@@ -151,7 +152,7 @@ class APIHandler(BaseHandler):
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
-        
+
         Args:
             model (dict): user-provided model
             model_types (dict): dict of key:type used to validate types and keys

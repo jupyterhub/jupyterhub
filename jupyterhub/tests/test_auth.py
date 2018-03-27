@@ -22,7 +22,7 @@ def test_pam_auth():
         'password': 'match',
     })
     assert authorized['name'] == 'match'
-    
+
     authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'match',
         'password': 'nomatch',
@@ -61,13 +61,13 @@ def test_pam_auth_whitelist():
         'password': 'kaylee',
     })
     assert authorized['name'] == 'kaylee'
-    
+
     authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'wash',
         'password': 'nomatch',
     })
     assert authorized is None
-    
+
     authorized = yield authenticator.get_authenticated_user(None, {
         'username': 'mal',
         'password': 'mal',
@@ -85,9 +85,9 @@ def test_pam_auth_group_whitelist():
     g = MockGroup('kaylee')
     def getgrnam(name):
         return g
-    
+
     authenticator = MockPAMAuthenticator(group_whitelist={'group'})
-    
+
     with mock.patch.object(auth, 'getgrnam', getgrnam):
         authorized = yield authenticator.get_authenticated_user(None, {
             'username': 'kaylee',
@@ -128,21 +128,21 @@ def test_cant_add_system_user():
     authenticator = auth.PAMAuthenticator(whitelist={'mal'})
     authenticator.add_user_cmd = ['jupyterhub-fake-command']
     authenticator.create_system_users = True
-    
+
     class DummyFile:
         def read(self):
             return b'dummy error'
-    
+
     class DummyPopen:
         def __init__(self, *args, **kwargs):
             self.args = args
             self.kwargs = kwargs
             self.returncode = 1
             self.stdout = DummyFile()
-        
+
         def wait(self):
             return
-    
+
     with mock.patch.object(auth, 'Popen', DummyPopen):
         with pytest.raises(RuntimeError) as exc:
             yield authenticator.add_user(user)
@@ -194,23 +194,6 @@ def test_handlers(app):
     a = auth.PAMAuthenticator()
     handlers = a.get_handlers(app)
     assert handlers[0][0] == '/login'
-
-
-@pytest.fixture
-def auth_state_enabled(app):
-    app.authenticator.auth_state = {
-        'who': 'cares',
-    }
-    app.authenticator.enable_auth_state = True
-    ck = crypto.CryptKeeper.instance()
-    before_keys = ck.keys
-    ck.keys = [os.urandom(32)]
-    try:
-        yield
-    finally:
-        ck.keys = before_keys
-        app.authenticator.enable_auth_state = False
-        app.authenticator.auth_state = None
 
 
 @pytest.mark.gen_test
@@ -270,7 +253,7 @@ def test_auth_admin_retained_if_unset(app):
 @pytest.fixture
 def auth_state_unavailable(auth_state_enabled):
     """auth_state enabled at the Authenticator level,
-    
+
     but unavailable due to no crypto keys.
     """
     crypto.CryptKeeper.instance().keys = []
@@ -343,5 +326,3 @@ def test_validate_names():
     a = auth.PAMAuthenticator(username_pattern='w.*')
     assert not a.validate_username('xander')
     assert a.validate_username('willow')
-
-

@@ -92,7 +92,7 @@ class CookieAPIHandler(APIHandler):
 
 class OAuthHandler(BaseHandler, OAuth2Handler):
     """Implement OAuth provider handlers
-    
+
     OAuth2Handler sets `self.provider` in initialize,
     but we are already passing the Provider object via settings.
     """

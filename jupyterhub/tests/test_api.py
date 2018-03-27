@@ -52,9 +52,13 @@ def check_db_locks(func):
     return new_func
 
 
-def find_user(db, name):
+def find_user(db, name, app=None):
     """Find user in database."""
-    return db.query(orm.User).filter(orm.User.name == name).first()
+    orm_user = db.query(orm.User).filter(orm.User.name == name).first()
+    if app is None:
+        return orm_user
+    else:
+        return app.users[orm_user.id]
 
 
 def add_user(db, app=None, **kwargs):
@@ -280,6 +284,8 @@ def test_get_user(app):
         'admin': False,
         'server': None,
         'pending': None,
+        # auth state is present because requestor is an admin
+        'auth_state': None
     }
 
 
@@ -418,6 +424,84 @@ def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
+
+
+@mark.user
+@mark.gen_test
+def test_set_auth_state(app, auth_state_enabled):
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'admin'
+    user = find_user(db, name, app=app)
+    assert user is not None
+    assert user.name == name
+
+    r = yield api_request(app, 'users', name, method='patch',
+        data=json.dumps({'auth_state': auth_state})
+    )
+
+    assert r.status_code == 200
+    users_auth_state = yield user.get_auth_state()
+    assert users_auth_state == auth_state
+
+
+@mark.user
+@mark.gen_test
+def test_user_set_auth_state(app, auth_state_enabled):
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'user'
+    user = find_user(db, name, app=app)
+    assert user is not None
+    assert user.name == name
+    user_auth_state = yield user.get_auth_state()
+    assert user_auth_state is None
+
+    r = yield api_request(
+        app, 'users', name, method='patch',
+        data=json.dumps({'auth_state': auth_state}),
+        headers=auth_header(app.db, name),
+    )
+
+    assert r.status_code == 403
+    user_auth_state = yield user.get_auth_state()
+    assert user_auth_state is None
+
+
+@mark.user
+@mark.gen_test
+def test_admin_get_auth_state(app, auth_state_enabled):
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'admin'
+    user = find_user(db, name, app=app)
+    assert user is not None
+    assert user.name == name
+    yield user.save_auth_state(auth_state)
+
+    r = yield api_request(app, 'users', name)
+
+    assert r.status_code == 200
+    assert r.json()['auth_state'] == auth_state
+
+
+@mark.user
+@mark.gen_test
+def test_user_get_auth_state(app, auth_state_enabled):
+    # explicitly check that a user will not get their own auth state via the API
+    auth_state = {'secret': 'hello'}
+    db = app.db
+    name = 'user'
+    user = find_user(db, name, app=app)
+    assert user is not None
+    assert user.name == name
+    yield user.save_auth_state(auth_state)
+
+    r = yield api_request(app, 'users', name,
+                          headers=auth_header(app.db, name))
+
+    assert r.status_code == 200
+    assert 'auth_state' not in r.json()
 
 
 @mark.gen_test
@@ -593,7 +677,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     user.spawner._start_future = Future()
     r = yield api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 429
-    
+
     # allow ykka to start
     users[0].spawner._start_future.set_result(None)
     # wait for ykka to finish

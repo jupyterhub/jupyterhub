@@ -36,6 +36,7 @@ def test_default_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
+        'auth_state': None,
         'server': user.url,
         'servers': {
             '': {
@@ -63,6 +64,7 @@ def test_default_server(app, named_servers):
         'pending': None,
         'server': None,
         'servers': {},
+        'auth_state': None,
     }
 
 
@@ -99,6 +101,7 @@ def test_create_named_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
+        'auth_state': None,
         'server': None,
         'servers': {
             servername: {
@@ -136,6 +139,7 @@ def test_delete_named_server(app, named_servers):
         'kind': 'user',
         'admin': False,
         'pending': None,
+        'auth_state': None,
         'server': None,
         'servers': {
             name: {
