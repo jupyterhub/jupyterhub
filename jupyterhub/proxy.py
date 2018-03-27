@@ -251,7 +251,6 @@ class Proxy(LoggingConfigurable):
 
         Used when loading up a new proxy.
         """
-        db = self.db
         futures = []
         for service in service_dict.values():
             if service.server:
@@ -264,7 +263,6 @@ class Proxy(LoggingConfigurable):
 
         Used when loading up a new proxy.
         """
-        db = self.db
         futures = []
         for user in user_dict.values():
             for name, spawner in user.spawners.items():
@@ -276,11 +274,15 @@ class Proxy(LoggingConfigurable):
     async def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy."""
         if not routes:
+            self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
+        # log info-level that we are starting the route-checking
+        # this may help diagnose performance issues,
+        # as we are about
+        self.log.info("Checking routes")
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
-        db = self.db
 
         good_routes = {'/'}
 
@@ -342,8 +344,7 @@ class Proxy(LoggingConfigurable):
                 self.log.warning("Deleting stale route %s", routespec)
                 futures.append(self.delete_route(routespec))
 
-        for f in futures:
-            await f
+        await gen.multi(futures)
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
@@ -367,7 +368,7 @@ class ConfigurableHTTPProxy(Proxy):
     If the proxy should not be run as a subprocess of the Hub,
     (e.g. in a separate container),
     set::
-    
+
         c.ConfigurableHTTPProxy.should_start = False
     """
 
