@@ -312,7 +312,8 @@ class Proxy(LoggingConfigurable):
                             )
                             futures.append(self.add_user(user, name))
                 elif spawner.pending:
-                    # don't consider routes for spawners in any pending event stale
+                    # don't consider routes stale if the spawner is in any pending event
+                    # wait until after the pending state clears before taking any actions
                     # they could be pending deletion from the proxy!
                     good_routes.add(spawner.proxy_spec)
 
