@@ -15,9 +15,10 @@ Route Specification:
 - Route paths should be normalized to always start and end with '/'
 """
 
-# Copyright (c) IPython Development Team.
+# Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import json
 import os
 from subprocess import Popen
@@ -30,13 +31,12 @@ from tornado.ioloop import PeriodicCallback
 
 from traitlets import (
     Any, Bool, Instance, Integer, Unicode,
-    default,
+    default, observe,
 )
 from jupyterhub.traitlets import Command
 
 from traitlets.config import LoggingConfigurable
 from .objects import Server
-from .orm import Service, User
 from . import utils
 from .utils import url_path_join
 
@@ -375,6 +375,26 @@ class ConfigurableHTTPProxy(Proxy):
     proxy_process = Any()
     client = Instance(AsyncHTTPClient, ())
 
+    concurrency = Integer(
+        10,
+        config=True,
+        help="""
+        The number of requests allowed to be concurrently outstanding to the proxy
+
+        Limiting this number avoids potential timeout errors
+        by sending too many requests to update the proxy at once
+        """,
+        )
+    semaphore = Any()
+
+    @default('semaphore')
+    def _default_semaphore(self):
+        return asyncio.BoundedSemaphore(self.concurrency)
+
+    @observe('concurrency')
+    def _concurrency_changed(self, change):
+        self.semaphore = asyncio.BoundedSemaphore(change.new)
+
     debug = Bool(False, help="Add debug-level logging to the Proxy.", config=True)
     auth_token = Unicode(
         help="""The Proxy auth token
@@ -454,9 +474,7 @@ class ConfigurableHTTPProxy(Proxy):
             if status is not None:
                 e = RuntimeError(
                     "Proxy failed to start with exit code %i" % status)
-                # py2-compatible `raise e from None`
-                e.__cause__ = None
-                raise e
+                raise e from None
 
         for server in (public_server, api_server):
             for i in range(10):
@@ -525,7 +543,7 @@ class ConfigurableHTTPProxy(Proxy):
             routespec = routespec + '/'
         return routespec
 
-    def api_request(self, path, method='GET', body=None, client=None):
+    async def api_request(self, path, method='GET', body=None, client=None):
         """Make an authenticated API request of the proxy."""
         client = client or AsyncHTTPClient()
         url = url_path_join(self.api_url, 'api/routes', path)
@@ -539,23 +557,25 @@ class ConfigurableHTTPProxy(Proxy):
                               self.auth_token)},
                           body=body,
                           )
+        async with self.semaphore:
+            result = await client.fetch(req)
+            return result
 
-        return client.fetch(req)
-
-    def add_route(self, routespec, target, data):
+    async def add_route(self, routespec, target, data):
         body = data or {}
         body['target'] = target
         body['jupyterhub'] = True
         path = self._routespec_to_chp_path(routespec)
-        return self.api_request(path,
-                                method='POST',
-                                body=body,
-                                )
+        await self.api_request(
+            path,
+            method='POST',
+            body=body,
+        )
 
-    def delete_route(self, routespec):
+    async def delete_route(self, routespec):
         path = self._routespec_to_chp_path(routespec)
         try:
-            return self.api_request(path, method='DELETE')
+            await self.api_request(path, method='DELETE')
         except HTTPError as e:
             if e.status_code == 404:
                 # Warn about 404s because something might be wrong
