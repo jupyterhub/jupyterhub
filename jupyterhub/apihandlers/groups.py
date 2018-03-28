@@ -41,6 +41,36 @@ class GroupListAPIHandler(_GroupAPIHandler):
         data = [ self.group_model(g) for g in self.db.query(orm.Group) ]
         self.write(json.dumps(data))
 
+    @admin_only
+    async def post(self):
+        """POST creates Multiple groups """
+        model = self.get_json_body()
+        if not model or not isinstance(model, dict) or not model.get('groups'):
+            raise web.HTTPError(400, "Must specify at least one group to create")
+        
+        groupnames = model.pop("groups",[])
+        self._check_group_model(model)
+        
+        created = []
+        for name in groupnames:
+            existing = orm.Group.find(self.db, name=name)
+            if existing is not None:
+                raise web.HTTPError(400, "Group %s already exists" % name)
+        
+            usernames = model.get('users', [])
+            # check that users exist
+            users = self._usernames_to_users(usernames)
+            # create the group
+            self.log.info("Creating new group %s with %i users",
+                name, len(users),
+            )
+            self.log.debug("Users: %s", usernames)
+            group = orm.Group(name=name, users=users)
+            self.db.add(group)
+            self.db.commit()
+            created.append(group)
+        self.write(json.dumps([self.group_model(group) for group in created]))
+        self.set_status(201)
 
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
