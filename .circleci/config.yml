@@ -50,4 +50,4 @@ jobs:
               - test
             filters:
               tags:
-              only: /.*/
+                only: /.*/
