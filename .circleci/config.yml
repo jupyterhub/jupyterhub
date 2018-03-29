@@ -6,31 +6,38 @@ jobs:
       enabled: true
     steps:
       - checkout
-      - run: ls
+      - run:
+          command: ls
 
   test:
     machine:
       enabled: true
     steps:
       - checkout
-      - run: docker build -t jupyterhub/jupyterhub .
-      - run: docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
+      - run:
+          command: docker build -t jupyterhub/jupyterhub .
+      - run:
+          command: docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
 
   deploy:
     machine:
       enabled: true
     steps:
       - checkout
-      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
-      - run: docker push jupyterhub/jupyterhub-onbuild
+      - run:
+          command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+      - run:
+          command: docker push jupyterhub/jupyterhub-onbuild
 
   release:
     machine:
       enabled: true
     steps:
       - checkout
-      - run: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
-      - run: docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
+      - run:
+          command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+      - run:
+          command: docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
 
 
   workflows:
@@ -38,7 +45,9 @@ jobs:
     build-test-deploy:
       jobs:
         - build
-        - test
+        - test:
+            requires:
+              - build
         - deploy:
             requires:
               - test
