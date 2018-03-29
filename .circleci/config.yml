@@ -38,8 +38,8 @@ jobs:
 
   workflows:
     version 2:
-    jobs:
-      - build
-      - test
-      - deploy
-      - release
+      jobs:
+        - build
+        - test
+        - deploy
+        - release
