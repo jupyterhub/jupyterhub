@@ -1,7 +1,4 @@
-# Python CircleCI 2.0 configuration file
 # Updating CircleCI configuration from v1 to v2
-# Check https://circleci.com/docs/2.0/language-python/ for more details
-#
 version: 2
 jobs:
   build:
@@ -41,5 +38,15 @@ jobs:
       jobs:
         - build
         - test
-        - deploy
-        - release
+        - deploy:
+            requires:
+              - test
+            filters:
+              branches:
+                only: master
+        - release:
+            requires:
+              - test
+            filters:
+              tags:
+                only: /.*/
