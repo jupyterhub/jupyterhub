@@ -41,11 +41,5 @@ jobs:
     jobs:
       - build
       - test
-      - deploy:
-          filters:
-            branches:
-              only: master
-      - release:
-          filters:
-            tags:
-              only: /.*/
+      - deploy
+      - release
