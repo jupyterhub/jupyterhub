@@ -34,19 +34,19 @@ jobs:
 
 
   workflows:
-    version 2:
-      jobs:
-        - build
-        - test
-        - deploy:
-            requires:
-              - test
-            filters:
-              branches:
-                only: master
-        - release:
-            requires:
-              - test
-            filters:
-              tags:
-                only: /.*/
+    version: 2
+    jobs:
+      - build
+      - test
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master
+      - release:
+          requires:
+            - test
+          filters:
+            tags:
+            only: /.*/
