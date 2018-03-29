@@ -38,15 +38,14 @@ jobs:
 
   workflows:
     version 2:
-    build_test_deploy_release:
-      jobs:
-          - build
-          - test
-          - deploy:
-              filters:
-                branches:
-                  only: master
-          - release:
-              filters:
-                tags:
-                  only: /.*/
+    jobs:
+      - build
+      - test
+      - deploy:
+          filters:
+            branches:
+              only: master
+      - release:
+          filters:
+            tags:
+              only: /.*/
