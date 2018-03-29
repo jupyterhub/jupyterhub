@@ -14,7 +14,6 @@ import shutil
 import signal
 import sys
 import warnings
-from subprocess import Popen
 from tempfile import mkdtemp
 
 # FIXME: remove when we drop Python 3.5 support
@@ -35,6 +34,13 @@ from .traitlets import Command, ByteSpecification, Callable
 from .utils import iterate_until, maybe_future, random_port, url_path_join, exponential_backoff
 
 _mswindows = (os.name == "nt")
+
+if _mswindows:
+    import pywintypes
+    import win32profile
+    from .win_utils import PopenAsUser as Popen
+else:
+    from subprocess import Popen
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -926,8 +932,7 @@ class LocalProcessSpawner(Spawner):
     """
     A Spawner that uses `subprocess.Popen` to start single-user servers as local processes.
 
-    Requires local UNIX users matching the authenticated users to exist.
-    Does not work on Windows.
+    Requires local UNIX/Windows users matching the authenticated users to exist.
 
     This is the default spawner for JupyterHub.
 
@@ -1066,7 +1071,13 @@ class LocalProcessSpawner(Spawner):
         cmd = []
         env = self.get_env()
 
-        cmd.extend(self.cmd)
+        if _mswindows:
+            cmd.append(sys.executable)
+            py_scripts_dir = os.path.join(os.path.dirname(sys.executable), 'Scripts')
+            cmd.append(os.path.join(py_scripts_dir, "jupyterhub-singleuser"))
+        else:
+            cmd.extend(self.cmd)
+
         cmd.extend(self.get_args())
 
         if self.shell_cmd:
@@ -1076,10 +1087,42 @@ class LocalProcessSpawner(Spawner):
 
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
 
-        popen_kwargs = dict(
-            preexec_fn=self.make_preexec_fn(self.user.name),
-            start_new_session=True,  # don't forward signals
-        )
+        if _mswindows:
+            auth_state = await self.user.get_auth_state()
+            token = pywintypes.HANDLE(auth_state['auth_token'])
+            user_env = None
+
+            try:
+                # Will load user variables, if the user profile is loaded
+                user_env = win32profile.CreateEnvironmentBlock(token, False)
+            except Exception as exc:
+                self.log.warning("Failed to load user environment for %s: %s", self.user.name, exc)
+            else:
+                # If the user profile is loaded, adjust APPDATA so the jupyter runtime files are stored
+                # in a per-user location
+                if 'APPDATA' in user_env:
+                    env['APPDATA'] = user_env['APPDATA']
+
+            # If the user profile is loaded, set cwd to USERPROFILE
+            if user_env and 'USERPROFILE' in user_env:
+                cwd = user_env['USERPROFILE']
+            else:
+                # On Posix, the cwd is set to ~ before spawning the singleuser server (preexec_fn).
+                # Windows Popen doesn't have preexec_fn support, so we need to set cwd directly. 
+                # Set CWD to a temp directory, since we failed to load the user profile
+                cwd = mkdtemp()
+
+            popen_kwargs = dict(
+                token = token,
+                cwd = cwd
+            )
+            # Detach so the underlying winhandle stays alive
+            token.Detach()
+        else:
+            popen_kwargs = dict(
+                preexec_fn=self.make_preexec_fn(self.user.name),
+                start_new_session=True,  # don't forward signals
+            )
         popen_kwargs.update(self.popen_kwargs)
         # don't let user config override env
         popen_kwargs['env'] = env
