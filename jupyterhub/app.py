@@ -42,6 +42,7 @@ from traitlets import (
 from traitlets.config import Application, catch_config_error
 
 here = os.path.dirname(__file__)
+_mswindows = (os.name == "nt")
 
 import jupyterhub
 from . import handlers, apihandlers
@@ -887,7 +888,8 @@ class JupyterHub(Application):
             self.log.info("Loading %s from %s", trait_name, secret_file)
             try:
                 perm = os.stat(secret_file).st_mode
-                if perm & 0o07:
+                # skip check on Windows, since Windows  permissions don't follow POSIX rules
+                if ((perm & 0o07) and not _mswindows):
                     raise ValueError("cookie_secret_file can be read or written by anybody")
                 with open(secret_file) as f:
                     text_secret = f.read().strip()
@@ -926,10 +928,15 @@ class JupyterHub(Application):
             with open(secret_file, 'w') as f:
                 f.write(text_secret)
                 f.write('\n')
-            try:
-                os.chmod(secret_file, 0o600)
-            except OSError:
-                self.log.warning("Failed to set permissions on %s", secret_file)
+            # TODO: to support Windows, proper Administrator, System and Owner permissions
+            #   need to be set via DCL objects creted via the windows API.
+            #   For now, the responsibility is on the user: he should run jupyterhub on
+            #   a folder with the correct permissions, which sounds sensible.
+            if not _mswindows:
+                try:
+                    os.chmod(secret_file, 0o600)
+                except OSError:
+                    self.log.warning("Failed to set permissions on %s", secret_file)
         # store the loaded trait value
         self.cookie_secret = secret
 
