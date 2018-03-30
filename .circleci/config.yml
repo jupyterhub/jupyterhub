@@ -40,40 +40,40 @@ jobs:
           command: docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
 
 
-  workflows:
-    version: 2
-    build-test-deploy:
-      jobs:
-        - build:
-            filters:
-              branches:
-                only: master
-        - test:
-            requires:
-              - build
-            filters:
-              branches:
-                only: master
-        - deploy:
-            requires:
-              - test
-            filters:
-              branches:
-                only: master
-    build-test-release:
-        - build:
-            filters:
-              tags:
-                only: /.*/
-        - test:
-            requires:
-              - build
-            filters:
-              tags:
-                only: /.*/
-        - release:
-            requires:
-              - test
-            filters:
-              tags:
-                only: /.*/
+workflows:
+  version: 2
+  build-test-deploy:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: master
+      - test:
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+      - deploy:
+          requires:
+            - test
+          filters:
+            branches:
+              only: master
+  build-test-release:
+      - build:
+          filters:
+            tags:
+              only: /.*/
+      - test:
+          requires:
+            - build
+          filters:
+            tags:
+              only: /.*/
+      - release:
+          requires:
+            - test
+          filters:
+            tags:
+              only: /.*/
