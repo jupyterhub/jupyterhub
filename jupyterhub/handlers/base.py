@@ -882,7 +882,7 @@ class UserSpawnHandler(BaseHandler):
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template("spawn_pending.html", user=user)
+                html = self.render_template("spawn_pending.html", user=user, messages=spawner.pending_messages)
                 self.finish(html)
                 return
 
@@ -910,7 +910,7 @@ class UserSpawnHandler(BaseHandler):
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template("spawn_pending.html", user=user)
+                html = self.render_template("spawn_pending.html", user=user, messages=spawner.pending_messages)
                 self.finish(html)
                 return
 

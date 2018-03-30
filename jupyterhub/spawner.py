@@ -80,6 +80,14 @@ class Spawner(LoggingConfigurable):
         return False
 
     @property
+    def pending_messages(self):
+        """Return username:servername or username
+
+        Used in logging for consistency with named servers.
+        """
+        return []
+
+    @property
     def ready(self):
         """Is this server ready to use?
 
