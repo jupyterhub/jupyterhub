@@ -81,9 +81,9 @@ class Spawner(LoggingConfigurable):
 
     @property
     def pending_messages(self):
-        """Return username:servername or username
+        """Return messages about pending spawn
 
-        Used in logging for consistency with named servers.
+        Useful for informing the user why spawn is not finished.
         """
         return []
 
