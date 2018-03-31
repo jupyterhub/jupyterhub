@@ -43,7 +43,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
 
     @admin_only
     async def post(self):
-        """POST creates Multiple groups"""
+        """POST creates Multiple groups """
         model = self.get_json_body()
         self._check_group_model(model)
         if not model or not isinstance(model, dict) or not model.get('groups'):
