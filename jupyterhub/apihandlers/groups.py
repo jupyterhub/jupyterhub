@@ -45,10 +45,12 @@ class GroupListAPIHandler(_GroupAPIHandler):
     async def post(self):
         """POST creates Multiple groups """
         model = self.get_json_body()
-        self._check_group_model(model)
         if not model or not isinstance(model, dict) or not model.get('groups'):
             raise web.HTTPError(400, "Must specify at least one group to create")
-        groupnames = model.get("groups",[])
+        
+        groupnames = model.pop("groups",[])
+        self._check_group_model(model)
+        
         created = []
         for name in groupnames:
             existing = orm.Group.find(self.db, name=name)
