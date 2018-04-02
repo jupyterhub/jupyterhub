@@ -23,7 +23,6 @@ jobs:
     machine:
       enabled: true
     steps:
-      - checkout
       - run:
           command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
       - run:
@@ -33,7 +32,6 @@ jobs:
     machine:
       enabled: true
     steps:
-      - checkout
       - run:
           command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
       - run:
