@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import json
 
 from tornado import  web
@@ -324,10 +325,12 @@ class SpawnProgressAPIHandler(APIHandler):
             await self.send_event(ready_event)
             return
 
+        spawn_future = spawner._spawn_future
+
         if not spawner._spawn_pending:
             # not pending, no progress to fetch
             # check if spawner has just failed
-            f = spawner._spawn_future
+            f = spawn_future
             if f and f.done() and f.exception():
                 failed_event['message'] = "Spawn failed: %s" % f.exception()
                 await self.send_event(failed_event)
@@ -336,22 +339,40 @@ class SpawnProgressAPIHandler(APIHandler):
                 raise web.HTTPError(400, "%s is not starting...", spawner._log_name)
 
         # retrieve progress events from the Spawner
-        async for event in spawner._generate_progress():
-            # don't allow events to sneakily set the 'ready flag'
+        progress_iter = spawner._generate_progress().__aiter__()
+        while True:
+            event_future = asyncio.ensure_future(progress_iter.__anext__())
+            await asyncio.wait(
+                [event_future, spawn_future],
+                return_when=asyncio.FIRST_COMPLETED)
+            if event_future.done():
+                try:
+                    event = event_future.result()
+                except StopAsyncIteration:
+                    break
+            elif spawn_future.done():
+                # spawn is done *and* event is not ready
+                # cancel event future to avoid warnings about
+                # unawaited tasks
+                if not event_future.cancelled():
+                    event_future.cancel()
+                break
+            else:
+                # neither is done, this shouldn't be possible
+                continue
+
+            # don't allow events to sneakily set the 'ready' flag
             if 'ready' in event:
                 event.pop('ready', None)
             await self.send_event(event)
 
-        # events finished, check if we are still pending
+        # progress finished, check if we are still pending
         if spawner._spawn_pending:
-            try:
-                await spawner._spawn_future
-            except Exception:
-                # suppress exceptions in spawn future,
-                # which will be logged elsewhere
-                pass
+            # wait for spawn_future to complete
+            # (ignore errors, which will be logged elsewhere)
+            await asyncio.wait(spawn_future)
 
-        # progress finished, check if we are done
+        # progress and spawn finished, check if spawn succeeded
         if spawner.ready:
             # spawner is ready, signal completion and redirect
             self.log.info("Server %s is ready", spawner._log_name)

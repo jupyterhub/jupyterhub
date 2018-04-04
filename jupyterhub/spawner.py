@@ -5,6 +5,7 @@ Contains base Spawner class & default implementation
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import errno
 import json
 import os
@@ -17,11 +18,10 @@ from subprocess import Popen
 from tempfile import mkdtemp
 
 # FIXME: remove when we drop Python 3.5 support
-from async_generator import isasyncgenfunction, async_generator, yield_
+from async_generator import async_generator, yield_
 
 from sqlalchemy import inspect
 
-from tornado import gen, concurrent
 from tornado.ioloop import PeriodicCallback
 
 from traitlets.config import LoggingConfigurable
@@ -697,35 +697,36 @@ class Spawner(LoggingConfigurable):
         """Private wrapper of progress generator
 
         This method is always an async generator and will always yield at least one event.
-
-        Calls self._default_progress if self.progress is not an async generator
         """
         if not self._spawn_pending:
             raise RuntimeError("Spawn not pending, can't generate progress")
+
+        spawn_future = self._spawn_future
+
         await yield_({
             "progress": 0,
             "message": "Server requested",
             })
-        if isasyncgenfunction(self.progress):
-            progress = self.progress
-        else:
-            progress = self._default_progress
 
-        # TODO: stop when spawn is ready, even if progress isn't
-        async for event in progress():
-            await yield_(event)
+        progress_iter = self.progress().__aiter__()
+        while True:
+            f = asyncio.ensure_future(progress_iter.__anext__())
+            await asyncio.wait(
+                [f, spawn_future],
+                return_when=asyncio.FIRST_COMPLETED)
+            if f.done():
+                try:
+                    await yield_(f.result())
+                except StopAsyncIteration:
+                    break
+            elif spawn_future.done():
+                # cancel event future to avoid warnings about
+                # unawaited tasks
+                if not f.cancelled():
+                    f.cancel()
+                break
 
     @async_generator
-    async def _default_progress(self):
-        """The default progress events generator
-
-        Yields just one generic event for 50% progress
-        """
-        await yield_({
-            "progress": 50,
-            "message": "Spawning server...",
-        })
-
     async def progress(self):
         """Async generator for progress events
 
@@ -749,7 +750,10 @@ class Spawner(LoggingConfigurable):
 
         .. versionadded:: 0.9
         """
-        pass
+        await yield_({
+            "progress": 50,
+            "message": "Spawning server...",
+        })
 
     async def start(self):
         """Start the single-user server
