@@ -78,6 +78,8 @@ require(["jquery"], function ($) {
 
     if (evt.failed) {
       evtSource.close();
+      // stop spinner
+      $(".fa-pulse").removeClass("fa-pulse");
       // turn progress bar red
       progressBar.addClass('progress-bar-danger');
       // open event log for debugging
