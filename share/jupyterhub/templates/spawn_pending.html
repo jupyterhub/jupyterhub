@@ -71,6 +71,7 @@ require(["jquery"], function ($) {
     }
 
     if (evt.ready) {
+      evtSource.close();
       // reload the current page
       // which should result in a redirect to the running server
       window.location.reload();
@@ -83,7 +84,7 @@ require(["jquery"], function ($) {
       // turn progress bar red
       progressBar.addClass('progress-bar-danger');
       // open event log for debugging
-      $('progress-details').prop('open', true);
+      $('#progress-details').prop('open', true);
     }
   }
 
