@@ -18,9 +18,12 @@ class APIHandler(BaseHandler):
     def content_security_policy(self):
         return '; '.join([super().content_security_policy, "default-src 'none'"])
 
+    def get_content_type(self):
+        return 'application/json'
+
     def set_default_headers(self):
         super().set_default_headers()
-        self.set_header('Content-Type', 'application/json')
+        self.set_header('Content-Type', self.get_content_type())
 
     def check_referer(self):
         """Check Origin for cross-site API requests.

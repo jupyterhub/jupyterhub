@@ -1,4 +1,5 @@
 alembic
+async_generator>=1.8
 traitlets>=4.3.2
 tornado>=4.1
 jinja2

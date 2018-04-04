@@ -16,6 +16,9 @@ import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
+# FIXME: remove when we drop Python 3.5 support
+from async_generator import isasyncgenfunction, async_generator, yield_
+
 from sqlalchemy import inspect
 
 from tornado import gen, concurrent
@@ -47,7 +50,7 @@ class Spawner(LoggingConfigurable):
     is created for each user. If there are 20 JupyterHub users, there will be 20
     instances of the subclass.
     """
-    
+
     # private attributes for tracking status
     _spawn_pending = False
     _start_pending = False
@@ -264,11 +267,10 @@ class Spawner(LoggingConfigurable):
         """Get the options form
 
         Returns:
-          (Future(str)): the content of the options form presented to the user
+          Future (str): the content of the options form presented to the user
           prior to starting a Spawner.
 
-        .. versionadded:: 0.9.0
-            Introduced.
+        .. versionadded:: 0.9
         """
         if callable(self.options_form):
             options_form = await maybe_future(self.options_form(self))
@@ -689,6 +691,65 @@ class Spawner(LoggingConfigurable):
         """Run the pre_spawn_hook if defined"""
         if self.pre_spawn_hook:
             return self.pre_spawn_hook(self)
+
+    @async_generator
+    async def _generate_progress(self):
+        """Private wrapper of progress generator
+
+        This method is always an async generator and will always yield at least one event.
+
+        Calls self._default_progress if self.progress is not an async generator
+        """
+        if not self._spawn_pending:
+            raise RuntimeError("Spawn not pending, can't generate progress")
+        await yield_({
+            "progress": 0,
+            "message": "Server requested",
+            })
+        if isasyncgenfunction(self.progress):
+            progress = self.progress
+        else:
+            progress = self._default_progress
+
+        # TODO: stop when spawn is ready, even if progress isn't
+        async for event in progress():
+            await yield_(event)
+
+    @async_generator
+    async def _default_progress(self):
+        """The default progress events generator
+
+        Yields just one generic event for 50% progress
+        """
+        await yield_({
+            "progress": 50,
+            "message": "Spawning server...",
+        })
+
+    async def progress(self):
+        """Async generator for progress events
+
+        Must be an async generator
+
+        For Python 3.5-compatibility, use the async_generator package
+
+        Should yield messages of the form:
+
+        ::
+
+          {
+            "progress": 80, # integer, out of 100
+            "message": text, # text message (will be escaped for HTML)
+            "html_message": html_text, # optional html-formatted message (may have links)
+          }
+
+        In HTML contexts, html_message will be displayed instead of message if present.
+        Progress will be updated if defined.
+        To update messages without progress omit the progress field.
+
+        .. versionadded:: 0.9
+        """
+        pass
 
     async def start(self):
         """Start the single-user server

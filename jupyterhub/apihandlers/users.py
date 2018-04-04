@@ -5,10 +5,11 @@
 
 import json
 
-from tornado import gen, web
+from tornado import  web
+from tornado.iostream import StreamClosedError
 
 from .. import orm
-from ..utils import admin_only, maybe_future
+from ..utils import admin_only, maybe_future, url_path_join
 from .base import APIHandler
 
 
@@ -17,6 +18,7 @@ class SelfAPIHandler(APIHandler):
 
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
+
     async def get(self):
         user = self.get_current_user()
         if user is None:
@@ -101,6 +103,7 @@ def admin_or_self(method):
             raise web.HTTPError(404)
         return method(self, name, *args, **kwargs)
     return m
+
 
 class UserAPIHandler(APIHandler):
 
@@ -269,10 +272,108 @@ class UserAdminAccessAPIHandler(APIHandler):
             raise web.HTTPError(404)
 
 
+class SpawnProgressAPIHandler(APIHandler):
+    """EventStream handler for pending spawns"""
+    def get_content_type(self):
+        return 'text/event-stream'
+
+    async def send_event(self, event):
+        try:
+            self.write('data: {}\n\n'.format(json.dumps(event)))
+            await self.flush()
+        except StreamClosedError:
+            self.log.warning("Stream closed while handling %s", self.request.uri)
+            # raise Finish to halt the handler
+            raise web.Finish()
+
+    @admin_or_self
+    async def get(self, username, server_name=''):
+        self.set_header('Cache-Control', 'no-cache')
+        if server_name is None:
+            server_name = ''
+        user = self.find_user(username)
+        if user is None:
+            # no such user
+            raise web.HTTPError(404)
+        if server_name not in user.spawners:
+            # user has no such server
+            raise web.HTTPError(404)
+        spawner = user.spawners[server_name]
+        # cases:
+        # - spawner already started and ready
+        # - spawner not running at all
+        # - spawner failed
+        # - spawner pending start (what we expect)
+        url = url_path_join(user.url, server_name, '/')
+        ready_event = {
+            'progress': 100,
+            'ready': True,
+            'message': "Server ready at {}".format(url),
+            'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+            'url': url,
+        }
+        failed_event = {
+            'progress': 100,
+            'failed': True,
+            'message': "Spawn failed",
+        }
+
+        if spawner.ready:
+            # spawner already ready. Trigger progress-completion immediately
+            self.log.info("Server %s is already started", spawner._log_name)
+            await self.send_event(ready_event)
+            return
+
+        if not spawner._spawn_pending:
+            # not pending, no progress to fetch
+            # check if spawner has just failed
+            f = spawner._spawn_future
+            if f and f.done() and f.exception():
+                failed_event['message'] = "Spawn failed: %s" % f.exception()
+                await self.send_event(failed_event)
+                return
+            else:
+                raise web.HTTPError(400, "%s is not starting...", spawner._log_name)
+
+        # retrieve progress events from the Spawner
+        async for event in spawner._generate_progress():
+            # don't allow events to sneakily set the 'ready flag'
+            if 'ready' in event:
+                event.pop('ready', None)
+            await self.send_event(event)
+
+        # events finished, check if we are still pending
+        if spawner._spawn_pending:
+            try:
+                await spawner._spawn_future
+            except Exception:
+                # suppress exceptions in spawn future,
+                # which will be logged elsewhere
+                pass
+
+        # progress finished, check if we are done
+        if spawner.ready:
+            # spawner is ready, signal completion and redirect
+            self.log.info("Server %s is ready", spawner._log_name)
+            await self.send_event(ready_event)
+            return
+        else:
+            # what happened? Maybe spawn failed?
+            f = spawner._spawn_future
+            if f and f.done() and f.exception():
+                failed_event['message'] = "Spawn failed: %s" % f.exception()
+            else:
+                self.log.warning("Server %s didn't start for unknown reason", spawner._log_name)
+            await self.send_event(failed_event)
+            return
+
+
 default_handlers = [
     (r"/api/user", SelfAPIHandler),
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
+    (r"/api/users/([^/]+)/server-progress", SpawnProgressAPIHandler),
+    (r"/api/users/([^/]+)/server-progress/([^/]*)", SpawnProgressAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)", UserServerAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
