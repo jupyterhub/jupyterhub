@@ -887,13 +887,6 @@ class UserSpawnHandler(BaseHandler):
                     pass
 
             # we may have waited above, check pending again:
-            url_parts = [self.hub.base_url, 'api/users', user.escaped_name]
-            if spawner.name:
-                url_parts.extend(['servers', spawner.name, 'progress'])
-            else:
-                url_parts.extend(['server/progress'])
-            progress_url = url_path_join(*url_parts)
-
             if spawner.pending:
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
@@ -902,7 +895,7 @@ class UserSpawnHandler(BaseHandler):
                 html = self.render_template(
                     "spawn_pending.html",
                     user=user,
-                    progress_url=progress_url,
+                    progress_url=spawner._progress_url,
                 )
                 self.finish(html)
                 return
@@ -934,7 +927,7 @@ class UserSpawnHandler(BaseHandler):
                 html = self.render_template(
                     "spawn_pending.html",
                     user=user,
-                    progress_url=progress_url,
+                    progress_url=spawner._progress_url,
                 )
                 self.finish(html)
                 return

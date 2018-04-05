@@ -692,6 +692,10 @@ class Spawner(LoggingConfigurable):
         if self.pre_spawn_hook:
             return self.pre_spawn_hook(self)
 
+    @property
+    def _progress_url(self):
+        return self.user.progress_url(self.name)
+
     @async_generator
     async def _generate_progress(self):
         """Private wrapper of progress generator

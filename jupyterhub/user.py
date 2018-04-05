@@ -320,6 +320,15 @@ class User:
         else:
             return self.base_url
 
+    def progress_url(self, server_name=''):
+        """API URL for progress endpoint for a server with a given name"""
+        url_parts = [self.settings['hub'].base_url, 'api/users', self.escaped_name]
+        if server_name:
+            url_parts.extend(['servers', server_name, 'progress'])
+        else:
+            url_parts.extend(['server/progress'])
+        return url_path_join(*url_parts)
+
     async def spawn(self, server_name='', options=None):
         """Start the user's spawner
 

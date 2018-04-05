@@ -97,6 +97,22 @@ class APIHandler(BaseHandler):
             'message': message or status_message,
         }))
 
+    def server_model(self, spawner):
+        """Get the JSON model for a Spawner"""
+        last_activity = spawner.orm_spawner.last_activity
+        # don't call isoformat if last_activity is None
+        if last_activity:
+            last_activity = isoformat(last_activity)
+
+        return {
+            'name': spawner.name,
+            'last_activity': last_activity,
+            'started': isoformat(spawner.orm_spawner.started),
+            'pending': spawner.pending,
+            'url': url_path_join(spawner.user.url, spawner.name, '/'),
+            'progress_url': spawner._progress_url,
+        }
+
     def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
@@ -114,33 +130,23 @@ class APIHandler(BaseHandler):
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
             'server': user.url if user.running else None,
+            'progress_url': user.spawner._progress_url if user.active else None,
             'pending': None,
             'created': isoformat(user.created),
             'last_activity': last_activity,
             'started': None,
         }
         if '' in user.spawners:
-            spawner = user.spawners['']
-            model['pending'] = spawner.pending or None
-            if spawner.active and spawner.orm_spawner.started:
-                model['started'] = isoformat(spawner.orm_spawner.started)
+            server_model = self.server_model(user.spawners[''])
+            # copy some values from the default server to the user model
+            for key in ('started', 'pending', 'progress_url'):
+                model[key] = server_model[key]
 
         if self.allow_named_servers:
             servers = model['servers'] = {}
             for name, spawner in user.spawners.items():
                 if spawner.ready:
-                    last_activity = spawner.orm_spawner.last_activity
-                    if last_activity:
-                        last_activity = isoformat(last_activity)
-                    servers[name] = s = {
-                        'name': name,
-                        'last_activity': last_activity,
-                        'started': isoformat(spawner.orm_spawner.started),
-                    }
-                    if spawner.pending:
-                        s['pending'] = spawner.pending
-                    if spawner.server:
-                        s['url'] = url_path_join(user.url, name, '/')
+                    servers[name] = self.server_model(spawner)
         return model
 
     def group_model(self, group):
