@@ -372,9 +372,9 @@ default_handlers = [
     (r"/api/user", SelfAPIHandler),
     (r"/api/users", UserListAPIHandler),
     (r"/api/users/([^/]+)", UserAPIHandler),
-    (r"/api/users/([^/]+)/server-progress", SpawnProgressAPIHandler),
-    (r"/api/users/([^/]+)/server-progress/([^/]*)", SpawnProgressAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
+    (r"/api/users/([^/]+)/server/progress", SpawnProgressAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)", UserServerAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]*)/progress", SpawnProgressAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]

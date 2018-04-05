@@ -887,10 +887,12 @@ class UserSpawnHandler(BaseHandler):
                     pass
 
             # we may have waited above, check pending again:
-            progress_url = url_path_join(
-                self.hub.base_url, 'api/users',
-                user.escaped_name, 'server-progress', spawner.name,
-            )
+            url_parts = [self.hub.base_url, 'api/users', user.escaped_name]
+            if spawner.name:
+                url_parts.extend(['servers', spawner.name, 'progress'])
+            else:
+                url_parts.extend(['server/progress'])
+            progress_url = url_path_join(*url_parts)
 
             if spawner.pending:
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
