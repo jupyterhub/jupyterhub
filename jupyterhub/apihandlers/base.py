@@ -99,14 +99,9 @@ class APIHandler(BaseHandler):
 
     def server_model(self, spawner):
         """Get the JSON model for a Spawner"""
-        last_activity = spawner.orm_spawner.last_activity
-        # don't call isoformat if last_activity is None
-        if last_activity:
-            last_activity = isoformat(last_activity)
-
         return {
             'name': spawner.name,
-            'last_activity': last_activity,
+            'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
@@ -118,12 +113,6 @@ class APIHandler(BaseHandler):
         if isinstance(user, orm.User):
             user = self.users[user.id]
 
-
-        last_activity = user.last_activity
-        # don't call isoformat if last_activity is None
-        if last_activity:
-            last_activity = isoformat(last_activity)
-
         model = {
             'kind': 'user',
             'name': user.name,
@@ -133,8 +122,8 @@ class APIHandler(BaseHandler):
             'progress_url': user.spawner._progress_url if user.active else None,
             'pending': None,
             'created': isoformat(user.created),
-            'last_activity': last_activity,
             'started': None,
+            'last_activity': isoformat(user.last_activity),
         }
         if '' in user.spawners:
             server_model = self.server_model(user.spawners[''])

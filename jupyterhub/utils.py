@@ -45,6 +45,10 @@ def isoformat(dt):
 
     Naïve datetime objects are assumed to be UTC
     """
+    # allow null timestamps to remain None without
+    # having to check if isoformat should be called
+    if dt is None:
+        return None
     if dt.tzinfo:
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
     return dt.isoformat() + 'Z'
