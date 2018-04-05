@@ -8,7 +8,7 @@ import json
 from urllib.parse import quote
 
 from oauth2.web.tornado import OAuth2Handler
-from tornado import web, gen
+from tornado import web
 
 from .. import orm
 from ..user import User
@@ -24,7 +24,11 @@ class TokenAPIHandler(APIHandler):
             orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             raise web.HTTPError(404)
+
+        # record activity whenever we see a token
+        now = orm_token.last_activity = datetime.utcnow()
         if orm_token.user:
+            orm_token.user.last_activity = now
             model = self.user_model(self.users[orm_token.user])
         elif orm_token.service:
             model = self.service_model(orm_token.service)
@@ -33,8 +37,6 @@ class TokenAPIHandler(APIHandler):
             self.db.delete(orm_token)
             self.db.commit()
             raise web.HTTPError(404)
-        # record activity whenever we see a token
-        orm_token.last_activity = datetime.utcnow()
         self.db.commit()
         self.write(json.dumps(model))
 

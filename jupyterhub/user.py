@@ -10,7 +10,6 @@ from oauth2.error import ClientNotFoundError
 from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
-from traitlets import HasTraits, Any, Dict, default
 
 from .utils import maybe_future, url_path_join
 
@@ -381,6 +380,11 @@ class User:
             await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
         spawner._start_pending = True
+        # update spawner start time, and activity for both spawner and user
+        self.last_activity = \
+            spawner.orm_spawner.started = \
+            spawner.orm_spawner.last_activity = datetime.utcnow()
+        db.commit()
         # wait for spawner.start to return
         try:
             # run optional preparation work to bootstrap the notebook
@@ -459,7 +463,6 @@ class User:
         if self.state is None:
             self.state = {}
         spawner.orm_spawner.state = spawner.get_state()
-        self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
         db.commit()
         spawner._waiting_for_response = True
         try:
@@ -529,6 +532,8 @@ class User:
                     self.db.delete(orm_token)
             self.db.commit()
         finally:
+            spawner.orm_spawner.started = None
+            self.db.commit()
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
             try:

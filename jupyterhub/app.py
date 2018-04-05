@@ -8,7 +8,7 @@ import asyncio
 import atexit
 import binascii
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from datetime import datetime, timezone
 from getpass import getuser
 import logging
 from operator import itemgetter
@@ -22,8 +22,8 @@ from urllib.parse import urlparse
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
+from dateutil.parser import parse as parse_date
 from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
-
 from sqlalchemy.exc import OperationalError
 
 from tornado.httpclient import AsyncHTTPClient
@@ -50,7 +50,7 @@ from .services.service import Service
 
 from . import crypto
 from . import dbutil, orm
-from .user import User, UserDict
+from .user import UserDict
 from .oauth.store import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
@@ -59,7 +59,6 @@ from .traitlets import URLPrefix, Command
 from .utils import (
     maybe_future,
     url_path_join,
-    ISO8601_ms, ISO8601_s,
     print_stacks, print_ps_info,
 )
 # classes for config
@@ -1067,6 +1066,12 @@ class JupyterHub(Application):
                     such as when user accounts are deleted from the external system
                     without notifying JupyterHub.
                     """))
+            else:
+                # handle database upgrades where user.created is undefined.
+                # we don't want to allow user.created to be undefined,
+                # so initialize it to last_activity (if defined) or now.
+                if not user.created:
+                    user.created = user.last_activity or datetime.utcnow()
         db.commit()
 
         # The whitelist set and the users in the db are now the same.
@@ -1575,12 +1580,19 @@ class JupyterHub(Application):
             if spawner is None:
                 self.log.warning("Found no spawner for route: %s", route)
                 continue
-            try:
-                dt = datetime.strptime(route_data['last_activity'], ISO8601_ms)
-            except Exception:
-                dt = datetime.strptime(route_data['last_activity'], ISO8601_s)
-            user.last_activity = max(user.last_activity, dt)
-            spawner.last_activity = max(spawner.last_activity, dt)
+            dt = parse_date(route_data['last_activity'])
+            if dt.tzinfo:
+                # strip timezone info to naïve UTC datetime
+                dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+            if user.last_activity:
+                user.last_activity = max(user.last_activity, dt)
+            else:
+                user.last_activity = dt
+            if spawner.last_activity:
+                spawner.last_activity = max(spawner.last_activity, dt)
+            else:
+                spawner.last_activity = dt
             # FIXME: Make this configurable duration. 30 minutes for now!
             if (now - user.last_activity).total_seconds() < 30 * 60:
                 active_users_count += 1

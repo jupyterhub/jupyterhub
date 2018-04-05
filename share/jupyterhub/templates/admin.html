@@ -45,7 +45,13 @@
       {% block user_row scoped %}
       <td class="name-col col-sm-2">{{u.name}}</td>
       <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
-      <td class="time-col col-sm-3">{{u.last_activity.isoformat() + 'Z'}}</td>
+      <td class="time-col col-sm-3">
+        {%- if u.last_activity -%}
+        {{ u.last_activity.isoformat() + 'Z' }}
+        {%- else -%}
+        Never
+        {%- endif -%}
+      </td>
       <td class="server-col col-sm-2 text-center">
         <a role="button" class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
         <a role="button" class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>

@@ -26,7 +26,7 @@ from ..spawner import LocalProcessSpawner
 from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
-    PROXY_ADD_DURATION_SECONDS, ProxyAddStatus
+    PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
 )
 
 # pattern for the authentication token header
@@ -191,7 +191,8 @@ class BaseHandler(RequestHandler):
         if orm_token is None:
             return None
         else:
-            orm_token.last_activity = datetime.utcnow()
+            orm_token.last_activity = \
+                orm_token.user.last_activity = datetime.utcnow()
             self.db.commit()
             return self._user_from_orm(orm_token.user)
 
@@ -205,7 +206,11 @@ class BaseHandler(RequestHandler):
             return None
         else:
             # record token activity
-            orm_token.last_activity = datetime.utcnow()
+            now = datetime.utcnow()
+            orm_token.last_activity = now
+            if orm_token.user:
+                orm_token.user.last_activity = now
+
             self.db.commit()
             return orm_token.service or self._user_from_orm(orm_token.user)
 
@@ -231,6 +236,10 @@ class BaseHandler(RequestHandler):
             self.log.warning("Invalid cookie token")
             # have cookie, but it's not valid. Clear it and start over.
             clear()
+            return
+        # update user activity
+        user.last_activity = datetime.utcnow()
+        self.db.commit()
         return user
 
     def _user_from_orm(self, orm_user):
