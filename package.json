@@ -9,7 +9,7 @@
     "url": "https://github.com/jupyter/jupyterhub.git"
   },
   "scripts": {
-    "postinstall": "./bower-lite",
+    "postinstall": "python ./bower-lite",
     "lessc": "lessc"
   },
   "devDependencies": {
