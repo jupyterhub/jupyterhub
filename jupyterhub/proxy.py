@@ -19,6 +19,7 @@ Route Specification:
 # Distributed under the terms of the Modified BSD License.
 
 import asyncio
+from functools import wraps
 import json
 import os
 from subprocess import Popen
@@ -39,6 +40,21 @@ from traitlets.config import LoggingConfigurable
 from .objects import Server
 from . import utils
 from .utils import url_path_join
+
+
+def _one_at_a_time(method):
+    """decorator to limit an async method to be called only once
+
+    If multiple concurrent calls to this method are made,
+    queue them instead of allowing them to be concurrently outstanding.
+    """
+    method._lock = asyncio.Lock()
+    @wraps(method)
+    async def locked_method(*args, **kwargs):
+        async with method._lock:
+            return await method(*args, **kwargs)
+
+    return locked_method
 
 
 class Proxy(LoggingConfigurable):
@@ -271,6 +287,7 @@ class Proxy(LoggingConfigurable):
         # wait after submitting them all
         await gen.multi(futures)
 
+    @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy."""
         if not routes:
