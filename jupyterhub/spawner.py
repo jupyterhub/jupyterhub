@@ -32,7 +32,7 @@ from traitlets import (
 
 from .objects import Server
 from .traitlets import Command, ByteSpecification, Callable
-from .utils import maybe_future, random_port, url_path_join, exponential_backoff
+from .utils import iterate_until, maybe_future, random_port, url_path_join, exponential_backoff
 
 
 class Spawner(LoggingConfigurable):
@@ -706,25 +706,10 @@ class Spawner(LoggingConfigurable):
         await yield_({
             "progress": 0,
             "message": "Server requested",
-            })
+        })
 
-        progress_iter = self.progress().__aiter__()
-        while True:
-            f = asyncio.ensure_future(progress_iter.__anext__())
-            await asyncio.wait(
-                [f, spawn_future],
-                return_when=asyncio.FIRST_COMPLETED)
-            if f.done():
-                try:
-                    await yield_(f.result())
-                except StopAsyncIteration:
-                    break
-            elif spawn_future.done():
-                # cancel event future to avoid warnings about
-                # unawaited tasks
-                if not f.cancelled():
-                    f.cancel()
-                break
+        async for event in iterate_until(spawn_future, self.progress()):
+            await yield_(event)
 
     @async_generator
     async def progress(self):

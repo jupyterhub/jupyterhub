@@ -19,6 +19,7 @@ import threading
 import uuid
 import warnings
 
+from async_generator import async_generator, yield_
 from tornado import gen, ioloop, web
 from tornado.platform.asyncio import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPError
@@ -445,3 +446,43 @@ def maybe_future(obj):
         return asyncio.wrap_future(obj)
     else:
         return to_asyncio_future(gen.maybe_future(obj))
+
+
+@async_generator
+async def iterate_until(deadline_future, generator):
+    """An async generator that yields items from a generator
+    until a deadline future resolves
+
+    This could *almost* be implemented as a context manager
+    like asyncio_timeout with a Future for the cutoff.
+
+    However, we want one distinction: continue yielding items
+    after the future is complete, as long as the are already finished.
+
+    Usage::
+
+        async for item in iterate_until(some_future, some_async_generator()):
+            print(item)
+
+    """
+    aiter = generator.__aiter__()
+    while True:
+        item_future = asyncio.ensure_future(aiter.__anext__())
+        await asyncio.wait(
+            [item_future, deadline_future],
+            return_when=asyncio.FIRST_COMPLETED)
+        if item_future.done():
+            try:
+                await yield_(item_future.result())
+            except StopAsyncIteration:
+                break
+        elif deadline_future.done():
+            # deadline is done *and* next item is not ready
+            # cancel item future to avoid warnings about
+            # unawaited tasks
+            if not item_future.cancelled():
+                item_future.cancel()
+            break
+        else:
+            # neither is done, this shouldn't happen
+            continue

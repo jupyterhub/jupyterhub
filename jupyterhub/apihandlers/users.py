@@ -10,7 +10,7 @@ from tornado import  web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
-from ..utils import admin_only, maybe_future, url_path_join
+from ..utils import admin_only, iterate_until, maybe_future, url_path_join
 from .base import APIHandler
 
 
@@ -339,28 +339,7 @@ class SpawnProgressAPIHandler(APIHandler):
                 raise web.HTTPError(400, "%s is not starting...", spawner._log_name)
 
         # retrieve progress events from the Spawner
-        progress_iter = spawner._generate_progress().__aiter__()
-        while True:
-            event_future = asyncio.ensure_future(progress_iter.__anext__())
-            await asyncio.wait(
-                [event_future, spawn_future],
-                return_when=asyncio.FIRST_COMPLETED)
-            if event_future.done():
-                try:
-                    event = event_future.result()
-                except StopAsyncIteration:
-                    break
-            elif spawn_future.done():
-                # spawn is done *and* event is not ready
-                # cancel event future to avoid warnings about
-                # unawaited tasks
-                if not event_future.cancelled():
-                    event_future.cancel()
-                break
-            else:
-                # neither is done, this shouldn't be possible
-                continue
-
+        async for event in iterate_until(spawn_future, spawner._generate_progress()):
             # don't allow events to sneakily set the 'ready' flag
             if 'ready' in event:
                 event.pop('ready', None)
