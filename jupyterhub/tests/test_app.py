@@ -176,6 +176,7 @@ def test_resume_spawners(tmpdir, request):
     def new_hub():
         app = MockHub()
         app.config.ConfigurableHTTPProxy.should_start = False
+        app.config.ConfigurableHTTPProxy.auth_token = 'unused'
         yield app.initialize([])
         return app
     app = yield new_hub()

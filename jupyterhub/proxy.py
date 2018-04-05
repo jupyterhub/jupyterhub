@@ -368,7 +368,7 @@ class ConfigurableHTTPProxy(Proxy):
     If the proxy should not be run as a subprocess of the Hub,
     (e.g. in a separate container),
     set::
-    
+
         c.ConfigurableHTTPProxy.should_start = False
     """
 
@@ -386,14 +386,10 @@ class ConfigurableHTTPProxy(Proxy):
 
     @default('auth_token')
     def _auth_token_default(self):
-        token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', None)
-        if not token:
-            self.log.warning('\n'.join([
-                "",
-                "Generating CONFIGPROXY_AUTH_TOKEN. Restarting the Hub will require restarting the proxy.",
-                "Set CONFIGPROXY_AUTH_TOKEN env or JupyterHub.proxy_auth_token config to avoid this message.",
-                "",
-            ]))
+        token = os.environ.get('CONFIGPROXY_AUTH_TOKEN', '')
+        if self.should_start and not token:
+            # generating tokens is fine if the Hub is starting the proxy
+            self.log.info("Generating new CONFIGPROXY_AUTH_TOKEN")
             token = utils.new_token()
         return token
 
@@ -405,6 +401,17 @@ class ConfigurableHTTPProxy(Proxy):
                       )
 
     _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        # check for required token if proxy is external
+        if not self.auth_token and not self.should_start:
+            raise ValueError(
+                "%s.auth_token or CONFIGPROXY_AUTH_TOKEN env is required"
+                " if Proxy.should_start is False" % self.__class__.__name__
+            )
+
+
 
     async def start(self):
         public_server = Server.from_url(self.public_url)
