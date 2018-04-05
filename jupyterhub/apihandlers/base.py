@@ -103,7 +103,7 @@ class APIHandler(BaseHandler):
             'name': spawner.name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
-            'pending': spawner.pending,
+            'pending': spawner.pending or None,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'progress_url': spawner._progress_url,
         }
@@ -119,7 +119,7 @@ class APIHandler(BaseHandler):
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
             'server': user.url if user.running else None,
-            'progress_url': user.spawner._progress_url if user.active else None,
+            'progress_url': user.progress_url(''),
             'pending': None,
             'created': isoformat(user.created),
             'started': None,
@@ -128,7 +128,7 @@ class APIHandler(BaseHandler):
         if '' in user.spawners:
             server_model = self.server_model(user.spawners[''])
             # copy some values from the default server to the user model
-            for key in ('started', 'pending', 'progress_url'):
+            for key in ('started', 'pending'):
                 model[key] = server_model[key]
 
         if self.allow_named_servers:

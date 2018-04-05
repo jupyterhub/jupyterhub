@@ -201,10 +201,17 @@ def normalize_user(user):
     """
     for key in ('created', 'last_activity', 'started'):
         user[key] = normalize_timestamp(user[key])
+    if user['progress_url']:
+        user['progress_url'] = re.sub(
+            r'.*/hub/api',
+            'PREFIX/hub/api',
+            user['progress_url'],
+        )
     if 'servers' in user:
         for server in user['servers'].values():
             for key in ('started', 'last_activity'):
                 server[key] = normalize_timestamp(server[key])
+            server['progress_url'] = re.sub(r'.*/hub/api', 'PREFIX/hub/api', server['progress_url'])
     return user
 
 def fill_user(model):
@@ -221,6 +228,7 @@ def fill_user(model):
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
     model.setdefault('started', None)
+    model.setdefault('progress_url', 'PREFIX/hub/api/users/{name}/server/progress'.format(**model))
     return model
 
 
