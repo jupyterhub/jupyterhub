@@ -26,7 +26,7 @@ Or run it manually by generating an API token and storing it in `JUPYTERHUB_API_
     python cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from functools import partial
 import json
 import os
@@ -39,6 +39,7 @@ except ImportError:
 import dateutil.parser
 
 from tornado.gen import coroutine, multi
+from tornado.locks import Semaphore
 from tornado.log import app_log
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.ioloop import IOLoop, PeriodicCallback
@@ -76,7 +77,7 @@ def format_td(td):
 
 
 @coroutine
-def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0):
+def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concurrency=10):
     """Shutdown idle single-user servers
 
     If cull_users, inactive *users* will be deleted as well.
@@ -90,7 +91,21 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0):
     )
     now = datetime.now(timezone.utc)
     client = AsyncHTTPClient()
-    resp = yield client.fetch(req)
+
+    if concurrency:
+        semaphore = Semaphore(concurrency)
+        @coroutine
+        def fetch(req):
+            """client.fetch wrapped in a semaphore to limit concurrency"""
+            yield semaphore.acquire()
+            try:
+                return (yield client.fetch(req))
+            finally:
+                yield semaphore.release()
+    else:
+        fetch = client.fetch
+
+    resp = yield fetch(req)
     users = json.loads(resp.body.decode('utf8', 'replace'))
     futures = []
 
@@ -154,7 +169,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0):
             method='DELETE',
             headers=auth_header,
         )
-        resp = yield client.fetch(req)
+        resp = yield fetch(req)
         if resp.code == 202:
             app_log.warning(
                 "Server %s is slow to stop",
@@ -238,7 +253,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0):
             method='DELETE',
             headers=auth_header,
         )
-        yield client.fetch(req)
+        yield fetch(req)
         return True
 
     for user in users:
@@ -269,6 +284,13 @@ if __name__ == '__main__':
            help="""Cull users in addition to servers.
                 This is for use in temporary-user cases such as tmpnb.""",
            )
+    define('concurrency', default=10,
+           help="""Limit the number of concurrent requests made to the Hub.
+
+                Deleting a lot of users at the same time can slow down the Hub,
+                so limit the number of API requests we have outstanding at any given time.
+                """
+           )
 
     parse_command_line()
     if not options.cull_every:
@@ -291,6 +313,7 @@ if __name__ == '__main__':
         inactive_limit=options.timeout,
         cull_users=options.cull_users,
         max_age=options.max_age,
+        concurrency=options.concurrency,
     )
     # schedule first cull immediately
     # because PeriodicCallback doesn't start until the end of the first interval
