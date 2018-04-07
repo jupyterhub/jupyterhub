@@ -979,28 +979,12 @@ def test_add_multi_group(app):
     r_names = [group['name'] for group in reply]
     assert names == r_names
 
-    # for name in names:
-    #     user = find_user(db, name)
-    #     assert user is not None
-    #     assert user.name == name
-    #     assert not user.admin
-
     # try to create the same groups again
     r = yield api_request(app, 'users', method='post',
                           data=json.dumps({'groups': names}),
                           )
     assert r.status_code == 400
 
-    # names = ['a', 'b', 'ab']
-
-    # # try to create the same users again
-    # r = yield api_request(app, 'users', method='post',
-    #                       data=json.dumps({'usernames': names}),
-    #                       )
-    # assert r.status_code == 201
-    # reply = r.json()
-    # r_names = [user['name'] for user in reply]
-    # assert r_names == ['ab']
 
 @mark.group
 @mark.gen_test
