@@ -4,11 +4,11 @@ The pages of the JupyterHub application are generated from [Jinja](http://jinja.
 
 ## Custom Templates
 
-JupyterHub will look for custom templates in all of the paths in the `JupyterHub.template_paths` configuration option, falling back on the [default templates](https://github.com/jupyterhub/jupyterhub/tree/master/share/jupyter/hub/templates) if no custom template with that name is found.  (This fallback behavior is new in version 0.9; previous versions searched only those paths explicitly included in `template_paths`.)  This means you can override as many or as few templates as you desire.
+JupyterHub will look for custom templates in all of the paths in the `JupyterHub.template_paths` configuration option, falling back on the [default templates](https://github.com/jupyterhub/jupyterhub/tree/master/share/jupyterhub/templates) if no custom template with that name is found.  (This fallback behavior is new in version 0.9; previous versions searched only those paths explicitly included in `template_paths`.)  This means you can override as many or as few templates as you desire.
 
 ## Extending Templates
 
-Jinja provides a mechanism to [extend templates](http://jinja.pocoo.org/docs/2.10/templates/#template-inheritance).  A base template can define a `block`, and child templates can replace or supplement the material in the block.  The [JupyterHub templates](https://github.com/jupyterhub/jupyterhub/tree/master/share/jupyter/hub/templates) make extensive use of this feature, which allows you to customize parts of the interface easily.
+Jinja provides a mechanism to [extend templates](http://jinja.pocoo.org/docs/2.10/templates/#template-inheritance).  A base template can define a `block`, and child templates can replace or supplement the material in the block.  The [JupyterHub templates](https://github.com/jupyterhub/jupyterhub/tree/master/share/jupyterhub/templates) make extensive use of this feature, which allows you to customize parts of the interface easily.
 
 In general, a child template can extend a base template, `base.html`, by beginning with
 ```
