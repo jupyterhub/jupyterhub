@@ -56,7 +56,7 @@ def io_loop(request):
 
 
 @fixture(autouse=True)
-def cleanup_after(request):
+def cleanup_after(request, io_loop):
     """function-scoped fixture to shutdown user servers
 
     allows cleanup of servers between tests
@@ -68,12 +68,12 @@ def cleanup_after(request):
         if not MockHub.initialized():
             return
         app = MockHub.instance()
-        loop = asyncio.new_event_loop()
         for uid, user in app.users.items():
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
-                    loop.run_until_complete(app.proxy.delete_user(user, name))
-                    loop.run_until_complete(user.stop(name))
+                    print('closing', user)
+                    io_loop.run_sync(lambda: app.proxy.delete_user(user, name))
+                    io_loop.run_sync(lambda: user.stop(name))
 
 
 @fixture(scope='module')
