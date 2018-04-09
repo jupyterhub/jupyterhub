@@ -347,27 +347,24 @@ class SpawnProgressAPIHandler(APIHandler):
                     event.pop('ready', None)
                 await self.send_event(event)
 
-        # progress finished, check if we are still pending
-        if spawner._spawn_pending:
-            # wait for spawn_future to complete
-            # (ignore errors, which will be logged elsewhere)
-            await asyncio.wait([spawn_future])
+        # progress finished, wait for spawn to actually resolve,
+        # in case progress finished early
+        # (ignore errors, which will be logged elsewhere)
+        await asyncio.wait([spawn_future])
 
         # progress and spawn finished, check if spawn succeeded
         if spawner.ready:
             # spawner is ready, signal completion and redirect
             self.log.info("Server %s is ready", spawner._log_name)
             await self.send_event(ready_event)
-            return
         else:
             # what happened? Maybe spawn failed?
-            f = spawner._spawn_future
+            f = spawn_future
             if f and f.done() and f.exception():
                 failed_event['message'] = "Spawn failed: %s" % f.exception()
             else:
                 self.log.warning("Server %s didn't start for unknown reason", spawner._log_name)
             await self.send_event(failed_event)
-            return
 
 
 default_handlers = [
