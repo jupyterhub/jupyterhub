@@ -697,11 +697,8 @@ class BaseHandler(RequestHandler):
         try:
             await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
         except gen.TimeoutError:
-            if spawner._stop_pending:
-                # hit timeout, but stop is still pending
-                self.log.warning("User %s:%s server is slow to stop", user.name, name)
-            else:
-                raise
+            # hit timeout, but stop is still pending
+            self.log.warning("User %s:%s server is slow to stop", user.name, name)
 
     #---------------------------------------------------------------
     # template rendering
