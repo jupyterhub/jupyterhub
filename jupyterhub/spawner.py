@@ -1096,6 +1096,7 @@ class LocalProcessSpawner(Spawner):
             if self.ip:
                 self.server.ip = self.ip
             self.server.port = self.port
+            self.db.commit()
         return (self.ip or '127.0.0.1', self.port)
 
     async def poll(self):

@@ -406,6 +406,7 @@ class User:
             if ip_port:
                 # get ip, port info from return value of start()
                 server.ip, server.port = ip_port
+                db.commit()
             else:
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
