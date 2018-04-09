@@ -696,7 +696,7 @@ def next_event(it):
 
 
 @mark.gen_test
-def test_spawn_progress(request, app, no_patience, slow_spawn):
+def test_progress(request, app, no_patience, slow_spawn):
     db = app.db
     name = 'martin'
     app_user = add_user(db, app=app, name=name)
@@ -729,7 +729,7 @@ def test_spawn_progress(request, app, no_patience, slow_spawn):
 
 
 @mark.gen_test
-def test_spawn_progress_not_started(request, app):
+def test_progress_not_started(request, app):
     db = app.db
     name = 'nope'
     app_user = add_user(db, app=app, name=name)
@@ -742,7 +742,7 @@ def test_spawn_progress_not_started(request, app):
 
 
 @mark.gen_test
-def test_spawn_progress_not_found(request, app):
+def test_progress_not_found(request, app):
     db = app.db
     name = 'noserver'
     r = yield api_request(app, 'users', 'nosuchuser', 'server/progress')
@@ -753,7 +753,7 @@ def test_spawn_progress_not_found(request, app):
 
 
 @mark.gen_test
-def test_spawn_progress_ready(request, app):
+def test_progress_ready(request, app):
     """Test progress API when spawner is already started
 
     e.g. a race between requesting progress and progress already being complete
@@ -775,11 +775,8 @@ def test_spawn_progress_ready(request, app):
 
 
 @mark.gen_test
-def test_spawn_progress_bad(request, app, no_patience, bad_spawn):
-    """Test progress API when spawner is already started
-
-    e.g. a race between requesting progress and progress already being complete
-    """
+def test_progress_bad(request, app, no_patience, bad_spawn):
+    """Test progress API when spawner has already failed"""
     db = app.db
     name = 'simon'
     app_user = add_user(db, app=app, name=name)
@@ -790,6 +787,31 @@ def test_spawn_progress_bad(request, app, no_patience, bad_spawn):
     request.addfinalizer(r.close)
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt == {
+        'progress': 100,
+        'failed': True,
+        'message': "Spawn failed: I don't work!",
+    }
+
+
+@mark.gen_test
+def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
+    """Test progress API when spawner fails while watching"""
+    db = app.db
+    name = 'eugene'
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 202
+    r = yield api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 0
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 50
     evt = yield ex.submit(next_event, line_iter)
     assert evt == {
         'progress': 100,
