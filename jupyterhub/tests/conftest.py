@@ -76,6 +76,7 @@ def cleanup_after(request, io_loop):
                     except HTTPError:
                         pass
                     io_loop.run_sync(lambda: user.stop(name))
+        app.db.commit()
 
 
 @fixture(scope='module')
