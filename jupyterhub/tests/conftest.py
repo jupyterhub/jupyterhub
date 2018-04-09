@@ -3,11 +3,12 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import os
 import logging
 from getpass import getuser
 from subprocess import TimeoutExpired
-import time
+
 from unittest import mock
 from pytest import fixture, raises
 from tornado import ioloop, gen
@@ -24,6 +25,7 @@ import jupyterhub.services.service
 
 # global db session object
 _db = None
+
 
 @fixture
 def db():
@@ -51,6 +53,26 @@ def io_loop(request):
 
     request.addfinalizer(_close)
     return io_loop
+
+
+@fixture(autouse=True)
+def cleanup_after(request):
+    """function-scoped fixture to shutdown user servers
+
+    allows cleanup of servers between tests
+    without having to launch a whole new app
+    """
+    try:
+        yield
+    finally:
+        if not MockHub.initialized():
+            return
+        app = MockHub.instance()
+        loop = asyncio.new_event_loop()
+        for uid, user in app.users.items():
+            for name, spawner in list(user.spawners.items()):
+                if spawner.active:
+                    loop.run_until_complete(user.stop(name))
 
 
 @fixture(scope='module')
