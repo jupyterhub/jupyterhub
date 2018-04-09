@@ -798,27 +798,48 @@ def test_spawn_progress_bad(request, app, no_patience, bad_spawn):
     }
 
 
+@async_generator
+async def progress_forever():
+    """progress function that yields messages forever"""
+    for i in range(1, 10):
+        await yield_({
+            'progress': i,
+            'message': 'Stage %s' % i,
+        })
+        # wait a long time before the next event
+        await gen.sleep(10)
+
+
+if sys.version_info >= (3, 6):
+    # additional progress_forever defined as native
+    # async generator
+    # to test for issues with async_generator wrappers
+    exec("""
+async def progress_forever_native():
+    for i in range(1, 10):
+        yield {
+            'progress': i,
+            'message': 'Stage %s' % i,
+        }
+        # wait a long time before the next event
+        await gen.sleep(10)
+""", globals())
+
+
 @mark.gen_test
 def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
     """Progress events stop when Spawner finishes
 
     even if progress iterator is still going.
     """
-
-    @async_generator
-    async def progress_forever():
-        for i in range(1, 10):
-            await yield_({
-                'progress': i,
-                'message': 'Stage %s' % i,
-            })
-            # wait a long time before the next event
-            await gen.sleep(10)
-
     db = app.db
     name = 'geddy'
     app_user = add_user(db, app=app, name=name)
-    app_user.spawner.progress = progress_forever
+    if sys.version_info >= (3, 6):
+        # Python >= 3.6, try native async generator
+        app_user.spawner.progress = globals()['progress_forever_native']
+    else:
+        app_user.spawner.progress = progress_forever
     app_user.spawner.delay = 1
 
     r = yield api_request(app, 'users', name, 'server', method='post')
