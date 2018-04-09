@@ -3,7 +3,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import asyncio
 import os
 import logging
 from getpass import getuser
@@ -12,6 +11,7 @@ from subprocess import TimeoutExpired
 from unittest import mock
 from pytest import fixture, raises
 from tornado import ioloop, gen
+from tornado.httpclient import HTTPError
 
 from .. import orm
 from .. import crypto
@@ -71,8 +71,10 @@ def cleanup_after(request, io_loop):
         for uid, user in app.users.items():
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
-                    print('closing', user)
-                    io_loop.run_sync(lambda: app.proxy.delete_user(user, name))
+                    try:
+                        io_loop.run_sync(lambda: app.proxy.delete_user(user, name))
+                    except HTTPError:
+                        pass
                     io_loop.run_sync(lambda: user.stop(name))
 
 
