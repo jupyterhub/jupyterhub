@@ -349,7 +349,7 @@ class SpawnProgressAPIHandler(APIHandler):
         if spawner._spawn_pending:
             # wait for spawn_future to complete
             # (ignore errors, which will be logged elsewhere)
-            await asyncio.wait(spawn_future)
+            await asyncio.wait([spawn_future])
 
         # progress and spawn finished, check if spawn succeeded
         if spawner.ready:
