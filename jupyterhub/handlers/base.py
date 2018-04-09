@@ -135,11 +135,15 @@ class BaseHandler(RequestHandler):
             "report-uri " + self.csp_report_uri,
         ])
 
+    def get_content_type(self):
+        return 'text/html'
+
     def set_default_headers(self):
         """
         Set any headers passed as tornado_settings['headers'].
 
         By default sets Content-Security-Policy of frame-ancestors 'self'.
+        Also responsible for setting content-type header
         """
         # wrap in HTTPHeaders for case-insensitivity
         headers = HTTPHeaders(self.settings.get('headers', {}))
@@ -152,6 +156,7 @@ class BaseHandler(RequestHandler):
             self.set_header('Access-Control-Allow-Headers', 'accept, content-type, authorization')
         if 'Content-Security-Policy' not in headers:
             self.set_header('Content-Security-Policy', self.content_security_policy)
+        self.set_header('Content-Type', self.get_content_type())
 
     #---------------------------------------------------------------
     # Login and cookie-related
