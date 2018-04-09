@@ -555,7 +555,10 @@ class User:
             except Exception:
                 self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
             spawner._stop_pending = False
-            if not (spawner._spawn_future and spawner._spawn_future.exception()):
+            if not (
+                spawner._spawn_future and
+                (not spawner._spawn_future.done() or spawner._spawn_future.exception())
+            ):
                 # pop Spawner *unless* it's stopping due to an error
                 # because some pages serve latest-spawn error messages
                 self.spawners.pop(server_name)
