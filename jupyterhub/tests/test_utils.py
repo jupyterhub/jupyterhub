@@ -3,7 +3,7 @@
 import asyncio
 import pytest
 
-from async_generator import async_generator, yield_
+from async_generator import aclosing, async_generator, yield_
 from ..utils import iterate_until
 
 
@@ -37,8 +37,9 @@ async def test_iterate_until(io_loop, deadline, n, delay, expected):
     f = schedule_future(io_loop, delay=deadline)
 
     yielded = []
-    async for item in iterate_until(f, yield_n(n, delay=delay)):
-        yielded.append(item)
+    async with aclosing(iterate_until(f, yield_n(n, delay=delay))) as items:
+        async for item in items:
+            yielded.append(item)
     assert yielded == expected
 
 
@@ -52,6 +53,7 @@ async def test_iterate_until_ready_after_deadline(io_loop):
             await yield_(i)
 
     yielded = []
-    async for item in iterate_until(f, gen()):
-        yielded.append(item)
+    async with aclosing(iterate_until(f, gen())) as items:
+        async for item in items:
+            yielded.append(item)
     assert yielded == list(range(5))

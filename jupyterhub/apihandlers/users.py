@@ -6,6 +6,7 @@
 import asyncio
 import json
 
+from async_generator import aclosing
 from tornado import  web
 from tornado.iostream import StreamClosedError
 
@@ -339,11 +340,12 @@ class SpawnProgressAPIHandler(APIHandler):
                 raise web.HTTPError(400, "%s is not starting...", spawner._log_name)
 
         # retrieve progress events from the Spawner
-        async for event in iterate_until(spawn_future, spawner._generate_progress()):
-            # don't allow events to sneakily set the 'ready' flag
-            if 'ready' in event:
-                event.pop('ready', None)
-            await self.send_event(event)
+        async with aclosing(iterate_until(spawn_future, spawner._generate_progress())) as events:
+            async for event in events:
+                # don't allow events to sneakily set the 'ready' flag
+                if 'ready' in event:
+                    event.pop('ready', None)
+                await self.send_event(event)
 
         # progress finished, check if we are still pending
         if spawner._spawn_pending:

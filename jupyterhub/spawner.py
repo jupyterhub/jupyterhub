@@ -705,15 +705,15 @@ class Spawner(LoggingConfigurable):
         if not self._spawn_pending:
             raise RuntimeError("Spawn not pending, can't generate progress")
 
-        spawn_future = self._spawn_future
-
         await yield_({
             "progress": 0,
             "message": "Server requested",
         })
+        from async_generator import aclosing
 
-        async for event in iterate_until(spawn_future, self.progress()):
-            await yield_(event)
+        async with aclosing(self.progress()) as progress:
+            async for event in progress:
+                await yield_(event)
 
     @async_generator
     async def progress(self):

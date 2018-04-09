@@ -19,7 +19,7 @@ import threading
 import uuid
 import warnings
 
-from async_generator import async_generator, yield_
+from async_generator import aclosing, async_generator, yield_
 from tornado import gen, ioloop, web
 from tornado.platform.asyncio import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPError
@@ -469,24 +469,29 @@ async def iterate_until(deadline_future, generator):
             print(item)
 
     """
-    aiter = generator.__aiter__()
-    while True:
-        item_future = asyncio.ensure_future(aiter.__anext__())
-        await asyncio.wait(
-            [item_future, deadline_future],
-            return_when=asyncio.FIRST_COMPLETED)
-        if item_future.done():
-            try:
-                await yield_(item_future.result())
-            except StopAsyncIteration:
+    async with aclosing(generator.__aiter__()) as aiter:
+        while True:
+            item_future = asyncio.ensure_future(aiter.__anext__())
+            await asyncio.wait(
+                [item_future, deadline_future],
+                return_when=asyncio.FIRST_COMPLETED)
+            if item_future.done():
+                try:
+                    await yield_(item_future.result())
+                except (StopAsyncIteration, asyncio.CancelledError):
+                    break
+            elif deadline_future.done():
+                # deadline is done *and* next item is not ready
+                # cancel item future to avoid warnings about
+                # unawaited tasks
+                if not item_future.cancelled():
+                    item_future.cancel()
+                # resolve cancellation to avoid garbage collection issues
+                try:
+                    await item_future
+                except asyncio.CancelledError:
+                    pass
                 break
-        elif deadline_future.done():
-            # deadline is done *and* next item is not ready
-            # cancel item future to avoid warnings about
-            # unawaited tasks
-            if not item_future.cancelled():
-                item_future.cancel()
-            break
-        else:
-            # neither is done, this shouldn't happen
-            continue
+            else:
+                # neither is done, this shouldn't happen
+                continue
