@@ -72,6 +72,7 @@ def cleanup_after(request):
         for uid, user in app.users.items():
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
+                    loop.run_until_complete(app.proxy.delete_user(user, name))
                     loop.run_until_complete(user.stop(name))
 
 
