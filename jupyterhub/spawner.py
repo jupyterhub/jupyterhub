@@ -81,6 +81,14 @@ class Spawner(LoggingConfigurable):
         return False
 
     @property
+    def pending_messages(self):
+        """Return messages about pending spawn
+
+        Useful for informing the user why spawn is not finished.
+        """
+        return []
+
+    @property
     def ready(self):
         """Is this server ready to use?
 

@@ -12,7 +12,12 @@
       <p><i class="fa fa-spinner fa-pulse fa-fw fa-3x" aria-hidden="true"></i></p>
       <a role="button" id="refresh" class="btn btn-lg btn-primary" href="#">refresh</a>
     </div>
-  </div>
+    <pre>
+      {% for m in messages %}
+        {{ m }}
+      {% endfor %}
+    </pre>
+</div>
 </div>
 
 {% endblock %}
