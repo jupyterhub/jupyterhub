@@ -990,6 +990,26 @@ def test_groups_list(app):
 
 @mark.group
 @mark.gen_test
+def test_add_multi_group(app):
+    db = app.db
+    names = ['group1', 'group2']
+    r = yield api_request(app, 'groups', method='post',
+                          data=json.dumps({'groups': names}),
+                          )
+    assert r.status_code == 201
+    reply = r.json()
+    r_names = [group['name'] for group in reply]
+    assert names == r_names
+
+    # try to create the same groups again
+    r = yield api_request(app, 'users', method='post',
+                          data=json.dumps({'groups': names}),
+                          )
+    assert r.status_code == 400
+
+
+@mark.group
+@mark.gen_test
 def test_group_get(app):
     group = orm.Group.find(app.db, name='alphaflight')
     user = add_user(app.db, app=app, name='sasquatch')
