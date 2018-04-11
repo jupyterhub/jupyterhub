@@ -66,7 +66,7 @@ class UserListAPIHandler(APIHandler):
             raise web.HTTPError(400, msg)
 
         if not to_create:
-            raise web.HTTPError(400, "All %i users already exist" % len(usernames))
+            raise web.HTTPError(409, "All %i users already exist" % len(usernames))
 
         created = []
         for name in to_create:
@@ -122,7 +122,7 @@ class UserAPIHandler(APIHandler):
         data = self.get_json_body()
         user = self.find_user(name)
         if user is not None:
-            raise web.HTTPError(400, "User %s already exists" % name)
+            raise web.HTTPError(409, "User %s already exists" % name)
 
         user = self.user_from_username(name)
         if data:
