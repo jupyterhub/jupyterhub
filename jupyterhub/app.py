@@ -63,7 +63,12 @@ from .utils import (
     print_stacks, print_ps_info,
 )
 # classes for config
-from .auth import Authenticator, PAMAuthenticator
+from .auth import Authenticator
+if _mswindows:
+    from .auth import WinAuthenticator
+else:
+    from .auth import PAMAuthenticator
+
 from .crypto import CryptKeeper
 from .spawner import Spawner, LocalProcessSpawner
 from .objects import Hub, Server
@@ -222,7 +227,7 @@ class JupyterHub(Application):
         Spawner,
         LocalProcessSpawner,
         Authenticator,
-        PAMAuthenticator,
+        PAMAuthenticator if not _mswindows else WinAuthenticator,
         CryptKeeper,
     ])
 
@@ -557,7 +562,7 @@ class JupyterHub(Application):
     ).tag(config=True)
     _service_map = Dict()
 
-    authenticator_class = Type(PAMAuthenticator, Authenticator,
+    authenticator_class = Type(PAMAuthenticator if not _mswindows else WinAuthenticator, Authenticator,
         help="""Class for authenticating users.
 
         This should be a class with the following form:

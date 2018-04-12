@@ -30,6 +30,10 @@ from .traitlets import Command
 _mswindows = (os.name == "nt")
 
 if _mswindows:
+    import asyncio
+    import win32security
+    import pywintypes
+    import win32profile
     import win32net
 else:
     import grp
@@ -543,6 +547,120 @@ class LocalAuthenticator(Authenticator):
             err = p.stdout.read().decode('utf8', 'replace')
             raise RuntimeError("Failed to create system user %s: %s" % (name, err))
 
+
+class WinAuthenticator(LocalAuthenticator):
+    """Authenticate local Windows users"""
+    # Variable to store registry hive handle, which is not being loaded. It needs to be
+    # stored since UnloadUserProfiles requires a live registry hive handle to succeed.
+    _hreg = None
+
+    # run Windows Auth in a thread, since it can be slow
+    executor = Any()
+    @default('executor')
+    def _default_executor(self):
+        return ThreadPoolExecutor(1)
+    encoding = Unicode('utf8',
+        help="""
+        The text encoding to use when communicating with PAM
+        """
+    ).tag(config=True)
+
+    open_sessions = Bool(True,
+        help="""
+        Whether to load a user profile when spawners are started.
+
+        This may trigger things like creating USERPROFILE and APPDATA directories
+
+        If any errors are encountered when loading/unloading user profiles,
+        this is automatically set to False.
+        """
+    ).tag(config=True)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def normalize_username(self, username):
+        """Normalize the given username and return it
+
+        Apply `username_map` if it is set.
+        """
+        username = self.username_map.get(username, username)
+        return username
+
+    @run_on_executor
+    def authenticate(self, handler, data):
+        """Authenticate with Windows, and return the username if login is successful.
+
+        Return None otherwise.
+        """
+        try:
+            token = win32security.LogonUser(
+                data['username'],
+                ".",
+                data['password'],
+                win32security.LOGON32_LOGON_NETWORK,
+                win32security.LOGON32_PROVIDER_DEFAULT)
+        except win32security.error:
+            # Invalid User
+            return
+        else:
+            # Incorrect Password
+            if not token:
+                return
+            return {
+                'name': data['username'],
+                'auth_state': {
+                     # Detach so the underlying winhandle stays alive
+                    'auth_token': token.Detach(),
+                },
+            }
+
+    @run_on_executor
+    def pre_spawn_start(self, user, spawner):
+        """Load profile for user if so configured"""
+
+        if not self.open_sessions:
+            return
+        try:
+            loop = asyncio.new_event_loop()
+            auth_state = loop.run_until_complete(user.get_auth_state())
+            token = pywintypes.HANDLE(auth_state['auth_token'])
+
+            # Check if user has a roaming Profile
+            user_info = win32net.NetUserGetInfo(None, user.name, 4)
+            profilepath = user_info['profile']
+
+            # Loading the profile will create the USERPROFILE and APPDATA folders,
+            # if not present. To load the profile, the running process needs to have
+            # the SE_RESTORE_NAME and SE_BACKUP_NAME privileges.
+            self._hreg = win32profile.LoadUserProfile (
+                token,
+               {"UserName" : user.name, 'ProfilePath' : profilepath}
+            )
+        except Exception as exc:
+            self.log.warning("Failed to load user profile for %s: %s", user.name, exc)
+            self.log.warning("Disabling user profile from now on.")
+            self.open_sessions = False
+        # Detach so the underlying winhandle stays alive
+        token.Detach()
+
+    @run_on_executor
+    def post_spawn_stop(self, user, spawner):
+        """Unload profile for user if we were configured to opened one"""
+
+        if not self.open_sessions:
+            return
+        try:
+            loop = asyncio.new_event_loop()
+            auth_state = loop.run_until_complete(user.get_auth_state())
+            token = pywintypes.HANDLE(auth_state['auth_token'])
+            win32profile.UnloadUserProfile (token, self._hreg)
+        except Exception as exc:
+            self.log.warning("Failed to unload user profile for %s: %s", user.name, exc)
+            self.log.warning("Disabling user profile from now on.")
+            self.open_sessions = False
+        # Detach so token stays valid
+        token.Detach()
 
 class PAMAuthenticator(LocalAuthenticator):
     """Authenticate local UNIX users with PAM"""
