@@ -41,6 +41,7 @@ from .objects import Server
 from . import utils
 from .utils import url_path_join
 
+_mswindows = (os.name == "nt")
 
 def _one_at_a_time(method):
     """decorator to limit an async method to be called only once
@@ -483,7 +484,7 @@ class ConfigurableHTTPProxy(Proxy):
                              "  I hope there is SSL termination happening somewhere else...")
         self.log.info("Starting proxy @ %s", public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
-        shell = os.name == 'nt'
+        shell = _mswindows
         try:
             self.proxy_process = Popen(cmd, env=env, start_new_session=True, shell=shell)
         except FileNotFoundError as e:
