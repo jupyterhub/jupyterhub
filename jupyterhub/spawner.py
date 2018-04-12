@@ -5,6 +5,7 @@ Contains base Spawner class & default implementation
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import errno
 import json
 import os
@@ -16,9 +17,11 @@ import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
+# FIXME: remove when we drop Python 3.5 support
+from async_generator import async_generator, yield_
+
 from sqlalchemy import inspect
 
-from tornado import gen, concurrent
 from tornado.ioloop import PeriodicCallback
 
 from traitlets.config import LoggingConfigurable
@@ -29,7 +32,7 @@ from traitlets import (
 
 from .objects import Server
 from .traitlets import Command, ByteSpecification, Callable
-from .utils import maybe_future, random_port, url_path_join, exponential_backoff
+from .utils import iterate_until, maybe_future, random_port, url_path_join, exponential_backoff
 
 
 class Spawner(LoggingConfigurable):
@@ -47,7 +50,7 @@ class Spawner(LoggingConfigurable):
     is created for each user. If there are 20 JupyterHub users, there will be 20
     instances of the subclass.
     """
-    
+
     # private attributes for tracking status
     _spawn_pending = False
     _start_pending = False
@@ -264,11 +267,10 @@ class Spawner(LoggingConfigurable):
         """Get the options form
 
         Returns:
-          (Future(str)): the content of the options form presented to the user
+          Future (str): the content of the options form presented to the user
           prior to starting a Spawner.
 
-        .. versionadded:: 0.9.0
-            Introduced.
+        .. versionadded:: 0.9
         """
         if callable(self.options_form):
             options_form = await maybe_future(self.options_form(self))
@@ -690,6 +692,58 @@ class Spawner(LoggingConfigurable):
         if self.pre_spawn_hook:
             return self.pre_spawn_hook(self)
 
+    @property
+    def _progress_url(self):
+        return self.user.progress_url(self.name)
+
+    @async_generator
+    async def _generate_progress(self):
+        """Private wrapper of progress generator
+
+        This method is always an async generator and will always yield at least one event.
+        """
+        if not self._spawn_pending:
+            raise RuntimeError("Spawn not pending, can't generate progress")
+
+        await yield_({
+            "progress": 0,
+            "message": "Server requested",
+        })
+        from async_generator import aclosing
+
+        async with aclosing(self.progress()) as progress:
+            async for event in progress:
+                await yield_(event)
+
+    @async_generator
+    async def progress(self):
+        """Async generator for progress events
+
+        Must be an async generator
+
+        For Python 3.5-compatibility, use the async_generator package
+
+        Should yield messages of the form:
+
+        ::
+
+          {
+            "progress": 80, # integer, out of 100
+            "message": text, # text message (will be escaped for HTML)
+            "html_message": html_text, # optional html-formatted message (may have links)
+          }
+
+        In HTML contexts, html_message will be displayed instead of message if present.
+        Progress will be updated if defined.
+        To update messages without progress omit the progress field.
+
+        .. versionadded:: 0.9
+        """
+        await yield_({
+            "progress": 50,
+            "message": "Spawning server...",
+        })
+
     async def start(self):
         """Start the single-user server
 
@@ -1042,6 +1096,7 @@ class LocalProcessSpawner(Spawner):
             if self.ip:
                 self.server.ip = self.ip
             self.server.port = self.port
+            self.db.commit()
         return (self.ip or '127.0.0.1', self.port)
 
     async def poll(self):

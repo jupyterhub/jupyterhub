@@ -320,6 +320,15 @@ class User:
         else:
             return self.base_url
 
+    def progress_url(self, server_name=''):
+        """API URL for progress endpoint for a server with a given name"""
+        url_parts = [self.settings['hub'].base_url, 'api/users', self.escaped_name]
+        if server_name:
+            url_parts.extend(['servers', server_name, 'progress'])
+        else:
+            url_parts.extend(['server/progress'])
+        return url_path_join(*url_parts)
+
     async def spawn(self, server_name='', options=None):
         """Start the user's spawner
 
@@ -397,6 +406,7 @@ class User:
             if ip_port:
                 # get ip, port info from return value of start()
                 server.ip, server.port = ip_port
+                db.commit()
             else:
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
@@ -545,5 +555,10 @@ class User:
             except Exception:
                 self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
             spawner._stop_pending = False
-            # pop the Spawner object
-            self.spawners.pop(server_name)
+            if not (
+                spawner._spawn_future and
+                (not spawner._spawn_future.done() or spawner._spawn_future.exception())
+            ):
+                # pop Spawner *unless* it's stopping due to an error
+                # because some pages serve latest-spawn error messages
+                self.spawners.pop(server_name)

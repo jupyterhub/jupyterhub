@@ -18,10 +18,6 @@ class APIHandler(BaseHandler):
     def content_security_policy(self):
         return '; '.join([super().content_security_policy, "default-src 'none'"])
 
-    def set_default_headers(self):
-        super().set_default_headers()
-        self.set_header('Content-Type', 'application/json')
-
     def check_referer(self):
         """Check Origin for cross-site API requests.
 
@@ -94,16 +90,21 @@ class APIHandler(BaseHandler):
             'message': message or status_message,
         }))
 
+    def server_model(self, spawner):
+        """Get the JSON model for a Spawner"""
+        return {
+            'name': spawner.name,
+            'last_activity': isoformat(spawner.orm_spawner.last_activity),
+            'started': isoformat(spawner.orm_spawner.started),
+            'pending': spawner.pending or None,
+            'url': url_path_join(spawner.user.url, spawner.name, '/'),
+            'progress_url': spawner._progress_url,
+        }
+
     def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
-
-
-        last_activity = user.last_activity
-        # don't call isoformat if last_activity is None
-        if last_activity:
-            last_activity = isoformat(last_activity)
 
         model = {
             'kind': 'user',
@@ -111,33 +112,23 @@ class APIHandler(BaseHandler):
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
             'server': user.url if user.running else None,
+            'progress_url': user.progress_url(''),
             'pending': None,
             'created': isoformat(user.created),
-            'last_activity': last_activity,
             'started': None,
+            'last_activity': isoformat(user.last_activity),
         }
         if '' in user.spawners:
-            spawner = user.spawners['']
-            model['pending'] = spawner.pending or None
-            if spawner.active and spawner.orm_spawner.started:
-                model['started'] = isoformat(spawner.orm_spawner.started)
+            server_model = self.server_model(user.spawners[''])
+            # copy some values from the default server to the user model
+            for key in ('started', 'pending'):
+                model[key] = server_model[key]
 
         if self.allow_named_servers:
             servers = model['servers'] = {}
             for name, spawner in user.spawners.items():
                 if spawner.ready:
-                    last_activity = spawner.orm_spawner.last_activity
-                    if last_activity:
-                        last_activity = isoformat(last_activity)
-                    servers[name] = s = {
-                        'name': name,
-                        'last_activity': last_activity,
-                        'started': isoformat(spawner.orm_spawner.started),
-                    }
-                    if spawner.pending:
-                        s['pending'] = spawner.pending
-                    if spawner.server:
-                        s['url'] = url_path_join(user.url, name, '/')
+                    servers[name] = self.server_model(spawner)
         return model
 
     def group_model(self, group):

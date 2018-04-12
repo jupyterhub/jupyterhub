@@ -110,9 +110,6 @@ def test_spawn_redirect(app):
     cookies = yield app.login_user(name)
     u = app.users[orm.User.find(app.db, name)]
 
-    # ensure wash's server isn't running:
-    r = yield api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
-    r.raise_for_status()
     status = yield u.spawner.poll()
     assert status is not None
 

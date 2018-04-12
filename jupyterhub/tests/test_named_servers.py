@@ -41,6 +41,8 @@ def test_default_server(app, named_servers):
                 'started': TIMESTAMP,
                 'last_activity': TIMESTAMP,
                 'url': user.url,
+                'pending': None,
+                'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(username),
             },
         },
     })
@@ -96,6 +98,9 @@ def test_create_named_server(app, named_servers):
                 'started': TIMESTAMP,
                 'last_activity': TIMESTAMP,
                 'url': url_path_join(user.url, name, '/'),
+                'pending': None,
+                'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
+                    username, servername),
             }
             for name in [servername]
         },
@@ -124,13 +129,7 @@ def test_delete_named_server(app, named_servers):
     assert user_model == fill_user({
         'name': username,
         'auth_state': None,
-        'servers': {
-            name: {
-                'name': name,
-                'url': url_path_join(user.url, name, '/'),
-            }
-            for name in []
-        },
+        'servers': {},
     })
 
 @pytest.mark.gen_test

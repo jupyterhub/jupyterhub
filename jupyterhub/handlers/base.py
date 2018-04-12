@@ -135,11 +135,15 @@ class BaseHandler(RequestHandler):
             "report-uri " + self.csp_report_uri,
         ])
 
+    def get_content_type(self):
+        return 'text/html'
+
     def set_default_headers(self):
         """
         Set any headers passed as tornado_settings['headers'].
 
         By default sets Content-Security-Policy of frame-ancestors 'self'.
+        Also responsible for setting content-type header
         """
         # wrap in HTTPHeaders for case-insensitivity
         headers = HTTPHeaders(self.settings.get('headers', {}))
@@ -152,6 +156,7 @@ class BaseHandler(RequestHandler):
             self.set_header('Access-Control-Allow-Headers', 'accept, content-type, authorization')
         if 'Content-Security-Policy' not in headers:
             self.set_header('Content-Security-Policy', self.content_security_policy)
+        self.set_header('Content-Type', self.get_content_type())
 
     #---------------------------------------------------------------
     # Login and cookie-related
@@ -692,11 +697,8 @@ class BaseHandler(RequestHandler):
         try:
             await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
         except gen.TimeoutError:
-            if spawner._stop_pending:
-                # hit timeout, but stop is still pending
-                self.log.warning("User %s:%s server is slow to stop", user.name, name)
-            else:
-                raise
+            # hit timeout, but stop is still pending
+            self.log.warning("User %s:%s server is slow to stop", user.name, name)
 
     #---------------------------------------------------------------
     # template rendering
@@ -891,7 +893,12 @@ class UserSpawnHandler(BaseHandler):
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template("spawn_pending.html", user=user)
+                url_parts = []
+                html = self.render_template(
+                    "spawn_pending.html",
+                    user=user,
+                    progress_url=spawner._progress_url,
+                )
                 self.finish(html)
                 return
 
@@ -919,7 +926,11 @@ class UserSpawnHandler(BaseHandler):
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template("spawn_pending.html", user=user)
+                html = self.render_template(
+                    "spawn_pending.html",
+                    user=user,
+                    progress_url=spawner._progress_url,
+                )
                 self.finish(html)
                 return
 

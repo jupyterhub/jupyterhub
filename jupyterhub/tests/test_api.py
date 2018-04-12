@@ -8,9 +8,9 @@ import sys
 from unittest import mock
 from urllib.parse import urlparse, quote
 import uuid
+from async_generator import async_generator, yield_
 
 from pytest import mark
-
 from tornado import gen
 
 import jupyterhub
@@ -201,10 +201,17 @@ def normalize_user(user):
     """
     for key in ('created', 'last_activity', 'started'):
         user[key] = normalize_timestamp(user[key])
+    if user['progress_url']:
+        user['progress_url'] = re.sub(
+            r'.*/hub/api',
+            'PREFIX/hub/api',
+            user['progress_url'],
+        )
     if 'servers' in user:
         for server in user['servers'].values():
             for key in ('started', 'last_activity'):
                 server[key] = normalize_timestamp(server[key])
+            server['progress_url'] = re.sub(r'.*/hub/api', 'PREFIX/hub/api', server['progress_url'])
     return user
 
 def fill_user(model):
@@ -221,6 +228,7 @@ def fill_user(model):
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
     model.setdefault('started', None)
+    model.setdefault('progress_url', 'PREFIX/hub/api/users/{name}/server/progress'.format(**model))
     return model
 
 
@@ -674,6 +682,204 @@ def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
     # spawn failed
     assert not user.running
     assert app.users.count_active_users()['pending'] == 0
+
+
+def next_event(it):
+    """read an event from an eventstream"""
+    while True:
+        try:
+            line = next(it)
+        except StopIteration:
+            return
+        if line.startswith('data:'):
+            return json.loads(line.split(':', 1)[1])
+
+
+@mark.gen_test
+def test_progress(request, app, no_patience, slow_spawn):
+    db = app.db
+    name = 'martin'
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = yield api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt == {
+        'progress': 0,
+        'message': 'Server requested',
+    }
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt == {
+        'progress': 50,
+        'message': 'Spawning server...',
+    }
+    evt = yield ex.submit(next_event, line_iter)
+    url = app_user.url
+    assert evt == {
+        'progress': 100,
+        'message': 'Server ready at {}'.format(url),
+        'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
+        'url': url,
+        'ready': True,
+    }
+
+
+@mark.gen_test
+def test_progress_not_started(request, app):
+    db = app.db
+    name = 'nope'
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = yield api_request(app, 'users', name, 'server', method='delete')
+    r.raise_for_status()
+    r = yield api_request(app, 'users', name, 'server/progress')
+    assert r.status_code == 404
+
+
+@mark.gen_test
+def test_progress_not_found(request, app):
+    db = app.db
+    name = 'noserver'
+    r = yield api_request(app, 'users', 'nosuchuser', 'server/progress')
+    assert r.status_code == 404
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server/progress')
+    assert r.status_code == 404
+
+
+@mark.gen_test
+def test_progress_ready(request, app):
+    """Test progress API when spawner is already started
+
+    e.g. a race between requesting progress and progress already being complete
+    """
+    db = app.db
+    name = 'saga'
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = yield api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 100
+    assert evt['ready']
+    assert evt['url'] == app_user.url
+
+
+@mark.gen_test
+def test_progress_bad(request, app, no_patience, bad_spawn):
+    """Test progress API when spawner has already failed"""
+    db = app.db
+    name = 'simon'
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 500
+    r = yield api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt == {
+        'progress': 100,
+        'failed': True,
+        'message': "Spawn failed: I don't work!",
+    }
+
+
+@mark.gen_test
+def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
+    """Test progress API when spawner fails while watching"""
+    db = app.db
+    name = 'eugene'
+    app_user = add_user(db, app=app, name=name)
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 202
+    r = yield api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 0
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 50
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt == {
+        'progress': 100,
+        'failed': True,
+        'message': "Spawn failed: I don't work!",
+    }
+
+
+@async_generator
+async def progress_forever():
+    """progress function that yields messages forever"""
+    for i in range(1, 10):
+        await yield_({
+            'progress': i,
+            'message': 'Stage %s' % i,
+        })
+        # wait a long time before the next event
+        await gen.sleep(10)
+
+
+if sys.version_info >= (3, 6):
+    # additional progress_forever defined as native
+    # async generator
+    # to test for issues with async_generator wrappers
+    exec("""
+async def progress_forever_native():
+    for i in range(1, 10):
+        yield {
+            'progress': i,
+            'message': 'Stage %s' % i,
+        }
+        # wait a long time before the next event
+        await gen.sleep(10)
+""", globals())
+
+
+@mark.gen_test
+def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
+    """Progress events stop when Spawner finishes
+
+    even if progress iterator is still going.
+    """
+    db = app.db
+    name = 'geddy'
+    app_user = add_user(db, app=app, name=name)
+    if sys.version_info >= (3, 6):
+        # Python >= 3.6, try native async generator
+        app_user.spawner.progress = globals()['progress_forever_native']
+    else:
+        app_user.spawner.progress = progress_forever
+    app_user.spawner.delay = 1
+
+    r = yield api_request(app, 'users', name, 'server', method='post')
+    r.raise_for_status()
+    r = yield api_request(app, 'users', name, 'server/progress', stream=True)
+    r.raise_for_status()
+    request.addfinalizer(r.close)
+    ex = async_requests.executor
+    line_iter = iter(r.iter_lines(decode_unicode=True))
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 0
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt == {
+        'progress': 1,
+        'message': 'Stage 1',
+    }
+    evt = yield ex.submit(next_event, line_iter)
+    assert evt['progress'] == 100
 
 
 @mark.gen_test

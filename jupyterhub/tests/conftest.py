@@ -7,10 +7,11 @@ import os
 import logging
 from getpass import getuser
 from subprocess import TimeoutExpired
-import time
+
 from unittest import mock
 from pytest import fixture, raises
 from tornado import ioloop, gen
+from tornado.httpclient import HTTPError
 
 from .. import orm
 from .. import crypto
@@ -24,6 +25,7 @@ import jupyterhub.services.service
 
 # global db session object
 _db = None
+
 
 @fixture
 def db():
@@ -51,6 +53,30 @@ def io_loop(request):
 
     request.addfinalizer(_close)
     return io_loop
+
+
+@fixture(autouse=True)
+def cleanup_after(request, io_loop):
+    """function-scoped fixture to shutdown user servers
+
+    allows cleanup of servers between tests
+    without having to launch a whole new app
+    """
+    try:
+        yield
+    finally:
+        if not MockHub.initialized():
+            return
+        app = MockHub.instance()
+        for uid, user in app.users.items():
+            for name, spawner in list(user.spawners.items()):
+                if spawner.active:
+                    try:
+                        io_loop.run_sync(lambda: app.proxy.delete_user(user, name))
+                    except HTTPError:
+                        pass
+                    io_loop.run_sync(lambda: user.stop(name))
+        app.db.commit()
 
 
 @fixture(scope='module')
