@@ -22,6 +22,7 @@ import asyncio
 from functools import wraps
 import json
 import os
+import psutil
 from subprocess import Popen
 from urllib.parse import quote
 
@@ -518,13 +519,25 @@ class ConfigurableHTTPProxy(Proxy):
         self._check_running_callback = pc
         pc.start()
 
+    def _kill_proc_tree(self, pid):
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            child.kill()
+        psutil.wait_procs(children, timeout=5)
+
     def stop(self):
         self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
         if self._check_running_callback is not None:
             self._check_running_callback.stop()
         if self.proxy_process.poll() is None:
             try:
-                self.proxy_process.terminate()
+                if not _mswindows:
+                    self.proxy_process.terminate()
+                else:
+                    # On Windows we spawned a shell on Popen, so we need to
+                    # terminate all child processes as well
+                    self._kill_proc_tree(self.proxy_process.pid)
             except Exception as e:
                 self.log.error("Failed to terminate proxy process: %s", e)
 
