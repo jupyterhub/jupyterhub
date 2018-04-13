@@ -365,7 +365,7 @@ def test_add_multi_user(app):
     r = yield api_request(app, 'users', method='post',
         data=json.dumps({'usernames': names}),
     )
-    assert r.status_code == 400
+    assert r.status_code == 409
 
     names = ['a', 'b', 'ab']
 
@@ -408,6 +408,19 @@ def test_add_user_bad(app):
     assert r.status_code == 400
     user = find_user(db, name)
     assert user is None
+
+
+@mark.user
+@mark.gen_test
+def test_add_user_duplicate(app):
+    db = app.db
+    name = 'user'
+    user = find_user(db, name)
+    # double-check that it exists
+    assert user is not None
+    r = yield api_request(app, 'users', name, method='post')
+    # special 409 conflict for creating a user that already exists
+    assert r.status_code == 409
 
 
 @mark.user
@@ -1211,7 +1224,7 @@ def test_add_multi_group(app):
     r = yield api_request(app, 'users', method='post',
                           data=json.dumps({'groups': names}),
                           )
-    assert r.status_code == 400
+    assert r.status_code == 409
 
 
 @mark.group
@@ -1260,7 +1273,7 @@ def test_group_create_delete(app):
 
     # create duplicate raises 400
     r = yield api_request(app, 'groups/omegaflight', method='post')
-    assert r.status_code == 400
+    assert r.status_code == 409
 
     r = yield api_request(app, 'groups/omegaflight', method='delete')
     assert r.status_code == 204
