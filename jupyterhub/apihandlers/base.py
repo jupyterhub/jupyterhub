@@ -101,6 +101,40 @@ class APIHandler(BaseHandler):
             'progress_url': spawner._progress_url,
         }
 
+    def token_model(self, token):
+        """Get the JSON model for an APIToken"""
+        if isinstance(token, orm.APIToken):
+            kind = 'api_token'
+            extra = {
+                'note': token.note,
+            }
+        elif isinstance(token, orm.OAuthAccessToken):
+            kind = 'oauth'
+            extra = {
+                'oauth_client': token.client.description or token.client.client_id,
+            }
+        else:
+            raise TypeError(
+                "token must be an APIToken or OAuthAccessToken, not %s"
+                % type(token))
+
+        if token.user:
+            owner_key = 'user'
+            owner = token.user.name
+
+        else:
+            owner_key = 'service'
+            owner = token.service.name
+
+        model = {
+            owner_key: owner,
+            'kind': kind,
+            'created': isoformat(token.created),
+            'last_activity': isoformat(token.last_activity),
+        }
+        model.update(extra)
+        return model
+
     def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
