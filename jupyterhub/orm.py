@@ -457,6 +457,19 @@ class OAuthAccessToken(Hashed, Base):
             prefix=self.prefix,
         )
 
+    @classmethod
+    def find(cls, db, token):
+        orm_token = super().find(db, token)
+        if orm_token and not orm_token.client_id:
+            app_log.warning(
+                "Deleting stale oauth token for %s with no client",
+                orm_token.user and orm_token.user.name,
+            )
+            db.delete(orm_token)
+            db.commit()
+            return
+        return orm_token
+
 
 class OAuthCode(Base):
     __tablename__ = 'oauth_codes'
