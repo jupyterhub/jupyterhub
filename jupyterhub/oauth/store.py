@@ -195,10 +195,10 @@ class ClientStore(HubDBMixin, oauth2.store.ClientStore):
                       redirect_uris=[orm_client.redirect_uri],
                       secret=HashComparable(orm_client.secret),
                       )
-    
-    def add_client(self, client_id, client_secret, redirect_uri):
+
+    def add_client(self, client_id, client_secret, redirect_uri, description=''):
         """Add a client
-        
+
         hash its client_secret before putting it in the database.
         """
         # clear existing clients with same ID
@@ -212,6 +212,7 @@ class ClientStore(HubDBMixin, oauth2.store.ClientStore):
             identifier=client_id,
             secret=hash_token(client_secret),
             redirect_uri=redirect_uri,
+            description=description,
         )
         self.db.add(orm_client)
         self.db.commit()
@@ -222,7 +223,7 @@ def make_provider(session_factory, url_prefix, login_url):
     token_store = AccessTokenStore(session_factory)
     code_store = AuthCodeStore(session_factory)
     client_store = ClientStore(session_factory)
-    
+
     provider = Provider(
         access_token_store=token_store,
         auth_code_store=code_store,

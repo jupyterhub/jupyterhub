@@ -1222,6 +1222,7 @@ class JupyterHub(Application):
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
+                    description="JupyterHub service %s" % service.name,
                 )
 
             self._service_map[name] = service

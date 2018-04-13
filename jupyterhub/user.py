@@ -381,6 +381,7 @@ class User:
             # containers that resume will be updated below
             client_store.add_client(client_id, api_token,
                                     url_path_join(self.url, server_name, 'oauth_callback'),
+                                    description="Server at %s" % url_path_join(self.url, server_name),
                                     )
         db.commit()
 
