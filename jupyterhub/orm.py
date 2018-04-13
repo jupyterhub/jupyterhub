@@ -19,8 +19,8 @@ from sqlalchemy import (
     DateTime, Enum
 )
 from sqlalchemy.ext.declarative import declarative_base, declared_attr
-from sqlalchemy.orm import sessionmaker, relationship
 from sqlalchemy.interfaces import PoolListener
+from sqlalchemy.orm import backref, sessionmaker, relationship
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
 from sqlalchemy import create_engine, Table
@@ -78,8 +78,8 @@ class Server(Base):
 
 # user:group many:many mapping table
 user_group_map = Table('user_group_map', Base.metadata,
-    Column('user_id', ForeignKey('users.id'), primary_key=True),
-    Column('group_id', ForeignKey('groups.id'), primary_key=True),
+    Column('user_id', ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('group_id', ForeignKey('groups.id', ondelete='CASCADE'), primary_key=True),
 )
 
 
@@ -129,7 +129,14 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
-    _orm_spawners = relationship("Spawner", backref="user")
+    _orm_spawners = relationship(
+        "Spawner",
+        backref="user",
+        cascade="all, delete-orphan",
+        # can't use passive-deletes on this one
+        # because we rely on orm-level delete
+        # for Spawner.server
+    )
     @property
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
@@ -138,7 +145,12 @@ class User(Base):
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, nullable=True)
 
-    api_tokens = relationship("APIToken", backref="user")
+    api_tokens = relationship(
+        "APIToken",
+        backref="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
     # We will need to figure something else out if/when we have multiple spawners per user
@@ -179,7 +191,7 @@ class Spawner(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
     server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
-    server = relationship(Server)
+    server = relationship(Server, cascade="all")
 
     state = Column(JSONDict)
     name = Column(Unicode(255))
@@ -212,11 +224,16 @@ class Service(Base):
     name = Column(Unicode(255), unique=True)
     admin = Column(Boolean, default=False)
 
-    api_tokens = relationship("APIToken", backref="service")
+    api_tokens = relationship(
+        "APIToken",
+        backref="service",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     # service-specific interface
     _server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
-    server = relationship(Server, primaryjoin=_server_id == Server.id)
+    server = relationship(Server, cascade='all')
     pid = Column(Integer)
 
     def new_api_token(self, token=None, generated=True, note=''):
@@ -312,13 +329,8 @@ class APIToken(Hashed, Base):
     """An API token"""
     __tablename__ = 'api_tokens'
 
-    @declared_attr
-    def user_id(cls):
-        return Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
-
-    @declared_attr
-    def service_id(cls):
-        return Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+    service_id = Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(255), unique=True)
@@ -419,7 +431,6 @@ class OAuthAccessToken(Hashed, Base):
     refresh_token = Column(Unicode(255))
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    user = relationship(User)
     service = None # for API-equivalence with APIToken
 
     # the browser session id associated with a given token
@@ -433,8 +444,9 @@ class OAuthAccessToken(Hashed, Base):
     last_activity = Column(DateTime, nullable=True)
 
     def __repr__(self):
-        return "<{cls}('{prefix}...', user='{user}'>".format(
+        return "<{cls}('{prefix}...', client_id={client_id!r}, user={user!r}>".format(
             cls=self.__class__.__name__,
+            client_id=self.client_id,
             user=self.user and self.user.name,
             prefix=self.prefix,
         )
