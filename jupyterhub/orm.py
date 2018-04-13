@@ -151,6 +151,12 @@ class User(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    oauth_tokens = relationship(
+        "OAuthAccessToken",
+        backref="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
     # We will need to figure something else out if/when we have multiple spawners per user
