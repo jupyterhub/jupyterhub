@@ -486,6 +486,7 @@ class OAuthClient(Base):
     __tablename__ = 'oauth_clients'
     id = Column(Integer, primary_key=True, autoincrement=True)
     identifier = Column(Unicode(255), unique=True)
+    description = Column(Unicode(1023))
     secret = Column(Unicode(255))
     redirect_uri = Column(Unicode(1023))
 
