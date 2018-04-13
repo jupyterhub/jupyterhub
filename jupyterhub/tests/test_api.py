@@ -1221,7 +1221,7 @@ def test_add_multi_group(app):
     assert names == r_names
 
     # try to create the same groups again
-    r = yield api_request(app, 'users', method='post',
+    r = yield api_request(app, 'groups', method='post',
                           data=json.dumps({'groups': names}),
                           )
     assert r.status_code == 409
