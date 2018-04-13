@@ -669,7 +669,7 @@ class Spawner(LoggingConfigurable):
 
         if self.port:
             args.append('--port=%i' % self.port)
-        elif self.server.port:
+        elif self.server and self.server.port:
             self.log.warning("Setting port from user.server is deprecated as of JupyterHub 0.7.")
             args.append('--port=%i' % self.server.port)
 
