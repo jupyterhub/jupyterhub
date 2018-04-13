@@ -11,6 +11,7 @@ from tornado import  web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
+from ..user import User
 from ..utils import admin_only, iterate_until, maybe_future, url_path_join
 from .base import APIHandler
 
@@ -187,6 +188,89 @@ class UserAPIHandler(APIHandler):
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(user_))
+
+
+class UserTokenListAPIHandler(APIHandler):
+    """API endpoint for listing/creating tokens"""
+    @admin_or_self
+    def get(self, name):
+        """Get tokens for a given user"""
+        user = self.find_user(name)
+        if not user:
+            raise web.HTTPError(404, "No such user: %s" % name)
+        api_tokens = []
+        def sort_key(token):
+            return token.last_activity or token.created
+        for token in sorted(user.api_tokens, key=sort_key):
+            api_tokens.append(self.token_model(token))
+        oauth_tokens = []
+        for token in sorted(user.oauth_tokens, key=sort_key):
+            oauth_tokens.append(self.token_model(token))
+        self.write(json.dumps({
+            'api_tokens': api_tokens,
+            'oauth_tokens': oauth_tokens,
+        }))
+
+    @admin_or_self
+    def post(self, name):
+        requester = self.get_current_user()
+        user = self.find_user(name)
+        if requester is not user and not requester.admin:
+            raise web.HTTPError(403, "Only admins can request tokens for other users")
+        if not user:
+            raise web.HTTPError(404, "No such user: %s" % name)
+        body = self.get_json_body()
+        if requester is not user:
+            kind = 'user' if isinstance(requester, User) else 'service'
+        note = (body or {}).get('note')
+        if not note:
+            note = "via api"
+            if requester is not user:
+                note += " by %s %s" % (kind, requester.name)
+
+        api_token = user.new_api_token(note=note)
+        if requester is not user:
+            self.log.info("%s %s requested API token for %s", kind.title(), requester.name, user.name)
+        else:
+            user_kind = 'user' if isinstance(user, User) else 'service'
+            self.log.info("%s %s requested new API token", user_kind.title(), user.name)
+        # retrieve the model
+        token_model = self.token_model(orm.APIToken.find(self.db, api_token))
+        token_model['token'] = api_token
+        self.write(json.dumps(token_model))
+
+
+class UserTokenAPIHandler(APIHandler):
+    """API endpoint for listing/creating tokens"""
+    @admin_or_self
+    def get(self, name, token):
+        """"""
+        user = self.find_user(name)
+        if not user:
+            raise web.HTTPError(404, "No such user: %s" % name)
+        orm_token = orm.APIToken.find(self.db, token)
+        if orm_token is None:
+            orm_token = orm.OAuthAccessToken.find(self.db, token)
+        if orm_token is None or orm_token.user is not user.orm_user:
+            raise web.HTTPError(404, "Token not found %s", orm_token)
+        self.write(json.dumps(self.token_model(orm_token)))
+
+    @admin_or_self
+    def delete(self, name, token):
+        """Delete a token"""
+        user = self.find_user(name)
+        if not user:
+            raise web.HTTPError(404, "No such user: %s" % name)
+        orm_token = orm.APIToken.find(self.db, token)
+        if orm_token is None:
+            orm_token = orm.OAuthAccessToken.find(self.db, token)
+        print(user)
+        if orm_token is None or orm_token.user is not user.orm_user:
+            raise web.HTTPError(404, "Token not found")
+        self.db.delete(orm_token)
+        self.db.commit()
+        self.set_header('Content-Type', 'text/plain')
+        self.set_status(204)
 
 
 class UserServerAPIHandler(APIHandler):
@@ -373,6 +457,8 @@ default_handlers = [
     (r"/api/users/([^/]+)", UserAPIHandler),
     (r"/api/users/([^/]+)/server", UserServerAPIHandler),
     (r"/api/users/([^/]+)/server/progress", SpawnProgressAPIHandler),
+    (r"/api/users/([^/]+)/tokens", UserTokenListAPIHandler),
+    (r"/api/users/([^/]+)/tokens/([^/]*)", UserTokenAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)", UserServerAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)/progress", SpawnProgressAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),

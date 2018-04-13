@@ -1096,7 +1096,7 @@ def test_cookie(app):
 
 
 @mark.gen_test
-def test_token(app):
+def test_check_token(app):
     name = 'book'
     user = add_user(app.db, app=app, name=name)
     token = user.new_api_token()
@@ -1113,7 +1113,7 @@ def test_token(app):
     ({}, 200),
     ({'Authorization': 'token bad'}, 403),
 ])
-def test_get_new_token(app, headers, status):
+def test_get_new_token_deprecated(app, headers, status):
     # request a new token
     r = yield api_request(app, 'authorizations', 'token',
         method='post',
@@ -1131,7 +1131,7 @@ def test_get_new_token(app, headers, status):
 
 
 @mark.gen_test
-def test_token_formdata(app):
+def test_token_formdata_deprecated(app):
     """Create a token for a user with formdata and no auth header"""
     data = {
         'username': 'fake',
@@ -1158,7 +1158,7 @@ def test_token_formdata(app):
     ('user', 'other', 403),
     ('user', 'user', 200),
 ])
-def test_token_as_user(app, as_user, for_user, status):
+def test_token_as_user_deprecated(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
@@ -1182,6 +1182,137 @@ def test_token_as_user(app, as_user, for_user, status):
     reply = r.json()
     assert reply['name'] == data['username']
 
+
+@mark.gen_test
+@mark.parametrize("headers, status, note", [
+    ({}, 200, 'test note'),
+    ({}, 200, ''),
+    ({'Authorization': 'token bad'}, 403, ''),
+])
+def test_get_new_token(app, headers, status, note):
+    if note:
+        body = json.dumps({'note': note})
+    else:
+        body = ''
+    # request a new token
+    r = yield api_request(app, 'users/admin/tokens',
+        method='post',
+        headers=headers,
+        data=body,
+    )
+    assert r.status_code == status
+    if status != 200:
+        return
+    # check the new-token reply
+    reply = r.json()
+    assert 'token' in reply
+    assert reply['user'] == 'admin'
+    assert reply['created']
+    assert 'last_activity' in reply
+    if note:
+        assert reply['note'] == note
+    else:
+        assert reply['note'] == 'via api'
+    token = reply['token']
+
+    # check the validity of the new token
+    r = yield api_request(app, 'users/admin/tokens', token)
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['user'] == 'admin'
+    assert reply['created']
+    assert 'last_activity' in reply
+    if note:
+        assert reply['note'] == note
+    else:
+        assert reply['note'] == 'via api'
+
+    # delete the token
+    r = yield api_request(app, 'users/admin/tokens', token,
+        method='delete')
+    assert r.status_code == 204
+    # verify deletion
+    r = yield api_request(app, 'users/admin/tokens', token)
+    assert r.status_code == 404
+
+
+@mark.gen_test
+@mark.parametrize("as_user, for_user, status", [
+    ('admin', 'other', 200),
+    ('admin', 'missing', 404),
+    ('user', 'other', 403),
+    ('user', 'user', 200),
+])
+def test_token_for_user(app, as_user, for_user, status):
+    # ensure both users exist
+    u = add_user(app.db, app, name=as_user)
+    if for_user != 'missing':
+        add_user(app.db, app, name=for_user)
+    data = {'username': for_user}
+    headers = {
+        'Authorization': 'token %s' % u.new_api_token(),
+    }
+    r = yield api_request(app, 'users', for_user, 'tokens',
+        method='post',
+        data=json.dumps(data),
+        headers=headers,
+    )
+    assert r.status_code == status
+    reply = r.json()
+    if status != 200:
+        return
+    assert 'token' in reply
+    token = reply['token']
+    r = yield api_request(app, 'users', for_user, 'tokens', token,
+        headers=headers,
+    )
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['user'] == for_user
+    if for_user == as_user:
+        note = 'via api'
+    else:
+        note = 'via api by user %s' % as_user
+    assert reply['note'] == note
+
+
+    # delete the token
+    r = yield api_request(app, 'users', for_user, 'tokens', token,
+        method='delete',
+        headers=headers,
+    )
+
+    assert r.status_code == 204
+    r = yield api_request(app, 'users', for_user, 'tokens', token,
+        headers=headers,
+    )
+    assert r.status_code == 404
+
+@mark.gen_test
+@mark.parametrize("as_user, for_user, status", [
+    ('admin', 'other', 200),
+    ('admin', 'missing', 404),
+    ('user', 'other', 403),
+    ('user', 'user', 200),
+])
+def test_token_list(app, as_user, for_user, status):
+    u = add_user(app.db, app, name=as_user)
+    if for_user != 'missing':
+        for_user_obj = add_user(app.db, app, name=for_user)
+    headers = {
+        'Authorization': 'token %s' % u.new_api_token(),
+    }
+    r = yield api_request(app, 'users', for_user, 'tokens',
+        headers=headers,
+    )
+    assert r.status_code == status
+    if status != 200:
+        return
+    reply = r.json()
+    assert sorted(reply) == ['api_tokens', 'oauth_tokens']
+    assert len(reply['api_tokens']) == len(for_user_obj.api_tokens)
+    assert all(token['user'] == for_user for token in reply['api_tokens'])
+    assert all(token['user'] == for_user for token in reply['oauth_tokens'])
 
 # ---------------
 # Group API tests
