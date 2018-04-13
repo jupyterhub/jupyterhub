@@ -22,6 +22,11 @@ class TokenAPIHandler(APIHandler):
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             orm_token = orm.OAuthAccessToken.find(self.db, token)
+            if orm_token and not orm_token.client_id:
+                self.log.warning("Deleting stale oauth token for %s", orm_token.user)
+                self.db.delete(orm_token)
+                self.db.commit()
+                orm_token = None
         if orm_token is None:
             raise web.HTTPError(404)
 
