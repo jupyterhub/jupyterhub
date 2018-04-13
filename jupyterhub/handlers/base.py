@@ -195,11 +195,10 @@ class BaseHandler(RequestHandler):
         orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             return None
-        else:
-            orm_token.last_activity = \
-                orm_token.user.last_activity = datetime.utcnow()
-            self.db.commit()
-            return self._user_from_orm(orm_token.user)
+        orm_token.last_activity = \
+            orm_token.user.last_activity = datetime.utcnow()
+        self.db.commit()
+        return self._user_from_orm(orm_token.user)
 
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""

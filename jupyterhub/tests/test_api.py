@@ -274,8 +274,12 @@ def test_get_self(app):
     # identifying user via oauth token works
     u = add_user(db, app=app, name='orpheus')
     token = uuid.uuid4().hex
+    oauth_client = orm.OAuthClient(identifier='eurydice')
+    db.add(oauth_client)
+    db.commit()
     oauth_token = orm.OAuthAccessToken(
         user=u.orm_user,
+        client_id=oauth_client.identifier,
         token=token,
         grant_type=orm.GrantType.authorization_code,
     )
