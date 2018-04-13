@@ -241,33 +241,49 @@ class UserTokenListAPIHandler(APIHandler):
 
 
 class UserTokenAPIHandler(APIHandler):
-    """API endpoint for listing/creating tokens"""
+    """API endpoint for retrieving/deleting individual tokens"""
+
+    def find_token_by_id(self, user, token_id):
+        """Find a token object by token-id key
+
+        Raises 404 if not found for any reason
+        (e.g. wrong owner, invalid key format, etc.)
+        """
+        not_found = "No such token %s for user %s" % (token_id, user.name)
+        prefix, id = token_id[0], token_id[1:]
+        if prefix == 'a':
+            Token = orm.APIToken
+        elif prefix == 'o':
+            Token = orm.OAuthAccessToken
+        else:
+            raise web.HTTPError(404, not_found)
+        try:
+            id = int(id)
+        except ValueError:
+            raise web.HTTPError(404, not_found)
+
+        orm_token = self.db.query(Token).filter(Token.id==id).first()
+        if orm_token is None or orm_token.user is not user.orm_user:
+            raise web.HTTPError(404, "Token not found %s", orm_token)
+        return orm_token
+
     @admin_or_self
-    def get(self, name, token):
+    def get(self, name, token_id):
         """"""
         user = self.find_user(name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
-        orm_token = orm.APIToken.find(self.db, token)
-        if orm_token is None:
-            orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None or orm_token.user is not user.orm_user:
-            raise web.HTTPError(404, "Token not found %s", orm_token)
-        self.write(json.dumps(self.token_model(orm_token)))
+        token = self.find_token_by_id(user, token_id)
+        self.write(json.dumps(self.token_model(token)))
 
     @admin_or_self
-    def delete(self, name, token):
+    def delete(self, name, token_id):
         """Delete a token"""
         user = self.find_user(name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
-        orm_token = orm.APIToken.find(self.db, token)
-        if orm_token is None:
-            orm_token = orm.OAuthAccessToken.find(self.db, token)
-        print(user)
-        if orm_token is None or orm_token.user is not user.orm_user:
-            raise web.HTTPError(404, "Token not found")
-        self.db.delete(orm_token)
+        token = self.find_token_by_id(user, token_id)
+        self.db.delete(token)
         self.db.commit()
         self.set_header('Content-Type', 'text/plain')
         self.set_status(204)

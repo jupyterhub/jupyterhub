@@ -193,6 +193,7 @@ def normalize_timestamp(ts):
         return
     return re.sub('\d(\.\d+)?', '0', ts)
 
+
 def normalize_user(user):
     """Normalize a user model for comparison
 
@@ -1095,6 +1096,12 @@ def test_cookie(app):
     assert reply['name'] == name
 
 
+def normalize_token(token):
+    for key in ('created', 'last_activity'):
+        token[key] = normalize_timestamp(token[key])
+    return token
+
+
 @mark.gen_test
 def test_check_token(app):
     name = 'book'
@@ -1213,26 +1220,23 @@ def test_get_new_token(app, headers, status, note):
         assert reply['note'] == note
     else:
         assert reply['note'] == 'via api'
-    token = reply['token']
+    token_id = reply['id']
+    initial = normalize_token(reply)
+    # pop token for later comparison
+    initial.pop('token')
 
     # check the validity of the new token
-    r = yield api_request(app, 'users/admin/tokens', token)
+    r = yield api_request(app, 'users/admin/tokens', token_id)
     r.raise_for_status()
     reply = r.json()
-    assert reply['user'] == 'admin'
-    assert reply['created']
-    assert 'last_activity' in reply
-    if note:
-        assert reply['note'] == note
-    else:
-        assert reply['note'] == 'via api'
+    assert normalize_token(reply) == initial
 
     # delete the token
-    r = yield api_request(app, 'users/admin/tokens', token,
+    r = yield api_request(app, 'users/admin/tokens', token_id,
         method='delete')
     assert r.status_code == 204
     # verify deletion
-    r = yield api_request(app, 'users/admin/tokens', token)
+    r = yield api_request(app, 'users/admin/tokens', token_id)
     assert r.status_code == 404
 
 
@@ -1262,8 +1266,8 @@ def test_token_for_user(app, as_user, for_user, status):
     if status != 200:
         return
     assert 'token' in reply
-    token = reply['token']
-    r = yield api_request(app, 'users', for_user, 'tokens', token,
+    token_id = reply['id']
+    r = yield api_request(app, 'users', for_user, 'tokens', token_id,
         headers=headers,
     )
     r.raise_for_status()
@@ -1277,13 +1281,13 @@ def test_token_for_user(app, as_user, for_user, status):
 
 
     # delete the token
-    r = yield api_request(app, 'users', for_user, 'tokens', token,
+    r = yield api_request(app, 'users', for_user, 'tokens', token_id,
         method='delete',
         headers=headers,
     )
 
     assert r.status_code == 204
-    r = yield api_request(app, 'users', for_user, 'tokens', token,
+    r = yield api_request(app, 'users', for_user, 'tokens', token_id,
         headers=headers,
     )
     assert r.status_code == 404
@@ -1313,6 +1317,15 @@ def test_token_list(app, as_user, for_user, status):
     assert len(reply['api_tokens']) == len(for_user_obj.api_tokens)
     assert all(token['user'] == for_user for token in reply['api_tokens'])
     assert all(token['user'] == for_user for token in reply['oauth_tokens'])
+    # validate individual token ids
+    for token in reply['api_tokens'] + reply['oauth_tokens']:
+        r = yield api_request(app, 'users', for_user, 'tokens', token['id'],
+            headers=headers,
+        )
+        r.raise_for_status()
+        reply = r.json()
+        assert normalize_token(reply) == normalize_token(token)
+
 
 # ---------------
 # Group API tests
