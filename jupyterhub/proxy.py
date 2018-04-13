@@ -15,9 +15,11 @@ Route Specification:
 - Route paths should be normalized to always start and end with '/'
 """
 
-# Copyright (c) IPython Development Team.
+# Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
+from functools import wraps
 import json
 import os
 from subprocess import Popen
@@ -30,15 +32,29 @@ from tornado.ioloop import PeriodicCallback
 
 from traitlets import (
     Any, Bool, Instance, Integer, Unicode,
-    default,
+    default, observe,
 )
 from jupyterhub.traitlets import Command
 
 from traitlets.config import LoggingConfigurable
 from .objects import Server
-from .orm import Service, User
 from . import utils
 from .utils import url_path_join
+
+
+def _one_at_a_time(method):
+    """decorator to limit an async method to be called only once
+
+    If multiple concurrent calls to this method are made,
+    queue them instead of allowing them to be concurrently outstanding.
+    """
+    method._lock = asyncio.Lock()
+    @wraps(method)
+    async def locked_method(*args, **kwargs):
+        async with method._lock:
+            return await method(*args, **kwargs)
+
+    return locked_method
 
 
 class Proxy(LoggingConfigurable):
@@ -251,7 +267,6 @@ class Proxy(LoggingConfigurable):
 
         Used when loading up a new proxy.
         """
-        db = self.db
         futures = []
         for service in service_dict.values():
             if service.server:
@@ -264,7 +279,6 @@ class Proxy(LoggingConfigurable):
 
         Used when loading up a new proxy.
         """
-        db = self.db
         futures = []
         for user in user_dict.values():
             for name, spawner in user.spawners.items():
@@ -273,20 +287,25 @@ class Proxy(LoggingConfigurable):
         # wait after submitting them all
         await gen.multi(futures)
 
+    @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy."""
         if not routes:
+            self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
+        # log info-level that we are starting the route-checking
+        # this may help diagnose performance issues,
+        # as we are about
+        self.log.info("Checking routes")
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
-        db = self.db
 
         good_routes = {'/'}
 
         hub = self.app.hub
         if '/' not in routes:
-            self.log.warning("Adding missing default route")
+            self.log.warning("Adding default route")
             futures.append(self.add_hub_route(hub))
         else:
             route = routes['/']
@@ -343,8 +362,7 @@ class Proxy(LoggingConfigurable):
                 self.log.warning("Deleting stale route %s", routespec)
                 futures.append(self.delete_route(routespec))
 
-        for f in futures:
-            await f
+        await gen.multi(futures)
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
@@ -374,6 +392,26 @@ class ConfigurableHTTPProxy(Proxy):
 
     proxy_process = Any()
     client = Instance(AsyncHTTPClient, ())
+
+    concurrency = Integer(
+        10,
+        config=True,
+        help="""
+        The number of requests allowed to be concurrently outstanding to the proxy
+
+        Limiting this number avoids potential timeout errors
+        by sending too many requests to update the proxy at once
+        """,
+        )
+    semaphore = Any()
+
+    @default('semaphore')
+    def _default_semaphore(self):
+        return asyncio.BoundedSemaphore(self.concurrency)
+
+    @observe('concurrency')
+    def _concurrency_changed(self, change):
+        self.semaphore = asyncio.BoundedSemaphore(change.new)
 
     debug = Bool(False, help="Add debug-level logging to the Proxy.", config=True)
     auth_token = Unicode(
@@ -461,9 +499,7 @@ class ConfigurableHTTPProxy(Proxy):
             if status is not None:
                 e = RuntimeError(
                     "Proxy failed to start with exit code %i" % status)
-                # py2-compatible `raise e from None`
-                e.__cause__ = None
-                raise e
+                raise e from None
 
         for server in (public_server, api_server):
             for i in range(10):
@@ -532,7 +568,7 @@ class ConfigurableHTTPProxy(Proxy):
             routespec = routespec + '/'
         return routespec
 
-    def api_request(self, path, method='GET', body=None, client=None):
+    async def api_request(self, path, method='GET', body=None, client=None):
         """Make an authenticated API request of the proxy."""
         client = client or AsyncHTTPClient()
         url = url_path_join(self.api_url, 'api/routes', path)
@@ -546,23 +582,25 @@ class ConfigurableHTTPProxy(Proxy):
                               self.auth_token)},
                           body=body,
                           )
+        async with self.semaphore:
+            result = await client.fetch(req)
+            return result
 
-        return client.fetch(req)
-
-    def add_route(self, routespec, target, data):
+    async def add_route(self, routespec, target, data):
         body = data or {}
         body['target'] = target
         body['jupyterhub'] = True
         path = self._routespec_to_chp_path(routespec)
-        return self.api_request(path,
-                                method='POST',
-                                body=body,
-                                )
+        await self.api_request(
+            path,
+            method='POST',
+            body=body,
+        )
 
-    def delete_route(self, routespec):
+    async def delete_route(self, routespec):
         path = self._routespec_to_chp_path(routespec)
         try:
-            return self.api_request(path, method='DELETE')
+            await self.api_request(path, method='DELETE')
         except HTTPError as e:
             if e.status_code == 404:
                 # Warn about 404s because something might be wrong

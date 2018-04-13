@@ -1667,7 +1667,6 @@ class JupyterHub(Application):
 
         await self.proxy.check_routes(self.users, self._service_map)
 
-
         if self.service_check_interval and any(s.url for s in self._service_map.values()):
             pc = PeriodicCallback(self.check_services_health, 1e3 * self.service_check_interval)
             pc.start()
