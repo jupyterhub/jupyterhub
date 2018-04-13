@@ -130,13 +130,51 @@ def upgrade_if_needed(db_url, backup=True, log=None):
     upgrade(db_url)
 
 
-def _alembic(*args):
+def shell(args=None):
+    """Start an IPython shell hooked up to the jupyerhub database"""
+    from .app import JupyterHub
+    hub = JupyterHub()
+    hub.load_config_file(hub.config_file)
+    db_url = hub.db_url
+    db = orm.new_session_factory(db_url, **hub.db_kwargs)()
+    ns = {
+        'db': db,
+        'db_url': db_url,
+        'orm': orm,
+    }
+
+    import IPython
+    IPython.start_ipython(args, user_ns=ns)
+
+
+def _alembic(args):
     """Run an alembic command with a temporary alembic.ini"""
-    with _temp_alembic_ini('sqlite:///jupyterhub.sqlite') as alembic_ini:
+    from .app import JupyterHub
+    hub = JupyterHub()
+    hub.load_config_file(hub.config_file)
+    db_url = hub.db_url
+    with _temp_alembic_ini(db_url) as alembic_ini:
         check_call(
-            ['alembic', '-c', alembic_ini] + list(args)
+            ['alembic', '-c', alembic_ini] + args
         )
 
 
+def main(args=None):
+    if args is None:
+        args = sys.argv[1:]
+    # dumb option parsing, since we want to pass things through
+    # to subcommands
+    choices = ['shell', 'alembic']
+    if not args or args[0] not in choices:
+        print("Select a command from: %s" % ', '.join(choices))
+        return 1
+    cmd, args = args[0], args[1:]
+
+    if cmd == 'shell':
+        shell(args)
+    elif cmd == 'alembic':
+        _alembic(args)
+
+
 if __name__ == '__main__':
-    _alembic(*sys.argv[1:])
+    sys.exit(main())
