@@ -602,7 +602,7 @@ class ConfigurableHTTPProxy(Proxy):
         try:
             await self.api_request(path, method='DELETE')
         except HTTPError as e:
-            if e.status_code == 404:
+            if e.code == 404:
                 # Warn about 404s because something might be wrong
                 # but don't raise because the route is gone,
                 # which is the goal.
