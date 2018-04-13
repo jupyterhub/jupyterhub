@@ -108,13 +108,11 @@ class APIHandler(BaseHandler):
             extra = {
                 'note': token.note,
             }
-            id = 'a%i' % token.id
         elif isinstance(token, orm.OAuthAccessToken):
             kind = 'oauth'
             extra = {
                 'oauth_client': token.client.description or token.client.client_id,
             }
-            id = 'o%i' % token.id
         else:
             raise TypeError(
                 "token must be an APIToken or OAuthAccessToken, not %s"
@@ -130,7 +128,7 @@ class APIHandler(BaseHandler):
 
         model = {
             owner_key: owner,
-            'id': id,
+            'id': token.api_id,
             'kind': kind,
             'created': isoformat(token.created),
             'last_activity': isoformat(token.last_activity),
