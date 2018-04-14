@@ -30,6 +30,84 @@
       </div>
     </p>
   </div>
+
+  {% if api_tokens %}
+  <div class="row">
+    <h2>API Tokens</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <td>Note</td>
+          <td>Last used</td>
+          <td>Created</td>
+        </tr>
+      </thead>
+      <tbody>
+        {% for token in api_tokens %}
+        <tr class="token-row" data-token-id="{{token.api_id}}"">
+          {% block token_row scoped %}
+          <td class="note-col col-sm-5">{{token.note}}</td>
+          <td class="time-col col-sm-3">
+            {%- if token.last_activity -%}
+            {{ token.last_activity.isoformat() + 'Z' }}
+            {%- else -%}
+            Never
+            {%- endif -%}
+          </td>
+          <td class="time-col col-sm-3">
+            {{ token.created.isoformat() + 'Z' }}
+          </td>
+          <td class="col-sm-1 text-center">
+            <a role="button" class="delete-token-btn btn btn-xs btn-danger">revoke</a>
+          </td>
+          {% endblock token_row %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+  {% if oauth_clients %}
+  <div class="row">
+    <h2>Authorized OAuth Applications</h2>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <td>Application</td>
+          <td>Tokens</td>
+          <td>Last used</td>
+          <td>First authorized</td>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in oauth_clients %}
+        <tr class="oauth-client-row"
+          data-token-ids="{{ client['token_ids'] }}"">
+          {% block client_row scoped %}
+          <td class="note-col col-sm-4">{{ client['description'] }}</td>
+          <td class="col-sm-1">
+            {{ client['token_count'] }}
+          </td>
+          <td class="time-col col-sm-3">
+            {%- if client['last_activity'] -%}
+            {{ client['last_activity'].isoformat() + 'Z' }}
+            {%- else -%}
+            Never
+            {%- endif -%}
+          </td>
+          <td class="time-col col-sm-3">
+            {{ client['created'].isoformat() + 'Z' }}
+          </td>
+          <td class="col-sm-1 text-center">
+            <a role="button" class="delete-token-btn btn btn-xs btn-danger">revoke</a>
+          </td>
+          {% endblock client_row %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 
