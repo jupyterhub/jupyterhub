@@ -985,6 +985,9 @@ class UserSpawnHandler(BaseHandler):
             # logged in as a different user, redirect
             self.statsd.incr('redirects.user_to_user', 1)
             target = url_path_join(current_user.url, user_path or '')
+            if self.request.query:
+                # FIXME: use urlunparse instead?
+                target += '?' + self.request.query
             self.redirect(target)
         else:
             # not logged in, clear any cookies and reload
