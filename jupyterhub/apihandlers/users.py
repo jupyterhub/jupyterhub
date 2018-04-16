@@ -283,7 +283,17 @@ class UserTokenAPIHandler(APIHandler):
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
         token = self.find_token_by_id(user, token_id)
-        self.db.delete(token)
+        # deleting an oauth token deletes *all* oauth tokens for that client
+        if isinstance(token, orm.OAuthAccessToken):
+            client_id = token.client_id
+            tokens = [
+                token for token in user.oauth_tokens
+                if token.client_id == client_id
+            ]
+        else:
+            tokens = [token]
+        for token in tokens:
+            self.db.delete(token)
         self.db.commit()
         self.set_header('Content-Type', 'text/plain')
         self.set_status(204)

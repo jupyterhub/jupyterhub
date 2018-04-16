@@ -254,13 +254,16 @@ class TokenPageHandler(BaseHandler):
                     (token.last_activity and token.last_activity > last_activity)
                 ):
                     last_activity = token.last_activity
+            token = tokens[0]
             oauth_clients.append({
                 'client': token.client,
                 'description': token.client.description or token.client.client_id,
                 'created': created,
                 'last_activity': last_activity,
                 'tokens': tokens,
-                'token_ids': ','.join(token.api_id for token in tokens),
+                # only need one token id because
+                # revoking one oauth token revokes all oauth tokens for that client
+                'token_id': tokens[0].api_id,
                 'token_count': len(tokens),
             })
 

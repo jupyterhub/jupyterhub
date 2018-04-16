@@ -71,7 +71,7 @@
             {{ token.created.isoformat() + 'Z' }}
           </td>
           <td class="col-sm-1 text-center">
-            <a role="button" class="revoke-token-btn btn btn-xs btn-danger">revoke</a>
+            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
           </td>
           {% endblock token_row %}
         </tr>
@@ -87,20 +87,16 @@
       <thead>
         <tr>
           <td>Application</td>
-          <td>Tokens</td>
           <td>Last used</td>
           <td>First authorized</td>
         </tr>
       </thead>
       <tbody>
         {% for client in oauth_clients %}
-        <tr class="oauth-client-row"
-          data-token-ids="{{ client['token_ids'] }}"">
+        <tr class="token-row"
+          data-token-id="{{ client['token_id'] }}"">
           {% block client_row scoped %}
-          <td class="note-col col-sm-4">{{ client['description'] }}</td>
-          <td class="col-sm-1">
-            {{ client['token_count'] }}
-          </td>
+          <td class="note-col col-sm-5">{{ client['description'] }}</td>
           <td class="time-col col-sm-3">
             {%- if client['last_activity'] -%}
             {{ client['last_activity'].isoformat() + 'Z' }}
@@ -112,8 +108,8 @@
             {{ client['created'].isoformat() + 'Z' }}
           </td>
           <td class="col-sm-1 text-center">
-            <a role="button" class="delete-token-btn btn btn-xs btn-danger">revoke</a>
-          </td>
+            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</a>
+          </button>
           {% endblock client_row %}
         </tr>
         {% endfor %}
