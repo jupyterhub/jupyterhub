@@ -18,7 +18,7 @@ require(["jquery", "jhapi", "moment"], function($, JHAPI, moment) {
   $("#request-token-form").submit(function() {
     var note = $("#token-note").val();
     if (!note.length) {
-      note = "requested via form page";
+      note = "Requested via token page";
     }
     api.request_token(
       user,
