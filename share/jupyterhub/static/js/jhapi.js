@@ -132,9 +132,9 @@ define(['jquery', 'utils'], function ($, utils) {
         );
     };
 
-    JHAPI.prototype.delete_token = function (user, token_id, options) {
+    JHAPI.prototype.revoke_token = function (user, token_id, options) {
         options = options || {};
-        options = update(options, {type: 'POST'});
+        options = update(options, {type: 'DELETE'});
         this.api_request(
             utils.url_path_join('users', user, 'tokens', token_id),
             options

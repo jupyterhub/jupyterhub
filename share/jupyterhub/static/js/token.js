@@ -32,5 +32,22 @@ require(["jquery", "jhapi", "moment"], function($, JHAPI, moment) {
     );
     return false;
   });
+
+  function get_token_row(element) {
+    while (!element.hasClass("token-row")) {
+      element = element.parent();
+    }
+    return element;
+  }
+
+  $(".revoke-token-btn").click(function() {
+    var el = $(this);
+    var row = get_token_row(el);
+    el.attr("disabled", true);
+    api.revoke_token(user, row.data('token-id'), {
+      success: function(reply) {
+        row.remove();
+      },
     });
+  });
 });
