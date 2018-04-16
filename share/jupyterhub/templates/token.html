@@ -47,6 +47,11 @@
   {% if api_tokens %}
   <div class="row">
     <h2>API Tokens</h2>
+    <p>
+      These are tokens with full access to the JupyterHub API.
+      Anything you can do with JupyterHub can be done with these tokens.
+      Revoking the API token for a running server will require restarting that server.
+    </p>
     <table class="table table-striped">
       <thead>
         <tr>
@@ -80,9 +85,17 @@
     </table>
   </div>
   {% endif %}
+
   {% if oauth_clients %}
   <div class="row">
-    <h2>Authorized OAuth Applications</h2>
+    <h2>Authorized Applications</h2>
+    <p>
+      These are applications that use OAuth with JupyterHub
+      to identify users (mostly notebook servers).
+
+      OAuth tokens can generally only be used to identify you,
+      not take actions on your behalf.
+    </p>
     <table class="table table-striped">
       <thead>
         <tr>
