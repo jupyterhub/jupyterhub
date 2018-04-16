@@ -70,7 +70,7 @@ class TokenAPIHandler(APIHandler):
 
         note = (data or {}).get('note')
         if not note:
-            note = "via api"
+            note = "Requested via deprecated api"
             if requester is not user:
                 kind = 'user' if isinstance(user, User) else 'service'
                 note += " by %s %s" % (kind, requester.name)

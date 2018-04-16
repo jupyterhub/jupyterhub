@@ -224,7 +224,7 @@ class UserTokenListAPIHandler(APIHandler):
             kind = 'user' if isinstance(requester, User) else 'service'
         note = (body or {}).get('note')
         if not note:
-            note = "via api"
+            note = "Requested via api"
             if requester is not user:
                 note += " by %s %s" % (kind, requester.name)
 

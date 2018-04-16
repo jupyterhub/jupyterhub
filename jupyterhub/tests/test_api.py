@@ -1219,7 +1219,7 @@ def test_get_new_token(app, headers, status, note):
     if note:
         assert reply['note'] == note
     else:
-        assert reply['note'] == 'via api'
+        assert reply['note'] == 'Requested via api'
     token_id = reply['id']
     initial = normalize_token(reply)
     # pop token for later comparison
