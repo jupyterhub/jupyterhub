@@ -115,7 +115,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
     def handle_server(user, server_name, server):
         """Handle (maybe) culling a single server
 
-        Returns True if server was culled,
+        Returns True if server is now stopped (user removable),
         False otherwise.
         """
         log_name = user['name']
@@ -184,19 +184,28 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
     @coroutine
     def handle_user(user):
-        """Handle one user"""
+        """Handle one user.
+
+        Create a list of their servers, and async exec them.  Wait for
+        that to be done, and if all servers are stopped, possibly cull
+        the user.
+        """
         # shutdown servers first.
         # Hub doesn't allow deleting users with running servers.
-        servers = user.get(
-            'servers',
-            {
-                '': {
+        # named servers contain the 'servers' dict
+        if 'servers' in user:
+            servers = user['servers']
+        # Otherwise, server data is intermingled in with the user
+        # model
+        else:
+            servers = {}
+            if user['server']:
+                servers[''] = {
                     'started': user.get('started'),
                     'last_activity': user['last_activity'],
                     'pending': user['pending'],
+                    'url': user['server'],
                 }
-            }
-        )
         server_futures = [
             handle_server(user, server_name, server)
             for server_name, server in servers.items()
