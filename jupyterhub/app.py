@@ -1487,7 +1487,7 @@ class JupyterHub(Application):
         if managed_services:
             self.log.info("Cleaning up %i services...", len(managed_services))
             for service in managed_services:
-                futures.append(asyncio.ensure_future(service.stop()))
+                service.stop()
 
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
@@ -1502,6 +1502,7 @@ class JupyterHub(Application):
         # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
             if self.proxy.should_start:
+                self.log.debug("Stopping proxy")
                 await maybe_future(self.proxy.stop())
             else:
                 self.log.info("I didn't start the proxy, I can't clean it up")
