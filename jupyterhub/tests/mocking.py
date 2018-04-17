@@ -222,11 +222,20 @@ class MockHub(JupyterHub):
 
     def load_config_file(self, *args, **kwargs):
         pass
+
     def init_tornado_application(self):
         """Instantiate the tornado Application object"""
         super().init_tornado_application()
         # reconnect tornado_settings so that mocks can update the real thing
         self.tornado_settings = self.users.settings = self.tornado_application.settings
+
+    def init_services(self):
+        # explicitly expire services before reinitializing
+        # this only happens in tests because re-initialize
+        # does not occur in a real instance
+        for service in self.db.query(orm.Service):
+            self.db.expire(service)
+        return super().init_services()
 
     @gen.coroutine
     def initialize(self, argv=None):
