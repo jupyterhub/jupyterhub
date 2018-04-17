@@ -66,6 +66,8 @@ def format_td(td):
 
     as HH:MM:SS
     """
+    if td is None:
+        return "unknown"
     if isinstance(td, str):
         return td
     seconds = int(td.total_seconds())
@@ -113,7 +115,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
     def handle_server(user, server_name, server):
         """Handle (maybe) culling a single server
 
-        Returns True if server was culled,
+        Returns True if server is now stopped (user removable),
         False otherwise.
         """
         log_name = user['name']
@@ -129,7 +131,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             age = now - parse_date(server['started'])
         else:
             # started may be undefined on jupyterhub < 0.9
-            age = 'unknown'
+            age = None
 
         # check last activity
         # last_activity can be None in 0.9
@@ -142,7 +144,8 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             # for running servers
             inactive = age
 
-        should_cull = inactive.total_seconds() >= inactive_limit
+        should_cull = (inactive is not None and
+                       inactive.total_seconds() >= inactive_limit)
         if should_cull:
             app_log.info(
                 "Culling server %s (inactive for %s)",
@@ -152,7 +155,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             # only check started if max_age is specified
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
-            if age.total_seconds() >= max_age:
+            if age is not None and age.total_seconds() >= max_age:
                 app_log.info(
                     "Culling server %s (age: %s, inactive for %s)",
                     log_name, format_td(age), format_td(inactive))
@@ -181,19 +184,28 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
     @coroutine
     def handle_user(user):
-        """Handle one user"""
+        """Handle one user.
+
+        Create a list of their servers, and async exec them.  Wait for
+        that to be done, and if all servers are stopped, possibly cull
+        the user.
+        """
         # shutdown servers first.
         # Hub doesn't allow deleting users with running servers.
-        servers = user.get(
-            'servers',
-            {
-                '': {
+        # named servers contain the 'servers' dict
+        if 'servers' in user:
+            servers = user['servers']
+        # Otherwise, server data is intermingled in with the user
+        # model
+        else:
+            servers = {}
+            if user['server']:
+                servers[''] = {
                     'started': user.get('started'),
                     'last_activity': user['last_activity'],
                     'pending': user['pending'],
+                    'url': user['server'],
                 }
-            }
-        )
         server_futures = [
             handle_server(user, server_name, server)
             for server_name, server in servers.items()
@@ -214,7 +226,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             age = now - parse_date(user['created'])
         else:
             # created may be undefined on jupyterhub < 0.9
-            age = 'unknown'
+            age = None
 
         # check last activity
         # last_activity can be None in 0.9
@@ -226,7 +238,8 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             # which introduces the 'created' field which is never None
             inactive = age
 
-        should_cull = inactive.total_seconds() >= inactive_limit
+        should_cull = (inactive is not None and
+                       inactive.total_seconds() >= inactive_limit)
         if should_cull:
             app_log.info(
                 "Culling user %s (inactive for %s)",
@@ -236,7 +249,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             # only check created if max_age is specified
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
-            if age.total_seconds() >= max_age:
+            if age is not None and age.total_seconds() >= max_age:
                 app_log.info(
                     "Culling user %s (age: %s, inactive for %s)",
                     user['name'], format_td(age), format_td(inactive))
