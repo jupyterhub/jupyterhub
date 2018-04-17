@@ -1487,7 +1487,7 @@ class JupyterHub(Application):
         if managed_services:
             self.log.info("Cleaning up %i services...", len(managed_services))
             for service in managed_services:
-                futures.append(asyncio.ensure_future(service.stop()))
+                service.stop()
 
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
