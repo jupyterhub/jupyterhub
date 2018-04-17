@@ -1502,6 +1502,7 @@ class JupyterHub(Application):
         # clean up proxy while single-user servers are shutting down
         if self.cleanup_proxy:
             if self.proxy.should_start:
+                self.log.debug("Stopping proxy")
                 await maybe_future(self.proxy.stop())
             else:
                 self.log.info("I didn't start the proxy, I can't clean it up")

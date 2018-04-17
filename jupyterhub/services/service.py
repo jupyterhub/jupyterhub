@@ -322,6 +322,7 @@ class Service(LoggingConfigurable):
 
     def stop(self):
         """Stop a managed service"""
+        self.log.debug("Stopping service %s", self.name)
         if not self.managed:
             raise RuntimeError("Cannot stop unmanaged service %s" % self)
         if self.spawner:
