@@ -70,11 +70,12 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
 
         """
 
-        user = self.db.query(orm.User).filter(orm.User.id == access_token.user_id).first()
+        user = self.db.query(orm.User).filter_by(id=access_token.user_id).first()
         if user is None:
             raise ValueError("No user for access token: %s" % access_token.user_id)
+        client = self.db.query(orm.OAuthClient).filter_by(identifier=access_token.client_id).first()
         orm_access_token = orm.OAuthAccessToken(
-            client_id=access_token.client_id,
+            client=client,
             grant_type=access_token.grant_type,
             expires_at=access_token.expires_at,
             refresh_token=access_token.refresh_token,
@@ -127,10 +128,10 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
                                    :class:`oauth2.datatype.AuthorizationCode`.
         """
         orm_code = orm.OAuthCode(
-            client_id=authorization_code.client_id,
+            client=authorization_code.client,
             code=authorization_code.code,
             expires_at=authorization_code.expires_at,
-            user_id=authorization_code.user_id,
+            user=authorization_code.user,
             redirect_uri=authorization_code.redirect_uri,
             session_id=authorization_code.data.get('session_id', ''),
         )

@@ -14,16 +14,19 @@ from tornado.log import app_log
 
 from sqlalchemy.types import TypeDecorator, TEXT, LargeBinary
 from sqlalchemy import (
-    inspect,
+    create_engine, event, inspect,
     Column, Integer, ForeignKey, Unicode, Boolean,
-    DateTime, Enum
+    DateTime, Enum, Table,
 )
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.interfaces import PoolListener
-from sqlalchemy.orm import backref, sessionmaker, relationship
+from sqlalchemy.orm import (
+    Session,
+    interfaces, object_session, relationship, sessionmaker,
+)
+
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
-from sqlalchemy import create_engine, Table
 
 from .utils import (
     random_port,
@@ -88,7 +91,7 @@ class Group(Base):
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
-    users = relationship('User', secondary='user_group_map', back_populates='groups')
+    users = relationship('User', secondary='user_group_map', backref='groups')
 
     def __repr__(self):
         return "<%s %s (%i users)>" % (
@@ -133,9 +136,6 @@ class User(Base):
         "Spawner",
         backref="user",
         cascade="all, delete-orphan",
-        # can't use passive-deletes on this one
-        # because we rely on orm-level delete
-        # for Spawner.server
     )
     @property
     def orm_spawners(self):
@@ -149,13 +149,16 @@ class User(Base):
         "APIToken",
         backref="user",
         cascade="all, delete-orphan",
-        passive_deletes=True,
     )
     oauth_tokens = relationship(
         "OAuthAccessToken",
         backref="user",
         cascade="all, delete-orphan",
-        passive_deletes=True,
+    )
+    oauth_codes = relationship(
+        "OAuthCode",
+        backref="user",
+        cascade="all, delete-orphan",
     )
     cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
@@ -164,8 +167,6 @@ class User(Base):
     # Authenticators can store their state here:
     # Encryption is handled elsewhere
     encrypted_auth_state = Column(LargeBinary)
-    # group mapping
-    groups = relationship('Group', secondary='user_group_map', back_populates='users')
 
     def __repr__(self):
         return "<{cls}({name} {running}/{total} running)>".format(
@@ -234,7 +235,6 @@ class Service(Base):
         "APIToken",
         backref="service",
         cascade="all, delete-orphan",
-        passive_deletes=True,
     )
 
     # service-specific interface
@@ -408,10 +408,10 @@ class APIToken(Hashed, Base):
         orm_token.token = token
         if user:
             assert user.id is not None
-            orm_token.user_id = user.id
+            orm_token.user = user
         else:
             assert service.id is not None
-            orm_token.service_id = service.id
+            orm_token.service = service
         db.add(orm_token)
         db.commit()
         return token
@@ -498,6 +498,18 @@ class OAuthClient(Base):
     secret = Column(Unicode(255))
     redirect_uri = Column(Unicode(1023))
 
+    access_tokens = relationship(
+        OAuthAccessToken,
+        backref='client',
+        cascade='all, delete-orphan',
+    )
+    codes = relationship(
+        OAuthCode,
+        backref='client',
+        cascade='all, delete-orphan',
+    )
+
+# General database utilities
 
 class DatabaseSchemaMismatch(Exception):
     """Exception raised when the database schema version does not match
@@ -510,6 +522,39 @@ class ForeignKeysListener(PoolListener):
     """Enable foreign keys on sqlite"""
     def connect(self, dbapi_con, con_record):
         dbapi_con.execute('pragma foreign_keys=ON')
+
+
+def _expire_relationship(target, relationship_prop):
+    """Expire relationship backrefs
+
+    used when an object with relationships is deleted
+    """
+
+    session = object_session(target)
+    # get peer objects to be expired
+    peers = getattr(target, relationship_prop.key)
+    if peers is None:
+        # no peer to clear
+        return
+    # many-to-many and one-to-many have a list of peers
+    # many-to-one has only one
+    if relationship_prop.direction is interfaces.MANYTOONE:
+        peers = [peers]
+    for obj in peers:
+        if inspect(obj).persistent:
+            session.expire(obj, [relationship_prop.back_populates])
+
+
+@event.listens_for(Session, "persistent_to_deleted")
+def _notify_deleted_relationships(session, obj):
+    """Expire relationships when an object becomes deleted
+
+    Needed for
+    """
+    mapper = inspect(obj).mapper
+    for prop in mapper.relationships:
+        if prop.back_populates:
+            _expire_relationship(obj, prop)
 
 
 def check_db_revision(engine):
