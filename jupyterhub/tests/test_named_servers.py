@@ -43,6 +43,7 @@ def test_default_server(app, named_servers):
                 'pending': None,
                 'ready': True,
                 'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(username),
+                'state': {'pid': 0},
             },
         },
     })
@@ -102,6 +103,7 @@ def test_create_named_server(app, named_servers):
                 'ready': True,
                 'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
                     username, servername),
+                'state': {'pid': 0},
             }
             for name in [servername]
         },

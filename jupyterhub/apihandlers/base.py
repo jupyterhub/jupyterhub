@@ -90,7 +90,7 @@ class APIHandler(BaseHandler):
             'message': message or status_message,
         }))
 
-    def server_model(self, spawner):
+    def server_model(self, spawner, include_state=False):
         """Get the JSON model for a Spawner"""
         return {
             'name': spawner.name,
@@ -98,6 +98,7 @@ class APIHandler(BaseHandler):
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
+            'state': spawner.get_state() if include_state else None,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'progress_url': spawner._progress_url,
         }
@@ -137,7 +138,7 @@ class APIHandler(BaseHandler):
         model.update(extra)
         return model
 
-    def user_model(self, user, include_servers=False):
+    def user_model(self, user, include_servers=False, include_state=False):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
@@ -164,7 +165,7 @@ class APIHandler(BaseHandler):
             # include 'active' servers, not just ready
             # (this includes pending events)
             if spawner.active:
-                servers[name] = self.server_model(spawner)
+                servers[name] = self.server_model(spawner, include_state=include_state)
         return model
 
     def group_model(self, group):

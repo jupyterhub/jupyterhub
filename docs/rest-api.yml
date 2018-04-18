@@ -652,6 +652,9 @@ definitions:
         type: string
         format: date-time
         description: UTC timestamp last-seen activity on this server.
+      state:
+        type: object
+        description: Arbitrary internal state from this server's spawner.  Only available on the hub's users list or get-user-by-name method, and only if a hub admin.  None otherwise.
   Group:
     type: object
     properties:

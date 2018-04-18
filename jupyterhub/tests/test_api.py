@@ -207,6 +207,9 @@ def normalize_user(user):
             for key in ('started', 'last_activity'):
                 server[key] = normalize_timestamp(server[key])
             server['progress_url'] = re.sub(r'.*/hub/api', 'PREFIX/hub/api', server['progress_url'])
+            if (isinstance(server['state'], dict)
+                and isinstance(server['state'].get('pid', None), int)):
+                server['state']['pid'] = 0
     return user
 
 def fill_user(model):
