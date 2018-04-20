@@ -35,7 +35,10 @@ class SelfAPIHandler(APIHandler):
 class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
-        data = [ self.user_model(u) for u in self.db.query(orm.User) ]
+        data = [
+            self.user_model(u, include_servers=True)
+            for u in self.db.query(orm.User)
+        ]
         self.write(json.dumps(data))
 
     @admin_only
@@ -113,15 +116,15 @@ class UserAPIHandler(APIHandler):
     @admin_or_self
     async def get(self, name):
         user = self.find_user(name)
-        user_ = self.user_model(user)
+        model = self.user_model(user, include_servers=True)
         # auth state will only be shown if the requestor is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
         # will see their auth state but normal users won't
         requestor = self.get_current_user()
         if requestor.admin:
-            user_['auth_state'] = await user.get_auth_state()
-        self.write(json.dumps(user_))
+            model['auth_state'] = await user.get_auth_state()
+        self.write(json.dumps(model))
 
     @admin_only
     async def post(self, name):

@@ -137,7 +137,7 @@ class APIHandler(BaseHandler):
         model.update(extra)
         return model
 
-    def user_model(self, user):
+    def user_model(self, user, include_servers=False):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
@@ -154,6 +154,10 @@ class APIHandler(BaseHandler):
         }
         if '' in user.spawners:
             model['pending'] = user.spawners[''].pending
+
+        if not include_servers:
+            model['servers'] = None
+            return model
 
         servers = model['servers'] = {}
         for name, spawner in user.spawners.items():
