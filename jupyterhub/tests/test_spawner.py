@@ -370,14 +370,10 @@ def test_spawner_delete_server(app):
     assert spawner.server is not None
     assert spawner.orm_spawner.server is not None
 
-    # trigger delete via db
-    db.delete(spawner.orm_spawner.server)
-    db.commit()
-    assert spawner.orm_spawner.server is None
-
-    # setting server = None also triggers delete
+    # setting server = None triggers delete
     spawner.server = None
     db.commit()
+    assert spawner.orm_spawner.server is None
     # verify that the server was actually deleted from the db
     assert db.query(orm.Server).filter(orm.Server.id == server_id).first() is None
     # verify that both ORM and top-level references are None
