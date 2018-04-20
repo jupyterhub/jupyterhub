@@ -19,6 +19,7 @@ before_install:
   - npm install
   - npm install -g configurable-http-proxy
   - |
+    # setup database
     if [[ $JUPYTERHUB_TEST_DB_URL == mysql* ]]; then
       unset MYSQL_UNIX_PORT
       DB=mysql bash ci/docker-db.sh
@@ -36,6 +37,8 @@ install:
 # running tests
 script:
   - |
+    # create old database for upgrading
+    set -e
     if [[ ! -z "$JUPYTERHUB_TEST_DB_URL" ]]; then
       # if testing upgrade-db, run `jupyterhub token` with 0.7
       # to initialize an old db. Used in upgrade-tests
@@ -50,8 +53,8 @@ script:
         --JupyterHub.authenticator_class=jupyterhub.auth.Authenticator
     fi
   - pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
-  # Verify docs build
   - |
+    # build docs
     pushd docs
     pip install -r requirements.txt
     make html
