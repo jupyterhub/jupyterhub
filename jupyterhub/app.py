@@ -117,6 +117,9 @@ COOKIE_SECRET_BYTES = 32  # the number of bytes to use when generating new cooki
 
 HEX_RE = re.compile('^([a-f0-9]{2})+$', re.IGNORECASE)
 
+_mswindows  = (os.name == "nt")
+
+
 class NewToken(Application):
     """Generate and print a new API token"""
     name = 'jupyterhub-token'
@@ -886,9 +889,11 @@ class JupyterHub(Application):
             secret_from = 'file'
             self.log.info("Loading %s from %s", trait_name, secret_file)
             try:
-                perm = os.stat(secret_file).st_mode
-                if perm & 0o07:
-                    raise ValueError("cookie_secret_file can be read or written by anybody")
+                if not _mswindows: # Windows permissions don't follow POSIX rules
+                    perm = os.stat(secret_file).st_mode
+                    if perm & 0o07:
+                        msg = "cookie_secret_file can be read or written by anybody"
+                        raise ValueError(msg)
                 with open(secret_file) as f:
                     text_secret = f.read().strip()
                 if HEX_RE.match(text_secret):
@@ -926,10 +931,11 @@ class JupyterHub(Application):
             with open(secret_file, 'w') as f:
                 f.write(text_secret)
                 f.write('\n')
-            try:
-                os.chmod(secret_file, 0o600)
-            except OSError:
-                self.log.warning("Failed to set permissions on %s", secret_file)
+            if not _mswindows: # Windows permissions don't follow POSIX rules
+                try:
+                    os.chmod(secret_file, 0o600)
+                except OSError:
+                    self.log.warning("Failed to set permissions on %s", secret_file)
         # store the loaded trait value
         self.cookie_secret = secret
 
