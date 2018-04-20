@@ -34,7 +34,6 @@ def test_default_server(app, named_servers):
         'name': username,
         'auth_state': None,
         'server': user.url,
-        'started': TIMESTAMP,
         'servers': {
             '': {
                 'name': '',
@@ -42,6 +41,7 @@ def test_default_server(app, named_servers):
                 'last_activity': TIMESTAMP,
                 'url': user.url,
                 'pending': None,
+                'ready': True,
                 'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(username),
             },
         },
@@ -99,6 +99,7 @@ def test_create_named_server(app, named_servers):
                 'last_activity': TIMESTAMP,
                 'url': url_path_join(user.url, name, '/'),
                 'pending': None,
+                'ready': True,
                 'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
                     username, servername),
             }

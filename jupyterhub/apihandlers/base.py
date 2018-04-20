@@ -97,6 +97,7 @@ class APIHandler(BaseHandler):
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending or None,
+            'ready': spawner.ready,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'progress_url': spawner._progress_url,
         }
@@ -147,23 +148,19 @@ class APIHandler(BaseHandler):
             'admin': user.admin,
             'groups': [ g.name for g in user.groups ],
             'server': user.url if user.running else None,
-            'progress_url': user.progress_url(''),
             'pending': None,
             'created': isoformat(user.created),
-            'started': None,
             'last_activity': isoformat(user.last_activity),
         }
         if '' in user.spawners:
-            server_model = self.server_model(user.spawners[''])
-            # copy some values from the default server to the user model
-            for key in ('started', 'pending'):
-                model[key] = server_model[key]
+            model['pending'] = user.spawners[''].pending
 
-        if self.allow_named_servers:
-            servers = model['servers'] = {}
-            for name, spawner in user.spawners.items():
-                if spawner.ready:
-                    servers[name] = self.server_model(spawner)
+        servers = model['servers'] = {}
+        for name, spawner in user.spawners.items():
+            # include 'active' servers, not just ready
+            # (this includes pending events)
+            if spawner.active:
+                servers[name] = self.server_model(spawner)
         return model
 
     def group_model(self, group):
