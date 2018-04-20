@@ -1274,9 +1274,9 @@ def test_token_for_user(app, as_user, for_user, status):
     reply = r.json()
     assert reply['user'] == for_user
     if for_user == as_user:
-        note = 'via api'
+        note = 'Requested via api'
     else:
-        note = 'via api by user %s' % as_user
+        note = 'Requested via api by user %s' % as_user
     assert reply['note'] == note
 
 
