@@ -96,7 +96,7 @@ class APIHandler(BaseHandler):
             'name': spawner.name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
-            'pending': spawner.pending or None,
+            'pending': spawner.pending,
             'ready': spawner.ready,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'progress_url': spawner._progress_url,

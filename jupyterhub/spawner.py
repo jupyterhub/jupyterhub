@@ -81,7 +81,7 @@ class Spawner(LoggingConfigurable):
             return 'spawn'
         elif self._stop_pending:
             return 'stop'
-        return False
+        return None
 
     @property
     def ready(self):
