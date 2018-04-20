@@ -621,7 +621,10 @@ def check_db_revision(engine):
         ))
 
 
-def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
+def new_session_factory(url="sqlite:///:memory:",
+                        reset=False,
+                        expire_on_commit=False,
+                        **kwargs):
     """Create a new session at url"""
     if url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -648,5 +651,7 @@ def new_session_factory(url="sqlite:///:memory:", reset=False, **kwargs):
     # SQLAlchemy to expire objects after commiting - we don't expect
     # concurrent runs of the hub talking to the same db. Turning
     # this off gives us a major performance boost
-    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    session_factory = sessionmaker(bind=engine,
+                                   expire_on_commit=expire_on_commit,
+    )
     return session_factory
