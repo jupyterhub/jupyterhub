@@ -37,7 +37,7 @@ def upgrade():
         c.execute("""
             UPDATE spawners
             SET started='%s'
-            WHERE server_id NOT NULL
+            WHERE server_id IS NOT NULL
             """ % (now,)
         )
 
