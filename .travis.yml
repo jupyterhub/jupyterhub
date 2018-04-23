@@ -9,6 +9,8 @@ python:
 env:
   global:
     - ASYNC_TEST_TIMEOUT=15
+    - MYSQL_HOST=127.0.0.1
+    - MYSQL_TCP_PORT=13306
 services:
   - postgres
   - docker
@@ -37,22 +39,9 @@ install:
 # running tests
 script:
   - |
-    # create old database for upgrading
+    # run tests
     set -e
-    if [[ ! -z "$JUPYTERHUB_TEST_DB_URL" ]]; then
-      # if testing upgrade-db, run `jupyterhub token` with 0.7
-      # to initialize an old db. Used in upgrade-tests
-      export JUPYTERHUB_TEST_UPGRADE_DB_URL=${JUPYTERHUB_TEST_DB_URL}_upgrade
-      # use virtualenv instead of venv because venv doesn't work here
-      python -m pip install virtualenv
-      python -m virtualenv old-hub-env
-      ./old-hub-env/bin/python -m pip install jupyterhub==0.7.2 psycopg2 'mysql-connector<2.2'
-      ./old-hub-env/bin/jupyterhub token kaylee \
-        --JupyterHub.db_url=$JUPYTERHUB_TEST_UPGRADE_DB_URL \
-        --Authenticator.whitelist="{'kaylee'}" \
-        --JupyterHub.authenticator_class=jupyterhub.auth.Authenticator
-    fi
-  - pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
   - |
     # build docs
     pushd docs
@@ -69,8 +58,6 @@ matrix:
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
       env:
-        - MYSQL_HOST=127.0.0.1
-        - MYSQL_TCP_PORT=13306
         - JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:$MYSQL_TCP_PORT/jupyterhub
     - python: 3.6
       env:
