@@ -30,8 +30,13 @@ before_install:
       pip install psycopg2
     fi
 install:
-  - pip install -U pip
+  - pip install --upgrade pip
   - pip install --pre -r dev-requirements.txt .
+  - |
+    # pin tornado
+    if [[ ! -z "$TORNADO" ]]; then
+      pip install --pre tornado==$TORNADO
+    fi
   - pip freeze
 
 # running tests
@@ -65,6 +70,8 @@ after_success:
 matrix:
   fast_finish: true
   include:
+    - python: 3.6
+      env: TORNADO='4.5.*'
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
