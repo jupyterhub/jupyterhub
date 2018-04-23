@@ -7,3 +7,4 @@ pytest-tornado
 pytest>=3.3
 notebook
 requests-mock
+virtualenv
