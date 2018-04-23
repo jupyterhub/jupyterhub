@@ -65,6 +65,8 @@ class SpawnHandler(BaseHandler):
     Only enabled when Spawner.options_form is defined.
     """
     async def _render_form(self, message='', for_user=None):
+        # Note that 'user' is the authenticated user making the request and
+        # 'for_user' is the user whose server is being spawned.
         user = for_user or self.get_current_user()
         spawner_options_form = await user.spawner.get_options_form()
         return self.render_template('spawn.html',
@@ -72,6 +74,7 @@ class SpawnHandler(BaseHandler):
             spawner_options_form=spawner_options_form,
             error_message=message,
             url=self.request.uri,
+            spawner=for_user.spawner
         )
 
     @web.authenticated
