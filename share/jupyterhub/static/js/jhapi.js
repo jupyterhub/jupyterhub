@@ -120,10 +120,25 @@ define(['jquery', 'utils'], function ($, utils) {
         );
     };
 
-    JHAPI.prototype.request_token = function (options) {
+    JHAPI.prototype.request_token = function (user, props, options) {
         options = options || {};
         options = update(options, {type: 'POST'});
-        this.api_request('authorizations/token', options);
+        if (props) {
+            options.data = JSON.stringify(props);
+        }
+        this.api_request(
+            utils.url_path_join('users', user, 'tokens'),
+            options
+        );
+    };
+
+    JHAPI.prototype.revoke_token = function (user, token_id, options) {
+        options = options || {};
+        options = update(options, {type: 'DELETE'});
+        this.api_request(
+            utils.url_path_join('users', user, 'tokens', token_id),
+            options
+        );
     };
 
     JHAPI.prototype.shutdown_hub = function (data, options) {

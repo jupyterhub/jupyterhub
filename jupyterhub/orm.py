@@ -342,6 +342,10 @@ class APIToken(Hashed, Base):
     hashed = Column(Unicode(255), unique=True)
     prefix = Column(Unicode(16), index=True)
 
+    @property
+    def api_id(self):
+        return 'a%i' % self.id
+
     # token metadata for bookkeeping
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime)
@@ -431,6 +435,10 @@ class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
+    @property
+    def api_id(self):
+        return 'o%i' % self.id
+
     client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
@@ -486,6 +494,7 @@ class OAuthClient(Base):
     __tablename__ = 'oauth_clients'
     id = Column(Integer, primary_key=True, autoincrement=True)
     identifier = Column(Unicode(255), unique=True)
+    description = Column(Unicode(1023))
     secret = Column(Unicode(255))
     redirect_uri = Column(Unicode(1023))
 

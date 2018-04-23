@@ -350,9 +350,7 @@ class User:
             base_url=base_url,
         )
         db.add(orm_server)
-        note = "server token"
-        if server_name:
-            note += " for server %s" % server_name
+        note = "Server at %s" % base_url
         api_token = self.new_api_token(note=note)
         db.commit()
 
@@ -381,6 +379,7 @@ class User:
             # containers that resume will be updated below
             client_store.add_client(client_id, api_token,
                                     url_path_join(self.url, server_name, 'oauth_callback'),
+                                    description="Server at %s" % (url_path_join(self.base_url, server_name) + '/'),
                                     )
         db.commit()
 

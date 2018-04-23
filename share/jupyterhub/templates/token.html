@@ -4,12 +4,25 @@
 
 <div class="container">
   <div class="row">
-    <div class="text-center">
-      <a id="request-token" role="button" class="btn btn-lg btn-jupyter" href="#">
-        Request new API token
-      </a>
-    </div>
+    <form id="request-token-form" class="col-md-offset-3 col-md-6">
+      <div class="text-center">
+        <button type="submit" class="btn btn-lg btn-jupyter">
+          Request new API token
+        </button>
+      </div>
+      <div class="form-group">
+        <label for="token-note">Note</label>
+        <input
+          id="token-note"
+          class="form-control"
+          placeholder="note to identify your new token">
+        <small id="note-note" class="form-text text-muted">
+          This note will help you keep track of what your tokens are for.
+        </small>
+      </div>
+    </form>
   </div>
+
   <div class="row">
     <p>
       <div id="token-area" class="col-md-6 col-md-offset-3" style="display: none;">
@@ -30,6 +43,93 @@
       </div>
     </p>
   </div>
+
+  {% if api_tokens %}
+  <div class="row">
+    <h2>API Tokens</h2>
+    <p>
+      These are tokens with full access to the JupyterHub API.
+      Anything you can do with JupyterHub can be done with these tokens.
+      Revoking the API token for a running server will require restarting that server.
+    </p>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <td>Note</td>
+          <td>Last used</td>
+          <td>Created</td>
+        </tr>
+      </thead>
+      <tbody>
+        {% for token in api_tokens %}
+        <tr class="token-row" data-token-id="{{token.api_id}}"">
+          {% block token_row scoped %}
+          <td class="note-col col-sm-5">{{token.note}}</td>
+          <td class="time-col col-sm-3">
+            {%- if token.last_activity -%}
+            {{ token.last_activity.isoformat() + 'Z' }}
+            {%- else -%}
+            Never
+            {%- endif -%}
+          </td>
+          <td class="time-col col-sm-3">
+            {{ token.created.isoformat() + 'Z' }}
+          </td>
+          <td class="col-sm-1 text-center">
+            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
+          </td>
+          {% endblock token_row %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if oauth_clients %}
+  <div class="row">
+    <h2>Authorized Applications</h2>
+    <p>
+      These are applications that use OAuth with JupyterHub
+      to identify users (mostly notebook servers).
+
+      OAuth tokens can generally only be used to identify you,
+      not take actions on your behalf.
+    </p>
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <td>Application</td>
+          <td>Last used</td>
+          <td>First authorized</td>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in oauth_clients %}
+        <tr class="token-row"
+          data-token-id="{{ client['token_id'] }}"">
+          {% block client_row scoped %}
+          <td class="note-col col-sm-5">{{ client['description'] }}</td>
+          <td class="time-col col-sm-3">
+            {%- if client['last_activity'] -%}
+            {{ client['last_activity'].isoformat() + 'Z' }}
+            {%- else -%}
+            Never
+            {%- endif -%}
+          </td>
+          <td class="time-col col-sm-3">
+            {{ client['created'].isoformat() + 'Z' }}
+          </td>
+          <td class="col-sm-1 text-center">
+            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</a>
+          </button>
+          {% endblock client_row %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
 </div>
 {% endblock %}
 

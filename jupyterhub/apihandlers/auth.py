@@ -41,6 +41,11 @@ class TokenAPIHandler(APIHandler):
         self.write(json.dumps(model))
 
     async def post(self):
+        warn_msg = (
+            "Using deprecated token creation endpoint %s."
+            " Use /hub/api/users/:user/tokens instead."
+        ) % self.request.uri
+        self.log.warning(warn_msg)
         requester = user = self.get_current_user()
         if user is None:
             # allow requesting a token with username and password
@@ -65,7 +70,7 @@ class TokenAPIHandler(APIHandler):
 
         note = (data or {}).get('note')
         if not note:
-            note = "via api"
+            note = "Requested via deprecated api"
             if requester is not user:
                 kind = 'user' if isinstance(user, User) else 'service'
                 note += " by %s %s" % (kind, requester.name)
@@ -73,6 +78,7 @@ class TokenAPIHandler(APIHandler):
         api_token = user.new_api_token(note=note)
         self.write(json.dumps({
             'token': api_token,
+            'warning': warn_msg,
             'user': self.user_model(user),
         }))
 

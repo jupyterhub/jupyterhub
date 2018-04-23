@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from datetime import datetime
 from http.client import responses
 
 from jinja2 import TemplateNotFound
@@ -220,7 +221,69 @@ class TokenPageHandler(BaseHandler):
 
     @web.authenticated
     def get(self):
-        html = self.render_template('token.html')
+        never = datetime(1900, 1, 1)
+
+        user = self.get_current_user()
+        def sort_key(token):
+            return (
+                token.last_activity or never,
+                token.created or never,
+            )
+        api_tokens = sorted(user.api_tokens, key=sort_key, reverse=True)
+
+        # group oauth client tokens by client id
+        from collections import defaultdict
+        oauth_tokens = defaultdict(list)
+        for token in user.oauth_tokens:
+            if not token.client_id:
+                # token should have been deleted when client was deleted
+                self.log.warning("Deleting stale oauth token for %s", user.name)
+                self.db.delete(token)
+                self.db.commit()
+                continue
+            oauth_tokens[token.client_id].append(token)
+
+        # get the earliest created and latest last_activity
+        # timestamp for a given oauth client
+        oauth_clients = []
+        for client_id, tokens in oauth_tokens.items():
+            created = tokens[0].created
+            last_activity = tokens[0].last_activity
+            for token in tokens[1:]:
+                if token.created < created:
+                    created = token.created
+                if (
+                    last_activity is None or
+                    (token.last_activity and token.last_activity > last_activity)
+                ):
+                    last_activity = token.last_activity
+            token = tokens[0]
+            oauth_clients.append({
+                'client': token.client,
+                'description': token.client.description or token.client.client_id,
+                'created': created,
+                'last_activity': last_activity,
+                'tokens': tokens,
+                # only need one token id because
+                # revoking one oauth token revokes all oauth tokens for that client
+                'token_id': tokens[0].api_id,
+                'token_count': len(tokens),
+            })
+
+        # sort oauth clients by last activity, created
+        def sort_key(client):
+            return (
+                client['last_activity'] or never,
+                client['created'] or never,
+            )
+
+        oauth_clients = sorted(oauth_clients, key=sort_key, reverse=True)
+
+        html = self.render_template(
+            'token.html',
+            api_tokens=api_tokens,
+            oauth_clients=oauth_clients,
+        )
         self.finish(html)
 
 

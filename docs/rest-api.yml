@@ -240,18 +240,36 @@ paths:
           description: The user's notebook named-server has stopped
         '202':
           description: The user's notebook named-server has not yet stopped as it is taking a while to stop
-  /users/{name}/admin-access:
-    post:
-      summary: Grant admin access to this user's notebook server
-      parameters:
-        - name: name
-          description: username
-          in: path
-          required: true
-          type: string
+  /users/{name}/tokens:
+    get:
+      summary: List tokens for the user
       responses:
         '200':
-          description: Sets a cookie granting the requesting administrator access to the user's notebook server
+          description: The list of tokens
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Token'
+    post:
+      summary: Create a new token for the user
+      responses:
+        '201':
+          description: The newly created token
+          schema:
+            $ref: '#/definitions/Token'
+  /users/{name}/tokens/{token_id}:
+    get:
+      summary: Get the model for a token by id
+      responses:
+        '200':
+          description: The info for the new token
+          schema:
+            $ref: '#/definitions/Token'
+    delete:
+      summary: Delete (revoke) a token by id
+      responses:
+        '204':
+          description: The token has been deleted
   /user:
     summary: Return authenticated user's model
     description:
@@ -628,3 +646,31 @@ definitions:
         description: The command used to start the service (if managed)
         items:
           type: string
+  Token:
+    type: object
+    properties:
+      token:
+        type: string
+        description: The token itself. Only present in responses to requests for a new token.
+      id:
+        type: string
+        description: The id of the API token. Used for modifying or deleting the token.
+      user:
+        type: string
+        description: The user that owns a token (undefined if owned by a service)
+      service:
+        type: string
+        description: The service that owns the token (undefined of owned by a user)
+      note:
+        type: string
+        description: A note about the token, typically describing what it was created for.
+      created:
+        type: string
+        format: date-time
+        description: Timestamp when this token was created
+      last_activity:
+        type: string
+        format: date-time
+        description: |
+          Timestamp of last-seen activity using this token.
+          Can be null if token has never been used.
