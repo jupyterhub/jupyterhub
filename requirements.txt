@@ -1,7 +1,7 @@
 alembic
 async_generator>=1.8
 traitlets>=4.3.2
-tornado>=4.1
+tornado>=4.5
 jinja2
 pamela
 python-oauth2>=1.0
