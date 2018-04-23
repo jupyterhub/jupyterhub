@@ -70,11 +70,12 @@ class AccessTokenStore(HubDBMixin, oauth2.store.AccessTokenStore):
 
         """
 
-        user = self.db.query(orm.User).filter(orm.User.id == access_token.user_id).first()
+        user = self.db.query(orm.User).filter_by(id=access_token.user_id).first()
         if user is None:
             raise ValueError("No user for access token: %s" % access_token.user_id)
+        client = self.db.query(orm.OAuthClient).filter_by(identifier=access_token.client_id).first()
         orm_access_token = orm.OAuthAccessToken(
-            client_id=access_token.client_id,
+            client=client,
             grant_type=access_token.grant_type,
             expires_at=access_token.expires_at,
             refresh_token=access_token.refresh_token,
@@ -101,10 +102,12 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
                  given code.
 
         """
-        orm_code = self.db\
-            .query(orm.OAuthCode)\
-            .filter(orm.OAuthCode.code == code)\
+        orm_code = (
+            self.db
+            .query(orm.OAuthCode)
+            .filter_by(code=code)
             .first()
+        )
         if orm_code is None:
             raise AuthCodeNotFound()
         else:
@@ -118,7 +121,6 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
                 data={'session_id': orm_code.session_id},
             )
 
-
     def save_code(self, authorization_code):
         """
         Stores the data belonging to an authorization code token.
@@ -126,11 +128,29 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
         :param authorization_code: An instance of
                                    :class:`oauth2.datatype.AuthorizationCode`.
         """
+        orm_client = (
+            self.db
+            .query(orm.OAuthClient)
+            .filter_by(identifier=authorization_code.client_id)
+            .first()
+        )
+        if orm_client is None:
+            raise ValueError("No such client: %s" % authorization_code.client_id)
+
+        orm_user = (
+            self.db
+            .query(orm.User)
+            .filter_by(id=authorization_code.user_id)
+            .first()
+        )
+        if orm_user is None:
+            raise ValueError("No such user: %s" % authorization_code.user_id)
+
         orm_code = orm.OAuthCode(
-            client_id=authorization_code.client_id,
+            client=orm_client,
             code=authorization_code.code,
             expires_at=authorization_code.expires_at,
-            user_id=authorization_code.user_id,
+            user=orm_user,
             redirect_uri=authorization_code.redirect_uri,
             session_id=authorization_code.data.get('session_id', ''),
         )
@@ -146,7 +166,7 @@ class AuthCodeStore(HubDBMixin, oauth2.store.AuthCodeStore):
 
         :param code: The authorization code.
         """
-        orm_code = self.db.query(orm.OAuthCode).filter(orm.OAuthCode.code == code).first()
+        orm_code = self.db.query(orm.OAuthCode).filter_by(code=code).first()
         if orm_code is not None:
             self.db.delete(orm_code)
             self.db.commit()
@@ -166,7 +186,7 @@ class HashComparable:
     """
     def __init__(self, hashed_token):
         self.hashed_token = hashed_token
-    
+
     def __repr__(self):
         return "<{} '{}'>".format(self.__class__.__name__, self.hashed_token)
 
@@ -185,10 +205,12 @@ class ClientStore(HubDBMixin, oauth2.store.ClientStore):
         :raises: :class:`oauth2.error.ClientNotFoundError` if no data could be retrieved for
                  given client_id.
         """
-        orm_client = self.db\
-            .query(orm.OAuthClient)\
-            .filter(orm.OAuthClient.identifier == client_id)\
+        orm_client = (
+            self.db
+            .query(orm.OAuthClient)
+            .filter_by(identifier=client_id)
             .first()
+        )
         if orm_client is None:
             raise ClientNotFoundError()
         return Client(identifier=client_id,
@@ -202,10 +224,12 @@ class ClientStore(HubDBMixin, oauth2.store.ClientStore):
         hash its client_secret before putting it in the database.
         """
         # clear existing clients with same ID
-        for client in self.db\
-                .query(orm.OAuthClient)\
-                .filter(orm.OAuthClient.identifier == client_id):
-            self.db.delete(client)
+        for orm_client in (
+            self.db
+            .query(orm.OAuthClient)\
+            .filter_by(identifier=client_id)
+        ):
+            self.db.delete(orm_client)
         self.db.commit()
 
         orm_client = orm.OAuthClient(

@@ -289,6 +289,7 @@ def test_spawner_delete_cascade(db):
 
     # verify that server gets deleted
     assert_not_found(db, orm.Server, server_id)
+    assert user.orm_spawners == {}
 
 
 def test_user_delete_cascade(db):
@@ -305,11 +306,11 @@ def test_user_delete_cascade(db):
     spawner = orm.Spawner(user=user)
     db.commit()
     spawner.server = server = orm.Server()
-    oauth_code = orm.OAuthCode(client_id=oauth_client.identifier, user_id=user.id)
+    oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.OAuthAccessToken(
-        client_id=oauth_client.identifier,
-        user_id=user.id,
+        client=oauth_client,
+        user=user,
         grant_type=orm.GrantType.authorization_code,
     )
     db.add(oauth_token)
@@ -343,15 +344,16 @@ def test_oauth_client_delete_cascade(db):
 
     # create a bunch of objects that reference the User
     # these should all be deleted automatically when the user goes away
-    oauth_code = orm.OAuthCode(client_id=oauth_client.identifier, user_id=user.id)
+    oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.OAuthAccessToken(
-        client_id=oauth_client.identifier,
-        user_id=user.id,
+        client=oauth_client,
+        user=user,
         grant_type=orm.GrantType.authorization_code,
     )
     db.add(oauth_token)
     db.commit()
+    assert user.oauth_tokens == [oauth_token]
 
     # record all of the ids
     oauth_code_id = oauth_code.id
@@ -364,3 +366,80 @@ def test_oauth_client_delete_cascade(db):
     # verify that everything gets deleted
     assert_not_found(db, orm.OAuthCode, oauth_code_id)
     assert_not_found(db, orm.OAuthAccessToken, oauth_token_id)
+    assert user.oauth_tokens == []
+    assert user.oauth_codes == []
+
+
+def test_delete_token_cascade(db):
+    user = orm.User(name='mobs')
+    db.add(user)
+    db.commit()
+    user.new_api_token()
+    api_token = user.api_tokens[0]
+    db.delete(api_token)
+    db.commit()
+    assert user.api_tokens == []
+
+
+def test_group_delete_cascade(db):
+    user1 = orm.User(name='user1')
+    user2 = orm.User(name='user2')
+    group1 = orm.Group(name='group1')
+    group2 = orm.Group(name='group2')
+    db.add(user1)
+    db.add(user2)
+    db.add(group1)
+    db.add(group2)
+    db.commit()
+    # add user to group via user.groups works
+    user1.groups.append(group1)
+    db.commit()
+    assert user1 in group1.users
+
+    # add user to group via groups.users works
+    group1.users.append(user2)
+    db.commit()
+    assert user1 in group1.users
+    assert user2 in group1.users
+    assert group1 in user1.groups
+    assert group1 in user2.groups
+
+    # fill out the connections (no new concept)
+    group2.users.append(user1)
+    group2.users.append(user2)
+    db.commit()
+    assert user1 in group1.users
+    assert user2 in group1.users
+    assert user1 in group2.users
+    assert user2 in group2.users
+    assert group1 in user1.groups
+    assert group1 in user2.groups
+    assert group2 in user1.groups
+    assert group2 in user2.groups
+
+    # now start deleting
+    # 1. remove group via user.groups
+    user1.groups.remove(group2)
+    db.commit()
+    assert user1 not in group2.users
+    assert group2 not in user1.groups
+
+    # 2. remove user via group.users
+    group1.users.remove(user2)
+    db.commit()
+    assert user2 not in group1.users
+    assert group1 not in user2.groups
+
+    # 3. delete group object
+    db.delete(group2)
+    db.commit()
+    assert group2 not in user1.groups
+    assert group2 not in user2.groups
+
+    # 4. delete user object
+    db.delete(user1)
+    db.commit()
+    assert user1 not in group1.users
+
+
+

@@ -280,7 +280,7 @@ def test_get_self(app):
     db.commit()
     oauth_token = orm.OAuthAccessToken(
         user=u.orm_user,
-        client_id=oauth_client.identifier,
+        client=oauth_client,
         token=token,
         grant_type=orm.GrantType.authorization_code,
     )
