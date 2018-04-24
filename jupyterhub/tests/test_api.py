@@ -608,6 +608,7 @@ def test_spawn(app):
     assert app.users.count_active_users()['pending'] == 0
 
 
+@mark.slow
 @mark.gen_test
 def test_slow_spawn(app, no_patience, slow_spawn):
     db = app.db
@@ -712,7 +713,7 @@ def next_event(it):
         if line.startswith('data:'):
             return json.loads(line.split(':', 1)[1])
 
-
+@mark.slow
 @mark.gen_test
 def test_progress(request, app, no_patience, slow_spawn):
     db = app.db
@@ -950,7 +951,7 @@ def test_spawn_limit(app, no_patience, slow_spawn, request):
     while any(u.spawner.active for u in users):
         yield gen.sleep(0.1)
 
-
+@mark.slow
 @mark.gen_test
 def test_active_server_limit(app, request):
     db = app.db
@@ -1008,7 +1009,7 @@ def test_active_server_limit(app, request):
     assert counts['ready'] == 0
     assert counts['pending'] == 0
 
-
+@mark.slow
 @mark.gen_test
 def test_start_stop_race(app, no_patience, slow_spawn):
     user = add_user(app.db, app, name='panda')

@@ -1,13 +1,16 @@
 """Mock service for testing Service integration
 
 A JupyterHub service running a basic HTTP server.
-Used by the mockservice fixtures.
 
-Handlers allow:
+Used by the `mockservice` fixtures found in `conftest.py` file.
 
-- echoing proxied URLs back
-- retrieving service's environment variables
-- testing service's API access to the Hub retrieval of sys.argv.
+Handlers and their purpose include:
+
+- EchoHandler: echoing proxied URLs back
+- EnvHandler: retrieving service's environment variables
+- APIHandler: testing service's API access to the Hub retrieval of `sys.argv`.
+- WhoAmIHandler: returns name of user making a request (deprecated cookie login)
+- OWhoAmIHandler: returns name of user making a request (OAuth login)
 """
 
 import json
@@ -51,11 +54,12 @@ class APIHandler(web.RequestHandler):
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
     """Reply with the name of the user who made the request.
     
-    Uses deprecated cookie login
+    Uses "deprecated" cookie login
     """
     @web.authenticated
     def get(self):
         self.write(self.get_current_user())
+
 
 class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
     """Reply with the name of the user who made the request.

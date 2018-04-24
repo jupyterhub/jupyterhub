@@ -2,8 +2,15 @@
 
 basic HTTP Server that echos URLs back,
 and allow retrieval of sys.argv.
-"""
 
+Used by the mock spawners found in `mocking.py` file.
+
+Handlers and their purpose include:
+
+- EchoHandler: echoing URLs back
+- ArgsHandler: allowing retrieval of `sys.argv`.
+
+"""
 import argparse
 import json
 import sys
