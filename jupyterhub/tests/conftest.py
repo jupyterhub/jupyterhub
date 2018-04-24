@@ -1,17 +1,40 @@
-"""py.test fixtures"""
+"""py.test fixtures
+
+Fixtures for jupyterhub components
+----------------------------------
+- `app`
+- `auth_state_enabled`
+- `db`
+- `io_loop`
+- single user servers
+    - `cleanup_after`: allows cleanup of single user servers between tests
+- mocked service
+    - `MockServiceSpawner`
+    - `mockservice`: mocked service with no external service url
+    - `mockservice_url`: mocked service with a url to test external services
+
+Fixtures to add functionality or spawning behavior
+--------------------------------------------------
+- `admin_access`
+- `no_patience`
+- `slow_spawn`
+- `never_spawn`
+- `bad_spawn`
+- `slow_bad_spawn`
+
+"""
 
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-import os
-import logging
 from getpass import getuser
-from subprocess import TimeoutExpired
-
-from unittest import mock
+import logging
+import os
 from pytest import fixture, raises
+from subprocess import TimeoutExpired
 from tornado import ioloop, gen
 from tornado.httpclient import HTTPError
+from unittest import mock
 
 from .. import orm
 from .. import crypto
@@ -25,6 +48,45 @@ import jupyterhub.services.service
 
 # global db session object
 _db = None
+
+
+@fixture(scope='module')
+def app(request, io_loop):
+    """Mock a jupyterhub app for testing"""
+    mocked_app = MockHub.instance(log_level=logging.DEBUG)
+
+    @gen.coroutine
+    def make_app():
+        yield mocked_app.initialize([])
+        yield mocked_app.start()
+
+    io_loop.run_sync(make_app)
+
+    def fin():
+        # disconnect logging during cleanup because pytest closes captured FDs prematurely
+        mocked_app.log.handlers = []
+        MockHub.clear_instance()
+        mocked_app.stop()
+
+    request.addfinalizer(fin)
+    return mocked_app
+
+
+@fixture
+def auth_state_enabled(app):
+    app.authenticator.auth_state = {
+        'who': 'cares',
+    }
+    app.authenticator.enable_auth_state = True
+    ck = crypto.CryptKeeper.instance()
+    before_keys = ck.keys
+    ck.keys = [os.urandom(32)]
+    try:
+        yield
+    finally:
+        ck.keys = before_keys
+        app.authenticator.enable_auth_state = False
+        app.authenticator.auth_state = None
 
 
 @fixture
@@ -79,48 +141,16 @@ def cleanup_after(request, io_loop):
         app.db.commit()
 
 
-@fixture(scope='module')
-def app(request, io_loop):
-    """Mock a jupyterhub app for testing"""
-    mocked_app = MockHub.instance(log_level=logging.DEBUG)
-    @gen.coroutine
-    def make_app():
-        yield mocked_app.initialize([])
-        yield mocked_app.start()
-    io_loop.run_sync(make_app)
-
-    def fin():
-        # disconnect logging during cleanup because pytest closes captured FDs prematurely
-        mocked_app.log.handlers = []
-        MockHub.clear_instance()
-        mocked_app.stop()
-    request.addfinalizer(fin)
-    return mocked_app
-
-
-@fixture
-def auth_state_enabled(app):
-    app.authenticator.auth_state = {
-        'who': 'cares',
-    }
-    app.authenticator.enable_auth_state = True
-    ck = crypto.CryptKeeper.instance()
-    before_keys = ck.keys
-    ck.keys = [os.urandom(32)]
-    try:
-        yield
-    finally:
-        ck.keys = before_keys
-        app.authenticator.enable_auth_state = False
-        app.authenticator.auth_state = None
-
-
-# mock services for testing.
-# Shorter intervals, etc.
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
+    """mock services for testing.
+
+       Shorter intervals, etc.
+    """
     poll_interval = 1
 
+
 _mock_service_counter = 0
+
 
 def _mockservice(request, app, url=False):
     global _mock_service_counter
@@ -174,6 +204,14 @@ def mockservice_url(request, app):
 
 
 @fixture
+def admin_access(app):
+    """Grant admin-access with this fixture"""
+    with mock.patch.dict(app.tornado_settings,
+                         {'admin_access': True}):
+        yield
+
+
+@fixture
 def no_patience(app):
     """Set slow-spawning timeouts to zero"""
     with mock.patch.dict(app.tornado_settings,
@@ -211,12 +249,4 @@ def slow_bad_spawn(app):
     """Fixture enabling SlowBadSpawner"""
     with mock.patch.dict(app.tornado_settings,
                          {'spawner_class': mocking.SlowBadSpawner}):
-        yield
-
-
-@fixture
-def admin_access(app):
-    """Grant admin-access with this fixture"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'admin_access': True}):
         yield
