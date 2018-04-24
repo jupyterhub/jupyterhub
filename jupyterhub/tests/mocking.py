@@ -1,5 +1,31 @@
-"""mock utilities for testing"""
+"""mock utilities for testing
 
+Functions
+---------
+- mock_authenticate
+- mock_check_account
+- mock_open_session
+
+Spawners
+--------
+- MockSpawner: based on LocalProcessSpawner
+- SlowSpawner:
+- NeverSpawner:
+- BadSpawner:
+- SlowBadSpawner
+- FormSpawner
+
+Other components
+----------------
+- MockPAMAuthenticator
+- MockHub
+- MockSingleUserServer
+- StubSingleUserSpawner
+
+- public_host
+- public_url
+
+"""
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -26,6 +52,7 @@ from .utils import async_requests
 
 from pamela import PAMError
 
+
 def mock_authenticate(username, password, service, encoding):
     # just use equality for testing
     if password == username:
@@ -49,7 +76,7 @@ class MockSpawner(LocalProcessSpawner):
     """Base mock spawner
     
     - disables user-switching that we need root permissions to do
-    - spawns jupyterhub.tests.mocksu instead of a full single-user server
+    - spawns `jupyterhub.tests.mocksu` instead of a full single-user server
     """
     def make_preexec_fn(self, *a, **kw):
         # skip the setuid stuff
@@ -72,6 +99,7 @@ class MockSpawner(LocalProcessSpawner):
         elif self.will_resume:
             self.use_this_api_token = self.api_token
         return super().start()
+
 
 class SlowSpawner(MockSpawner):
     """A spawner that takes a few seconds to start"""
@@ -128,7 +156,6 @@ class SlowBadSpawner(MockSpawner):
         raise RuntimeError("I don't work!")
 
 
-
 class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
     options_form = "IMAFORM"
@@ -164,7 +191,7 @@ class MockPAMAuthenticator(PAMAuthenticator):
                 open_session=mock_open_session,
                 close_session=mock_open_session,
                 check_account=mock_check_account,
-                ):
+        ):
             username = yield super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
         if username is None:
             return
