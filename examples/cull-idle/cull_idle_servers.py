@@ -127,6 +127,19 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
                 log_name, server['pending'])
             return False
 
+        # jupyterhub < 0.9 defined 'server.url' once the server was ready
+        # as an *implicit* signal that the server was ready.
+        # 0.9 adds a dedicated, explicit 'ready' field.
+        # By current (0.9) definitions, servers that have no pending
+        # events and are not ready shouldn't be in the model,
+        # but let's check just to be safe.
+
+        if not server.get('ready', bool(server['url'])):
+            app_log.warning(
+                "Not culling not-ready not-pending server %s: %s",
+                log_name, server)
+            return False
+
         if server.get('started'):
             age = now - parse_date(server['started'])
         else:
@@ -192,16 +205,18 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
         """
         # shutdown servers first.
         # Hub doesn't allow deleting users with running servers.
-        # named servers contain the 'servers' dict
+        # jupyterhub 0.9 always provides a 'servers' model.
+        # 0.8 only does this when named servers are enabled.
         if 'servers' in user:
             servers = user['servers']
-        # Otherwise, server data is intermingled in with the user
-        # model
         else:
+            # jupyterhub < 0.9 without named servers enabled.
+            # create servers dict with one entry for the default server
+            # from the user model.
+            # only if the server is running.
             servers = {}
             if user['server']:
                 servers[''] = {
-                    'started': user.get('started'),
                     'last_activity': user['last_activity'],
                     'pending': user['pending'],
                     'url': user['server'],

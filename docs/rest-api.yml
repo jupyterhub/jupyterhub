@@ -3,7 +3,7 @@ swagger: '2.0'
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
-  version: 0.8.0dev
+  version: 0.9.0dev
   license:
     name: BSD-3-Clause
 schemes:
@@ -606,12 +606,52 @@ definitions:
         description: The user's notebook server's base URL, if running; null if not.
       pending:
         type: string
-        enum: ["spawn", "stop"]
+        enum: ["spawn", "stop", null]
         description: The currently pending action, if any
       last_activity:
         type: string
         format: date-time
         description: Timestamp of last-seen activity from the user
+      servers:
+        type: object
+        description: The active servers for this user.
+        items:
+          schema:
+            $ref: '#/definitions/Server'
+  Server:
+    type: object
+    properties:
+      name:
+        type: string
+        description: The server's name. The user's default server has an empty name ('')
+      ready:
+        type: boolean
+        description: |
+          Whether the server is ready for traffic.
+          Will always be false when any transition is pending.
+      pending:
+        type: string
+        enum: ["spawn", "stop", null]
+        description: |
+          The currently pending action, if any.
+          A server is not ready if an action is pending.
+      url:
+        type: string
+        description: |
+          The URL where the server can be accessed
+          (typically /user/:name/:server.name/).
+      progress_url:
+        type: string
+        description: |
+          The URL for an event-stream to retrieve events during a spawn.
+      started:
+        type: string
+        format: date-time
+        description: UTC timestamp when the server was last started.
+      last_activity:
+        type: string
+        format: date-time
+        description: UTC timestamp last-seen activity on this server.
   Group:
     type: object
     properties:

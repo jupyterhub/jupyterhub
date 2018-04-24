@@ -200,14 +200,8 @@ def normalize_user(user):
     smooths out user model with things like timestamps
     for easier comparison
     """
-    for key in ('created', 'last_activity', 'started'):
+    for key in ('created', 'last_activity'):
         user[key] = normalize_timestamp(user[key])
-    if user['progress_url']:
-        user['progress_url'] = re.sub(
-            r'.*/hub/api',
-            'PREFIX/hub/api',
-            user['progress_url'],
-        )
     if 'servers' in user:
         for server in user['servers'].values():
             for key in ('started', 'last_activity'):
@@ -228,8 +222,7 @@ def fill_user(model):
     model.setdefault('pending', None)
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
-    model.setdefault('started', None)
-    model.setdefault('progress_url', 'PREFIX/hub/api/users/{name}/server/progress'.format(**model))
+    model.setdefault('servers', {})
     return model
 
 
