@@ -21,7 +21,7 @@ esac
 
 set -x
 
-$SQL 'DROP DATABASE jupyterhub;' 2>/dev/null || true
-$SQL "CREATE DATABASE jupyterhub ${EXTRA_CREATE};"
-$SQL 'DROP DATABASE jupyterhub_upgrade;' 2>/dev/null || true
-$SQL "CREATE DATABASE jupyterhub_upgrade ${EXTRA_CREATE};"
+for SUFFIX in '' _upgrade_072 _upgrade_081; do
+    $SQL "DROP DATABASE jupyterhub${SUFFIX};" 2>/dev/null || true
+    $SQL "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE};"
+done

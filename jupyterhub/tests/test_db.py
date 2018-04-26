@@ -1,45 +1,70 @@
 from glob import glob
 import os
-import shutil
+from subprocess import check_call
+import sys
+import tempfile
 
 import pytest
 from pytest import raises
 from traitlets.config import Config
 
-from ..dbutil import upgrade
 from ..app import NewToken, UpgradeDB, JupyterHub
 
 
-here = os.path.dirname(__file__)
-old_db = os.path.join(here, 'old-jupyterhub.sqlite')
+here = os.path.abspath(os.path.dirname(__file__))
+populate_db = os.path.join(here, 'populate_db.py')
 
-def generate_old_db(path):
-    db_path = os.path.join(path, "jupyterhub.sqlite")
-    print(old_db, db_path)
-    shutil.copy(old_db, db_path)
-    return 'sqlite:///%s' % db_path
 
-def test_upgrade(tmpdir):
-    print(tmpdir)
-    db_url = generate_old_db(str(tmpdir))
-    upgrade(db_url)
+def generate_old_db(env_dir, hub_version, db_url):
+    """Generate an old jupyterhub database
 
+    Installs a particular jupyterhub version in a virtualenv
+    and runs populate_db.py to populate a database
+    """
+    env_pip = os.path.join(env_dir, 'bin', 'pip')
+    env_py = os.path.join(env_dir, 'bin', 'python')
+    check_call([sys.executable, '-m', 'virtualenv', env_dir])
+    pkgs = ['jupyterhub==' + hub_version]
+    if 'mysql' in db_url:
+        pkgs.append('mysql-connector<2.2')
+    elif 'postgres' in db_url:
+        pkgs.append('psycopg2')
+    check_call([env_pip, 'install'] + pkgs)
+    check_call([env_py, populate_db, db_url])
+
+
+@pytest.mark.parametrize(
+    'hub_version',
+    [
+        '0.7.2',
+        '0.8.1',
+    ],
+)
 @pytest.mark.gen_test
-def test_upgrade_entrypoint(tmpdir):
-    db_url = os.getenv('JUPYTERHUB_TEST_UPGRADE_DB_URL')
-    if not db_url:
-        # default: sqlite
-        db_url = generate_old_db(str(tmpdir))
+def test_upgrade(tmpdir, hub_version):
+    db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
+    if db_url:
+        db_url += '_upgrade_' + hub_version.replace('.', '')
+    else:
+        db_url = 'sqlite:///jupyterhub.sqlite'
+    tmpdir.chdir()
+
+    # use persistent temp env directory
+    # to reuse across multiple runs
+    env_dir = os.path.join(tempfile.gettempdir(), 'test-hub-upgrade-%s' % hub_version)
+
+    generate_old_db(env_dir, hub_version, db_url)
+
     cfg = Config()
     cfg.JupyterHub.db_url = db_url
 
-    tmpdir.chdir()
     tokenapp = NewToken(config=cfg)
-    tokenapp.initialize(['kaylee'])
+    tokenapp.initialize(['admin'])
     with raises(SystemExit):
         tokenapp.start()
 
     if 'sqlite' in db_url:
+        fname = db_url.split(':///')[1]
         sqlite_files = glob(os.path.join(str(tmpdir), 'jupyterhub.sqlite*'))
         assert len(sqlite_files) == 1
 

@@ -15,6 +15,9 @@ depends_on = None
 from alembic import op
 import sqlalchemy as sa
 
+import logging
+logger = logging.getLogger('alembic')
+
 
 def upgrade():
     tables = op.get_bind().engine.table_names()
@@ -24,8 +27,11 @@ def upgrade():
     if 'oauth_access_tokens' in tables:
         op.add_column('oauth_access_tokens', sa.Column('created', sa.DateTime(), nullable=True))
         op.add_column('oauth_access_tokens', sa.Column('last_activity', sa.DateTime(), nullable=True))
-        op.create_foreign_key(None, 'oauth_access_tokens', 'oauth_clients', ['client_id'], ['identifier'], ondelete='CASCADE')
-        op.create_foreign_key(None, 'oauth_codes', 'oauth_clients', ['client_id'], ['identifier'], ondelete='CASCADE')
+        if op.get_context().dialect.name == 'sqlite':
+            logger.warning("sqlite cannot use ALTER TABLE to create foreign keys. Upgrade will be incomplete.")
+        else:
+            op.create_foreign_key(None, 'oauth_access_tokens', 'oauth_clients', ['client_id'], ['identifier'], ondelete='CASCADE')
+            op.create_foreign_key(None, 'oauth_codes', 'oauth_clients', ['client_id'], ['identifier'], ondelete='CASCADE')
 
 
 def downgrade():
