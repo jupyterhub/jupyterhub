@@ -104,6 +104,65 @@ def test_pam_auth_group_whitelist():
 
 
 @pytest.mark.gen_test
+def test_pam_auth_blacklist():
+    # Null case compared to next case
+    authenticator = MockPAMAuthenticator()
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'wash',
+        'password': 'wash',
+    })
+    assert authorized['name'] == 'wash'
+
+    # Blacklist basics
+    authenticator = MockPAMAuthenticator(blacklist={'wash'})
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'wash',
+        'password': 'wash',
+    })
+    assert authorized is  None
+
+    # User in both white and blacklists: default deny.  Make error someday?
+    authenticator = MockPAMAuthenticator(blacklist={'wash'}, whitelist={'wash', 'kaylee'})
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'wash',
+        'password': 'wash',
+    })
+    assert authorized is None
+
+    # User not in blacklist can log in
+    authenticator = MockPAMAuthenticator(blacklist={'wash'}, whitelist={'wash', 'kaylee'})
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'kaylee',
+        'password': 'kaylee',
+    })
+    assert authorized['name'] == 'kaylee'
+
+    # User in whitelist, blacklist irrelevent
+    authenticator = MockPAMAuthenticator(blacklist={'mal'}, whitelist={'wash', 'kaylee'})
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'wash',
+        'password': 'wash',
+    })
+    assert authorized['name'] == 'wash'
+
+    # User in neither list
+    authenticator = MockPAMAuthenticator(blacklist={'mal'}, whitelist={'wash', 'kaylee'})
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'simon',
+        'password': 'simon',
+    })
+    assert authorized is None
+
+    # blacklist == {}
+    authenticator = MockPAMAuthenticator(blacklist=set(), whitelist={'wash', 'kaylee'})
+    authorized = yield authenticator.get_authenticated_user(None, {
+        'username': 'kaylee',
+        'password': 'kaylee',
+    })
+    assert authorized['name'] == 'kaylee'
+
+
+@pytest.mark.gen_test
 def test_pam_auth_no_such_group():
     authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
     authorized = yield authenticator.get_authenticated_user(None, {

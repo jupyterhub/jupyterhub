@@ -274,13 +274,13 @@ class Authenticator(LoggingConfigurable):
             return
 
         blacklist_pass = await maybe_future(self.check_blacklist(username))
+        whitelist_pass = await maybe_future(self.check_whitelist(username))
         if blacklist_pass:
             pass
         else:
             self.log.warning("User %r in blacklist. Stop authentication", username)
             return
 
-        whitelist_pass = await maybe_future(self.check_whitelist(username))
         if whitelist_pass:
             return authenticated
         else:
