@@ -1,77 +1,27 @@
+# Python CircleCI 2.0 configuration file
 # Updating CircleCI configuration from v1 to v2
+# Check https://circleci.com/docs/2.0/language-python/ for more details
+#
 version: 2
 jobs:
   build:
-    machine:
-      enabled: true
+    machine: true
     steps:
       - checkout
       - run:
-          command: ls
-
-  test:
-    machine:
-      enabled: true
-    steps:
-      - checkout
+          name: build images
+          command: |
+            docker build -t jupyterhub/jupyterhub .
+            docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-master} onbuild
       - run:
-          command: docker build -t jupyterhub/jupyterhub .
-      - run:
-          command: docker build -t jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-latest} onbuild
-
-  deploy:
-    machine:
-      enabled: true
-    steps:
-      - run:
-          command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
-      - run:
-          command: docker push jupyterhub/jupyterhub-onbuild
-
-  release:
-    machine:
-      enabled: true
-    steps:
-      - run:
-          command: docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
-      - run:
-          command: docker push jupyterhub/jupyterhub-onbuild:$CIRCLE_TAG
-
-
-workflows:
-  version: 2
-  build-test-deploy:
-    jobs:
-      - build:
-          filters:
-            branches:
-              only: master
-      - test:
-          requires:
-            - build
-          filters:
-            branches:
-              only: master
+          name: smoke test jupyterhub
+          command: |
+            docker run --rm -it jupyterhub/jupyterhub jupyterhub --help
       - deploy:
-          requires:
-            - test
-          filters:
-            branches:
-              only: master
-  build-test-release:
-      - build:
-          filters:
-            tags:
-              only: /.*/
-      - test:
-          requires:
-            - build
-          filters:
-            tags:
-              only: /.*/
-      - release:
-          requires:
-            - test
-          filters:
-            tags:
-              only: /.*/
+          name: Push docker image
+          command: |
+            docker images
+            if [[ "${CIRCLE_BRANCH}" == "master" || ! -z "${CIRCLE_TAG}" ]]; then
+              docker login -u $DOCKER_USER -p $DOCKER_PASS -e unused@example.com
+              docker push jupyterhub/jupyterhub-onbuild:${CIRCLE_TAG:-master}
+            fi
