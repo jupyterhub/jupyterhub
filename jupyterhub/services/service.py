@@ -56,6 +56,7 @@ from ..traitlets import Command
 from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..utils import url_path_join
 
+
 class _MockUser(HasTraits):
     name = Unicode()
     server = Instance(orm.Server, allow_none=True)
@@ -71,7 +72,7 @@ class _MockUser(HasTraits):
             return self.host + self.server.base_url
         else:
             return self.server.base_url
-    
+
     @property
     def base_url(self):
         if not self.server:
@@ -122,6 +123,7 @@ class _ServiceSpawner(LocalProcessSpawner):
             raise
 
         self.pid = self.proc.pid
+
 
 class Service(LoggingConfigurable):
     """An object wrapping a service specification for Hub API consumers.
@@ -320,7 +322,7 @@ class Service(LoggingConfigurable):
         self.log.error("Service %s exited with status %i", self.name, self.proc.returncode)
         self.start()
 
-    def stop(self):
+    async def stop(self):
         """Stop a managed service"""
         self.log.debug("Stopping service %s", self.name)
         if not self.managed:
@@ -330,4 +332,4 @@ class Service(LoggingConfigurable):
                 self.db.delete(self.orm.server)
                 self.db.commit()
             self.spawner.stop_polling()
-            return self.spawner.stop()
+            return (await self.spawner.stop())

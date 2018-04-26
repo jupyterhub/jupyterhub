@@ -1494,7 +1494,7 @@ class JupyterHub(Application):
         if managed_services:
             self.log.info("Cleaning up %i services...", len(managed_services))
             for service in managed_services:
-                service.stop()
+                await service.stop()
 
         if self.cleanup_servers:
             self.log.info("Cleaning up single-user servers...")
