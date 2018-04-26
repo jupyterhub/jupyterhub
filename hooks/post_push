@@ -15,13 +15,15 @@ function get_hub_version() {
 
 
 get_hub_version
-# when building 0.9.0.dev, push 0.9.0 and 0.9 tags as well
-docker tag $DOCKER_REPO:$hub_xyz $DOCKER_REPO:$DOCKER_TAG
+
+# when building master, push 0.9.0 as well
+docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xyz
 docker push $DOCKER_REPO:$hub_xyz
-docker tag $ONBUILD:$hub_xyz $ONBUILD:$DOCKER_TAG
+docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xyz
 docker push $ONBUILD:$hub_xyz
 
-docker tag $DOCKER_REPO:$hub_xy $DOCKER_REPO:$DOCKER_TAG
+# when building 0.9.x, push 0.9 as well
+docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xy
 docker push $DOCKER_REPO:$hub_xy
-docker tag $ONBUILD:$hub_xy $DOCKER_REPO:$DOCKER_TAG
+docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xy
 docker push $ONBUILD:$hub_xyz
