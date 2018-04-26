@@ -1,0 +1,4 @@
+#!/bin/bash
+set -exuo pipefail
+
+docker build --build-arg BASE_IMAGE=$DOCKER_REPO:$DOCKER_TAG -t ${DOCKER_REPO}-onbuild:$DOCKER_TAG onbuild
