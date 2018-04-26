@@ -1,5 +1,5 @@
 #!/bin/bash
-set -ex
+set -exuo pipefail
 
 docker build -t $DOCKER_REPO:$DOCKER_TAG .
 # build onbuild

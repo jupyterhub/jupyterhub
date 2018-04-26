@@ -1,4 +1,6 @@
-stable=0.8
+#!/bin/bash
+set -exuo pipefail
+
 export ONBUILD=${DOCKER_REPO}_onbuild
 # push ONBUILD image
 docker push $ONBUILD:$DOCKER_TAG
