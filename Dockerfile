@@ -26,13 +26,10 @@ LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 # install nodejs, utf8 locale, set CDN because default httpredir is unreliable
 ENV DEBIAN_FRONTEND noninteractive
-RUN REPO=http://cdn-fastly.deb.debian.org && \
-    apt-get -y update && \
+RUN apt-get -y update && \
     apt-get -y upgrade && \
-    apt-get -y install wget locales git bzip2 &&\
-    /usr/sbin/update-locale LANG=C.UTF-8 && \
-    locale-gen C.UTF-8 && \
-    apt-get remove -y locales && \
+    apt-get -y install wget git bzip2 && \
+    apt-get purge && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 ENV LANG C.UTF-8
