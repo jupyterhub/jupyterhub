@@ -75,7 +75,7 @@ def format_td(td):
     seconds = seconds % 3600
     m = seconds // 60
     seconds = seconds % 60
-    return f"{h:02}:{m:02}:{seconds:02}"
+    return "{h:02}:{m:02}:{seconds:02}".format(h=h, m=m, seconds=seconds)
 
 
 @coroutine
