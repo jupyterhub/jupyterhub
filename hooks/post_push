@@ -1,0 +1,25 @@
+stable=0.8
+export ONBUILD=${DOCKER_REPO}_onbuild
+# push ONBUILD image
+docker push $ONBUILD:$DOCKER_TAG
+
+function get_hub_version() {
+  rm -f hub_version
+  docker run --rm -v $PWD:/version -u $(id -u) -i $DOCKER_REPO:$DOCKER_TAG sh -c 'jupyterhub --version > /version/hub_version'
+  hub_xyz=$(cat hub_version)
+  split=( ${hub_xyz//./ } )
+  hub_xy="${split[0]}.${split[1]}"
+}
+
+
+get_hub_version
+# when building 0.9.0.dev, push 0.9.0 and 0.9 tags as well
+docker tag $DOCKER_REPO:$hub_xyz $DOCKER_REPO:$DOCKER_TAG
+docker push $DOCKER_REPO:$hub_xyz
+docker tag $ONBUILD:$hub_xyz $ONBUILD:$DOCKER_TAG
+docker push $ONBUILD:$hub_xyz
+
+docker tag $DOCKER_REPO:$hub_xy $DOCKER_REPO:$DOCKER_TAG
+docker push $DOCKER_REPO:$hub_xy
+docker tag $ONBUILD:$hub_xy $DOCKER_REPO:$DOCKER_TAG
+docker push $ONBUILD:$hub_xyz
