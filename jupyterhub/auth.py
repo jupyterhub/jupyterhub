@@ -88,6 +88,20 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    blacklist = Set(
+        help="""
+        Blacklist of usernames that are not allowed to log in.
+
+        Use this with supported authenticators to restrict which users can not log in. This is an
+        additional blacklist that further restricts users, beyond whatever restrictions the
+        authenticator has in place.
+
+        If empty, does not perform any additional restriction.
+
+        .. versionadded: 0.9
+        """
+    ).tag(config=True)
+
     @observe('whitelist')
     def _check_whitelist(self, change):
         short_names = [name for name in change['new'] if len(name) <= 1]
@@ -205,6 +219,21 @@ class Authenticator(LoggingConfigurable):
             return True
         return username in self.whitelist
 
+    def check_blacklist(self, username):
+        """Check if a username is blocked to authenticate based on blacklist configuration
+
+        Return True if username is allowed, False otherwise.
+        No blacklist means any username is allowed.
+
+        Names are normalized *before* being checked against the blacklist.
+
+        .. versionadded: 0.9
+        """
+        if not self.blacklist:
+            # No blacklist means any name is allowed
+            return True
+        return username not in self.blacklist
+
     async def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
 
@@ -242,6 +271,13 @@ class Authenticator(LoggingConfigurable):
         authenticated['name'] = username = self.normalize_username(authenticated['name'])
         if not self.validate_username(username):
             self.log.warning("Disallowing invalid username %r.", username)
+            return
+
+        blacklist_pass = await maybe_future(self.check_blacklist(username))
+        if blacklist_pass:
+            pass
+        else:
+            self.log.warning("User %r in blacklist. Stop authentication", username)
             return
 
         whitelist_pass = await maybe_future(self.check_whitelist(username))
