@@ -15,7 +15,7 @@ c.JupyterHub.services = [
     {
         'name': 'cull-idle',
         'admin': True,
-        'command': 'python cull_idle_servers.py --timeout=3600'.split(),
+        'command': 'python3 cull_idle_servers.py --timeout=3600'.split(),
     }
 ]
 ```
@@ -37,5 +37,5 @@ variable. Run `cull_idle_servers.py` manually.
 
 ```bash
     export JUPYTERHUB_API_TOKEN=`jupyterhub token`
-    python cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
+    python3 cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 ```

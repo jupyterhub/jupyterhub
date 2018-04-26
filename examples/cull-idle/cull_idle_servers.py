@@ -16,14 +16,14 @@ You can run this as a service managed by JupyterHub with this in your config::
         {
             'name': 'cull-idle',
             'admin': True,
-            'command': 'python cull_idle_servers.py --timeout=3600'.split(),
+            'command': 'python3 cull_idle_servers.py --timeout=3600'.split(),
         }
     ]
 
 Or run it manually by generating an API token and storing it in `JUPYTERHUB_API_TOKEN`:
 
     export JUPYTERHUB_API_TOKEN=`jupyterhub token`
-    python cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
+    python3 cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 """
 
 from datetime import datetime, timezone
