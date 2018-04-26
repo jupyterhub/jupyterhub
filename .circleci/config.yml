@@ -13,7 +13,7 @@ jobs:
           command: |
             docker build -t jupyterhub/jupyterhub .
             docker build -t jupyterhub/jupyterhub-onbuild onbuild
-            docker build -t jupyterhub/jupyterhub:alpine -f dockerfiles/Dockerfile.alpine
+            docker build -t jupyterhub/jupyterhub:alpine -f dockerfiles/Dockerfile.alpine .
             docker build -t jupyterhub/singleuser singleuser
       - run:
           name: smoke test jupyterhub
