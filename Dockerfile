@@ -21,13 +21,12 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-FROM debian:jessie
-MAINTAINER Jupyter Project <jupyter@googlegroups.com>
+FROM ubuntu:18.04
+LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
 # install nodejs, utf8 locale, set CDN because default httpredir is unreliable
 ENV DEBIAN_FRONTEND noninteractive
 RUN REPO=http://cdn-fastly.deb.debian.org && \
-    echo "deb $REPO/debian jessie main\ndeb $REPO/debian-security jessie/updates main" > /etc/apt/sources.list && \
     apt-get -y update && \
     apt-get -y upgrade && \
     apt-get -y install wget locales git bzip2 &&\
@@ -39,11 +38,11 @@ RUN REPO=http://cdn-fastly.deb.debian.org && \
 ENV LANG C.UTF-8
 
 # install Python + NodeJS with conda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.2.12-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
-    echo 'd0c7c71cc5659e54ab51f2005a8d96f3 */tmp/miniconda.sh' | md5sum -c - && \
+RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.4.10-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+    echo 'bec6203dbb2f53011e974e9bf4d46e93 */tmp/miniconda.sh' | md5sum -c - && \
     bash /tmp/miniconda.sh -f -b -p /opt/conda && \
     /opt/conda/bin/conda install --yes -c conda-forge \
-      python=3.5 sqlalchemy tornado jinja2 traitlets requests pip pycurl \
+      python=3.6 sqlalchemy tornado jinja2 traitlets requests pip pycurl \
       nodejs configurable-http-proxy && \
     /opt/conda/bin/pip install --upgrade pip && \
     rm /tmp/miniconda.sh
