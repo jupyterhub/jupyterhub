@@ -431,9 +431,15 @@ class BaseHandler(RequestHandler):
             # default URL after login
             # if self.redirect_to_server, default login URL initiates spawn
             if user and self.redirect_to_server:
-                next_url = user.url
+                if self.config.JupyterHub.get('default_user_page'):
+                    next_url = self.config.JupyterHub['default_user_page']
+                else:
+                    next_url = user.url
             else:
-                next_url = url_path_join(self.hub.base_url, 'home')
+                if self.config.JupyterHub.get('default_page'):
+                    next_url = self.config.JupyterHub['default_page']
+                else:
+                    next_url = url_path_join(self.hub.base_url, 'home')
         return next_url
 
     async def login_user(self, data=None):

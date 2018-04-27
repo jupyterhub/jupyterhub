@@ -838,9 +838,20 @@ class JupyterHub(Application):
             handlers[i] = tuple(lis)
         return handlers
 
+    extra_page_handlers = List().tag(config=True)
+    default_page = Any(default_value=None).tag(config=True)
+    default_user_page = Any(default_value=None).tag(config=True)
+ 
+
     def init_handlers(self):
         h = []
+
+        # add any user configurable handlers. Make it first so it can override
+        # builtin handlers
+
+        h.extend(self.extra_page_handlers)
         # load handlers from the authenticator
+
         h.extend(self.authenticator.get_handlers(self))
         # set default handlers
         h.extend(handlers.default_handlers)
