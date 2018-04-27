@@ -1,0 +1,29 @@
+#!/bin/bash
+set -exuo pipefail
+
+export ONBUILD=${DOCKER_REPO}-onbuild
+# push ONBUILD image
+docker push $ONBUILD:$DOCKER_TAG
+
+function get_hub_version() {
+  rm -f hub_version
+  docker run --rm -v $PWD:/version -u $(id -u) -i $DOCKER_REPO:$DOCKER_TAG sh -c 'jupyterhub --version > /version/hub_version'
+  hub_xyz=$(cat hub_version)
+  split=( ${hub_xyz//./ } )
+  hub_xy="${split[0]}.${split[1]}"
+}
+
+
+get_hub_version
+
+# when building master, push 0.9.0 as well
+docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xyz
+docker push $DOCKER_REPO:$hub_xyz
+docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xyz
+docker push $ONBUILD:$hub_xyz
+
+# when building 0.9.x, push 0.9 as well
+docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xy
+docker push $DOCKER_REPO:$hub_xy
+docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xy
+docker push $ONBUILD:$hub_xyz
