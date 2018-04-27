@@ -175,6 +175,13 @@ class Service(LoggingConfigurable):
         If unspecified, an API token will be generated for managed services.
         """
     ).tag(input=True)
+
+    info = Dict(
+        help="""Provide a place to include miscellaneous information about the service,
+        provided through the configuration
+        """
+    ).tag(input=True)
+
     # Managed service API:
     spawner = Any()
 
