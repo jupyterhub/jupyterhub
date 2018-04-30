@@ -234,6 +234,11 @@ class Authenticator(LoggingConfigurable):
             return True
         return username not in self.blacklist
 
+    def get_current_user(self, handler):
+        """Return username for current request.
+        """
+        return None
+
     async def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
 
@@ -590,8 +595,8 @@ class PAMAuthenticator(LocalAuthenticator):
         help="""
         Whether to check the user's account status via PAM during authentication.
 
-        The PAM account stack performs non-authentication based account 
-        management. It is typically used to restrict/permit access to a 
+        The PAM account stack performs non-authentication based account
+        management. It is typically used to restrict/permit access to a
         service and this step is needed to access the host's user access control.
 
         Disabling this can be dangerous as authenticated but unauthorized users may
