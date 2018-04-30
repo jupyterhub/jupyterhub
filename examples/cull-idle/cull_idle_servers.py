@@ -79,7 +79,7 @@ def format_td(td):
 
 
 @coroutine
-def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concurrency=10):
+def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concurrency=10, user_inactive_limit=None, user_max_age=None):
     """Shutdown idle single-user servers
 
     If cull_users, inactive *users* will be deleted as well.
@@ -110,6 +110,10 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
     resp = yield fetch(req)
     users = json.loads(resp.body.decode('utf8', 'replace'))
     futures = []
+    if not user_inactive_limit:
+        user_inactive_limit = inactive_limit
+    if not user_max_age:
+        user_max_age = max_age
 
     @coroutine
     def handle_server(user, server_name, server):
@@ -159,10 +163,6 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
         should_cull = (inactive is not None and
                        inactive.total_seconds() >= inactive_limit)
-        if should_cull:
-            app_log.info(
-                "Culling server %s (inactive for %s)",
-                log_name, format_td(inactive))
 
         if max_age and not should_cull:
             # only check started if max_age is specified
@@ -176,10 +176,13 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
         if not should_cull:
             app_log.debug(
-                "Not culling server %s (age: %s, inactive for %s)",
+                "Not culling server %s (age: %s, inactive: %s)",
                 log_name, format_td(age), format_td(inactive))
             return False
 
+        app_log.debug(
+            "Culling server %s (age: %s, inactive for %s)",
+            log_name, format_td(age), format_td(inactive))
         req = HTTPRequest(
             url=url + '/users/%s/server' % quote(user['name']),
             method='DELETE',
@@ -243,6 +246,12 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             # created may be undefined on jupyterhub < 0.9
             age = None
 
+        # Don't cull admin users
+        if user['admin']:
+            app_log.debug("Not culling user %s, they are admin",
+                          user['name'])
+            return False
+
         # check last activity
         # last_activity can be None in 0.9
         if user['last_activity']:
@@ -254,17 +263,13 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
             inactive = age
 
         should_cull = (inactive is not None and
-                       inactive.total_seconds() >= inactive_limit)
-        if should_cull:
-            app_log.info(
-                "Culling user %s (inactive for %s)",
-                user['name'], inactive)
+                       inactive.total_seconds() >= user_inactive_limit)
 
-        if max_age and not should_cull:
-            # only check created if max_age is specified
+        if user_max_age and not should_cull:
+            # only check created if user_max_age is specified
             # so that we can still be compatible with jupyterhub 0.8
             # which doesn't define the 'started' field
-            if age is not None and age.total_seconds() >= max_age:
+            if age is not None and age.total_seconds() >= user_max_age:
                 app_log.info(
                     "Culling user %s (age: %s, inactive for %s)",
                     user['name'], format_td(age), format_td(inactive))
@@ -272,10 +277,13 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
         if not should_cull:
             app_log.debug(
-                "Not culling user %s (created: %s, last active: %s)",
+                "Not culling user %s (age: %s, last active: %s)",
                 user['name'], format_td(age), format_td(inactive))
             return False
 
+        app_log.debug(
+            "Culling user %s (age: %s, last active: %s)",
+            user['name'], format_td(age), format_td(inactive))
         req = HTTPRequest(
             url=url + '/users/%s' % user['name'],
             method='DELETE',
@@ -312,6 +320,11 @@ if __name__ == '__main__':
            help="""Cull users in addition to servers.
                 This is for use in temporary-user cases such as tmpnb.""",
            )
+    define('user_timeout', default=0, type=int,
+           help="""Inactive time for culling users.  Defaults to --timeout.""",
+           )
+    define('user_max_age', default=0,
+           help="The age limit (in seconds) where users, active and inactive, will be culled if user's age exceeds the limit. Defaults to --max_age.")
     define('concurrency', default=10,
            help="""Limit the number of concurrent requests made to the Hub.
 
@@ -342,6 +355,8 @@ if __name__ == '__main__':
         cull_users=options.cull_users,
         max_age=options.max_age,
         concurrency=options.concurrency,
+        user_inactive_limit=options.user_timeout,
+        user_max_age=options.user_max_age,
     )
     # schedule first cull immediately
     # because PeriodicCallback doesn't start until the end of the first interval
