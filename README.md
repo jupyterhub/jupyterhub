@@ -38,7 +38,7 @@ Three main actors make up JupyterHub:
 
 Basic principles for operation are:
 
-- Hub spawns a proxy.
+- Hub launches a proxy.
 - Proxy forwards all requests to Hub by default.
 - Hub handles login, and spawns single-user servers on demand.
 - Hub configures proxy to forward url prefixes to the single-user notebook
