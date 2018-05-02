@@ -70,6 +70,7 @@ def _scrub_uri(uri):
         # use manual list + split rather than parsing
         # to minimally perturb original
         parts = parsed.query.split('&')
+        changed = False
         for i, s in enumerate(parts):
             if '=' in s:
                 key, value = s.split('=', 1)
