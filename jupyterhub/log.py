@@ -154,6 +154,6 @@ def log_request(handler):
         # to get headers from tornado
         location = handler._headers.get('Location')
         if location:
-            ns['location'] = ' -> {}'.format(location)
+            ns['location'] = ' -> {}'.format(_scrub_uri(location))
     log_method(msg.format(**ns))
     prometheus_log_method(handler)
