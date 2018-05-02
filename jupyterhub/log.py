@@ -70,6 +70,7 @@ def _scrub_uri(uri):
         # use manual list + split rather than parsing
         # to minimally perturb original
         parts = parsed.query.split('&')
+        changed = False
         for i, s in enumerate(parts):
             if '=' in s:
                 key, value = s.split('=', 1)
@@ -153,6 +154,6 @@ def log_request(handler):
         # to get headers from tornado
         location = handler._headers.get('Location')
         if location:
-            ns['location'] = ' -> {}'.format(location)
+            ns['location'] = ' -> {}'.format(_scrub_uri(location))
     log_method(msg.format(**ns))
     prometheus_log_method(handler)
