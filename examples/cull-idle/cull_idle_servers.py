@@ -24,6 +24,12 @@ Or run it manually by generating an API token and storing it in `JUPYTERHUB_API_
 
     export JUPYTERHUB_API_TOKEN=`jupyterhub token`
     python3 cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
+
+This script uses the same ``--timeout`` and ``--max-age`` values for
+culling users and users' servers.  If you want a different value for
+users and servers, you should add this script to the services list
+twice, just with different ``name``s, different values, and one with
+the ``--cull-users`` option.
 """
 
 from datetime import datetime, timezone
