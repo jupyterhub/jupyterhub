@@ -4,11 +4,13 @@
 
 import json
 import traceback
+from urllib.parse import urlparse, urlunparse
 
 from tornado.log import LogFormatter, access_log
 from tornado.web import StaticFileHandler, HTTPError
 
 from .metrics import prometheus_log_method
+
 
 def coroutine_frames(all_frames):
     """Extract coroutine boilerplate frames from a frame list
@@ -52,11 +54,32 @@ class CoroutineLogFormatter(LogFormatter):
     def formatException(self, exc_info):
         return ''.join(coroutine_traceback(*exc_info))
 
+# url params to be scrubbed if seen
+# any url param that *contains* one of these
+# will be scrubbed from logs
+SCRUB_PARAM_KEYS = ('token', 'auth', 'key', 'code', 'state')
+
 
 def _scrub_uri(uri):
     """scrub auth info from uri"""
     if '/api/authorizations/cookie/' in uri or '/api/authorizations/token/' in uri:
         uri = uri.rsplit('/', 1)[0] + '/[secret]'
+    parsed = urlparse(uri)
+    if parsed.query:
+        # check for potentially sensitive url params
+        # use manual list + split rather than parsing
+        # to minimally perturb original
+        parts = parsed.query.split('&')
+        for i, s in enumerate(parts):
+            if '=' in s:
+                key, value = s.split('=', 1)
+                for substring in SCRUB_PARAM_KEYS:
+                    if substring in key:
+                        parts[i] = key + '=[secret]'
+                        changed = True
+        if changed:
+            parsed = parsed._replace(query='&'.join(parts))
+            return urlunparse(parsed)
     return uri
 
 
