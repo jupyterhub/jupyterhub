@@ -2,6 +2,7 @@
 
 Welcome! As a [Jupyter](https://jupyter.org) project, we follow the [Jupyter contributor guide](https://jupyter.readthedocs.io/en/latest/contributor/content-contributor.html).
 
+
 ## Set up your development system
 
 For a development install, clone the [repository](https://github.com/jupyterhub/jupyterhub)
@@ -34,17 +35,28 @@ python3 setup.py css   # recompile CSS from LESS sources
 
 ## Running the test suite
 
-We use [pytest](http://doc.pytest.org/en/latest/) for running tests. Set up a
-development install as described above. To run all the tests:
+We use [pytest](http://doc.pytest.org/en/latest/) for running tests. 
+
+1. Set up a development install as described above. 
+
+2. Set environment variable for `ASYNC_TEST_TIMEOUT` to 15 seconds:
 
 ```bash
-pytest jupyterhub/tests
+export ASYNC_TEST_TIMEOUT=15
+```
+
+3. Run tests.
+
+To run all the tests:
+
+```bash
+pytest -v jupyterhub/tests
 ```
 
 To run an individual test file (i.e. `test_api.py`):
 
 ```bash
-pytest jupyterhub/tests/test_api.py
+pytest -v jupyterhub/tests/test_api.py
 ```
 
 ### Troubleshooting tests
@@ -63,16 +75,24 @@ If you see many test errors and failures, double check that you have installed
 
 ## Building the Docs locally
 
-Install the dependencies:
+1. Install the development system as described above.
+
+2. Install the dependencies for documentation:
 
 ```bash
 python3 -m pip install -r docs/requirements.txt
 ```
 
-Build the docs:
+3. Build the docs:
 
 ```bash
 cd docs
 make clean
 make html
+```
+
+4. View the docs:
+
+```bash
+open build/html/index.html
 ```
