@@ -34,7 +34,7 @@
         <td colspan="12">
           <a id="add-users" role="button" class="col-xs-2 btn btn-default">Add Users</a>
           <span class="col-xs-offset-4 col-xs-3">
-            <a id="start-all-servers" role="button" class="btn btn-success col-xs-5 col-xs-offset-1">Start All</a>
+            <a id="start-all-servers" role="button" class="btn btn-primary col-xs-5 col-xs-offset-1">Start All</a>
             <a id="stop-all-servers" role="button" class="btn btn-danger col-xs-5 col-xs-offset-1">Stop All</a>
           </span>
           <a id="shutdown-hub" role="button" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
@@ -54,11 +54,11 @@
       </td>
       <td class="server-col col-sm-2 text-center">
         <a role="button" class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</span>
-        <a role="button" class="start-server btn btn-xs btn-success {% if u.running %}hidden{% endif %}">start server</span>
+        <a role="button" class="start-server btn btn-xs btn-primary {% if u.running %}hidden{% endif %}">start server</span>
       </td>
       <td class="server-col col-sm-1 text-center">
         {% if admin_access %}
-        <a role="button" class="access-server btn btn-xs btn-success {% if not u.running %}hidden{% endif %}">access server</span>
+        <a role="button" class="access-server btn btn-xs btn-primary {% if not u.running %}hidden{% endif %}">access server</span>
         {% endif %}
       </td>
       <td class="edit-col col-sm-1 text-center">
@@ -85,7 +85,7 @@
   Are you sure you want to stop all your users' servers? Kernels will be shutdown and unsaved data may be lost.
 {% endcall %}
 
-{% call modal('Start All Servers', btn_label='Start All', btn_class='btn-success start-all-button') %}
+{% call modal('Start All Servers', btn_label='Start All', btn_class='btn-primary start-all-button') %}
   Are you sure you want to start all servers? This can slam your server resources.
 {% endcall %}
 
