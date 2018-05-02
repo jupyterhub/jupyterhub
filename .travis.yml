@@ -32,7 +32,7 @@ before_install:
       pip install psycopg2
     fi
 install:
-  - pip install -U pip
+  - pip install --upgrade pip
   - pip install --pre -r dev-requirements.txt .
   - pip freeze
 
