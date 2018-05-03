@@ -17,7 +17,7 @@ import re
 import signal
 import sys
 from textwrap import dedent
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse
 
 
 if sys.version_info[:2] < (3, 3):
@@ -302,11 +302,11 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
     ip = Unicode('',
-        help="""The public facing ip of the whole JupyterHub application 
+        help="""The public facing ip of the whole JupyterHub application
         (specifically referred to as the proxy).
-        
-        This is the address on which the proxy will listen. The default is to 
-        listen on all interfaces. This is the only address through which JupyterHub 
+
+        This is the address on which the proxy will listen. The default is to
+        listen on all interfaces. This is the only address through which JupyterHub
         should be accessed by users. """
     ).tag(config=True)
 
@@ -410,7 +410,7 @@ class JupyterHub(Application):
 
     hub_port = Integer(8081,
         help="""The internal port for the Hub process.
-        
+
         This is the internal port of the hub itself. It should never be accessed directly.
         See JupyterHub.port for the public port to use when accessing jupyterhub.
         It is rare that this port should be set except in cases of port conflict.
@@ -418,19 +418,12 @@ class JupyterHub(Application):
     ).tag(config=True)
     hub_ip = Unicode('127.0.0.1',
         help="""The ip address for the Hub process to *bind* to.
-        
+
         By default, the hub listens on localhost only. This address must be accessible from 
         the proxy and user servers. You may need to set this to a public ip or '' for all 
         interfaces if the proxy or user servers are in containers or on a different host.
 
         See `hub_connect_ip` for cases where the bind and connect address should differ.
-        """
-    ).tag(config=True)
-
-    hub_socket = Unicode('',
-        help="""Set the tornado application to listen on a unix socket.
-
-        If set, take precedence over the `hub_port` and `hub_ip` settings.
         """
     ).tag(config=True)
 
@@ -450,14 +443,42 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    hub_connect_url = Unicode(
+        help="""
+        The URL for connecting to the Hub.
+        Spawners, services, and the proxy will use this URL
+        to talk to the Hub.
+
+        Only needs to be specified if the default hub URL is not
+        connectable (e.g. using a unix+http:// bind url).
+
+        .. seealso::
+            JupyterHub.hub_connect_ip
+            JupyterHub.hub_bind_url
+        .. versionadded:: 0.9
+        """
+    )
+    hub_bind_url = Unicode(
+        help="""
+        The URL for binding the Hub.
+        The Hub will listen on this URL.
+
+        Can be a unix+http:// url for listening on a BSD socket
+
+        .. versionadded:: 0.9
+        """,
+        config=True,
+        )
+
     hub_connect_port = Integer(
         0,
         help="""
-        The port for proxies & spawners to connect to the hub on.
+        DEPRECATED
 
-        Used alongside `hub_connect_ip` and only when different from hub_port.
+        Use hub_connect_url
 
         .. versionadded:: 0.8
+        .. versiondeprecated:: 0.9
         """
     ).tag(config=True)
 
@@ -979,17 +1000,30 @@ class JupyterHub(Application):
             self.exit(e)
 
     def init_hub(self):
-        """Load the Hub config into the database"""
-        self.hub = Hub(
-            ip=self.hub_ip,
-            port=self.hub_port,
+        """Load the Hub URL config"""
+        hub_args = dict(
             base_url=self.hub_prefix,
             public_host=self.subdomain_host,
         )
+        if self.hub_bind_url:
+            hub_args['bind_url'] = self.hub_bind_url
+        else:
+            hub_args['ip'] = self.hub_ip
+            hub_args['port'] = self.hub_port
+        self.hub = Hub(**hub_args)
+
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
         if self.hub_connect_port:
             self.hub.connect_port = self.hub_connect_port
+            self.log.warning(
+                "JupyterHub.hub_connect_port is deprecated as of 0.9."
+                " Use JupyterHub.hub_connect_url to fully specify"
+                " the URL for connecting to the Hub."
+            )
+
+        if self.hub_connect_url:
+            self.hub.connect_url = self.hub_connect_url
 
     async def init_users(self):
         """Load users into and from the database"""
@@ -1636,14 +1670,23 @@ class JupyterHub(Application):
 
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
+        bind_url = urlparse(self.hub.bind_url)
         try:
-            if self.hub_socket:
-                socket = bind_unix_socket(self.hub_socket)
+            if bind_url.scheme.startswith('unix+'):
+                socket = bind_unix_socket(unquote(bind_url.netloc))
                 self.http_server.add_socket(socket)
-                self.log.info("Hub API listening on %s", self.hub_socket)
             else:
-                self.http_server.listen(self.hub_port, address=self.hub_ip)
-                self.log.info("Hub API listening on %s", self.hub.bind_url)
+                ip = bind_url.hostname
+                port = bind_url.port
+                if not port:
+                    if bind_url.scheme == 'https':
+                        port = 443
+                    else:
+                        port = 80
+                self.http_server.listen(port, address=ip)
+            self.log.info("Hub API listening on %s", self.hub.bind_url)
+            if self.hub.url != self.hub.bind_url:
+                self.log.info("Private Hub API connect url %s", self.hub.url)
         except Exception:
             self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
