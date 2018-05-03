@@ -305,7 +305,6 @@ class Proxy(LoggingConfigurable):
 
         hub = self.app.hub
         if '/' not in routes:
-            self.log.warning("Adding default route")
             futures.append(self.add_hub_route(hub))
         else:
             route = routes['/']
