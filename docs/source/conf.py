@@ -21,7 +21,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'autodoc_traits',
-    'jupyter_alabaster_theme',
 ]
 
 templates_path = ['_templates']
@@ -67,7 +66,7 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-html_theme = 'jupyter_alabaster_theme'
+html_theme = 'alabaster'
 
 #html_theme_options = {}
 #html_theme_path = []
@@ -170,9 +169,7 @@ intersphinx_mapping = {'https://docs.python.org/3/': None}
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if not on_rtd:
-    import jupyter_alabaster_theme
-    html_theme = 'jupyter_alabaster_theme'
-    html_theme_path = [jupyter_alabaster_theme.get_path()]
+    html_theme = 'alabaster'
 else:
     # readthedocs.org uses their theme by default, so no need to specify it
     # build rest-api, since RTD doesn't run make
