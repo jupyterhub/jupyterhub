@@ -72,28 +72,36 @@ html_theme = 'alabaster'
 #html_theme_path = []
 #html_title = None
 #html_short_title = None
-#html_logo = None
-#html_favicon = None
+html_logo = '_static/images/logo/favicon.ico'
+html_favicon = '_static/images/logo/logo.png'
 
 # Paths that contain custom static files (such as style sheets)
 html_static_path = ['_static']
 
-#html_extra_path = []
-#html_last_updated_fmt = '%b %d, %Y'
-#html_use_smartypants = True
-#html_sidebars = {}
-#html_additional_pages = {}
-#html_domain_indices = True
-#html_use_index = True
-#html_split_index = False
-#html_show_sourcelink = True
-#html_show_sphinx = True
-#html_show_copyright = True
-#html_use_opensearch = ''
-#html_file_suffix = None
-#html_search_language = 'en'
-#html_search_options = {'type': 'default'}
-#html_search_scorer = 'scorer.js'
+html_theme_options = {
+    'show_related': True,
+    'description': 'Documentation for JupyterHub',
+    'github_user': 'jupyterhub',
+    'github_repo': 'jupyterhub',
+    'github_banner': False,
+    'github_button': False,
+    'show_powered_by': False,
+    'extra_nav_links': {
+        'GitHub Repo': 'http://github.com/jupyterhub/jupyterhub',
+        'Issue Tracker': 'http://github.com/jupyterhub/jupyterhub/issues',
+    },
+}
+
+html_sidebars = {
+    '**': [
+        'about.html',
+        'searchbox.html',
+        'navigation.html',
+        'relations.html',
+        'sourcelink.html',
+    ],
+}
+
 htmlhelp_basename = 'JupyterHubdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
