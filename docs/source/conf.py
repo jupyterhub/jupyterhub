@@ -68,8 +68,8 @@ source_suffix = ['.rst', '.md']
 # The theme to use for HTML and HTML Help pages.
 html_theme = 'alabaster'
 
-html_logo = '_static/images/logo/favicon.ico'
-html_favicon = '_static/images/logo/logo.png'
+html_logo = '_static/images/logo/logo.png'
+html_favicon = '_static/images/logo/favicon.ico'
 
 # Paths that contain custom static files (such as style sheets)
 html_static_path = ['_static']
