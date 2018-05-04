@@ -213,17 +213,21 @@ class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
     db_file = None
-    
     last_activity_interval = 2
-    
-    base_url = '/@/space%20word/'
-    
     log_datefmt = '%M:%S'
-    
+
     @default('subdomain_host')
     def _subdomain_host_default(self):
         return os.environ.get('JUPYTERHUB_TEST_SUBDOMAIN_HOST', '')
-    
+
+    @default('bind_url')
+    def _default_bind_url(self):
+        if self.subdomain_host:
+            port = urlparse(self.subdomain_host).port
+        else:
+            port = random_port()
+        return 'http://127.0.0.1:%i/@/space%%20word/' % port
+
     @default('ip')
     def _ip_default(self):
         return '127.0.0.1'

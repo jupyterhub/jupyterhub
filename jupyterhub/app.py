@@ -360,6 +360,12 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    @default('base_url')
+    def _default_base_url(self):
+        # call validate to ensure leading/trailing slashes
+        print(self.bind_url)
+        return JupyterHub.base_url.validate(self, urlparse(self.bind_url).path)
+
     subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
 
