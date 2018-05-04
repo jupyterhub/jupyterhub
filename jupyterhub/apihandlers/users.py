@@ -223,7 +223,17 @@ class UserTokenListAPIHandler(APIHandler):
         if requester is None:
             # defer to Authenticator for identifying the user
             # can be username+password or an upstream auth token
-            name = await self.authenticator.authenticate(self, body.get('auth'))
+            try:
+                name = await self.authenticator.authenticate(self, body.get('auth'))
+            except web.HTTPError as e:
+                # turn any authentication error into 403
+                raise web.HTTPError(403)
+            except Exception as e:
+                # suppress and log error here in case Authenticator
+                # isn't prepared to handle auth via this data
+                self.log.error("Error authenticating request for %s: %s",
+                    self.request.uri, e)
+                raise web.HTTPError(403)
             requester = self.find_user(name)
         if requester is None:
             # couldn't identify requester
