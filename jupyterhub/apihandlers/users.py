@@ -214,18 +214,29 @@ class UserTokenListAPIHandler(APIHandler):
             'oauth_tokens': oauth_tokens,
         }))
 
-    @admin_or_self
-    def post(self, name):
+    async def post(self, name):
+        body = self.get_json_body() or {}
+        if not isinstance(body, dict):
+            raise web.HTTPError(400, "Body must be a JSON dict or empty")
+
         requester = self.get_current_user()
+        if requester is None:
+            # defer to Authenticator for identifying the user
+            # can be username+password or an upstream auth token
+            name = await self.authenticator.authenticate(self, body.get('auth'))
+            requester = self.find_user(name)
+        if requester is None:
+            # couldn't identify requester
+            raise web.HTTPError(403)
         user = self.find_user(name)
         if requester is not user and not requester.admin:
             raise web.HTTPError(403, "Only admins can request tokens for other users")
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
-        body = self.get_json_body()
         if requester is not user:
             kind = 'user' if isinstance(requester, User) else 'service'
-        note = (body or {}).get('note')
+
+        note = body.get('note')
         if not note:
             note = "Requested via api"
             if requester is not user:
