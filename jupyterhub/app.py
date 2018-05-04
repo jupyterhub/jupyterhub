@@ -36,7 +36,7 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
-    Type, Set, Instance, Bytes, Float,
+    Tuple, Type, Set, Instance, Bytes, Float,
     observe, default,
 )
 from traitlets.config import Application, catch_config_error
@@ -616,28 +616,20 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
-    throttle_retry_suggest_min = Integer(
-        30,
+    spawn_throttle_retry_range = Tuple(
+        (30, 60),
         help="""
-        Minimum seconds after which we suggest the user retry spawning.
+        (min seconds, max seconds) range to suggest a user wait before retrying.
 
-        When `concurrent_spawn_limit` is exceeded, we recommend users retry
-        after a random period of time, bounded by throttle_retry_suggest_min
-        and throttle_retry_suggest_max.
+        When `concurrent_spawn_limit` is exceeded, spawning is throttled.
+        We suggest users wait random period of time within this range
+        before retrying.
 
-        throttle_retry_suggest_min should ideally be set to the median
-        spawn time of servers in your installation.
-        """
-    )
+        A Retry-After header is set with a random value within this range.
+        Error pages will display a rounded version of this value.
 
-    throttle_retry_suggest_max = Integer(
-        60,
-        help="""
-        Minimum seconds after which we suggest the user retry spawning.
-
-        When `concurrent_spawn_limit` is exceeded, we recommend users retry
-        after a random period of time, bounded by throttle_retry_suggest_min
-        and throttle_retry_suggest_max.
+        The lower bound should ideally be approximately
+        the median spawn time for your deployment.
         """
     )
 
@@ -1448,8 +1440,7 @@ class JupyterHub(Application):
             allow_named_servers=self.allow_named_servers,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
-            throttle_retry_suggest_min=self.throttle_retry_suggest_min,
-            throttle_retry_suggest_max=self.throttle_retry_suggest_max,
+            spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
         )
         # allow configured settings to have priority

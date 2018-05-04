@@ -4,13 +4,14 @@
 # Distributed under the terms of the Modified BSD License.
 
 import copy
-import re
-import time
 from datetime import datetime, timedelta
 from http.client import responses
+import math
+import random
+import re
+import time
 from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 import uuid
-import random
 
 from jinja2 import TemplateNotFound
 
@@ -533,18 +534,30 @@ class BaseHandler(RequestHandler):
             # Suggest number of seconds client should wait before retrying
             # This helps prevent thundering herd problems, where users simply
             # immediately retry when we are overloaded.
-            retry_time = int(random.uniform(
-                self.settings['throttle_retry_suggest_min'],
-                self.settings['throttle_retry_suggest_max']
-            ))
-            self.set_header('Retry-After', str(retry_time))
-            self.log.info(
-                '%s pending spawns, throttling. Retry in %s seconds',
-                spawn_pending_count, retry_time
+            retry_range = self.settings['spawn_throttle_retry_range']
+            retry_time = int(random.uniform(*retry_range))
+
+            # round suggestion to nicer human value (nearest 10 seconds or minute)
+            if retry_time <= 90:
+                # round human seconds up to nearest 10
+                human_retry_time = "%i0 seconds" % math.ceil(retry_time / 10.)
+            else:
+                # round number of minutes
+                human_retry_time = "%i minutes" % math.round(retry_time / 60.)
+
+            self.log.warning(
+                '%s pending spawns, throttling. Suggested retry in %s seconds.',
+                spawn_pending_count, retry_time,
             )
-            self.set_status(429, "Too many users trying to log in right now. Try again in a {}s".format(retry_time))
-            # We use set_status and then raise web.Finish, since raising web.HTTPError resets any headers we wanna send.
-            raise web.Finish()
+            err = web.HTTPError(
+                429,
+                "Too many users trying to log in right now. Try again in {}.".format(human_retry_time)
+            )
+            # can't call set_header directly here because it gets ignored
+            # when errors are raised
+            # we handle err.headers ourselves in Handler.write_error
+            err.headers = {'Retry-After': retry_time}
+            raise err
 
         if active_server_limit and active_count >= active_server_limit:
             self.log.info(
@@ -779,6 +792,13 @@ class BaseHandler(RequestHandler):
         )
 
         self.set_header('Content-Type', 'text/html')
+        # allow setting headers from exceptions
+        # since exception handler clears headers
+        headers = getattr(exception, 'headers', None)
+        if headers:
+            for key, value in headers.items():
+                self.set_header(key, value)
+
         # render the template
         try:
             html = self.render_template('%s.html' % status_code, **ns)

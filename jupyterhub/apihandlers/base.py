@@ -72,6 +72,7 @@ class APIHandler(BaseHandler):
         """Write JSON errors instead of HTML"""
         exc_info = kwargs.get('exc_info')
         message = ''
+        exception = None
         status_message = responses.get(status_code, 'Unknown Error')
         if exc_info:
             exception = exc_info[1]
@@ -85,6 +86,15 @@ class APIHandler(BaseHandler):
             reason = getattr(exception, 'reason', '')
             if reason:
                 status_message = reason
+
+        self.set_header('Content-Type', 'application/json')
+        # allow setting headers from exceptions
+        # since exception handler clears headers
+        headers = getattr(exception, 'headers', None)
+        if headers:
+            for key, value in headers.items():
+                self.set_header(key, value)
+
         self.write(json.dumps({
             'status': status_code,
             'message': message or status_message,
