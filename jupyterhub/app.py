@@ -17,7 +17,7 @@ import re
 import signal
 import sys
 from textwrap import dedent
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, urlunparse
 
 
 if sys.version_info[:2] < (3, 3):
@@ -87,6 +87,7 @@ aliases = {
     'y': 'JupyterHub.answer_yes',
     'ssl-key': 'JupyterHub.ssl_key',
     'ssl-cert': 'JupyterHub.ssl_cert',
+    'url': 'JupyterHub.bind_url',
     'ip': 'JupyterHub.ip',
     'port': 'JupyterHub.port',
     'pid-file': 'JupyterHub.pid_file',
@@ -307,8 +308,28 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will listen. The default is to
         listen on all interfaces. This is the only address through which JupyterHub
-        should be accessed by users. """
+        should be accessed by users."""
     ).tag(config=True)
+
+    @observe('ip', 'port')
+    def _ip_port_changed(self, change):
+        urlinfo = urlparse(self.bind_url)
+        urlinfo = urlinfo._replace(netloc='%s:%i' % (self.ip, self.port))
+        self.bind_url = urlunparse(urlinfo)
+
+    bind_url = Unicode(
+        "http://127.0.0.1:8000",
+        help="""The public facing URL of the whole JupyterHub application.
+
+        This is the address on which the proxy will bind.
+        Sets protocol, ip, base_url
+        """
+    ).tag(config=True)
+
+    @observe('bind_url')
+    def _bind_url_changed(self, change):
+        urlinfo = urlparse(change.new)
+        self.base_url = urlinfo.path
 
     subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
@@ -343,16 +364,16 @@ class JupyterHub(Application):
 
     port = Integer(8000,
         help="""The public facing port of the proxy.
-        
-        This is the port on which the proxy will listen. 
-        This is the only port through which JupyterHub 
+
+        This is the port on which the proxy will listen.
+        This is the only port through which JupyterHub
         should be accessed by users.
         """
     ).tag(config=True)
     base_url = URLPrefix('/',
         help="""The base URL of the entire application.
-        
-        Add this to the begining of all JupyterHub URLs. 
+
+        Add this to the begining of all JupyterHub URLs.
         Use base_url to run JupyterHub within an existing website.
         """
     ).tag(config=True)
@@ -460,10 +481,15 @@ class JupyterHub(Application):
     )
     hub_bind_url = Unicode(
         help="""
-        The URL for binding the Hub.
-        The Hub will listen on this URL.
+        The URL on which the Hub will listen.
+        This is a private URL for internal communication.
+        Typically set in combination with hub_connect_url.
+        If a unix socket, hub_connect_url **must** also be set.
 
-        Can be a unix+http:// url for listening on a BSD socket
+        For example:
+
+            "http://127.0.0.1:8081"
+            "unix+http://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
 
         .. versionadded:: 0.9
         """,
@@ -478,7 +504,9 @@ class JupyterHub(Application):
         Use hub_connect_url
 
         .. versionadded:: 0.8
-        .. versiondeprecated:: 0.9
+
+        .. deprecated:: 0.9
+            Use hub_connect_url
         """
     ).tag(config=True)
 
@@ -855,10 +883,6 @@ class JupyterHub(Application):
         logger.propagate = True
         logger.parent = self.log
         logger.setLevel(self.log.level)
-
-    def init_ports(self):
-        if self.hub_port == self.port:
-            raise TraitError("The hub and proxy cannot both listen on port %i" % self.port)
 
     @staticmethod
     def add_url_prefix(prefix, handlers):
@@ -1390,15 +1414,9 @@ class JupyterHub(Application):
     def init_proxy(self):
         """Load the Proxy config"""
         # FIXME: handle deprecated config here
-        public_url = 'http{s}://{ip}:{port}{base_url}'.format(
-            s='s' if self.ssl_cert else '',
-            ip=self.ip,
-            port=self.port,
-            base_url=self.base_url,
-        )
         self.proxy = self.proxy_class(
             db_factory=lambda: self.db,
-            public_url=public_url,
+            public_url=self.bind_url,
             parent=self,
             app=self,
             log=self.log,
@@ -1513,7 +1531,6 @@ class JupyterHub(Application):
             self.update_config(cfg)
         self.write_pid_file()
         self.init_pycurl()
-        self.init_ports()
         self.init_secrets()
         self.init_db()
         self.init_hub()
