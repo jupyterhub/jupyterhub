@@ -17,10 +17,12 @@ import re
 import signal
 import sys
 from textwrap import dedent
-from urllib.parse import urlparse
+from urllib.parse import unquote, urlparse, urlunparse
+
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
+
 
 from dateutil.parser import parse as parse_date
 from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
@@ -33,6 +35,7 @@ from tornado.log import app_log, access_log, gen_log
 import tornado.options
 from tornado import gen, web
 from tornado.platform.asyncio import AsyncIOMainLoop
+from tornado.netutil import bind_unix_socket
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
@@ -84,6 +87,7 @@ aliases = {
     'y': 'JupyterHub.answer_yes',
     'ssl-key': 'JupyterHub.ssl_key',
     'ssl-cert': 'JupyterHub.ssl_cert',
+    'url': 'JupyterHub.bind_url',
     'ip': 'JupyterHub.ip',
     'port': 'JupyterHub.port',
     'pid-file': 'JupyterHub.pid_file',
@@ -299,13 +303,68 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
     ip = Unicode('',
-        help="""The public facing ip of the whole JupyterHub application 
+        help="""The public facing ip of the whole JupyterHub application
         (specifically referred to as the proxy).
-        
-        This is the address on which the proxy will listen. The default is to 
-        listen on all interfaces. This is the only address through which JupyterHub 
-        should be accessed by users. """
+
+        This is the address on which the proxy will listen. The default is to
+        listen on all interfaces. This is the only address through which JupyterHub
+        should be accessed by users.
+
+        .. deprecated: 0.9
+        """
     ).tag(config=True)
+
+    port = Integer(8000,
+        help="""The public facing port of the proxy.
+
+        This is the port on which the proxy will listen.
+        This is the only port through which JupyterHub
+        should be accessed by users.
+
+        .. deprecated: 0.9
+            Use JupyterHub.bind_url
+        """
+    ).tag(config=True)
+
+    @observe('ip', 'port')
+    def _ip_port_changed(self, change):
+        urlinfo = urlparse(self.bind_url)
+        urlinfo = urlinfo._replace(netloc='%s:%i' % (self.ip, self.port))
+        self.bind_url = urlunparse(urlinfo)
+
+    bind_url = Unicode(
+        "http://127.0.0.1:8000",
+        help="""The public facing URL of the whole JupyterHub application.
+
+        This is the address on which the proxy will bind.
+        Sets protocol, ip, base_url
+
+        .. deprecated: 0.9
+            Use JupyterHub.bind_url
+        """
+    ).tag(config=True)
+
+    @observe('bind_url')
+    def _bind_url_changed(self, change):
+        urlinfo = urlparse(change.new)
+        self.base_url = urlinfo.path
+
+    base_url = URLPrefix('/',
+        help="""The base URL of the entire application.
+
+        Add this to the beginning of all JupyterHub URLs.
+        Use base_url to run JupyterHub within an existing website.
+
+        .. deprecated: 0.9
+            Use JupyterHub.bind_url
+        """
+    ).tag(config=True)
+
+    @default('base_url')
+    def _default_base_url(self):
+        # call validate to ensure leading/trailing slashes
+        print(self.bind_url)
+        return JupyterHub.base_url.validate(self, urlparse(self.bind_url).path)
 
     subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
@@ -338,21 +397,6 @@ class JupyterHub(Application):
             return ''
         return urlparse(self.subdomain_host).hostname
 
-    port = Integer(8000,
-        help="""The public facing port of the proxy.
-        
-        This is the port on which the proxy will listen. 
-        This is the only port through which JupyterHub 
-        should be accessed by users.
-        """
-    ).tag(config=True)
-    base_url = URLPrefix('/',
-        help="""The base URL of the entire application.
-        
-        Add this to the begining of all JupyterHub URLs. 
-        Use base_url to run JupyterHub within an existing website.
-        """
-    ).tag(config=True)
     logo_file = Unicode('',
         help="Specify path to a logo image to override the Jupyter logo in the banner."
     ).tag(config=True)
@@ -407,7 +451,7 @@ class JupyterHub(Application):
 
     hub_port = Integer(8081,
         help="""The internal port for the Hub process.
-        
+
         This is the internal port of the hub itself. It should never be accessed directly.
         See JupyterHub.port for the public port to use when accessing jupyterhub.
         It is rare that this port should be set except in cases of port conflict.
@@ -415,7 +459,7 @@ class JupyterHub(Application):
     ).tag(config=True)
     hub_ip = Unicode('127.0.0.1',
         help="""The ip address for the Hub process to *bind* to.
-        
+
         By default, the hub listens on localhost only. This address must be accessible from 
         the proxy and user servers. You may need to set this to a public ip or '' for all 
         interfaces if the proxy or user servers are in containers or on a different host.
@@ -440,14 +484,49 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    hub_connect_url = Unicode(
+        help="""
+        The URL for connecting to the Hub.
+        Spawners, services, and the proxy will use this URL
+        to talk to the Hub.
+
+        Only needs to be specified if the default hub URL is not
+        connectable (e.g. using a unix+http:// bind url).
+
+        .. seealso::
+            JupyterHub.hub_connect_ip
+            JupyterHub.hub_bind_url
+        .. versionadded:: 0.9
+        """
+    )
+    hub_bind_url = Unicode(
+        help="""
+        The URL on which the Hub will listen.
+        This is a private URL for internal communication.
+        Typically set in combination with hub_connect_url.
+        If a unix socket, hub_connect_url **must** also be set.
+
+        For example:
+
+            "http://127.0.0.1:8081"
+            "unix+http://%2Fsrv%2Fjupyterhub%2Fjupyterhub.sock"
+
+        .. versionadded:: 0.9
+        """,
+        config=True,
+        )
+
     hub_connect_port = Integer(
         0,
         help="""
-        The port for proxies & spawners to connect to the hub on.
+        DEPRECATED
 
-        Used alongside `hub_connect_ip` and only when different from hub_port.
+        Use hub_connect_url
 
         .. versionadded:: 0.8
+
+        .. deprecated:: 0.9
+            Use hub_connect_url
         """
     ).tag(config=True)
 
@@ -842,10 +921,6 @@ class JupyterHub(Application):
         logger.parent = self.log
         logger.setLevel(self.log.level)
 
-    def init_ports(self):
-        if self.hub_port == self.port:
-            raise TraitError("The hub and proxy cannot both listen on port %i" % self.port)
-
     @staticmethod
     def add_url_prefix(prefix, handlers):
         """add a url prefix to handlers"""
@@ -986,17 +1061,30 @@ class JupyterHub(Application):
             self.exit(e)
 
     def init_hub(self):
-        """Load the Hub config into the database"""
-        self.hub = Hub(
-            ip=self.hub_ip,
-            port=self.hub_port,
+        """Load the Hub URL config"""
+        hub_args = dict(
             base_url=self.hub_prefix,
             public_host=self.subdomain_host,
         )
+        if self.hub_bind_url:
+            hub_args['bind_url'] = self.hub_bind_url
+        else:
+            hub_args['ip'] = self.hub_ip
+            hub_args['port'] = self.hub_port
+        self.hub = Hub(**hub_args)
+
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
         if self.hub_connect_port:
             self.hub.connect_port = self.hub_connect_port
+            self.log.warning(
+                "JupyterHub.hub_connect_port is deprecated as of 0.9."
+                " Use JupyterHub.hub_connect_url to fully specify"
+                " the URL for connecting to the Hub."
+            )
+
+        if self.hub_connect_url:
+            self.hub.connect_url = self.hub_connect_url
 
     async def init_users(self):
         """Load users into and from the database"""
@@ -1363,15 +1451,9 @@ class JupyterHub(Application):
     def init_proxy(self):
         """Load the Proxy config"""
         # FIXME: handle deprecated config here
-        public_url = 'http{s}://{ip}:{port}{base_url}'.format(
-            s='s' if self.ssl_cert else '',
-            ip=self.ip,
-            port=self.port,
-            base_url=self.base_url,
-        )
         self.proxy = self.proxy_class(
             db_factory=lambda: self.db,
-            public_url=public_url,
+            public_url=self.bind_url,
             parent=self,
             app=self,
             log=self.log,
@@ -1487,7 +1569,6 @@ class JupyterHub(Application):
             self.update_config(cfg)
         self.write_pid_file()
         self.init_pycurl()
-        self.init_ports()
         self.init_secrets()
         self.init_db()
         self.init_hub()
@@ -1644,13 +1725,26 @@ class JupyterHub(Application):
 
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
+        bind_url = urlparse(self.hub.bind_url)
         try:
-            self.http_server.listen(self.hub_port, address=self.hub_ip)
+            if bind_url.scheme.startswith('unix+'):
+                socket = bind_unix_socket(unquote(bind_url.netloc))
+                self.http_server.add_socket(socket)
+            else:
+                ip = bind_url.hostname
+                port = bind_url.port
+                if not port:
+                    if bind_url.scheme == 'https':
+                        port = 443
+                    else:
+                        port = 80
+                self.http_server.listen(port, address=ip)
+            self.log.info("Hub API listening on %s", self.hub.bind_url)
+            if self.hub.url != self.hub.bind_url:
+                self.log.info("Private Hub API connect url %s", self.hub.url)
         except Exception:
             self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
-        else:
-            self.log.info("Hub API listening on %s", self.hub.bind_url)
 
         # start the proxy
         if self.proxy.should_start:

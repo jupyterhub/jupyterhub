@@ -401,15 +401,30 @@ class User:
             f = maybe_future(spawner.start())
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
-            ip_port = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
-            if ip_port:
+            url = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            if url:
                 # get ip, port info from return value of start()
-                server.ip, server.port = ip_port
+                if isinstance(url, str):
+                    # >= 0.9 can return a full URL string
+                    pass
+                else:
+                    # >= 0.7 returns (ip, port)
+                    url = 'http://%s:%i' % url
+                urlinfo = urlparse(url)
+                server.proto = urlinfo.scheme
+                server.ip = urlinfo.hostname
+                port = urlinfo.port
+                if not port:
+                    if urlinfo.scheme == 'https':
+                        port = 443
+                    else:
+                        port = 80
+                server.port = port
                 db.commit()
             else:
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
-                self.log.warning("DEPRECATION: Spawner.start should return (ip, port) in JupyterHub >= 0.7")
+                self.log.warning("DEPRECATION: Spawner.start should return a url or (ip, port) tuple in JupyterHub >= 0.9")
             if spawner.api_token and spawner.api_token != api_token:
                 # Spawner re-used an API token, discard the unused api_token
                 orm_token = orm.APIToken.find(self.db, api_token)

@@ -33,6 +33,19 @@ class Server(HasTraits):
     port = Integer()
     base_url = URLPrefix('/')
     cookie_name = Unicode('')
+    connect_url = Unicode('')
+    bind_url = Unicode('')
+
+    @default('bind_url')
+    def bind_url_default(self):
+        """representation of URL used for binding
+
+        Never used in APIs, only logging,
+        since it can be non-connectable value, such as '', meaning all interfaces.
+        """
+        if self.ip in {'', '0.0.0.0'}:
+            return self.url.replace(self._connect_ip, self.ip or '*', 1)
+        return self.url
 
     @property
     def _connect_ip(self):
@@ -107,6 +120,12 @@ class Server(HasTraits):
 
     @property
     def host(self):
+        if self.connect_url:
+            parsed = urlparse(self.connect_url)
+            return "{proto}://{host}".format(
+                proto=parsed.scheme,
+                host=parsed.netloc,
+            )
         return "{proto}://{ip}:{port}".format(
             proto=self.proto,
             ip=self._connect_ip,
@@ -115,21 +134,12 @@ class Server(HasTraits):
 
     @property
     def url(self):
+        if self.connect_url:
+            return self.connect_url
         return "{host}{uri}".format(
             host=self.host,
             uri=self.base_url,
         )
-
-    @property
-    def bind_url(self):
-        """representation of URL used for binding
-
-        Never used in APIs, only logging,
-        since it can be non-connectable value, such as '', meaning all interfaces.
-        """
-        if self.ip in {'', '0.0.0.0'}:
-            return self.url.replace(self._connect_ip, self.ip or '*', 1)
-        return self.url
 
     def wait_up(self, timeout=10, http=False):
         """Wait for this server to come up"""
