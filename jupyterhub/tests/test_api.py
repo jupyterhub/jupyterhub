@@ -1289,6 +1289,31 @@ def test_token_for_user(app, as_user, for_user, status):
     )
     assert r.status_code == 404
 
+
+@mark.gen_test
+def test_token_authenticator_noauth(app):
+    """Create a token for a user relying on Authenticator.authenticate and no auth header"""
+    name = 'user'
+    data = {
+        'auth': {
+            'username': name,
+            'password': name,
+        },
+    }
+    r = yield api_request(app, 'users', name, 'tokens',
+        method='post',
+        data=json.dumps(data) if data else None,
+        noauth=True,
+    )
+    assert r.status_code == 200
+    reply = r.json()
+    assert 'token' in reply
+    r = yield api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+
+
 @mark.gen_test
 @mark.parametrize("as_user, for_user, status", [
     ('admin', 'other', 200),
