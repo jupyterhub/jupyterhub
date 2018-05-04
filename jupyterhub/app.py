@@ -308,7 +308,22 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will listen. The default is to
         listen on all interfaces. This is the only address through which JupyterHub
-        should be accessed by users."""
+        should be accessed by users.
+
+        .. deprecated: 0.9
+        """
+    ).tag(config=True)
+
+    port = Integer(8000,
+        help="""The public facing port of the proxy.
+
+        This is the port on which the proxy will listen.
+        This is the only port through which JupyterHub
+        should be accessed by users.
+
+        .. deprecated: 0.9
+            Use JupyterHub.bind_url
+        """
     ).tag(config=True)
 
     @observe('ip', 'port')
@@ -323,6 +338,9 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will bind.
         Sets protocol, ip, base_url
+
+        .. deprecated: 0.9
+            Use JupyterHub.bind_url
         """
     ).tag(config=True)
 
@@ -330,6 +348,17 @@ class JupyterHub(Application):
     def _bind_url_changed(self, change):
         urlinfo = urlparse(change.new)
         self.base_url = urlinfo.path
+
+    base_url = URLPrefix('/',
+        help="""The base URL of the entire application.
+
+        Add this to the beginning of all JupyterHub URLs.
+        Use base_url to run JupyterHub within an existing website.
+
+        .. deprecated: 0.9
+            Use JupyterHub.bind_url
+        """
+    ).tag(config=True)
 
     subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
@@ -362,21 +391,6 @@ class JupyterHub(Application):
             return ''
         return urlparse(self.subdomain_host).hostname
 
-    port = Integer(8000,
-        help="""The public facing port of the proxy.
-
-        This is the port on which the proxy will listen.
-        This is the only port through which JupyterHub
-        should be accessed by users.
-        """
-    ).tag(config=True)
-    base_url = URLPrefix('/',
-        help="""The base URL of the entire application.
-
-        Add this to the begining of all JupyterHub URLs.
-        Use base_url to run JupyterHub within an existing website.
-        """
-    ).tag(config=True)
     logo_file = Unicode('',
         help="Specify path to a logo image to override the Jupyter logo in the banner."
     ).tag(config=True)
