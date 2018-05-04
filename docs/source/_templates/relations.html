@@ -1,0 +1,17 @@
+{# Custom template for relations.html
+
+   alabaster theme does not provide previous/next page by default
+#}
+<div class="relations">
+<h3>Navigation</h3>
+<ul>
+  <li><a href="{{ pathto(master_doc) }}">Documentation Home</a><ul>
+  {%- if prev %}
+  <li><a href="{{ prev.link|e }}" title="Previous">Previous topic</a></li>
+  {%- endif %}
+  {%- if next %}
+  <li><a href="{{ next.link|e }}" title="Next">Next topic</a></li>
+  {%- endif %}
+  </ul>
+</ul>
+</div>

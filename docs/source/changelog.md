@@ -63,7 +63,7 @@ in your Dockerfile is sufficient.
 
   ```python
   {
-      'username': 'name'
+      'username': 'name',
       'state': {}
   }
   ```

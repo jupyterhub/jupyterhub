@@ -1,0 +1,106 @@
+div#helm-chart-schema h2,
+div#helm-chart-schema h3,
+div#helm-chart-schema h4,
+div#helm-chart-schema h5,
+div#helm-chart-schema h6 {
+    font-family: courier new;
+}
+
+h3, h3 ~ * {
+  margin-left: 3% !important;
+}
+
+h4, h4 ~ * {
+  margin-left: 6% !important;
+}
+
+h5, h5 ~ * {
+  margin-left: 9% !important;
+}
+
+h6, h6 ~ * {
+  margin-left: 12% !important;
+}
+
+h7, h7 ~ * {
+  margin-left: 15% !important;
+}
+
+img.logo {
+  width:100%
+}
+
+.right-next {
+    float: right;
+    max-width: 45%;
+    overflow: auto;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.right-next::after{
+    content: ' »';
+}
+
+.left-prev {
+    float: left;
+    max-width: 45%;
+    overflow: auto;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.left-prev::before{
+    content: '« ';
+}
+
+.prev-next-bottom {
+  margin-top: 3em;
+}
+
+.prev-next-top {
+  margin-bottom: 1em;
+}
+
+/* Sidebar TOC and headers */
+
+div.sphinxsidebarwrapper div {
+    margin-bottom: .8em;
+}
+div.sphinxsidebar h3 {
+    font-size: 1.3em;
+    padding-top: 0px;
+    font-weight: 800;
+    margin-left: 0px !important;
+}
+
+div.sphinxsidebar p.caption {
+    font-size: 1.2em;
+    margin-bottom: 0px;
+    margin-left: 0px !important;
+    font-weight: 900;
+    color: #767676;
+}
+
+div.sphinxsidebar ul {
+    font-size: .8em;
+    margin-top: 0px;
+    padding-left: 3%;
+    margin-left: 0px !important;
+}
+
+div.relations ul {
+    font-size: 1em;
+    margin-left: 0px !important;
+}
+
+div#searchbox form {
+    margin-left: 0px !important;
+}
+
+/* body elements */
+.toctree-wrapper span.caption-text {
+    color: #767676;
+    font-style: italic;
+    font-weight: 300;
+}

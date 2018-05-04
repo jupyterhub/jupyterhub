@@ -1,0 +1,30 @@
+{% extends '!page.html' %}
+
+{# Custom template for page.html
+
+   Alabaster theme does not provide blocks for prev/next at bottom of each page.
+   This is _in addition_ to the prev/next in the  sidebar. The "Prev/Next" text
+   or symbols are handled by CSS classes in _static/custom.css
+#}
+
+{% macro prev_next(prev, next, prev_title='', next_title='') %}
+  {%- if prev %}
+     <a class='left-prev' href="{{ prev.link|e }}" title="{{ _('previous chapter')}}">{{ prev_title or prev.title }}</a>
+  {%- endif %}
+  {%- if next %}
+     <a class='right-next' href="{{ next.link|e }}" title="{{ _('next chapter')}}">{{ next_title or next.title }}</a>
+  {%- endif %}
+  <div style='clear:both;'></div>
+{% endmacro %}
+
+
+{% block body %}
+  <div class='prev-next-top'>
+    {{ prev_next(prev, next, 'Previous', 'Next') }}
+  </div>
+
+  {{super()}}
+  <div class='prev-next-bottom'>
+    {{ prev_next(prev, next) }}
+  </div>
+{% endblock %}

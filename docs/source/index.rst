@@ -19,7 +19,7 @@ Three subsystems make up JupyterHub:
 
 JupyterHub performs the following functions:
 
-- The Hub spawns a proxy
+- The Hub launches a proxy
 - The proxy forwards all requests to the Hub by default
 - The Hub handles user login and spawns single-user servers on demand
 - The Hub configures the proxy to forward URL prefixes to the single-user

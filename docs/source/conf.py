@@ -21,7 +21,6 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'autodoc_traits',
-    'jupyter_alabaster_theme',
 ]
 
 templates_path = ['_templates']
@@ -67,34 +66,39 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-html_theme = 'jupyter_alabaster_theme'
+html_theme = 'alabaster'
 
-#html_theme_options = {}
-#html_theme_path = []
-#html_title = None
-#html_short_title = None
-#html_logo = None
-#html_favicon = None
+html_logo = '_static/images/logo/logo.png'
+html_favicon = '_static/images/logo/favicon.ico'
 
 # Paths that contain custom static files (such as style sheets)
 html_static_path = ['_static']
 
-#html_extra_path = []
-#html_last_updated_fmt = '%b %d, %Y'
-#html_use_smartypants = True
-#html_sidebars = {}
-#html_additional_pages = {}
-#html_domain_indices = True
-#html_use_index = True
-#html_split_index = False
-#html_show_sourcelink = True
-#html_show_sphinx = True
-#html_show_copyright = True
-#html_use_opensearch = ''
-#html_file_suffix = None
-#html_search_language = 'en'
-#html_search_options = {'type': 'default'}
-#html_search_scorer = 'scorer.js'
+html_theme_options = {
+    'show_related': True,
+    'description': 'Documentation for JupyterHub',
+    'github_user': 'jupyterhub',
+    'github_repo': 'jupyterhub',
+    'github_banner': False,
+    'github_button': True,
+    'github_type': 'star',
+    'show_powered_by': False,
+    'extra_nav_links': {
+        'GitHub Repo': 'http://github.com/jupyterhub/jupyterhub',
+        'Issue Tracker': 'http://github.com/jupyterhub/jupyterhub/issues',
+    },
+}
+
+html_sidebars = {
+    '**': [
+        'about.html',
+        'searchbox.html',
+        'navigation.html',
+        'relations.html',
+        'sourcelink.html',
+    ],
+}
+
 htmlhelp_basename = 'JupyterHubdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -170,9 +174,7 @@ intersphinx_mapping = {'https://docs.python.org/3/': None}
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
 if not on_rtd:
-    import jupyter_alabaster_theme
-    html_theme = 'jupyter_alabaster_theme'
-    html_theme_path = [jupyter_alabaster_theme.get_path()]
+    html_theme = 'alabaster'
 else:
     # readthedocs.org uses their theme by default, so no need to specify it
     # build rest-api, since RTD doesn't run make
