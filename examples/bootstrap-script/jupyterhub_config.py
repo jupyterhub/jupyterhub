@@ -2,6 +2,7 @@
 # create a directory for the user before the spawner starts
 
 import os
+import shutil
 def create_dir_hook(spawner):
     username = spawner.user.name # get the username
     volume_path = os.path.join('/volumes/jupyterhub', username)
@@ -10,8 +11,15 @@ def create_dir_hook(spawner):
         # now do whatever you think your user needs
         # ...
 
-# attach the hook function to the spawner
+def clean_dir_hook(spawner):
+    username = spawner.user.name # get the username
+    temp_path = os.path.join('/volumes/jupyterhub', username, 'temp')
+    if os.path.exists(temp_path) and os.path.isdir(temp_path):
+        shutil.rmtree(temp_path)
+
+# attach the hook functions to the spawner
 c.Spawner.pre_spawn_hook = create_dir_hook
+c.Spawner.post_spawn_hook = clean_dir_hook
 
 # Use the DockerSpawner to serve your users' notebooks
 c.JupyterHub.spawner_class = 'dockerspawner.DockerSpawner'
