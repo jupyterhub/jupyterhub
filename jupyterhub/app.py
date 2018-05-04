@@ -36,7 +36,7 @@ from tornado.platform.asyncio import AsyncIOMainLoop
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
-    Type, Set, Instance, Bytes, Float,
+    Tuple, Type, Set, Instance, Bytes, Float,
     observe, default,
 )
 from traitlets.config import Application, catch_config_error
@@ -615,6 +615,23 @@ class JupyterHub(Application):
         If set to 0, no limit is enforced.
         """
     ).tag(config=True)
+
+    spawn_throttle_retry_range = Tuple(
+        (30, 60),
+        help="""
+        (min seconds, max seconds) range to suggest a user wait before retrying.
+
+        When `concurrent_spawn_limit` is exceeded, spawning is throttled.
+        We suggest users wait random period of time within this range
+        before retrying.
+
+        A Retry-After header is set with a random value within this range.
+        Error pages will display a rounded version of this value.
+
+        The lower bound should ideally be approximately
+        the median spawn time for your deployment.
+        """
+    )
 
     active_server_limit = Integer(
         0,
@@ -1423,6 +1440,7 @@ class JupyterHub(Application):
             allow_named_servers=self.allow_named_servers,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
+            spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
         )
         # allow configured settings to have priority
