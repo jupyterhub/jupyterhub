@@ -621,6 +621,24 @@ def check_db_revision(engine):
         ))
 
 
+def mysql_large_prefix_check(engine):
+    """Check mysql has innodb_large_prefix set"""
+    if not str(engine.url).startswith('mysql'):
+        return False
+    variables =  dict(engine.execute(
+        'show variables where variable_name like'
+        '"innodb_large_prefix" or'
+        'variable_name like "innodb_file_format";').fetchall())
+    if variables['innodb_file_format'] == 'Barracuda' and
+        variables['innodb_large_prefix'] == 'ON':
+        return True
+    else:
+        return False
+
+def add_row_format(base):
+    for t in  base.metadata.tables.values():
+        t.dialect_kwargs['mysql_ROW_FORMAT'] = 'DYNAMIC'
+
 def new_session_factory(url="sqlite:///:memory:",
                         reset=False,
                         expire_on_commit=False,
@@ -645,6 +663,8 @@ def new_session_factory(url="sqlite:///:memory:",
 
     # check the db revision (will raise, pointing to `upgrade-db` if version doesn't match)
     check_db_revision(engine)
+    if mysql_large_prefix_check(engine):
+        add_row_format(Base)
     Base.metadata.create_all(engine)
 
     # We set expire_on_commit=False, since we don't actually need
