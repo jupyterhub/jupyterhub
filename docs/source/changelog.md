@@ -7,6 +7,113 @@ command line for details.
 
 ## [Unreleased]
 
+## 0.9
+
+### 0.9.0
+
+JupyterHub 0.9 is a major upgrade of JupyterHub.
+There are several changes to the database schema,
+so make sure to backup your database and run:
+
+    jupyterhub upgrade-db
+
+after upgrading jupyterhub.
+
+The biggest change for 0.9 is the switch to asyncio coroutines everywhere
+instead of tornado coroutines. Custom Spawners and Authenticators are still
+free to use tornado coroutines for async methods, as they will continue to
+work. As part of this upgrade, JupyterHub 0.9 drops support for Python < 3.5
+and tornado < 5.0.
+
+
+#### Changed
+
+- Require Python >= 3.5
+- Require tornado >= 5.0
+- Use asyncio coroutines throughout
+- Set status 409 for conflicting actions instead of 400,
+  e.g. creating users or groups that already exist.
+- timestamps in REST API continue to be UTC, but now include 'Z' suffix
+  to identify them as such.
+- REST API User model always includes `servers` dict,
+  not just when named servers are enabled.
+- `server` info is no longer available to oauth identification endpoints,
+  only user info and group membership.
+- `User.last_activity` may be None if a user has not been seen,
+  rather than starting with the user creation time
+  which is now separately stored as `User.created`.
+- static resources are now found in `$PREFIX/share/jupyterhub` instead of `share/jupyter/hub` for improved consistency.
+- Deprecate `.extra_log_file` config. Use pipe redirection instead:
+
+      jupyterhub &>> /var/log/jupyterhub.log
+
+- deprecate `JupyterHub.ip`, `JupyterHub.port`, `JupyterHub.base_url` config in favor of single `JupyterHub.bind_url` config.
+- deprecate `JupyterHub.hub_ip`, `JupyterHub.hub_port` config
+  in favor of single `JupyterHub.hub_bind_url` config.
+  `hub_bind_url` supports unix domain sockets, e.g.
+  `unix+http://%2Fsrv%2Fjupytrehub.sock`
+- deprecate `JupyterHub.hub_connect_port` config in favor of `JupyterHub.hub_connect_url`.
+
+#### Added
+
+- Spawners can define a `.progress` method which should be an async generator.
+  The generator should yield events of the form:
+  ```python
+  {
+    "message": "some-state-message",
+    "progress": 50,
+  }
+  ```
+  These messages will be shown with a progress bar on the spawn-pending page.
+  The `async_generator` package can be used to make async generators
+  compatible with Python 3.5.
+- track activity of individual API tokens
+- new REST API for managing API tokens at `/hub/api/user/tokens[/token-id]`
+- allow viewing/revoking tokens via token page
+- User creation time is available in the REST API as `User.created`
+- Server start time is stored as `Server.started`
+- `Spawner.start` may return a URL for connecting to a notebook instead of `(ip, port)`. This enables Spawners to launch servers that setup their own HTTPS.
+- Optimize database performance by disabling sqlalchemy expire_on_commit by default.
+- Add `python -m jupyterhub.dbutil shell` entrypoint for quickly
+  launching an IPython session connected to your JupyterHub database.
+- Include `User.auth_state` in user model on single-user REST endpoints for admins only.
+- Include `Server.state` in server model on REST endpoints for admins only.
+- Add `Authenticator.blacklist` for blacklisting users instead of whitelisting.
+- Pass `c.JupyterHub.tornado_settings['cookie_options']` down to Spawners
+  so that cookie options (e.g. `expires_days`) can be set globally for the whole application.
+- SIGINFO (`ctrl-t`) handler showing the current status of all running threads,
+  coroutines, and CPU/memory/FD consumption.
+- Add async `Spawner.get_options_form` alternative to `.options_form`, so it can be a coroutine.
+- Add `JupyterHub.redirect_to_server` config to govern whether
+  users should be sent to their server on login or the JuptyerHub home page.
+- html page templates can be more easily customized and extended.
+- Allow registering external OAuth clients for using the Hub as an OAuth provider.
+- Add basic prometheus metrics at `/hub/metrics` endpoint.
+- Add session-id cookie, enabling immediate revocation of login tokens.
+- Authenticators may specify that users are admins by specifying the `admin` key when return the user model as a dict.
+- Added "Start All" button to admin page for launching all user servers at once.
+
+
+#### Fixed
+
+- Remove green from theme to improve accessibility
+- Fix error when proxy deletion fails due to route already being deleted
+- clear `?redirects` from URL on successful launch
+- disable send2trash by default, which is rarely desirable for jupyterhub
+- Put PAM calls in a thread so they don't block the main application
+  in cases where PAM is slow (e.g. LDAP).
+- Remove implicit spawn from login handler,
+  instead relying on subsequent request for `/user/:name` to trigger spawn.
+- Fixed several inconsistencies for initial redirects,
+  depending on whether server is running or not and whether the user is logged in or not.
+- Admin requests for  `/user/:name` (when admin-access is enabled) launch the right server if it's not running instead of redirecting to their own.
+- Major performance improvement starting up JupyterHub with many users,
+  especially when most are inactive.
+- Various fixes in race conditions and performance improvements with the default proxy.
+- Fixes for CORS headers
+- Stop setting `.form-control` on spawner form inputs unconditionally.
+
+
 ## 0.8
 
 ### [0.8.1] 2017-11-07
