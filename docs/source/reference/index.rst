@@ -5,6 +5,7 @@ Technical Reference
    :maxdepth: 2
 
    technical-overview
+   sudo
    websecurity
    authenticators
    spawners
