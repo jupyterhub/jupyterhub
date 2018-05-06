@@ -626,8 +626,8 @@ def mysql_large_prefix_check(engine):
     if not str(engine.url).startswith('mysql'):
         return False
     variables =  dict(engine.execute(
-        'show variables where variable_name like'
-        '"innodb_large_prefix" or'
+        'show variables where variable_name like '
+        '"innodb_large_prefix" or '
         'variable_name like "innodb_file_format";').fetchall())
     if (variables['innodb_file_format'] == 'Barracuda' and
         variables['innodb_large_prefix'] == 'ON'):
