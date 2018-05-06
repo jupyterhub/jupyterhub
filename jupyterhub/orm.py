@@ -629,8 +629,8 @@ def mysql_large_prefix_check(engine):
         'show variables where variable_name like'
         '"innodb_large_prefix" or'
         'variable_name like "innodb_file_format";').fetchall())
-    if variables['innodb_file_format'] == 'Barracuda' and
-        variables['innodb_large_prefix'] == 'ON':
+    if (variables['innodb_file_format'] == 'Barracuda' and
+        variables['innodb_large_prefix'] == 'ON'):
         return True
     else:
         return False
