@@ -651,6 +651,8 @@ def new_session_factory(url="sqlite:///:memory:",
 
     elif url.startswith('mysql'):
         kwargs.setdefault('pool_recycle', 60)
+        if mysql_large_prefix_check(engine):  # if mysql is allows large indexes
+            add_row_format(Base)              # set format on the tables
 
     if url.endswith(':memory:'):
         # If we're using an in-memory database, ensure that only one connection
@@ -664,8 +666,6 @@ def new_session_factory(url="sqlite:///:memory:",
     # check the db revision (will raise, pointing to `upgrade-db` if version doesn't match)
     check_db_revision(engine)
 
-    if mysql_large_prefix_check(engine):  # if mysql is allows large indexes
-        add_row_format(Base)              # set format on the tables
     Base.metadata.create_all(engine)
 
     # We set expire_on_commit=False, since we don't actually need
