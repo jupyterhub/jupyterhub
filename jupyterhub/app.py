@@ -496,6 +496,7 @@ class JupyterHub(Application):
         """,
         config=True
     )
+
     hub_bind_url = Unicode(
         help="""
         The URL on which the Hub will listen.

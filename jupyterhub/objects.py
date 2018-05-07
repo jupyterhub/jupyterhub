@@ -9,7 +9,7 @@ import warnings
 
 from traitlets import (
     HasTraits, Instance, Integer, Unicode,
-    default, observe,
+    default, observe, validate,
 )
 from .traitlets import URLPrefix
 from . import orm
@@ -59,6 +59,15 @@ class Server(HasTraits):
             else:
                 port = 80
         self.port = port
+
+    @validate('connect_url')
+    def _connect_url_add_prefix(self, proposal):
+        """Ensure connect_url includes base_url"""
+        urlinfo = urlparse(proposal.value)
+        if not urlinfo.path.startswith(self.base_url):
+            urlinfo = urlinfo._replace(path=self.base_url)
+            return urlunparse(urlinfo)
+        return proposal.value
 
     @property
     def _connect_ip(self):
