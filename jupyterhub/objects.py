@@ -4,7 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 import warnings
 
 from traitlets import (
