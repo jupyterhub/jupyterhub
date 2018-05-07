@@ -47,6 +47,19 @@ class Server(HasTraits):
             return self.url.replace(self._connect_ip, self.ip or '*', 1)
         return self.url
 
+    @observe('bind_url')
+    def _bind_url_changed(self, change):
+        urlinfo = urlparse(change.new)
+        self.proto = urlinfo.scheme
+        self.ip = urlinfo.hostname or ''
+        port = urlinfo.port
+        if port is None:
+            if self.proto == 'https':
+                port = 443
+            else:
+                port = 80
+        self.port = port
+
     @property
     def _connect_ip(self):
         """The address to use when connecting to this server
@@ -83,16 +96,7 @@ class Server(HasTraits):
     @classmethod
     def from_url(cls, url):
         """Create a Server from a given URL"""
-        urlinfo = urlparse(url)
-        proto = urlinfo.scheme
-        ip = urlinfo.hostname or ''
-        port = urlinfo.port
-        if not port:
-            if proto == 'https':
-                port = 443
-            else:
-                port = 80
-        return cls(proto=proto, ip=ip, port=port, base_url=urlinfo.path)
+        return cls(bind_url=url, base_url=urlparse(url).path)
 
     @default('port')
     def _default_port(self):
