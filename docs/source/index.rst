@@ -52,7 +52,6 @@ Contents
 
 * :doc:`reference/index`
 * :doc:`reference/technical-overview`
-* :doc:`reference/sudo`
 * :doc:`reference/websecurity`
 * :doc:`reference/authenticators`
 * :doc:`reference/spawners`
@@ -60,6 +59,7 @@ Contents
 * :doc:`reference/rest`
 * :doc:`reference/upgrading`
 * :doc:`reference/config-examples`
+* :doc:`reference/config-sudo`
 
 **API Reference**
 

@@ -15,3 +15,4 @@ Technical Reference
    upgrading
    templates
    config-examples
+   config-sudo

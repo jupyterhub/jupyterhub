@@ -5,8 +5,9 @@ following configurations:
 
 - Using GitHub OAuth
 - Using nginx reverse proxy
+- Run JupyterHub without root privileges using `sudo`
 
-## Using GitHub OAuth
+# Using GitHub OAuth
 
 In this example, we show a configuration file for a fairly standard JupyterHub
 deployment with the following assumptions:
@@ -89,7 +90,7 @@ export CONFIGPROXY_AUTH_TOKEN=super-secret
 jupyterhub -f /etc/jupyterhub/jupyterhub_config.py &>> /var/log/jupyterhub.log
 ```
 
-## Using a reverse proxy
+# Using a reverse proxy
 
 In the following example, we show configuration files for a JupyterHub server
 running locally on port `8000` but accessible from the outside on the standard
@@ -119,7 +120,7 @@ This can take a few minutes:
 openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
 ```
 
-### nginx
+## nginx
 
 The **`nginx` server config file** is fairly standard fare except for the two
 `location` blocks within the `HUB.DOMAIN.TLD` config file:
@@ -227,7 +228,7 @@ Now restart `nginx`, restart the JupyterHub, and enjoy accessing
 `https://NO_HUB.DOMAIN.TLD`.
 
 
-### Apache
+## Apache
 
 As with nginx above, you can use [Apache](https://httpd.apache.org) as the reverse proxy.
 First, we will need to enable the apache modules that we are going to need:
