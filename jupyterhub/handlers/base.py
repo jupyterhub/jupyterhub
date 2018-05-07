@@ -260,6 +260,13 @@ class BaseHandler(RequestHandler):
 
     def get_current_user(self):
         """get current username"""
+        user = self.authenticator.get_current_user(self)
+        if user is not None:
+            user = self.find_user(user)
+        if user is not None:
+            user.last_activiy = datetime.utcnow()
+            self.db.commit()
+            return user
         user = self.get_current_user_token()
         if user is not None:
             return user
