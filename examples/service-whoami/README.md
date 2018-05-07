@@ -26,9 +26,9 @@ After logging in with your local-system credentials, you should see a JSON dump 
 
 This relies on the Hub starting the whoami services, via config (see [jupyterhub_config.py](./jupyterhub_config.py)).
 
-In this example, the `hub_users` of the service only allows the user that started the service (i.e. the user that started the hub) access.
-So if you start jupyterhub with `sudo` only `root` will have access to the service
-unless you change the `hub_users` value in the service.
+You may set the `hub_users` configuration in the service script
+to restrict access to the service to a whitelist of allowed users.
+By default, any authenticated user is allowed.
 
 A similar service could be run externally, by setting the JupyterHub service environment variables:
 
