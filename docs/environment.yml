@@ -15,3 +15,5 @@ dependencies:
 - pip:
   - python-oauth2
   - recommonmark==0.4.0
+  - async_generator
+  - prometheus_client
