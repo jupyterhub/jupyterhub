@@ -497,7 +497,8 @@ class JupyterHub(Application):
             JupyterHub.hub_connect_ip
             JupyterHub.hub_bind_url
         .. versionadded:: 0.9
-        """
+        """,
+        config=True
     )
     hub_bind_url = Unicode(
         help="""
