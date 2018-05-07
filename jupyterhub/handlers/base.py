@@ -752,7 +752,7 @@ class BaseHandler(RequestHandler):
     @property
     def template_namespace(self):
         user = self.get_current_user()
-        return dict(
+        ns = dict(
             base_url=self.hub.base_url,
             prefix=self.base_url,
             user=user,
@@ -762,6 +762,9 @@ class BaseHandler(RequestHandler):
             static_url=self.static_url,
             version_hash=self.version_hash,
         )
+        if self.settings['template_vars']:
+            ns.update(self.settings['template_vars'])
+        return ns
 
     def write_error(self, status_code, **kwargs):
         """render custom error pages"""
