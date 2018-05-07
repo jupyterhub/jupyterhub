@@ -286,6 +286,10 @@ class JupyterHub(Application):
     def _template_paths_default(self):
         return [os.path.join(self.data_files_path, 'templates')]
 
+    template_vars = Dict(
+        help="Extra variables to be passed into jinja templates",
+    ).tag(config=True)
+
     confirm_no_ssl = Bool(False,
         help="""DEPRECATED: does nothing"""
     ).tag(config=True)
@@ -1526,6 +1530,7 @@ class JupyterHub(Application):
             static_url_prefix=url_path_join(self.hub.base_url, 'static/'),
             static_handler_class=CacheControlStaticFilesHandler,
             template_path=self.template_paths,
+            template_vars=self.template_vars,
             jinja2_env=jinja_env,
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
