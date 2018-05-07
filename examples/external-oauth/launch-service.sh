@@ -18,4 +18,4 @@ export JUPYTERHUB_OAUTH_CALLBACK_URL="$JUPYTERHUB_SERVICE_URL/oauth_callback"
 export JUPYTERHUB_HOST='http://127.0.0.1:8000'
 
 # launch the service
-exec python3 whoami-oauth.py
+exec python3 ../service-whoami/whoami-oauth.py
