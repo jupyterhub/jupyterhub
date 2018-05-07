@@ -35,7 +35,6 @@ from tornado.log import app_log, access_log, gen_log
 import tornado.options
 from tornado import gen, web
 from tornado.platform.asyncio import AsyncIOMainLoop
-from tornado.netutil import bind_unix_socket
 
 from traitlets import (
     Unicode, Integer, Dict, TraitError, List, Bool, Any,
@@ -1728,6 +1727,7 @@ class JupyterHub(Application):
         bind_url = urlparse(self.hub.bind_url)
         try:
             if bind_url.scheme.startswith('unix+'):
+                from tornado.netutil import bind_unix_socket
                 socket = bind_unix_socket(unquote(bind_url.netloc))
                 self.http_server.add_socket(socket)
             else:
