@@ -15,7 +15,11 @@ from jupyterhub.services.auth import HubAuthenticated
 
 
 class WhoAmIHandler(HubAuthenticated, RequestHandler):
-    hub_users = {getuser()} # the users allowed to access me
+    # hub_users can be a set of users who are allowed to access the service
+    # `getuser()` here would mean only the user who started the service
+    # can access the service:
+
+    # hub_users = {getuser()}
 
     @authenticated
     def get(self):
