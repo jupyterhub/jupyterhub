@@ -338,9 +338,6 @@ class JupyterHub(Application):
 
         This is the address on which the proxy will bind.
         Sets protocol, ip, base_url
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
         """
     ).tag(config=True)
 
