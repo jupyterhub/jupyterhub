@@ -846,16 +846,15 @@ class JupyterHub(Application):
     def init_handlers(self):
         h = []
 
-        # add any user configurable handlers. Make it first so it can override
-        # builtin handlers
-
-        h.extend(self.extra_page_handlers)
         # load handlers from the authenticator
 
         h.extend(self.authenticator.get_handlers(self))
         # set default handlers
         h.extend(handlers.default_handlers)
         h.extend(apihandlers.default_handlers)
+
+        # add any user configurable handlers.
+        h.extend(self.extra_page_handlers)
 
         h.append((r'/logo', LogoHandler, {'path': self.logo_file}))
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
