@@ -3,6 +3,7 @@ include COPYING.md
 include setupegg.py
 include bower-lite
 include package.json
+include package-lock.json
 include *requirements.txt
 include Dockerfile
 
