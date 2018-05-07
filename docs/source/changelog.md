@@ -47,12 +47,13 @@ and tornado < 5.0.
 
       jupyterhub &>> /var/log/jupyterhub.log
 
-- deprecate `JupyterHub.ip`, `JupyterHub.port`, `JupyterHub.base_url` config in favor of single `JupyterHub.bind_url` config.
-- deprecate `JupyterHub.hub_ip`, `JupyterHub.hub_port` config
-  in favor of single `JupyterHub.hub_bind_url` config.
+- Add `JupyterHub.bind_url` config for setting the full bind URL of the proxy.
+  Sets ip, port, base_url all at once.
+- Add `JupyterHub.hub_bind_url` for setting the full host+port of the Hub.
   `hub_bind_url` supports unix domain sockets, e.g.
   `unix+http://%2Fsrv%2Fjupytrehub.sock`
-- deprecate `JupyterHub.hub_connect_port` config in favor of `JupyterHub.hub_connect_url`.
+- Deprecate `JupyterHub.hub_connect_port` config in favor of `JupyterHub.hub_connect_url`. `hub_connect_ip` is not deprecated
+  and can still be used in the common case where only the ip address of the hub differs from the bind ip.
 
 #### Added
 

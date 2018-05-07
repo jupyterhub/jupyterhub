@@ -359,7 +359,6 @@ class JupyterHub(Application):
     @default('base_url')
     def _default_base_url(self):
         # call validate to ensure leading/trailing slashes
-        print(self.bind_url)
         return JupyterHub.base_url.validate(self, urlparse(self.bind_url).path)
 
     subdomain_host = Unicode('',
@@ -451,16 +450,20 @@ class JupyterHub(Application):
         This is the internal port of the hub itself. It should never be accessed directly.
         See JupyterHub.port for the public port to use when accessing jupyterhub.
         It is rare that this port should be set except in cases of port conflict.
+
+        See also `hub_ip` for the ip and `hub_bind_url` for setting the full bind URL.
         """
     ).tag(config=True)
+
     hub_ip = Unicode('127.0.0.1',
         help="""The ip address for the Hub process to *bind* to.
 
-        By default, the hub listens on localhost only. This address must be accessible from 
-        the proxy and user servers. You may need to set this to a public ip or '' for all 
+        By default, the hub listens on localhost only. This address must be accessible from
+        the proxy and user servers. You may need to set this to a public ip or '' for all
         interfaces if the proxy or user servers are in containers or on a different host.
 
-        See `hub_connect_ip` for cases where the bind and connect address should differ.
+        See `hub_connect_ip` for cases where the bind and connect address should differ,
+        or `hub_bind_url` for setting the full bind URL.
         """
     ).tag(config=True)
 
@@ -492,10 +495,12 @@ class JupyterHub(Application):
         .. seealso::
             JupyterHub.hub_connect_ip
             JupyterHub.hub_bind_url
+
         .. versionadded:: 0.9
         """,
         config=True
     )
+
     hub_bind_url = Unicode(
         help="""
         The URL on which the Hub will listen.
@@ -1064,6 +1069,11 @@ class JupyterHub(Application):
             public_host=self.subdomain_host,
         )
         if self.hub_bind_url:
+            # ensure hub_prefix is set on bind_url
+            self.hub_bind_url = urlunparse(
+                urlparse(self.hub_bind_url)
+                ._replace(path=self.hub_prefix)
+            )
             hub_args['bind_url'] = self.hub_bind_url
         else:
             hub_args['ip'] = self.hub_ip
@@ -1081,6 +1091,11 @@ class JupyterHub(Application):
             )
 
         if self.hub_connect_url:
+            # ensure hub_prefix is on connect_url
+            self.hub_connect_url = urlunparse(
+                urlparse(self.hub_connect_url)
+                ._replace(path=self.hub_prefix)
+            )
             self.hub.connect_url = self.hub_connect_url
 
     async def init_users(self):

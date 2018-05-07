@@ -4,12 +4,12 @@
 # Distributed under the terms of the Modified BSD License.
 
 import socket
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 import warnings
 
 from traitlets import (
     HasTraits, Instance, Integer, Unicode,
-    default, observe,
+    default, observe, validate,
 )
 from .traitlets import URLPrefix
 from . import orm
@@ -47,6 +47,28 @@ class Server(HasTraits):
             return self.url.replace(self._connect_ip, self.ip or '*', 1)
         return self.url
 
+    @observe('bind_url')
+    def _bind_url_changed(self, change):
+        urlinfo = urlparse(change.new)
+        self.proto = urlinfo.scheme
+        self.ip = urlinfo.hostname or ''
+        port = urlinfo.port
+        if port is None:
+            if self.proto == 'https':
+                port = 443
+            else:
+                port = 80
+        self.port = port
+
+    @validate('connect_url')
+    def _connect_url_add_prefix(self, proposal):
+        """Ensure connect_url includes base_url"""
+        urlinfo = urlparse(proposal.value)
+        if not urlinfo.path.startswith(self.base_url):
+            urlinfo = urlinfo._replace(path=self.base_url)
+            return urlunparse(urlinfo)
+        return proposal.value
+
     @property
     def _connect_ip(self):
         """The address to use when connecting to this server
@@ -83,16 +105,7 @@ class Server(HasTraits):
     @classmethod
     def from_url(cls, url):
         """Create a Server from a given URL"""
-        urlinfo = urlparse(url)
-        proto = urlinfo.scheme
-        ip = urlinfo.hostname or ''
-        port = urlinfo.port
-        if not port:
-            if proto == 'https':
-                port = 443
-            else:
-                port = 80
-        return cls(proto=proto, ip=ip, port=port, base_url=urlinfo.path)
+        return cls(bind_url=url, base_url=urlparse(url).path)
 
     @default('port')
     def _default_port(self):
