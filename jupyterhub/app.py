@@ -1065,6 +1065,11 @@ class JupyterHub(Application):
             public_host=self.subdomain_host,
         )
         if self.hub_bind_url:
+            # ensure hub_prefix is set on bind_url
+            self.hub_bind_url = urlunparse(
+                urlparse(self.hub_bind_url)
+                ._replace(path=self.hub_prefix)
+            )
             hub_args['bind_url'] = self.hub_bind_url
         else:
             hub_args['ip'] = self.hub_ip
@@ -1082,6 +1087,11 @@ class JupyterHub(Application):
             )
 
         if self.hub_connect_url:
+            # ensure hub_prefix is on connect_url
+            self.hub_connect_url = urlunparse(
+                urlparse(self.hub_connect_url)
+                ._replace(path=self.hub_prefix)
+            )
             self.hub.connect_url = self.hub_connect_url
 
     async def init_users(self):
