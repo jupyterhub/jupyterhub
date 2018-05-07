@@ -115,16 +115,20 @@ class APIHandler(BaseHandler):
 
     def token_model(self, token):
         """Get the JSON model for an APIToken"""
+        expires_at = None
         if isinstance(token, orm.APIToken):
             kind = 'api_token'
             extra = {
                 'note': token.note,
             }
+            expires_at = token.expires_at
         elif isinstance(token, orm.OAuthAccessToken):
             kind = 'oauth'
             extra = {
                 'oauth_client': token.client.description or token.client.client_id,
             }
+            if token.expires_at:
+                expires_at = datetime.fromtimestamp(token.expires_at)
         else:
             raise TypeError(
                 "token must be an APIToken or OAuthAccessToken, not %s"
