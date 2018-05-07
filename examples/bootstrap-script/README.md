@@ -26,7 +26,7 @@ You can define your own bootstrap process by implementing a `pre_spawn_hook` on 
 The Spawner itself is passed as parameter to your hook and you can easily get the contextual information out of the spawning process. 
 
 Similarly, there may be cases where you would like to clean up after a spawner stops.
-You may implement a `post_spawn_hook` that is always executed after the spawner stops.
+You may implement a `post_stop_hook` that is always executed after the spawner stops.
 
 If you implement a hook, make sure that it is *idempotent*. It will be executed every time
 a notebook server is spawned to the user. That means you should somehow

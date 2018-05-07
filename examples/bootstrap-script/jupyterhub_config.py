@@ -19,7 +19,7 @@ def clean_dir_hook(spawner):
 
 # attach the hook functions to the spawner
 c.Spawner.pre_spawn_hook = create_dir_hook
-c.Spawner.post_spawn_hook = clean_dir_hook
+c.Spawner.post_stop_hook = clean_dir_hook
 
 # Use the DockerSpawner to serve your users' notebooks
 c.JupyterHub.spawner_class = 'dockerspawner.DockerSpawner'

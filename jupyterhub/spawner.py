@@ -515,7 +515,7 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    post_spawn_hook = Any(
+    post_stop_hook = Any(
         help="""
         An optional hook function that you can implement to do work after
         the spawner stops.
@@ -701,12 +701,12 @@ class Spawner(LoggingConfigurable):
         if self.pre_spawn_hook:
             return self.pre_spawn_hook(self)
 
-    def run_post_spawn_hook(self):
-        """Run the post_spawn_hook if defined"""
+    def run_post_stop_hook(self):
+        """Run the post_stop_hook if defined"""
         try:
-            return self.post_spawn_hook(self)
+            return self.post_stop_hook(self)
         except Exception:
-            self.log.exception("post_spawn_hook failed with exception: %s", self)
+            self.log.exception("post_stop_hook failed with exception: %s", self)
 
     @property
     def _progress_url(self):
