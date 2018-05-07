@@ -450,16 +450,20 @@ class JupyterHub(Application):
         This is the internal port of the hub itself. It should never be accessed directly.
         See JupyterHub.port for the public port to use when accessing jupyterhub.
         It is rare that this port should be set except in cases of port conflict.
+
+        See also `hub_ip` for the ip and `hub_bind_url` for setting the full bind URL.
         """
     ).tag(config=True)
+
     hub_ip = Unicode('127.0.0.1',
         help="""The ip address for the Hub process to *bind* to.
 
-        By default, the hub listens on localhost only. This address must be accessible from 
-        the proxy and user servers. You may need to set this to a public ip or '' for all 
+        By default, the hub listens on localhost only. This address must be accessible from
+        the proxy and user servers. You may need to set this to a public ip or '' for all
         interfaces if the proxy or user servers are in containers or on a different host.
 
-        See `hub_connect_ip` for cases where the bind and connect address should differ.
+        See `hub_connect_ip` for cases where the bind and connect address should differ,
+        or `hub_bind_url` for setting the full bind URL.
         """
     ).tag(config=True)
 
