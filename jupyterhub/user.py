@@ -559,6 +559,8 @@ class User:
         finally:
             spawner.orm_spawner.started = None
             self.db.commit()
+            # trigger post-stop hook
+            await maybe_future(spawner.run_post_stop_hook())
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
             try:

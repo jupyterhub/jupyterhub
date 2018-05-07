@@ -515,6 +515,15 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    post_stop_hook = Any(
+        help="""
+        An optional hook function that you can implement to do work after
+        the spawner stops.
+
+        This can be set independent of any concrete spawner implementation.
+        """
+    ).tag(config=True)
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -691,6 +700,13 @@ class Spawner(LoggingConfigurable):
         """Run the pre_spawn_hook if defined"""
         if self.pre_spawn_hook:
             return self.pre_spawn_hook(self)
+
+    def run_post_stop_hook(self):
+        """Run the post_stop_hook if defined"""
+        try:
+            return self.post_stop_hook(self)
+        except Exception:
+            self.log.exception("post_stop_hook failed with exception: %s", self)
 
     @property
     def _progress_url(self):
