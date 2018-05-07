@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import asyncio
+from datetime import datetime
 import json
 
 from async_generator import aclosing
@@ -201,13 +202,30 @@ class UserTokenListAPIHandler(APIHandler):
         user = self.find_user(name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
+
+        now = datetime.utcnow()
+
         api_tokens = []
         def sort_key(token):
             return token.last_activity or token.created
+
         for token in sorted(user.api_tokens, key=sort_key):
+            if token.expires_at and token.expires_at < now:
+                # exclude expired tokens
+                self.db.delete(token)
+                self.db.commit()
+                continue
             api_tokens.append(self.token_model(token))
+
         oauth_tokens = []
+        # OAuth tokens use integer timestamps
+        now_timestamp = now.timestamp()
         for token in sorted(user.oauth_tokens, key=sort_key):
+            if token.expires_at and token.expires_at < now_timestamp:
+                # exclude expired tokens
+                self.db.delete(token)
+                self.db.commit()
+                continue
             oauth_tokens.append(self.token_model(token))
         self.write(json.dumps({
             'api_tokens': api_tokens,
@@ -252,7 +270,7 @@ class UserTokenListAPIHandler(APIHandler):
             if requester is not user:
                 note += " by %s %s" % (kind, requester.name)
 
-        api_token = user.new_api_token(note=note)
+        api_token = user.new_api_token(note=note, expires_in=body.get('expires_in', None))
         if requester is not user:
             self.log.info("%s %s requested API token for %s", kind.title(), requester.name, user.name)
         else:

@@ -9,6 +9,7 @@ import atexit
 import binascii
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
+from functools import partial
 from getpass import getuser
 import logging
 from operator import itemgetter
@@ -1249,10 +1250,23 @@ class JupyterHub(Application):
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()
 
+    # purge expired tokens hourly
+    purge_expired_tokens_interval = 3600
+
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
+        purge_expired_tokens = partial(orm.APIToken.purge_expired, self.db)
+        purge_expired_tokens()
+        # purge expired tokens hourly
+        # we don't need to be prompt about this
+        # because expired tokens cannot be used anyway
+        pc = PeriodicCallback(
+            purge_expired_tokens,
+            1e3 * self.purge_expired_tokens_interval,
+        )
+        pc.start()
 
     def init_services(self):
         self._service_map.clear()
