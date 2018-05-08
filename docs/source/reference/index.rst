@@ -15,4 +15,6 @@ Technical Reference
    upgrading
    templates
    config-examples
+   config-ghoauth
+   config-proxy
    config-sudo
