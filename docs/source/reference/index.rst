@@ -5,7 +5,6 @@ Technical Reference
    :maxdepth: 2
 
    technical-overview
-   sudo
    websecurity
    authenticators
    spawners
@@ -15,3 +14,6 @@ Technical Reference
    upgrading
    templates
    config-examples
+   config-ghoauth
+   config-proxy
+   config-sudo

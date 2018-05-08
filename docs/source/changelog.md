@@ -51,7 +51,7 @@ and tornado < 5.0.
   Sets ip, port, base_url all at once.
 - Add `JupyterHub.hub_bind_url` for setting the full host+port of the Hub.
   `hub_bind_url` supports unix domain sockets, e.g.
-  `unix+http://%2Fsrv%2Fjupytrehub.sock`
+  `unix+http://%2Fsrv%2Fjupyterhub.sock`
 - Deprecate `JupyterHub.hub_connect_port` config in favor of `JupyterHub.hub_connect_url`. `hub_connect_ip` is not deprecated
   and can still be used in the common case where only the ip address of the hub differs from the bind ip.
 
