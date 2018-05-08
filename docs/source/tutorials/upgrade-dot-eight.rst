@@ -1,4 +1,4 @@
-.. upgrade-dot-eight:
+.. _upgrade-dot-eight:
 
 Upgrading to JupyterHub version 0.8
 ===================================
