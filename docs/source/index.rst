@@ -59,8 +59,8 @@ Contents
 * :doc:`reference/rest`
 * :doc:`reference/upgrading`
 * :doc:`reference/config-examples`
-* :doc:`reference/config-examples`
-* :doc:`reference/config-examples`
+* :doc:`reference/config-ghoauth`
+* :doc:`reference/config-proxy`
 * :doc:`reference/config-sudo`
 
 **API Reference**
