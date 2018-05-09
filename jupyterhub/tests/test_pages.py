@@ -447,6 +447,21 @@ def test_token_auth(app):
     assert r.status_code == 200
 
 
+@pytest.mark.gen_test
+def test_oauth_token_page(app):
+    name = 'token'
+    cookies = yield app.login_user(name)
+    user = app.users[orm.User.find(app.db, name)]
+    client = orm.OAuthClient(identifier='token')
+    app.db.add(client)
+    oauth_token = orm.OAuthAccessToken(client=client, user=user, grant_type=orm.GrantType.authorization_code)
+    app.db.add(oauth_token)
+    app.db.commit()
+    r = yield get_page('token', app, cookies=cookies)
+    r.raise_for_status()
+    assert r.status_code == 200
+
+
 @pytest.mark.parametrize("error_status", [
     503,
     404,
