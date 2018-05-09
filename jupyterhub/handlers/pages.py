@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from collections import defaultdict
 from datetime import datetime
 from http.client import responses
 
@@ -229,12 +230,24 @@ class TokenPageHandler(BaseHandler):
                 token.last_activity or never,
                 token.created or never,
             )
-        api_tokens = sorted(user.api_tokens, key=sort_key, reverse=True)
+
+        now = datetime.utcnow()
+        api_tokens = []
+        for token in sorted(user.api_tokens, key=sort_key, reverse=True):
+            if token.expires_at and token.expires_at < now:
+                self.db.delete(token)
+                self.db.commit()
+                continue
+            api_tokens.append(token)
 
         # group oauth client tokens by client id
-        from collections import defaultdict
         oauth_tokens = defaultdict(list)
         for token in user.oauth_tokens:
+            if token.expires_at and token.expires_at < now:
+                self.log.warning("Deleting expired token")
+                self.db.delete(token)
+                self.db.commit()
+                continue
             if not token.client_id:
                 # token should have been deleted when client was deleted
                 self.log.warning("Deleting stale oauth token for %s", user.name)

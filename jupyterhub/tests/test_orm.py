@@ -3,8 +3,10 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from datetime import datetime, timedelta
 import os
 import socket
+from unittest import mock
 
 import pytest
 from tornado import gen
@@ -97,6 +99,32 @@ def test_tokens(db):
     with pytest.raises(ValueError):
         user.new_api_token(token)
     assert len(user.api_tokens) == 3
+
+
+def test_token_expiry(db):
+    user = orm.User(name='parker')
+    db.add(user)
+    db.commit()
+    now = datetime.utcnow()
+    token = user.new_api_token(expires_in=60)
+    orm_token = orm.APIToken.find(db, token=token)
+    assert orm_token
+    assert orm_token.expires_at is not None
+    # approximate range
+    assert orm_token.expires_at > now + timedelta(seconds=50)
+    assert orm_token.expires_at < now + timedelta(seconds=70)
+    the_future = mock.patch('jupyterhub.orm.utcnow', lambda : now + timedelta(seconds=70))
+    with the_future:
+        found = orm.APIToken.find(db, token=token)
+    assert found is None
+    # purging shouldn't delete non-expired tokens
+    orm.APIToken.purge_expired(db)
+    assert orm.APIToken.find(db, token=token)
+    with the_future:
+        orm.APIToken.purge_expired(db)
+    assert orm.APIToken.find(db, token=token) is None
+    # after purging, make sure we aren't in the user token list
+    assert orm_token not in user.api_tokens
 
 
 def test_service_tokens(db):
