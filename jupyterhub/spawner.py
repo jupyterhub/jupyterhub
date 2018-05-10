@@ -703,10 +703,11 @@ class Spawner(LoggingConfigurable):
 
     def run_post_stop_hook(self):
         """Run the post_stop_hook if defined"""
-        try:
-            return self.post_stop_hook(self)
-        except Exception:
-            self.log.exception("post_stop_hook failed with exception: %s", self)
+        if self.post_stop_hook is not None:
+            try:
+                return self.post_stop_hook(self)
+            except Exception:
+                self.log.exception("post_stop_hook failed with exception: %s", self)
 
     @property
     def _progress_url(self):
