@@ -426,20 +426,16 @@ class BaseHandler(RequestHandler):
             self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
                 self.request.uri, next_url,
             )
+        if not next_url and self.config.JupyterHub.get('default_url'):
+            next_url = url_path_join(self.hub.base_url, self.config.JupyterHub['default_url'])
 
         if not next_url:
             # default URL after login
             # if self.redirect_to_server, default login URL initiates spawn
             if user and self.redirect_to_server:
-                if self.config.JupyterHub.get('default_user_page'):
-                    next_url = self.config.JupyterHub['default_user_page']
-                else:
-                    next_url = user.url
+                next_url = user.url
             else:
-                if self.config.JupyterHub.get('default_page'):
-                    next_url = self.config.JupyterHub['default_page']
-                else:
-                    next_url = url_path_join(self.hub.base_url, 'home')
+                next_url = url_path_join(self.hub.base_url, 'home')
         return next_url
 
     async def login_user(self, data=None):

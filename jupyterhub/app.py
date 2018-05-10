@@ -839,9 +839,7 @@ class JupyterHub(Application):
         return handlers
 
     extra_page_handlers = List().tag(config=True)
-    default_page = Any(default_value=None).tag(config=True)
-    default_user_page = Any(default_value=None).tag(config=True)
- 
+    default_url = Any(default_value=None).tag(config=True)
 
     def init_handlers(self):
         h = []
