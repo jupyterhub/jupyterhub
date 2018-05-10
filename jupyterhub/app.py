@@ -843,9 +843,7 @@ class JupyterHub(Application):
 
     def init_handlers(self):
         h = []
-
         # load handlers from the authenticator
-
         h.extend(self.authenticator.get_handlers(self))
         # set default handlers
         h.extend(handlers.default_handlers)
