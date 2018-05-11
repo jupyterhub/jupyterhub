@@ -3,9 +3,11 @@
 {% block main %}
 
 <div class="container">
+  {% block heading %}
   <div class="row text-center">
-    <h1>Spawner options</h1>
+    <h1>Spawner Options</h1>
   </div>
+  {% endblock %}
   <div class="row col-sm-offset-2 col-sm-8">
     {% if for_user and user.name != for_user.name -%}
       <p>Spawning server for {{ for_user.name }}</p>
