@@ -273,7 +273,7 @@ class TokenPageHandler(BaseHandler):
             token = tokens[0]
             oauth_clients.append({
                 'client': token.client,
-                'description': token.client.description or token.client.client_id,
+                'description': token.client.description or token.client.identifier,
                 'created': created,
                 'last_activity': last_activity,
                 'tokens': tokens,
