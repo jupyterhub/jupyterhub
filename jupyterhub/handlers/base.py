@@ -427,7 +427,7 @@ class BaseHandler(RequestHandler):
                 self.request.uri, next_url,
             )
         if not next_url and self.config.JupyterHub.get('default_url'):
-            next_url = url_path_join(self.hub.base_url, self.config.JupyterHub['default_url'])
+            next_url = self.config.JupyterHub['default_url']
 
         if not next_url:
             # default URL after login
