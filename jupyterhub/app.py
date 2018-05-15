@@ -315,6 +315,7 @@ class JupyterHub(Application):
         should be accessed by users.
 
         .. deprecated: 0.9
+            Use JupyterHub.bind_url
         """
     ).tag(config=True)
 
@@ -329,26 +330,6 @@ class JupyterHub(Application):
             Use JupyterHub.bind_url
         """
     ).tag(config=True)
-
-    @observe('ip', 'port')
-    def _ip_port_changed(self, change):
-        urlinfo = urlparse(self.bind_url)
-        urlinfo = urlinfo._replace(netloc='%s:%i' % (self.ip, self.port))
-        self.bind_url = urlunparse(urlinfo)
-
-    bind_url = Unicode(
-        "http://127.0.0.1:8000",
-        help="""The public facing URL of the whole JupyterHub application.
-
-        This is the address on which the proxy will bind.
-        Sets protocol, ip, base_url
-        """
-    ).tag(config=True)
-
-    @observe('bind_url')
-    def _bind_url_changed(self, change):
-        urlinfo = urlparse(change.new)
-        self.base_url = urlinfo.path
 
     base_url = URLPrefix('/',
         help="""The base URL of the entire application.
@@ -365,6 +346,25 @@ class JupyterHub(Application):
     def _default_base_url(self):
         # call validate to ensure leading/trailing slashes
         return JupyterHub.base_url.validate(self, urlparse(self.bind_url).path)
+
+    @observe('ip', 'port', 'base_url')
+    def _url_part_changed(self, change):
+        """propagate deprecated ip/port/base_url config to the bind_url"""
+        urlinfo = urlparse(self.bind_url)
+        urlinfo = urlinfo._replace(netloc='%s:%i' % (self.ip, self.port))
+        urlinfo = urlinfo._replace(path=self.base_url)
+        bind_url = urlunparse(urlinfo)
+        if bind_url != self.bind_url:
+            self.bind_url = bind_url
+
+    bind_url = Unicode(
+        "http://127.0.0.1:8000",
+        help="""The public facing URL of the whole JupyterHub application.
+
+        This is the address on which the proxy will bind.
+        Sets protocol, ip, base_url
+        """
+    ).tag(config=True)
 
     subdomain_host = Unicode('',
         help="""Run single-user servers on subdomains of this host.
