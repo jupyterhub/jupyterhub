@@ -1493,10 +1493,16 @@ class JupyterHub(Application):
                 oauth_client_ids.add(spawner.oauth_client_id)
 
         client_store = self.oauth_provider.client_authenticator.client_store
-        for oauth_client in self.db.query(orm.OAuthClient):
+        for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
                 self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
                 self.db.delete(oauth_client)
+                # Some deployments that create temporary users may have left *lots*
+                # of entries here.
+                # Don't try to delete them all in one transaction,
+                # commit at most 100 deletions at a time.
+                if i % 100 == 0:
+                    self.db.commit()
         self.db.commit()
 
     def init_proxy(self):
