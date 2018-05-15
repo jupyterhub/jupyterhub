@@ -62,6 +62,10 @@ class BaseHandler(RequestHandler):
         return self.settings.get('base_url', '/')
 
     @property
+    def default_url(self):
+        return self.settings.get('default_url', '')
+
+    @property
     def version_hash(self):
         return self.settings.get('version_hash', '')
 
@@ -428,12 +432,15 @@ class BaseHandler(RequestHandler):
             self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
                 self.request.uri, next_url,
             )
-        if not next_url and self.config.JupyterHub.get('default_url'):
-            next_url = self.config.JupyterHub['default_url']
+
+        if not next_url:
+            # custom default URL
+            next_url = self.default_url
 
         if not next_url:
             # default URL after login
-            # if self.redirect_to_server, default login URL initiates spawn
+            # if self.redirect_to_server, default login URL initiates spawn,
+            # otherwise send to Hub home page (control panel)
             if user and self.redirect_to_server:
                 next_url = user.url
             else:
