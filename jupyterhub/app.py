@@ -937,8 +937,23 @@ class JupyterHub(Application):
             handlers[i] = tuple(lis)
         return handlers
 
-    extra_handlers = List(help="Register extra page handlers for jupyterhub, should be of the form (<regex>,handler)").tag(config=True)
-    default_url = Any(default_value=None, help='specify default URL for "next_url" (e.g. when user directs to "/"').tag(config=True)
+    extra_handlers = List(
+        help="""
+        Register extra tornado Handlers for jupyterhub.
+
+        Should be of the form ``("<regex>", Handler)``
+
+        The Hub prefix will be added, so `/my-page` will be served at `/hub/my-page`.
+        """,
+    ).tag(config=True)
+
+    default_url = Unicode(
+        help="""
+        The default URL for users when they arrive (e.g. when user directs to "/")
+
+        By default, redirects users to their own server.
+        """,
+    ).tag(config=True)
 
     def init_handlers(self):
         h = []
@@ -1541,6 +1556,7 @@ class JupyterHub(Application):
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,
+            default_url=self.default_url,
             cookie_secret=self.cookie_secret,
             cookie_max_age_days=self.cookie_max_age_days,
             redirect_to_server=self.redirect_to_server,

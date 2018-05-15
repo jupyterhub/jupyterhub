@@ -31,7 +31,9 @@ class RootHandler(BaseHandler):
     """
     def get(self):
         user = self.get_current_user()
-        if user:
+        if self.default_url:
+            url = self.default_url
+        elif user:
             url = self.get_next_url(user)
         else:
             url = self.settings['login_url']

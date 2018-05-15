@@ -54,6 +54,30 @@ def test_root_redirect(app):
 
 
 @pytest.mark.gen_test
+def test_root_default_url_noauth(app):
+    with mock.patch.dict(app.tornado_settings,
+                         {'default_url': '/foo/bar'}):
+        r = yield get_page('/', app, allow_redirects=False)
+    r.raise_for_status()
+    url = r.headers.get('Location', '')
+    path = urlparse(url).path
+    assert path == '/foo/bar'
+
+
+@pytest.mark.gen_test
+def test_root_default_url_auth(app):
+    name = 'wash'
+    cookies = yield app.login_user(name)
+    with mock.patch.dict(app.tornado_settings,
+                         {'default_url': '/foo/bar'}):
+        r = yield get_page('/', app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    url = r.headers.get('Location', '')
+    path = urlparse(url).path
+    assert path == '/foo/bar'
+
+
+@pytest.mark.gen_test
 def test_home_no_auth(app):
     r = yield get_page('home', app, allow_redirects=False)
     r.raise_for_status()
