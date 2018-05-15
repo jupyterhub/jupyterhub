@@ -15,6 +15,7 @@ import uuid
 
 from jinja2 import TemplateNotFound
 
+from sqlalchemy.exc import SQLAlchemyError
 from tornado.log import app_log
 from tornado.httputil import url_concat, HTTPHeaders
 from tornado.ioloop import IOLoop
@@ -793,6 +794,10 @@ class BaseHandler(RequestHandler):
             reason = getattr(exception, 'reason', '')
             if reason:
                 message = reasons.get(reason, reason)
+
+        if exception and isinstance(exception, SQLAlchemyError):
+            self.log.warning("Rolling back session due to database error %s", exception)
+            self.db.rollback()
 
         # build template namespace
         ns = dict(

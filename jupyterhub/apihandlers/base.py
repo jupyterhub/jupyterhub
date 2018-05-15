@@ -6,6 +6,7 @@ import json
 
 from http.client import responses
 
+from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
 
 from .. import orm
@@ -86,6 +87,10 @@ class APIHandler(BaseHandler):
             reason = getattr(exception, 'reason', '')
             if reason:
                 status_message = reason
+
+        if exception and isinstance(exception, SQLAlchemyError):
+            self.log.warning("Rolling back session due to database error %s", exception)
+            self.db.rollback()
 
         self.set_header('Content-Type', 'application/json')
         # allow setting headers from exceptions
