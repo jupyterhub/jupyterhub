@@ -8,18 +8,21 @@ from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
 
-from tornado import gen
 import pytest
+from tornado import gen
+from traitlets.config import Config
 
 from .mocking import MockHub
 from .test_api import add_user
 from .. import orm
-from ..app import COOKIE_SECRET_BYTES
+from ..app import COOKIE_SECRET_BYTES, JupyterHub
+
 
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
     assert '--ip' in out
     assert '--JupyterHub.ip' in out
+
 
 def test_token_app():
     cmd = [sys.executable, '-m', 'jupyterhub', 'token']
@@ -29,6 +32,7 @@ def test_token_app():
             f.write("c.Authenticator.admin_users={'user'}")
         out = check_output(cmd + ['user'], cwd=td).decode('utf8', 'replace').strip()
     assert re.match(r'^[a-z0-9]+$', out)
+
 
 def test_generate_config():
     with NamedTemporaryFile(prefix='jupyterhub_config', suffix='.py') as tf:
@@ -218,3 +222,41 @@ def test_resume_spawners(tmpdir, request):
     assert not user.running
     assert user.spawner.server is None
     assert list(db.query(orm.Server)) == []
+
+
+@pytest.mark.parametrize(
+    'hub_config, expected',
+    [
+        (
+            {'ip': '0.0.0.0'},
+            {'bind_url': 'http://0.0.0.0:8000/'},
+        ),
+        (
+            {'port': 123, 'base_url': '/prefix'},
+            {
+                'bind_url': 'http://:123/prefix/',
+                'base_url': '/prefix/',
+            },
+        ),
+        (
+            {'bind_url': 'http://0.0.0.0:12345/sub'},
+            {'base_url': '/sub/'},
+        ),
+    ]
+)
+def test_url_config(hub_config, expected):
+    # construct the config object
+    cfg = Config()
+    for key, value in hub_config.items():
+        cfg.JupyterHub[key] = value
+
+    # instantiate the Hub and load config
+    app = JupyterHub(config=cfg)
+    # validate config
+    for key, value in hub_config.items():
+        if key not in expected:
+            assert getattr(app, key) == value
+
+    # validate additional properties
+    for key, value in expected.items():
+        assert getattr(app, key) == value
