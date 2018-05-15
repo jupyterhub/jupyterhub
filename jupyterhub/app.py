@@ -937,6 +937,9 @@ class JupyterHub(Application):
             handlers[i] = tuple(lis)
         return handlers
 
+    extra_handlers = List(help="Register extra page handlers for jupyterhub, should be of the form (<regex>,handler)").tag(config=True)
+    default_url = Any(default_value=None, help='specify default URL for "next_url" (e.g. when user directs to "/"').tag(config=True)
+
     def init_handlers(self):
         h = []
         # load handlers from the authenticator
@@ -944,6 +947,9 @@ class JupyterHub(Application):
         # set default handlers
         h.extend(handlers.default_handlers)
         h.extend(apihandlers.default_handlers)
+
+        # add any user configurable handlers.
+        h.extend(self.extra_handlers)
 
         h.append((r'/logo', LogoHandler, {'path': self.logo_file}))
         self.handlers = self.add_url_prefix(self.hub_prefix, h)

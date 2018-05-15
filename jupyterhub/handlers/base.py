@@ -428,6 +428,8 @@ class BaseHandler(RequestHandler):
             self.log.warning("Redirecting %s to %s. For sharing public links, use /user-redirect/",
                 self.request.uri, next_url,
             )
+        if not next_url and self.config.JupyterHub.get('default_url'):
+            next_url = self.config.JupyterHub['default_url']
 
         if not next_url:
             # default URL after login
