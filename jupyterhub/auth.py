@@ -49,7 +49,7 @@ class Authenticator(LoggingConfigurable):
 
         Encrypting auth_state requires the cryptography package.
 
-        Additionally, the JUPYTERHUB_CRYPTO_KEY envirionment variable must
+        Additionally, the JUPYTERHUB_CRYPT_KEY environment variable must
         contain one (or more, separated by ;) 32B encryption keys.
         These can be either base64 or hex-encoded.
 
