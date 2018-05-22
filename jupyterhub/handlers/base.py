@@ -417,10 +417,20 @@ class BaseHandler(RequestHandler):
         - else: /hub/home
         """
         next_url = self.get_argument('next', default='')
-        if (next_url + '/').startswith('%s://%s/' % (self.request.protocol, self.request.host)):
+        if (next_url + '/').startswith(
+            (
+                '%s://%s/' % (self.request.protocol, self.request.host),
+                '//%s/' % self.request.host,
+            )
+        ):
             # treat absolute URLs for our host as absolute paths:
-            next_url = urlparse(next_url).path
-        if next_url and not next_url.startswith('/'):
+            parsed = urlparse(next_url)
+            next_url = parsed.path
+            if parsed.query:
+                next_url = next_url + '?' + parsed.query
+            if parsed.hash:
+                next_url = next_url + '#' + parsed.hash
+        if next_url and (urlparse(next_url).netloc or not next_url.startswith('/')):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
         if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
