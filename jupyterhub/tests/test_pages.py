@@ -3,6 +3,7 @@
 from urllib.parse import urlencode, urlparse
 
 from tornado import gen
+from tornado.httputil import url_concat
 
 from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
@@ -366,29 +367,50 @@ def test_login_strip(app):
     assert called_with == [form_data]
 
 
+@pytest.mark.parametrize(
+    'running, next_url, location',
+    [
+        # default URL if next not specified, for both running and not
+        (True, '', ''),
+        (False, '', ''),
+        # next_url is respected
+        (False, '/hub/admin', '/hub/admin'),
+        (False, '/user/other', '/hub/user/other'),
+        (False, '/absolute', '/absolute'),
+        (False, '/has?query#andhash', '/has?query#andhash'),
+
+        # next_url outside is not allowed
+        (False, 'https://other.domain', ''),
+        (False, 'ftp://other.domain', ''),
+        (False, '//other.domain', ''),
+    ]
+)
 @pytest.mark.gen_test
-def test_login_redirect(app):
+def test_login_redirect(app, running, next_url, location):
     cookies = yield app.login_user('river')
     user = app.users['river']
-    # no next_url, server running
-    yield user.spawn()
-    r = yield get_page('login', app, cookies=cookies, allow_redirects=False)
-    r.raise_for_status()
-    assert r.status_code == 302
-    assert '/user/river' in r.headers['Location']
+    if location:
+        location = ujoin(app.base_url, location)
+    else:
+        # use default url
+        location = user.url
 
-    # no next_url, server not running
-    yield user.stop()
-    r = yield get_page('login', app, cookies=cookies, allow_redirects=False)
-    r.raise_for_status()
-    assert r.status_code == 302
-    assert '/user/river' in r.headers['Location']
+    url = 'login'
+    if next_url:
+        if '//' not in next_url:
+            next_url = ujoin(app.base_url, next_url, '')
+        url = url_concat(url, dict(next=next_url))
 
-    # next URL given, use it
-    r = yield get_page('login?next=/hub/admin', app, cookies=cookies, allow_redirects=False)
+    if running and not user.active:
+        # ensure running
+        yield user.spawn()
+    elif user.active and not running:
+        # ensure not running
+        yield user.stop()
+    r = yield get_page(url, app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 302
-    assert r.headers['Location'].endswith('/hub/admin')
+    assert location == r.headers['Location']
 
 
 @pytest.mark.gen_test
