@@ -1627,6 +1627,33 @@ class JupyterHub(Application):
             cfg.JupyterHub.merge(cfg.JupyterHubApp)
             self.update_config(cfg)
         self.write_pid_file()
+
+        def _log_cls(name, cls):
+            """Log a configured class
+
+            Logs the class and version (if found) of Authenticator
+            and Spawner
+            """
+            # try to guess the version from the top-level module
+            # this will work often enough to be useful.
+            # no need to be perfect.
+            if cls.__module__:
+                mod = sys.modules.get(cls.__module__.split('.')[0])
+                version = getattr(mod, '__version__', '')
+                if version:
+                    version = '-{}'.format(version)
+            else:
+                version = ''
+            self.log.info(
+                "Using %s: %s.%s%s",
+                name,
+                cls.__module__ or '',
+                cls.__name__,
+                version,
+            )
+        _log_cls("Authenticator", self.authenticator_class)
+        _log_cls("Spawner", self.spawner_class)
+
         self.init_pycurl()
         self.init_secrets()
         self.init_db()
