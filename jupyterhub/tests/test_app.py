@@ -242,6 +242,16 @@ def test_resume_spawners(tmpdir, request):
             {'bind_url': 'http://0.0.0.0:12345/sub'},
             {'base_url': '/sub/'},
         ),
+        (
+            # no config, test defaults
+            {},
+            {
+                'base_url': '/',
+                'bind_url': 'http://:8000',
+                'ip': '',
+                'port': 8000,
+                },
+        ),
     ]
 )
 def test_url_config(hub_config, expected):
