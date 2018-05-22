@@ -424,7 +424,12 @@ class BaseHandler(RequestHandler):
             )
         ):
             # treat absolute URLs for our host as absolute paths:
-            next_url = urlparse(next_url).path
+            parsed = urlparse(next_url)
+            next_url = parsed.path
+            if parsed.query:
+                next_url = next_url + '?' + parsed.query
+            if parsed.hash:
+                next_url = next_url + '#' + parsed.hash
         if next_url and (urlparse(next_url).netloc or not next_url.startswith('/')):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
