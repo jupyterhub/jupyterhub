@@ -59,3 +59,33 @@ text about the server starting up, place this content in a file named
 <p>Patience is a virtue.</p>
 {% endblock %}
 ```
+
+## Simple configuration
+
+The most powerful way to control templates is to directly extend them
+as you see above.  However, some simple configuration is possible:
+
+### Announcement text
+
+If you set the configuration variable `JupyterHub.template_vars =
+{'announcement': 'some_text}`, the given `some_text` will be placed on
+the top of all pages.  The more specific variables
+`announcement_login`, `announcement_spawn`, `announcement_home`, and
+`announcement_logout` are more specific and only show on their
+respective pages (overriding the global `announcement` variable).
+Note that changing these varables require a restart, unlike direct
+template extension.
+
+You can get the same effect by extending templates, which allows you
+to update the messages without restarting.  Set
+`c.JupyterHub.template_paths` as mentioned above, and then create a
+template (for example, `login.html`) with:
+
+```html
+{% extends "templates/login.html" %}
+{% set announcement = 'some message' %}
+```
+
+Extending `page.html` puts the message on all pages, but note that
+extending `page.html` take precedence over an extension of a specific
+page (unlike the variable-based approach above).

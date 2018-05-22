@@ -140,6 +140,16 @@
   </nav>
 {% endblock %}
 
+
+{% block announcement %}
+{% if announcement %}
+<div class="container text-center announcement">
+  {{ announcement | safe }}
+</div>
+{% endif %}
+{% endblock %}
+
+
 {% block main %}
 {% endblock %}
 
