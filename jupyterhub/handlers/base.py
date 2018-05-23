@@ -15,6 +15,7 @@ import uuid
 
 from jinja2 import TemplateNotFound
 
+from sqlalchemy.exc import SQLAlchemyError
 from tornado.log import app_log
 from tornado.httputil import url_concat, HTTPHeaders
 from tornado.ioloop import IOLoop
@@ -264,10 +265,17 @@ class BaseHandler(RequestHandler):
 
     def get_current_user(self):
         """get current username"""
-        user = self.get_current_user_token()
-        if user is not None:
-            return user
-        return self.get_current_user_cookie()
+        if not hasattr(self, '_jupyterhub_user'):
+            try:
+                user = self.get_current_user_token()
+                if user is None:
+                    user = self.get_current_user_cookie()
+                self._jupyterhub_user = user
+            except Exception:
+                # don't let errors here raise more than once
+                self._jupyterhub_user = None
+                raise
+        return self._jupyterhub_user
 
     def find_user(self, name):
         """Get a user by name
@@ -803,6 +811,10 @@ class BaseHandler(RequestHandler):
             reason = getattr(exception, 'reason', '')
             if reason:
                 message = reasons.get(reason, reason)
+
+        if exception and isinstance(exception, SQLAlchemyError):
+            self.log.warning("Rolling back session due to database error %s", exception)
+            self.db.rollback()
 
         # build template namespace
         ns = dict(

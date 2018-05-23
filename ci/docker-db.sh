@@ -8,7 +8,7 @@ export MYSQL_HOST=127.0.0.1
 export MYSQL_TCP_PORT=${MYSQL_TCP_PORT:-13306}
 export PGHOST=127.0.0.1
 NAME="hub-test-$DB"
-DOCKER_RUN="docker run --rm -d --name $NAME"
+DOCKER_RUN="docker run -d --name $NAME"
 
 docker rm -f "$NAME" 2>/dev/null || true
 

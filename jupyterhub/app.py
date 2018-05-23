@@ -27,7 +27,7 @@ if sys.version_info[:2] < (3, 3):
 
 from dateutil.parser import parse as parse_date
 from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
 from tornado.httpclient import AsyncHTTPClient
 import tornado.httpserver
@@ -1792,7 +1792,13 @@ class JupyterHub(Application):
         self.statsd.gauge('users.running', users_count)
         self.statsd.gauge('users.active', active_users_count)
 
-        self.db.commit()
+        try:
+            self.db.commit()
+        except SQLAlchemyError:
+            self.log.exception("Rolling back session due to database error")
+            self.db.rollback()
+            return
+
         await self.proxy.check_routes(self.users, self._service_map, routes)
 
     async def start(self):
