@@ -23,6 +23,7 @@ def service_model(service):
         'prefix': service.server.base_url if service.server else '',
         'command': service.command,
         'pid': service.proc.pid if service.proc else 0,
+        'info': service.info
     }
 
 class ServiceListAPIHandler(APIHandler):
