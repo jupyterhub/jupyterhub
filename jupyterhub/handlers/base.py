@@ -40,7 +40,8 @@ reasons = {
     'timeout': "Failed to reach your server."
         "  Please try again later."
         "  Contact admin if the issue persists.",
-    'error': "Failed to start your server.  Please contact admin.",
+    'error': "Failed to start your server on the last attempt.  "
+        "  Please contact admin if the issue persists.",
 }
 
 # constant, not configurable
