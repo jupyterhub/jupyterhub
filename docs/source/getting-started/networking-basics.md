@@ -35,6 +35,10 @@ Configuring only the main IP and port of JupyterHub should be sufficient for
 most deployments of JupyterHub. However, more customized scenarios may need
 additional networking details to be configured.
 
+Note that `c.JupyterHub.ip` and `c.JupyterHub.port` are single values,
+not tuples or lists – JupyterHub listens to only a single IP address and
+port.
+
 ## Set the Proxy's REST API communication URL (optional)
 
 By default, this REST API listens on port 8081 of `localhost` only.
@@ -86,3 +90,12 @@ configuration for, e.g. docker, is:
 c.JupyterHub.hub_ip = '0.0.0.0'  # listen on all interfaces
 c.JupyterHub.hub_connect_ip = '10.0.1.4'  # ip as seen on the docker network. Can also be a hostname.
 ```
+
+## Adjusting the hub's URL
+
+The hub will most commonly be running on a hostname of its own.  If it
+is not – for example, if the hub is being reverse-proxied and being
+exposed at a URL such as `https://proxy.example.org/jupyter/` – then
+you will need to tell JupyterHub the base URL of the service.  In such
+a case, it is both necessary and sufficient to set
+`c.JupyterHub.base_url = '/jupyter/'` in the configuration.

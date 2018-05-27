@@ -72,8 +72,13 @@ would be the needed configuration:
 If SSL termination happens outside of the Hub
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In certain cases, e.g. behind `SSL termination in NGINX <https://www.nginx.com/resources/admin-guide/nginx-ssl-termination/>`_,
-allowing no SSL running on the hub may be the desired configuration option.
+In certain cases, for example if the hub is running behind a reverse proxy, and
+`SSL termination is being provided by NGINX <https://www.nginx.com/resources/admin-guide/nginx-ssl-termination/>`_,
+it is reasonable to run the hub without SSL.
+
+To achieve this, simply omit the configuration settings
+``c.JupyterHub.ssl_key`` and ``c.JupyterHub.ssl_cert``
+(setting them to ``None`` does not have the same effect, and is an error).
 
 .. _cookie-secret:
 
