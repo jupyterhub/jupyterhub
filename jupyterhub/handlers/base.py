@@ -928,6 +928,7 @@ class UserSpawnHandler(BaseHandler):
             # First, check for previous failure.
             if (
                 not spawner.active
+                and not spawner.options_form
                 and spawner._spawn_future
                 and spawner._spawn_future.done()
                 and spawner._spawn_future.exception()
