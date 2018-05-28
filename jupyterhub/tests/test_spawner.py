@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 from unittest import mock
+from urllib.parse import urlparse
 
 import pytest
 from tornado import gen
@@ -20,7 +21,8 @@ from .. import orm
 from .. import spawner as spawnermod
 from ..spawner import LocalProcessSpawner, Spawner
 from ..user import User
-from ..utils import new_token
+from ..utils import new_token, url_path_join
+from .mocking import public_url
 from .test_api import add_user
 from .utils import async_requests
 
@@ -304,7 +306,7 @@ def test_spawner_reuse_api_token(db, app):
 @pytest.mark.gen_test
 def test_spawner_insert_api_token(app):
     """Token provided by spawner is not in the db
-    
+
     Insert token into db as a user-provided token.
     """
     # setup: new user, double check that they don't have any tokens registered
@@ -379,3 +381,28 @@ def test_spawner_delete_server(app):
     # verify that both ORM and top-level references are None
     assert spawner.orm_spawner.server is None
     assert spawner.server is None
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "has@x",
+        "has~x",
+        "has%x",
+        "has%40x",
+    ]
+)
+@pytest.mark.gen_test
+def test_spawner_routing(app, name):
+    """Test routing of names with special characters"""
+    db = app.db
+    with mock.patch.dict(app.config.LocalProcessSpawner, {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']}):
+        user = add_user(app.db, app, name=name)
+        yield user.spawn()
+        yield wait_for_spawner(user.spawner)
+        yield app.proxy.add_user(user)
+    url = url_path_join(public_url(app, user), "test/url")
+    r = yield async_requests.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.url == url
+    assert r.text == urlparse(url).path
