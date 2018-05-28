@@ -689,6 +689,11 @@ definitions:
         description: The command used to start the service (if managed)
         items:
           type: string
+      info:
+        type: object
+        description: |
+          Additional information a deployment can attach to a service.
+          JupyterHub does not use this field.
   Token:
     type: object
     properties:
