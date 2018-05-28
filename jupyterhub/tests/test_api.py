@@ -1525,6 +1525,7 @@ def test_get_services(app, mockservice_url):
             'pid': mockservice.proc.pid,
             'prefix': mockservice.server.base_url,
             'url': mockservice.url,
+            'info': {},
         }
     }
 
@@ -1551,6 +1552,7 @@ def test_get_service(app, mockservice_url):
         'pid': mockservice.proc.pid,
         'prefix': mockservice.server.base_url,
         'url': mockservice.url,
+        'info': {},
     }
 
     r = yield api_request(app, 'services/%s' % mockservice.name,
