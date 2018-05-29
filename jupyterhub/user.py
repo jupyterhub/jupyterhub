@@ -295,15 +295,17 @@ class User:
     @property
     def domain(self):
         """Get the domain for my server."""
-        # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
-        return self.escaped_name + '.' + self.settings['domain']
+        # use underscore as escape char for domains
+        return quote(self.name).replace('%', '_').lower() + '.' + self.settings['domain']
 
     @property
     def host(self):
         """Get the *host* for my server (proto://domain[:port])"""
         # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
         parsed = urlparse(self.settings['subdomain_host'])
-        h = '%s://%s.%s' % (parsed.scheme, self.escaped_name, parsed.netloc)
+        h = '%s://%s' % (parsed.scheme, self.domain)
+        if parsed.port:
+            h += ':%i' % parsed.port
         return h
 
     @property
