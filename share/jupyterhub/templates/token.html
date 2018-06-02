@@ -73,7 +73,11 @@
             {%- endif -%}
           </td>
           <td class="time-col col-sm-3">
+            {%- if token.created -%}
             {{ token.created.isoformat() + 'Z' }}
+            {%- else -%}
+            N/A
+            {%- endif -%}
           </td>
           <td class="col-sm-1 text-center">
             <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
@@ -118,7 +122,11 @@
             {%- endif -%}
           </td>
           <td class="time-col col-sm-3">
+            {%- if client['created'] -%}
             {{ client['created'].isoformat() + 'Z' }}
+            {%- else -%}
+            N/A
+            {%- endif -%}
           </td>
           <td class="col-sm-1 text-center">
             <button class="revoke-token-btn btn btn-xs btn-danger">revoke</a>
