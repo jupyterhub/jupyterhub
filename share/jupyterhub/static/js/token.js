@@ -12,7 +12,7 @@ require(["jquery", "jhapi", "moment"], function($, JHAPI, moment) {
     // convert ISO datestamps to nice momentjs ones
     el = $(el);
     let m = moment(new Date(el.text().trim()));
-    el.text(m.isValid() ? m.fromNow() : "Never");
+    el.text(m.isValid() ? m.fromNow() : el.text());
   });
 
   $("#request-token-form").submit(function() {
