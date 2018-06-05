@@ -140,7 +140,10 @@ class NewToken(Application):
         ab01cd23ef45
     """
 
-    name = Unicode(getuser())
+    name = Unicode()
+    @default('name')
+    def _default_name(self):
+        return getuser()
 
     aliases = token_aliases
     classes = []
