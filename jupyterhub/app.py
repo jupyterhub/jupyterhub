@@ -277,6 +277,9 @@ class JupyterHub(Application):
     service_check_interval = Integer(60,
         help="Interval (in seconds) at which to check connectivity of services with web endpoints."
     ).tag(config=True)
+    active_user_window = Integer(30 * 60,
+        help="Duration (in seconds) to determine the number of active users."
+    ).tag(config=True)
 
     data_files_path = Unicode(DATA_FILES_PATH,
         help="The location of jupyterhub data files (e.g. /usr/local/share/jupyterhub)"
@@ -1789,8 +1792,7 @@ class JupyterHub(Application):
                 spawner.last_activity = max(spawner.last_activity, dt)
             else:
                 spawner.last_activity = dt
-            # FIXME: Make this configurable duration. 30 minutes for now!
-            if (now - user.last_activity).total_seconds() < 30 * 60:
+            if (now - user.last_activity).total_seconds() < self.active_user_window:
                 active_users_count += 1
         self.statsd.gauge('users.running', users_count)
         self.statsd.gauge('users.active', active_users_count)
