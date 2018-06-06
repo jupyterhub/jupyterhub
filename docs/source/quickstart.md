@@ -10,15 +10,22 @@ Before installing JupyterHub, you will need:
   [`conda`](https://conda.io/docs/get-started.html) for
   installing Python packages is helpful.
 - [nodejs/npm](https://www.npmjs.com/). [Install nodejs/npm](https://docs.npmjs.com/getting-started/installing-node),
-  using your operating system's package manager. For example, install on Linux
-  Debian/Ubuntu using:
+  using your operating system's package manager.
 
-  ```bash
-  sudo apt-get install npm nodejs-legacy
-  ```
+  * If you are using **`conda`**, the nodejs and npm dependencies will be installed for
+    you by conda.
 
-  The `nodejs-legacy` package installs the `node` executable and is currently
-  required for `npm` to work on Debian/Ubuntu.
+  * If you are using **`pip`**, install a recent version of
+    [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node).
+    For example, install it on Linux (Debian/Ubuntu) using:
+
+    ```
+    sudo apt-get install npm nodejs-legacy
+    ```
+          
+    The `nodejs-legacy` package installs the `node` executable and is currently
+    required for npm to work on Debian/Ubuntu.
+
 - TLS certificate and key for HTTPS communication
 - Domain name
 
