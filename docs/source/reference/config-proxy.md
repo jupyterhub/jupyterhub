@@ -30,9 +30,10 @@ openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
 
 ## nginx
 
-The **`nginx` server config file** is fairly standard fare except for the two
-`location` blocks within the `HUB.DOMAIN.TLD` config file,
-e.g. by creating the file `/etc/nginx/sites.enabled/jupyterhub.conf`:
+This **`nginx` config file** is fairly standard fare except for the two
+`location` blocks within the main section for HUB.DOMAIN.tld.
+To create a new site for jupyterhub in your nginx config, make a new file
+in `sites.enabled`, e.g. `/etc/nginx/sites.enabled/jupyterhub.conf`:
 
 ```bash
 # top-level http config for websocket headers
