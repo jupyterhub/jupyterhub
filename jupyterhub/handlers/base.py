@@ -942,7 +942,7 @@ class UserSpawnHandler(BaseHandler):
                 raise copy.copy(exc).with_traceback(exc.__traceback__)
 
             # check for pending spawn
-            if spawner.pending and spawner._spawn_future:
+            if spawner.pending == 'spawn' and spawner._spawn_future:
                 # wait on the pending spawn
                 self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
                 try:
@@ -952,14 +952,20 @@ class UserSpawnHandler(BaseHandler):
                     pass
 
             # we may have waited above, check pending again:
+            # page could be pending spawn *or* stop
             if spawner.pending:
                 self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
                 # spawn has started, but not finished
                 self.statsd.incr('redirects.user_spawn_pending', 1)
                 url_parts = []
+                if spawner.pending == "stop":
+                    page = "stop_pending.html"
+                else:
+                    page = "spawn_pending.html"
                 html = self.render_template(
-                    "spawn_pending.html",
+                    page,
                     user=user,
+                    spawner=spawner,
                     progress_url=spawner._progress_url,
                 )
                 self.finish(html)
