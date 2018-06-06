@@ -8,8 +8,8 @@
       {% if user.running %}
       <a id="stop" role="button" class="btn btn-lg btn-danger">Stop My Server</a>
       {% endif %}
-      <a id="start"role="button" class="btn btn-lg btn-primary" href="{{ url }}">
-      {% if not user.running %}
+      <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}">
+      {% if not user.active %}
       Start
       {% endif %}
         My Server
