@@ -19,7 +19,7 @@ import threading
 import uuid
 import warnings
 
-from async_generator import aclosing, async_generator, yield_
+from async_generator import aclosing, asynccontextmanager, async_generator, yield_
 from tornado import gen, ioloop, web
 from tornado.platform.asyncio import to_asyncio_future
 from tornado.httpclient import AsyncHTTPClient, HTTPError
@@ -450,6 +450,21 @@ def maybe_future(obj):
         return asyncio.wrap_future(obj)
     else:
         return to_asyncio_future(gen.maybe_future(obj))
+
+
+@asynccontextmanager
+@async_generator
+async def not_aclosing(coro):
+    """An empty context manager for Python < 3.5.2
+    which lacks the `aclose` method on async iterators
+    """
+    await yield_(await coro)
+
+
+if sys.version_info < (3, 5, 2):
+    # Python 3.5.1 is missing the aclose method on async iterators,
+    # so we can't close them
+    aclosing = not_aclosing
 
 
 @async_generator
