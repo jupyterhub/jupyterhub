@@ -24,7 +24,6 @@ from async_generator import async_generator, yield_
 from sqlalchemy import inspect
 
 from tornado.ioloop import PeriodicCallback
-from certipy import Certipy
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
@@ -676,6 +675,7 @@ class Spawner(LoggingConfigurable):
 
     def create_certs(self):
         """Create the certs to be used for internal ssl."""
+        from certipy import Certipy
         cert_store = Certipy(store_dir=self.internal_certs_location)
         internal_authority = self.internal_authority_name
         notebook_authority = self.internal_notebook_authority_name

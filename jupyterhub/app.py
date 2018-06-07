@@ -1710,6 +1710,7 @@ class JupyterHub(Application):
             cfg.JupyterHub.merge(cfg.JupyterHubApp)
             self.update_config(cfg)
         if self.internal_ssl:
+            from certipy import Certipy
             cert_store = Certipy(store_dir=self.internal_certs_location)
             joint_ca_file = "{out}/combined-cas.crt".format(out=self.internal_certs_location)
 
