@@ -63,6 +63,7 @@ from .utils import (
     maybe_future,
     url_path_join,
     print_stacks, print_ps_info,
+    make_ssl_context,
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -312,6 +313,37 @@ class JupyterHub(Application):
         When setting this, you should also set ssl_key
         """
     ).tag(config=True)
+    internal_ssl = Bool(False,
+        help=""" Turn on server side ssl. This enables end-to-end encryption.
+        JupyterHub will automatically create the necessary certificate
+        authority and sign notebook certificates as they're created.
+        """
+    ).tag(config=True)
+    internal_certs_location = Unicode('out',
+        help=""" The location to store certificates automatically created by
+        JupyterHub.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    internal_authority_name = Unicode('jupyterhub',
+        help=""" The name for the internal signing authority
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    internal_ssl_key = Unicode('',
+        help=""" The key to be used for internal ssl
+        """
+    )
+    internal_ssl_cert = Unicode('',
+        help=""" The cert to be used for internal ssl
+        """
+    )
+    internal_ssl_ca = Unicode('',
+        help=""" The ca to be used for internal ssl
+        """
+    )
     ip = Unicode('',
         help="""The public facing ip of the whole JupyterHub application
         (specifically referred to as the proxy).
@@ -1138,6 +1170,8 @@ class JupyterHub(Application):
                 ._replace(path=self.hub_prefix)
             )
             self.hub.connect_url = self.hub_connect_url
+        if self.internal_ssl:
+            self.hub.proto = 'https'
 
     async def init_users(self):
         """Load users into and from the database"""
@@ -1598,6 +1632,12 @@ class JupyterHub(Application):
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
+            internal_ssl=self.internal_ssl,
+            internal_certs_location=self.internal_certs_location,
+            internal_authority_name=self.internal_authority_name,
+            internal_ssl_key=self.internal_ssl_key,
+            internal_ssl_cert=self.internal_ssl_cert,
+            internal_ssl_ca=self.internal_ssl_ca,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1829,8 +1869,15 @@ class JupyterHub(Application):
             loop.stop()
             return
 
+        ssl_context = make_ssl_context(
+            self.internal_ssl_key,
+            self.internal_ssl_cert,
+            cafile=self.internal_ssl_ca,
+            check_hostname=False
+        )
+
         # start the webserver
-        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
+        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, ssl_options=ssl_context, xheaders=True)
         bind_url = urlparse(self.hub.bind_url)
         try:
             if bind_url.scheme.startswith('unix+'):
@@ -1880,7 +1927,12 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        await Server.from_orm(service.orm.server).wait_up(http=True, timeout=1)
+                        ssl_context = make_ssl_context(
+                            self.internal_ssl_key,
+                            self.internal_ssl_cert,
+                            cafile=self.internal_ssl_ca
+                        )
+                        await Server.from_orm(service.orm.server).wait_up(http=True, timeout=1, ssl_context=ssl_context)
                     except TimeoutError:
                         if service.managed:
                             status = await service.spawner.poll()

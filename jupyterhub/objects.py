@@ -157,10 +157,11 @@ class Server(HasTraits):
             uri=self.base_url,
         )
 
-    def wait_up(self, timeout=10, http=False):
+
+    def wait_up(self, timeout=10, http=False, ssl_context=None):
         """Wait for this server to come up"""
         if http:
-            return wait_for_http_server(self.url, timeout=timeout)
+            return wait_for_http_server(self.url, timeout=timeout, ssl_context=ssl_context)
         else:
             return wait_for_server(self._connect_ip, self._connect_port, timeout=timeout)
 
