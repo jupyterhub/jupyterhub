@@ -35,12 +35,14 @@ author = u'Project Jupyter team'
 
 # Autopopulate version
 from os.path import dirname
+
 docs = dirname(dirname(__file__))
 root = dirname(docs)
 sys.path.insert(0, root)
 sys.path.insert(0, os.path.join(docs, 'sphinxext'))
 
 import jupyterhub
+
 # The short X.Y version.
 version = '%i.%i' % jupyterhub.version_info[:2]
 # The full version, including alpha/beta/rc tags.
@@ -56,12 +58,10 @@ default_role = 'literal'
 
 # -- Source -------------------------------------------------------------
 
-source_parsers = {
-    '.md': 'recommonmark.parser.CommonMarkParser',
-}
+source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
 
 source_suffix = ['.rst', '.md']
-#source_encoding = 'utf-8-sig'
+# source_encoding = 'utf-8-sig'
 
 # -- Options for HTML output ----------------------------------------------
 
@@ -96,7 +96,7 @@ html_sidebars = {
         'navigation.html',
         'relations.html',
         'sourcelink.html',
-    ],
+    ]
 }
 
 htmlhelp_basename = 'JupyterHubdoc'
@@ -104,38 +104,40 @@ htmlhelp_basename = 'JupyterHubdoc'
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
-#'papersize': 'letterpaper',
-#'pointsize': '10pt',
-#'preamble': '',
-#'figure_align': 'htbp',
+    # 'papersize': 'letterpaper',
+    # 'pointsize': '10pt',
+    # 'preamble': '',
+    # 'figure_align': 'htbp',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'JupyterHub.tex', u'JupyterHub Documentation',
-   u'Project Jupyter team', 'manual'),
+    (
+        master_doc,
+        'JupyterHub.tex',
+        u'JupyterHub Documentation',
+        u'Project Jupyter team',
+        'manual',
+    )
 ]
 
-#latex_logo = None
-#latex_use_parts = False
-#latex_show_pagerefs = False
-#latex_show_urls = False
-#latex_appendices = []
-#latex_domain_indices = True
+# latex_logo = None
+# latex_use_parts = False
+# latex_show_pagerefs = False
+# latex_show_urls = False
+# latex_appendices = []
+# latex_domain_indices = True
 
 
 # -- manual page output -------------------------------------------------
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'jupyterhub', u'JupyterHub Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, 'jupyterhub', u'JupyterHub Documentation', [author], 1)]
 
-#man_show_urls = False
+# man_show_urls = False
 
 
 # -- Texinfo output -----------------------------------------------------
@@ -144,15 +146,21 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'JupyterHub', u'JupyterHub Documentation',
-   author, 'JupyterHub', 'One line description of project.',
-   'Miscellaneous'),
+    (
+        master_doc,
+        'JupyterHub',
+        u'JupyterHub Documentation',
+        author,
+        'JupyterHub',
+        'One line description of project.',
+        'Miscellaneous',
+    )
 ]
 
-#texinfo_appendices = []
-#texinfo_domain_indices = True
-#texinfo_show_urls = 'footnote'
-#texinfo_no_detailmenu = False
+# texinfo_appendices = []
+# texinfo_domain_indices = True
+# texinfo_show_urls = 'footnote'
+# texinfo_no_detailmenu = False
 
 
 # -- Epub output --------------------------------------------------------
@@ -179,6 +187,7 @@ else:
     # readthedocs.org uses their theme by default, so no need to specify it
     # build rest-api, since RTD doesn't run make
     from subprocess import check_call as sh
+
     sh(['make', 'rest-api'], cwd=docs)
 
 # -- Spell checking -------------------------------------------------------
@@ -190,4 +199,4 @@ except ImportError:
 else:
     extensions.append("sphinxcontrib.spelling")
 
-spelling_word_list_filename='spelling_wordlist.txt'
+spelling_word_list_filename = 'spelling_wordlist.txt'
