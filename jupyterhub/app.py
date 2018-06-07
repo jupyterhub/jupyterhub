@@ -1148,9 +1148,9 @@ class JupyterHub(Application):
         hub_args = dict(
             base_url=self.hub_prefix,
             public_host=self.subdomain_host,
-            ssl_cert_file=self.internal_ssl_cert,
-            ssl_key_file=self.internal_ssl_key,
-            ssl_ca_file=self.internal_ssl_ca,
+            certfile=self.internal_ssl_cert,
+            keyfile=self.internal_ssl_key,
+            cafile=self.internal_ssl_ca,
         )
         if self.hub_bind_url:
             # ensure hub_prefix is set on bind_url
@@ -1439,9 +1439,9 @@ class JupyterHub(Application):
                     port=port,
                     cookie_name='jupyterhub-services',
                     base_url=service.prefix,
-                    ssl_cert_file=self.internal_ssl_cert,
-                    ssl_key_file=self.internal_ssl_key,
-                    ssl_ca_file=self.internal_ssl_ca,
+                    certfile=self.internal_ssl_cert,
+                    keyfile=self.internal_ssl_key,
+                    cafile=self.internal_ssl_ca,
                 )
                 self.db.add(server)
 
@@ -1732,18 +1732,29 @@ class JupyterHub(Application):
                 extra_names = [socket.getfqdn()] + self.trusted_alt_names
                 extra_names = ','.join(["DNS:{}".format(name) for name in extra_names])
                 alt_names = alt_names.format(extra_names=extra_names).encode()
-                internal_key_pair = cert_store.create_signed_pair("localhost", self.internal_authority_name, alt_names=alt_names)
+                internal_key_pair = cert_store.create_signed_pair(
+                        "localhost",
+                        self.internal_authority_name,
+                        alt_names=alt_names)
 
             # Join CA files
             with open(internal_key_pair.ca_file) as internal_ca, \
-                open(notebook_authority.ca_file) as notebook_ca, \
-                open(joint_ca_file, 'w') as combined_ca:
+                 open(notebook_authority.ca_file) as notebook_ca, \
+                 open(joint_ca_file, 'w') as combined_ca:
                     combined_ca.write(internal_ca.read())
                     combined_ca.write(notebook_ca.read())
 
             self.internal_ssl_key = internal_key_pair.key_file
             self.internal_ssl_cert = internal_key_pair.cert_file
             self.internal_ssl_ca = joint_ca_file
+
+            # Configure the AsyncHTTPClient
+            ssl_context = make_ssl_context(
+                self.internal_ssl_key,
+                self.internal_ssl_cert,
+                cafile=self.internal_ssl_ca,
+            )
+            AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
         self.write_pid_file()
 
         def _log_cls(name, cls):

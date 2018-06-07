@@ -48,7 +48,7 @@ from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
-from .utils import async_requests
+from .utils import async_requests, ssl_setup
 
 from pamela import PAMError
 
@@ -215,6 +215,20 @@ class MockHub(JupyterHub):
     db_file = None
     last_activity_interval = 2
     log_datefmt = '%M:%S'
+
+    def __new__(cls, *args, **kwargs):
+        try:
+            # Turn on internalSSL if the options exist
+            internal_authority_name = 'hub'
+            cert_location = kwargs['internal_certs_location']
+            external_certs = ssl_setup(cert_location, internal_authority_name)
+            kwargs['internal_ssl'] = True
+            kwargs['internal_authority_name'] = internal_authority_name
+            kwargs['ssl_cert'] = external_certs.cert_file
+            kwargs['ssl_key'] = external_certs.key_file
+        except KeyError:
+            pass
+        return super().__new__(cls, *args, **kwargs)
 
     @default('subdomain_host')
     def _subdomain_host_default(self):

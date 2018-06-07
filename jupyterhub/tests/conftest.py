@@ -42,6 +42,7 @@ from ..utils import random_port
 
 from . import mocking
 from .mocking import MockHub
+from .utils import ssl_setup
 from .test_services import mockservice_cmd
 
 import jupyterhub.services.service
@@ -50,10 +51,25 @@ import jupyterhub.services.service
 _db = None
 
 
+@fixture(scope='session')
+def ssl_tmpdir(tmpdir_factory):
+    return tmpdir_factory.mktemp('ssl')
+
+
 @fixture(scope='module')
-def app(request, io_loop):
+def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = MockHub.instance(log_level=logging.DEBUG)
+    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+
+    if ssl_enabled:
+        internal_authority_name = 'hub'
+        external_certs = ssl_setup(str(ssl_tmpdir), internal_authority_name)
+        mocked_app = MockHub.instance(
+                log_level=logging.DEBUG,
+                internal_ssl=True,
+                internal_authority_name=internal_authority_name,
+                internal_certs_location=str(ssl_tmpdir))
 
     @gen.coroutine
     def make_app():
@@ -116,16 +132,6 @@ def io_loop(request):
     request.addfinalizer(_close)
     return io_loop
 
-@fixture(scope='module')
-def app(request, io_loop):
-    """Mock a jupyterhub app for testing"""
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    mocked_app = MockHub.instance(log_level=logging.DEBUG, internal_ssl=ssl_enabled)
-    @gen.coroutine
-    def make_app():
-        yield mocked_app.initialize([])
-        yield mocked_app.start()
-    io_loop.run_sync(make_app)
 
 @fixture(autouse=True)
 def cleanup_after(request, io_loop):

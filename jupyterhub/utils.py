@@ -72,7 +72,11 @@ def can_connect(ip, port):
         return True
 
 
-def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname=True):
+def make_ssl_context(
+        keyfile, certfile, cafile=None,
+        verify=True, check_hostname=True):
+    """Setup context for starting an https server or making requests over ssl.
+    """
     if not keyfile or not certfile:
         return None
     purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH

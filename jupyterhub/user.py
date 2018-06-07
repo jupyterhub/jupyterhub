@@ -508,7 +508,10 @@ class User:
             cert = self.settings['internal_ssl_cert']
             ca = self.settings['internal_ssl_ca']
             ssl_context = make_ssl_context(key, cert, cafile=ca)
-            resp = await server.wait_up(http=True, timeout=spawner.http_timeout, ssl_context=ssl_context)
+            resp = await server.wait_up(
+                    http=True,
+                    timeout=spawner.http_timeout,
+                    ssl_context=ssl_context)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(

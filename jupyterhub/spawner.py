@@ -680,18 +680,23 @@ class Spawner(LoggingConfigurable):
         internal_authority = self.internal_authority_name
         notebook_authority = self.internal_notebook_authority_name
         internal_key_pair = cert_store.get(internal_authority)
-        notebook_key_pair = cert_store.create_signed_pair(self.user.name, notebook_authority, alt_names=b"DNS:localhost,IP:127.0.0.1")
+        notebook_key_pair = cert_store.create_signed_pair(
+                self.user.name,
+                notebook_authority,
+                alt_names=b"DNS:localhost,IP:127.0.0.1")
         return {
-            "key_file": notebook_key_pair.key_file,
-            "cert_file": notebook_key_pair.cert_file,
-            "ca_file": internal_key_pair.ca_file,
+            "keyfile": notebook_key_pair.key_file,
+            "certfile": notebook_key_pair.cert_file,
+            "cafile": internal_key_pair.ca_file,
         }
 
     def move_certs(self, key_pair):
-        """Takes dict of cert/ca file paths and moves, sets up proper ownership for them."""
-        key = key_pair['key_file']
-        cert = key_pair['cert_file']
-        ca = key_pair['ca_file']
+        """Takes dict of cert/ca file paths and moves, sets up proper ownership
+        for them.
+        """
+        key = key_pair['keyfile']
+        cert = key_pair['certfile']
+        ca = key_pair['cafile']
 
         try:
             user = pwd.getpwnam(self.user.name)
@@ -705,9 +710,9 @@ class Spawner(LoggingConfigurable):
             os.makedirs(out_dir, 0o700, exist_ok=True)
 
             # Move certs to users dir
-            shutil.move(key_pair['key_file'], out_dir)
-            shutil.move(key_pair['cert_file'], out_dir)
-            shutil.copy(key_pair['ca_file'], out_dir)
+            shutil.move(key_pair['keyfile'], out_dir)
+            shutil.move(key_pair['certfile'], out_dir)
+            shutil.copy(key_pair['cafile'], out_dir)
 
             path_tmpl = "{out}/{name}.{ext}"
             key = path_tmpl.format(out=out_dir, name=self.user.name, ext="key")

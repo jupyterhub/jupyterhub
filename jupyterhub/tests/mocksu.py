@@ -14,9 +14,11 @@ Handlers and their purpose include:
 import argparse
 import json
 import sys
+import os
 
 from tornado import web, httpserver, ioloop
 from .mockservice import EnvHandler
+from ..utils import make_ssl_context
 
 class EchoHandler(web.RequestHandler):
     def get(self):
@@ -34,7 +36,19 @@ def main(args):
         (r'.*', EchoHandler),
     ])
     
-    server = httpserver.HTTPServer(app)
+    ssl_context = None
+    if args.keyfile and args.certfile and args.client_ca:
+        key = args.keyfile.strip('"')
+        cert = args.certfile.strip('"')
+        ca = args.client_ca.strip('"')
+
+        ssl_context = make_ssl_context(
+                key,
+                cert,
+                cafile = ca,
+                check_hostname = False)
+
+    server = httpserver.HTTPServer(app, ssl_options=ssl_context)
     server.listen(args.port)
     try:
         ioloop.IOLoop.instance().start()
@@ -44,5 +58,8 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int)
+    parser.add_argument('--keyfile', type=str)
+    parser.add_argument('--certfile', type=str)
+    parser.add_argument('--client-ca', type=str)
     args, extra = parser.parse_known_args()
     main(args)

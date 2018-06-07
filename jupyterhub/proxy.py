@@ -391,15 +391,6 @@ class ConfigurableHTTPProxy(Proxy):
         c.ConfigurableHTTPProxy.should_start = False
     """
 
-    def __init__(self, *args, **kwargs):
-      super().__init__(*args, **kwargs)
-      ssl_context = make_ssl_context(
-          self.app.internal_ssl_key,
-          self.app.internal_ssl_cert,
-          cafile=self.app.internal_ssl_ca,
-      )
-      AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
-
     proxy_process = Any()
     client = Instance(AsyncHTTPClient, ())
 

@@ -35,9 +35,9 @@ class Server(HasTraits):
     cookie_name = Unicode('')
     connect_url = Unicode('')
     bind_url = Unicode('')
-    ssl_cert_file = Unicode()
-    ssl_key_file = Unicode()
-    ssl_ca_file = Unicode()
+    certfile = Unicode()
+    keyfile = Unicode()
+    cafile = Unicode()
 
     @default('bind_url')
     def bind_url_default(self):
@@ -126,9 +126,9 @@ class Server(HasTraits):
         self.port = obj.port
         self.base_url = obj.base_url
         self.cookie_name = obj.cookie_name
-        self.ssl_cert_file = obj.ssl_cert_file
-        self.ssl_key_file = obj.ssl_key_file
-        self.ssl_ca_file = obj.ssl_ca_file
+        self.certfile = obj.certfile
+        self.keyfile = obj.keyfile
+        self.cafile = obj.cafile
 
     # setter to pass through to the database
     @observe('ip', 'proto', 'port', 'base_url', 'cookie_name')
@@ -166,9 +166,12 @@ class Server(HasTraits):
 
     def wait_up(self, timeout=10, http=False, ssl_context=None):
         """Wait for this server to come up"""
-        ssl_context = ssl_context or make_ssl_context(self.ssl_key_file, self.ssl_cert_file, cafile=self.ssl_ca_file)
         if http:
-            return wait_for_http_server(self.url, timeout=timeout, ssl_context=ssl_context)
+            ssl_context = ssl_context or make_ssl_context(
+                    self.keyfile, self.certfile, cafile=self.cafile)
+
+            return wait_for_http_server(
+                    self.url, timeout=timeout, ssl_context=ssl_context)
         else:
             return wait_for_server(self._connect_ip, self._connect_port, timeout=timeout)
 
