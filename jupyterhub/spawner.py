@@ -691,9 +691,7 @@ class Spawner(LoggingConfigurable):
         }
 
     def move_certs(self, key_pair):
-        """Takes dict of cert/ca file paths and moves, sets up proper ownership
-        for them.
-        """
+        """Takes dict of cert paths, moves and sets ownership for them."""
         key = key_pair['keyfile']
         cert = key_pair['certfile']
         ca = key_pair['cafile']
