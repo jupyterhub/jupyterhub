@@ -35,8 +35,8 @@ RUN apt-get -y update && \
 ENV LANG C.UTF-8
 
 # install Python + NodeJS with conda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.4.10-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
-    echo 'bec6203dbb2f53011e974e9bf4d46e93 */tmp/miniconda.sh' | md5sum -c - && \
+RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.5.1-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
+    echo '0c28787e3126238df24c5d4858bd0744 */tmp/miniconda.sh' | md5sum -c - && \
     bash /tmp/miniconda.sh -f -b -p /opt/conda && \
     /opt/conda/bin/conda install --yes -c conda-forge \
       python=3.6 sqlalchemy tornado jinja2 traitlets requests pip pycurl \
