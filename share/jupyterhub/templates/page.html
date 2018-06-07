@@ -70,7 +70,7 @@
         {% else %}
         admin_access: false,
         {% endif %}
-        {% if user and user.spawner.options_form %}
+        {% if not no_spawner_check and user and user.spawner.options_form %}
         options_form: true,
         {% else %}
         options_form: false,

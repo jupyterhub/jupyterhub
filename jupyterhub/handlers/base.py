@@ -827,19 +827,27 @@ class BaseHandler(RequestHandler):
         )
 
         self.set_header('Content-Type', 'text/html')
-        # allow setting headers from exceptions
-        # since exception handler clears headers
-        headers = getattr(exception, 'headers', None)
-        if headers:
-            for key, value in headers.items():
-                self.set_header(key, value)
+        if isinstance(exception, web.HTTPError):
+            # allow setting headers from exceptions
+            # since exception handler clears headers
+            headers = getattr(exception, 'headers', None)
+            if headers:
+                for key, value in headers.items():
+                    self.set_header(key, value)
+            # Content-Length must be recalculated.
+            self.clear_header('Content-Length')
 
         # render the template
         try:
             html = self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
-            html = self.render_template('error.html', **ns)
+            try:
+                html = self.render_template('error.html', **ns)
+            except:
+                # In this case, any side effect must be avoided.
+                ns['no_spawner_check'] = True
+                html = self.render_template('error.html', **ns)
 
         self.write(html)
 
