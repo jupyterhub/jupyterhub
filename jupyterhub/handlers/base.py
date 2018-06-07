@@ -842,7 +842,12 @@ class BaseHandler(RequestHandler):
             html = self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
-            html = self.render_template('error.html', **ns)
+            try:
+                html = self.render_template('error.html', **ns)
+            except:
+                # In this case, any side effect must be avoided.
+                ns['no_spawner_check'] = True
+                html = self.render_template('error.html', **ns)
 
         self.write(html)
 
