@@ -54,7 +54,7 @@ for administration of the Hub and its users.
 ### Check prerequisites
 
 - A Linux/Unix based system
-- [Python](https://www.python.org/downloads/) 3.4 or greater
+- [Python](https://www.python.org/downloads/) 3.5 or greater
 - [nodejs/npm](https://www.npmjs.com/)
 
   * If you are using **`conda`**, the nodejs and npm dependencies will be installed for
@@ -88,7 +88,7 @@ If you plan to run notebook servers locally, install the Jupyter notebook
 or JupyterLab:
 
 ```bash
-conda install jupyter
+conda install notebook
 conda install jupyterlab
 ```
 
