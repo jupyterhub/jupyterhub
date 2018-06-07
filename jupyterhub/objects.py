@@ -164,9 +164,9 @@ class Server(HasTraits):
         )
 
 
-    def wait_up(self, timeout=10, http=False):
+    def wait_up(self, timeout=10, http=False, ssl_context=None):
         """Wait for this server to come up"""
-        ssl_context = make_ssl_context(self.ssl_key_file, self.ssl_cert_file, cafile=self.ssl_ca_file)
+        ssl_context = ssl_context or make_ssl_context(self.ssl_key_file, self.ssl_cert_file, cafile=self.ssl_ca_file)
         if http:
             return wait_for_http_server(self.url, timeout=timeout, ssl_context=ssl_context)
         else:
