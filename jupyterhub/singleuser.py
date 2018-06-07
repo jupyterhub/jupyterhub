@@ -237,6 +237,27 @@ class SingleUserNotebookApp(NotebookApp):
     def _default_group(self):
         return os.environ.get('JUPYTERHUB_GROUP') or ''
 
+    keyfile = Unicode('',
+        help="""The ssl key to use for requests
+
+        Use with certfile
+        """
+    ).tag(config=True)
+
+    certfile = Unicode('',
+        help="""The ssl cert to use for requests
+
+        Use with keyfile
+        """
+    ).tag(config=True)
+
+    client_ca = Unicode('',
+        help="""The ssl certificate authority to use to verify requests
+
+        Use with keyfile and certfile
+        """
+    ).tag(config=True)
+
     @observe('user')
     def _user_changed(self, change):
         self.log.name = change.new
@@ -423,6 +444,9 @@ class SingleUserNotebookApp(NotebookApp):
             api_url=self.hub_api_url,
             hub_prefix=self.hub_prefix,
             base_url=self.base_url,
+            keyfile=self.keyfile,
+            certfile=self.certfile,
+            client_ca=self.client_ca,
         )
         # smoke check
         if not self.hub_auth.oauth_client_id:

@@ -1379,6 +1379,7 @@ class JupyterHub(Application):
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
             service = Service(parent=self,
+                app=self,
                 base_url=self.base_url,
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,

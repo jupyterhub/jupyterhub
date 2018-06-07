@@ -158,6 +158,11 @@ class Spawner(LoggingConfigurable):
         if self.orm_spawner:
             return self.orm_spawner.name
         return ''
+    hub = Any()
+    authenticator = Any()
+    internal_ssl = Bool(False)
+    internal_certs_location = Unicode('')
+    internal_authority_name = Unicode('')
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()

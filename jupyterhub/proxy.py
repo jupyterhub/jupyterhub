@@ -41,7 +41,7 @@ from jupyterhub.traitlets import Command
 from traitlets.config import LoggingConfigurable
 from .objects import Server
 from . import utils
-from .utils import url_path_join
+from .utils import url_path_join, make_ssl_context
 
 
 def _one_at_a_time(method):
@@ -391,6 +391,15 @@ class ConfigurableHTTPProxy(Proxy):
         c.ConfigurableHTTPProxy.should_start = False
     """
 
+    def __init__(self, *args, **kwargs):
+      super().__init__(*args, **kwargs)
+      ssl_context = make_ssl_context(
+          self.app.internal_ssl_key,
+          self.app.internal_ssl_cert,
+          cafile=self.app.internal_ssl_ca,
+      )
+      AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
+
     proxy_process = Any()
     client = Instance(AsyncHTTPClient, ())
 
@@ -432,9 +441,22 @@ class ConfigurableHTTPProxy(Proxy):
             token = utils.new_token()
         return token
 
-    api_url = Unicode('http://127.0.0.1:8001', config=True,
+    api_url = Unicode(config=True,
                       help="""The ip (or hostname) of the proxy's API endpoint"""
                       )
+
+    @default('api_url')
+    def _api_url_default(self):
+      url = '127.0.0.1:8001'
+      proto = 'http'
+      if self.app.internal_ssl:
+        proto = 'https'
+
+      return "{proto}://{url}".format(
+            proto=proto,
+            url=url,
+          )
+
     command = Command('configurable-http-proxy', config=True,
                       help="""The command to start the proxy"""
                       )
@@ -541,6 +563,13 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
+        if self.app.internal_ssl:
+            cmd.extend(['--api-ssl-key', self.app.internal_ssl_key])
+            cmd.extend(['--api-ssl-cert', self.app.internal_ssl_cert])
+            cmd.extend(['--api-ssl-ca', self.app.internal_ssl_ca])
+            cmd.extend(['--api-ssl-request-cert'])
+            cmd.extend(['--api-ssl-reject-unauthorized'])
+            cmd.extend(['--forward-ssl'])
         if self.app.statsd_host:
             cmd.extend([
                 '--statsd-host', self.app.statsd_host,

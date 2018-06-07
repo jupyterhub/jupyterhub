@@ -11,7 +11,7 @@ from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
 
-from .utils import maybe_future, url_path_join
+from .utils import maybe_future, url_path_join, make_ssl_context
 
 from . import orm
 from ._version import _check_version, __version__
@@ -215,6 +215,9 @@ class User:
             db=self.db,
             oauth_client_id=client_id,
             cookie_options = self.settings.get('cookie_options', {}),
+            internal_ssl=self.settings.get('internal_ssl'),
+            internal_certs_location=self.settings.get('internal_certs_location'),
+            internal_authority_name=self.settings.get('internal_authority_name'),
         )
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
@@ -493,7 +496,11 @@ class User:
         db.commit()
         spawner._waiting_for_response = True
         try:
-            resp = await server.wait_up(http=True, timeout=spawner.http_timeout)
+            key = self.settings['internal_ssl_key']
+            cert = self.settings['internal_ssl_cert']
+            ca = self.settings['internal_ssl_ca']
+            ssl_context = make_ssl_context(key, cert, cafile=ca)
+            resp = await server.wait_up(http=True, timeout=spawner.http_timeout, ssl_context=ssl_context)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(
