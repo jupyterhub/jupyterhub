@@ -422,7 +422,8 @@ class User:
                     pass
                 else:
                     # >= 0.7 returns (ip, port)
-                    url = 'http://%s:%i' % url
+                    proto = 'https' if self.settings['internal_ssl'] else 'http'
+                    url = '%s://%s:%i' % ((proto,) + url)
                 urlinfo = urlparse(url)
                 server.proto = urlinfo.scheme
                 server.ip = urlinfo.hostname
