@@ -43,7 +43,7 @@ from notebook.base.handlers import IPythonHandler
 from ._version import __version__, _check_version
 from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
-from .utils import url_path_join
+from .utils import url_path_join, make_ssl_context
 
 
 # Authenticate requests with the Hub
@@ -399,6 +399,13 @@ class SingleUserNotebookApp(NotebookApp):
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
+        ssl_context = make_ssl_context(
+            self.keyfile,
+            self.certfile,
+            cafile=self.client_ca,
+        )
+        AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
+
         client = AsyncHTTPClient()
         RETRIES = 5
         for i in range(1, RETRIES+1):

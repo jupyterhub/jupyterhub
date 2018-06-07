@@ -218,6 +218,8 @@ class User:
             internal_ssl=self.settings.get('internal_ssl'),
             internal_certs_location=self.settings.get('internal_certs_location'),
             internal_authority_name=self.settings.get('internal_authority_name'),
+            internal_notebook_authority_name=self.settings.get('internal_notebook_authority_name'),
+            trusted_alt_names=self.settings.get('trusted_alt_names'),
         )
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)

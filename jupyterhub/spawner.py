@@ -164,6 +164,7 @@ class Spawner(LoggingConfigurable):
     internal_ssl = Bool(False)
     internal_certs_location = Unicode('')
     internal_authority_name = Unicode('')
+    internal_notebook_authority_name = Unicode('')
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -672,6 +673,47 @@ class Spawner(LoggingConfigurable):
         """
         return s.format(**self.template_namespace())
 
+    def create_certs(self):
+        """Create the certs to be used for internal ssl."""
+        cert_store = Certipy(store_dir=self.internal_certs_location)
+        internal_authority = self.internal_authority_name
+        notebook_authority = self.internal_notebook_authority_name
+        internal_key_pair = cert_store.get(internal_authority)
+        notebook_key_pair = cert_store.create_signed_pair(self.user.name, notebook_authority, alt_names=b"DNS:localhost,IP:127.0.0.1")
+        return {
+            "key_file": notebook_key_pair.key_file,
+            "cert_file": notebook_key_pair.cert_file,
+            "ca_file": internal_key_pair.ca_file,
+        }
+
+    def move_certs(self, cert_files):
+        """Takes dict of cert/ca file paths and moves, sets up proper ownership for them."""
+        user = pwd.getpwnam(self.user.name)
+        uid = user.pw_uid
+        gid = user.pw_gid
+        home = user.pw_dir
+
+        # Create dir for user's certs wherever we're starting
+        out_dir = "{home}/.jupyter".format(home=home)
+        shutil.rmtree(out_dir, ignore_errors=True)
+        os.makedirs(out_dir, 0o700, exist_ok=True)
+
+        # Move certs to users dir
+        shutil.move(cert_files['key_file'], out_dir)
+        shutil.move(cert_files['cert_file'], out_dir)
+        shutil.copy(cert_files['ca_file'], out_dir)
+
+        path_tmpl = "{out}/{name}.{ext}"
+        key = path_tmpl.format(out=out_dir, name=self.user.name, ext="key")
+        cert = path_tmpl.format(out=out_dir, name=self.user.name, ext="crt")
+        ca = path_tmpl.format(out=out_dir, name=self.internal_authority_name, ext="crt")
+
+        # Set cert ownership to user
+        for f in [out_dir, key, cert, ca]:
+            shutil.chown(f, user=uid, group=gid)
+
+        return [key, cert, ca]
+
     def get_args(self):
         """Return the arguments to be passed after self.cmd
 
@@ -696,21 +738,16 @@ class Spawner(LoggingConfigurable):
             args.append('--NotebookApp.default_url="%s"' % default_url)
 
         if self.internal_ssl:
-            cert_store = Certipy(store_dir=self.internal_certs_location)
-            cert_store.store_load()
-            authority = self.internal_authority_name
-            internal_key_pair = cert_store.store_get(self.user.name)
-            if not internal_key_pair:
-                internal_key_pair = cert_store.create_signed_pair(self.user.name, authority, alt_names=b"DNS:localhost,IP:127.0.0.1")
-            cert_store.store_save()
-            key = internal_key_pair.key_file
-            cert = internal_key_pair.cert_file
-            ca = internal_key_pair.ca_file
+            try:
+                key, cert, ca = self.move_certs(self.create_certs())
 
-            args.append('--keyfile="%s"' % key)
-            args.append('--certfile="%s"' % cert)
-            if ca:
-                args.append('--client-ca="%s"' % ca)
+                args.append('--keyfile="%s"' % key)
+                args.append('--certfile="%s"' % cert)
+                if ca:
+                    args.append('--client-ca="%s"' % ca)
+            except Exception as e:
+                print("Internal SSL, if enabled, will not work.")
+                raise
 
         if self.debug:
             args.append('--debug')

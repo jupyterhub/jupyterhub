@@ -327,8 +327,16 @@ class JupyterHub(Application):
         Use with internal_ssl
         """
     ).tag(config=True)
-    internal_authority_name = Unicode('jupyterhub',
+    internal_authority_name = Unicode('hub',
         help=""" The name for the internal signing authority
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    internal_notebook_authority_name = Unicode('notebook',
+        help=""" The name for the notebook signing authority.
+        This authority is separate from internal_authority_name so that
+        individual notebooks do not trust each other, only the hub and proxy.
 
         Use with internal_ssl
         """
@@ -345,6 +353,16 @@ class JupyterHub(Application):
         help=""" The ca to be used for internal ssl
         """
     )
+    trusted_alt_names = List(Unicode(),
+        help=""" Names to include in the subject alternative name.
+        These names will be used for server name verification. This is useful
+        if JupyterHub is being run behind a reverse proxy or services using ssl
+        are on different hosts.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+
     ip = Unicode('',
         help="""The public facing ip of the whole JupyterHub application
         (specifically referred to as the proxy).
@@ -1637,9 +1655,11 @@ class JupyterHub(Application):
             internal_ssl=self.internal_ssl,
             internal_certs_location=self.internal_certs_location,
             internal_authority_name=self.internal_authority_name,
+            internal_notebook_authority_name=self.internal_notebook_authority_name,
             internal_ssl_key=self.internal_ssl_key,
             internal_ssl_cert=self.internal_ssl_cert,
             internal_ssl_ca=self.internal_ssl_ca,
+            trusted_alt_names=self.trusted_alt_names,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1685,17 +1705,37 @@ class JupyterHub(Application):
             self.update_config(cfg)
         if self.internal_ssl:
             cert_store = Certipy(store_dir=self.internal_certs_location)
-            cert_store.store_load()
-            if not cert_store.store_get(self.internal_authority_name):
+            joint_ca_file = "{out}/combined-cas.crt".format(out=self.internal_certs_location)
+
+            # The authority for internal components (hub, proxy)
+            if not cert_store.get(self.internal_authority_name):
                 cert_store.create_ca(self.internal_authority_name)
-            internal_key_pair = cert_store.store_get("localhost")
+
+            # The authority for individual notebooks
+            notebook_authority = cert_store.get(self.internal_notebook_authority_name)
+            if not notebook_authority:
+                notebook_authority = cert_store.create_ca(self.internal_notebook_authority_name)
+
+            internal_key_pair = cert_store.get("localhost")
             if not internal_key_pair:
-                internal_key_pair = cert_store.create_signed_pair("localhost", self.internal_authority_name, alt_names=b"IP:127.0.0.1")
-            cert_store.store_save()
+                alt_names = "IP:127.0.0.1,DNS:localhost,{extra_names}"
+                # In the event the hub needs to be accessed externally, add
+                # the fqdn and (optionally) rev_proxy to the set of alt_names.
+                extra_names = [socket.getfqdn()] + self.trusted_alt_names
+                extra_names = ','.join(["DNS:{}".format(name) for name in extra_names])
+                alt_names = alt_names.format(extra_names=extra_names).encode()
+                internal_key_pair = cert_store.create_signed_pair("localhost", self.internal_authority_name, alt_names=alt_names)
+
+            # Join CA files
+            with open(internal_key_pair.ca_file) as internal_ca, \
+                open(notebook_authority.ca_file) as notebook_ca, \
+                open(joint_ca_file, 'w') as combined_ca:
+                    combined_ca.write(internal_ca.read())
+                    combined_ca.write(notebook_ca.read())
 
             self.internal_ssl_key = internal_key_pair.key_file
             self.internal_ssl_cert = internal_key_pair.cert_file
-            self.internal_ssl_ca = internal_key_pair.ca_file
+            self.internal_ssl_ca = joint_ca_file
         self.write_pid_file()
 
         def _log_cls(name, cls):
