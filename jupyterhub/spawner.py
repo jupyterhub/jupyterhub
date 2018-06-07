@@ -751,16 +751,12 @@ class Spawner(LoggingConfigurable):
             args.append('--NotebookApp.default_url="%s"' % default_url)
 
         if self.internal_ssl:
-            try:
-                key, cert, ca = self.move_certs(self.create_certs())
+            key, cert, ca = self.move_certs(self.create_certs())
 
-                args.append('--keyfile="%s"' % key)
-                args.append('--certfile="%s"' % cert)
-                if ca:
-                    args.append('--client-ca="%s"' % ca)
-            except Exception as e:
-                print("Internal SSL, if enabled, will not work.")
-                raise
+            args.append('--keyfile="%s"' % key)
+            args.append('--certfile="%s"' % cert)
+            if ca:
+                args.append('--client-ca="%s"' % ca)
 
         if self.debug:
             args.append('--debug')
