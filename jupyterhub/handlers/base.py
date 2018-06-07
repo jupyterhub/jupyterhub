@@ -827,12 +827,15 @@ class BaseHandler(RequestHandler):
         )
 
         self.set_header('Content-Type', 'text/html')
-        # allow setting headers from exceptions
-        # since exception handler clears headers
-        headers = getattr(exception, 'headers', None)
-        if headers:
-            for key, value in headers.items():
-                self.set_header(key, value)
+        if isinstance(exception, web.HTTPError):
+            # allow setting headers from exceptions
+            # since exception handler clears headers
+            headers = getattr(exception, 'headers', None)
+            if headers:
+                for key, value in headers.items():
+                    self.set_header(key, value)
+            # Content-Length must be recalculated.
+            self.clear_header('Content-Length')
 
         # render the template
         try:
