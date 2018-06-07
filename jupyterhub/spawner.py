@@ -687,31 +687,38 @@ class Spawner(LoggingConfigurable):
             "ca_file": internal_key_pair.ca_file,
         }
 
-    def move_certs(self, cert_files):
+    def move_certs(self, key_pair):
         """Takes dict of cert/ca file paths and moves, sets up proper ownership for them."""
-        user = pwd.getpwnam(self.user.name)
-        uid = user.pw_uid
-        gid = user.pw_gid
-        home = user.pw_dir
+        key = key_pair['key_file']
+        cert = key_pair['cert_file']
+        ca = key_pair['ca_file']
 
-        # Create dir for user's certs wherever we're starting
-        out_dir = "{home}/.jupyter".format(home=home)
-        shutil.rmtree(out_dir, ignore_errors=True)
-        os.makedirs(out_dir, 0o700, exist_ok=True)
+        try:
+            user = pwd.getpwnam(self.user.name)
+            uid = user.pw_uid
+            gid = user.pw_gid
+            home = user.pw_dir
 
-        # Move certs to users dir
-        shutil.move(cert_files['key_file'], out_dir)
-        shutil.move(cert_files['cert_file'], out_dir)
-        shutil.copy(cert_files['ca_file'], out_dir)
+            # Create dir for user's certs wherever we're starting
+            out_dir = "{home}/.jupyter/certs".format(home=home)
+            shutil.rmtree(out_dir, ignore_errors=True)
+            os.makedirs(out_dir, 0o700, exist_ok=True)
 
-        path_tmpl = "{out}/{name}.{ext}"
-        key = path_tmpl.format(out=out_dir, name=self.user.name, ext="key")
-        cert = path_tmpl.format(out=out_dir, name=self.user.name, ext="crt")
-        ca = path_tmpl.format(out=out_dir, name=self.internal_authority_name, ext="crt")
+            # Move certs to users dir
+            shutil.move(key_pair['key_file'], out_dir)
+            shutil.move(key_pair['cert_file'], out_dir)
+            shutil.copy(key_pair['ca_file'], out_dir)
 
-        # Set cert ownership to user
-        for f in [out_dir, key, cert, ca]:
-            shutil.chown(f, user=uid, group=gid)
+            path_tmpl = "{out}/{name}.{ext}"
+            key = path_tmpl.format(out=out_dir, name=self.user.name, ext="key")
+            cert = path_tmpl.format(out=out_dir, name=self.user.name, ext="crt")
+            ca = path_tmpl.format(out=out_dir, name=self.internal_authority_name, ext="crt")
+
+            # Set cert ownership to user
+            for f in [out_dir, key, cert, ca]:
+                shutil.chown(f, user=uid, group=gid)
+        except KeyError:
+            self.log.debug("User {} not found on system, not moving certs".format(self.user.name))
 
         return [key, cert, ca]
 

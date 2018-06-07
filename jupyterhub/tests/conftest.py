@@ -116,6 +116,16 @@ def io_loop(request):
     request.addfinalizer(_close)
     return io_loop
 
+@fixture(scope='module')
+def app(request, io_loop):
+    """Mock a jupyterhub app for testing"""
+    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+    mocked_app = MockHub.instance(log_level=logging.DEBUG, internal_ssl=ssl_enabled)
+    @gen.coroutine
+    def make_app():
+        yield mocked_app.initialize([])
+        yield mocked_app.start()
+    io_loop.run_sync(make_app)
 
 @fixture(autouse=True)
 def cleanup_after(request, io_loop):
