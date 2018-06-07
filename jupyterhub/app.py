@@ -20,6 +20,7 @@ import sys
 from textwrap import dedent
 from urllib.parse import unquote, urlparse, urlunparse
 
+from certipy import Certipy
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
@@ -1682,6 +1683,19 @@ class JupyterHub(Application):
             cfg = self.config.copy()
             cfg.JupyterHub.merge(cfg.JupyterHubApp)
             self.update_config(cfg)
+        if self.internal_ssl:
+            cert_store = Certipy(store_dir=self.internal_certs_location)
+            cert_store.store_load()
+            if not cert_store.store_get(self.internal_authority_name):
+                cert_store.create_ca(self.internal_authority_name)
+            internal_key_pair = cert_store.store_get("localhost")
+            if not internal_key_pair:
+                internal_key_pair = cert_store.create_signed_pair("localhost", self.internal_authority_name, alt_names=b"IP:127.0.0.1")
+            cert_store.store_save()
+
+            self.internal_ssl_key = internal_key_pair.key_file
+            self.internal_ssl_cert = internal_key_pair.cert_file
+            self.internal_ssl_ca = internal_key_pair.ca_file
         self.write_pid_file()
 
         def _log_cls(name, cls):

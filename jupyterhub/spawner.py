@@ -23,6 +23,7 @@ from async_generator import async_generator, yield_
 from sqlalchemy import inspect
 
 from tornado.ioloop import PeriodicCallback
+from certipy import Certipy
 
 from traitlets.config import LoggingConfigurable
 from traitlets import (
@@ -693,6 +694,23 @@ class Spawner(LoggingConfigurable):
         if self.default_url:
             default_url = self.format_string(self.default_url)
             args.append('--NotebookApp.default_url="%s"' % default_url)
+
+        if self.internal_ssl:
+            cert_store = Certipy(store_dir=self.internal_certs_location)
+            cert_store.store_load()
+            authority = self.internal_authority_name
+            internal_key_pair = cert_store.store_get(self.user.name)
+            if not internal_key_pair:
+                internal_key_pair = cert_store.create_signed_pair(self.user.name, authority, alt_names=b"DNS:localhost,IP:127.0.0.1")
+            cert_store.store_save()
+            key = internal_key_pair.key_file
+            cert = internal_key_pair.cert_file
+            ca = internal_key_pair.ca_file
+
+            args.append('--keyfile="%s"' % key)
+            args.append('--certfile="%s"' % cert)
+            if ca:
+                args.append('--client-ca="%s"' % ca)
 
         if self.debug:
             args.append('--debug')
