@@ -215,12 +215,18 @@ class User:
             db=self.db,
             oauth_client_id=client_id,
             cookie_options = self.settings.get('cookie_options', {}),
-            internal_ssl=self.settings.get('internal_ssl'),
-            internal_certs_location=self.settings.get('internal_certs_location'),
-            internal_authority_name=self.settings.get('internal_authority_name'),
-            internal_notebook_authority_name=self.settings.get('internal_notebook_authority_name'),
             trusted_alt_names=self.settings.get('trusted_alt_names'),
         )
+
+        if self.settings.get('internal_ssl'):
+            ssl_kwargs = dict(
+                internal_ssl=self.settings.get('internal_ssl'),
+                internal_certs_location=self.settings.get('internal_certs_location'),
+                internal_authority_name=self.settings.get('internal_authority_name'),
+                internal_notebook_authority_name=self.settings.get('internal_notebook_authority_name'),
+            )
+            spawn_kwargs.update(ssl_kwargs)
+
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
