@@ -1148,6 +1148,9 @@ class JupyterHub(Application):
         hub_args = dict(
             base_url=self.hub_prefix,
             public_host=self.subdomain_host,
+            ssl_cert_file=self.internal_ssl_cert,
+            ssl_key_file=self.internal_ssl_key,
+            ssl_ca_file=self.internal_ssl_ca,
         )
         if self.hub_bind_url:
             # ensure hub_prefix is set on bind_url
@@ -1436,6 +1439,9 @@ class JupyterHub(Application):
                     port=port,
                     cookie_name='jupyterhub-services',
                     base_url=service.prefix,
+                    ssl_cert_file=self.internal_ssl_cert,
+                    ssl_key_file=self.internal_ssl_key,
+                    ssl_ca_file=self.internal_ssl_ca,
                 )
                 self.db.add(server)
 
