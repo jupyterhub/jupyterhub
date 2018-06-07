@@ -1718,6 +1718,7 @@ class JupyterHub(Application):
 
             internal_key_pair = cert_store.get("localhost")
             if not internal_key_pair:
+                import socket
                 alt_names = "IP:127.0.0.1,DNS:localhost,{extra_names}"
                 # In the event the hub needs to be accessed externally, add
                 # the fqdn and (optionally) rev_proxy to the set of alt_names.

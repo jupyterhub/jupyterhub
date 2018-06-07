@@ -569,7 +569,6 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.extend(['--api-ssl-ca', self.app.internal_ssl_ca])
             cmd.extend(['--api-ssl-request-cert'])
             cmd.extend(['--api-ssl-reject-unauthorized'])
-            cmd.extend(['--forward-ssl'])
         if self.app.statsd_host:
             cmd.extend([
                 '--statsd-host', self.app.statsd_host,
