@@ -52,11 +52,11 @@ additional configuration required for MySQL that is not needed for PostgreSQL.
   from the hub will be idle for longer than most connections. This behavior
   will lead to frustrating 'the connection has gone away' errors from
   sqlalchemy if `pool_recycle` is not set.
-- If you use utf8mb4 collation with MySQL earlier than 5.7.7 or MariaDB earlier
-  than 10.2.1 you may get an '1709, Index column size too large' error. To fix
-  this you need to set 'innodb_large_prefix' to enabled and
-  'innodb_file_format' to 'Barracuda' to allow for the index sizes jupyterhub
-  uses. 'row_format' will be set to 'DYNAMIC' as long as those options are set
+- If you use `utf8mb4` collation with MySQL earlier than 5.7.7 or MariaDB
+  earlier than 10.2.1 you may get an `1709, Index column size too large` error.
+  To fix this you need to set `innodb_large_prefix` to enabled and
+  `innodb_file_format` to `Barracuda` to allow for the index sizes jupyterhub
+  uses. `row_format` will be set to `DYNAMIC` as long as those options are set
   correctly. Later versions of MariaDB and MySQL should set these values by
-  default, as well as have a default DYNAMIC row_format and pose no trouble to
-  users.
+  default, as well as have a default `DYNAMIC` `row_format` and pose no trouble
+  to users.
