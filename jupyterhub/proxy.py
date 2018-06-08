@@ -488,7 +488,10 @@ class ConfigurableHTTPProxy(Proxy):
         except FileNotFoundError as e:
             self.log.error(
                 "Failed to find proxy %r\n"
-                "The proxy can be installed with `npm install -g configurable-http-proxy`"
+                "The proxy can be installed with `npm install -g configurable-http-proxy`."
+                "To install `npm`, install nodejs which includes `npm`."
+                "If you see an `EACCES` error or permissions error, refer to the `npm` "
+                "documentation on How To Prevent Permissions Errors."
                 % self.command
             )
             raise
