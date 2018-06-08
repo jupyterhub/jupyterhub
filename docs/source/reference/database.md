@@ -36,6 +36,12 @@ correctly if the database file is kept on an NFS filesystem. This is because
 should avoid putting SQLite database files on NFS since it will not handle well
 multiple processes which might try to access the file at the same time.
 
+### PostgreSQL
+
+We recommend using PostgreSQL for production if you are unsure whether to use
+MySQL or PostgreSQL or if you do not have a strong preference. There is
+additional configuration required for MySQL that is not needed for PostgreSQL.
+
 ### MySQL
 
 - You should use the `pymysql` sqlalchemy provider (the other one, MySQLdb,
@@ -47,6 +53,6 @@ multiple processes which might try to access the file at the same time.
   will lead to frustrating 'the connection has gone away' errors from
   sqlalchemy if `pool_recycle` is not set.
 
-### PostgreSQL
+
 
 
