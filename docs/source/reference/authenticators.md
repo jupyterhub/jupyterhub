@@ -38,6 +38,8 @@ with any provider, is also available.
 
 - ldapauthenticator for LDAP
 - tmpauthenticator for temporary accounts
+- For Shibboleth, [jhub_shibboleth_auth](https://github.com/gesiscss/jhub_shibboleth_auth)
+  and [jhub_remote_user_authenticator](https://github.com/cwaldbieser/jhub_remote_user_authenticator)
 
 ## Technical Overview of Authentication
 
