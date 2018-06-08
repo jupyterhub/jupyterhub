@@ -208,7 +208,13 @@ class MyAuthenticator(Authenticator):
         spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
 ```
 
+## pre_spawn_start and post_spawn_stop hooks
 
+Authenticators uses two hooks, [`pre_spawn_start(user, spawner)`] and
+[`post_spawn_stop(user, spawner)`] to add pass additional state information
+between the authenticator and a spawner. These hooks are typically used auth-related
+startup, i.e. opening a PAM session, and auth-related cleanup, i.e. closing a
+PAM session.
 
 ## JupyterHub as an OAuth provider
 
