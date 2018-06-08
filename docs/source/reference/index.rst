@@ -11,6 +11,7 @@ Technical Reference
    services
    proxy
    rest
+   database
    upgrading
    templates
    config-examples
