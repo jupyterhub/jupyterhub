@@ -489,7 +489,9 @@ class ConfigurableHTTPProxy(Proxy):
             self.log.error(
                 "Failed to find proxy %r\n"
                 "The proxy can be installed with `npm install -g configurable-http-proxy`."
-                "Please refer to the nodejs documentation if you need to install `npm`."
+                "To install `npm`, install nodejs which includes `npm`."
+                "If you see an `EACCES` error or permissions error, refer to the `npm` "
+                "documentation on How To Prevent Permissions Errors."
                 % self.command
             )
             raise
