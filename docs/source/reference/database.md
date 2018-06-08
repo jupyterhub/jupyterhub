@@ -29,7 +29,12 @@ statement.
 
 ### SQLite
 
-The SQLite database should not be used on NFS.
+The SQLite database should not be used on NFS. SQLite uses reader/writer locks
+to control access to the database. This locking mechanism might not work
+correctly if the database file is kept on an NFS filesystem. This is because
+`fcntl()` file locking is broken on many NFS implementations. Therefore, you
+should avoid putting SQLite database files on NFS since it will not handle well
+multiple processes which might try to access the file at the same time.
 
 ### MySQL
 
