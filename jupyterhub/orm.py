@@ -204,7 +204,7 @@ class Spawner(Base):
     server = relationship(Server, cascade="all")
 
     state = Column(JSONDict)
-    name = Column(Unicode(255))
+    server_name = Column(Unicode(255))
 
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)

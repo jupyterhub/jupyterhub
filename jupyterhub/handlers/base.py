@@ -716,10 +716,10 @@ class BaseHandler(RequestHandler):
         await self.proxy.delete_user(user, server_name)
         await user.stop(server_name)
 
-    async def stop_single_user(self, user, name=''):
-        if name not in user.spawners:
-            raise KeyError("User %s has no such spawner %r", user.name, name)
-        spawner = user.spawners[name]
+    async def stop_single_user(self, user, server_name=''):
+        if server_name not in user.spawners:
+            raise KeyError("User %s has no such spawner %r", user.name, server_name)
+        spawner = user.spawners[server_name]
         if spawner.pending:
             raise RuntimeError("%s pending %s" % (spawner._log_name, spawner.pending))
         # set user._stop_pending before doing anything async
@@ -735,8 +735,8 @@ class BaseHandler(RequestHandler):
             """
             tic = IOLoop.current().time()
             try:
-                await self.proxy.delete_user(user, name)
-                await user.stop(name)
+                await self.proxy.delete_user(user, server_name)
+                await user.stop(server_name)
             finally:
                 spawner._stop_pending = False
             toc = IOLoop.current().time()
@@ -747,7 +747,7 @@ class BaseHandler(RequestHandler):
             await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
-            self.log.warning("User %s:%s server is slow to stop", user.name, name)
+            self.log.warning("User %s:%s server is slow to stop", user.name, server_name)
 
     #---------------------------------------------------------------
     # template rendering

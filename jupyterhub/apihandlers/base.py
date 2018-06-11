@@ -111,13 +111,13 @@ class APIHandler(BaseHandler):
     def server_model(self, spawner, include_state=False):
         """Get the JSON model for a Spawner"""
         return {
-            'name': spawner.name,
+            'name': spawner.server_name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
             'state': spawner.get_state() if include_state else None,
-            'url': url_path_join(spawner.user.url, spawner.name, '/'),
+            'url': url_path_join(spawner.user.url, spawner.server_name, '/'),
             'progress_url': spawner._progress_url,
         }
 
