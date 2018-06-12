@@ -9,6 +9,7 @@ problem and how to resolve it.
 - sudospawner fails to run
 - What is the default behavior when none of the lists (admin, whitelist,
   group whitelist) are set?
+- JupyterHub Docker container not accessible at localhost
 
 [*Errors*](#errors)
 - 500 error after spawning my single-user server
@@ -62,6 +63,17 @@ a password) will be allowed to start a server. The whitelist lets you limit
 this to a particular set of users, and the admin_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
 things like inspect other users' servers, or modify the userlist at runtime).
+
+### JupyterHub Docker container not accessible at localhost
+
+Even though the command to start your Docker container exposes port 8000 
+(`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`), 
+it is possible that the IP address itself is not accessible/visible. As a result 
+when you try http://localhost:8000 in your browser, you are unable to connect 
+even though the container is running properly. One workaround is to explicitly 
+tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this 
+command: 
+`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub --ip 0.0.0.0 --port 8000`
 
 
 ## Errors
