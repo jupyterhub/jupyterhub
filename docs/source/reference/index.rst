@@ -14,6 +14,7 @@ Technical Reference
    database
    upgrading
    templates
+   config-user-env
    config-examples
    config-ghoauth
    config-proxy
