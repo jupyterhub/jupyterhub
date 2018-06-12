@@ -3,6 +3,7 @@
 Project Jupyter thanks the following people for their help and
 contribution on JupyterHub:
 
+- adelcast
 - Analect
 - anderbubble
 - apetresc
@@ -10,6 +11,7 @@ contribution on JupyterHub:
 - betatim
 - Carreau
 - charnpreetsingh
+- chicovenancio
 - ckald
 - CRegenschein
 - cwaldbieser
@@ -24,16 +26,22 @@ contribution on JupyterHub:
 - dmartzol
 - DominicFollettSmith
 - dsblank
+- dtaniwaki
+- echarles
 - ellisonbg
 - evanlinde
 - Fokko
 - fperez
+- gweis
 - iamed18
+- jamescurtin
 - JamiesHQ
+- JasonJWilliamsNY
 - jbweston
 - jdavidheiser
 - jencabral
 - jhamrick
+- jzf2101
 - josephtate
 - kinuax
 - KrishnaPG
@@ -46,8 +54,10 @@ contribution on JupyterHub:
 - Mistobaan
 - mwmarkland
 - nthiery
+- nxg
 - ObiWahn
 - ozancaglayan
+- paccorsi
 - parente
 - PeterDaveHello
 - peterruppel
@@ -55,16 +65,20 @@ contribution on JupyterHub:
 - prasadkatti
 - rafael-ladislau
 - rgbkrk
+- rkdarst
 - robnagler
 - ryanlovett
 - Scrypy
 - shreddd
 - spoorthyv
 - ssanderson
+- summerswallow
 - takluyver
 - temogen
 - ThomasMChen
+- Thoralf Gutierrez
 - TimShawver
+- tklever
 - Todd-Z-Li
 - toobaz
 - tsaeger
