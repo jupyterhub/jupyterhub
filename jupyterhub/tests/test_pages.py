@@ -17,6 +17,7 @@ from .mocking import FormSpawner, public_url, public_host
 from .test_api import api_request, add_user
 from .utils import async_requests
 
+
 def get_page(path, app, hub=True, **kw):
     if hub:
         prefix = app.hub.base_url
@@ -519,82 +520,53 @@ def test_proxy_error(app, error_status):
     assert r.status_code == 200
 
 
-
 @pytest.mark.gen_test
-def test_page_contents(app):
-    """Tests the contents of various pages.
+@pytest.mark.parametrize(
+    "announcements",
+    [
+        "",
+        "spawn",
+        "spawn,home,login",
+        "login,logout",
+    ]
+)
+def test_announcements(app, announcements):
+    """Test announcements on various pages"""
+    # Default announcement - same on all pages
+    ann01 = "ANNOUNCE01"
+    template_vars = {"announcement": ann01}
+    announcements = announcements.split(",")
+    for name in announcements:
+        template_vars["announcement_" + name] = "ANN_" + name
 
-    Currently includes tests for the template_vars variables:
-    announcement, announcement_login, announcement_home,
-    announcement_spawn, and announcement_logout.
+    def assert_announcement(name, text):
+        if name in announcements:
+            assert template_vars["announcement_" + name] in text
+            assert ann01 not in text
+        else:
+            assert ann01 in text
 
-    Other simple template tests could be put here.
-    """
-    # Basic announcements - same on all pages
-    ann01 = 'ANNOUNCE01'
-    ann02 = 'ANNOUNCE02'
-    with mock.patch.dict(app.users.settings,
-                         {'template_vars': {'announcement': ann01},
-                         'spawner_class': FormSpawner}):
-        r = yield get_page('login', app)
+    cookies = yield app.login_user("jones")
+
+    with mock.patch.dict(
+        app.tornado_settings,
+        {"template_vars": template_vars, "spawner_class": FormSpawner},
+    ):
+        r = yield get_page("login", app)
         r.raise_for_status()
-        assert ann01 in r.text
-        cookies = yield app.login_user('jones')
-        r = yield get_page('spawn', app, cookies=cookies)
+        assert_announcement("login", r.text)
+        r = yield get_page("spawn", app, cookies=cookies)
         r.raise_for_status()
-        assert ann01 in r.text
-        r = yield get_page('home', app, cookies=cookies)  # hub/home
+        assert_announcement("spawn", r.text)
+        r = yield get_page("home", app, cookies=cookies)  # hub/home
         r.raise_for_status()
-        assert ann01 in r.text
-        r = yield get_page('logout', app, cookies=cookies)
+        assert_announcement("home", r.text)
+        # need auto_login=True to get logout page
+        auto_login = app.authenticator.auto_login
+        app.authenticator.auto_login = True
+        try:
+            r = yield get_page("logout", app, cookies=cookies)
+        finally:
+            app.authenticator.auto_login = auto_login
         r.raise_for_status()
-        assert ann01 in r.text
-
-    # Different annoncements on one page
-    with mock.patch.dict(app.users.settings,
-                         {'template_vars': {'announcement': ann01,
-                                            'announcement_spawn': ann02},
-                         'spawner_class': FormSpawner}):
-        r = yield get_page('login', app)
-        r.raise_for_status()
-        assert ann01 in r.text
-        assert ann02 not in r.text
-
-        cookies = yield app.login_user('jones')
-        r = yield get_page('spawn', app, cookies=cookies)
-        r.raise_for_status()
-        assert ann01 not in r.text
-        assert ann02 in r.text
-
-    # Different annoucements on all pages.  Must give formspawner to
-    # ensure we get a message on the spawn page
-    with mock.patch.dict(app.users.settings,
-                         {'template_vars': {'announcement': ann01,
-                                            'announcement_spawn': 'ANN_spawn',
-                                            'announcement_home': 'ANN_home',
-                                            'announcement_login': 'ANN_login'},
-                         'spawner_class': FormSpawner
-                         }):
-        r = yield get_page('login', app)
-        assert 'ANN_login' in r.text
-        assert ann01 not in r.text
-
-        cookies = yield app.login_user('jones')
-        r = yield get_page('spawn', app, cookies=cookies)
-        assert 'ANN_spawn' in r.text
-        assert ann01 not in r.text
-
-        r = yield get_page('home', app, cookies=cookies)  # hub/home
-        assert 'ANN_home' in r.text
-        assert ann01 not in r.text
-    # ... and must have auto_login=True in order to not be immediately
-    # redirected from the logout page:
-    with mock.patch.dict(app.users.settings,
-                         {'template_vars': {'announcement': ann01,
-                                            'announcement_logout': 'ANN_logout'},
-                         'authenticator': Authenticator(auto_login=True),
-                         'spawner_class': FormSpawner
-                         }):
-        r = yield get_page('logout', app, cookies=cookies)
-        assert 'ANN_logout' in r.text
-        assert ann01 not in r.text
+        assert_announcement("logout", r.text)
