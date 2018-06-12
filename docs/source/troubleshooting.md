@@ -68,9 +68,9 @@ things like inspect other users' servers, or modify the userlist at runtime).
 
 Even though the command to start your Docker container exposes port 8000 
 (`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`), 
-is possible that the IP address itself is not accessible/visible. As a result 
+it is possible that the IP address itself is not accessible/visible. As a result 
 when you try http://localhost:8000 in your browser, you are unable to connect 
-even though the container is running properly. One workaround  is to explicitly 
+even though the container is running properly. One workaround is to explicitly 
 tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this 
 command: 
 `docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub --ip 0.0.0.0 --port 8000`
