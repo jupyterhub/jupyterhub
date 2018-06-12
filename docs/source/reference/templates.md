@@ -60,12 +60,14 @@ text about the server starting up, place this content in a file named
 {% endblock %}
 ```
 
-## Simple configuration
+## Page Announcements
 
-The most powerful way to control templates is to directly extend them
-as you see above.  However, some simple configuration is possible:
+To add announcements to be displayed on a page, you have two options:
 
-### Announcement text
+- Extend the page templates as described above
+- Use configuration variables
+
+### Announcement Configuration Variables
 
 If you set the configuration variable `JupyterHub.template_vars =
 {'announcement': 'some_text}`, the given `some_text` will be placed on
