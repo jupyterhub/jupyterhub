@@ -7,8 +7,8 @@ version_info = (
     0,
     9,
     0,
-    "",  # release (b1, rc1)
-    "dev",  # dev
+    "rc1",  # release (b1, rc1)
+    # "dev",  # dev
 )
 
 # pep 440 version: no dot before beta/rc, but before .dev
