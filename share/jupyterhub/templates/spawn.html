@@ -1,4 +1,7 @@
 {% extends "page.html" %}
+{% if announcement_spawn %}
+  {% set announcement = announcement_spawn %}
+{% endif %}
 
 {% block main %}
 
