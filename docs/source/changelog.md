@@ -93,6 +93,14 @@ and tornado < 5.0.
 - Add session-id cookie, enabling immediate revocation of login tokens.
 - Authenticators may specify that users are admins by specifying the `admin` key when return the user model as a dict.
 - Added "Start All" button to admin page for launching all user servers at once.
+- Services have an `info` field which is a dictionary.
+  This is accessible via the REST API.
+- `JupyterHub.extra_handlers` allows defining additonal tornado RequestHandlers attached to the Hub.
+- API tokens may now expire.
+  Expiry is available in the REST model as `expires_at`,
+  and settable when creating API tokens by specifying `expires_in`.
+-
+
 
 
 #### Fixed
@@ -113,6 +121,11 @@ and tornado < 5.0.
 - Various fixes in race conditions and performance improvements with the default proxy.
 - Fixes for CORS headers
 - Stop setting `.form-control` on spawner form inputs unconditionally.
+- Better recovery from database errors and database connection issues
+  without having to restart the Hub.
+- Fix handling of `~` character in usernames.
+- Fix jupyterhub startup when `getpass.getuser()` would fail,
+  e.g. due to missing entry in passwd file in containers.
 
 
 ## 0.8
