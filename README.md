@@ -81,7 +81,7 @@ for administration of the Hub and its users.
 To install JupyterHub along with its dependencies including nodejs/npm:
 
 ```bash
-conda install jupyterhub
+conda install -c conda-forge jupyterhub
 ```
 
 If you plan to run notebook servers locally, install the Jupyter notebook
