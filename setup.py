@@ -116,7 +116,7 @@ setup_args = dict(
     ],
     project_urls        = {
         'Documentation': 'https://jupyterhub.readthedocs.io',
-        'Funding': 'http://jupyter.org/about',
+        'Funding': 'https://jupyter.org/about',
         'Source': 'https://github.com/jupyterhub/jupyterhub/',
         'Tracker': 'https://github.com/jupyterhub/jupyterhub/issues',
     },
