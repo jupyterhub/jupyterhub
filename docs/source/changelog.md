@@ -99,8 +99,6 @@ and tornado < 5.0.
 - API tokens may now expire.
   Expiry is available in the REST model as `expires_at`,
   and settable when creating API tokens by specifying `expires_in`.
--
-
 
 
 #### Fixed
