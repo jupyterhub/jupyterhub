@@ -154,6 +154,7 @@ def test_external_proxy(request):
     'zoe',
     '50fia',
     '秀樹',
+    '~TestJH'
 ])
 def test_check_routes(app,  username, disable_check_routes):
     proxy = app.proxy
