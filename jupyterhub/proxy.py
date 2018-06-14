@@ -574,7 +574,7 @@ class ConfigurableHTTPProxy(Proxy):
         """
         # chp stores routes in unescaped form.
         # restore escaped-form we created it with.
-        routespec = quote(chp_path, safe='@/')
+        routespec = quote(chp_path, safe='@/~')
         if self.host_routing:
             # host routes don't start with /
             routespec = routespec.lstrip('/')
