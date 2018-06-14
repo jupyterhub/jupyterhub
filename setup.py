@@ -83,6 +83,10 @@ for d, _, _ in os.walk('jupyterhub'):
     if os.path.exists(pjoin(d, '__init__.py')):
         packages.append(d.replace(os.path.sep, '.'))
 
+with open('README.md', encoding="utf8") as f:
+    readme = f.read()
+
+
 setup_args = dict(
     name                = 'jupyterhub',
     scripts             = glob(pjoin('scripts', '*')),
@@ -93,10 +97,11 @@ setup_args = dict(
     package_data        = get_package_data(),
     version             = ns['__version__'],
     description         = "JupyterHub: A multi-user server for Jupyter notebooks",
-    long_description    = "See https://jupyterhub.readthedocs.io for more info.",
+    long_description    = readme,
+    long_description_content_type = 'text/markdown',
     author              = "Jupyter Development Team",
     author_email        = "jupyter@googlegroups.com",
-    url                 = "http://jupyter.org",
+    url                 = "https://jupyter.org",
     license             = "BSD",
     platforms           = "Linux, Mac OS X",
     keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
@@ -109,6 +114,12 @@ setup_args = dict(
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
     ],
+    project_urls        = {
+        'Documentation': 'https://jupyterhub.readthedocs.io',
+        'Funding': 'https://jupyter.org/about',
+        'Source': 'https://github.com/jupyterhub/jupyterhub/',
+        'Tracker': 'https://github.com/jupyterhub/jupyterhub/issues',
+    },
 )
 
 #---------------------------------------------------------------------------
