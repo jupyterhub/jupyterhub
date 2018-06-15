@@ -83,7 +83,7 @@ for d, _, _ in os.walk('jupyterhub'):
     if os.path.exists(pjoin(d, '__init__.py')):
         packages.append(d.replace(os.path.sep, '.'))
 
-with open('README.md', encoding="utf8") as f:
+with open('README.md') as f:
     readme = f.read()
 
 
