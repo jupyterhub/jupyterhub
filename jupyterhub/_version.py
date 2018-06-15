@@ -4,11 +4,11 @@
 # Distributed under the terms of the Modified BSD License.
 
 version_info = (
+    1,
     0,
-    9,
     0,
     "",  # release (b1, rc1)
-    # "dev",  # dev
+    "dev",  # dev
 )
 
 # pep 440 version: no dot before beta/rc, but before .dev
