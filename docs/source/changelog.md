@@ -9,7 +9,7 @@ command line for details.
 
 ## 0.9
 
-### 0.9.0
+### [0.9.0] 2018-06-15
 
 JupyterHub 0.9 is a major upgrade of JupyterHub.
 There are several changes to the database schema,
@@ -379,7 +379,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...HEAD
+[0.9.0]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/jupyterhub/jupyterhub/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/jupyterhub/jupyterhub/compare/0.7.1...0.7.2
