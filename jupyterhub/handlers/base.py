@@ -1119,6 +1119,7 @@ class AddSlashHandler(BaseHandler):
         self.redirect(urlunparse(dest))
 
 default_handlers = [
+    (r'', AddSlashHandler),  # add trailing / to `/hub`
     (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
     (r'/user-redirect/(.*)?', UserRedirectHandler),
     (r'/security/csp-report', CSPReportHandler),
