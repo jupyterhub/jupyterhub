@@ -570,3 +570,12 @@ def test_announcements(app, announcements):
             app.authenticator.auto_login = auto_login
         r.raise_for_status()
         assert_announcement("logout", r.text)
+
+
+@pytest.mark.gen_test
+def test_server_not_running_api_request(app):
+    cookies = yield app.login_user("bees")
+    r = yield get_page("user/bees/api/status", app, hub=False, cookies=cookies)
+    assert r.status_code == 404
+    assert r.headers["content-type"] == "application/json"
+    assert r.json() == {"message": "bees is not running"}
