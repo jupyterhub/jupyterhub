@@ -365,8 +365,8 @@ class Proxy(LoggingConfigurable):
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
-        self.log.info("Adding default route for Hub: / => %s", hub.host)
-        return self.add_route('/', self.hub.host, {'hub': True})
+        self.log.info("Adding default route for Hub: %s => %s", hub.base_url[:-4], hub.host)
+        return self.add_route(hub.base_url[:-4], self.hub.host, {'hub': True})
 
     async def restore_routes(self):
         self.log.info("Setting up routes on new proxy")
