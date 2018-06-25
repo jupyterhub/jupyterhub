@@ -1002,7 +1002,7 @@ class LocalProcessSpawner(Spawner):
             which could change what the jupyterhub-singleuser launch command does.
             Only use this for trusted users.
         """
-    )
+    ).tag(config=True)
 
     proc = Instance(Popen,
         allow_none=True,
