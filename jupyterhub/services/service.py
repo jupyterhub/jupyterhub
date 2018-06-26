@@ -39,6 +39,7 @@ A hub-managed service with no URL::
 
 """
 
+import copy
 import pipes
 import shutil
 from subprocess import Popen
@@ -303,6 +304,15 @@ class Service(LoggingConfigurable):
         if self.url:
             env['JUPYTERHUB_SERVICE_URL'] = self.url
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
+
+        hub = self.hub
+        if self.hub.ip in ('0.0.0.0', ''):
+            # if the Hub is listening on all interfaces,
+            # tell services to connect via localhost
+            # since they are always local subprocesses
+            hub = copy.deepcopy(self.hub)
+            hub.connect_url = ''
+            hub.connect_ip = '127.0.0.1'
 
         self.spawner = _ServiceSpawner(
             cmd=self.command,
