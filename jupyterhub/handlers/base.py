@@ -6,6 +6,7 @@
 import copy
 from datetime import datetime, timedelta
 from http.client import responses
+import json
 import math
 import random
 import re
@@ -884,6 +885,13 @@ class UserSpawnHandler(BaseHandler):
     which will in turn send her to /user/alice/notebooks/mynotebook.ipynb.
     """
 
+    def _fail_api_request(self, user):
+        """Fail an API request to a not-running server"""
+        self.set_status(404)
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps({"message": "%s is not running" % user.name}))
+        self.finish()
+
     async def get(self, name, user_path):
         if not user_path:
             user_path = '/'
@@ -910,6 +918,11 @@ class UserSpawnHandler(BaseHandler):
             # otherwise redirect users to their own server
             should_spawn = (current_user and current_user.name == name)
 
+        if "api" in user_path.split("/") and not user.active:
+            # API request for not-running server (e.g. notebook UI left open)
+            # Avoid triggering a spawn.
+            self._fail_api_request(user)
+            return
 
         if should_spawn:
             # if spawning fails for any reason, point users to /hub/home to retry
