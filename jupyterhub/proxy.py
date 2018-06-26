@@ -22,7 +22,9 @@ import asyncio
 from functools import wraps
 import json
 import os
+import signal
 from subprocess import Popen
+import time
 from urllib.parse import quote
 
 from tornado import gen
@@ -437,6 +439,12 @@ class ConfigurableHTTPProxy(Proxy):
                       help="""The command to start the proxy"""
                       )
 
+    pid_file = Unicode(
+        "jupyterhub-proxy.pid",
+        config=True,
+        help="File in which to write the PID of the proxy process.",
+    )
+
     _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
 
     def __init__(self, **kwargs):
@@ -448,9 +456,72 @@ class ConfigurableHTTPProxy(Proxy):
                 " if Proxy.should_start is False" % self.__class__.__name__
             )
 
+    def _check_previous_process(self):
+        """Check if there's a process leftover and shut it down if so"""
+        if not self.pid_file or not os.path.exists(self.pid_file):
+            return
+        pid_file = os.path.abspath(self.pid_file)
+        self.log.warning("Found proxy pid file: %s", pid_file)
+        try:
+            with open(pid_file, "r") as f:
+                pid = int(f.read().strip())
+        except ValueError:
+            self.log.warning("%s did not appear to contain a pid", pid_file)
+            self._remove_pid_file()
+            return
 
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            self.log.warning("Proxy no longer running at pid=%s", pid)
+            self._remove_pid_file()
+            return
+
+        # if we got here, CHP is still running
+        self.log.warning("Proxy still running at pid=%s", pid)
+        for i, sig in enumerate([signal.SIGTERM] * 2 + [signal.SIGKILL]):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except ProcessLookupError:
+                break
+            time.sleep(1)
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                break
+
+        try:
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            self.log.warning("Stopped proxy at pid=%s", pid)
+            self._remove_pid_file()
+            return
+        else:
+            raise RuntimeError("Failed to stop proxy at pid=%s", pid)
+
+    def _write_pid_file(self):
+        """write pid for proxy to a file"""
+        self.log.debug("Writing proxy pid file: %s", self.pid_file)
+        with open(self.pid_file, "w") as f:
+            f.write(str(self.proxy_process.pid))
+
+    def _remove_pid_file(self):
+        """Cleanup pid file for proxy after stopping"""
+        if not self.pid_file:
+            return
+        self.log.debug("Removing proxy pid file %s", self.pid_file)
+        try:
+            os.remove(self.pid_file)
+        except FileNotFoundError:
+            self.log.debug("PID file %s already removed", self.pid_file)
+            pass
 
     async def start(self):
+        """Start the proxy process"""
+        # check if there is a previous instance still around
+        self._check_previous_process()
+
+        # build the command to launch
         public_server = Server.from_url(self.public_url)
         api_server = Server.from_url(self.api_url)
         env = os.environ.copy()
@@ -496,6 +567,8 @@ class ConfigurableHTTPProxy(Proxy):
             )
             raise
 
+        self._write_pid_file()
+
         def _check_process():
             status = self.proxy_process.poll()
             if status is not None:
@@ -519,13 +592,20 @@ class ConfigurableHTTPProxy(Proxy):
         self._check_running_callback = pc
         pc.start()
 
-    def _kill_proc_tree(self, pid):
-        import psutil
-        parent = psutil.Process(pid)
-        children = parent.children(recursive=True)
-        for child in children:
-            child.kill()
-        psutil.wait_procs(children, timeout=5)
+    def _terminate(self):
+        """Terminate our process"""
+        if os.name == 'nt':
+            # On Windows we spawned a shell on Popen, so we need to
+            # terminate all child processes as well
+            import psutil
+
+            parent = psutil.Process(self.proxy_process.pid)
+            children = parent.children(recursive=True)
+            for child in children:
+                child.kill()
+            psutil.wait_procs(children, timeout=5)
+        else:
+            self.proxy_process.terminate()
 
     def stop(self):
         self.log.info("Cleaning up proxy[%i]...", self.proxy_process.pid)
@@ -533,14 +613,10 @@ class ConfigurableHTTPProxy(Proxy):
             self._check_running_callback.stop()
         if self.proxy_process.poll() is None:
             try:
-                if os.name == 'nt':
-                     # On Windows we spawned a shell on Popen, so we need to
-                    # terminate all child processes as well
-                    self._kill_proc_tree(self.proxy_process.pid)
-                else:
-                    self.proxy_process.terminate()
+                self._terminate()
             except Exception as e:
                 self.log.error("Failed to terminate proxy process: %s", e)
+        self._remove_pid_file()
 
     async def check_running(self):
         """Check if the proxy is still running"""
@@ -549,6 +625,7 @@ class ConfigurableHTTPProxy(Proxy):
         self.log.error("Proxy stopped with exit code %r",
                        'unknown' if self.proxy_process is None else self.proxy_process.poll()
                        )
+        self._remove_pid_file()
         await self.start()
         await self.restore_routes()
 
