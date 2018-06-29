@@ -301,13 +301,13 @@ class Proxy(LoggingConfigurable):
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
 
-        good_routes = {'/'}
+        good_routes = {self.app.base_url}
 
-        hub = self.app.hub
-        if '/' not in routes:
+        hub = self.hub
+        if self.app.base_url not in routes:
             futures.append(self.add_hub_route(hub))
         else:
-            route = routes['/']
+            route = routes[self.app.base_url]
             if route['target'] != hub.host:
                 self.log.warning("Updating default route %s → %s", route['target'], hub.host)
                 futures.append(self.add_hub_route(hub))
@@ -365,8 +365,8 @@ class Proxy(LoggingConfigurable):
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
-        self.log.info("Adding default route for Hub: %s => %s", hub.base_url[:-4], hub.host)
-        return self.add_route(hub.base_url[:-4], self.hub.host, {'hub': True})
+        self.log.info("Adding default route for Hub: %s => %s", self.app.base_url, hub.host)
+        return self.add_route(self.app.base_url, self.hub.host, {'hub': True})
 
     async def restore_routes(self):
         self.log.info("Setting up routes on new proxy")
