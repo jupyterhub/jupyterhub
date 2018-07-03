@@ -213,7 +213,10 @@ class SingleUserNotebookApp(NotebookApp):
     subcommands = {}
     version = __version__
     classes = NotebookApp.classes + [HubOAuth]
-    
+
+    # disable single-user app's localhost checking
+    allow_remote_access = True
+
     # don't store cookie secrets
     cookie_secret_file = ''
     # always generate a new cookie secret on launch
@@ -225,7 +228,7 @@ class SingleUserNotebookApp(NotebookApp):
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)
-    
+
     @default('user')
     def _default_user(self):
         return os.environ.get('JUPYTERHUB_USER') or ''

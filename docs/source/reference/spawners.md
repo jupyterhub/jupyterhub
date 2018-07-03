@@ -46,7 +46,16 @@ Most `Spawner.start` functions will look similar to this example:
 def start(self):
     self.ip = '127.0.0.1'
     self.port = random_port()
-    yield self._actually_start_server_somehow()
+    # get environment variables,
+    # several of which are required for configuring the single-user server
+    env = self.get_env()
+    cmd = []
+    # get jupyterhub command to run,
+    # typically ['jupyterhub-singleuser']
+    cmd.extend(self.cmd)
+    cmd.extend(self.get_args())
+
+    yield self._actually_start_server_somehow(cmd, env)
     return (self.ip, self.port)
 ```
 

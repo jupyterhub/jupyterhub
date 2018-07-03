@@ -63,6 +63,9 @@ class Server(HasTraits):
     @validate('connect_url')
     def _connect_url_add_prefix(self, proposal):
         """Ensure connect_url includes base_url"""
+        if not proposal.value:
+            # Don't add the prefix if the setting is being cleared
+            return proposal.value
         urlinfo = urlparse(proposal.value)
         if not urlinfo.path.startswith(self.base_url):
             urlinfo = urlinfo._replace(path=self.base_url)
