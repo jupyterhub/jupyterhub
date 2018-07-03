@@ -79,7 +79,7 @@ def test_external_proxy(request):
 
     # test if api service has a root route '/'
     routes = yield app.proxy.get_all_routes()
-    assert list(routes.keys()) == ['/']
+    assert list(routes.keys()) == [app.hub.routespec]
     
     # add user to the db and start a single user server
     name = 'river'
@@ -95,7 +95,7 @@ def test_external_proxy(request):
     if app.subdomain_host:
         host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
     user_spec = host + user_path
-    assert sorted(routes.keys()) == ['/', user_spec]
+    assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 
     # teardown the proxy and start a new one in the same place
     proxy.terminate()
@@ -113,7 +113,7 @@ def test_external_proxy(request):
 
     # check that the routes are correct
     routes = yield app.proxy.get_all_routes()
-    assert sorted(routes.keys()) == ['/', user_spec]
+    assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 
     # teardown the proxy, and start a new one with different auth and port
     proxy.terminate()
@@ -146,7 +146,7 @@ def test_external_proxy(request):
 
     # check that the routes are correct
     routes = yield app.proxy.get_all_routes()
-    assert sorted(routes.keys()) == ['/', user_spec]
+    assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 
 
 @pytest.mark.gen_test

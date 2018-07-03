@@ -1055,7 +1055,7 @@ def test_get_proxy(app):
     r = yield api_request(app, 'proxy')
     r.raise_for_status()
     reply = r.json()
-    assert list(reply.keys()) == ['/']
+    assert list(reply.keys()) == [app.hub.routespec]
 
 
 @mark.gen_test

@@ -216,11 +216,12 @@ def test_spawn_form(app):
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
         yield u.stop()
-
-        r = yield async_requests.post(ujoin(base_url, 'spawn?next=/user/jones/tree'), cookies=cookies, data={
-            'bounds': ['-1', '1'],
-            'energy': '511keV',
-        })
+        next_url = ujoin(app.base_url, 'user/jones/tree')
+        r = yield async_requests.post(
+            url_concat(ujoin(base_url, 'spawn'), {'next': next_url}),
+            cookies=cookies,
+            data={'bounds': ['-1', '1'], 'energy': '511keV'},
+        )
         r.raise_for_status()
         assert r.history
         assert u.spawner.user_options == {
@@ -236,13 +237,13 @@ def test_spawn_form_admin_access(app, admin_access):
         base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = yield app.login_user('admin')
         u = add_user(app.db, app=app, name='martha')
+        next_url = ujoin(app.base_url, 'user', u.name, 'tree')
 
         r = yield async_requests.post(
-            ujoin(base_url, 'spawn/{0}?next=/user/{0}/tree'.format(u.name)),
-            cookies=cookies, data={
-            'bounds': ['-3', '3'],
-            'energy': '938MeV',
-        })
+            url_concat(ujoin(base_url, 'spawn', u.name), {'next': next_url}),
+            cookies=cookies,
+            data={'bounds': ['-3', '3'], 'energy': '938MeV'},
+        )
         r.raise_for_status()
         assert r.history
         assert r.url.startswith(public_url(app, u))

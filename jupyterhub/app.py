@@ -1108,7 +1108,18 @@ class JupyterHub(Application):
         else:
             hub_args['ip'] = self.hub_ip
             hub_args['port'] = self.hub_port
-        self.hub = Hub(**hub_args)
+
+        # routespec for the Hub is the *app* base url
+        # not the hub URL, so it receives requests for non-running servers
+        # use `/` with host-based routing so the Hub
+        # gets requests for all hosts
+        host = ''
+        if self.subdomain_host:
+            routespec = '/'
+        else:
+            routespec = self.base_url
+
+        self.hub = Hub(routespec=routespec, **hub_args)
 
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip

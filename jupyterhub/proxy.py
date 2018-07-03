@@ -25,7 +25,7 @@ import os
 import signal
 from subprocess import Popen
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
@@ -303,13 +303,13 @@ class Proxy(LoggingConfigurable):
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
 
-        good_routes = {'/'}
+        good_routes = {self.app.hub.routespec}
 
-        hub = self.app.hub
-        if '/' not in routes:
+        hub = self.hub
+        if self.app.hub.routespec not in routes:
             futures.append(self.add_hub_route(hub))
         else:
-            route = routes['/']
+            route = routes[self.app.hub.routespec]
             if route['target'] != hub.host:
                 self.log.warning("Updating default route %s → %s", route['target'], hub.host)
                 futures.append(self.add_hub_route(hub))
@@ -367,8 +367,8 @@ class Proxy(LoggingConfigurable):
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
-        self.log.info("Adding default route for Hub: / => %s", hub.host)
-        return self.add_route('/', self.hub.host, {'hub': True})
+        self.log.info("Adding default route for Hub: %s => %s", hub.routespec, hub.host)
+        return self.add_route(hub.routespec, self.hub.host, {'hub': True})
 
     async def restore_routes(self):
         self.log.info("Setting up routes on new proxy")
