@@ -185,6 +185,7 @@ class Hub(Server):
         )
         return self
     public_host = Unicode()
+    routespec = Unicode()
 
     @property
     def api_url(self):
