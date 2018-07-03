@@ -15,7 +15,7 @@ This section provides the following information about Services:
 ## Definition of a Service
 
 When working with JupyterHub, a **Service** is defined as a process that interacts
-with the Hub's REST API. A Service may perform a specific or
+with the Hub's REST API. A Service may perform a specific
 action or task. For example, the following tasks can each be a unique Service:
 
 - shutting down individuals' single user notebook servers that have been idle
