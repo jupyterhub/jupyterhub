@@ -18,7 +18,8 @@ JupyterHub 0.9.1 contains a number of small bugfixes on top of 0.9.
 - API requests to stopped servers (requests to the hub for `/user/:name/api/...`) fail with 404 rather than triggering a restart of the server
 - Compatibility fix for notebook 5.6.0 which will introduce further
   security checks for local connections
-- Managed services always use localhost to talk to the Hub if it's listening on all interfaces.
+- Managed services always use localhost to talk to the Hub if the Hub listening on all interfaces
+- When using a URL prefix, the Hub route will be `JupyterHub.base_url` instead of unconditionally `/`
 - additional fixes and improvements
 
 ### [0.9.0] 2018-06-15
