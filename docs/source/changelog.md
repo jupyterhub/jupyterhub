@@ -9,6 +9,19 @@ command line for details.
 
 ## 0.9
 
+### [0.9.1]
+
+JupyterHub 0.9.1 contains a number of small bugfixes on top of 0.9.
+
+- Use a PID file for the proxy to decrease the likelihood that a leftover proxy process will prevent JupyterHub from restarting
+- `c.LocalProcessSpawner.shell_cmd` is now configurable
+- API requests to stopped servers (requests to the hub for `/user/:name/api/...`) fail with 404 rather than triggering a restart of the server
+- Compatibility fix for notebook 5.6.0 which will introduce further
+  security checks for local connections
+- Managed services always use localhost to talk to the Hub if the Hub listening on all interfaces
+- When using a URL prefix, the Hub route will be `JupyterHub.base_url` instead of unconditionally `/`
+- additional fixes and improvements
+
 ### [0.9.0] 2018-06-15
 
 JupyterHub 0.9 is a major upgrade of JupyterHub.
@@ -379,7 +392,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...HEAD
+[0.9.1]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/jupyterhub/jupyterhub/compare/0.7.2...0.8.0
