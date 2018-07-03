@@ -1111,10 +1111,13 @@ class JupyterHub(Application):
 
         # routespec for the Hub is the *app* base url
         # not the hub URL, so it receives requests for non-running servers
+        # use `/` with host-based routing so the Hub
+        # gets requests for all hosts
         host = ''
         if self.subdomain_host:
-            host = urlparse(self.subdomain_host).hostname
-        routespec = host + self.base_url
+            routespec = '/'
+        else:
+            routespec = self.base_url
 
         self.hub = Hub(routespec=routespec, **hub_args)
 
