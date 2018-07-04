@@ -9,7 +9,7 @@ command line for details.
 
 ## 0.9
 
-### [0.9.1]
+### [0.9.1] 2018-07-04
 
 JupyterHub 0.9.1 contains a number of small bugfixes on top of 0.9.
 
