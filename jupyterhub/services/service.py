@@ -42,6 +42,7 @@ A hub-managed service with no URL::
 import copy
 import pipes
 import shutil
+import os
 from subprocess import Popen
 
 from traitlets import (
@@ -106,6 +107,8 @@ class _ServiceSpawner(LocalProcessSpawner):
     def start(self):
         """Start the process"""
         env = self.get_env()
+        if os.name == 'nt':
+            env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
         cmd = self.cmd
 
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
