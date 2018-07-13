@@ -331,7 +331,7 @@ class User:
             url_parts.extend(['server/progress'])
         return url_path_join(*url_parts)
 
-    async def spawn(self, server_name='', options=None):
+    async def spawn(self, server_name='', options=None, handler=None):
         """Start the user's spawner
 
         depending from the value of JupyterHub.allow_named_servers
@@ -361,6 +361,9 @@ class User:
         spawner.server = server = Server(orm_server=orm_server)
         assert spawner.orm_spawner.server is orm_server
 
+        # pass requesting handler to the spawner
+        # e.g. for processing GET params
+        spawner.handler = handler
         # Passing user_options to the spawner
         spawner.user_options = options or {}
         # we are starting a new server, make sure it doesn't restore state
@@ -484,6 +487,9 @@ class User:
             # raise original exception
             spawner._start_pending = False
             raise e
+        finally:
+            # clear reference to handler after start finishes
+            spawner.handler = None
         spawner.start_polling()
 
         # store state

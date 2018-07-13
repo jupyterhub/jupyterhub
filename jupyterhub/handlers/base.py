@@ -602,7 +602,7 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Initiating spawn for %s", user_server_name)
 
-        spawn_future = user.spawn(server_name, options)
+        spawn_future = user.spawn(server_name, options, handler=self)
 
         self.log.debug("%i%s concurrent spawns",
             spawn_pending_count,
