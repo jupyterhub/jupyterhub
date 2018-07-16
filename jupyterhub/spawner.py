@@ -195,6 +195,19 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    consecutive_failure_limit = Integer(
+        0,
+        help="""
+        Maximum number of consecutive failures to allow before
+        shutting down JupyterHub.
+
+        This helps JupyterHub recover from a certain class of problem preventing launch
+        in contexts where the Hub is automatically restarted (e.g. systemd, docker, kubernetes).
+
+        A limit of 0 means no limit and consecutive failures will not be tracked.
+        """,
+    ).tag(config=True)
+
     start_timeout = Integer(60,
         help="""
         Timeout (in seconds) before giving up on starting of single-user server.
