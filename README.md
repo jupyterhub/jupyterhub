@@ -11,8 +11,8 @@
 
 
 [![PyPI](https://img.shields.io/pypi/v/jupyterhub.svg)](https://pypi.python.org/pypi/jupyterhub)
-[![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](http://jupyterhub.readthedocs.org/en/latest/?badge=latest)
-[![Documentation Status](http://readthedocs.org/projects/jupyterhub/badge/?version=0.7.2)](http://jupyterhub.readthedocs.io/en/0.7.2/?badge=0.7.2)
+[![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](https://jupyterhub.readthedocs.org/en/latest/?badge=latest)
+[![Documentation Status](http://readthedocs.org/projects/jupyterhub/badge/?version=0.7.2)](https://jupyterhub.readthedocs.io/en/0.7.2/?badge=0.7.2)
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
@@ -124,7 +124,7 @@ more configuration of the system.
 
 ## Configuration
 
-The [Getting Started](http://jupyterhub.readthedocs.io/en/latest/getting-started/index.html) section of the
+The [Getting Started](https://jupyterhub.readthedocs.io/en/latest/getting-started/index.html) section of the
 documentation explains the common steps in setting up JupyterHub.
 
 The [**JupyterHub tutorial**](https://github.com/jupyterhub/jupyterhub-tutorial)
@@ -233,7 +233,7 @@ our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
 
 - [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
-- [Documentation for JupyterHub](http://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
+- [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
 - [Documentation for JupyterHub's REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
