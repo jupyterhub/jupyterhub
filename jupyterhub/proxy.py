@@ -447,6 +447,14 @@ class ConfigurableHTTPProxy(Proxy):
 
     _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
 
+    def _check_pid(self, pid):
+        if os.name == 'nt':
+            import psutil
+            if not psutil.pid_exists(pid):
+                raise ProcessLookupError
+        else:
+            os.kill(pid, 0)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # check for required token if proxy is external
@@ -471,7 +479,7 @@ class ConfigurableHTTPProxy(Proxy):
             return
 
         try:
-            os.kill(pid, 0)
+            self._check_pid(pid)
         except ProcessLookupError:
             self.log.warning("Proxy no longer running at pid=%s", pid)
             self._remove_pid_file()
@@ -486,12 +494,12 @@ class ConfigurableHTTPProxy(Proxy):
                 break
             time.sleep(1)
             try:
-                os.kill(pid, 0)
+                self._check_pid(pid)
             except ProcessLookupError:
                 break
 
         try:
-            os.kill(pid, 0)
+            self._check_pid(pid)
         except ProcessLookupError:
             self.log.warning("Stopped proxy at pid=%s", pid)
             self._remove_pid_file()
