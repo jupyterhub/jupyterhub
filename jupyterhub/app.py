@@ -1921,8 +1921,7 @@ class JupyterHub(Application):
 
     def sigterm(self, signum, frame):
         self.log.critical("Received SIGTERM, shutting down")
-        self.io_loop.stop()
-        self.atexit()
+        raise SystemExit(128 + signum)
 
     _atexit_ran = False
 
@@ -1932,6 +1931,7 @@ class JupyterHub(Application):
             return
         self._atexit_ran = True
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        asyncio.set_event_loop(asyncio.new_event_loop())
         IOLoop.clear_current()
         loop = IOLoop()
         loop.make_current()
