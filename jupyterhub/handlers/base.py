@@ -657,6 +657,7 @@ class BaseHandler(RequestHandler):
         # hook up spawner._spawn_future so that other requests can await
         # this result
         finish_spawn_future = spawner._spawn_future = maybe_future(finish_user_spawn())
+
         def _clear_spawn_future(f):
             # clear spawner._spawn_future when it's done
             # keep an exception around, though, to prevent repeated implicit spawns
@@ -665,10 +666,44 @@ class BaseHandler(RequestHandler):
                 spawner._spawn_future = None
             # Now we're all done. clear _spawn_pending flag
             spawner._spawn_pending = False
+
         finish_spawn_future.add_done_callback(_clear_spawn_future)
 
+        # when spawn finishes (success or failure)
+        # update failure count and abort if consecutive failure limit
+        # is reached
+        def _track_failure_count(f):
+            if f.exception() is None:
+                # spawn succeeded, reset failure count
+                self.settings['failure_count'] = 0
+                return
+            # spawn failed, increment count and abort if limit reached
+            self.settings.setdefault('failure_count', 0)
+            self.settings['failure_count'] += 1
+            failure_count = self.settings['failure_count']
+            failure_limit = spawner.consecutive_failure_limit
+            if failure_limit and 1 < failure_count < failure_limit:
+                self.log.warning(
+                    "%i consecutive spawns failed.  "
+                    "Hub will exit if failure count reaches %i before succeeding",
+                    failure_count, failure_limit,
+                )
+            if failure_limit and failure_count >= failure_limit:
+                self.log.critical(
+                    "Aborting due to %i consecutive spawn failures", failure_count
+                )
+                # abort in 2 seconds to allow pending handlers to resolve
+                # mostly propagating errors for the current failures
+                def abort():
+                    raise SystemExit(1)
+                IOLoop.current().call_later(2, abort)
+
+        finish_spawn_future.add_done_callback(_track_failure_count)
+
         try:
-            await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
+            await gen.with_timeout(
+                timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future
+            )
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
