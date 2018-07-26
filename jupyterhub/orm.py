@@ -77,9 +77,6 @@ class Server(Base):
     port = Column(Integer, default=random_port)
     base_url = Column(Unicode(255), default='/')
     cookie_name = Column(Unicode(255), default='cookie')
-    certfile = Column(Unicode(4096), default='')
-    keyfile = Column(Unicode(4096), default='')
-    cafile = Column(Unicode(4096), default='')
 
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)

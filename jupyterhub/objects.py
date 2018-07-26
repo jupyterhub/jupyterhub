@@ -126,9 +126,6 @@ class Server(HasTraits):
         self.port = obj.port
         self.base_url = obj.base_url
         self.cookie_name = obj.cookie_name
-        self.certfile = obj.certfile
-        self.keyfile = obj.keyfile
-        self.cafile = obj.cafile
 
     # setter to pass through to the database
     @observe('ip', 'proto', 'port', 'base_url', 'cookie_name')

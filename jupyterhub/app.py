@@ -1439,9 +1439,6 @@ class JupyterHub(Application):
                     port=port,
                     cookie_name='jupyterhub-services',
                     base_url=service.prefix,
-                    certfile=self.internal_ssl_cert,
-                    keyfile=self.internal_ssl_key,
-                    cafile=self.internal_ssl_ca,
                 )
                 self.db.add(server)
 
