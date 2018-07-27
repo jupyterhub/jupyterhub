@@ -633,6 +633,13 @@ class Spawner(LoggingConfigurable):
         if self.cpu_guarantee:
             env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
+        if self.internal_ssl:
+            key, cert, ca = self.move_certs(self.create_certs())
+
+            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = key
+            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = cert
+            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = ca
+
         return env
 
     def template_namespace(self):
@@ -747,14 +754,6 @@ class Spawner(LoggingConfigurable):
         if self.default_url:
             default_url = self.format_string(self.default_url)
             args.append('--NotebookApp.default_url="%s"' % default_url)
-
-        if self.internal_ssl:
-            key, cert, ca = self.move_certs(self.create_certs())
-
-            args.append('--keyfile="%s"' % key)
-            args.append('--certfile="%s"' % cert)
-            if ca:
-                args.append('--client-ca="%s"' % ca)
 
         if self.debug:
             args.append('--debug')

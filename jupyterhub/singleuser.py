@@ -237,27 +237,6 @@ class SingleUserNotebookApp(NotebookApp):
     def _default_group(self):
         return os.environ.get('JUPYTERHUB_GROUP') or ''
 
-    keyfile = Unicode('',
-        help="""The ssl key to use for requests
-
-        Use with certfile
-        """
-    ).tag(config=True)
-
-    certfile = Unicode('',
-        help="""The ssl cert to use for requests
-
-        Use with keyfile
-        """
-    ).tag(config=True)
-
-    client_ca = Unicode('',
-        help="""The ssl certificate authority to use to verify requests
-
-        Use with keyfile and certfile
-        """
-    ).tag(config=True)
-
     @observe('user')
     def _user_changed(self, change):
         self.log.name = change.new
@@ -265,6 +244,18 @@ class SingleUserNotebookApp(NotebookApp):
     hub_host = Unicode().tag(config=True)
 
     hub_prefix = Unicode('/hub/').tag(config=True)
+
+    @default('keyfile')
+    def _keyfile_default(self):
+        return os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_KEYFILE') or ''
+
+    @default('certfile')
+    def _certfile_default(self):
+        return os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CERTFILE') or ''
+
+    @default('client_ca')
+    def _client_ca_default(self):
+        return os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA') or ''
 
     @default('hub_prefix')
     def _hub_prefix_default(self):
