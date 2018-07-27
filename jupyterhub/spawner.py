@@ -710,7 +710,7 @@ class Spawner(LoggingConfigurable):
             home = user.pw_dir
 
             # Create dir for user's certs wherever we're starting
-            out_dir = "{home}/.jupyter/certs".format(home=home)
+            out_dir = "{home}/.jupyterhub/jupyterhub-certs".format(home=home)
             shutil.rmtree(out_dir, ignore_errors=True)
             os.makedirs(out_dir, 0o700, exist_ok=True)
 
