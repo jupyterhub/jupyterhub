@@ -634,11 +634,11 @@ class Spawner(LoggingConfigurable):
             env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
         if self.internal_ssl:
-            key, cert, ca = self.move_certs(self.create_certs())
+            files = self.move_certs(self.create_certs())
 
-            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = key
-            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = cert
-            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = ca
+            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = files['keyfile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = files['certfile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = files['cafile']
 
         return env
 
@@ -730,7 +730,7 @@ class Spawner(LoggingConfigurable):
         except KeyError:
             self.log.debug("User {} not found on system, not moving certs".format(self.user.name))
 
-        return [key, cert, ca]
+        return {"keyfile": key, "certfile": cert, "cafile": ca}
 
     def get_args(self):
         """Return the arguments to be passed after self.cmd
