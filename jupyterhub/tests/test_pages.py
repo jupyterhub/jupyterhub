@@ -17,6 +17,7 @@ from .mocking import FormSpawner, public_url, public_host
 from .test_api import api_request, add_user
 from .utils import async_requests
 
+
 def get_page(path, app, hub=True, **kw):
     if hub:
         prefix = app.hub.base_url
@@ -215,11 +216,12 @@ def test_spawn_form(app):
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
         yield u.stop()
-
-        r = yield async_requests.post(ujoin(base_url, 'spawn?next=/user/jones/tree'), cookies=cookies, data={
-            'bounds': ['-1', '1'],
-            'energy': '511keV',
-        })
+        next_url = ujoin(app.base_url, 'user/jones/tree')
+        r = yield async_requests.post(
+            url_concat(ujoin(base_url, 'spawn'), {'next': next_url}),
+            cookies=cookies,
+            data={'bounds': ['-1', '1'], 'energy': '511keV'},
+        )
         r.raise_for_status()
         assert r.history
         assert u.spawner.user_options == {
@@ -235,13 +237,13 @@ def test_spawn_form_admin_access(app, admin_access):
         base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = yield app.login_user('admin')
         u = add_user(app.db, app=app, name='martha')
+        next_url = ujoin(app.base_url, 'user', u.name, 'tree')
 
         r = yield async_requests.post(
-            ujoin(base_url, 'spawn/{0}?next=/user/{0}/tree'.format(u.name)),
-            cookies=cookies, data={
-            'bounds': ['-3', '3'],
-            'energy': '938MeV',
-        })
+            url_concat(ujoin(base_url, 'spawn', u.name), {'next': next_url}),
+            cookies=cookies,
+            data={'bounds': ['-3', '3'], 'energy': '938MeV'},
+        )
         r.raise_for_status()
         assert r.history
         assert r.url.startswith(public_url(app, u))
@@ -517,3 +519,64 @@ def test_oauth_token_page(app):
 def test_proxy_error(app, error_status):
     r = yield get_page('/error/%i' % error_status, app)
     assert r.status_code == 200
+
+
+@pytest.mark.gen_test
+@pytest.mark.parametrize(
+    "announcements",
+    [
+        "",
+        "spawn",
+        "spawn,home,login",
+        "login,logout",
+    ]
+)
+def test_announcements(app, announcements):
+    """Test announcements on various pages"""
+    # Default announcement - same on all pages
+    ann01 = "ANNOUNCE01"
+    template_vars = {"announcement": ann01}
+    announcements = announcements.split(",")
+    for name in announcements:
+        template_vars["announcement_" + name] = "ANN_" + name
+
+    def assert_announcement(name, text):
+        if name in announcements:
+            assert template_vars["announcement_" + name] in text
+            assert ann01 not in text
+        else:
+            assert ann01 in text
+
+    cookies = yield app.login_user("jones")
+
+    with mock.patch.dict(
+        app.tornado_settings,
+        {"template_vars": template_vars, "spawner_class": FormSpawner},
+    ):
+        r = yield get_page("login", app)
+        r.raise_for_status()
+        assert_announcement("login", r.text)
+        r = yield get_page("spawn", app, cookies=cookies)
+        r.raise_for_status()
+        assert_announcement("spawn", r.text)
+        r = yield get_page("home", app, cookies=cookies)  # hub/home
+        r.raise_for_status()
+        assert_announcement("home", r.text)
+        # need auto_login=True to get logout page
+        auto_login = app.authenticator.auto_login
+        app.authenticator.auto_login = True
+        try:
+            r = yield get_page("logout", app, cookies=cookies)
+        finally:
+            app.authenticator.auto_login = auto_login
+        r.raise_for_status()
+        assert_announcement("logout", r.text)
+
+
+@pytest.mark.gen_test
+def test_server_not_running_api_request(app):
+    cookies = yield app.login_user("bees")
+    r = yield get_page("user/bees/api/status", app, hub=False, cookies=cookies)
+    assert r.status_code == 404
+    assert r.headers["content-type"] == "application/json"
+    assert r.json() == {"message": "bees is not running"}

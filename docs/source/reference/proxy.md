@@ -2,7 +2,7 @@
 
 JupyterHub 0.8 introduced the ability to write a custom implementation of the
 proxy. This enables deployments with different needs than the default proxy,
-configurable-http-proxy (CHP). CHP is a single-process nodejs proxy that they
+configurable-http-proxy (CHP). CHP is a single-process nodejs proxy that the
 Hub manages by default as a subprocess (it can be run externally, as well, and
 typically is in production deployments).
 

@@ -9,7 +9,20 @@ command line for details.
 
 ## 0.9
 
-### 0.9.0
+### [0.9.1] 2018-07-04
+
+JupyterHub 0.9.1 contains a number of small bugfixes on top of 0.9.
+
+- Use a PID file for the proxy to decrease the likelihood that a leftover proxy process will prevent JupyterHub from restarting
+- `c.LocalProcessSpawner.shell_cmd` is now configurable
+- API requests to stopped servers (requests to the hub for `/user/:name/api/...`) fail with 404 rather than triggering a restart of the server
+- Compatibility fix for notebook 5.6.0 which will introduce further
+  security checks for local connections
+- Managed services always use localhost to talk to the Hub if the Hub listening on all interfaces
+- When using a URL prefix, the Hub route will be `JupyterHub.base_url` instead of unconditionally `/`
+- additional fixes and improvements
+
+### [0.9.0] 2018-06-15
 
 JupyterHub 0.9 is a major upgrade of JupyterHub.
 There are several changes to the database schema,
@@ -93,6 +106,12 @@ and tornado < 5.0.
 - Add session-id cookie, enabling immediate revocation of login tokens.
 - Authenticators may specify that users are admins by specifying the `admin` key when return the user model as a dict.
 - Added "Start All" button to admin page for launching all user servers at once.
+- Services have an `info` field which is a dictionary.
+  This is accessible via the REST API.
+- `JupyterHub.extra_handlers` allows defining additonal tornado RequestHandlers attached to the Hub.
+- API tokens may now expire.
+  Expiry is available in the REST model as `expires_at`,
+  and settable when creating API tokens by specifying `expires_in`.
 
 
 #### Fixed
@@ -113,6 +132,11 @@ and tornado < 5.0.
 - Various fixes in race conditions and performance improvements with the default proxy.
 - Fixes for CORS headers
 - Stop setting `.form-control` on spawner form inputs unconditionally.
+- Better recovery from database errors and database connection issues
+  without having to restart the Hub.
+- Fix handling of `~` character in usernames.
+- Fix jupyterhub startup when `getpass.getuser()` would fail,
+  e.g. due to missing entry in passwd file in containers.
 
 
 ## 0.8
@@ -368,7 +392,9 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...HEAD
+[0.9.1]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...0.9.1
+[0.9.0]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...0.8.1
 [0.8.0]: https://github.com/jupyterhub/jupyterhub/compare/0.7.2...0.8.0
 [0.7.2]: https://github.com/jupyterhub/jupyterhub/compare/0.7.1...0.7.2

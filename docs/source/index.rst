@@ -58,6 +58,8 @@ Contents
 * :doc:`reference/services`
 * :doc:`reference/rest`
 * :doc:`reference/upgrading`
+* :doc:`reference/templates`
+* :doc:`reference/config-user-env`
 * :doc:`reference/config-examples`
 * :doc:`reference/config-ghoauth`
 * :doc:`reference/config-proxy`

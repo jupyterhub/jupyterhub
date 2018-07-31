@@ -62,5 +62,7 @@ matrix:
     - python: 3.6
       env:
         - JUPYTERHUB_TEST_DB_URL=postgresql://postgres@127.0.0.1/jupyterhub
+    - python: 3.7
+      dist: xenial
   allow_failures:
     - python: nightly

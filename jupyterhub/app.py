@@ -976,8 +976,6 @@ class JupyterHub(Application):
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
-            # add trailing / to `/hub`
-            (self.hub_prefix.rstrip('/'), handlers.AddSlashHandler),
             # add trailing / to ``/user|services/:name`
             (r"%s(user|services)/([^/]+)" % self.base_url, handlers.AddSlashHandler),
             (r"(?!%s).*" % self.hub_prefix, handlers.PrefixRedirectHandler),
@@ -1110,7 +1108,18 @@ class JupyterHub(Application):
         else:
             hub_args['ip'] = self.hub_ip
             hub_args['port'] = self.hub_port
-        self.hub = Hub(**hub_args)
+
+        # routespec for the Hub is the *app* base url
+        # not the hub URL, so it receives requests for non-running servers
+        # use `/` with host-based routing so the Hub
+        # gets requests for all hosts
+        host = ''
+        if self.subdomain_host:
+            routespec = '/'
+        else:
+            routespec = self.base_url
+
+        self.hub = Hub(routespec=routespec, **hub_args)
 
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
@@ -1912,8 +1921,7 @@ class JupyterHub(Application):
 
     def sigterm(self, signum, frame):
         self.log.critical("Received SIGTERM, shutting down")
-        self.io_loop.stop()
-        self.atexit()
+        raise SystemExit(128 + signum)
 
     _atexit_ran = False
 
@@ -1923,6 +1931,7 @@ class JupyterHub(Application):
             return
         self._atexit_ran = True
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        asyncio.set_event_loop(asyncio.new_event_loop())
         IOLoop.clear_current()
         loop = IOLoop()
         loop.make_current()

@@ -6,6 +6,7 @@
 import copy
 from datetime import datetime, timedelta
 from http.client import responses
+import json
 import math
 import random
 import re
@@ -656,6 +657,7 @@ class BaseHandler(RequestHandler):
         # hook up spawner._spawn_future so that other requests can await
         # this result
         finish_spawn_future = spawner._spawn_future = maybe_future(finish_user_spawn())
+
         def _clear_spawn_future(f):
             # clear spawner._spawn_future when it's done
             # keep an exception around, though, to prevent repeated implicit spawns
@@ -664,10 +666,44 @@ class BaseHandler(RequestHandler):
                 spawner._spawn_future = None
             # Now we're all done. clear _spawn_pending flag
             spawner._spawn_pending = False
+
         finish_spawn_future.add_done_callback(_clear_spawn_future)
 
+        # when spawn finishes (success or failure)
+        # update failure count and abort if consecutive failure limit
+        # is reached
+        def _track_failure_count(f):
+            if f.exception() is None:
+                # spawn succeeded, reset failure count
+                self.settings['failure_count'] = 0
+                return
+            # spawn failed, increment count and abort if limit reached
+            self.settings.setdefault('failure_count', 0)
+            self.settings['failure_count'] += 1
+            failure_count = self.settings['failure_count']
+            failure_limit = spawner.consecutive_failure_limit
+            if failure_limit and 1 < failure_count < failure_limit:
+                self.log.warning(
+                    "%i consecutive spawns failed.  "
+                    "Hub will exit if failure count reaches %i before succeeding",
+                    failure_count, failure_limit,
+                )
+            if failure_limit and failure_count >= failure_limit:
+                self.log.critical(
+                    "Aborting due to %i consecutive spawn failures", failure_count
+                )
+                # abort in 2 seconds to allow pending handlers to resolve
+                # mostly propagating errors for the current failures
+                def abort():
+                    raise SystemExit(1)
+                IOLoop.current().call_later(2, abort)
+
+        finish_spawn_future.add_done_callback(_track_failure_count)
+
         try:
-            await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
+            await gen.with_timeout(
+                timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future
+            )
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
@@ -884,6 +920,13 @@ class UserSpawnHandler(BaseHandler):
     which will in turn send her to /user/alice/notebooks/mynotebook.ipynb.
     """
 
+    def _fail_api_request(self, user):
+        """Fail an API request to a not-running server"""
+        self.set_status(404)
+        self.set_header("Content-Type", "application/json")
+        self.write(json.dumps({"message": "%s is not running" % user.name}))
+        self.finish()
+
     async def get(self, name, user_path):
         if not user_path:
             user_path = '/'
@@ -910,6 +953,11 @@ class UserSpawnHandler(BaseHandler):
             # otherwise redirect users to their own server
             should_spawn = (current_user and current_user.name == name)
 
+        if "api" in user_path.split("/") and not user.active:
+            # API request for not-running server (e.g. notebook UI left open)
+            # Avoid triggering a spawn.
+            self._fail_api_request(user)
+            return
 
         if should_spawn:
             # if spawning fails for any reason, point users to /hub/home to retry
@@ -1119,6 +1167,7 @@ class AddSlashHandler(BaseHandler):
         self.redirect(urlunparse(dest))
 
 default_handlers = [
+    (r'', AddSlashHandler),  # add trailing / to `/hub`
     (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
     (r'/user-redirect/(.*)?', UserRedirectHandler),
     (r'/security/csp-report', CSPReportHandler),

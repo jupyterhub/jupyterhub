@@ -252,6 +252,17 @@ paths:
               $ref: '#/definitions/Token'
     post:
       summary: Create a new token for the user
+      parameters:
+        - name: expires_in
+          type: number
+          required: false
+          in: body
+          description: lifetime (in seconds) after which the requested token will expire.
+        - name: note
+          type: string
+          required: false
+          in: body
+          description: A note attached to the token for future bookkeeping
       responses:
         '201':
           description: The newly created token
@@ -716,6 +727,10 @@ definitions:
         type: string
         format: date-time
         description: Timestamp when this token was created
+      expires_at:
+        type: string
+        format: date-time
+        description: Timestamp when this token expires. Null if there is no expiry.
       last_activity:
         type: string
         format: date-time

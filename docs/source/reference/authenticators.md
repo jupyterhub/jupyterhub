@@ -226,5 +226,5 @@ Beginning with version 0.8, JupyterHub is an OAuth provider.
 [OAuth]: https://en.wikipedia.org/wiki/OAuth
 [GitHub OAuth]: https://developer.github.com/v3/oauth/
 [OAuthenticator]: https://github.com/jupyterhub/oauthenticator
-[pre_spawn_start(user, spawner)]: http://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.pre_spawn_start
-[post_spawn_stop(user, spawner)]: http://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.post_spawn_stop
+[pre_spawn_start(user, spawner)]: https://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.pre_spawn_start
+[post_spawn_stop(user, spawner)]: https://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.post_spawn_stop
