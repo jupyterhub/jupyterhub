@@ -1,0 +1,14 @@
+{% extends "templates/page.html" %}
+{% block announcement %}
+<div class="container text-center announcement">
+</div>
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script>
+$.get("/services/announcement/", function(data) {
+    $(".announcement").html(data["announcement"]);
+});
+</script>
+{% endblock %}
