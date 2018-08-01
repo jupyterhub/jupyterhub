@@ -32,6 +32,7 @@ from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
 )
+from ..apihandlers.users import admin_or_self
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -932,6 +933,7 @@ class UserSpawnHandler(BaseHandler):
         self.write(json.dumps({"message": "%s is not running" % user.name}))
         self.finish()
 
+    @admin_or_self
     async def post(self, user_name, user_path, server_name=''):
         if server_name == '':
             if not user_path:
@@ -1131,7 +1133,86 @@ class UserSpawnHandler(BaseHandler):
                 ))
 
         else:
-            raise NotImplementedError('Named servers via UI has not been implemented yet.')
+            if not self.allow_named_servers:
+                raise web.HTTPError(400, "Named servers are not enabled.")
+            else:
+                user = self.find_user(user_name) #/handlers/base
+                # user = self.find_user(user_name) #/apihandlers/users
+                if user is None:
+                    # no such user
+                    raise web.HTTPError(404, "No such user %s" % user_name)
+                spawner = user.spawners[server_name] #/apihandlers/users
+                # spawner = user.spawner #/handlers/base
+                pending = spawner.pending #/apihandlers/users
+
+                # check for pending spawn
+                if pending == 'spawn' and spawner._spawn_future:
+                    # wait on the pending spawn
+                    self.log.debug("Waiting for %s pending %s", spawner._log_name, pending)
+                    try:
+                        await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
+                    except gen.TimeoutError:
+                        self.log.info("Pending spawn for %s didn't finish in %.1f seconds", spawner._log_name, self.slow_spawn_timeout)
+                        pass
+
+                # we may have waited above, check pending again:
+                # page could be pending spawn *or* stop
+                if pending:
+                    self.log.info("%s is pending %s", spawner._log_name, pending)
+                    # spawn has started, but not finished
+                    self.statsd.incr('redirects.user_spawn_pending', 1)
+                    url_parts = []
+                    if pending == "stop":
+                        page = "stop_pending.html"
+                    else:
+                        page = "spawn_pending.html"
+                    html = self.render_template(
+                        page,
+                        user=user,
+                        spawner=spawner,
+                        progress_url=spawner._progress_url,
+                    )
+                    self.finish(html)
+                    raise web.HTTPError(400, "%s is pending %s" % (spawner._log_name, pending)) #/apihandlers/users
+
+                # spawn has supposedly finished, check on the status
+                if spawner.ready:
+                    # include notify, so that a server that died is noticed immediately
+                    # set _spawn_pending flag to prevent races while we wait
+                    spawner._spawn_pending = True
+                    try:
+                        status = await spawner.poll_and_notify()
+                    finally:
+                        spawner._spawn_pending = False
+                    if status is None:
+                        raise web.HTTPError(400, "%s is already running" % spawner._log_name)
+                    else:
+                        # server is not running, trigger spawn
+                        if spawner.options_form:
+                            url_parts = [self.hub.base_url, 'spawn']
+                            if current_user.name != user.name:
+                                # spawning on behalf of another user
+                                url_parts.append(user.name)
+                                self.redirect(url_concat(url_path_join(*url_parts),
+                                                {'next': self.request.uri}))
+                        return
+                    else:
+                        await self.spawn_single_user(user, server_name) #/apihandlers/users line 373
+
+                # spawn didn't finish, show pending page
+                if pending:
+                    self.log.info("%s is pending %s", spawner._log_name, pending)
+                    # spawn has started, but not finished
+                    self.statsd.incr('redirects.user_spawn_pending', 1)
+                    html = self.render_template(
+                        "spawn_pending.html",
+                        user=user,
+                        progress_url=spawner._progress_url,
+                    )
+                    self.finish(html)
+                    raise web.HTTPError(400, "%s is pending %s" % (spawner._log_name, pending)) #/apihandlers/users
+
+                raise NotImplementedError('Named servers via UI has not been implemented yet.')
 
 
 class UserRedirectHandler(BaseHandler):
