@@ -66,8 +66,8 @@ class Spawner(LoggingConfigurable):
 
         Used in logging for consistency with named servers.
         """
-        if self.server_name:
-            return '%s:%s' % (self.user.name, self.server_name)
+        if self.name:
+            return '%s:%s' % (self.user.name, self.name)
         else:
             return self.user.name
 
@@ -154,9 +154,9 @@ class Spawner(LoggingConfigurable):
                 self.orm_spawner.server = server.orm_server
 
     @property
-    def server_name(self):
+    def name(self):
         if self.orm_spawner:
-            return self.orm_spawner.server_name
+            return self.orm_spawner.name
         return ''
     admin_access = Bool(False)
     api_token = Unicode()
@@ -617,7 +617,7 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_COOKIE_OPTIONS'] = json.dumps(self.cookie_options)
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = \
-            url_path_join(self.user.url, self.server_name, 'oauth_callback')
+            url_path_join(self.user.url, self.name, 'oauth_callback')
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
@@ -724,7 +724,7 @@ class Spawner(LoggingConfigurable):
 
     @property
     def _progress_url(self):
-        return self.user.progress_url(self.server_name)
+        return self.user.progress_url(self.name)
 
     @async_generator
     async def _generate_progress(self):

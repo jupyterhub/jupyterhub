@@ -142,7 +142,7 @@ class User(Base):
     )
     @property
     def orm_spawners(self):
-        return {s.server_name: s for s in self._orm_spawners}
+        return {s.name: s for s in self._orm_spawners}
 
     admin = Column(Boolean, default=False)
     created = Column(DateTime, default=datetime.utcnow)
@@ -204,7 +204,7 @@ class Spawner(Base):
     server = relationship(Server, cascade="all")
 
     state = Column(JSONDict)
-    server_name = Column(Unicode(255))
+    name = Column(Unicode(255))
 
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
