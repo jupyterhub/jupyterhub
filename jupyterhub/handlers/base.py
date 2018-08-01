@@ -901,6 +901,11 @@ class PrefixRedirectHandler(BaseHandler):
     """
     def get(self):
         uri = self.request.uri
+        # Since self.base_url will end with trailing slash.
+        # Ensure uri will end with trailing slash when matching
+        # with self.base_url.
+        if not uri.endswith('/'):
+            uri += '/'
         if uri.startswith(self.base_url):
             path = self.request.uri[len(self.base_url):]
         else:
