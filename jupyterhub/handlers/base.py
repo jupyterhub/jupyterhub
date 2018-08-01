@@ -916,7 +916,7 @@ class PrefixRedirectHandler(BaseHandler):
 
 
 class UserSpawnHandler(BaseHandler):
-    """Redirect requests to /user/name/* handled by the Hub.
+    """Redirect requests to /user/user_name/* handled by the Hub.
 
     If logged in, spawn a single-user server and redirect request.
     If a user, alice, requests /user/bob/notebooks/mynotebook.ipynb,
@@ -932,202 +932,206 @@ class UserSpawnHandler(BaseHandler):
         self.write(json.dumps({"message": "%s is not running" % user.name}))
         self.finish()
 
-    async def get(self, name, user_path):
-        if not user_path:
-            user_path = '/'
-        current_user = self.get_current_user()
-        if (
-            current_user
-            and current_user.name != name
-            and current_user.admin
-            and self.settings.get('admin_access', False)
-        ):
-            # allow admins to spawn on behalf of users
-            user = self.find_user(name)
-            if user is None:
-                # no such user
-                raise web.HTTPError(404, "No such user %s" % name)
-            self.log.info("Admin %s requesting spawn on behalf of %s",
-                          current_user.name, user.name)
-            admin_spawn = True
-            should_spawn = True
-        else:
-            user = current_user
-            admin_spawn = False
-            # For non-admins, we should spawn if the user matches
-            # otherwise redirect users to their own server
-            should_spawn = (current_user and current_user.name == name)
+    async def post(self, user_name, user_path, server_name=''):
+        if server_name == '':
+            if not user_path:
+                user_path = '/'
+            current_user = self.get_current_user()
+            if (
+                current_user
+                and current_user.name != user_name
+                and current_user.admin
+                and self.settings.get('admin_access', False)
+            ):
+                # allow admins to spawn on behalf of users
+                user = self.find_user(user_name)
+                if user is None:
+                    # no such user
+                    raise web.HTTPError(404, "No such user %s" % user_name)
+                self.log.info("Admin %s requesting spawn on behalf of %s",
+                            current_user.name, user.name)
+                admin_spawn = True
+                should_spawn = True
+            else:
+                user = current_user
+                admin_spawn = False
+                # For non-admins, we should spawn if the user matches
+                # otherwise redirect users to their own server
+                should_spawn = (current_user and current_user.name == user_name)
+                
+            if "api" in user_path.split("/") and not user.active:
+                # API request for not-running server (e.g. notebook UI left open)
+                # Avoid triggering a spawn.
+                self._fail_api_request(user)
+                return
 
-        if "api" in user_path.split("/") and not user.active:
-            # API request for not-running server (e.g. notebook UI left open)
-            # Avoid triggering a spawn.
-            self._fail_api_request(user)
-            return
+            if should_spawn:
+                # if spawning fails for any reason, point users to /hub/home to retry
+                self.extra_error_html = self.spawn_home_error
 
-        if should_spawn:
-            # if spawning fails for any reason, point users to /hub/home to retry
-            self.extra_error_html = self.spawn_home_error
-
-            # If people visit /user/:name directly on the Hub,
-            # the redirects will just loop, because the proxy is bypassed.
-            # Try to check for that and warn,
-            # though the user-facing behavior is unchanged
-            host_info = urlparse(self.request.full_url())
-            port = host_info.port
-            if not port:
-                port = 443 if host_info.scheme == 'https' else 80
-            if port != Server.from_url(self.proxy.public_url).connect_port and port == self.hub.connect_port:
-                self.log.warning("""
+                # If people visit /user/:user_name directly on the Hub,
+                # the redirects will just loop, because the proxy is bypassed.
+                # Try to check for that and warn,
+                # though the user-facing behavior is unchanged
+                host_info = urlparse(self.request.full_url())
+                port = host_info.port
+                if not port:
+                    port = 443 if host_info.scheme == 'https' else 80
+                if port != Server.from_url(self.proxy.public_url).connect_port and port == self.hub.connect_port:
+                    self.log.warning("""
                     Detected possible direct connection to Hub's private ip: %s, bypassing proxy.
                     This will result in a redirect loop.
                     Make sure to connect to the proxied public URL %s
                     """, self.request.full_url(), self.proxy.public_url)
+                    
+                # logged in as valid user, check for pending spawn
+                spawner = user.spawner
+                
+                # First, check for previous failure.
+                if (
+                    not spawner.active
+                    and spawner._spawn_future
+                    and spawner._spawn_future.done()
+                    and spawner._spawn_future.exception()
+                ):
+                    # Condition: spawner not active and _spawn_future exists and contains an Exception
+                    # Implicit spawn on /user/:user_name is not allowed if the user's last spawn failed.
+                    # We should point the user to Home if the most recent spawn failed.
+                    exc = spawner._spawn_future.exception()
+                    self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
+                        spawner._log_name, exc)
+                    # raise a copy because each time an Exception object is re-raised, its traceback grows
+                    raise copy.copy(exc).with_traceback(exc.__traceback__)
 
-            # logged in as valid user, check for pending spawn
-            spawner = user.spawner
+                # check for pending spawn
+                if spawner.pending == 'spawn' and spawner._spawn_future:
+                    # wait on the pending spawn
+                    self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
+                    try:
+                        await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
+                    except gen.TimeoutError:
+                        self.log.info("Pending spawn for %s didn't finish in %.1f seconds", spawner._log_name, self.slow_spawn_timeout)
+                        pass
 
-            # First, check for previous failure.
-            if (
-                not spawner.active
-                and spawner._spawn_future
-                and spawner._spawn_future.done()
-                and spawner._spawn_future.exception()
-            ):
-                # Condition: spawner not active and _spawn_future exists and contains an Exception
-                # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
-                # We should point the user to Home if the most recent spawn failed.
-                exc = spawner._spawn_future.exception()
-                self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
-                    spawner._log_name, exc)
-                # raise a copy because each time an Exception object is re-raised, its traceback grows
-                raise copy.copy(exc).with_traceback(exc.__traceback__)
-
-            # check for pending spawn
-            if spawner.pending == 'spawn' and spawner._spawn_future:
-                # wait on the pending spawn
-                self.log.debug("Waiting for %s pending %s", spawner._log_name, spawner.pending)
-                try:
-                    await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), spawner._spawn_future)
-                except gen.TimeoutError:
-                    self.log.info("Pending spawn for %s didn't finish in %.1f seconds", spawner._log_name, self.slow_spawn_timeout)
-                    pass
-
-            # we may have waited above, check pending again:
-            # page could be pending spawn *or* stop
-            if spawner.pending:
-                self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
-                # spawn has started, but not finished
-                self.statsd.incr('redirects.user_spawn_pending', 1)
-                url_parts = []
-                if spawner.pending == "stop":
-                    page = "stop_pending.html"
-                else:
-                    page = "spawn_pending.html"
-                html = self.render_template(
-                    page,
-                    user=user,
-                    spawner=spawner,
-                    progress_url=spawner._progress_url,
-                )
-                self.finish(html)
-                return
-
-            # spawn has supposedly finished, check on the status
-            if spawner.ready:
-                status = await spawner.poll()
-            else:
-                status = 0
-
-            # server is not running, trigger spawn
-            if status is not None:
-                if spawner.options_form:
-                    url_parts = [self.hub.base_url, 'spawn']
-                    if current_user.name != user.name:
-                        # spawning on behalf of another user
-                        url_parts.append(user.name)
-                    self.redirect(url_concat(url_path_join(*url_parts),
-                                             {'next': self.request.uri}))
-                    return
-                else:
-                    await self.spawn_single_user(user)
-
-            # spawn didn't finish, show pending page
-            if spawner.pending:
-                self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
-                # spawn has started, but not finished
-                self.statsd.incr('redirects.user_spawn_pending', 1)
-                html = self.render_template(
-                    "spawn_pending.html",
-                    user=user,
-                    progress_url=spawner._progress_url,
-                )
-                self.finish(html)
-                return
-
-            # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
-            # This is important in many distributed proxy implementations - those are often eventually
-            # consistent and can take up to a couple of seconds to actually apply throughout the cluster.
-            try:
-                redirects = int(self.get_argument('redirects', 0))
-            except ValueError:
-                self.log.warning("Invalid redirects argument %r", self.get_argument('redirects'))
-                redirects = 0
-
-            # check redirect limit to prevent browser-enforced limits.
-            # In case of version mismatch, raise on only two redirects.
-            if redirects >= self.settings.get(
-                'user_redirect_limit', 4
-            ) or (redirects >= 2 and spawner._jupyterhub_version != __version__):
-                # We stop if we've been redirected too many times.
-                msg = "Redirect loop detected."
-                if spawner._jupyterhub_version != __version__:
-                    msg += (
-                        " Notebook has jupyterhub version {singleuser}, but the Hub expects {hub}."
-                        " Try installing jupyterhub=={hub} in the user environment"
-                        " if you continue to have problems."
-                    ).format(
-                        singleuser=spawner._jupyterhub_version or 'unknown (likely < 0.8)',
-                        hub=__version__,
+                # we may have waited above, check pending again:
+                # page could be pending spawn *or* stop
+                if spawner.pending:
+                    self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
+                    # spawn has started, but not finished
+                    self.statsd.incr('redirects.user_spawn_pending', 1)
+                    url_parts = []
+                    if spawner.pending == "stop":
+                        page = "stop_pending.html"
+                    else:
+                        page = "spawn_pending.html"
+                    html = self.render_template(
+                        page,
+                        user=user,
+                        spawner=spawner,
+                        progress_url=spawner._progress_url,
                     )
-                raise web.HTTPError(500, msg)
+                    self.finish(html)
+                    return
 
-            without_prefix = self.request.uri[len(self.hub.base_url):]
-            target = url_path_join(self.base_url, without_prefix)
-            if self.subdomain_host:
-                target = user.host + target
+                # spawn has supposedly finished, check on the status
+                if spawner.ready:
+                    status = await spawner.poll()
+                else:
+                    status = 0
 
-            # record redirect count in query parameter
-            if redirects:
-                self.log.warning("Redirect loop detected on %s", self.request.uri)
-                # add capped exponential backoff where cap is 10s
-                await gen.sleep(min(1 * (2 ** redirects), 10))
-                # rewrite target url with new `redirects` query value
-                url_parts = urlparse(target)
-                query_parts = parse_qs(url_parts.query)
-                query_parts['redirects'] = redirects + 1
-                url_parts = url_parts._replace(query=urlencode(query_parts))
-                target = urlunparse(url_parts)
+                # server is not running, trigger spawn
+                if status is not None:
+                    if spawner.options_form:
+                        url_parts = [self.hub.base_url, 'spawn']
+                        if current_user.name != user.name:
+                            # spawning on behalf of another user
+                            url_parts.append(user.name)
+                        self.redirect(url_concat(url_path_join(*url_parts),
+                                                {'next': self.request.uri}))
+                        return
+                    else:
+                        await self.spawn_single_user(user)
+
+                # spawn didn't finish, show pending page
+                if spawner.pending:
+                    self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
+                    # spawn has started, but not finished
+                    self.statsd.incr('redirects.user_spawn_pending', 1)
+                    html = self.render_template(
+                        "spawn_pending.html",
+                        user=user,
+                        progress_url=spawner._progress_url,
+                    )
+                    self.finish(html)
+                    return
+
+                # We do exponential backoff here - since otherwise we can get stuck in a redirect loop!
+                # This is important in many distributed proxy implementations - those are often eventually
+                # consistent and can take up to a couple of seconds to actually apply throughout the cluster.
+                try:
+                    redirects = int(self.get_argument('redirects', 0))
+                except ValueError:
+                    self.log.warning("Invalid redirects argument %r", self.get_argument('redirects'))
+                    redirects = 0
+
+                # check redirect limit to prevent browser-enforced limits.
+                # In case of version mismatch, raise on only two redirects.
+                if redirects >= self.settings.get(
+                    'user_redirect_limit', 4
+                ) or (redirects >= 2 and spawner._jupyterhub_version != __version__):
+                    # We stop if we've been redirected too many times.
+                    msg = "Redirect loop detected."
+                    if spawner._jupyterhub_version != __version__:
+                        msg += (
+                            " Notebook has jupyterhub version {singleuser}, but the Hub expects {hub}."
+                            " Try installing jupyterhub=={hub} in the user environment"
+                            " if you continue to have problems."
+                        ).format(
+                            singleuser=spawner._jupyterhub_version or 'unknown (likely < 0.8)',
+                            hub=__version__,
+                        )
+                    raise web.HTTPError(500, msg)
+
+                without_prefix = self.request.uri[len(self.hub.base_url):]
+                target = url_path_join(self.base_url, without_prefix)
+                if self.subdomain_host:
+                    target = user.host + target
+
+                # record redirect count in query parameter
+                if redirects:
+                    self.log.warning("Redirect loop detected on %s", self.request.uri)
+                    # add capped exponential backoff where cap is 10s
+                    await gen.sleep(min(1 * (2 ** redirects), 10))
+                    # rewrite target url with new `redirects` query value
+                    url_parts = urlparse(target)
+                    query_parts = parse_qs(url_parts.query)
+                    query_parts['redirects'] = redirects + 1
+                    url_parts = url_parts._replace(query=urlencode(query_parts))
+                    target = urlunparse(url_parts)
+                else:
+                    target = url_concat(target, {'redirects': 1})
+
+                self.redirect(target)
+                self.statsd.incr('redirects.user_after_login')
+            elif current_user:
+                # logged in as a different user, redirect
+                self.statsd.incr('redirects.user_to_user', 1)
+                target = url_path_join(current_user.url, user_path or '')
+                if self.request.query:
+                    # FIXME: use urlunparse instead?
+                    target += '?' + self.request.query
+                self.redirect(target)
             else:
-                target = url_concat(target, {'redirects': 1})
+                # not logged in, clear any cookies and reload
+                self.statsd.incr('redirects.user_to_login', 1)
+                self.clear_login_cookie()
+                self.redirect(url_concat(
+                    self.settings['login_url'],
+                    {'next': self.request.uri},
+                ))
 
-            self.redirect(target)
-            self.statsd.incr('redirects.user_after_login')
-        elif current_user:
-            # logged in as a different user, redirect
-            self.statsd.incr('redirects.user_to_user', 1)
-            target = url_path_join(current_user.url, user_path or '')
-            if self.request.query:
-                # FIXME: use urlunparse instead?
-                target += '?' + self.request.query
-            self.redirect(target)
         else:
-            # not logged in, clear any cookies and reload
-            self.statsd.incr('redirects.user_to_login', 1)
-            self.clear_login_cookie()
-            self.redirect(url_concat(
-                self.settings['login_url'],
-                {'next': self.request.uri},
-            ))
+            raise NotImplementedError('Named servers via UI has not been implemented yet.')
 
 
 class UserRedirectHandler(BaseHandler):
