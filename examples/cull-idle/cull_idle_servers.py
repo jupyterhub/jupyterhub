@@ -186,10 +186,16 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
                 log_name, format_td(age), format_td(inactive))
             return False
 
+        if server_name:
+            # culling a named server
+            delete_url = url + "/users/%s/servers/%s" % (
+                quote(user['name']), quote(server['name'])
+            )
+        else:
+            delete_url = url + '/users/%s/server' % quote(user['name'])
+
         req = HTTPRequest(
-            url=url + '/users/%s/server' % quote(user['name']),
-            method='DELETE',
-            headers=auth_header,
+            url=delete_url, method='DELETE', headers=auth_header,
         )
         resp = yield fetch(req)
         if resp.code == 202:
