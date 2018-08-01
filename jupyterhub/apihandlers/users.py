@@ -380,7 +380,7 @@ class UserServerAPIHandler(APIHandler):
         user = self.find_user(name)
         if server_name:
             if not self.allow_named_servers:
-                raise web.HTTPError(400, "Named servers are not enabled.")
+                raise web.HTTPError(400, "Named servers are not enabled.") # compare line 351 of apihandlers/users
             if server_name not in user.spawners:
                 raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
 

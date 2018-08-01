@@ -988,7 +988,10 @@ class UserSpawnHandler(BaseHandler):
             if server_name is None:
                 spawner = user.spawner
             else:
-                spawner = user.spawners[server_name]
+                if self.allow_named_servers == True:
+                    spawner = user.spawners[server_name]
+                else:
+                    raise web.HTTPError(400, "Named servers are not enabled.")
                 
             # First, check for previous failure.
             if (
@@ -1129,7 +1132,7 @@ class UserSpawnHandler(BaseHandler):
             self.statsd.incr('redirects.user_to_login', 1)
             self.clear_login_cookie()
             self.redirect(url_concat(
-            self.settings['login_url'],
+                self.settings['login_url'],
                 {'next': self.request.uri},
             ))
 
