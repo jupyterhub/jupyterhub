@@ -991,7 +991,7 @@ class UserSpawnHandler(BaseHandler):
                 if self.allow_named_servers == True:
                     spawner = user.spawners[server_name]
                 else:
-                    raise web.HTTPError(400, "Named servers are not enabled.")
+                    raise web.HTTPError(500, "Named servers are not enabled.")
                 
             # First, check for previous failure.
             if (
