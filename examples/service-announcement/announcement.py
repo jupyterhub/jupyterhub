@@ -11,6 +11,9 @@ from tornado import escape, gen, ioloop, web
 class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
     """Dynamically manage page announcements"""
 
+    hub_users = []
+    allow_admin = True
+
     def initialize(self, storage):
         """Create storage for announcement text"""
         self.storage = storage
@@ -18,9 +21,6 @@ class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
     @web.authenticated
     def post(self):
         """Update announcement"""
-        user = self.get_current_user()
-        if user is None or not user.get("admin", False):
-            raise web.HTTPError(403)
         doc = escape.json_decode(self.request.body)
         self.storage["announcement"] = doc["announcement"]
         self.storage["timestamp"] = datetime.datetime.now().isoformat()
@@ -34,9 +34,6 @@ class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
     @web.authenticated
     def delete(self):
         """Clear announcement"""
-        user = self.get_current_user()
-        if user is None or not user.get("admin", False):
-            raise web.HTTPError(403)
         self.storage["announcement"] = ""
         self.write_to_json(self.storage)
 
