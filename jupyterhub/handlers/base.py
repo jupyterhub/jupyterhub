@@ -948,7 +948,7 @@ class UserSpawnHandler(BaseHandler):
                 # no such user
                 raise web.HTTPError(404, "No such user %s" % user_name)
             self.log.info("Admin %s requesting spawn on behalf of %s",
-                        current_user.name, user.name)
+                      current_user.name, user.name)
             admin_spawn = True
             should_spawn = True
         else:
@@ -982,7 +982,7 @@ class UserSpawnHandler(BaseHandler):
                     This will result in a redirect loop.
                     Make sure to connect to the proxied public URL %s
                     """, self.request.full_url(), self.proxy.public_url)
-                    
+
             # logged in as valid user, check for pending spawn
             if server_name is None:
                 spawner = user.spawner
@@ -1136,7 +1136,7 @@ class UserSpawnHandler(BaseHandler):
                 {'next': self.request.uri},
             ))
 
- 
+
 class UserRedirectHandler(BaseHandler):
     """Redirect requests to user servers.
 
