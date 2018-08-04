@@ -33,7 +33,6 @@ from ..metrics import (
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
 )
 
-
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
 
@@ -958,7 +957,7 @@ class UserSpawnHandler(BaseHandler):
             # For non-admins, we should spawn if the user matches
             # otherwise redirect users to their own server
             should_spawn = (current_user and current_user.name == user_name)
-                
+
         if "api" in user_path.split("/") and not user.active:
             # API request for not-running server (e.g. notebook UI left open)
             # Avoid triggering a spawn.
@@ -979,10 +978,10 @@ class UserSpawnHandler(BaseHandler):
                 port = 443 if host_info.scheme == 'https' else 80
             if port != Server.from_url(self.proxy.public_url).connect_port and port == self.hub.connect_port:
                 self.log.warning("""
-                Detected possible direct connection to Hub's private ip: %s, bypassing proxy.
-                This will result in a redirect loop.
-                 Make sure to connect to the proxied public URL %s
-                """, self.request.full_url(), self.proxy.public_url)
+                    Detected possible direct connection to Hub's private ip: %s, bypassing proxy.
+                    This will result in a redirect loop.
+                    Make sure to connect to the proxied public URL %s
+                    """, self.request.full_url(), self.proxy.public_url)
                     
             # logged in as valid user, check for pending spawn
             if server_name is None:
@@ -992,7 +991,7 @@ class UserSpawnHandler(BaseHandler):
                 #if self.allow_named_servers:
                 #    spawner = user.spawners[server_name]
                 #else:
-                #    raise web.HTTPError(400, "Named servers are not enabled.")
+                #    raise web.HTTPError(400, "Named servers are not enabled.")  # compare line 351 of apihandlers/users
                 
             # First, check for previous failure.
             if (
@@ -1002,7 +1001,7 @@ class UserSpawnHandler(BaseHandler):
                 and spawner._spawn_future.exception()
             ):
                 # Condition: spawner not active and _spawn_future exists and contains an Exception
-                # Implicit spawn on /user/:user_name is not allowed if the user's last spawn failed.
+                # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
                 # We should point the user to Home if the most recent spawn failed.
                 exc = spawner._spawn_future.exception()
                 self.log.error("Preventing implicit spawn for %s because last spawn failed: %s",
