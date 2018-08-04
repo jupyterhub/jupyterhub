@@ -345,8 +345,8 @@ class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
     @admin_or_self
-    async def post(self, name, server_name=''):
-        user = self.find_user(name)
+    async def post(self, user_name, server_name=''):
+        user = self.find_user(user_name)
         if server_name and not self.allow_named_servers:
             raise web.HTTPError(400, "Named servers are not enabled.")
         spawner = user.spawners[server_name]
@@ -380,7 +380,7 @@ class UserServerAPIHandler(APIHandler):
         user = self.find_user(name)
         if server_name:
             if not self.allow_named_servers:
-                raise web.HTTPError(400, "Named servers are not enabled.")
+                raise web.HTTPError(400, "Named servers are not enabled.") # compare line 351 of apihandlers/users
             if server_name not in user.spawners:
                 raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
 
