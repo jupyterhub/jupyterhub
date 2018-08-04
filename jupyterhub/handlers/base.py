@@ -948,7 +948,7 @@ class UserSpawnHandler(BaseHandler):
                 # no such user
                 raise web.HTTPError(404, "No such user %s" % user_name)
             self.log.info("Admin %s requesting spawn on behalf of %s",
-                      current_user.name, user.name)
+                 current_user.name, user.name)
             admin_spawn = True
             should_spawn = True
         else:
@@ -1053,7 +1053,7 @@ class UserSpawnHandler(BaseHandler):
                         # spawning on behalf of another user
                         url_parts.append(user.name)
                     self.redirect(url_concat(url_path_join(*url_parts),
-                                            {'next': self.request.uri}))
+                                         {'next': self.request.uri}))
                     return
                 else:
                     await self.spawn_single_user(user, server_name)
