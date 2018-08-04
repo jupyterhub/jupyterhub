@@ -12,6 +12,7 @@
       {% if self.allow_named_servers %}
         {% for spawner in user.spawners %}
           <a id="stop" role="button" class="btn btn-lg btn-danger">Stop {% spawner.name %}</a>
+        {% endfor %}
       {% else %}
       <a id="stop" role="button" class="btn btn-lg btn-danger">Stop My Server</a>
       {% endif %}
