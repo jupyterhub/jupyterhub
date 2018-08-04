@@ -191,7 +191,7 @@ class User:
 
         orm_spawner = self.orm_spawners.get(server_name)
         if orm_spawner is None:
-            orm_spawner = orm.Spawner(user=self.orm_user, server_name=server_name)
+            orm_spawner = orm.Spawner(user=self.orm_user, name=server_name)
             self.db.add(orm_spawner)
             self.db.commit()
             assert server_name in self.orm_spawners
