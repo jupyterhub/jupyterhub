@@ -9,6 +9,16 @@ command line for details.
 
 ## 0.9
 
+### [0.9.2] 2018-08-10
+
+JupyterHub 0.9.2 contains small bugfixes and improvements.
+
+- Documentation and example improvements
+- Add `Spawner.consecutive_failure_limit` config for aborting the Hub if too many spawns fail in a row.
+- Fix for handling SIGTERM when run with asyncio (tornado 5)
+- Windows compatibility fixes
+
+
 ### [0.9.1] 2018-07-04
 
 JupyterHub 0.9.1 contains a number of small bugfixes on top of 0.9.
@@ -392,7 +402,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...HEAD
+[0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
 [0.9.1]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...0.8.1
