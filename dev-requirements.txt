@@ -8,3 +8,6 @@ pytest>=3.3
 notebook
 requests-mock
 virtualenv
+# temporary pin of attrs for jsonschema 0.3.0a1
+# seems to be a pip bug
+attrs>=17.4.0
