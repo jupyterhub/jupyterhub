@@ -752,10 +752,10 @@ class BaseHandler(RequestHandler):
         await self.proxy.delete_user(user, server_name)
         await user.stop(server_name)
 
-    async def stop_single_user(self, user, name=''):
-        if name not in user.spawners:
-            raise KeyError("User %s has no such spawner %r", user.name, name)
-        spawner = user.spawners[name]
+    async def stop_single_user(self, user, server_name=''):
+        if server_name not in user.spawners:
+            raise KeyError("User %s has no such spawner %r", user.name, server_name)
+        spawner = user.spawners[server_name]
         if spawner.pending:
             raise RuntimeError("%s pending %s" % (spawner._log_name, spawner.pending))
         # set user._stop_pending before doing anything async
@@ -771,8 +771,8 @@ class BaseHandler(RequestHandler):
             """
             tic = IOLoop.current().time()
             try:
-                await self.proxy.delete_user(user, name)
-                await user.stop(name)
+                await self.proxy.delete_user(user, server_name)
+                await user.stop(server_name)
             finally:
                 spawner._stop_pending = False
             toc = IOLoop.current().time()
@@ -783,7 +783,7 @@ class BaseHandler(RequestHandler):
             await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
-            self.log.warning("User %s:%s server is slow to stop", user.name, name)
+            self.log.warning("User %s:%s server is slow to stop", user.name, server_name)
 
     #---------------------------------------------------------------
     # template rendering
@@ -916,7 +916,7 @@ class PrefixRedirectHandler(BaseHandler):
 
 
 class UserSpawnHandler(BaseHandler):
-    """Redirect requests to /user/name/* handled by the Hub.
+    """Redirect requests to /user/user_name/* handled by the Hub.
 
     If logged in, spawn a single-user server and redirect request.
     If a user, alice, requests /user/bob/notebooks/mynotebook.ipynb,
@@ -932,21 +932,21 @@ class UserSpawnHandler(BaseHandler):
         self.write(json.dumps({"message": "%s is not running" % user.name}))
         self.finish()
 
-    async def get(self, name, user_path):
+    async def get(self, user_name, user_path, server_name=''):
         if not user_path:
             user_path = '/'
         current_user = self.get_current_user()
         if (
             current_user
-            and current_user.name != name
+            and current_user.name != user_name
             and current_user.admin
             and self.settings.get('admin_access', False)
         ):
             # allow admins to spawn on behalf of users
-            user = self.find_user(name)
+            user = self.find_user(user_name)
             if user is None:
                 # no such user
-                raise web.HTTPError(404, "No such user %s" % name)
+                raise web.HTTPError(404, "No such user %s" % user_name)
             self.log.info("Admin %s requesting spawn on behalf of %s",
                           current_user.name, user.name)
             admin_spawn = True
@@ -956,7 +956,7 @@ class UserSpawnHandler(BaseHandler):
             admin_spawn = False
             # For non-admins, we should spawn if the user matches
             # otherwise redirect users to their own server
-            should_spawn = (current_user and current_user.name == name)
+            should_spawn = (current_user and current_user.name == user_name)
 
         if "api" in user_path.split("/") and not user.active:
             # API request for not-running server (e.g. notebook UI left open)
@@ -968,7 +968,7 @@ class UserSpawnHandler(BaseHandler):
             # if spawning fails for any reason, point users to /hub/home to retry
             self.extra_error_html = self.spawn_home_error
 
-            # If people visit /user/:name directly on the Hub,
+            # If people visit /user/:user_name directly on the Hub,
             # the redirects will just loop, because the proxy is bypassed.
             # Try to check for that and warn,
             # though the user-facing behavior is unchanged
@@ -984,8 +984,15 @@ class UserSpawnHandler(BaseHandler):
                     """, self.request.full_url(), self.proxy.public_url)
 
             # logged in as valid user, check for pending spawn
-            spawner = user.spawner
-
+            if server_name is None:
+                spawner = user.spawner
+            else:
+                spawner = user.spawners[server_name]
+                #if self.allow_named_servers:
+                #    spawner = user.spawners[server_name]
+                #else:
+                #    raise web.HTTPError(400, "Named servers are not enabled.")  # compare line 351 of apihandlers/users
+                
             # First, check for previous failure.
             if (
                 not spawner.active
@@ -1049,7 +1056,7 @@ class UserSpawnHandler(BaseHandler):
                                              {'next': self.request.uri}))
                     return
                 else:
-                    await self.spawn_single_user(user)
+                    await self.spawn_single_user(user, server_name)
 
             # spawn didn't finish, show pending page
             if spawner.pending:

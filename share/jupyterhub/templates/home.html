@@ -9,7 +9,13 @@
   <div class="row">
     <div class="text-center">
       {% if user.running %}
+      {% if self.allow_named_servers %}
+        {% for spawner in user.spawners %}
+          <a id="stop" role="button" class="btn btn-lg btn-danger">Stop {% spawner.name %}</a>
+        {% endfor %}
+      {% else %}
       <a id="stop" role="button" class="btn btn-lg btn-danger">Stop My Server</a>
+      {% endif %}
       {% endif %}
       <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}">
       {% if not user.active %}
