@@ -62,24 +62,50 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         el.text(m.isValid() ? m.fromNow() : "Never");
     });
 
-    $(".stop-server").click(function () {
+    $(".stop-server.default-server").click(function () {
         var el = $(this);
         var row = get_row(el);
         var user = row.data('user');
         el.text("stopping...");
         api.stop_server(user, {
             success: function () {
-                el.text('stop server').addClass('hidden');
-                row.find('.access-server').addClass('hidden');
-                row.find('.start-server').removeClass('hidden');
-            }
+                if (el.data("named_servers") === true) {
+                el.text("stop default server").addClass("hidden");
+                } else {
+                el.text("stop server").addClass("hidden");
+                }
+                row.find(".access-server").addClass("hidden");
+                row.find(".start-server").removeClass("hidden");
+            },
         });
     });
 
-    $(".access-server").map(function (i, el) {
+    $(".stop-server[id^='stop-']").click(function () {
+        var el = $(this);
+        var row = get_row(el);
+        var user = row.data("user");
+        var server_name = (this.id).replace(/^(stop-)/, "");
+        el.text("stopping...");
+        api.stop_named_server(user, server_name, {
+            success: function() {
+                el.text("stop "+server_name).addClass("hidden");
+                row.find(".access-server").addClass("hidden");
+                row.find(".start-server").removeClass("hidden");
+            },
+        });
+    });
+
+    $(".access-server.default-server").map(function (i, el) {
         el = $(el);
-        var user = get_row(el).data('user');
-        el.attr('href', utils.url_path_join(prefix, 'user', user) + '/');
+        var user = get_row(el).data("user");
+        el.attr("href", utils.url_path_join(prefix, "user", user) + "/");
+    });
+
+    $(".access-server[id^='access-']").map(function (i, el) {
+        el = $(el);
+        var user = get_row(el).data("user");
+        var server_name = (this.id).replace(/^(access-)/, "");
+        el.attr("href", utils.url_path_join(prefix, "user", user, server_name) + "/" );
     });
 
     if (admin_access && options_form) {
@@ -94,16 +120,35 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function ($, bs, mo
         // since it would mean opening a bunch of tabs
         $('#start-all-servers').addClass('hidden');
     } else {
-        $(".start-server").click(function () {
+        $(".start-server.default-server").click(function () {
             var el = $(this);
             var row = get_row(el);
             var user = row.data('user');
             el.text("starting...");
             api.start_server(user, {
                 success: function () {
-                    el.text('start server').addClass('hidden');
-                    row.find('.stop-server').removeClass('hidden');
-                    row.find('.access-server').removeClass('hidden');
+                    if (el.data("named_servers") === true ){
+                    el.text("start default server").addClass("hidden");
+                    } else {
+                    el.text("start server").addClass("hidden");
+                    }
+                    row.find(".stop-server").removeClass("hidden");
+                    row.find(".access-server").removeClass("hidden");
+                }
+            });
+        });
+
+        $(".start-server[id^='start-']").click(function () {
+            var el = $(this);
+            var row = get_row(el);
+            var user = row.data("user");
+            var server_name = (this.id).replace(/^(start-)/, "");
+            el.text("starting...");
+            api.start_named_server(user, server_name, {
+                success: function () {
+                    el.text("start "+server_name).addClass("hidden");
+                    row.find(".stop-server").removeClass("hidden");
+                    row.find(".access-server").removeClass("hidden");
                 }
             });
         });

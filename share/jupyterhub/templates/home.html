@@ -6,20 +6,76 @@
 {% block main %}
 
 <div class="container">
+{% if user.active %}
+  <div class="row" style="margin: 1%">
+    <div class="text-center">
+      {% if default_server.active %}
+          <a id="stop" role="button" class="btn btn-lg btn-danger">
+          {% if allow_named_servers %}
+            Stop Default Server
+          {% else %}
+            Stop My Server
+          {% endif %}
+          </a>
+          {% if allow_named_servers %}
+          <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}" data-named_servers="true">
+            Default Server
+          {% else %}
+          <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}" data-named_servers="false">
+            My Server
+          {% endif %}
+          </a>
+      {% else %}
+      <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}">
+      Start Default Server
+      </a>
+      {% endif %}
+    </div>
+  </div>
+
+  {% for spawner in spawners %}
+      {% if spawner.name %}
+          <div class="row" style="margin: 1%">
+            <div class="text-center">
+            {% if spawner.state %}
+                <a id="stop-{{ spawner.name }}" role="button" class="btn btn-lg btn-danger" data-state="true">
+                Stop {{ spawner.name }}
+                </a>
+                <a id="goto-{{ spawner.name }}" role="button" class="btn btn-lg btn-primary" href="{{ url_path_join(url, spawner.name) }}" data-state="true">
+                {{ spawner.name }}
+                </a>
+                <a id="start-{{ spawner.name }}" role="button" class="btn btn-lg btn-primary" data-state="true" style="display: none">
+                Start {{ spawner.name }}
+                </a>
+            {% else %}
+                <a id="stop-{{ spawner.name }}" role="button" class="btn btn-lg btn-danger" data-state="false" style="display: none">
+                Stop {{ spawner.name }}
+                </a>
+                <a id="goto-{{ spawner.name }}" role="button" class="btn btn-lg btn-primary" href="{{ url_path_join(url, spawner.name) }}" data-state="false" style="display: none">
+                {{ spawner.name }}
+                </a>
+                <a id="start-{{ spawner.name }}" role="button" class="btn btn-lg btn-primary" data-state="false">
+                Start {{ spawner.name }}
+                </a>
+            {% endif %}
+            </div>
+          </div>
+      {% endif %}
+  {% endfor %}
+
+{% else %}
   <div class="row">
     <div class="text-center">
-      {% if user.running %}
-      <a id="stop" role="button" class="btn btn-lg btn-danger">Stop My Server</a>
-      {% endif %}
       <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ url }}">
-      {% if not user.active %}
-      Start
+      {% if allow_named_servers %}
+        Start a New Server
+      {% else %}
+        Start My Server
       {% endif %}
-        My Server
       </a>
     </div>
   </div>
-</div>
+{% endif %}
 
 {% endblock %}
 

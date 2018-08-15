@@ -182,19 +182,19 @@ class User:
                 await self.save_auth_state(auth_state)
         return auth_state
 
-    def _new_spawner(self, name, spawner_class=None, **kwargs):
+    def _new_spawner(self, server_name, spawner_class=None, **kwargs):
         """Create a new spawner"""
         if spawner_class is None:
             spawner_class = self.spawner_class
-        self.log.debug("Creating %s for %s:%s", spawner_class, self.name, name)
+        self.log.debug("Creating %s for %s:%s", spawner_class, self.name, server_name)
 
-        orm_spawner = self.orm_spawners.get(name)
+        orm_spawner = self.orm_spawners.get(server_name)
         if orm_spawner is None:
-            orm_spawner = orm.Spawner(user=self.orm_user, name=name)
+            orm_spawner = orm.Spawner(user=self.orm_user, name=server_name)
             self.db.add(orm_spawner)
             self.db.commit()
-            assert name in self.orm_spawners
-        if name == '' and self.state:
+            assert server_name in self.orm_spawners
+        if server_name == '' and self.state:
             # migrate user.state to spawner.state
             orm_spawner.state = self.state
             self.state = None
@@ -202,15 +202,15 @@ class User:
         # use fully quoted name for client_id because it will be used in cookie-name
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
         client_id = 'jupyterhub-user-%s' % quote(self.name)
-        if name:
-            client_id = '%s-%s' % (client_id, quote(name))
+        if server_name:
+            client_id = '%s-%s' % (client_id, quote(server_name))
         spawn_kwargs = dict(
             user=self,
             orm_spawner=orm_spawner,
             hub=self.settings.get('hub'),
             authenticator=self.authenticator,
             config=self.settings.get('config'),
-            proxy_spec=url_path_join(self.proxy_spec, name, '/'),
+            proxy_spec=url_path_join(self.proxy_spec, server_name, '/'),
             db=self.db,
             oauth_client_id=client_id,
             cookie_options = self.settings.get('cookie_options', {}),
