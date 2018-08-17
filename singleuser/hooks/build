@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-stable=0.8
+stable=0.9
 
 for V in master $stable; do
     docker build --build-arg JUPYTERHUB_VERSION=$V -t $DOCKER_REPO:$V .

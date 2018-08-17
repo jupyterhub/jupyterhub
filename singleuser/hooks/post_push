@@ -1,6 +1,7 @@
 #!/bin/bash
+set -ex
 
-stable=0.8
+stable=0.9
 for V in master $stable; do
   docker push $DOCKER_REPO:$V
 done
