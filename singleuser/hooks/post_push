@@ -27,3 +27,5 @@ docker push $DOCKER_REPO:$hub_xyz
 get_hub_version master
 docker tag $DOCKER_REPO:master $DOCKER_REPO:$hub_xy
 docker push $DOCKER_REPO:$hub_xy
+docker tag $DOCKER_REPO:master $DOCKER_REPO:$hub_xyz
+docker push $DOCKER_REPO:$hub_xyz
