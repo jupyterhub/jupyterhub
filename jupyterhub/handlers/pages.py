@@ -12,6 +12,7 @@ from tornado import web, gen
 from tornado.httputil import url_concat
 
 from .. import orm
+from ..user import User
 from ..utils import admin_only, url_path_join
 from .base import BaseHandler
 
@@ -45,7 +46,7 @@ class HomeHandler(BaseHandler):
 
     @web.authenticated
     async def get(self):
-        user = self.get_current_user()
+        user = User(self.get_current_user())
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             await user.spawner.poll_and_notify()
