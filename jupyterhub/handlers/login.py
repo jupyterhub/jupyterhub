@@ -32,6 +32,7 @@ class LoginHandler(BaseHandler):
     def _render(self, login_error=None, username=None):
         return self.render_template('login.html',
                 next=url_escape(self.get_argument('next', default='')),
+                dvtoken=url_escape(self.get_argument('dvtoken', default='')),
                 username=username,
                 login_error=login_error,
                 custom_html=self.authenticator.custom_html,
