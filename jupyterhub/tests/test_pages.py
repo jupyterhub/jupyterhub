@@ -169,6 +169,31 @@ def test_spawn_redirect(app):
 
 
 @pytest.mark.gen_test
+def test_spawn_handler_access(app):
+    name = 'winston'
+    cookies = yield app.login_user(name)
+    u = app.users[orm.User.find(app.db, name)]
+
+    status = yield u.spawner.poll()
+    assert status is not None
+
+    # spawn server via browser link with ?arg=value
+    r = yield get_page('spawn', app, cookies=cookies, params={'arg': 'value'})
+    r.raise_for_status()
+
+    # verify that request params got passed down
+    # implemented in MockSpawner
+    r = yield async_requests.get(ujoin(public_url(app, u), 'env'))
+    env = r.json()
+    assert 'HANDLER_ARGS' in env
+    assert env['HANDLER_ARGS'] == 'arg=value'
+
+    # stop server
+    r = yield api_request(app, 'users', name, 'server', method='delete')
+    r.raise_for_status()
+
+
+@pytest.mark.gen_test
 def test_spawn_admin_access(app, admin_access):
     """GET /user/:name as admin with admin-access spawns user's server"""
     cookies = yield app.login_user('admin')
