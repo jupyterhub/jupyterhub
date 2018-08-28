@@ -475,12 +475,26 @@ class BaseHandler(RequestHandler):
 
         if authenticated:
             username = authenticated['name']
+            groupnames = authenticated.get('groups')
             auth_state = authenticated.get('auth_state')
             admin = authenticated.get('admin')
             new_user = username not in self.users
             user = self.user_from_username(username)
             if new_user:
                 await maybe_future(self.authenticator.add_user(user))
+            # Create groups provided by the authenticator that are missing from the db.
+            if groupnames is not None:
+                orm_groups = []
+                for group in groupnames:
+                    g = orm.Groups.find(db=self.db, group)
+                    if g is None:
+                        g = orm.Group(name=group)
+                        self.db.add(g)
+                        self.db.commit()
+                    orm_groups.append(g)
+                # Set the groups of the user to the authenticator provided ones.
+                user.groups = orm_groups
+                self.db.commit()
             # Only set `admin` if the authenticator returned an explicit value.
             if admin is not None and admin != user.admin:
                 user.admin = admin
