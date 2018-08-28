@@ -307,8 +307,9 @@ class Authenticator(LoggingConfigurable):
             user (str or dict or None): The username of the authenticated user,
                 or None if Authentication failed.
                 The Authenticator may return a dict instead, which MUST have a
-                key 'name' holding the username, and may have two optional keys
-                set - 'auth_state', a dictionary of of auth state that will be
+                key 'name' holding the username, and may have three optional keys
+                set - 'groups', a list of the groups to which the user belongs,
+                'auth_state', a dictionary of of auth state that will be
                 persisted; and 'admin', the admin setting value for the user.
         """
 
