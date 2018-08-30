@@ -428,6 +428,9 @@ class UserAdminAccessAPIHandler(APIHandler):
 
 class SpawnProgressAPIHandler(APIHandler):
     """EventStream handler for pending spawns"""
+
+    keepalive_interval = 10
+
     def get_content_type(self):
         return 'text/event-stream'
 
@@ -439,6 +442,24 @@ class SpawnProgressAPIHandler(APIHandler):
             self.log.warning("Stream closed while handling %s", self.request.uri)
             # raise Finish to halt the handler
             raise web.Finish()
+
+    _finished = False
+    def on_finish(self):
+        print("on finish")
+        self._finished = True
+
+    async def keepalive(self):
+        """Write empty lines periodically
+
+        to avoid being closed by intermediate proxies
+        when there's a large gap between events.
+        """
+        while not self._finished:
+            try:
+                await self.write("\n\n")
+            except (StreamClosedError, RuntimeError):
+                return
+            await asyncio.sleep(self.keepalive_interval)
 
     @admin_or_self
     async def get(self, username, server_name=''):
@@ -453,6 +474,9 @@ class SpawnProgressAPIHandler(APIHandler):
             # user has no such server
             raise web.HTTPError(404)
         spawner = user.spawners[server_name]
+
+        # start sending keepalive to avoid proxies closing the connection
+        asyncio.ensure_future(self.keepalive())
         # cases:
         # - spawner already started and ready
         # - spawner not running at all
