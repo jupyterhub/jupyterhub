@@ -75,7 +75,7 @@ the top of all pages.  The more specific variables
 `announcement_login`, `announcement_spawn`, `announcement_home`, and
 `announcement_logout` are more specific and only show on their
 respective pages (overriding the global `announcement` variable).
-Note that changing these varables require a restart, unlike direct
+Note that changing these variables require a restart, unlike direct
 template extension.
 
 You can get the same effect by extending templates, which allows you

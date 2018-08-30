@@ -70,7 +70,7 @@ Cmnd_Alias JUPYTER_CMD = /usr/local/bin/sudospawner
 rhea ALL=(JUPYTER_USERS) NOPASSWD:JUPYTER_CMD
 ```
 
-It might be useful to modifiy `secure_path` to add commands in path.
+It might be useful to modify `secure_path` to add commands in path.
 
 As an alternative to adding every user to the `/etc/sudoers` file, you can
 use a group in the last line above, instead of `JUPYTER_USERS`:

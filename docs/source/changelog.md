@@ -118,7 +118,7 @@ and tornado < 5.0.
 - Added "Start All" button to admin page for launching all user servers at once.
 - Services have an `info` field which is a dictionary.
   This is accessible via the REST API.
-- `JupyterHub.extra_handlers` allows defining additonal tornado RequestHandlers attached to the Hub.
+- `JupyterHub.extra_handlers` allows defining additional tornado RequestHandlers attached to the Hub.
 - API tokens may now expire.
   Expiry is available in the REST model as `expires_at`,
   and settable when creating API tokens by specifying `expires_in`.
