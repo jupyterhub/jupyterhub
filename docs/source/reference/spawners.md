@@ -196,7 +196,7 @@ allocate. Attempting to use more memory than this limit will cause errors. The
 single-user notebook server can discover its own memory limit by looking at
 the environment variable `MEM_LIMIT`, which is specified in absolute bytes.
 
-`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a *minumum amount of
+`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a *minimum amount of
 memory* is desirable. In this case, you can set `c.Spawner.mem_guarantee` to
 to provide a guarantee that at minimum this much memory will always be
 available for the single-user notebook server to use. The environment variable
