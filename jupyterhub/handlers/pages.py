@@ -111,7 +111,11 @@ class SpawnHandler(BaseHandler):
             if user.spawner._spawn_future and user.spawner._spawn_future.done():
                 user.spawner._spawn_future = None
             # not running, no form. Trigger spawn by redirecting to /user/:name
-            self.redirect(user.url)
+            url = user.url
+            if self.request.query:
+                # add query params
+                url += '?' + self.request.query
+            self.redirect(url)
 
     @web.authenticated
     async def post(self, for_user=None):
