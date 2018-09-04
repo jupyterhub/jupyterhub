@@ -681,7 +681,33 @@ class Spawner(LoggingConfigurable):
         return s.format(**self.template_namespace())
 
     def create_certs(self, alt_names=None, override=False):
-        """Create the certs to be used for internal ssl."""
+        """Create and set ownership for the certs to be used for internal ssl
+
+        Keyword Arguments:
+            alt_names (list): a list of alternative names to identify the
+            server by, see:
+            https://en.wikipedia.org/wiki/Subject_Alternative_Name
+
+            override: override the default_names with the provided alt_names
+
+        Returns:
+            dict: Path to cert files and CA
+
+        This method creates certs for use with the singleuser notebook. It
+        enables SSL and ensures that the notebook can perform bi-directional
+        SSL auth with the hub (verification based on CA).
+
+        If the singleuser host has a name or ip other than localhost,
+        an appropriate alternative name(s) must be passed for ssl verification
+        by the hub to work. For example, for Jupyter hosts with an IP of
+        10.10.10.10 or DNS name of jupyter.example.com, this would be:
+
+        alt_names=["IP:10.10.10.10"]
+        alt_names=["DNS:jupyter.example.com"]
+
+        respectively. The list can contain both the IP and DNS names to refer
+        to the host by either IP or DNS name (note the `default_names` below).
+        """
         from certipy import Certipy
         default_names = ["DNS:localhost", "IP:127.0.0.1"]
         alt_names = alt_names or []
@@ -705,7 +731,6 @@ class Spawner(LoggingConfigurable):
             "cafile": internal_key_pair['files']['cert'],
         }
 
-        """Takes dict of cert paths, moves and sets ownership for them."""
         try:
             user = pwd.getpwnam(self.user.name)
             uid = user.pw_uid
@@ -719,6 +744,26 @@ class Spawner(LoggingConfigurable):
         return paths
 
     def move_certs(self, paths):
+        """Takes cert paths, moves and sets ownership for them
+
+        Arguments:
+            paths (dict): a list of paths for key, cert, and CA
+
+        Returns:
+            dict: a list (potentially altered) of paths for key, cert,
+            and CA
+
+        `.move_certs` is called after certs for the singleuser notebook have
+        been created by create_certs.
+
+        By default, certs are created in a standard, central location defined
+        by `internal_certs_location`. For a local, single-host deployment of
+        JupyterHub, this should suffice. If, however, singleuser notebooks
+        are spawned on other hosts, `.move_certs` should be overridden to move
+        these files appropriately. This could mean using `scp` to copy them
+        to another host, moving them to a volume mounted in a docker container,
+        or exporting them as a secret in kubernetes.
+        """
         key = paths['keyfile']
         cert = paths['certfile']
         ca = paths['cafile']
