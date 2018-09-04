@@ -223,3 +223,30 @@ in the single-user notebook server when a guarantee is being provided.
 **The spawner's underlying system or cluster is responsible for enforcing these
 limits and providing these guarantees.** If these values are set to `None`, no
 limits or guarantees are provided, and no environment values are set.
+
+### Encryption
+
+Communication between the `Proxy`, `Hub`, and `Notebook` can be secured by
+turning on `internal_ssl` in `jupyterhub_config.py`. For a custom spawner to
+utilize these certs, there are two methods of interest on the base `Spawner`
+class: `.create_certs` and `.move_certs`.
+
+The first method, `.create_certs` will sign a key-cert pair using an internally
+trusted authority for notebooks.  During this process, `.create_certs` can
+apply `ip` and `dns` name information to the cert via an `alt_names` `kwarg`.
+This is used for certificate authentication (verification). Without proper
+verification, the `Notebook` will be unable to communicate with the `Hub` and
+vice versa when `internal_ssl` is enabled. For example, given a deployment
+using the `DockerSpawner` which will start containers with `ips` from the
+`docker` subnet pool, the `DockerSpawner` would need to instead choose a
+container `ip` prior to starting and pass that to `.create_certs` (TODO: edit).
+
+In general though, this method will not need to be changed and the default
+`ip`/`dns` (localhost) info will suffice.
+
+When `.create_certs` is run, it will `.create_certs` in a default, central
+location specified by `c.JupyterHub.internal_certs_location`. For `Spawners`
+that need access to these certs elsewhere (i.e. on another host altogether),
+the `.move_certs` method can be overridden to move the certs appropriately.
+Again, using `DockerSpawner` as an example, this would entail moving certs
+to a directory that will get mounted into the container this spawner starts.
