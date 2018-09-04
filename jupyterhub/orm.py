@@ -513,6 +513,7 @@ class OAuthCode(Base):
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     session_id = Column(Unicode(255))
+    # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
 
@@ -523,6 +524,10 @@ class OAuthClient(Base):
     description = Column(Unicode(1023))
     secret = Column(Unicode(255))
     redirect_uri = Column(Unicode(1023))
+
+    @property
+    def client_id(self):
+        return self.identifier
 
     access_tokens = relationship(
         OAuthAccessToken,

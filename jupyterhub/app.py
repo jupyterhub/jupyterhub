@@ -1331,7 +1331,7 @@ class JupyterHub(Application):
             host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
         else:
             domain = host = ''
-        client_store = self.oauth_provider.client_authenticator.client_store
+
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
@@ -1389,7 +1389,7 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
-                client_store.add_client(
+                self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
@@ -1489,9 +1489,9 @@ class JupyterHub(Application):
     def init_oauth(self):
         base_url = self.hub.base_url
         self.oauth_provider = make_provider(
-            lambda : self.db,
+            lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
-            login_url=url_path_join(base_url, 'login')
+            login_url=url_path_join(base_url, 'login'),
         )
 
     def cleanup_oauth_clients(self):
@@ -1507,7 +1507,6 @@ class JupyterHub(Application):
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
 
-        client_store = self.oauth_provider.client_authenticator.client_store
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
                 self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
