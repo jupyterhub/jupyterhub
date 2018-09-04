@@ -224,8 +224,8 @@ class MockHub(JupyterHub):
             external_certs = ssl_setup(cert_location, internal_authority_name)
             kwargs['internal_ssl'] = True
             kwargs['internal_authority_name'] = internal_authority_name
-            kwargs['ssl_cert'] = external_certs.cert_file
-            kwargs['ssl_key'] = external_certs.key_file
+            kwargs['ssl_cert'] = external_certs['files']['cert']
+            kwargs['ssl_key'] = external_certs['files']['key']
         except KeyError:
             pass
         return super().__new__(cls, *args, **kwargs)

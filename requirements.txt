@@ -9,4 +9,4 @@ python-dateutil
 SQLAlchemy>=1.1
 requests
 prometheus_client>=0.0.21
-certipy
+certipy>=0.1.0

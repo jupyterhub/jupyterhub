@@ -20,8 +20,6 @@ import sys
 from textwrap import dedent
 from urllib.parse import unquote, urlparse, urlunparse
 
-from certipy import Certipy
-
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
@@ -327,6 +325,12 @@ class JupyterHub(Application):
         Use with internal_ssl
         """
     ).tag(config=True)
+    recreate_internal_certs = Bool(False,
+        help=""" Recreate all certificates used within JupyterHub on restart.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
     internal_authority_name = Unicode('hub',
         help=""" The name for the internal signing authority
 
@@ -337,6 +341,20 @@ class JupyterHub(Application):
         help=""" The name for the notebook signing authority.
         This authority is separate from internal_authority_name so that
         individual notebooks do not trust each other, only the hub and proxy.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    external_authorities = Dict(
+        help=""" A dict of common name to paths to external CA certificates.
+
+        This option is useful when there exist certificates that need to be
+        trusted, but are outside of Certipy's control. For example, when
+        running a proxy in lieu of ConfigurableHTTPProxy, the signing CA that
+        it uses for SSL can be imported and its trust properly propagated.
+
+        The dict uses common names for keys that map to the file path of the
+        certificate. Common names need to be unique.
 
         Use with internal_ssl
         """
@@ -1117,40 +1135,60 @@ class JupyterHub(Application):
     def init_internal_ssl(self):
         """Create the certs needed to turn on internal SSL"""
         if self.internal_ssl:
-            from certipy import Certipy
-            cert_store = Certipy(store_dir=self.internal_certs_location)
-            joint_ca_name = 'combined-cas'
+            from certipy import Certipy, CertNotFoundError
+            certipy = Certipy(store_dir=self.internal_certs_location,
+                              remove_existing=self.recreate_internal_certs)
+            joint_ca_name = "combined-cas.crt"
 
             # The authority for internal components (hub, proxy)
-            if not cert_store.get(self.internal_authority_name):
-                cert_store.create_ca(self.internal_authority_name)
+            try:
+                certipy.store.get_record(self.internal_authority_name)
+            except CertNotFoundError:
+                certipy.create_ca(self.internal_authority_name)
 
             # The authority for individual notebooks
-            notebook_authority = cert_store.get(self.internal_notebook_authority_name)
-            if not notebook_authority:
-                notebook_authority = cert_store.create_ca(self.internal_notebook_authority_name)
+            try:
+                authority_record = certipy.store.get_record(
+                    self.internal_notebook_authority_name)
+            except CertNotFoundError:
+                authority_record = certipy.create_ca(
+                    self.internal_notebook_authority_name)
 
-            internal_key_pair = cert_store.get("localhost")
-            if not internal_key_pair:
+            # The signed certs used by hub-internal components
+            try:
+                internal_key_pair = certipy.store.get_record("hub-internal")
+            except CertNotFoundError:
                 import socket
-                alt_names = "IP:127.0.0.1,DNS:localhost,{extra_names}"
+                alt_names = ["IP:127.0.0.1", "DNS:localhost"]
                 # In the event the hub needs to be accessed externally, add
                 # the fqdn and (optionally) rev_proxy to the set of alt_names.
-                extra_names = [socket.getfqdn()] + self.trusted_alt_names
-                extra_names = ','.join(["DNS:{}".format(name) for name in extra_names])
-                alt_names = alt_names.format(extra_names=extra_names).encode()
-                internal_key_pair = cert_store.create_signed_pair(
-                        "localhost",
-                        self.internal_authority_name,
-                        alt_names=alt_names)
+                alt_names += (["DNS:" + socket.getfqdn()]
+                               + self.trusted_alt_names)
+                internal_key_pair = certipy.create_signed_pair(
+                    "hub-internal",
+                    self.internal_authority_name,
+                    alt_names=alt_names
+                )
 
-            authorities = [self.internal_authority_name,
-                          self.internal_notebook_authority_name]
-            joint_ca_file = cert_store.create_ca_bundle(authorities,
-                        joint_ca_name)
+            external_authorities = []
+            # Add provided, external authority info into Certipy. This will
+            # allow these certs to be added to the joint trust bundle.
+            for cn, file_path in self.external_authorities.items():
+                certipy.store.add_record(
+                    cn, files={"cert": file_path}
+                )
+                external_authorities.append(cn)
 
-            self.internal_ssl_key = internal_key_pair.key_file
-            self.internal_ssl_cert = internal_key_pair.cert_file
+            authorities = ([self.internal_authority_name,
+                            self.internal_notebook_authority_name]
+                           + external_authorities)
+
+            joint_ca_file = certipy.create_ca_bundle(
+                joint_ca_name, ca_names=authorities
+            )
+
+            self.internal_ssl_key = internal_key_pair['files']['key']
+            self.internal_ssl_cert = internal_key_pair['files']['cert']
             self.internal_ssl_ca = joint_ca_file
 
             # Configure the AsyncHTTPClient. This will affect anything using
@@ -1160,7 +1198,9 @@ class JupyterHub(Application):
                 self.internal_ssl_cert,
                 cafile=self.internal_ssl_ca,
             )
-            AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
+            AsyncHTTPClient.configure(
+                None, defaults={"ssl_options" : ssl_context}
+            )
 
     def init_db(self):
         """Create the database connection"""

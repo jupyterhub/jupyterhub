@@ -5,6 +5,5 @@
 
 import sys
 import jupyterhub.tests.mocking
-from .utils import ssl_setup
 
 from jupyterhub.tests.test_app import *

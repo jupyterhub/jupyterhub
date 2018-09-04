@@ -634,11 +634,11 @@ class Spawner(LoggingConfigurable):
             env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
         if self.internal_ssl:
-            files = self.move_certs(self.create_certs())
+            paths = self.move_certs(self.create_certs())
 
-            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = files['keyfile']
-            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = files['certfile']
-            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = files['cafile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = paths['keyfile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = paths['certfile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = paths['cafile']
 
         return env
 
@@ -680,28 +680,48 @@ class Spawner(LoggingConfigurable):
         """
         return s.format(**self.template_namespace())
 
-    def create_certs(self):
+    def create_certs(self, alt_names=None, override=False):
         """Create the certs to be used for internal ssl."""
         from certipy import Certipy
-        cert_store = Certipy(store_dir=self.internal_certs_location)
+        default_names = ["DNS:localhost", "IP:127.0.0.1"]
+        alt_names = alt_names or []
+
+        if not override:
+            alt_names = default_names + alt_names
+
+        certipy = Certipy(store_dir=self.internal_certs_location)
         internal_authority = self.internal_authority_name
         notebook_authority = self.internal_notebook_authority_name
-        internal_key_pair = cert_store.get(internal_authority)
-        notebook_key_pair = cert_store.create_signed_pair(
-                self.user.name,
-                notebook_authority,
-                alt_names=b"DNS:localhost,IP:127.0.0.1")
-        return {
-            "keyfile": notebook_key_pair.key_file,
-            "certfile": notebook_key_pair.cert_file,
-            "cafile": internal_key_pair.ca_file,
+        internal_key_pair = certipy.store.get_record(internal_authority)
+        notebook_key_pair = certipy.create_signed_pair(
+            self.user.name,
+            notebook_authority,
+            alt_names=alt_names,
+            overwrite=True
+        )
+        paths = {
+            "keyfile": notebook_key_pair['files']['key'],
+            "certfile": notebook_key_pair['files']['cert'],
+            "cafile": internal_key_pair['files']['cert'],
         }
 
-    def move_certs(self, key_pair):
         """Takes dict of cert paths, moves and sets ownership for them."""
-        key = key_pair['keyfile']
-        cert = key_pair['certfile']
-        ca = key_pair['cafile']
+        try:
+            user = pwd.getpwnam(self.user.name)
+            uid = user.pw_uid
+            gid = user.pw_gid
+            for f in ['keyfile', 'certfile']:
+                shutil.chown(paths[f], user=uid, group=gid)
+        except KeyError:
+            self.log.info("User {} not found on system, "
+                          "unable to change ownership".format(self.user.name))
+
+        return paths
+
+    def move_certs(self, paths):
+        key = paths['keyfile']
+        cert = paths['certfile']
+        ca = paths['cafile']
 
         try:
             user = pwd.getpwnam(self.user.name)
@@ -715,9 +735,9 @@ class Spawner(LoggingConfigurable):
             os.makedirs(out_dir, 0o700, exist_ok=True)
 
             # Move certs to users dir
-            shutil.move(key_pair['keyfile'], out_dir)
-            shutil.move(key_pair['certfile'], out_dir)
-            shutil.copy(key_pair['cafile'], out_dir)
+            shutil.move(paths['keyfile'], out_dir)
+            shutil.move(paths['certfile'], out_dir)
+            shutil.copy(paths['cafile'], out_dir)
 
             path_tmpl = "{out}/{name}.{ext}"
             key = path_tmpl.format(out=out_dir, name=self.user.name, ext="key")
@@ -728,7 +748,8 @@ class Spawner(LoggingConfigurable):
             for f in [out_dir, key, cert, ca]:
                 shutil.chown(f, user=uid, group=gid)
         except KeyError:
-            self.log.debug("User {} not found on system, not moving certs".format(self.user.name))
+            self.log.info("User {} not found on system, "
+                          "not moving certs".format(self.user.name))
 
         return {"keyfile": key, "certfile": cert, "cafile": ca}
 

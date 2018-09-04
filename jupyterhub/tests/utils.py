@@ -21,7 +21,8 @@ async_requests = _AsyncRequests()
 def ssl_setup(cert_dir, authority_name):
     # Set up the external certs with the same authority as the internal
     # one so that certificate trust works regardless of chosen endpoint.
-    cert_store = Certipy(store_dir=cert_dir)
-    internal_authority = cert_store.create_ca(authority_name)
-    external_certs = cert_store.create_signed_pair('external', authority_name)
+    certipy = Certipy(store_dir=cert_dir)
+    internal_authority = certipy.create_ca(authority_name, overwrite=True)
+    external_certs = certipy.create_signed_pair('external', authority_name,
+                                                overwrite=True)
     return external_certs
