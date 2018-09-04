@@ -27,13 +27,13 @@ class ArgsHandler(web.RequestHandler):
         self.write(json.dumps(sys.argv))
 
 def main(args):
-    
+
     app = web.Application([
         (r'.*/args', ArgsHandler),
         (r'.*/env', EnvHandler),
         (r'.*', EchoHandler),
     ])
-    
+
     server = httpserver.HTTPServer(app)
     server.listen(args.port)
     try:

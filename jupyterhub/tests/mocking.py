@@ -74,18 +74,20 @@ def mock_open_session(username, service, encoding):
 
 class MockSpawner(LocalProcessSpawner):
     """Base mock spawner
-    
+
     - disables user-switching that we need root permissions to do
     - spawns `jupyterhub.tests.mocksu` instead of a full single-user server
     """
     def make_preexec_fn(self, *a, **kw):
         # skip the setuid stuff
         return
-    
+
     def _set_user_changed(self, name, old, new):
         pass
-    
+
     def user_env(self, env):
+        if self.handler:
+            env['HANDLER_ARGS'] = self.handler.request.query
         return env
 
     @default('cmd')

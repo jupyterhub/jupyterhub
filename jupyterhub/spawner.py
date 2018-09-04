@@ -161,6 +161,7 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
+    handler = Any()
 
     will_resume = Bool(False,
         help="""Whether the Spawner will resume on next start

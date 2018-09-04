@@ -604,6 +604,32 @@ def test_spawn(app):
     assert app.users.count_active_users()['pending'] == 0
 
 
+@mark.gen_test
+def test_spawn_handler(app):
+    """Test that the requesting Handler is passed to Spawner.handler"""
+    db = app.db
+    name = 'salmon'
+    user = add_user(db, app=app, name=name)
+    app_user = app.users[name]
+
+    # spawn via API with ?foo=bar
+    r = yield api_request(app, 'users', name, 'server', method='post', params={'foo': 'bar'})
+    r.raise_for_status()
+
+    # verify that request params got passed down
+    # implemented in MockSpawner
+    url = public_url(app, user)
+    r = yield async_requests.get(ujoin(url, 'env'))
+    env = r.json()
+    assert 'HANDLER_ARGS' in env
+    assert env['HANDLER_ARGS'] == 'foo=bar'
+    # make user spawner.handler doesn't persist after spawn finishes
+    assert app_user.spawner.handler is None
+
+    r = yield api_request(app, 'users', name, 'server', method='delete')
+    r.raise_for_status()
+
+
 @mark.slow
 @mark.gen_test
 def test_slow_spawn(app, no_patience, slow_spawn):
