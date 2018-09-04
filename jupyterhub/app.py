@@ -102,6 +102,8 @@ flags = {
         "set log level to logging.DEBUG (maximize logging output)"),
     'generate-config': ({'JupyterHub': {'generate_config': True}},
         "generate default config file"),
+    'generate-certs': ({'JupyterHub': {'generate_certs': True}},
+        "generate certificates used for internal ssl"),
     'no-db': ({'JupyterHub': {'db_url': 'sqlite:///:memory:'}},
         "disable persisting state database to disk"
     ),
@@ -251,6 +253,9 @@ class JupyterHub(Application):
     ).tag(config=True)
     generate_config = Bool(False,
         help="Generate default config file",
+    ).tag(config=True)
+    generate_certs = Bool(False,
+        help="Generate certs used for internal ssl",
     ).tag(config=True)
     answer_yes = Bool(False,
         help="Answer yes to any questions (e.g. confirm overwrite)"
@@ -1781,7 +1786,7 @@ class JupyterHub(Application):
     @catch_config_error
     async def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)
-        if self.generate_config or self.subapp:
+        if self.generate_config or self.generate_certs or self.subapp:
             return
         self.load_config_file(self.config_file)
         self.init_logging()
@@ -1980,6 +1985,19 @@ class JupyterHub(Application):
 
         if self.generate_config:
             self.write_config_file()
+            loop.stop()
+            return
+
+        if self.generate_certs:
+            self.load_config_file(self.config_file)
+            if not self.internal_ssl:
+                self.log.warn("You'll need to enable `internal_ssl` "
+                              "in the `jupyterhub_config` file to use "
+                              "these certs.")
+                self.internal_ssl = True
+            self.init_internal_ssl()
+            self.log.info("Certificates written to directory `{}`".format(
+                self.internal_certs_location))
             loop.stop()
             return
 
