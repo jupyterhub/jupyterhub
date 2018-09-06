@@ -486,11 +486,10 @@ class BaseHandler(RequestHandler):
             if groupnames is not None:
                 orm_groups = []
                 for group in groupnames:
-                    g = orm.Groups.find(db=self.db, group)
+                    g = orm.Groups.find(db=self.db, name=group)
                     if g is None:
                         g = orm.Group(name=group)
                         self.db.add(g)
-                        self.db.commit()
                     orm_groups.append(g)
                 # Set the groups of the user to the authenticator provided ones.
                 user.groups = orm_groups
