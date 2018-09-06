@@ -489,7 +489,7 @@ class ConfigurableHTTPProxy(Proxy):
         self.log.warning("Proxy still running at pid=%s", pid)
         for i, sig in enumerate([signal.SIGTERM] * 2 + [signal.SIGKILL]):
             try:
-                os.kill(pid, signal.SIGTERM)
+                os.kill(pid, sig)
             except ProcessLookupError:
                 break
             time.sleep(1)
