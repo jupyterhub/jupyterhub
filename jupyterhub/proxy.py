@@ -487,9 +487,14 @@ class ConfigurableHTTPProxy(Proxy):
 
         # if we got here, CHP is still running
         self.log.warning("Proxy still running at pid=%s", pid)
-        for i, sig in enumerate([signal.SIGTERM] * 2 + [signal.SIGKILL]):
+        if os.name != 'nt':
+            sig_list = [signal.SIGTERM] * 2 + [signal.SIGKILL]
+        for i in range(3):
             try:
-                os.kill(pid, sig)
+                if os.name == 'nt':
+                    self._terminate_win(pid)
+                else:
+                    os.kill(pid,sig_list[i])
             except ProcessLookupError:
                 break
             time.sleep(1)
@@ -600,18 +605,21 @@ class ConfigurableHTTPProxy(Proxy):
         self._check_running_callback = pc
         pc.start()
 
+    def _terminate_win(self, pid):
+        # On Windows we spawned a shell on Popen, so we need to
+        # terminate all child processes as well
+        import psutil
+
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            child.kill()
+        psutil.wait_procs(children, timeout=5)
+
     def _terminate(self):
         """Terminate our process"""
         if os.name == 'nt':
-            # On Windows we spawned a shell on Popen, so we need to
-            # terminate all child processes as well
-            import psutil
-
-            parent = psutil.Process(self.proxy_process.pid)
-            children = parent.children(recursive=True)
-            for child in children:
-                child.kill()
-            psutil.wait_procs(children, timeout=5)
+            self._terminate_win(self.proxy_process.pid)
         else:
             self.proxy_process.terminate()
 
