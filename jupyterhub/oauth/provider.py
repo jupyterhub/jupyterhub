@@ -1,6 +1,6 @@
 """Utilities for hooking up oauth2 to JupyterHub's database
 
-implements https://python-oauth2.readthedocs.io/en/latest/store.html
+implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
 
 from datetime import datetime

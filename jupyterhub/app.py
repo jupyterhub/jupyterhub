@@ -54,7 +54,7 @@ from .services.service import Service
 from . import crypto
 from . import dbutil, orm
 from .user import UserDict
-from .oauth.store import make_provider
+from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
