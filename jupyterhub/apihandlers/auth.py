@@ -144,35 +144,89 @@ class OAuthHandler(BaseHandler):
             ._replace(query=urlencode(query_list))
         )
 
+    def add_credentials(self, credentials=None):
+        """Add oauth credentials
 
-class OAuthAuthorizeHandler(OAuthHandler):
-    """Implement OAuth provider handlers
+        Adds user, session_id, client to oauth credentials
+        """
+        if credentials is None:
+            credentials = {}
+        else:
+            credentials = credentials.copy()
 
-    OAuth2Handler sets `self.provider` in initialize,
-    but we are already passing the Provider object via settings.
-    """
+        session_id = self.get_session_cookie()
+        if session_id is None:
+            session_id = self.set_session_cookie()
+
+        user = self.get_current_user()
+
+        # Extra credentials we need in the validator
+        credentials.update({
+            'user': user,
+            'handler': self,
+            'session_id': session_id,
+        })
+        return credentials
+
+    def send_oauth_response(self, headers, body, status):
+        """Send oauth response
+
+        headers, body, status  are returned by provider method.
+        """
+        self.set_status(status)
+        for key, value in headers.items():
+            self.set_header(key, value)
+        if body:
+            self.write(body)
+
+
+class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
+    """Implement OAuth authorization endpoint(s)"""
+
+    def _complete_login(self, uri, headers, scopes, credentials):
+        try:
+            headers, body, status = self.oauth_provider.create_authorization_response(
+                uri, 'POST', '', headers, scopes, credentials)
+
+        except oauth2.FatalClientError as e:
+            # TODO: human error page
+            raise
+        self.send_oauth_response(headers, body, status)
 
     @web.authenticated
     def get(self):
-        # You need to define extract_params and make sure it does not
-        # include file like objects waiting for input. In Django this
-        # is request.META['wsgi.input'] and request.META['wsgi.errors']
-        uri, http_method, body, headers = self.extract_oauth_params()
+        """GET /oauth/authorization
 
+        Render oauth confirmation page:
+        "Server at ... would like permission to ...".
+
+        Users accessing their own server will skip confirmation.
+        """
+
+        uri, http_method, body, headers = self.extract_oauth_params()
         try:
             scopes, credentials = self.oauth_provider.validate_authorization_request(
                 uri, http_method, body, headers)
+            credentials = self.add_credentials(credentials)
+            client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
+            if client.redirect_uri.startswith(self.get_current_user().url):
+                self.log.debug(
+                    "Skipping oauth confirmation for %s accessing %s",
+                    self.get_current_user(), client.description,
+                )
+                # access to my own server doesn't require oauth confirmation
+                # this is the pre-1.0 behavior for all oauth
+                self._complete_login(uri, headers, scopes, credentials)
+                return
 
-            if scopes == ['identify']:
-                pass
-            client_id = 'hmmm'
-            # You probably want to render a template instead.
-            self.write('<h1> Authorize access to %s </h1>' % client_id)
-            self.write('<form method="POST" action="">')
-            for scope in scopes or []:
-                self.write('<input type="checkbox" name="scopes" ' +
-                'value="%s"/> %s' % (scope, scope))
-                self.write('<input type="submit" value="Authorize"/>')
+            # Render oauth 'Authorize application...' page
+            self.write(
+                self.render_template(
+                    "oauth.html",
+                    scopes=scopes,
+                    oauth_client=client,
+                )
+            )
 
         # Errors that should be shown to the user on the provider website
         except oauth2.FatalClientError as e:
@@ -188,46 +242,30 @@ class OAuthAuthorizeHandler(OAuthHandler):
     @web.authenticated
     def post(self):
         uri, http_method, body, headers = self.extract_oauth_params()
+        referer = self.request.headers.get('Referer', 'no referer')
+        full_url = self.request.full_url()
+        if referer != full_url:
+            self.log.error("OAuth POST from %s != %s", referer, full_url)
+            raise web.HTTPError(403, "Authorization form must come from authorization")
 
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
         scopes = self.get_arguments('scopes')
-
-        session_id = self.get_session_cookie()
-        if session_id is None:
-            session_id = self.set_session_cookie()
-
-        user = self.get_current_user()
-
-
-        # Extra credentials we need in the validator
-        credentials = {
-            'user': user,
-            'handler': self,
-            'session_id': session_id,
-        }
-
-        # The previously stored (in authorization GET view) credentials
-        # credentials.update(request.session.get('oauth2_credentials', {}))
+        # credentials we need in the validator
+        credentials = self.add_credentials()
 
         try:
             headers, body, status = self.oauth_provider.create_authorization_response(
-            uri, http_method, body, headers, scopes, credentials)
-            self.set_status(status)
-            for key, value in headers.items():
-                self.set_header(key, value)
-            if body:
-                self.write(body)
-
+                uri, http_method, body, headers, scopes, credentials,
+            )
         except oauth2.FatalClientError as e:
             # TODO: human error page
             raise
+        else:
+            self.send_oauth_response(headers, body, status)
 
 
-class OAuthTokenHandler(OAuthHandler):
-
-    # get JSON error messages
-    write_error = APIHandler.write_error
+class OAuthTokenHandler(OAuthHandler, APIHandler):
 
     def post(self):
         uri, http_method, body, headers = self.extract_oauth_params()
@@ -235,12 +273,7 @@ class OAuthTokenHandler(OAuthHandler):
 
         headers, body, status = self.oauth_provider.create_token_response(
                 uri, http_method, body, headers, credentials)
-
-        self.set_status(status)
-        for key, value in headers.items():
-            self.set_header(key, value)
-        if body:
-            self.write(body)
+        self.send_oauth_response(headers, body, status)
 
 
 default_handlers = [
