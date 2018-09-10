@@ -599,6 +599,29 @@ def test_announcements(app, announcements):
 
 
 @pytest.mark.gen_test
+def test_token_page(app):
+    name = "cake"
+    cookies = yield app.login_user(name)
+    r = yield get_page("token", app, cookies=cookies)
+    r.raise_for_status()
+    assert urlparse(r.url).path.endswith('/hub/token')
+    assert "Request new API token" in r.text
+    assert "API Tokens" in r.text
+    assert "Server at %s" % app.users[name].url in r.text
+    # no oauth tokens yet, shouldn't have that section
+    assert "Authorized Applications" not in r.text
+
+    # spawn the user to trigger oauth, etc.
+    r = yield get_page("spawn", app, cookies=cookies)
+    r.raise_fo_status()
+
+    r = yield get_page("token", app, cookies=cookies)
+    r.raise_for_status()
+    assert "API Tokens" in r.text
+    assert "Authorized Applications" not in r.text
+
+
+@pytest.mark.gen_test
 def test_server_not_running_api_request(app):
     cookies = yield app.login_user("bees")
     r = yield get_page("user/bees/api/status", app, hub=False, cookies=cookies)

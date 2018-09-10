@@ -247,9 +247,11 @@ class TokenPageHandler(BaseHandler):
             api_tokens.append(token)
 
         # group oauth client tokens by client id
+        # AccessTokens have expires_at as an integer timestamp
+        now_timestamp = now.timestamp()
         oauth_tokens = defaultdict(list)
         for token in user.oauth_tokens:
-            if token.expires_at and token.expires_at < now:
+            if token.expires_at and token.expires_at < now_timestamp:
                 self.log.warning("Deleting expired token")
                 self.db.delete(token)
                 self.db.commit()
