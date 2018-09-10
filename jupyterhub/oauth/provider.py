@@ -4,6 +4,7 @@ implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
 
 from datetime import datetime
+from urllib.parse import urlparse
 
 from oauthlib.oauth2 import RequestValidator, WebApplicationServer
 
@@ -98,22 +99,15 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant (during token request)
         """
+        # TODO: record redirect_uri used during oauth
+        # if we ever support multiple destinations
         app_log.debug("confirm_redirect_uri: client_id=%s, redirect_uri=%s",
             client_id, redirect_uri,
         )
-        orm_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
-        )
-        if orm_client is None:
-            app_log.warning("No such oauth client %s", client_id)
-            return False
-        if redirect_uri == orm_client.redirect_uri:
+        if redirect_uri == client.redirect_uri:
             return True
         else:
-            app_log.warning("Redirect uri %s != %s", redirect_uri, orm_client.redirect_uri)
+            app_log.warning("Redirect uri %s != %s", redirect_uri, client.redirect_uri)
             return False
 
     def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
@@ -465,7 +459,7 @@ class JupyterHubRequestValidator(RequestValidator):
             - Client Credentials Grant
             - Refresh Token Grant
         """
-        return True
+        return grant_type == 'authorization_code'
 
     def validate_redirect_uri(self, client_id, redirect_uri, request, *args, **kwargs):
         """Ensure client is authorized to redirect to the redirect_uri requested.
@@ -479,8 +473,34 @@ class JupyterHubRequestValidator(RequestValidator):
             - Authorization Code Grant
             - Implicit Grant
         """
-        return True
-        raise NotImplementedError('Subclasses must implement this method.')
+        app_log.debug("validate_redirect_uri: client_id=%s, redirect_uri=%s",
+            client_id, redirect_uri,
+        )
+        orm_client = (
+            self.db
+            .query(orm.OAuthClient)
+            .filter_by(identifier=client_id)
+            .first()
+        )
+        if orm_client is None:
+            app_log.warning("No such oauth client %s", client_id)
+            return False
+        if '://' in redirect_uri and '://' not in orm_client.redirect_uri:
+            # default internal "/path/only" redirect uri
+            # confirm it matches our Host header and protocol of Referer
+            expected = "{}://{}{}".format(
+                urlparse(request.headers.get('Referer', '')).scheme,
+                request.headers.get('Host', '[missing Host]'),
+                orm_client.redirect_uri,
+            )
+        else:
+            expected = orm_client.redirect_uri
+
+        if redirect_uri == expected:
+            return True
+        else:
+            app_log.warning("Redirect uri %s != %s", redirect_uri, orm_client.redirect_uri)
+            return False
 
     def validate_refresh_token(self, refresh_token, client, request, *args, **kwargs):
         """Ensure the Bearer token is valid and authorized access to scopes.

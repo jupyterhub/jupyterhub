@@ -104,7 +104,7 @@ class CookieAPIHandler(APIHandler):
         self.write(json.dumps(self.user_model(user)))
 
 
-class OAuthHandler(BaseHandler):
+class OAuthHandler:
     def extract_oauth_params(self):
         """extract oauthlib params from a request
 
@@ -230,13 +230,11 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
         # Errors that should be shown to the user on the provider website
         except oauth2.FatalClientError as e:
-            # TODO: human error page
-            raise
-            # return response_from_error(e)
+            raise web.HTTPError(e.status_code, e.description)
 
         # Errors embedded in the redirect URI back to the client
         except oauth2.OAuth2Error as e:
-            self.log.error("oauth error: %s" % e)
+            self.log.error("OAuth error: %s", e.description)
             self.redirect(e.in_uri(e.redirect_uri))
 
     @web.authenticated
@@ -259,21 +257,23 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 uri, http_method, body, headers, scopes, credentials,
             )
         except oauth2.FatalClientError as e:
-            # TODO: human error page
-            raise
+            raise web.HTTPError(e.status_code, e.description)
         else:
             self.send_oauth_response(headers, body, status)
 
 
 class OAuthTokenHandler(OAuthHandler, APIHandler):
-
     def post(self):
         uri, http_method, body, headers = self.extract_oauth_params()
         credentials = {}
 
-        headers, body, status = self.oauth_provider.create_token_response(
-                uri, http_method, body, headers, credentials)
-        self.send_oauth_response(headers, body, status)
+        try:
+            headers, body, status = self.oauth_provider.create_token_response(
+                    uri, http_method, body, headers, credentials)
+        except oauth2.FatalClientError as e:
+            raise web.HTTPError(e.status_code, e.description)
+        else:
+            self.send_oauth_response(headers, body, status)
 
 
 default_handlers = [
