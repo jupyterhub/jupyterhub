@@ -10,7 +10,7 @@ import jupyterhub
 from .mocking import StubSingleUserSpawner, public_url
 from ..utils import url_path_join
 
-from .utils import async_requests
+from .utils import async_requests, AsyncSession
 
 
 @pytest.mark.gen_test
@@ -41,9 +41,20 @@ def test_singleuser_auth(app):
     r = yield async_requests.get(url_path_join(url, 'logout'), cookies=cookies)
     assert len(r.cookies) == 0
 
-    # another user accessing should get 403, not redirect to login
+    # accessing another user's server hits the oauth confirmation page
     cookies = yield app.login_user('burgess')
-    r = yield async_requests.get(url, cookies=cookies)
+    s = AsyncSession()
+    s.cookies = cookies
+    r = yield s.get(url)
+    assert urlparse(r.url).path.endswith('/oauth2/authorize')
+    # submit the oauth form to complete authorization
+    r = yield s.post(
+        r.url,
+        data={'scopes': ['identify']},
+        headers={'Referer': r.url},
+    )
+    assert urlparse(r.url).path.rstrip('/').endswith('/user/nandy/tree')
+    # user isn't authorized, should raise 403
     assert r.status_code == 403
     assert 'burgess' in r.text
 
