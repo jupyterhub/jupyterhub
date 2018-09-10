@@ -49,9 +49,10 @@ class JupyterHubRequestValidator(RequestValidator):
             .first()
         )
         if oauth_client is None:
-            raise web.HTTPError(400, "Bad OAuth Client")
+            return False
         if not compare_token(oauth_client.secret, client_secret):
-            raise web.HTTPError(400, "Bad OAuth Client")
+            app_log.warning("Client secret mismatch for %s", client_id)
+            return False
 
         request.client = oauth_client
         return True
@@ -75,6 +76,7 @@ class JupyterHubRequestValidator(RequestValidator):
             .first()
         )
         if orm_client is None:
+            app_log.warning("No such oauth client %s", client_id)
             return False
         request.client = orm_client
         return True
@@ -96,8 +98,8 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant (during token request)
         """
-        app_log.debug("confirm_redirect_uri: client_id=%s, code=%s, redirect_uri=%s",
-            client_id, code, redirect_uri,
+        app_log.debug("confirm_redirect_uri: client_id=%s, redirect_uri=%s",
+            client_id, redirect_uri,
         )
         orm_client = (
             self.db
@@ -106,9 +108,13 @@ class JupyterHubRequestValidator(RequestValidator):
             .first()
         )
         if orm_client is None:
+            app_log.warning("No such oauth client %s", client_id)
             return False
-        # TODO: confirm redirect uri
-        return True
+        if redirect_uri == orm_client.redirect_uri:
+            return True
+        else:
+            app_log.warning("Redirect uri %s != %s", redirect_uri, orm_client.redirect_uri)
+            return False
 
     def get_default_redirect_uri(self, client_id, request, *args, **kwargs):
         """Get the default redirect URI for the client.
@@ -126,7 +132,7 @@ class JupyterHubRequestValidator(RequestValidator):
             .first()
         )
         if orm_client is None:
-            return False
+            raise KeyError(client_id)
         return orm_client.redirect_uri
 
     def get_default_scopes(self, client_id, request, *args, **kwargs):
@@ -150,8 +156,7 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Refresh token grant
         """
-        token = find_token()
-        return token.scopes
+        raise NotImplementedError()
 
     def is_within_original_scope(self, request_scopes, refresh_token, request, *args, **kwargs):
         """Check if requested scopes are within a scope of the refresh token.
@@ -169,8 +174,7 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Refresh token grant
         """
-        return set(request_scopes)
-        return False
+        raise NotImplementedError()
 
     def invalidate_authorization_code(self, client_id, code, request, *args, **kwargs):
         """Invalidate an authorization code after use.
@@ -180,7 +184,7 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant
         """
-        app_log.debug("Deleting oauth code %s for %s", code, client_id)
+        app_log.debug("Deleting oauth code %s... for %s", code[:3], client_id)
         orm_code = self.db.query(orm.OAuthCode).filter_by(code=code).first()
         if orm_code is not None:
             self.db.delete(orm_code)
@@ -221,7 +225,8 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant
         """
-        app_log.debug("Saving authorization code %s, %s, %s, %s", client_id, code, args, kwargs)
+        log_code = code.get('code', 'undefined')[:3] + '...'
+        app_log.debug("Saving authorization code %s, %s, %s, %s", client_id, log_code, args, kwargs)
         orm_client = (
             self.db
             .query(orm.OAuthClient)
@@ -236,6 +241,8 @@ class JupyterHubRequestValidator(RequestValidator):
             code=code['code'],
             # oauth has 5 minutes to complete
             expires_at=int(datetime.utcnow().timestamp() + 300),
+            # TODO: persist oauth scopes
+            # scopes=request.scopes,
             user=request.user.orm_user,
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
@@ -260,7 +267,7 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Token Grant Dispatcher
         """
-        return []
+        raise NotImplementedError("TODO")
 
     def save_token(self, token, request, *args, **kwargs):
         """Persist the token with a token type specific method.
@@ -307,7 +314,19 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant (might not associate a client)
             - Client Credentials grant
         """
-        app_log.debug("Saving bearer token %s", token)
+        log_token = {}
+        log_token.update(token)
+        scopes = token['scope'].split(' ')
+        # TODO:
+        if scopes != ['identify']:
+            raise ValueError("Only 'identify' scope is supported")
+        # redact sensitive keys in log
+        for key in ('access_token', 'refresh_token', 'state'):
+            if key in token:
+                value = token[key]
+                if isinstance(value, str):
+                    log_token[key] = 'REDACTED'
+        app_log.debug("Saving bearer token %s", log_token)
         if request.user is None:
             raise ValueError("No user for access token: %s" % request.user)
         client = self.db.query(orm.OAuthClient).filter_by(identifier=request.client.client_id).first()
@@ -316,7 +335,8 @@ class JupyterHubRequestValidator(RequestValidator):
             grant_type=orm.GrantType.authorization_code,
             expires_at=datetime.utcnow().timestamp() + token['expires_in'],
             refresh_token=token['refresh_token'],
-            # refresh_expires_at=access_token.refresh_expires_at,
+            # TODO: save scopes,
+            # scopes=scopes,
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
@@ -506,27 +526,6 @@ class JupyterHubRequestValidator(RequestValidator):
             - Client Credentials Grant
         """
         return True
-
-class HashComparable:
-    """An object for storing hashed tokens
-
-    Overrides `==` so that it compares as equal to its unhashed original
-
-    Needed for storing hashed client_secrets
-    because python-oauth2 uses::
-
-        secret == client.client_secret
-
-    and we don't want to store unhashed secrets in the database.
-    """
-    def __init__(self, hashed_token):
-        self.hashed_token = hashed_token
-
-    def __repr__(self):
-        return "<{} '{}'>".format(self.__class__.__name__, self.hashed_token)
-
-    def __eq__(self, other):
-        return compare_token(self.hashed_token, other)
 
 
 class JupyterHubOAuthServer(WebApplicationServer):

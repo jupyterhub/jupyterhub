@@ -469,6 +469,7 @@ class OAuthAccessToken(Hashed, Base):
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(255))
+    # TODO: drop refresh_expires_at. Refresh tokens shouldn't expire
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     service = None # for API-equivalence with APIToken
