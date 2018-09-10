@@ -113,7 +113,7 @@ class OAuthHandler:
         (uri, http_method, body, headers)
         """
         return (
-            self.make_absolute_redirect_uri(self.request.uri),
+            self.request.uri,
             self.request.method,
             self.request.body,
             self.request.headers,
@@ -125,6 +125,9 @@ class OAuthHandler:
         internal redirect uris, e.g. `/user/foo/oauth_handler`
         are allowed in jupyterhub, but oauthlib prohibits them.
         Add `$HOST` header to redirect_uri to make them acceptable.
+
+        Currently unused in favor of monkeypatching
+        oauthlib.is_absolute_uri to skip the check
         """
         redirect_uri = self.get_argument('redirect_uri')
         if not redirect_uri or not redirect_uri.startswith('/'):

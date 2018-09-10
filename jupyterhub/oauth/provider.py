@@ -17,6 +17,13 @@ from .. import orm
 from ..utils import url_path_join, hash_token, compare_token
 
 
+# patch absolute-uri check
+# because we want to allow relative uri oauth
+# for internal services
+from oauthlib.oauth2.rfc6749.grant_types import authorization_code
+authorization_code.is_absolute_uri = lambda uri: True
+
+
 class JupyterHubRequestValidator(RequestValidator):
 
     def __init__(self, db):
@@ -485,18 +492,7 @@ class JupyterHubRequestValidator(RequestValidator):
         if orm_client is None:
             app_log.warning("No such oauth client %s", client_id)
             return False
-        if '://' in redirect_uri and '://' not in orm_client.redirect_uri:
-            # default internal "/path/only" redirect uri
-            # confirm it matches our Host header and protocol of Referer
-            expected = "{}://{}{}".format(
-                urlparse(request.headers.get('Referer', '')).scheme,
-                request.headers.get('Host', '[missing Host]'),
-                orm_client.redirect_uri,
-            )
-        else:
-            expected = orm_client.redirect_uri
-
-        if redirect_uri == expected:
+        if redirect_uri == orm_client.redirect_uri:
             return True
         else:
             app_log.warning("Redirect uri %s != %s", redirect_uri, orm_client.redirect_uri)
