@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from urllib.parse import quote, urlparse
 import warnings
 
-from oauth2.error import ClientNotFoundError
 from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
@@ -375,17 +374,14 @@ class User:
         client_id = spawner.oauth_client_id
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
-            client_store = oauth_provider.client_authenticator.client_store
-            try:
-                oauth_client = client_store.fetch_by_client_id(client_id)
-            except ClientNotFoundError:
-                oauth_client = None
+            oauth_client = oauth_provider.fetch_by_client_id(client_id)
             # create a new OAuth client + secret on every launch
             # containers that resume will be updated below
-            client_store.add_client(client_id, api_token,
-                                    url_path_join(self.url, server_name, 'oauth_callback'),
-                                    description="Server at %s" % (url_path_join(self.base_url, server_name) + '/'),
-                                    )
+            oauth_provider.add_client(
+                client_id, api_token,
+                url_path_join(self.url, server_name, 'oauth_callback'),
+                description="Server at %s" % (url_path_join(self.base_url, server_name) + '/'),
+            )
         db.commit()
 
         # trigger pre-spawn hook on authenticator
@@ -459,10 +455,10 @@ class User:
                     )
                 # update OAuth client secret with updated API token
                 if oauth_provider:
-                    client_store = oauth_provider.client_authenticator.client_store
-                    client_store.add_client(client_id, spawner.api_token,
-                                            url_path_join(self.url, server_name, 'oauth_callback'),
-                                            )
+                    oauth_provider.add_client(
+                        client_id, spawner.api_token,
+                        url_path_join(self.url, server_name, 'oauth_callback'),
+                    )
                     db.commit()
 
         except Exception as e:

@@ -600,6 +600,21 @@ def test_announcements(app, announcements):
         assert_announcement("logout", r.text)
 
 
+@pytest.mark.parametrize(
+    "params",
+    [
+        "",
+        "redirect_uri=/noexist",
+        "redirect_uri=ok&client_id=nosuchthing",
+    ]
+)
+@pytest.mark.gen_test
+def test_bad_oauth_get(app, params):
+    cookies = yield app.login_user("authorizer")
+    r = yield get_page("hub/api/oauth2/authorize?" + params, app, hub=False, cookies=cookies)
+    assert r.status_code == 400
+
+
 @pytest.mark.gen_test
 def test_token_page(app):
     name = "cake"

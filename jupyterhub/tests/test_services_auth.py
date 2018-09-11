@@ -1,6 +1,8 @@
+"""Tests for service authentication"""
 import asyncio
 from binascii import hexlify
 import copy
+from functools import partial
 import json
 import os
 from queue import Queue
@@ -24,7 +26,7 @@ from ..services.auth import _ExpiringDict, HubAuth, HubAuthenticated
 from ..utils import url_path_join
 from .mocking import public_url, public_host
 from .test_api import add_user
-from .utils import async_requests
+from .utils import async_requests, AsyncSession
 
 # mock for sending monotonic counter way into the future
 monotonic_future = mock.patch('time.monotonic', lambda : sys.maxsize)
@@ -322,24 +324,29 @@ def test_hubauth_service_token(app, mockservice_url):
 def test_oauth_service(app, mockservice_url):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
-    # first request is only going to set login cookie
-    s = requests.Session()
+    # first request is only going to login and get us to the oauth form page
+    s = AsyncSession()
     name = 'link'
     s.cookies = yield app.login_user(name)
-    # run session.get in async_requests thread
-    s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
-    r = yield s_get(url)
+
+    r = yield s.get(url)
+    r.raise_for_status()
+    # we should be looking at the oauth confirmation page
+    assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
+    # verify oauth state cookie was set at some point
+    assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
+
+    # submit the oauth form to complete authorization
+    r = yield s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
     assert 'service-%s' % service.name in set(s.cookies.keys())
     # verify oauth state cookie has been consumed
     assert 'service-%s-oauth-state' % service.name not in set(s.cookies.keys())
-    # verify oauth state cookie was set at some point
-    assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
 
-    # second request should be authenticated
-    r = yield s_get(url, allow_redirects=False)
+    # second request should be authenticated, which means no redirects
+    r = yield s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()
@@ -376,25 +383,23 @@ def test_oauth_cookie_collision(app, mockservice_url):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/')
     print(url)
-    s = requests.Session()
+    s = AsyncSession()
     name = 'mypha'
     s.cookies = yield app.login_user(name)
-    # run session.get in async_requests thread
-    s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
     state_cookie_name = 'service-%s-oauth-state' % service.name
     service_cookie_name = 'service-%s' % service.name
-    oauth_1 = yield s_get(url, allow_redirects=False)
+    oauth_1 = yield s.get(url)
     print(oauth_1.headers)
     print(oauth_1.cookies, oauth_1.url, url)
     assert state_cookie_name in s.cookies
-    state_cookies = [ s for s in s.cookies.keys() if s.startswith(state_cookie_name) ]
+    state_cookies = [ c for c in s.cookies.keys() if c.startswith(state_cookie_name) ]
     # only one state cookie
     assert state_cookies == [state_cookie_name]
     state_1 = s.cookies[state_cookie_name]
 
     # start second oauth login before finishing the first
-    oauth_2 = yield s_get(url, allow_redirects=False)
-    state_cookies = [ s for s in s.cookies.keys() if s.startswith(state_cookie_name) ]
+    oauth_2 = yield s.get(url)
+    state_cookies = [ c for c in s.cookies.keys() if c.startswith(state_cookie_name) ]
     assert len(state_cookies) == 2
     # get the random-suffix cookie name
     state_cookie_2 = sorted(state_cookies)[-1]
@@ -402,11 +407,14 @@ def test_oauth_cookie_collision(app, mockservice_url):
     assert s.cookies[state_cookie_name] == state_1
 
     # finish oauth 2
-    url = oauth_2.headers['Location']
-    if not urlparse(url).netloc:
-        url = public_host(app) + url
-    r = yield s_get(url)
+    # submit the oauth form to complete authorization
+    r = yield s.post(
+        oauth_2.url,
+        data={'scopes': ['identify']},
+        headers={'Referer': oauth_2.url},
+    )
     r.raise_for_status()
+    assert r.url == url
     # after finishing, state cookie is cleared
     assert state_cookie_2 not in s.cookies
     # service login cookie is set
@@ -414,11 +422,14 @@ def test_oauth_cookie_collision(app, mockservice_url):
     service_cookie_2 = s.cookies[service_cookie_name]
 
     # finish oauth 1
-    url = oauth_1.headers['Location']
-    if not urlparse(url).netloc:
-        url = public_host(app) + url
-    r = yield s_get(url)
+    r = yield s.post(
+        oauth_1.url,
+        data={'scopes': ['identify']},
+        headers={'Referer': oauth_1.url},
+    )
     r.raise_for_status()
+    assert r.url == url
+
     # after finishing, state cookie is cleared (again)
     assert state_cookie_name not in s.cookies
     # service login cookie is set (again, to a different value)
@@ -443,7 +454,7 @@ def test_oauth_logout(app, mockservice_url):
     service_cookie_name = 'service-%s' % service.name
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/?foo=bar')
     # first request is only going to set login cookie
-    s = requests.Session()
+    s = AsyncSession()
     name = 'propha'
     app_user = add_user(app.db, app=app, name=name)
     def auth_tokens():
@@ -458,13 +469,16 @@ def test_oauth_logout(app, mockservice_url):
 
     s.cookies = yield app.login_user(name)
     assert 'jupyterhub-session-id' in s.cookies
-    # run session.get in async_requests thread
-    s_get = lambda *args, **kwargs: async_requests.executor.submit(s.get, *args, **kwargs)
-    r = yield s_get(url)
+    r = yield s.get(url)
+    r.raise_for_status()
+    assert urlparse(r.url).path.endswith('oauth2/authorize')
+    # submit the oauth form to complete authorization
+    r = yield s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
     r.raise_for_status()
     assert r.url == url
+
     # second request should be authenticated
-    r = yield s_get(url, allow_redirects=False)
+    r = yield s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()
@@ -483,13 +497,13 @@ def test_oauth_logout(app, mockservice_url):
     assert len(auth_tokens()) == 1
 
     # hit hub logout URL
-    r = yield s_get(public_url(app, path='hub/logout'))
+    r = yield s.get(public_url(app, path='hub/logout'))
     r.raise_for_status()
     # verify that all cookies other than the service cookie are cleared
     assert list(s.cookies.keys()) == [service_cookie_name]
     # verify that clearing session id invalidates service cookie
     # i.e. redirect back to login page
-    r = yield s_get(url)
+    r = yield s.get(url)
     r.raise_for_status()
     assert r.url.split('?')[0] == public_url(app, path='hub/login')
 
@@ -506,7 +520,7 @@ def test_oauth_logout(app, mockservice_url):
     # check that we got the old session id back
     assert session_id == s.cookies['jupyterhub-session-id']
 
-    r = yield s_get(url, allow_redirects=False)
+    r = yield s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()
