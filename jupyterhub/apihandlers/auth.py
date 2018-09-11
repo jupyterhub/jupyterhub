@@ -172,9 +172,13 @@ class OAuthHandler:
         return credentials
 
     def send_oauth_response(self, headers, body, status):
-        """Send oauth response
+        """Send oauth response from provider return values
 
-        headers, body, status  are returned by provider method.
+        Provider methods return headers, body, and status
+        to be set on the response.
+
+        This method applies these values to the Handler
+        and sends the response.
         """
         self.set_status(status)
         for key, value in headers.items():
@@ -246,8 +250,9 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         referer = self.request.headers.get('Referer', 'no referer')
         full_url = self.request.full_url()
         if referer != full_url:
+            # OAuth post must be made to the URL it came from
             self.log.error("OAuth POST from %s != %s", referer, full_url)
-            raise web.HTTPError(403, "Authorization form must come from authorization")
+            raise web.HTTPError(403, "Authorization form must be sent from authorization page")
 
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
