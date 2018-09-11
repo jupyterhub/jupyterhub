@@ -2,8 +2,8 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from datetime import datetime
 import json
-import datetime
 
 from http.client import responses
 
@@ -14,7 +14,17 @@ from .. import orm
 from ..handlers import BaseHandler
 from ..utils import isoformat, url_path_join
 
+
 class APIHandler(BaseHandler):
+    """Base class for API endpoints
+
+    Differences from page handlers:
+
+    - JSON responses and errors
+    - strict referer checking for Cookie-authenticated requests
+    - strict content-security-policy
+    - methods for REST API models
+    """
 
     @property
     def content_security_policy(self):
@@ -137,7 +147,7 @@ class APIHandler(BaseHandler):
                 'oauth_client': token.client.description or token.client.client_id,
             }
             if token.expires_at:
-                expires_at = datetime.datetime.fromtimestamp(token.expires_at)
+                expires_at = datetime.fromtimestamp(token.expires_at)
         else:
             raise TypeError(
                 "token must be an APIToken or OAuthAccessToken, not %s"
@@ -157,6 +167,7 @@ class APIHandler(BaseHandler):
             'kind': kind,
             'created': isoformat(token.created),
             'last_activity': isoformat(token.last_activity),
+            'expires_at': isoformat(expires_at),
         }
         model.update(extra)
         return model

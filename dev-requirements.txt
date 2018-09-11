@@ -1,5 +1,6 @@
 -r requirements.txt
 mock
+beautifulsoup4
 codecov
 cryptography
 pytest-cov

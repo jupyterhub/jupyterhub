@@ -1214,14 +1214,19 @@ def test_token_as_user_deprecated(app, as_user, for_user, status):
 
 
 @mark.gen_test
-@mark.parametrize("headers, status, note", [
-    ({}, 200, 'test note'),
-    ({}, 200, ''),
-    ({'Authorization': 'token bad'}, 403, ''),
+@mark.parametrize("headers, status, note, expires_in", [
+    ({}, 200, 'test note', None),
+    ({}, 200, '', 100),
+    ({'Authorization': 'token bad'}, 403, '', None),
 ])
-def test_get_new_token(app, headers, status, note):
+def test_get_new_token(app, headers, status, note, expires_in):
+    options = {}
     if note:
-        body = json.dumps({'note': note})
+        options['note'] = note
+    if expires_in:
+        options['expires_in'] = expires_in
+    if options:
+        body = json.dumps(options)
     else:
         body = ''
     # request a new token
@@ -1239,6 +1244,10 @@ def test_get_new_token(app, headers, status, note):
     assert reply['user'] == 'admin'
     assert reply['created']
     assert 'last_activity' in reply
+    if expires_in:
+        assert isinstance(reply['expires_at'], str)
+    else:
+        assert reply['expires_at'] is None
     if note:
         assert reply['note'] == note
     else:
