@@ -9,6 +9,21 @@ command line for details.
 
 ## 0.9
 
+### [0.9.3] 2018-09-12
+
+JupyterHub 0.9.3 contains small bugfixes and improvements
+
+- Fix token page and model handling of `expires_at`.
+  This field was missing from the REST API model for tokens
+  and could cause the token page to not render
+- Add keep-alive to progress event stream to avoid proxies dropping
+  the connection due to inactivity
+- Documentation and example improvements
+- Disable quit button when using notebook 5.6
+- Prototype new feature (may change prior to 1.0):
+  pass requesting Handler to Spawners during start,
+  accessible as `self.handler`
+
 ### [0.9.2] 2018-08-10
 
 JupyterHub 0.9.2 contains small bugfixes and improvements.
@@ -402,7 +417,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...HEAD
+[0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
 [0.9.1]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...0.9.0
