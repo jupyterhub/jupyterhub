@@ -1,7 +1,9 @@
 """Tests for HTML pages"""
 
+import sys
 from urllib.parse import urlencode, urlparse
 
+from bs4 import BeautifulSoup
 from tornado import gen
 from tornado.httputil import url_concat
 
@@ -605,20 +607,42 @@ def test_token_page(app):
     r = yield get_page("token", app, cookies=cookies)
     r.raise_for_status()
     assert urlparse(r.url).path.endswith('/hub/token')
-    assert "Request new API token" in r.text
-    assert "API Tokens" in r.text
-    assert "Server at %s" % app.users[name].url in r.text
-    # no oauth tokens yet, shouldn't have that section
-    assert "Authorized Applications" not in r.text
+    def extract_body(r):
+        soup = BeautifulSoup(r.text, "html5lib")
+        import re
+        # trim empty lines
+        return re.sub(r"(\n\s*)+", "\n", soup.body.find(class_="container").text)
+    body = extract_body(r)
+    assert "Request new API token" in body, body
+    # no tokens yet, no lists
+    assert "API Tokens" not in body, body
+    assert "Authorized Applications" not in body, body
 
-    # spawn the user to trigger oauth, etc.
-    r = yield get_page("spawn", app, cookies=cookies)
-    r.raise_fo_status()
+    # request an API token
+    user = app.users[name]
+    token = user.new_api_token(expires_in=60, note="my-test-token")
+    app.db.commit()
 
     r = yield get_page("token", app, cookies=cookies)
     r.raise_for_status()
-    assert "API Tokens" in r.text
-    assert "Authorized Applications" not in r.text
+    body = extract_body(r)
+    assert "API Tokens" in body, body
+    assert "my-test-token" in body, body
+    # no oauth tokens yet, shouldn't have that section
+    assert "Authorized Applications" not in body, body
+
+    # spawn the user to trigger oauth, etc.
+    # request an oauth token
+    user.spawner.cmd = [sys.executable, '-m', 'jupyterhub.singleuser']
+    r = yield get_page("spawn", app, cookies=cookies)
+    r.raise_for_status()
+
+    r = yield get_page("token", app, cookies=cookies)
+    r.raise_for_status()
+    body = extract_body(r)
+    assert "API Tokens" in body, body
+    assert "Server at %s" % user.base_url in body, body
+    assert "Authorized Applications" in body, body
 
 
 @pytest.mark.gen_test
