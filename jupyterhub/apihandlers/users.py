@@ -456,7 +456,7 @@ class SpawnProgressAPIHandler(APIHandler):
         """
         while not self._finished:
             try:
-                await self.write("\n\n")
+                self.write("\n\n")
             except (StreamClosedError, RuntimeError):
                 return
             await asyncio.sleep(self.keepalive_interval)
