@@ -287,6 +287,30 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("User %r not in whitelist.", username)
             return
 
+    async def refresh_user(self, user):
+        """Refresh auth data for a given user
+
+        Allows refreshing or invalidating auth data.
+
+        Only override if your authenticator needs
+        to refresh its data about users once in a while.
+
+        .. versionadded: 1.0
+
+        Args:
+            user (User): the user to refresh
+        Returns:
+            auth_data (dict or None):
+                The same return value as `.authenticate`.
+                Any values here will refresh the value
+                for the user.
+                This can include updating `.admin` fields
+                or updating `.auth_state`.
+                Return None if the user's auth data has expired,
+                and they should be required to login again.
+        """
+        return {'name': user.name}
+
     async def authenticate(self, handler, data):
         """Authenticate a user with login form data
 

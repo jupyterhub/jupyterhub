@@ -52,7 +52,7 @@ class TokenAPIHandler(APIHandler):
             " Use /hub/api/users/:user/tokens instead."
         ) % self.request.uri
         self.log.warning(warn_msg)
-        requester = user = self.get_current_user()
+        requester = user = self.current_user
         if user is None:
             # allow requesting a token with username and password
             # for authenticators where that's possible
@@ -161,7 +161,7 @@ class OAuthHandler:
         if session_id is None:
             session_id = self.set_session_cookie()
 
-        user = self.get_current_user()
+        user = self.current_user
 
         # Extra credentials we need in the validator
         credentials.update({
@@ -216,10 +216,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 uri, http_method, body, headers)
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
-            if client.redirect_uri.startswith(self.get_current_user().url):
+            if client.redirect_uri.startswith(self.current_user.url):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
-                    self.get_current_user(), client.description,
+                    self.current_user, client.description,
                 )
                 # access to my own server doesn't require oauth confirmation
                 # this is the pre-1.0 behavior for all oauth

@@ -30,7 +30,7 @@ class RootHandler(BaseHandler):
     Otherwise, renders login page.
     """
     def get(self):
-        user = self.get_current_user()
+        user = self.current_user
         if self.default_url:
             url = self.default_url
         elif user:
@@ -45,7 +45,7 @@ class HomeHandler(BaseHandler):
 
     @web.authenticated
     async def get(self):
-        user = self.get_current_user()
+        user = self.current_user
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             await user.spawner.poll_and_notify()
@@ -87,7 +87,7 @@ class SpawnHandler(BaseHandler):
 
         or triggers spawn via redirect if there is no form.
         """
-        user = current_user = self.get_current_user()
+        user = current_user = self.current_user
         if for_user is not None and for_user != user.name:
             if not user.admin:
                 raise web.HTTPError(403, "Only admins can spawn on behalf of other users")
@@ -120,7 +120,7 @@ class SpawnHandler(BaseHandler):
     @web.authenticated
     async def post(self, for_user=None):
         """POST spawns with user-specified options"""
-        user = current_user = self.get_current_user()
+        user = current_user = self.current_user
         if for_user is not None and for_user != user.name:
             if not user.admin:
                 raise web.HTTPError(403, "Only admins can spawn on behalf of other users")
@@ -214,7 +214,7 @@ class AdminHandler(BaseHandler):
         running = [ u for u in users if u.running ]
 
         html = self.render_template('admin.html',
-            user=self.get_current_user(),
+            user=self.current_user,
             admin_access=self.settings.get('admin_access', False),
             users=users,
             running=running,
@@ -230,7 +230,7 @@ class TokenPageHandler(BaseHandler):
     def get(self):
         never = datetime(1900, 1, 1)
 
-        user = self.get_current_user()
+        user = self.current_user
         def sort_key(token):
             return (
                 token.last_activity or never,

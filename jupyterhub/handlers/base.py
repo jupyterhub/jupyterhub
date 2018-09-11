@@ -51,6 +51,20 @@ SESSION_COOKIE_NAME = 'jupyterhub-session-id'
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
 
+    async def prepare(self):
+        """Identify the user during the prepare stage of each request
+
+        During requests, the current user may be retrieved via
+        self.current_user
+        """
+        try:
+            await self.get_current_user()
+        except Exception:
+            self.log.exception("Failed to get current user")
+            self._jupyterhub_user = None
+
+        return await maybe_future(super().prepare())
+
     @property
     def log(self):
         """I can't seem to avoid typing self.log"""
@@ -209,6 +223,44 @@ class BaseHandler(RequestHandler):
         self.db.commit()
         return self._user_from_orm(orm_token.user)
 
+    async def refresh_user_auth(self, user, force=False):
+        """Refresh user authentication info
+
+        Calls `authenticator.refresh_user(user)`
+
+        Called at most once per user per request.
+
+        Args:
+            user (User): the user whose auth info is to be refreshed
+            force (bool): force a refresh instead of checking last refresh time
+        Returns:
+            user (User): the user having been refreshed, or None if
+        """
+        if not force: # TODO: and it's sufficiently recent
+            return user
+
+        # refresh a user at most once per request
+        if not hasattr(self, '_refreshed_users'):
+            self._refreshed_users = set()
+        if user.name in self._refreshed_users:
+            # already refreshed during this request
+            return user
+        self._refreshed_users.add(user.name)
+
+        self.log.debug("Refreshing auth for %s", user.name)
+        auth_info = await self.authenticator.refresh_user(user)
+        if auth_info is None:
+            self.log.warning("User %s has stale auth info. Login required to refresh.", user.name)
+            return
+
+        if isinstance(auth_info, str):
+            auth_info = {'name': auth_info}
+        if 'auth_state' not in auth_info:
+            # refresh didn't specify auth_state,
+            # so preserve previous value to avoid clearing
+            auth_info['auth_state'] = await user.get_auth_state()
+        return await self.auth_to_user(auth_info, user)
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
         token = self.get_auth_token()
@@ -217,15 +269,18 @@ class BaseHandler(RequestHandler):
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             return None
-        else:
-            # record token activity
-            now = datetime.utcnow()
-            orm_token.last_activity = now
-            if orm_token.user:
-                orm_token.user.last_activity = now
 
-            self.db.commit()
-            return orm_token.service or self._user_from_orm(orm_token.user)
+        # record token activity
+        now = datetime.utcnow()
+        orm_token.last_activity = now
+        if orm_token.user:
+            orm_token.user.last_activity = now
+        self.db.commit()
+
+        if orm_token.service:
+            return orm_token.service
+
+        return self._user_from_orm(orm_token.user)
 
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""
@@ -265,18 +320,30 @@ class BaseHandler(RequestHandler):
         """get_current_user from a cookie token"""
         return self._user_for_cookie(self.hub.cookie_name)
 
-    def get_current_user(self):
+    async def get_current_user(self):
         """get current username"""
         if not hasattr(self, '_jupyterhub_user'):
             try:
                 user = self.get_current_user_token()
                 if user is None:
                     user = self.get_current_user_cookie()
+                if user:
+                    user = await self.refresh_user_auth(user)
                 self._jupyterhub_user = user
             except Exception:
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
-                raise
+                self.log.exception("Error getting current user")
+        return self._jupyterhub_user
+
+    @property
+    def current_user(self):
+        """Override .current_user accessor from tornado
+
+        Allows .get_current_user to be async.
+        """
+        if not hasattr(self, '_jupyterhub_user'):
+            raise RuntimeError("Must call async get_current_user first!")
         return self._jupyterhub_user
 
     def find_user(self, name):
@@ -323,7 +390,6 @@ class BaseHandler(RequestHandler):
                 if count:
                     self.log.debug("Deleted %s access tokens for %s", count, user.name)
                     self.db.commit()
-
 
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
@@ -467,6 +533,43 @@ class BaseHandler(RequestHandler):
                 next_url = url_path_join(self.hub.base_url, 'home')
         return next_url
 
+    async def auth_to_user(self, authenticated, user=None):
+        """Persist data from .authenticate() or .refresh_user() to the User database
+
+        Args:
+            authenticated(dict): return data from .authenticate or .refresh_user
+            user(User, optional): the User object to refresh, if refreshing
+        Return:
+            user(User): the constructed User object
+        """
+        if isinstance(authenticated, str):
+            authenticated = {'name': authenticated}
+        username = authenticated['name']
+        auth_state = authenticated.get('auth_state')
+        admin = authenticated.get('admin')
+        refreshing = user is not None
+
+        if user and username != user.name:
+            raise ValueError("Username doesn't match! %s != %s" % (username, user.name))
+
+        if user is None:
+            new_user = username not in self.users
+            user = self.user_from_username(username)
+            if new_user:
+                await maybe_future(self.authenticator.add_user(user))
+        # Only set `admin` if the authenticator returned an explicit value.
+        if admin is not None and admin != user.admin:
+            user.admin = admin
+            self.db.commit()
+        # always set auth_state and commit,
+        # because there could be key-rotation or clearing of previous values
+        # going on.
+        if not self.authenticator.enable_auth_state:
+            # auth_state is not enabled. Force None.
+            auth_state = None
+        await user.save_auth_state(auth_state)
+        return user
+
     async def login_user(self, data=None):
         """Login a user"""
         auth_timer = self.statsd.timer('login.authenticate').start()
@@ -474,29 +577,11 @@ class BaseHandler(RequestHandler):
         auth_timer.stop(send=False)
 
         if authenticated:
-            username = authenticated['name']
-            auth_state = authenticated.get('auth_state')
-            admin = authenticated.get('admin')
-            new_user = username not in self.users
-            user = self.user_from_username(username)
-            if new_user:
-                await maybe_future(self.authenticator.add_user(user))
-            # Only set `admin` if the authenticator returned an explicit value.
-            if admin is not None and admin != user.admin:
-                user.admin = admin
-                self.db.commit()
-            # always set auth_state and commit,
-            # because there could be key-rotation or clearing of previous values
-            # going on.
-            if not self.authenticator.enable_auth_state:
-                # auth_state is not enabled. Force None.
-                auth_state = None
-            await user.save_auth_state(auth_state)
-            self.db.commit()
+            user = await self.auth_to_user(authenticated)
             self.set_login_cookie(user)
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
-            self.log.info("User logged in: %s", username)
+            self.log.info("User logged in: %s", user.name)
             return user
         else:
             self.statsd.incr('login.failure')
@@ -815,7 +900,7 @@ class BaseHandler(RequestHandler):
 
     @property
     def template_namespace(self):
-        user = self.get_current_user()
+        user = self.current_user
         ns = dict(
             base_url=self.hub.base_url,
             prefix=self.base_url,
@@ -890,7 +975,8 @@ class BaseHandler(RequestHandler):
 
 class Template404(BaseHandler):
     """Render our 404 template"""
-    def prepare(self):
+    async def prepare(self):
+        await super().prepare()
         raise web.HTTPError(404)
 
 
@@ -935,7 +1021,7 @@ class UserSpawnHandler(BaseHandler):
     async def get(self, name, user_path):
         if not user_path:
             user_path = '/'
-        current_user = self.get_current_user()
+        current_user = self.current_user
         if (
             current_user
             and current_user.name != name
@@ -1143,7 +1229,7 @@ class UserRedirectHandler(BaseHandler):
     """
     @web.authenticated
     def get(self, path):
-        user = self.get_current_user()
+        user = self.current_user
         url = url_path_join(user.url, path)
         if self.request.query:
             # FIXME: use urlunparse instead?
