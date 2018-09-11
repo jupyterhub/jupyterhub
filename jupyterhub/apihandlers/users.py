@@ -429,7 +429,7 @@ class UserAdminAccessAPIHandler(APIHandler):
 class SpawnProgressAPIHandler(APIHandler):
     """EventStream handler for pending spawns"""
 
-    keepalive_interval = 10
+    keepalive_interval = 8
 
     def get_content_type(self):
         return 'text/event-stream'
@@ -445,7 +445,6 @@ class SpawnProgressAPIHandler(APIHandler):
 
     _finished = False
     def on_finish(self):
-        print("on finish")
         self._finished = True
 
     async def keepalive(self):
