@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import json
+import datetime
 
 from http.client import responses
 
@@ -136,7 +137,7 @@ class APIHandler(BaseHandler):
                 'oauth_client': token.client.description or token.client.client_id,
             }
             if token.expires_at:
-                expires_at = datetime.fromtimestamp(token.expires_at)
+                expires_at = datetime.datetime.fromtimestamp(token.expires_at)
         else:
             raise TypeError(
                 "token must be an APIToken or OAuthAccessToken, not %s"
