@@ -238,6 +238,8 @@ our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
 
+JupyterHub follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
+
 ---
 
 **[Technical Overview](#technical-overview)** |
