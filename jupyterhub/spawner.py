@@ -162,9 +162,8 @@ class Spawner(LoggingConfigurable):
     hub = Any()
     authenticator = Any()
     internal_ssl = Bool(False)
+    internal_trust_bundles = Dict()
     internal_certs_location = Unicode('')
-    internal_authority_name = Unicode('')
-    internal_notebook_authority_name = Unicode('')
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -716,19 +715,17 @@ class Spawner(LoggingConfigurable):
             alt_names = default_names + alt_names
 
         certipy = Certipy(store_dir=self.internal_certs_location)
-        internal_authority = self.internal_authority_name
-        notebook_authority = self.internal_notebook_authority_name
-        internal_key_pair = certipy.store.get_record(internal_authority)
+        notebook_component = 'notebooks-ca'
         notebook_key_pair = certipy.create_signed_pair(
             self.user.name,
-            notebook_authority,
+            notebook_component,
             alt_names=alt_names,
             overwrite=True
         )
         paths = {
             "keyfile": notebook_key_pair['files']['key'],
             "certfile": notebook_key_pair['files']['cert'],
-            "cafile": internal_key_pair['files']['cert'],
+            "cafile": self.internal_trust_bundles[notebook_component]
         }
 
         try:
@@ -784,10 +781,9 @@ class Spawner(LoggingConfigurable):
             shutil.move(paths['certfile'], out_dir)
             shutil.copy(paths['cafile'], out_dir)
 
-            path_tmpl = "{out}/{name}.{ext}"
-            key = path_tmpl.format(out=out_dir, name=self.user.name, ext="key")
-            cert = path_tmpl.format(out=out_dir, name=self.user.name, ext="crt")
-            ca = path_tmpl.format(out=out_dir, name=self.internal_authority_name, ext="crt")
+            key = os.path.join(out_dir, os.path.basename(paths['keyfile']))
+            cert = os.path.join(out_dir, os.path.basename(paths['certfile']))
+            ca = os.path.join(out_dir, os.path.basename(paths['cafile']))
 
             # Set cert ownership to user
             for f in [out_dir, key, cert, ca]:

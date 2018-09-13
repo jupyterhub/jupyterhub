@@ -219,11 +219,9 @@ class MockHub(JupyterHub):
     def __new__(cls, *args, **kwargs):
         try:
             # Turn on internalSSL if the options exist
-            internal_authority_name = 'hub'
             cert_location = kwargs['internal_certs_location']
-            external_certs = ssl_setup(cert_location, internal_authority_name)
+            external_certs = ssl_setup(cert_location, 'hub-ca')
             kwargs['internal_ssl'] = True
-            kwargs['internal_authority_name'] = internal_authority_name
             kwargs['ssl_cert'] = external_certs['files']['cert']
             kwargs['ssl_key'] = external_certs['files']['key']
         except KeyError:

@@ -336,34 +336,54 @@ class JupyterHub(Application):
         Use with internal_ssl
         """
     ).tag(config=True)
-    internal_authority_name = Unicode('hub',
-        help=""" The name for the internal signing authority
+    external_ssl_authorities = Dict(
+        default_value={},
+        help=""" Dict authority:dict(files). Specify the key, cert, and/or
+        ca file for an authority. This is useful for externally managed
+        proxies that wish to use internal_ssl.
+
+        The files dict has this format (you must specify at least a cert):
+
+        {
+            'key': '/path/to/key.key',
+            'cert': '/path/to/cert.crt',
+            'ca': '/path/to/ca.crt'
+        }
+
+        The authorities you can override: 'hub-ca', 'notebooks-ca',
+        'proxy-api-ca', 'proxy-client-ca', and 'services-ca'.
 
         Use with internal_ssl
         """
     ).tag(config=True)
-    internal_notebook_authority_name = Unicode('notebook',
-        help=""" The name for the notebook signing authority.
-        This authority is separate from internal_authority_name so that
-        individual notebooks do not trust each other, only the hub and proxy.
+    internal_ssl_authorities = Dict(
+        default_value={
+            'hub-ca': None,
+            'notebooks-ca': None,
+            'proxy-api-ca': None,
+            'proxy-client-ca': None,
+            'services-ca': None,
+        },
+        help=""" Dict authority:dict(files). When creating the various
+        CAs needed for internal_ssl, these are the names that will be used
+        for each authority.
 
         Use with internal_ssl
         """
-    ).tag(config=True)
-    external_authorities = Dict(
-        help=""" A dict of common name to paths to external CA certificates.
-
-        This option is useful when there exist certificates that need to be
-        trusted, but are outside of Certipy's control. For example, when
-        running a proxy in lieu of ConfigurableHTTPProxy, the signing CA that
-        it uses for SSL can be imported and its trust properly propagated.
-
-        The dict uses common names for keys that map to the file path of the
-        certificate. Common names need to be unique.
+    )
+    internal_ssl_components_trust = Dict(
+        help=""" Dict component:list(components). This dict specifies the
+        relationships of components secured by internal_ssl.
+        """
+    )
+    internal_trust_bundles = Dict(
+        help=""" Dict component:path. These are the paths to the trust bundles
+        that each component should have. They will be set during
+        `init_internal_ssl`.
 
         Use with internal_ssl
         """
-    ).tag(config=True)
+    )
     internal_ssl_key = Unicode('',
         help=""" The key to be used for internal ssl
         """
@@ -1138,26 +1158,37 @@ class JupyterHub(Application):
         self.cookie_secret = secret
 
     def init_internal_ssl(self):
-        """Create the certs needed to turn on internal SSL"""
+        """Create the certs needed to turn on internal SSL.
+
+
+        """
+
         if self.internal_ssl:
             from certipy import Certipy, CertNotFoundError
             certipy = Certipy(store_dir=self.internal_certs_location,
                               remove_existing=self.recreate_internal_certs)
-            joint_ca_name = "combined-cas.crt"
 
-            # The authority for internal components (hub, proxy)
-            try:
-                certipy.store.get_record(self.internal_authority_name)
-            except CertNotFoundError:
-                certipy.create_ca(self.internal_authority_name)
+            # Here we define how trust should be laid out per each component
+            self.internal_ssl_components_trust = {
+                'hub-ca': list(self.internal_ssl_authorities.keys()),
+                'proxy-api-ca': ['hub-ca', 'services-ca', 'notebooks-ca'],
+                'proxy-client-ca': ['hub-ca', 'notebooks-ca'],
+                'notebooks-ca': ['hub-ca', 'proxy-client-ca'],
+                'services-ca': ['hub-ca', 'proxy-api-ca'],
+            }
 
-            # The authority for individual notebooks
-            try:
-                authority_record = certipy.store.get_record(
-                    self.internal_notebook_authority_name)
-            except CertNotFoundError:
-                authority_record = certipy.create_ca(
-                    self.internal_notebook_authority_name)
+            hub_name = 'hub-ca'
+
+            # If any external CAs were specified in external_ssl_authorities
+            # add records of them to Certipy's store.
+            self.internal_ssl_authorities.update(self.external_ssl_authorities)
+            for authority, files in self.internal_ssl_authorities.items():
+                if files:
+                    certipy.store.add_record(
+                        authority, is_ca=True, files=files)
+
+            self.internal_trust_bundles = certipy.trust_from_graph(
+                self.internal_ssl_components_trust)
 
             # The signed certs used by hub-internal components
             try:
@@ -1171,30 +1202,13 @@ class JupyterHub(Application):
                                + self.trusted_alt_names)
                 internal_key_pair = certipy.create_signed_pair(
                     "hub-internal",
-                    self.internal_authority_name,
+                    hub_name,
                     alt_names=alt_names
                 )
 
-            external_authorities = []
-            # Add provided, external authority info into Certipy. This will
-            # allow these certs to be added to the joint trust bundle.
-            for cn, file_path in self.external_authorities.items():
-                certipy.store.add_record(
-                    cn, files={"cert": file_path}
-                )
-                external_authorities.append(cn)
-
-            authorities = ([self.internal_authority_name,
-                            self.internal_notebook_authority_name]
-                           + external_authorities)
-
-            joint_ca_file = certipy.create_ca_bundle(
-                joint_ca_name, ca_names=authorities
-            )
-
             self.internal_ssl_key = internal_key_pair['files']['key']
             self.internal_ssl_cert = internal_key_pair['files']['cert']
-            self.internal_ssl_ca = joint_ca_file
+            self.internal_ssl_ca = self.internal_trust_bundles[hub_name]
 
             # Configure the AsyncHTTPClient. This will affect anything using
             # AsyncHTTPClient.
@@ -1750,8 +1764,8 @@ class JupyterHub(Application):
             active_server_limit=self.active_server_limit,
             internal_ssl=self.internal_ssl,
             internal_certs_location=self.internal_certs_location,
-            internal_authority_name=self.internal_authority_name,
-            internal_notebook_authority_name=self.internal_notebook_authority_name,
+            internal_authorities=self.internal_ssl_authorities,
+            internal_trust_bundles=self.internal_trust_bundles,
             internal_ssl_key=self.internal_ssl_key,
             internal_ssl_cert=self.internal_ssl_cert,
             internal_ssl_ca=self.internal_ssl_ca,

@@ -221,9 +221,10 @@ class User:
         if self.settings.get('internal_ssl'):
             ssl_kwargs = dict(
                 internal_ssl=self.settings.get('internal_ssl'),
-                internal_certs_location=self.settings.get('internal_certs_location'),
-                internal_authority_name=self.settings.get('internal_authority_name'),
-                internal_notebook_authority_name=self.settings.get('internal_notebook_authority_name'),
+                internal_trust_bundles=self.settings.get(
+                    'internal_trust_bundles'),
+                internal_certs_location=self.settings.get(
+                    'internal_certs_location'),
             )
             spawn_kwargs.update(ssl_kwargs)
 
@@ -505,9 +506,9 @@ class User:
         db.commit()
         spawner._waiting_for_response = True
         try:
-            key = self.settings['internal_ssl_key']
-            cert = self.settings['internal_ssl_cert']
-            ca = self.settings['internal_ssl_ca']
+            key = self.settings.get('internal_ssl_key')
+            cert = self.settings.get('internal_ssl_cert')
+            ca = self.settings.get('internal_ssl_ca')
             ssl_context = make_ssl_context(key, cert, cafile=ca)
             resp = await server.wait_up(
                     http=True,

@@ -334,7 +334,7 @@ class Service(LoggingConfigurable):
             ),
             internal_ssl=self.app.internal_ssl,
             internal_certs_location=self.app.internal_certs_location,
-            internal_authority_name=self.app.internal_authority_name,
+            internal_trust_bundles=self.app.internal_trust_bundles,
         )
         self.spawner.start()
         self.proc = self.spawner.proc

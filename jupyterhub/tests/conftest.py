@@ -63,12 +63,10 @@ def app(request, io_loop, ssl_tmpdir):
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
 
     if ssl_enabled:
-        internal_authority_name = 'hub'
-        external_certs = ssl_setup(str(ssl_tmpdir), internal_authority_name)
+        external_certs = ssl_setup(str(ssl_tmpdir), 'hub-ca')
         mocked_app = MockHub.instance(
                 log_level=logging.DEBUG,
                 internal_ssl=True,
-                internal_authority_name=internal_authority_name,
                 internal_certs_location=str(ssl_tmpdir))
 
     @gen.coroutine
