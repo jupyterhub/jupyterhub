@@ -253,6 +253,7 @@ def test_shell_cmd(db, tmpdir, request):
     r.raise_for_status()
     env = r.json()
     assert env['TESTVAR'] == 'foo'
+    yield s.stop()
 
 
 def test_inherit_overwrite():
@@ -406,3 +407,4 @@ def test_spawner_routing(app, name):
     r.raise_for_status()
     assert r.url == url
     assert r.text == urlparse(url).path
+    yield user.stop()
