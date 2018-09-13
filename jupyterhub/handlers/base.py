@@ -54,8 +54,14 @@ class BaseHandler(RequestHandler):
     async def prepare(self):
         """Identify the user during the prepare stage of each request
 
-        During requests, the current user may be retrieved via
-        self.current_user
+        `.prepare()` runs prior to all handler methods,
+        e.g. `.get()`, `.post()`.
+
+        Checking here allows `.get_current_user` to be async without requiring
+        every current user check to be made async.
+
+        The current user (None if not logged in) may be accessed
+        via the `self.current_user` property during the handling of any request.
         """
         try:
             await self.get_current_user()
@@ -234,7 +240,8 @@ class BaseHandler(RequestHandler):
             user (User): the user whose auth info is to be refreshed
             force (bool): force a refresh instead of checking last refresh time
         Returns:
-            user (User): the user having been refreshed, or None if
+            user (User): the user having been refreshed,
+                or None if the user must login again to refresh auth info.
         """
         if not force: # TODO: and it's sufficiently recent
             return user
@@ -249,15 +256,25 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Refreshing auth for %s", user.name)
         auth_info = await self.authenticator.refresh_user(user)
-        if auth_info is None:
-            self.log.warning("User %s has stale auth info. Login required to refresh.", user.name)
+
+        if not auth_info:
+            self.log.warning(
+                "User %s has stale auth info. Login is required to refresh.",
+                user.name,
+            )
             return
 
-        if isinstance(auth_info, str):
-            auth_info = {'name': auth_info}
+        if auth_info == True:
+            # refresh_user confirmed that it's up-to-date,
+            # nothing to refresh
+            return user
+
+        # Ensure name field is set. It cannot be updated.
+        auth_info['name'] = user.name
+
         if 'auth_state' not in auth_info:
             # refresh didn't specify auth_state,
-            # so preserve previous value to avoid clearing
+            # so preserve previous value to avoid clearing it
             auth_info['auth_state'] = await user.get_auth_state()
         return await self.auth_to_user(auth_info, user)
 
