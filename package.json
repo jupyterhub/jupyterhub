@@ -10,12 +10,14 @@
   },
   "scripts": {
     "postinstall": "python ./bower-lite",
+    "fmt": "prettier --write --trailing-comma es5 share/jupyterhub/static/js/*",
     "lessc": "lessc"
   },
   "devDependencies": {
+    "clean-css": "^3.4.13",
     "less": "^2.7.1",
     "less-plugin-clean-css": "^1.5.1",
-    "clean-css": "^3.4.13"
+    "prettier": "^1.14.2"
   },
   "dependencies": {
     "bootstrap": "^3.3.7",
