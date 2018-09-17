@@ -24,7 +24,7 @@ class SelfAPIHandler(APIHandler):
     """
 
     async def get(self):
-        user = self.get_current_user()
+        user = self.current_user
         if user is None:
             # whoami can be accessed via oauth token
             user = self.get_current_user_oauth_token()
@@ -99,7 +99,7 @@ class UserListAPIHandler(APIHandler):
 def admin_or_self(method):
     """Decorator for restricting access to either the target user or admin"""
     def m(self, name, *args, **kwargs):
-        current = self.get_current_user()
+        current = self.current_user
         if current is None:
             raise web.HTTPError(403)
         if not (current.name == name or current.admin):
@@ -117,13 +117,13 @@ class UserAPIHandler(APIHandler):
     @admin_or_self
     async def get(self, name):
         user = self.find_user(name)
-        model = self.user_model(user, include_servers=True, include_state=self.get_current_user().admin)
-        # auth state will only be shown if the requestor is an admin
+        model = self.user_model(user, include_servers=True, include_state=self.current_user.admin)
+        # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
         # will see their auth state but normal users won't
-        requestor = self.get_current_user()
-        if requestor.admin:
+        requester = self.current_user
+        if requester.admin:
             model['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(model))
 
@@ -157,7 +157,7 @@ class UserAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
-        if user.name == self.get_current_user().name:
+        if user.name == self.current_user.name:
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.spawner._stop_pending:
             raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
@@ -237,7 +237,7 @@ class UserTokenListAPIHandler(APIHandler):
         if not isinstance(body, dict):
             raise web.HTTPError(400, "Body must be a JSON dict or empty")
 
-        requester = self.get_current_user()
+        requester = self.current_user
         if requester is None:
             # defer to Authenticator for identifying the user
             # can be username+password or an upstream auth token
@@ -415,7 +415,7 @@ class UserAdminAccessAPIHandler(APIHandler):
     def post(self, name):
         self.log.warning("Deprecated in JupyterHub 0.8."
             " Admin access API is not needed now that we use OAuth.")
-        current = self.get_current_user()
+        current = self.current_user
         self.log.warning("Admin user %s has requested access to %s's server",
             current.name, name,
         )

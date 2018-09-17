@@ -236,14 +236,14 @@ def authenticated_403(self):
     Like tornado.web.authenticated, this decorator raises a 403 error
     instead of redirecting to login.
     """
-    if self.get_current_user() is None:
+    if self.current_user is None:
         raise web.HTTPError(403)
 
 
 @auth_decorator
 def admin_only(self):
     """Decorator for restricting access to admin users"""
-    user = self.get_current_user()
+    user = self.current_user
     if user is None or not user.admin:
         raise web.HTTPError(403)
 

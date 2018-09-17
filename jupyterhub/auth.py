@@ -287,10 +287,40 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("User %r not in whitelist.", username)
             return
 
+    async def refresh_user(self, user):
+        """Refresh auth data for a given user
+
+        Allows refreshing or invalidating auth data.
+
+        Only override if your authenticator needs
+        to refresh its data about users once in a while.
+
+        .. versionadded: 1.0
+
+        Args:
+            user (User): the user to refresh
+        Returns:
+            auth_data (bool or dict):
+                Return **True** if auth data for the user is up-to-date
+                and no updates are required.
+
+                Return **False** if the user's auth data has expired,
+                and they should be required to login again.
+
+                Return a **dict** of auth data if some values should be updated.
+                This dict should have the same structure as that returned
+                by :meth:`.authenticate()` when it returns a dict.
+                Any fields present will refresh the value for the user.
+                Any fields not present will be left unchanged.
+                This can include updating `.admin` or `.auth_state` fields.
+        """
+        return True
+
     async def authenticate(self, handler, data):
         """Authenticate a user with login form data
 
-        This must be a tornado gen.coroutine.
+        This must be a coroutine.
+
         It must return the username on successful authentication,
         and return None on failed authentication.
 
@@ -304,12 +334,14 @@ class Authenticator(LoggingConfigurable):
             data (dict): The formdata of the login form.
                          The default form has 'username' and 'password' fields.
         Returns:
-            user (str or dict or None): The username of the authenticated user,
+            user (str or dict or None):
+                The username of the authenticated user,
                 or None if Authentication failed.
+
                 The Authenticator may return a dict instead, which MUST have a
-                key 'name' holding the username, and may have two optional keys
-                set - 'auth_state', a dictionary of of auth state that will be
-                persisted; and 'admin', the admin setting value for the user.
+                key `name` holding the username, and MAY have two optional keys
+                set: `auth_state`, a dictionary of of auth state that will be
+                persisted; and `admin`, the admin setting value for the user.
         """
 
     def pre_spawn_start(self, user, spawner):
