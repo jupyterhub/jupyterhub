@@ -62,7 +62,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
   $(".time-col").map(function(i, el) {
     // convert ISO datestamps to nice momentjs ones
     el = $(el);
-    let m = moment(new Date(el.text().trim()));
+    var m = moment(new Date(el.text().trim()));
     el.text(m.isValid() ? m.fromNow() : "Never");
   });
 

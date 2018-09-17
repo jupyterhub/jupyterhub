@@ -38,7 +38,7 @@ require(["jquery", "jhapi"], function($, JHAPI) {
   //// Named servers buttons
 
   function stop() {
-    let server_name = this.id.replace(/^(stop-)/, "");
+    var server_name = this.id.replace(/^(stop-)/, "");
     // before request
     $("#stop-" + server_name)
       .attr("disabled", true)
