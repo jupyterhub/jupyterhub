@@ -18,18 +18,18 @@ require(["jquery", "jhapi"], function($, JHAPI) {
     api.stop_server(user, {
       success: function() {
         if ($("#start").data("named_servers") === true) {
-        $("#start")
-          .text("Start Default Server")
-          .attr("title", "Start the default server")
-          .attr("disabled", false)
-          .off("click");
+          $("#start")
+            .text("Start Default Server")
+            .attr("title", "Start the default server")
+            .attr("disabled", false)
+            .off("click");
         } else {
-        $("#start")
-          .text("Start My Server")
-          .attr("title", "Start your server")
-          .attr("disabled", false)
-          .off("click");
-        $("#stop").hide();
+          $("#start")
+            .text("Start My Server")
+            .attr("title", "Start your server")
+            .attr("disabled", false)
+            .off("click");
+          $("#stop").hide();
         }
       },
     });
@@ -38,33 +38,35 @@ require(["jquery", "jhapi"], function($, JHAPI) {
   //// Named servers buttons
 
   function stop() {
-    let server_name = (this.id).replace(/^(stop-)/, "");
+    let server_name = this.id.replace(/^(stop-)/, "");
     // before request
-    $("#stop-"+server_name)
+    $("#stop-" + server_name)
       .attr("disabled", true)
       .off("click")
       .click(function() {
-        return false;});
+        return false;
+      });
 
-    $("#goto-"+server_name)
+    $("#goto-" + server_name)
       .attr("disabled", true)
       .off("click")
       .click(function() {
-        return false;});
+        return false;
+      });
 
     // request
     api.stop_named_server(user, server_name, {
       success: function() {
         // after request --> establish final local state
-        $("#stop-"+server_name)
+        $("#stop-" + server_name)
           .data("state", false)
-          .hide()
+          .hide();
 
-        $("#goto-"+server_name)
+        $("#goto-" + server_name)
           .data("state", false)
-          .hide()
+          .hide();
 
-        $("#start-"+server_name)
+        $("#start-" + server_name)
           .data("state", false)
           .show()
           .attr("disabled", false)
@@ -72,56 +74,62 @@ require(["jquery", "jhapi"], function($, JHAPI) {
           .click(start);
       },
     });
-  };
+  }
 
   function goto() {
-    let server_name = (this.id).replace(/^(goto-)/, "");
+    let server_name = this.id.replace(/^(goto-)/, "");
     // before request
-    $("#stop-"+server_name)
+    $("#stop-" + server_name)
       .attr("disabled", true)
       .off("click")
       .click(function() {
-        return false;});
+        return false;
+      });
 
-    $("#goto-"+server_name)
+    $("#goto-" + server_name)
       .attr("disabled", true)
       .off("click")
       .click(function() {
-        return false;});
+        return false;
+      });
 
-    window.location = base_url+"/user/"+user+"/"+server_name+"/tree"; }
+    window.location = base_url + "/user/" + user + "/" + server_name + "/tree";
+  }
 
   function start() {
-    let server_name = (this.id).replace(/^(start-)/, "");
+    let server_name = this.id.replace(/^(start-)/, "");
     // before request
-    $("#start-"+server_name)
+    $("#start-" + server_name)
       .attr("disabled", true)
       .off("click")
       .click(function() {
-        return false;});
+        return false;
+      });
 
     // request
     api.start_named_server(user, server_name, {
       success: function() {
         // after request --> establish final local state
-        $("#stop-"+server_name)
+        $("#stop-" + server_name)
           .data("state", true)
           .show()
           .attr("disabled", false)
           .off("click")
           .click(stop);
 
-        $("#goto-"+server_name)
+        $("#goto-" + server_name)
           .data("state", true)
           .show()
           .attr("disabled", false)
           .off("click")
           .click(goto);
 
-        $("#start-"+server_name)
+        $("#start-" + server_name)
           .data("state", true)
-          .hide()
-      }});};
+          .hide();
+      },
+    });
+  }
 
   // Initial state: TRUE (server running) -- local state transitions occur by clicking stop
   // - stop visible
@@ -143,7 +151,8 @@ require(["jquery", "jhapi"], function($, JHAPI) {
     .attr("disabled", true)
     .off("click")
     .click(function() {
-      return false;});
+      return false;
+    });
 
   // Initial state: FALSE (server not running) -- local state transitions occur by clicking start
   // - stop invisible
@@ -155,18 +164,19 @@ require(["jquery", "jhapi"], function($, JHAPI) {
     .attr("disabled", true)
     .off("click")
     .click(function() {
-      return false;});
+      return false;
+    });
 
   $("[data-state='false'][id^='goto-']")
     .hide()
     .attr("disabled", true)
     .off("click")
     .click(function() {
-      return false;});
+      return false;
+    });
 
   $("[data-state='false'][id^='start-']")
     .show()
     .attr("disabled", false)
     .click(start);
-
 });

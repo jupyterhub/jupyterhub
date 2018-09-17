@@ -44,7 +44,7 @@ require(["jquery", "jhapi", "moment"], function($, JHAPI, moment) {
     var el = $(this);
     var row = get_token_row(el);
     el.attr("disabled", true);
-    api.revoke_token(user, row.data('token-id'), {
+    api.revoke_token(user, row.data("token-id"), {
       success: function(reply) {
         row.remove();
       },
