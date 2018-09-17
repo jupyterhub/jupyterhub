@@ -134,6 +134,10 @@ class Spawner(LoggingConfigurable):
     proxy_spec = Unicode()
 
     @property
+    def last_activity(self):
+        return self.orm_spawner.last_activity
+
+    @property
     def server(self):
         if hasattr(self, '_server'):
             return self._server
