@@ -52,11 +52,29 @@ define(['jquery', 'utils'], function ($, utils) {
         );
     };
 
+    JHAPI.prototype.start_named_server = function (user, server_name, options) {
+        options = options || {};
+        options = update(options, {type: 'POST', dataType: null});
+        this.api_request(
+            utils.url_path_join('users', user, 'servers', server_name),
+            options
+        );
+    };
+
     JHAPI.prototype.stop_server = function (user, options) {
         options = options || {};
         options = update(options, {type: 'DELETE', dataType: null});
         this.api_request(
             utils.url_path_join('users', user, 'server'),
+            options
+        );
+    };
+
+    JHAPI.prototype.stop_named_server = function (user, server_name, options) {
+        options = options || {};
+        options = update(options, {type: 'DELETE', dataType: null});
+        this.api_request(
+            utils.url_path_join('users', user, 'servers', server_name),
             options
         );
     };

@@ -50,13 +50,18 @@ class HomeHandler(BaseHandler):
             # trigger poll_and_notify event in case of a server that died
             await user.spawner.poll_and_notify()
 
-        # send the user to /spawn if they aren't running or pending a spawn,
+        # send the user to /spawn if they have no active servers,
         # to establish that this is an explicit spawn request rather
-        # than an implicit one, which can be caused by any link to `/user/:name`
-        url = user.url if user.spawner.active else url_path_join(self.hub.base_url, 'spawn')
+        # than an implicit one, which can be caused by any link to `/user/:name(/:server_name)`
+        url = url_path_join(self.hub.base_url, 'user', user.name)  if user.active else url_path_join(self.hub.base_url, 'spawn')
         html = self.render_template('home.html',
             user=user,
             url=url,
+            allow_named_servers=self.allow_named_servers,
+            url_path_join=url_path_join,
+            # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
+            spawners = user.orm_user._orm_spawners,
+            default_server = user.spawner,
         )
         self.finish(html)
 
@@ -214,11 +219,12 @@ class AdminHandler(BaseHandler):
         running = [ u for u in users if u.running ]
 
         html = self.render_template('admin.html',
-            user=self.current_user,
+            current_user=self.current_user,
             admin_access=self.settings.get('admin_access', False),
             users=users,
             running=running,
             sort={s:o for s,o in zip(sorts, orders)},
+            allow_named_servers=self.allow_named_servers,
         )
         self.finish(html)
 
