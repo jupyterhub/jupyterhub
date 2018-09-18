@@ -17,9 +17,14 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
 
   var api = new JHAPI(base_url);
 
-  function get_row(element) {
-    while (!element.hasClass("user-row")) {
+  function getRow(element) {
+    var original = element;
+    while (!element.hasClass("server-row")) {
       element = element.parent();
+      if (element[0].tagName === "BODY") {
+        console.error("Couldn't find row for", original);
+        throw new Error("No server-row found");
+      }
     }
     return element;
   }
@@ -66,52 +71,37 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
     el.text(m.isValid() ? m.fromNow() : "Never");
   });
 
-  $(".stop-server.default-server").click(function() {
+  $(".stop-server").click(function() {
     var el = $(this);
-    var row = get_row(el);
+    var row = getRow(el);
+    var serverName = row.data("server-name");
     var user = row.data("user");
     el.text("stopping...");
-    api.stop_server(user, {
+    var stop = function(options) {
+      return api.stop_server(user, options);
+    };
+    if (serverName !== "") {
+      stop = function(options) {
+        return api.stop_named_server(user, serverName, options);
+      };
+    }
+    stop({
       success: function() {
-        if (el.data("named_servers") === true) {
-          el.text("stop default server").addClass("hidden");
-        } else {
-          el.text("stop server").addClass("hidden");
-        }
+        el.text("stop " + serverName).addClass("hidden");
         row.find(".access-server").addClass("hidden");
         row.find(".start-server").removeClass("hidden");
       },
     });
   });
 
-  $(".stop-server[id^='stop-']").click(function() {
-    var el = $(this);
-    var row = get_row(el);
+  $(".access-server").map(function(i, el) {
+    el = $(el);
+    var row = getRow(el);
     var user = row.data("user");
-    var server_name = this.id.replace(/^(stop-)/, "");
-    el.text("stopping...");
-    api.stop_named_server(user, server_name, {
-      success: function() {
-        el.text("stop " + server_name).addClass("hidden");
-        row.find(".access-server").addClass("hidden");
-        row.find(".start-server").removeClass("hidden");
-      },
-    });
-  });
-
-  $(".access-server.default-server").map(function(i, el) {
-    el = $(el);
-    var user = get_row(el).data("user");
-    el.attr("href", utils.url_path_join(prefix, "user", user) + "/");
-  });
-
-  $(".access-server[id^='access-']").map(function(i, el) {
-    el = $(el);
-    var user = get_row(el).data("user");
-    var server_name = this.id.replace(/^(access-)/, "");
+    var serverName = row.data("server-name");
     el.attr(
       "href",
-      utils.url_path_join(prefix, "user", user, server_name) + "/"
+      utils.url_path_join(prefix, "user", user, serverName) + "/"
     );
   });
 
@@ -120,40 +110,31 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
     // link to spawn page instead of making API requests
     $(".start-server").map(function(i, el) {
       el = $(el);
-      var user = get_row(el).data("user");
+      var user = getRow(el).data("user");
+      // TODO: include server-name
       el.attr("href", utils.url_path_join(prefix, "hub/spawn", user));
     });
     // cannot start all servers in this case
     // since it would mean opening a bunch of tabs
     $("#start-all-servers").addClass("hidden");
   } else {
-    $(".start-server.default-server").click(function() {
+    $(".start-server").click(function() {
       var el = $(this);
-      var row = get_row(el);
+      var row = getRow(el);
       var user = row.data("user");
+      var serverName = row.data("server-name");
       el.text("starting...");
-      api.start_server(user, {
+      var start = function(options) {
+        return api.start_server(user, options);
+      };
+      if (serverName !== "") {
+        start = function(options) {
+          return api.start_named_server(user, serverName, options);
+        };
+      }
+      start({
         success: function() {
-          if (el.data("named_servers") === true) {
-            el.text("start default server").addClass("hidden");
-          } else {
-            el.text("start server").addClass("hidden");
-          }
-          row.find(".stop-server").removeClass("hidden");
-          row.find(".access-server").removeClass("hidden");
-        },
-      });
-    });
-
-    $(".start-server[id^='start-']").click(function() {
-      var el = $(this);
-      var row = get_row(el);
-      var user = row.data("user");
-      var server_name = this.id.replace(/^(start-)/, "");
-      el.text("starting...");
-      api.start_named_server(user, server_name, {
-        success: function() {
-          el.text("start " + server_name).addClass("hidden");
+          el.text("start " + serverName).addClass("hidden");
           row.find(".stop-server").removeClass("hidden");
           row.find(".access-server").removeClass("hidden");
         },
@@ -163,7 +144,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
 
   $(".edit-user").click(function() {
     var el = $(this);
-    var row = get_row(el);
+    var row = getRow(el);
     var user = row.data("user");
     var admin = row.data("admin");
     var dialog = $("#edit-user-dialog");
@@ -196,7 +177,7 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
 
   $(".delete-user").click(function() {
     var el = $(this);
-    var row = get_row(el);
+    var row = getRow(el);
     var user = row.data("user");
     var dialog = $("#delete-user-dialog");
     dialog.find(".delete-username").text(user);
