@@ -217,6 +217,13 @@ paths:
           in: path
           required: true
           type: string
+        - name: remove
+          description: |
+            Whether to fully remove the server, rather than just stop it.
+            Removing a server deletes things like the state of the stopped server.
+          in: body
+          required: false
+          type: boolean
       responses:
         '201':
           description: The user's notebook named-server has started

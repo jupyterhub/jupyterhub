@@ -1,4 +1,5 @@
 """Tests for named servers"""
+import json
 from unittest import mock
 
 import pytest
@@ -134,6 +135,21 @@ def test_delete_named_server(app, named_servers):
         'auth_state': None,
         'servers': {},
     })
+    # wrapper Spawner is gone
+    assert servername not in user.spawners
+    # low-level record still exists
+    assert servername in user.orm_spawners
+
+    r = yield api_request(
+        app, 'users', username, 'servers', servername,
+        method='delete',
+        data=json.dumps({'remove': True}),
+    )
+    r.raise_for_status()
+    assert r.status_code == 204
+    # low-level record is now removes
+    assert servername not in user.orm_spawners
+
 
 @pytest.mark.gen_test
 def test_named_server_disabled(app):
