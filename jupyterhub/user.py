@@ -195,11 +195,13 @@ class User:
         for name, orm_spawner in sorted(self.orm_user.orm_spawners.items()):
             if name == '' and not include_default:
                 continue
+            if name and not self.allow_named_servers:
+                continue
             if name in self.spawners:
-                # yield wrapper if it exists
+                # yield wrapper if it exists (server may be active)
                 yield self.spawners[name]
             else:
-                # otherwise, yield low-level object
+                # otherwise, yield low-level ORM object (server is not active)
                 yield orm_spawner
 
     def _new_spawner(self, server_name, spawner_class=None, **kwargs):
