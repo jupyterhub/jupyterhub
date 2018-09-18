@@ -135,16 +135,6 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
-    # properties on the spawner wrapper
-    # some APIs get these low-level objects
-    # when the spawner isn't running,
-    # for which these should all be False
-    active = running = ready = False
-    pending = None
-    @property
-    def orm_spawner(self):
-        return self
-
     _orm_spawners = relationship(
         "Spawner",
         backref="user",
@@ -219,6 +209,15 @@ class Spawner(Base):
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
 
+    # properties on the spawner wrapper
+    # some APIs get these low-level objects
+    # when the spawner isn't running,
+    # for which these should all be False
+    active = running = ready = False
+    pending = None
+    @property
+    def orm_spawner(self):
+        return self
 
 class Service(Base):
     """A service run with JupyterHub
