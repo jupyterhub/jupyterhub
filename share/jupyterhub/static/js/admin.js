@@ -94,6 +94,19 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
     });
   });
 
+  $(".delete-server").click(function() {
+    var el = $(this);
+    var row = getRow(el);
+    var serverName = row.data("server-name");
+    var user = row.data("user");
+    el.text("deleting...");
+    api.delete_named_server(user, serverName, {
+      success: function() {
+        row.remove();
+      },
+    });
+  });
+
   $(".access-server").map(function(i, el) {
     el = $(el);
     var row = getRow(el);

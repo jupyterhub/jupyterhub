@@ -85,7 +85,6 @@ require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
     disableRow(row);
 
     // request
-    // TODO: implement delete-named on the server side
     api.delete_named_server(user, serverName, {
       success: function() {
         row.remove();

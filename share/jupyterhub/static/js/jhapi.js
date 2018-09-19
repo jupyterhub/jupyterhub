@@ -73,6 +73,12 @@ define(["jquery", "utils"], function($, utils) {
     );
   };
 
+  JHAPI.prototype.delete_named_server = function(user, server_name, options) {
+    options = options || {};
+    options.data = JSON.stringify({ remove: true });
+    return this.stop_named_server(user, server_name, options);
+  };
+
   JHAPI.prototype.list_users = function(options) {
     this.api_request("users", options);
   };
