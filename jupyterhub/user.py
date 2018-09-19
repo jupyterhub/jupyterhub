@@ -554,11 +554,25 @@ class User:
             # remove server entry from db
             spawner.server = None
             if not spawner.will_resume:
-                # find and remove the API token if the spawner isn't
+                # find and remove the API token and oauth client if the spawner isn't
                 # going to re-use it next time
                 orm_token = orm.APIToken.find(self.db, api_token)
                 if orm_token:
                     self.db.delete(orm_token)
+                # remove oauth client as well
+                # handle upgrades from 0.8, where client id will be `user-USERNAME`,
+                # not just `jupyterhub-user-USERNAME`
+                client_ids = (
+                    spawner.oauth_client_id,
+                    spawner.oauth_client_id.split('-', 1)[1],
+                )
+                for oauth_client in (
+                    self.db
+                        .query(orm.OAuthClient)
+                        .filter(orm.OAuthClient.identifier.in_(client_ids))
+                ):
+                    self.log.debug("Deleting oauth client %s", oauth_client.identifier)
+                    self.db.delete(oauth_client)
             self.db.commit()
         finally:
             spawner.orm_spawner.started = None
