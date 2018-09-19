@@ -9,6 +9,12 @@ command line for details.
 
 ## 0.9
 
+### [0.9.4] 2018-09-20
+
+JupyterHub 0.9.4 fixes a single issue that required
+all running user servers to be restarted when performing an upgrade
+from 0.8 to 0.9.
+
 ### [0.9.3] 2018-09-12
 
 JupyterHub 0.9.3 contains small bugfixes and improvements
@@ -417,7 +423,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
+[0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
 [0.9.1]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...0.9.1
