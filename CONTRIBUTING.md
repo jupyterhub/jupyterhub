@@ -110,11 +110,10 @@ Happy developing!
 
 ### Using DummyAuthenticator & SimpleSpawner
 
-The default JupyterHub authenticator & spawner require your
-system to have user accounts for each user you want to log in to
-JupyterHub as. This requires you have root / `sudo` access to your
-machine. It also gets cumbersome & insecure quickly as you
-do development.
+The default JupyterHub [authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#the-default-pam-authenticator)
+& [spawner](https://jupyterhub.readthedocs.io/en/stable/api/spawner.html#localprocessspawner)
+require your system to have user accounts for each user you want to log in to
+JupyterHub as.
 
 [DummyAuthenticator](https://github.com/jupyterhub/dummyauthenticator) allows
 you to log in with any username & password.
