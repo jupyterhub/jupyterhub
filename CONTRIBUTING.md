@@ -108,6 +108,26 @@ to make that happen.
 
 Happy developing!
 
+### Using DummyAuthenticator & SimpleSpawner
+
+The default JupyterHub authenticator & spawner require your
+system to have user accounts for each user you want to log in to
+JupyterHub as. This requires you have root / `sudo` access to your
+machine. It also gets cumbersome & insecure quickly as you
+do development.
+
+[DummyAuthenticator](https://github.com/jupyterhub/dummyauthenticator) allows
+you to log in with any username & password.
+[SimpleSpawner](https://github.com/jupyterhub/simplespawner) lets you start
+servers without having to create unix users for each JupyterHub user.
+Together, these make it much easier to test JupyterHub.
+
+If you are working on parts of JupyterHub that are common to all
+authenticators & spawners, we recommend using both DummyAuthenticator &
+SimpleSpawner. If you are working on just authenticator related parts, use
+only SimpleSpawner. Similarly, if you are working on just spawner
+related parts, use only DummyAuthenticator.
+
 ## Troubleshooting a development install
 
 ### `lessc` not found
