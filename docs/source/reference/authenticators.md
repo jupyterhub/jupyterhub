@@ -36,10 +36,8 @@ with any provider, is also available.
 
 ## Additional Authenticators
 
-- ldapauthenticator for LDAP
-- tmpauthenticator for temporary accounts
-- For Shibboleth, [jhub_shibboleth_auth](https://github.com/gesiscss/jhub_shibboleth_auth)
-  and [jhub_remote_user_authenticator](https://github.com/cwaldbieser/jhub_remote_user_authenticator)
+A partial list of other authenticators is available on the
+[JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 ## Technical Overview of Authentication
 
