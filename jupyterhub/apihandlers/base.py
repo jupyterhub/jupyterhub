@@ -30,6 +30,9 @@ class APIHandler(BaseHandler):
     def content_security_policy(self):
         return '; '.join([super().content_security_policy, "default-src 'none'"])
 
+    def get_content_type(self):
+        return 'application/json'
+
     def check_referer(self):
         """Check Origin for cross-site API requests.
 
@@ -265,3 +268,13 @@ class APIHandler(BaseHandler):
 
     def options(self, *args, **kwargs):
         self.finish()
+
+
+class API404(APIHandler):
+    """404 for API requests
+
+    Ensures JSON 404 errors for malformed URLs
+    """
+    async def prepare(self):
+        await super().prepare()
+        raise web.HTTPError(404)

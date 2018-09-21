@@ -100,6 +100,8 @@ def api_request(app, *api_path, **kwargs):
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
     assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
     assert 'http' not in resp.headers['Content-Security-Policy']
+    if not kwargs.get('stream', False) and resp.content:
+        assert resp.headers.get('content-type') == 'application/json'
     return resp
 
 
@@ -746,6 +748,8 @@ def test_progress(request, app, no_patience, slow_spawn):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
+
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -807,6 +811,7 @@ def test_progress_ready(request, app):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -826,6 +831,7 @@ def test_progress_bad(request, app, no_patience, bad_spawn):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -847,6 +853,7 @@ def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)

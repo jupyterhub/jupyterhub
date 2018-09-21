@@ -973,6 +973,8 @@ class JupyterHub(Application):
         h.extend(self.extra_handlers)
 
         h.append((r'/logo', LogoHandler, {'path': self.logo_file}))
+        h.append((r'/api/(.*)', apihandlers.base.API404))
+
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
