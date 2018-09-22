@@ -51,7 +51,7 @@ to make that happen.
    ```
 
 2. Make sure the `python` you installed and the `npm` you installed
-   are available to you on the commandline.
+   are available to you on the command line.
 
    ```bash
    python -V
@@ -114,7 +114,7 @@ To simplify testing of JupyterHub,
 it's helpful to use DummyAuthenticator instead of the default JupyterHub authenticator
 and SimpleSpawner instead of the default spawner.
 
-There is a sample configuration file that does this in `testing.jupyterhub_config.py`.
+There is a sample configuration file that does this in `testing/jupyterhub_config.py`.
 To launch jupyterhub with this configuration:
 
     pip install jupyterhub-simplespawner jupyterhub-dummyauthenticator
@@ -161,9 +161,9 @@ python3 setup.py css   # recompile CSS from LESS sources
 
 ## Running the test suite
 
-We use [pytest](http://doc.pytest.org/en/latest/) for running tests. 
+We use [pytest](http://doc.pytest.org/en/latest/) for running tests.
 
-1. Set up a development install as described above. 
+1. Set up a development install as described above.
 
 2. Set environment variable for `ASYNC_TEST_TIMEOUT` to 15 seconds:
 
