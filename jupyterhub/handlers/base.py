@@ -31,6 +31,7 @@ from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
+    CURRENTLY_RUNNING_SERVERS
 )
 
 # pattern for the authentication token header
@@ -729,6 +730,7 @@ class BaseHandler(RequestHandler):
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
+            CURRENTLY_RUNNING_SERVERS.inc()
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
@@ -880,6 +882,7 @@ class BaseHandler(RequestHandler):
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
             self.statsd.timing('spawner.stop', (toc - tic) * 1000)
+            CURRENTLY_RUNNING_SERVERS.dec()
 
         try:
             await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())

@@ -18,6 +18,7 @@ them manually here.
 from enum import Enum
 
 from prometheus_client import Histogram
+from prometheus_client import Gauge
 
 REQUEST_DURATION_SECONDS = Histogram(
     'request_duration_seconds',
@@ -33,6 +34,13 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
     # are meant for quick running processes. Spawns can take a while!
     buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, float("inf")]
 )
+
+CURRENTLY_RUNNING_SERVERS = Gauge(
+    'currently_running_servers',
+    'the number of user servers currently running',
+)
+
+CURRENTLY_RUNNING_SERVERS.set(0)
 
 class ServerSpawnStatus(Enum):
     """
