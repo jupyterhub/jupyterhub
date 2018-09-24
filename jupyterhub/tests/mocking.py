@@ -26,6 +26,7 @@ Other components
 - public_url
 
 """
+
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -152,9 +153,8 @@ class BadSpawner(MockSpawner):
 class SlowBadSpawner(MockSpawner):
     """Spawner that fails after a short delay"""
 
-    @gen.coroutine
-    def start(self):
-        yield gen.sleep(0.1)
+    async def start(self):
+        await asyncio.sleep(0.5)
         raise RuntimeError("I don't work!")
 
 

@@ -734,7 +734,8 @@ class Spawner(LoggingConfigurable):
         This method is always an async generator and will always yield at least one event.
         """
         if not self._spawn_pending:
-            raise RuntimeError("Spawn not pending, can't generate progress")
+            self.log.warning("Spawn not pending, can't generate progress for %s", self._log_name)
+            return
 
         await yield_({
             "progress": 0,
