@@ -443,9 +443,12 @@ class SpawnProgressAPIHandler(APIHandler):
             # raise Finish to halt the handler
             raise web.Finish()
 
-    _finished = False
+    def initialize(self):
+        super().initialize()
+        self._finish_future = asyncio.Future()
+
     def on_finish(self):
-        self._finished = True
+        self._finish_future.set_result(None)
 
     async def keepalive(self):
         """Write empty lines periodically
@@ -453,12 +456,17 @@ class SpawnProgressAPIHandler(APIHandler):
         to avoid being closed by intermediate proxies
         when there's a large gap between events.
         """
-        while not self._finished:
+        while not self._finish_future.done():
             try:
                 self.write("\n\n")
+                await self.flush()
             except (StreamClosedError, RuntimeError):
                 return
-            await asyncio.sleep(self.keepalive_interval)
+
+            await asyncio.wait(
+                [self._finish_future],
+                timeout=self.keepalive_interval,
+            )
 
     @admin_or_self
     async def get(self, username, server_name=''):
