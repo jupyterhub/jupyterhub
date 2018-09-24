@@ -9,11 +9,14 @@ command line for details.
 
 ## 0.9
 
-### [0.9.4] 2018-09-20
+### [0.9.4] 2018-09-24
 
-JupyterHub 0.9.4 fixes a single issue that required
-all running user servers to be restarted when performing an upgrade
-from 0.8 to 0.9.
+JupyterHub 0.9.4 is a small bugfix release.
+
+- Fixes an  issue that required all running user servers to be restarted
+  when performing an upgrade from 0.8 to 0.9.
+- Fixes content-type for API endpoints back to `application/json`.
+  It was `text/html` in 0.9.0-0.9.3.
 
 ### [0.9.3] 2018-09-12
 
