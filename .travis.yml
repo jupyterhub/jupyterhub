@@ -17,6 +17,7 @@ services:
 
 # installing dependencies
 before_install:
+  - set -e
   - nvm install 6; nvm use 6
   - npm install
   - npm install -g configurable-http-proxy
@@ -40,20 +41,25 @@ install:
 script:
   - |
     # run tests
-    set -e
-    pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    if [[ "$TEST" != "docs" ]]; then
+      pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    fi
   - |
     # build docs
-    pushd docs
-    pip install -r requirements.txt
-    make html
-    popd
+    if [[ "$TEST" == "docs" ]]; then
+      pushd docs
+      pip install -r requirements.txt
+      make html
+      popd
+    fi
 after_success:
   - codecov
 
 matrix:
   fast_finish: true
   include:
+    - python: 3.6
+      env: TEST=docs
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
