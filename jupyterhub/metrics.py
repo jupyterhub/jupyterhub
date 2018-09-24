@@ -35,12 +35,12 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
     buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, float("inf")]
 )
 
-CURRENTLY_RUNNING_SERVERS = Gauge(
-    'currently_running_servers',
+RUNNING_SERVERS = Gauge(
+    'running_servers',
     'the number of user servers currently running',
 )
 
-CURRENTLY_RUNNING_SERVERS.set(0)
+RUNNING_SERVERS.set(0)
 
 class ServerSpawnStatus(Enum):
     """
