@@ -59,7 +59,31 @@ def create_dir_hook(spawner):
 c.Spawner.pre_spawn_hook = create_dir_hook
 ```
 
-### Example #2 - Run a shell script 
+### Example #2 - Run `mkhomedir_helper`
+
+Many Linux distributions provide a script that is responsible for user homedir bootstrapping: `/sbin/mkhomedir_helper`. To make use of it, you can use
+
+```python
+def create_dir_hook(spawner):
+    username = spawner.user.name
+    if not os.path.exists(os.path.join('/volumes/jupyterhub', username)):
+        subprocess.call(["sudo", "/sbin/mkhomedir_helper", spawner.user.name])
+
+# attach the hook function to the spawner
+c.Spawner.pre_spawn_hook = create_dir_hook
+```
+
+and make sure to add
+
+```
+jupyterhub ALL = (root) NOPASSWD: /sbin/mkhomedir_helper
+```
+
+in a new file in `/etc/sudoers.d`, or simply in `/etc/sudoers`.
+
+All new home directories will be created from `/etc/skel`, so make sure to place any custom homedir-contents in there.
+
+### Example #3 - Run a shell script 
 
 You can specify a plain ole' shell script (or any other executable) to be run 
 by the bootstrap process.
