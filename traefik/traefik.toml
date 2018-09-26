@@ -1,0 +1,44 @@
+defaultEntryPoints = ["http"]
+
+debug = true
+logLevel = "DEBUG"
+
+[api]
+	entrypoint = "http"
+	address = ":8080"
+
+[entryPoints]
+	[entryPoints.http]
+		address = ":80"
+
+[file]
+
+[frontends]
+        [frontends.default]
+                backend = "defaultbackend"
+                        [frontends.default.routes.test_1]
+                        rule = "PathPrefix:/"
+        [frontends.userfirst]
+                backend = "userfirstbackend"
+                        [frontends.userfirst.routes.test]
+                        rule = "PathPrefix:/user/first"
+        [frontends.usersecond]
+                backend = "usersecondbackend"
+                        [frontends.usersecond.routes.test]
+                        rule = "PathPrefix:/user/second"
+
+[backends]
+        [backends.defaultbackend]
+                [backends.defaultbackend.servers.server1]
+                        url = "http://127.0.0.1:9000"
+                        weight = 1
+        [backends.userfirstbackend]
+                [backends.userfirstbackend.servers.server1]
+                        url = "http://127.0.0.1:9090"
+                        weight = 1
+        [backends.usersecondbackend]
+                [backends.usersecondbackend.servers.server1]
+                        url = "http://127.0.0.1:9099"
+                        weight = 1
+
+
