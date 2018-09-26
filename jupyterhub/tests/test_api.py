@@ -677,7 +677,8 @@ def test_slow_spawn(app, no_patience, slow_spawn):
     assert not app_user.spawner._stop_pending
     assert app_user.spawner is not None
     r = yield api_request(app, 'users', name, 'server', method='delete')
-    assert r.status_code == 400
+    # 204 deleted if there's no such server
+    assert r.status_code == 204
     assert app.users.count_active_users()['pending'] == 0
     assert app.users.count_active_users()['active'] == 0
 

@@ -216,7 +216,10 @@ class AdminHandler(BaseHandler):
 
         users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered)
         users = [ self._user_from_orm(u) for u in users ]
-        running = [ u for u in users if u.running ]
+        from itertools import chain
+        running = []
+        for u in users:
+            running.extend(s for s in u.spawners.values() if s.active)
 
         html = self.render_template('admin.html',
             current_user=self.current_user,

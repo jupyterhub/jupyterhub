@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import copy
 from datetime import datetime, timedelta
 from http.client import responses
@@ -878,17 +879,24 @@ class BaseHandler(RequestHandler):
                 await self.proxy.delete_user(user, server_name)
                 await user.stop(server_name)
             finally:
+                spawner._stop_future = None
                 spawner._stop_pending = False
+
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
             self.statsd.timing('spawner.stop', (toc - tic) * 1000)
             RUNNING_SERVERS.dec()
 
+        future = spawner._stop_future = asyncio.ensure_future(stop())
+
         try:
-            await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
+            await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), future)
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
             self.log.warning("User %s:%s server is slow to stop", user.name, server_name)
+
+        # return handle on the future for hooking up callbacks
+        return future
 
     #---------------------------------------------------------------
     # template rendering
