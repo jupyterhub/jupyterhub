@@ -1,3 +1,4 @@
+==========
 JupyterHub
 ==========
 
@@ -32,41 +33,53 @@ The JupyterHub team and Project Jupyter value our community, and JupyterHub
 follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
 
 Contents
---------
+========
 
-**Installation Guide**
+Installation Guide
+------------------
 
-* :doc:`installation-guide`
-* :doc:`quickstart`
-* :doc:`quickstart-docker`
-* :doc:`installation-basics`
+.. toctree::
+   :maxdepth: 1
 
-**Getting Started**
+   installation-guide
+   quickstart
+   quickstart-docker
+   installation-basics
 
-* :doc:`getting-started/index`
-* :doc:`getting-started/config-basics`
-* :doc:`getting-started/networking-basics`
-* :doc:`getting-started/security-basics`
-* :doc:`getting-started/authenticators-users-basics`
-* :doc:`getting-started/spawners-basics`
-* :doc:`getting-started/services-basics`
+Getting Started
+---------------
 
-**Technical Reference**
+.. toctree::
+   :maxdepth: 1
 
-* :doc:`reference/index`
-* :doc:`reference/technical-overview`
-* :doc:`reference/websecurity`
-* :doc:`reference/authenticators`
-* :doc:`reference/spawners`
-* :doc:`reference/services`
-* :doc:`reference/rest`
-* :doc:`reference/upgrading`
-* :doc:`reference/templates`
-* :doc:`reference/config-user-env`
-* :doc:`reference/config-examples`
-* :doc:`reference/config-ghoauth`
-* :doc:`reference/config-proxy`
-* :doc:`reference/config-sudo`
+   getting-started/index
+   getting-started/config-basics
+   getting-started/networking-basics
+   getting-started/security-basics
+   getting-started/authenticators-users-basics
+   getting-started/spawners-basics
+   getting-started/services-basics
+
+Technical Reference
+-------------------
+
+.. toctree::
+   :maxdepth: 1
+
+   reference/index
+   reference/technical-overview
+   reference/websecurity
+   reference/authenticators
+   reference/spawners
+   reference/services
+   reference/rest
+   reference/upgrading
+   reference/templates
+   reference/config-user-env
+   reference/config-examples
+   reference/config-ghoauth
+   reference/config-proxy
+   reference/config-sudo
 
 Contributing
 ------------
@@ -91,36 +104,62 @@ helps keep our community welcoming to as many people as possible.
 API Reference
 -------------
 
-* :doc:`api/index`
+.. toctree::
+   :maxdepth: 1
 
-**Tutorials**
+   api/index
 
-* :doc:`tutorials/index`
-* :doc:`tutorials/upgrade-dot-eight`
-* `Zero to JupyterHub with Kubernetes <https://zero-to-jupyterhub.readthedocs.io/en/latest/>`_
+Tutorials
+---------
 
-**Troubleshooting**
+.. toctree::
+   :maxdepth: 1
 
-* :doc:`troubleshooting`
+   tutorials/index
+   tutorials/upgrade-dot-eight
 
-**About JupyterHub**
+Distributions
+-------------
 
-* :doc:`contributor-list`
-* :doc:`gallery-jhub-deployments`
+A JupyterHub **distribution** is tailored towards a particular set of
+use cases. These are generally easier to set up than setting up
+JupyterHub from scratch, assuming they fit your use case.
 
-**Changelog**
+The two popular ones are:
 
-* :doc:`changelog`
+* `Zero to JupyterHub on Kubernetes <http://z2jh.jupyter.org>`_, for
+  running JupyterHub on top of `Kubernetes <https://k8s.io>`_. This
+  can scale to large number of machines & users.
+* `The Littlest JupyterHub <http://tljh.jupyter.org>`_, for an easy
+  to set up & run JupyterHub supporting 1-100 users on a single machine.
+
+Troubleshooting
+---------------
+
+.. toctree::
+   :maxdepth: 1
+
+   troubleshooting
+
+About JupyterHub
+----------------
+
+.. toctree::
+   :maxdepth: 1
+
+   contributor-list
+   changelog
+   gallery-jhub-deployments
 
 Indices and tables
-------------------
+==================
 
 * :ref:`genindex`
 * :ref:`modindex`
 
 
 Questions? Suggestions?
------------------------
+=======================
 
 - `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
 - `Jupyter website <https://jupyter.org>`_
@@ -128,7 +167,7 @@ Questions? Suggestions?
 .. _contents:
 
 Full Table of Contents
-----------------------
+======================
 
 .. toctree::
    :maxdepth: 2
