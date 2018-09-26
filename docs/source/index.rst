@@ -35,6 +35,21 @@ follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/
 Contents
 ========
 
+Distributions
+-------------
+
+A JupyterHub **distribution** is tailored towards a particular set of
+use cases. These are generally easier to set up than setting up
+JupyterHub from scratch, assuming they fit your use case.
+
+The two popular ones are:
+
+* `Zero to JupyterHub on Kubernetes <http://z2jh.jupyter.org>`_, for
+  running JupyterHub on top of `Kubernetes <https://k8s.io>`_. This
+  can scale to large number of machines & users.
+* `The Littlest JupyterHub <http://tljh.jupyter.org>`_, for an easy
+  to set up & run JupyterHub supporting 1-100 users on a single machine.
+
 Installation Guide
 ------------------
 
@@ -73,7 +88,6 @@ Technical Reference
    reference/spawners
    reference/services
    reference/rest
-   reference/upgrading
    reference/templates
    reference/config-user-env
    reference/config-examples
@@ -100,6 +114,16 @@ helps keep our community welcoming to as many people as possible.
    contributing/docs
    contributing/tests
 
+Upgrading JupyterHub
+--------------------
+
+We try to make upgrades between minor versions as painless as possible.
+
+.. toctree::
+
+   changelog
+   reference/upgrading
+   tutorials/upgrade-dot-eight
 
 API Reference
 -------------
@@ -108,30 +132,6 @@ API Reference
    :maxdepth: 1
 
    api/index
-
-Tutorials
----------
-
-.. toctree::
-   :maxdepth: 1
-
-   tutorials/index
-   tutorials/upgrade-dot-eight
-
-Distributions
--------------
-
-A JupyterHub **distribution** is tailored towards a particular set of
-use cases. These are generally easier to set up than setting up
-JupyterHub from scratch, assuming they fit your use case.
-
-The two popular ones are:
-
-* `Zero to JupyterHub on Kubernetes <http://z2jh.jupyter.org>`_, for
-  running JupyterHub on top of `Kubernetes <https://k8s.io>`_. This
-  can scale to large number of machines & users.
-* `The Littlest JupyterHub <http://tljh.jupyter.org>`_, for an easy
-  to set up & run JupyterHub supporting 1-100 users on a single machine.
 
 Troubleshooting
 ---------------
