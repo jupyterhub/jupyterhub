@@ -90,8 +90,8 @@ happen.
 
    .. code:: bash
 
-      pip3 install -r dev-requirements.txt
-      pip3 install -r requirements.txt
+      python3 -m pip install -r dev-requirements.txt
+      python3 -m pip install -r requirements.txt
 
 5. Install the development version of JupyterHub. This lets you edit
    JupyterHub code in a text editor & restart the JupyterHub process to
@@ -99,7 +99,7 @@ happen.
 
    .. code:: bash
 
-      pip3 install --editable .
+      python3 -m pip install --editable .
 
 6. You are now ready to start JupyterHub!
 
@@ -158,7 +158,7 @@ another way it can fail!
 ``lessc`` not found
 -------------------
 
-If the ``pip3 install --editable .`` command fails and complains about
+If the ``python3 -m pip install --editable .`` command fails and complains about
 ``lessc`` being unavailable, you may need to explicitly install some
 additional JavaScript dependencies:
 

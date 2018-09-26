@@ -37,7 +37,7 @@ Next, you will need [sudospawner](https://github.com/jupyter/sudospawner)
 to enable monitoring the single-user servers with sudo:
 
 ```bash
-sudo pip install sudospawner
+sudo python3 -m pip install sudospawner
 ```
 
 Now we have to configure sudo to allow the Hub user (`rhea`) to launch

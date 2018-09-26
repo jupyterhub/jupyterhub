@@ -74,7 +74,7 @@ Next, shutdown the JupyterHub service.
 
 Follow directions that correspond to your package manager, `pip` or `conda`,
 for the new JupyterHub release. These directions will guide you to the
-specific command. In general, `pip install -U jupyterhub` or
+specific command. In general, `python3 -m pip install -U jupyterhub` or
 `conda upgrade jupyterhub`
 
 ### Upgrade JupyterHub databases
@@ -93,6 +93,6 @@ jupyterhub upgrade-db
 2. Backup JupyterHub configuration file: `jupyterhub_config.py`
 3. Shutdown the Hub
 4. Upgrade JupyterHub
-    - `pip install -U jupyterhub` when using `pip`
+    - `python3 -m pip install -U jupyterhub` when using `pip`
     - `conda upgrade jupyterhub` when using `conda`
 5. Upgrade the database using run `jupyterhub upgrade-db`

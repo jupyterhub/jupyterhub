@@ -17,7 +17,7 @@ Upgrade checklist
 2. Backup the existing JupyterHub configuration file: ``jupyterhub_config.py``
 3. Shutdown the Hub
 4. Upgrade JupyterHub
-    - ``pip install -U jupyterhub`` when using ``pip``
+    - ``python3 -m pip install -U jupyterhub`` when using ``pip``
     - ``conda upgrade jupyterhub`` when using ``conda``
 5. Upgrade the database using run ```jupyterhub upgrade-db``
 6. Update the JupyterHub configuration file ``jupyterhub_config.py``
@@ -69,7 +69,7 @@ Upgrade JupyterHub
 Follow directions that correspond to your package manager, ``pip`` or ``conda``,
 for the new JupyterHub release:
 
-- ``pip install -U jupyterhub`` for ``pip``
+- ``python3 -m pip install -U jupyterhub`` for ``pip``
 - ``conda upgrade jupyterhub`` for ``conda``
 
 Upgrade the proxy, authenticator, or spawner if needed.
