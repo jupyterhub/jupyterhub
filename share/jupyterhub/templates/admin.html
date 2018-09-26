@@ -24,7 +24,7 @@
         {% block thead %}
         {{ th("User (%i)" % users|length, 'name') }}
         {{ th("Admin", 'admin') }}
-        {{ th("Last Seen", 'last_activity') }}
+        {{ th("Last Activity", 'last_activity') }}
         {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
         {% endblock thead %}
       </tr>
@@ -41,87 +41,65 @@
         </td>
       </tr>
       {% for user in users %}
-      <tr class="user-row{% if allow_named_servers %} default-server-row{% endif %}" id="user-{{user.name}}" data-user="{{ user.name }}" data-admin="{{user.admin}}">
+      {% for spawner in user.all_spawners() %}
+      <tr class="user-row server-row" id="user-{{user.name}}" data-user="{{ user.name }}" data-server-name="{{spawner.name}}" data-admin="{{user.admin}}">
       {% block user_row scoped %}
-      <td class="name-col col-sm-2">{{user.name}}</td>
-      <td class="admin-col col-sm-2">{% if user.admin %}admin{% endif %}</td>
-      <td class="time-col col-sm-3">
-        {%- if user.last_activity -%}
-        {{ user.last_activity.isoformat() + 'Z' }}
-        {%- else -%}
-        Never
+
+      <td class="name-col col-sm-2">{{user.name}}
+        {%- if spawner.name -%}
+        /{{ spawner.name }}
         {%- endif -%}
       </td>
-      <td class="server-col col-sm-2 text-center">
-        <a role="button" class="stop-server btn btn-xs btn-danger{% if not user.running %} hidden{% endif %} default-server" data-named_servers={% if allow_named_servers %}"true"{% else %}"false"{% endif %}>
-        {% if allow_named_servers %}
-        stop default server
-        {% else %}
-        stop server
-        {% endif %}
-        </a>
-        <a role="button" class="start-server btn btn-xs btn-primary{% if user.running %} hidden{% endif %} default-server" data-named_servers={% if allow_named_servers %}"true"{% else %}"false"{% endif %}>
-        {% if allow_named_servers %}
-        start default server
-        {% else %}
-        start server</a>
-        {% endif %}
+
+      <td class="admin-col col-sm-2">
+        {%- if spawner.name == '' -%}
+        {% if user.admin %}admin{% endif %}
+        {%- endif -%}
       </td>
-      <td class="server-col col-sm-1 text-center">
-        {% if admin_access %}
-        <a role="button" class="access-server btn btn-xs btn-primary{% if not user.running %} hidden{% endif %} default-server" data-named_servers={% if allow_named_servers %}"true"{% else %}"false"{% endif %}>
-        {% if allow_named_servers %}
-        access default server
-        {% else %}
-        access server
-        {% endif %}
-        </a>
-        {% endif %}
-      </td>
-      <td class="edit-col col-sm-1 text-center">
-        <a role="button" class="edit-user btn btn-xs btn-primary">edit{% if allow_named_servers %} {{ user.name }}{% endif %}</a>
-      </td>
-      <td class="edit-col col-sm-1 text-center">
-        {% if user.name != current_user.name %}
-        <a role="button" class="delete-user btn btn-xs btn-danger">delete{% if allow_named_servers %} {{ user.name }}{% endif %}</a>
-        {% endif %}
-      </td>
-      </tr>
-      {% if allow_named_servers %}
-      {% for spawner in user.orm_user._orm_spawners %}
-      {% if spawner.name %}
-      <tr class="user-row" data-user="{{user.name}}" data-admin="{{user.admin}}">
-     {#  {% block user_row scoped %}  #}
-      <td class="name-col col-sm-2">  </td>
-      <td class="admin-col col-sm-2">   </td>
+
       <td class="time-col col-sm-3">
-        {%- if spawner.last_activity -%}
+      {%- if spawner.last_activity -%}
         {{ spawner.last_activity.isoformat() + 'Z' }}
-        {%- else -%}
+      {%- else -%}
         Never
-        {%- endif -%}
+      {%- endif -%}
       </td>
+
       <td class="server-col col-sm-2 text-center">
-        <a role="button" class="stop-server btn btn-xs btn-danger{% if not spawner.state %} hidden{% endif %}" id="stop-{{ spawner.name }}">stop {{ spawner.name }}</a>
-        <a role="button" class="start-server btn btn-xs btn-primary{% if spawner.state %} hidden{% endif %}" id="start-{{ spawner.name }}">start {{ spawner.name }}</a>
+        <a role="button" class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}">
+        stop server
+        </a>
+        <a role="button" class="start-server btn btn-xs btn-primary{% if spawner.active %} hidden{% endif %}">
+        start server
+        </a>
       </td>
       <td class="server-col col-sm-1 text-center">
-        {% if admin_access %}
-        <a role="button" class="access-server btn btn-xs btn-primary{% if not spawner.state %} hidden{% endif %}" id="access-{{ spawner.name }}">access server</a>
-        {% endif %}
+        {%- if admin_access %}
+        <a role="button" class="access-server btn btn-xs btn-primary{% if not spawner.active %} hidden{% endif %}">
+        access server
+        </a>
+        {%- endif %}
       </td>
       <td class="edit-col col-sm-1 text-center">
-        <!-- edit user button empty for named servers -->
+      {%- if spawner.name == '' -%}
+        <a role="button" class="edit-user btn btn-xs btn-primary">edit user</a>
+      {%- endif -%}
       </td>
       <td class="edit-col col-sm-1 text-center">
-        <!-- delete user button empty for named servers -->
+        {%- if spawner.name == '' -%}
+        {#- user row -#}
+          {%- if user.name != current_user.name -%}
+          <a role="button" class="delete-user btn btn-xs btn-danger">delete user</a>
+          {%- endif -%}
+        {%- else -%}
+          {#- named spawner row -#}
+          <a role="button" class="delete-server btn btn-xs btn-warning">delete server</a>
+        {%- endif -%}
       </td>
       </tr>
-      {% endif %}
-      {% endfor %}
-      {% endif %}
       {% endblock user_row %}
-  {% endfor %}
+      {% endfor %}
+      {% endfor %}
   </tbody>
   </table>
 </div>

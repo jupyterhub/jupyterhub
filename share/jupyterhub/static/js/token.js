@@ -11,7 +11,7 @@ require(["jquery", "jhapi", "moment"], function($, JHAPI, moment) {
   $(".time-col").map(function(i, el) {
     // convert ISO datestamps to nice momentjs ones
     el = $(el);
-    let m = moment(new Date(el.text().trim()));
+    var m = moment(new Date(el.text().trim()));
     el.text(m.isValid() ? m.fromNow() : el.text());
   });
 
@@ -44,7 +44,7 @@ require(["jquery", "jhapi", "moment"], function($, JHAPI, moment) {
     var el = $(this);
     var row = get_token_row(el);
     el.attr("disabled", true);
-    api.revoke_token(user, row.data('token-id'), {
+    api.revoke_token(user, row.data("token-id"), {
       success: function(reply) {
         row.remove();
       },

@@ -378,29 +378,52 @@ class UserServerAPIHandler(APIHandler):
     @admin_or_self
     async def delete(self, name, server_name=''):
         user = self.find_user(name)
+        options = self.get_json_body()
+        remove = (options or {}).get('remove', False)
+
+
+        def _remove_spawner(f=None):
+            if f and f.exception():
+                return
+            self.log.info("Deleting spawner %s", spawner._log_name)
+            self.db.delete(spawner.orm_spawner)
+            self.db.commit()
+
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if server_name not in user.spawners:
+            if server_name not in user.orm_spawners:
                 raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
+        elif remove:
+            raise web.HTTPError(400, "Cannot delete the default server")
 
         spawner = user.spawners[server_name]
         if spawner.pending == 'stop':
             self.log.debug("%s already stopping", spawner._log_name)
             self.set_header('Content-Type', 'text/plain')
             self.set_status(202)
+            if remove:
+                spawner._stop_future.add_done_callback(_remove_spawner)
             return
 
-        if not spawner.ready:
+        if spawner.pending:
             raise web.HTTPError(
-                400, "%s is not running %s" %
-                (spawner._log_name, '(pending: %s)' % spawner.pending if spawner.pending else '')
+                400, "%s is pending %s, please wait" % (spawner._log_name, spawner.pending)
             )
-        # include notify, so that a server that died is noticed immediately
-        status = await spawner.poll_and_notify()
-        if status is not None:
-            raise web.HTTPError(400, "%s is not running" % spawner._log_name)
-        await self.stop_single_user(user, server_name)
+
+        stop_future = None
+        if spawner.ready:
+            # include notify, so that a server that died is noticed immediately
+            status = await spawner.poll_and_notify()
+            if status is None:
+                stop_future = await self.stop_single_user(user, server_name)
+
+        if remove:
+            if stop_future:
+                stop_future.add_done_callback(_remove_spawner)
+            else:
+                _remove_spawner()
+
         status = 202 if spawner._stop_pending else 204
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)

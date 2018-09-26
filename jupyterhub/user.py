@@ -182,6 +182,28 @@ class User:
                 await self.save_auth_state(auth_state)
         return auth_state
 
+
+    def all_spawners(self, include_default=True):
+        """Generator yielding all my spawners
+
+        including those that are not running.
+
+        Spawners that aren't running will be low-level orm.Spawner objects,
+        while those that are will be higher-level Spawner wrapper objects.
+        """
+
+        for name, orm_spawner in sorted(self.orm_user.orm_spawners.items()):
+            if name == '' and not include_default:
+                continue
+            if name and not self.allow_named_servers:
+                continue
+            if name in self.spawners:
+                # yield wrapper if it exists (server may be active)
+                yield self.spawners[name]
+            else:
+                # otherwise, yield low-level ORM object (server is not active)
+                yield orm_spawner
+
     def _new_spawner(self, server_name, spawner_class=None, **kwargs):
         """Create a new spawner"""
         if spawner_class is None:
@@ -320,6 +342,13 @@ class User:
             )
         else:
             return self.base_url
+
+    def server_url(self, server_name=''):
+        """Get the url for a server with a given name"""
+        if not server_name:
+            return self.url
+        else:
+            return url_path_join(self.url, server_name)
 
     def progress_url(self, server_name=''):
         """API URL for progress endpoint for a server with a given name"""
