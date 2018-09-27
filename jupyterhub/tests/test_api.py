@@ -96,6 +96,9 @@ def api_request(app, *api_path, **kwargs):
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
     f = getattr(async_requests, method)
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
     resp = yield f(url, **kwargs)
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
     assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
@@ -1571,7 +1574,11 @@ def test_get_service(app, mockservice_url):
 def test_root_api(app):
     base_url = app.hub.url
     url = ujoin(base_url, 'api')
-    r = yield async_requests.get(url)
+    kwargs = {}
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
+    r = yield async_requests.get(url, **kwargs)
     r.raise_for_status()
     expected = {
         'version': jupyterhub.__version__
