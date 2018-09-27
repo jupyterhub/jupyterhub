@@ -11,6 +11,7 @@ c.JupyterHub.authenticator_class = DummyAuthenticator
 
 try:
     from jupyterhub.spawners import SimpleSpawner
+    c.JupyterHub.spawner_class = SimpleSpawner
 except ImportError:
     print("simplespawner not available. Try: `pip install jupyterhub-simplespawner`")
 else:
