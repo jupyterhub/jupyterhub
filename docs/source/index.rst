@@ -122,9 +122,10 @@ Upgrading JupyterHub
 We try to make upgrades between minor versions as painless as possible.
 
 .. toctree::
+   :maxdepth: 1
 
-   changelog
    admin/upgrading
+   changelog
 
 API Reference
 -------------
