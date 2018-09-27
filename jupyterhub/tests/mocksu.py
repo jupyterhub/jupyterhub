@@ -37,11 +37,11 @@ def main(args):
     ])
     
     ssl_context = None
-    if args.keyfile and args.certfile and args.client_ca:
-        key = args.keyfile.strip('"')
-        cert = args.certfile.strip('"')
-        ca = args.client_ca.strip('"')
+    key = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_KEYFILE') or ''
+    cert = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CERTFILE') or ''
+    ca = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA') or ''
 
+    if key and cert and ca:
         ssl_context = make_ssl_context(
                 key,
                 cert,
@@ -58,8 +58,5 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int)
-    parser.add_argument('--keyfile', type=str)
-    parser.add_argument('--certfile', type=str)
-    parser.add_argument('--client-ca', type=str)
     args, extra = parser.parse_known_args()
     main(args)
