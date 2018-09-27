@@ -12,7 +12,6 @@ Technical Reference
    proxy
    rest
    database
-   upgrading
    templates
    config-user-env
    config-examples
