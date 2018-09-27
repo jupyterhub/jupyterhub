@@ -116,9 +116,8 @@ Using DummyAuthenticator & SimpleSpawner
 ========================================
 
 To simplify testing of JupyterHub, it’s helpful to use
-`DummyAuthenticator <https://github.com/jupyterhub/dummyauthenticator>`_ 
-instead of the default JupyterHub authenticator and
-`SimpleSpawner <https://github.com/jupyterhub/simplespawner>`_ 
+:class:`~jupyterhub.auth.DummyAuthenticator` instead of the default JupyterHub
+authenticator and `SimpleSpawner <https://github.com/jupyterhub/simplespawner>`_ 
 instead of the default spawner.
 
 There is a sample configuration file that does this in
@@ -127,7 +126,7 @@ configuration:
 
 .. code:: bash
 
-   pip install jupyterhub-simplespawner jupyterhub-dummyauthenticator
+   pip install jupyterhub-simplespawner
    jupyterhub -f testing/jupyterhub_config.py
 
 The default JupyterHub `authenticator
