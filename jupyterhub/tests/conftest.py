@@ -178,7 +178,10 @@ def _mockservice(request, app, url=False):
         'admin': True,
     }
     if url:
-        spec['url'] = 'http://127.0.0.1:%i' % random_port()
+        if app.internal_ssl:
+            spec['url'] = 'https://127.0.0.1:%i' % random_port()
+        else:
+            spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
     io_loop = app.io_loop
 

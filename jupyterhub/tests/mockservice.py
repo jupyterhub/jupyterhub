@@ -23,6 +23,7 @@ import requests
 from tornado import web, httpserver, ioloop
 
 from jupyterhub.services.auth import HubAuthenticated, HubOAuthenticated, HubOAuthCallbackHandler
+from jupyterhub.utils import make_ssl_context
 
 
 class EchoHandler(web.RequestHandler):
@@ -85,7 +86,19 @@ def main():
             (r'.*', EchoHandler),
         ], cookie_secret=os.urandom(32))
 
-        server = httpserver.HTTPServer(app)
+        ssl_context = None
+        key = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_KEYFILE') or ''
+        cert = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CERTFILE') or ''
+        ca = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA') or ''
+
+        if key and cert and ca:
+            ssl_context = make_ssl_context(
+                    key,
+                    cert,
+                    cafile = ca,
+                    check_hostname = False)
+
+        server = httpserver.HTTPServer(app, ssl_options=ssl_context)
         server.listen(url.port, url.hostname)
     try:
         ioloop.IOLoop.instance().start()
