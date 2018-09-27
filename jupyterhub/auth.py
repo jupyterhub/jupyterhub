@@ -690,8 +690,6 @@ class PAMAuthenticator(LocalAuthenticator):
 class DummyAuthenticator(Authenticator):
     """Simple authentication for testing use"""
     password = Unicode(
-        None,
-        allow_none=True,
         config=True,
         help="""
         Set a global password for all users wanting to log in.
@@ -700,8 +698,7 @@ class DummyAuthenticator(Authenticator):
         """
     )
 
-    @gen.coroutine
-    def authenticate(self, handler, data):
+    async def authenticate(self, handler, data):
         """Checks against a global password if it's been set. If not, allow any user/pass combo"""
         if self.password:
             if data['password'] == self.password:
