@@ -59,7 +59,7 @@ def ssl_tmpdir(tmpdir_factory):
 @fixture(scope='module')
 def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
-    mocked_app = MockHub.instance(log_level=logging.DEBUG)
+    mocked_app = None
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
 
     if ssl_enabled:
@@ -68,6 +68,8 @@ def app(request, io_loop, ssl_tmpdir):
                 log_level=logging.DEBUG,
                 internal_ssl=True,
                 internal_certs_location=str(ssl_tmpdir))
+    else:
+        mocked_app = MockHub.instance(log_level=logging.DEBUG)
 
     @gen.coroutine
     def make_app():
