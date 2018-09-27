@@ -714,10 +714,11 @@ class Spawner(LoggingConfigurable):
         if not override:
             alt_names = default_names + alt_names
 
+        common_name = self.user.name or 'service'
         certipy = Certipy(store_dir=self.internal_certs_location)
         notebook_component = 'notebooks-ca'
         notebook_key_pair = certipy.create_signed_pair(
-            self.user.name,
+            common_name,
             notebook_component,
             alt_names=alt_names,
             overwrite=True
