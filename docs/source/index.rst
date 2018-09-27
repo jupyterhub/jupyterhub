@@ -122,8 +122,7 @@ We try to make upgrades between minor versions as painless as possible.
 .. toctree::
 
    changelog
-   reference/upgrading
-   tutorials/upgrade-dot-eight
+   admin/upgrading
 
 API Reference
 -------------
@@ -176,7 +175,6 @@ Full Table of Contents
    getting-started/index
    reference/index
    api/index
-   tutorials/index
    troubleshooting
    contributor-list
    gallery-jhub-deployments
