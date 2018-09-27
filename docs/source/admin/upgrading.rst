@@ -7,9 +7,10 @@ Upgrading JupyterHub
 JupyterHub offers easy upgrade pathways between minor versions. This
 document describes how to do these upgrades.
 
-If you are using a JupyterHub distribution, you should consult the
-distribution's documentation on how to upgrade. This document is if
-you have set up your own JupyterHub without using a distribution.
+If you are using :ref:`a JupyterHub distribution <index/distributions>`, you
+should consult the distribution's documentation on how to upgrade. This
+document is if you have set up your own JupyterHub without using a
+distribution.
 
 It is long because is pretty detailed! Most likely, upgrading
 JupyterHub is painless, quick and with minimal user interruption.
@@ -34,8 +35,7 @@ upgrade where they will be least disrupted.
 If you are using a different proxy, or running ``configurable-http-proxy``
 independent of JupyterHub, your users will be able to continue using notebook
 servers they had already launched, but will not be able to launch new servers
-nor sign in. This gives you more freedom to do upgrades without affecting
-users *too much*.
+nor sign in.
 
 
 Backup database & config
@@ -47,9 +47,9 @@ Before doing an upgrade, it is critical to back up:
    if you used those). If you are using sqlite (the default), you
    should backup the ``jupyterhub.sqlite`` file.
 #. Your ``jupyterhub_config.py`` file.
-#. Your user's data. This is unlikely to be affected directly by
-   a JupyterHub upgrade, but we recommend a backup since user data
-   is very critical.
+#. Your user's home directories. This is unlikely to be affected directly by
+   a JupyterHub upgrade, but we recommend a backup since user data is very
+   critical.
 
 
 Shutdown JupyterHub
@@ -63,7 +63,7 @@ Use the supervisor specific command to stop the JupyterHub process.
 Upgrade JupyterHub packages
 ===========================
 
-There are two environments where the ``jupyterhub`` package is installd:
+There are two environments where the ``jupyterhub`` package is installed:
 
 #. The *hub environment*, which is where the JupyterHub server process
    runs. This is started with the ``jupyterhub`` command, and is what
@@ -92,7 +92,7 @@ with:
 
 .. code-block:: bash
 
-   conda install jupyterhub==<version>
+   conda install -c conda-forge jupyterhub==<version>
 
 Where ``<version>`` is the version of JupyterHub you are upgrading to.
 

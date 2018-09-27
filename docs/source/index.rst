@@ -35,6 +35,8 @@ follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/
 Contents
 ========
 
+.. _index/distributions:
+
 Distributions
 -------------
 
