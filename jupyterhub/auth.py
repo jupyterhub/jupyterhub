@@ -687,8 +687,17 @@ class PAMAuthenticator(LocalAuthenticator):
             self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
 
+
 class DummyAuthenticator(Authenticator):
-    """Simple authentication for testing use"""
+    """Dummy Authenticator for testing
+
+    By default, any username + password is allowed
+    If a non-empty password is set, any username will be allowed
+    if it logs in with that password.
+
+    .. versionadded:: 1.0
+    """
+
     password = Unicode(
         config=True,
         help="""
