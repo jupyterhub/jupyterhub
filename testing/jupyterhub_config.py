@@ -10,7 +10,7 @@ c = get_config() # noqa
 c.JupyterHub.authenticator_class = DummyAuthenticator
 
 try:
-    from simplespawner import SimpleLocalProcessSpawner
+    from jupyterhub.spawners import SimpleSpawner
 except ImportError:
     print("simplespawner not available. Try: `pip install jupyterhub-simplespawner`")
 else:
