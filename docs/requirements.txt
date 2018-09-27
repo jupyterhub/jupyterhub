@@ -3,3 +3,4 @@
 -r ../requirements.txt
 sphinx>=1.7
 recommonmark==0.4.0
+sphinx-copybutton
