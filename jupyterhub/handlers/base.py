@@ -32,6 +32,7 @@ from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
+    SERVER_POLL_DURATION_SECONDS,
     RUNNING_SERVERS
 )
 
@@ -821,7 +822,10 @@ class BaseHandler(RequestHandler):
 
             # start has finished, but the server hasn't come up
             # check if the server died while we were waiting
+            poll_start_time = time.perf_counter()
             status = await spawner.poll()
+            SERVER_POLL_DURATION_SECONDS.observe(time.perf_counter() - poll_start_time)
+
             if status is not None:
                 toc = IOLoop.current().time()
                 self.statsd.timing('spawner.failure', (toc - tic) * 1000)
@@ -848,7 +852,11 @@ class BaseHandler(RequestHandler):
     async def user_stopped(self, user, server_name):
         """Callback that fires when the spawner has stopped"""
         spawner = user.spawners[server_name]
+
+        poll_start_time = time.perf_counter()
         status = await spawner.poll()
+        SERVER_POLL_DURATION_SECONDS.observe(time.perf_counter() - poll_start_time)
+
         if status is None:
             status = 'unknown'
         self.log.warning("User %s server stopped, with exit code: %s",
@@ -1152,7 +1160,9 @@ class UserSpawnHandler(BaseHandler):
 
             # spawn has supposedly finished, check on the status
             if spawner.ready:
+                poll_start_time = time.perf_counter()
                 status = await spawner.poll()
+                SERVER_POLL_DURATION_SECONDS.observe(time.perf_counter() - poll_start_time)
             else:
                 status = 0
 

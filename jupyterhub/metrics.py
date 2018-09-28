@@ -35,6 +35,11 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
     buckets=[0.5, 1, 2.5, 5, 10, 15, 30, 60, 120, float("inf")]
 )
 
+SERVER_POLL_DURATION_SECONDS = Histogram(
+    'server_poll_duration_seconds',
+    'time taken to poll if server is running',
+)
+
 RUNNING_SERVERS = Gauge(
     'running_servers',
     'the number of user servers currently running',
