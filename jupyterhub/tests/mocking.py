@@ -237,11 +237,12 @@ class MockHub(JupyterHub):
 
     @default('bind_url')
     def _default_bind_url(self):
+        proto = 'https' if self.internal_ssl else 'http'
         if self.subdomain_host:
             port = urlparse(self.subdomain_host).port
         else:
             port = random_port()
-        return 'http://127.0.0.1:%i/@/space%%20word/' % port
+        return '%s://127.0.0.1:%i/@/space%%20word/' % (proto, port)
 
     @default('ip')
     def _ip_default(self):
