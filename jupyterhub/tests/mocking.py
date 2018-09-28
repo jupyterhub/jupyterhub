@@ -217,16 +217,19 @@ class MockHub(JupyterHub):
     log_datefmt = '%M:%S'
 
     def __new__(cls, *args, **kwargs):
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, *args, **kwargs):
         try:
             # Turn on internalSSL if the options exist
             cert_location = kwargs['internal_certs_location']
-            external_certs = ssl_setup(cert_location, 'hub-ca')
+            self.external_certs = ssl_setup(cert_location, 'hub-ca')
             kwargs['internal_ssl'] = True
-            kwargs['ssl_cert'] = external_certs['files']['cert']
-            kwargs['ssl_key'] = external_certs['files']['key']
+            kwargs['ssl_cert'] = self.external_certs['files']['cert']
+            kwargs['ssl_key'] = self.external_certs['files']['key']
         except KeyError:
             pass
-        return super().__new__(cls, *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     @default('subdomain_host')
     def _subdomain_host_default(self):
