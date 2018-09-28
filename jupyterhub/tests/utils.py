@@ -22,7 +22,9 @@ def ssl_setup(cert_dir, authority_name):
     # Set up the external certs with the same authority as the internal
     # one so that certificate trust works regardless of chosen endpoint.
     certipy = Certipy(store_dir=cert_dir)
+    alt_names = ['DNS:localhost', 'IP:127.0.0.1']
     internal_authority = certipy.create_ca(authority_name, overwrite=True)
     external_certs = certipy.create_signed_pair('external', authority_name,
-                                                overwrite=True)
+                                                overwrite=True,
+                                                alt_names=alt_names)
     return external_certs

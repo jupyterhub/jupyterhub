@@ -215,6 +215,7 @@ class MockHub(JupyterHub):
     db_file = None
     last_activity_interval = 2
     log_datefmt = '%M:%S'
+    external_certs = None
 
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls, *args, **kwargs)
@@ -324,12 +325,16 @@ class MockHub(JupyterHub):
     def login_user(self, name):
         """Login a user by name, returning her cookies."""
         base_url = public_url(self)
+        external_ca = None
+        if self.internal_ssl:
+            external_ca = self.external_certs['files']['ca']
         r = yield async_requests.post(base_url + 'hub/login',
             data={
                 'username': name,
                 'password': name,
             },
             allow_redirects=False,
+            verify=external_ca,
         )
         r.raise_for_status()
         assert r.cookies
