@@ -168,6 +168,7 @@ class Spawner(LoggingConfigurable):
     internal_ssl = Bool(False)
     internal_trust_bundles = Dict()
     internal_certs_location = Unicode('')
+    cert_paths = Dict()
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -650,12 +651,10 @@ class Spawner(LoggingConfigurable):
         if self.cpu_guarantee:
             env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
-        if self.internal_ssl:
-            paths = self.move_certs(self.create_certs())
-
-            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = paths['keyfile']
-            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = paths['certfile']
-            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = paths['cafile']
+        if self.cert_paths:
+            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = self.cert_paths['keyfile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = self.cert_paths['certfile']
+            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
         return env
 
@@ -697,7 +696,7 @@ class Spawner(LoggingConfigurable):
         """
         return s.format(**self.template_namespace())
 
-    def create_certs(self, alt_names=None, override=False):
+    async def create_certs(self, alt_names=None, override=False):
         """Create and set ownership for the certs to be used for internal ssl
 
         Keyword Arguments:
@@ -748,7 +747,7 @@ class Spawner(LoggingConfigurable):
         }
         return paths
 
-    def move_certs(self, paths):
+    async def move_certs(self, paths):
         """Takes certificate paths and makes them available to the notebook server
 
         Arguments:

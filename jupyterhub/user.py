@@ -440,6 +440,11 @@ class User:
         try:
             # run optional preparation work to bootstrap the notebook
             await maybe_future(spawner.run_pre_spawn_hook())
+            if self.settings.get('internal_ssl'):
+                self.log.debug("Creating internal SSL certs for %s", spawner._log_name)
+                hub_paths = await maybe_future(spawner.create_certs())
+                spawner.cert_paths = await maybe_future(spawner.move_certs(hub_paths))
+            self.log.debug("Calling Spawner.start for %s", spawner._log_name)
             f = maybe_future(spawner.start())
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
@@ -536,11 +541,11 @@ class User:
         spawner.orm_spawner.state = spawner.get_state()
         db.commit()
         spawner._waiting_for_response = True
+        key = self.settings.get('internal_ssl_key')
+        cert = self.settings.get('internal_ssl_cert')
+        ca = self.settings.get('internal_ssl_ca')
+        ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
-            key = self.settings.get('internal_ssl_key')
-            cert = self.settings.get('internal_ssl_cert')
-            ca = self.settings.get('internal_ssl_ca')
-            ssl_context = make_ssl_context(key, cert, cafile=ca)
             resp = await server.wait_up(
                     http=True,
                     timeout=spawner.http_timeout,
