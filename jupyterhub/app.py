@@ -396,6 +396,11 @@ class JupyterHub(Application):
         help=""" The ca to be used for internal ssl
         """
     )
+    internal_proxy_certs = Dict(
+        help=""" Dict component:dict(cert files). This dict contains the certs
+        generated for both the proxy API and proxy client.
+        """
+    )
     trusted_alt_names = List(Unicode(),
         help=""" Names to include in the subject alternative name.
         These names will be used for server name verification. This is useful
@@ -1190,12 +1195,13 @@ class JupyterHub(Application):
             self.internal_trust_bundles = certipy.trust_from_graph(
                 self.internal_ssl_components_trust)
 
+            default_alt_names = ["IP:127.0.0.1", "DNS:localhost"]
             # The signed certs used by hub-internal components
             try:
                 internal_key_pair = certipy.store.get_record("hub-internal")
             except CertNotFoundError:
                 import socket
-                alt_names = ["IP:127.0.0.1", "DNS:localhost"]
+                alt_names = list(default_alt_names)
                 # In the event the hub needs to be accessed externally, add
                 # the fqdn and (optionally) rev_proxy to the set of alt_names.
                 alt_names += (["DNS:" + socket.getfqdn()]
@@ -1205,6 +1211,25 @@ class JupyterHub(Application):
                     hub_name,
                     alt_names=alt_names
                 )
+
+            # Create the proxy certs
+            proxy_api = 'proxy-api'
+            proxy_client = 'proxy-client'
+            for component in [proxy_api, proxy_client]:
+                ca_name = component + '-ca'
+
+                record = certipy.create_signed_pair(
+                    component,
+                    ca_name,
+                    alt_names=default_alt_names,
+                    overwrite=True
+                )
+
+                self.internal_proxy_certs[component] = {
+                    "keyfile": record['files']['key'],
+                    "certfile": record['files']['cert'],
+                    "cafile": record['files']['cert'],
+                }
 
             self.internal_ssl_key = internal_key_pair['files']['key']
             self.internal_ssl_cert = internal_key_pair['files']['cert']

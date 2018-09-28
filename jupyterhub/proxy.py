@@ -121,44 +121,6 @@ class Proxy(LoggingConfigurable):
         if the proxy is to be started by the Hub
         """
 
-    def create_certs(self, name, ca_name, alt_names=None, override=False):
-        """Create certificates to be used with internal_ssl.
-        """
-
-        from certipy import Certipy, CertNotFoundError
-        default_names = ["DNS:localhost", "IP:127.0.0.1"]
-        alt_names = alt_names or []
-
-        if not override:
-            alt_names = default_names + alt_names
-
-        certipy = Certipy(store_dir=self.app.internal_certs_location)
-        record = None
-
-        try:
-          record = certipy.store.get_record(name)
-        except CertNotFoundError:
-          record = certipy.create_signed_pair(
-              name,
-              ca_name,
-              alt_names=alt_names,
-              overwrite=True
-          )
-
-        paths = {
-            "keyfile": record['files']['key'],
-            "certfile": record['files']['cert'],
-            "cafile": record['files']['cert'],
-        }
-
-        return paths
-
-
-    def move_certs(self, paths):
-        """Move certificates created by create_certs.
-        """
-        return paths
-
     def validate_routespec(self, routespec):
         """Validate a routespec
 
@@ -593,25 +555,25 @@ class ConfigurableHTTPProxy(Proxy):
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
         if self.app.internal_ssl:
-            certs = {}
-            trust_bundles = {}
             proxy_api = 'proxy-api'
             proxy_client = 'proxy-client'
-            for component in [proxy_api, proxy_client]:
-                ca_name = component + '-ca'
-                trust_bundles[component] = \
-                    self.app.internal_trust_bundles[ca_name]
-                certs[component] = self.move_certs(
-                    self.create_certs(component, ca_name))
-            cmd.extend(['--api-ssl-key', certs[proxy_api]['keyfile']])
-            cmd.extend(['--api-ssl-cert', certs[proxy_api]['certfile']])
-            cmd.extend(['--api-ssl-ca', trust_bundles[proxy_api]])
+            api_key = self.app.internal_proxy_certs[proxy_api]['keyfile']
+            api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
+            api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
+
+            client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
+            client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
+            client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
+
+            cmd.extend(['--api-ssl-key', api_key])
+            cmd.extend(['--api-ssl-cert', api_cert])
+            cmd.extend(['--api-ssl-ca', api_ca])
             cmd.extend(['--api-ssl-request-cert'])
             cmd.extend(['--api-ssl-reject-unauthorized'])
 
-            cmd.extend(['--client-ssl-key', certs[proxy_client]['keyfile']])
-            cmd.extend(['--client-ssl-cert', certs[proxy_client]['certfile']])
-            cmd.extend(['--client-ssl-ca', trust_bundles[proxy_client]])
+            cmd.extend(['--client-ssl-key', client_key])
+            cmd.extend(['--client-ssl-cert', client_cert])
+            cmd.extend(['--client-ssl-ca', client_ca])
             cmd.extend(['--client-ssl-request-cert'])
             cmd.extend(['--client-ssl-reject-unauthorized'])
         if self.app.statsd_host:
