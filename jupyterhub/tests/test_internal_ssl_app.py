@@ -7,3 +7,4 @@ import sys
 import jupyterhub.tests.mocking
 
 from jupyterhub.tests.test_app import *
+ssl_enabled = True
