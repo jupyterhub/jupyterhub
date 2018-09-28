@@ -744,19 +744,8 @@ class Spawner(LoggingConfigurable):
         paths = {
             "keyfile": notebook_key_pair['files']['key'],
             "certfile": notebook_key_pair['files']['cert'],
-            "cafile": self.internal_trust_bundles[notebook_component]
+            "cafile": self.internal_trust_bundles[notebook_component],
         }
-
-        try:
-            user = pwd.getpwnam(self.user.name)
-            uid = user.pw_uid
-            gid = user.pw_gid
-            for f in ['keyfile', 'certfile']:
-                shutil.chown(paths[f], user=uid, group=gid)
-        except KeyError:
-            self.log.info("User {} not found on system, "
-                          "unable to change ownership".format(self.user.name))
-
         return paths
 
     def move_certs(self, paths):
