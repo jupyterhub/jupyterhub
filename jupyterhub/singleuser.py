@@ -247,15 +247,15 @@ class SingleUserNotebookApp(NotebookApp):
 
     @default('keyfile')
     def _keyfile_default(self):
-        return os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_KEYFILE') or ''
+        return os.environ.get('JUPYTERHUB_SSL_KEYFILE') or ''
 
     @default('certfile')
     def _certfile_default(self):
-        return os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CERTFILE') or ''
+        return os.environ.get('JUPYTERHUB_SSL_CERTFILE') or ''
 
     @default('client_ca')
     def _client_ca_default(self):
-        return os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA') or ''
+        return os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
 
     @default('hub_prefix')
     def _hub_prefix_default(self):

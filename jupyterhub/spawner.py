@@ -652,9 +652,9 @@ class Spawner(LoggingConfigurable):
             env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
         if self.cert_paths:
-            env['JUPYTERHUB_NOTEBOOK_SSL_KEYFILE'] = self.cert_paths['keyfile']
-            env['JUPYTERHUB_NOTEBOOK_SSL_CERTFILE'] = self.cert_paths['certfile']
-            env['JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA'] = self.cert_paths['cafile']
+            env['JUPYTERHUB_SSL_KEYFILE'] = self.cert_paths['keyfile']
+            env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
+            env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
         return env
 
