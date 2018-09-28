@@ -576,15 +576,19 @@ def test_spawn(app):
 
     assert spawner.server.base_url == ujoin(app.base_url, 'user/%s' % name) + '/'
     url = public_url(app, user)
-    r = yield async_requests.get(url)
+    kwargs = {}
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
+    r = yield async_requests.get(url, **kwargs)
     assert r.status_code == 200
     assert r.text == spawner.server.base_url
 
-    r = yield async_requests.get(ujoin(url, 'args'))
+    r = yield async_requests.get(ujoin(url, 'args'), **kwargs)
     assert r.status_code == 200
     argv = r.json()
     assert '--port' in ' '.join(argv)
-    r = yield async_requests.get(ujoin(url, 'env'))
+    r = yield async_requests.get(ujoin(url, 'env'), **kwargs)
     env = r.json()
     for expected in ['JUPYTERHUB_USER', 'JUPYTERHUB_BASE_URL', 'JUPYTERHUB_API_TOKEN']:
         assert expected in env
