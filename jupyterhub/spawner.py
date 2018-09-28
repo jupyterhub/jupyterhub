@@ -749,14 +749,19 @@ class Spawner(LoggingConfigurable):
         return paths
 
     def move_certs(self, paths):
-        """Takes cert paths, moves and sets ownership for them
+        """Takes certificate paths and makes them available to the notebook server
 
         Arguments:
-            paths (dict): a list of paths for key, cert, and CA
+            paths (dict): a list of paths for key, cert, and CA.
+            These paths will be resolvable and readable by the Hub process,
+            but not necessarily by the notebook server.
 
         Returns:
             dict: a list (potentially altered) of paths for key, cert,
-            and CA
+            and CA.
+            These paths should be resolvable and readable
+            by the notebook server to be launched.
+
 
         `.move_certs` is called after certs for the singleuser notebook have
         been created by create_certs.
@@ -769,38 +774,7 @@ class Spawner(LoggingConfigurable):
         to another host, moving them to a volume mounted in a docker container,
         or exporting them as a secret in kubernetes.
         """
-        key = paths['keyfile']
-        cert = paths['certfile']
-        ca = paths['cafile']
-
-        try:
-            user = pwd.getpwnam(self.user.name)
-            uid = user.pw_uid
-            gid = user.pw_gid
-            home = user.pw_dir
-
-            # Create dir for user's certs wherever we're starting
-            out_dir = "{home}/.jupyterhub/jupyterhub-certs".format(home=home)
-            shutil.rmtree(out_dir, ignore_errors=True)
-            os.makedirs(out_dir, 0o700, exist_ok=True)
-
-            # Move certs to users dir
-            shutil.move(paths['keyfile'], out_dir)
-            shutil.move(paths['certfile'], out_dir)
-            shutil.copy(paths['cafile'], out_dir)
-
-            key = os.path.join(out_dir, os.path.basename(paths['keyfile']))
-            cert = os.path.join(out_dir, os.path.basename(paths['certfile']))
-            ca = os.path.join(out_dir, os.path.basename(paths['cafile']))
-
-            # Set cert ownership to user
-            for f in [out_dir, key, cert, ca]:
-                shutil.chown(f, user=uid, group=gid)
-        except KeyError:
-            self.log.info("User {} not found on system, "
-                          "not moving certs".format(self.user.name))
-
-        return {"keyfile": key, "certfile": cert, "cafile": ca}
+        raise NotImplementedError()
 
     def get_args(self):
         """Return the arguments to be passed after self.cmd
@@ -1204,6 +1178,48 @@ class LocalProcessSpawner(Spawner):
         env = super().get_env()
         env = self.user_env(env)
         return env
+
+    async def move_certs(self, paths):
+        """Takes cert paths, moves and sets ownership for them
+
+        Arguments:
+            paths (dict): a list of paths for key, cert, and CA
+
+        Returns:
+            dict: a list (potentially altered) of paths for key, cert,
+            and CA
+
+        Stage certificates into a private home directory
+        and make them readable by the user.
+        """
+        key = paths['keyfile']
+        cert = paths['certfile']
+        ca = paths['cafile']
+
+        user = pwd.getpwnam(self.user.name)
+        uid = user.pw_uid
+        gid = user.pw_gid
+        home = user.pw_dir
+
+        # Create dir for user's certs wherever we're starting
+        out_dir = "{home}/.jupyterhub/jupyterhub-certs".format(home=home)
+        shutil.rmtree(out_dir, ignore_errors=True)
+        os.makedirs(out_dir, 0o700, exist_ok=True)
+
+        # Move certs to users dir
+        shutil.move(paths['keyfile'], out_dir)
+        shutil.move(paths['certfile'], out_dir)
+        shutil.copy(paths['cafile'], out_dir)
+
+        key = os.path.join(out_dir, os.path.basename(paths['keyfile']))
+        cert = os.path.join(out_dir, os.path.basename(paths['certfile']))
+        ca = os.path.join(out_dir, os.path.basename(paths['cafile']))
+
+        # Set cert ownership to user
+        for f in [out_dir, key, cert, ca]:
+            shutil.chown(f, user=uid, group=gid)
+
+        return {"keyfile": key, "certfile": cert, "cafile": ca}
 
     async def start(self):
         """Start the single-user server."""
