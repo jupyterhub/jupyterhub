@@ -42,7 +42,7 @@ from traitlets import (
     Tuple, Type, Set, Instance, Bytes, Float,
     observe, default,
 )
-from traitlets.config import Application, catch_config_error
+from traitlets.config import Application, Configurable, catch_config_error
 
 here = os.path.dirname(__file__)
 
@@ -58,7 +58,7 @@ from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
-from .traitlets import URLPrefix, Command
+from .traitlets import URLPrefix, Command, EntryPointType
 from .utils import (
     maybe_future,
     url_path_join,
@@ -227,13 +227,19 @@ class JupyterHub(Application):
         'upgrade-db': (UpgradeDB, "Upgrade your JupyterHub state database to the current version."),
     }
 
-    classes = List([
-        Spawner,
-        LocalProcessSpawner,
-        Authenticator,
-        PAMAuthenticator,
-        CryptKeeper,
-    ])
+    classes = List()
+    @default('classes')
+    def _load_classes(self):
+        classes = [Spawner, Authenticator, CryptKeeper]
+        for name, trait in self.traits(config=True).items():
+            # load entry point groups into configurable class list
+            # so that they show up in config files, etc.
+            if isinstance(trait, EntryPointType):
+                for key, entry_point in trait.load_entry_points().items():
+                    cls = entry_point.load()
+                    if cls not in classes and isinstance(cls, Configurable):
+                        classes.append(cls)
+        return classes
 
     load_groups = Dict(List(Unicode()),
         help="""Dict of 'group': ['usernames'] to load at startup.
@@ -651,20 +657,25 @@ class JupyterHub(Application):
     ).tag(config=True)
     _service_map = Dict()
 
-    authenticator_class = Type(PAMAuthenticator, Authenticator,
+    authenticator_class = EntryPointType(
+        default_value=PAMAuthenticator,
+        klass=Authenticator,
+        entry_point_group="jupyterhub.authenticators",
         help="""Class for authenticating users.
 
-        This should be a class with the following form:
+        This should be a subclass of :class:`jupyterhub.auth.Authenticator`
 
-        - constructor takes one kwarg: `config`, the IPython config object.
-
-        with an authenticate method that:
+        with an :meth:`authenticate` method that:
 
         - is a coroutine (asyncio or tornado)
         - returns username on success, None on failure
         - takes two arguments: (handler, data),
           where `handler` is the calling web.RequestHandler,
           and `data` is the POST form data from the login page.
+
+        .. versionchanged:: 1.0
+            authenticators may be registered via entry points,
+            e.g. `c.JupyterHub.authenticator_class = 'pam'`
         """
     ).tag(config=True)
 
@@ -679,10 +690,17 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     # class for spawning single-user servers
-    spawner_class = Type(LocalProcessSpawner, Spawner,
+    spawner_class = EntryPointType(
+        default_value=LocalProcessSpawner,
+        klass=Spawner,
+        entry_point_group="jupyterhub.spawners",
         help="""The class to use for spawning single-user servers.
 
-        Should be a subclass of Spawner.
+        Should be a subclass of :class:`jupyterhub.spawner.Spawner`.
+
+        .. versionchanged:: 1.0
+            spawners may be registered via entry points,
+            e.g. `c.JupyterHub.spawner_class = 'localprocess'`
         """
     ).tag(config=True)
 
