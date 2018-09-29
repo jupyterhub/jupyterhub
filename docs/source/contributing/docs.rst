@@ -65,9 +65,9 @@ so help in making it so would be appreciated!
 There are many ways to invoke a ``pip`` command, we recommend the following
 approach:
 
-```
-python3 -m pip
-```
+.. code-block:: bash
+
+   python3 -m pip
 
 This invokes pip explicitly using the python3 binary that you are
 currently using. This is the **recommended way** to invoke pip
