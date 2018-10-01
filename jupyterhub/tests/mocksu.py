@@ -43,10 +43,11 @@ def main(args):
 
     if key and cert and ca:
         ssl_context = make_ssl_context(
-                key,
-                cert,
-                cafile = ca,
-                check_hostname = False)
+            key,
+            cert,
+            cafile = ca,
+            check_hostname = False
+        )
 
     server = httpserver.HTTPServer(app, ssl_options=ssl_context)
     server.listen(args.port)
