@@ -402,8 +402,12 @@ def test_spawner_routing(app, name):
         yield user.spawn()
         yield wait_for_spawner(user.spawner)
         yield app.proxy.add_user(user)
+    kwargs = {'allow_redirects': False}
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
     url = url_path_join(public_url(app, user), "test/url")
-    r = yield async_requests.get(url, allow_redirects=False)
+    r = yield async_requests.get(url, **kwargs)
     r.raise_for_status()
     assert r.url == url
     assert r.text == urlparse(url).path
