@@ -75,7 +75,6 @@ Writing an Authenticator that looks up passwords in a dictionary
 requires only overriding this one method:
 
 ```python
-from tornado import gen
 from IPython.utils.traitlets import Dict
 from jupyterhub.auth import Authenticator
 
@@ -85,8 +84,7 @@ class DictionaryAuthenticator(Authenticator):
         help="""dict of username:password for authentication"""
     )
 
-    @gen.coroutine
-    def authenticate(self, handler, data):
+    async def authenticate(self, handler, data):
         if self.passwords.get(data['username']) == data['password']:
             return data['username']
 ```
@@ -142,6 +140,41 @@ See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/
 
 If you are interested in writing a custom authenticator, you can read
 [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
+
+### Registering custom Authenticators via entry points
+
+As of JupyterHub 1.0, custom authenticators can register themselves via
+the `jupyterhub.authenticators` entry point metadata.
+To do this, in your `setup.py` add:
+
+```python
+setup(
+  ...
+  entry_points={
+    'jupyterhub.authenticators': [
+        'myservice = mypackage:MyAuthenticator',
+    ],
+  },
+)
+```
+
+If you have added this metadata to your package,
+users can select your authenticator with the configuration:
+
+```python
+c.JupyterHub.authenticator_class = 'myservice'
+```
+
+instead of the full
+
+```python
+c.JupyterHub.authenticator_class = 'mypackage:MyAuthenticator'
+```
+
+previously required.
+Additionally, configurable attributes for your spawner will
+appear in jupyterhub help output and auto-generated configuration files
+via `jupyterhub --generate-config`.
 
 
 ### Authentication state

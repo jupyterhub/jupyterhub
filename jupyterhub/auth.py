@@ -687,11 +687,18 @@ class PAMAuthenticator(LocalAuthenticator):
             self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
 
+
 class DummyAuthenticator(Authenticator):
-    """Simple authentication for testing use"""
+    """Dummy Authenticator for testing
+
+    By default, any username + password is allowed
+    If a non-empty password is set, any username will be allowed
+    if it logs in with that password.
+
+    .. versionadded:: 1.0
+    """
+
     password = Unicode(
-        None,
-        allow_none=True,
         config=True,
         help="""
         Set a global password for all users wanting to log in.
@@ -700,8 +707,7 @@ class DummyAuthenticator(Authenticator):
         """
     )
 
-    @gen.coroutine
-    def authenticate(self, handler, data):
+    async def authenticate(self, handler, data):
         """Checks against a global password if it's been set. If not, allow any user/pass combo"""
         if self.password:
             if data['password'] == self.password:

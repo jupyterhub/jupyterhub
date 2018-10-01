@@ -106,6 +106,17 @@ setup_args = dict(
     platforms           = "Linux, Mac OS X",
     keywords            = ['Interactive', 'Interpreter', 'Shell', 'Web'],
     python_requires     = ">=3.5",
+    entry_points        = {
+        'jupyterhub.authenticators': [
+            'default = jupyterhub.auth:PAMAuthenticator',
+            'pam = jupyterhub.auth:PAMAuthenticator',
+            'dummy = jupyterhub.auth:DummyAuthenticator',
+        ],
+        'jupyterhub.spawners': [
+            'default = jupyterhub.spawner:LocalProcessSpawner',
+            'localprocess = jupyterhub.spawner:LocalProcessSpawner',
+        ],
+    },
     classifiers         = [
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',

@@ -10,6 +10,7 @@ and a custom Spawner needs to be able to take three actions:
 
 
 ## Examples
+
 Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).
 Some examples include:
 
@@ -173,6 +174,42 @@ When `Spawner.start` is called, this dictionary is accessible as `self.user_opti
 ## Writing a custom spawner
 
 If you are interested in building a custom spawner, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html).
+
+### Registering custom Spawners via entry points
+
+As of JupyterHub 1.0, custom Spawners can register themselves via
+the `jupyterhub.spawners` entry point metadata.
+To do this, in your `setup.py` add:
+
+```python
+setup(
+  ...
+  entry_points={
+    'jupyterhub.spawners': [
+        'myservice = mypackage:MySpawner',
+    ],
+  },
+)
+```
+
+If you have added this metadata to your package,
+users can select your authenticator with the configuration:
+
+```python
+c.JupyterHub.spawner_class = 'myservice'
+```
+
+instead of the full
+
+```python
+c.JupyterHub.spawner_class = 'mypackage:MySpawner'
+```
+
+previously required.
+Additionally, configurable attributes for your spawner will
+appear in jupyterhub help output and auto-generated configuration files
+via `jupyterhub --generate-config`.
+
 
 ## Spawners, resource limits, and guarantees (Optional)
 
