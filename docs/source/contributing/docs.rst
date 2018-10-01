@@ -59,21 +59,20 @@ living document that grows over time, so feel free to add to it / change it!
 Our entire documentation does not yet fully conform to these conventions yet,
 so help in making it so would be appreciated!
 
-``pip`` invocations
--------------------
+``pip`` invocation
+------------------
 
-There are three ways to invoke a ``pip`` command:
+There are many ways to invoke a ``pip`` command, we recommend the following
+approach:
 
-1. ``pip``
-    This points to python3 pip if you are in an appropriate environment,
-    but in some cases it can actually point to a python2 pip.
+.. code-block:: bash
 
-2. ``pip3``
-   When present, this always points to a python3 pip, most likely in
-   the same environment as your python3.
+   python3 -m pip
 
-3. ``python3 -m pip``
-   This invokes pip explicitly using the python3 binary that you are
-   currently using. This is the **recommended way** to invoke pip
-   in our documentation, since it is least likely to cause problems
-   with python3 and pip being from different environments.
+This invokes pip explicitly using the python3 binary that you are
+currently using. This is the **recommended way** to invoke pip
+in our documentation, since it is least likely to cause problems
+with python3 and pip being from different environments.
+
+For more information on how to invoke ``pip`` commands, see
+`the pip documentation <https://pip.pypa.io/en/stable/>`_.
