@@ -93,7 +93,7 @@ c.JupyterHub.services = [
     {
         'name': 'cull-idle',
         'admin': True,
-        'command': ['python', '/path/to/cull-idle.py', '--timeout']
+        'command': [sys.executable, '/path/to/cull-idle.py', '--timeout']
     }
 ]
 ```
