@@ -824,7 +824,9 @@ class BaseHandler(RequestHandler):
             # check if the server died while we were waiting
             poll_start_time = time.perf_counter()
             status = await spawner.poll()
-            SERVER_POLL_DURATION_SECONDS.observe(time.perf_counter() - poll_start_time)
+            SERVER_POLL_DURATION_SECONDS.labels(
+                status=ServerPollStatus.status_to_string(status)
+            ).observe(time.perf_counter() - poll_start_time)
 
             if status is not None:
                 toc = IOLoop.current().time()
@@ -832,6 +834,7 @@ class BaseHandler(RequestHandler):
                 SERVER_SPAWN_DURATION_SECONDS.labels(
                     status=ServerSpawnStatus.failure
                 ).observe(time.perf_counter() - spawn_start_time)
+
                 raise web.HTTPError(500, "Spawner failed to start [status=%s]. The logs for %s may contain details." % (
                     status, spawner._log_name))
 
@@ -855,10 +858,14 @@ class BaseHandler(RequestHandler):
 
         poll_start_time = time.perf_counter()
         status = await spawner.poll()
-        SERVER_POLL_DURATION_SECONDS.observe(time.perf_counter() - poll_start_time)
+        SERVER_POLL_DURATION_SECONDS.labels(
+            status=ServerPollStatus.status_to_string(status)
+        ).observe(time.perf_counter() - poll_start_time)
+
 
         if status is None:
             status = 'unknown'
+
         self.log.warning("User %s server stopped, with exit code: %s",
             user.name, status,
         )
@@ -1162,10 +1169,11 @@ class UserSpawnHandler(BaseHandler):
             if spawner.ready:
                 poll_start_time = time.perf_counter()
                 status = await spawner.poll()
-                SERVER_POLL_DURATION_SECONDS.observe(time.perf_counter() - poll_start_time)
+                SERVER_POLL_DURATION_SECONDS.labels(
+                    status=ServerPollStatus.status_to_string(status)
+                ).observe(time.perf_counter() - poll_start_time)
             else:
                 status = 0
-
             # server is not running, trigger spawn
             if status is not None:
                 if spawner.options_form:
