@@ -32,7 +32,7 @@ from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
-    SERVER_POLL_DURATION_SECONDS,
+    SERVER_POLL_DURATION_SECONDS, ServerPollStatus,
     RUNNING_SERVERS
 )
 
@@ -825,7 +825,7 @@ class BaseHandler(RequestHandler):
             poll_start_time = time.perf_counter()
             status = await spawner.poll()
             SERVER_POLL_DURATION_SECONDS.labels(
-                status=ServerPollStatus.status_to_string(status)
+                status=ServerPollStatus.from_status(status)
             ).observe(time.perf_counter() - poll_start_time)
 
             if status is not None:
@@ -859,7 +859,7 @@ class BaseHandler(RequestHandler):
         poll_start_time = time.perf_counter()
         status = await spawner.poll()
         SERVER_POLL_DURATION_SECONDS.labels(
-            status=ServerPollStatus.status_to_string(status)
+            status=ServerPollStatus.from_status(status)
         ).observe(time.perf_counter() - poll_start_time)
 
 
@@ -1170,7 +1170,7 @@ class UserSpawnHandler(BaseHandler):
                 poll_start_time = time.perf_counter()
                 status = await spawner.poll()
                 SERVER_POLL_DURATION_SECONDS.labels(
-                    status=ServerPollStatus.status_to_string(status)
+                    status=ServerPollStatus.from_status(status)
                 ).observe(time.perf_counter() - poll_start_time)
             else:
                 status = 0

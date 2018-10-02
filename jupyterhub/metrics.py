@@ -93,10 +93,12 @@ class ServerPollStatus(Enum):
     running = 'running'
     stopped = 'stopped'
 
-    def status_to_string(status):
+    @classmethod
+    def from_status(cls, status):
+        """Return enum string for a given poll status"""
         if status is None:
-            return running
-        return stopped
+            return cls.running
+        return cls.stopped
 
     def __str__(self):
         return self.value
