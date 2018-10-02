@@ -324,37 +324,40 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
     internal_ssl = Bool(False,
-        help=""" Turn on server side ssl. This enables end-to-end encryption.
+        help="""Enable SSL for all internal communication
+
+        This enables end-to-end encryption between all JupyterHub components.
         JupyterHub will automatically create the necessary certificate
         authority and sign notebook certificates as they're created.
         """
     ).tag(config=True)
-    internal_certs_location = Unicode('out',
-        help=""" The location to store certificates automatically created by
+    internal_certs_location = Unicode('internal-ssl',
+        help="""The location to store certificates automatically created by
         JupyterHub.
 
         Use with internal_ssl
         """
     ).tag(config=True)
     recreate_internal_certs = Bool(False,
-        help=""" Recreate all certificates used within JupyterHub on restart.
+        help="""Recreate all certificates used within JupyterHub on restart.
+
+        Note: enabling this feature requires restarting all notebook servers.
 
         Use with internal_ssl
         """
     ).tag(config=True)
     external_ssl_authorities = Dict(
-        default_value={},
-        help=""" Dict authority:dict(files). Specify the key, cert, and/or
+        help="""Dict authority:dict(files). Specify the key, cert, and/or
         ca file for an authority. This is useful for externally managed
         proxies that wish to use internal_ssl.
 
-        The files dict has this format (you must specify at least a cert):
+        The files dict has this format (you must specify at least a cert)::
 
-        {
-            'key': '/path/to/key.key',
-            'cert': '/path/to/cert.crt',
-            'ca': '/path/to/ca.crt'
-        }
+            {
+                'key': '/path/to/key.key',
+                'cert': '/path/to/cert.crt',
+                'ca': '/path/to/ca.crt'
+            }
 
         The authorities you can override: 'hub-ca', 'notebooks-ca',
         'proxy-api-ca', 'proxy-client-ca', and 'services-ca'.
@@ -370,7 +373,7 @@ class JupyterHub(Application):
             'proxy-client-ca': None,
             'services-ca': None,
         },
-        help=""" Dict authority:dict(files). When creating the various
+        help="""Dict authority:dict(files). When creating the various
         CAs needed for internal_ssl, these are the names that will be used
         for each authority.
 
@@ -378,29 +381,26 @@ class JupyterHub(Application):
         """
     )
     internal_ssl_components_trust = Dict(
-        help=""" Dict component:list(components). This dict specifies the
+        help="""Dict component:list(components). This dict specifies the
         relationships of components secured by internal_ssl.
         """
     )
     internal_trust_bundles = Dict(
-        help=""" Dict component:path. These are the paths to the trust bundles
+        help="""Dict component:path. These are the paths to the trust bundles
         that each component should have. They will be set during
         `init_internal_ssl`.
 
         Use with internal_ssl
         """
     )
-    internal_ssl_key = Unicode('',
-        help=""" The key to be used for internal ssl
-        """
+    internal_ssl_key = Unicode(
+        help="""The key to be used for internal ssl"""
     )
-    internal_ssl_cert = Unicode('',
-        help=""" The cert to be used for internal ssl
-        """
+    internal_ssl_cert = Unicode(
+        help="""The cert to be used for internal ssl"""
     )
-    internal_ssl_ca = Unicode('',
-        help=""" The ca to be used for internal ssl
-        """
+    internal_ssl_ca = Unicode(
+        help="""The certificate authority to be used for internal ssl"""
     )
     internal_proxy_certs = Dict(
         help=""" Dict component:dict(cert files). This dict contains the certs
@@ -408,7 +408,8 @@ class JupyterHub(Application):
         """
     )
     trusted_alt_names = List(Unicode(),
-        help=""" Names to include in the subject alternative name.
+        help="""Names to include in the subject alternative name.
+
         These names will be used for server name verification. This is useful
         if JupyterHub is being run behind a reverse proxy or services using ssl
         are on different hosts.
@@ -1183,10 +1184,7 @@ class JupyterHub(Application):
         self.cookie_secret = secret
 
     def init_internal_ssl(self):
-        """Create the certs needed to turn on internal SSL.
-
-
-        """
+        """Create the certs needed to turn on internal SSL."""
 
         if self.internal_ssl:
             from certipy import Certipy, CertNotFoundError
