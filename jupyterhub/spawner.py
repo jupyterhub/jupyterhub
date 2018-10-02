@@ -696,7 +696,22 @@ class Spawner(LoggingConfigurable):
         """
         return s.format(**self.template_namespace())
 
-    async def create_certs(self, alt_names=None, override=False):
+    ssl_alt_names = List(
+        Unicode(),
+        config=True,
+        help="""List of SSL alt names
+
+        May be set in config if all spawners should have the same value(s),
+        or set at runtime by Spawner that know their names.
+        """
+    )
+    ssl_alt_names_include_local = Bool(
+        True,
+        config=True,
+        help="""Whether to include DNS:localhost, IP:127.0.0.1 in alt names""",
+    )
+
+    async def create_certs(self):
         """Create and set ownership for the certs to be used for internal ssl
 
         Keyword Arguments:
@@ -726,9 +741,9 @@ class Spawner(LoggingConfigurable):
         """
         from certipy import Certipy
         default_names = ["DNS:localhost", "IP:127.0.0.1"]
-        alt_names = alt_names or []
+        alt_names = self.ssl_alt_names or []
 
-        if not override:
+        if self.ssl_alt_names_include_local:
             alt_names = default_names + alt_names
 
         common_name = self.user.name or 'service'
