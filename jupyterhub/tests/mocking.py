@@ -95,6 +95,10 @@ class MockSpawner(LocalProcessSpawner):
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
+    def move_certs(self, paths):
+        """Return the paths unmodified"""
+        return paths
+
     use_this_api_token = None
     def start(self):
         if self.use_this_api_token:

@@ -37,9 +37,9 @@ def main(args):
     ])
     
     ssl_context = None
-    key = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_KEYFILE') or ''
-    cert = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CERTFILE') or ''
-    ca = os.environ.get('JUPYTERHUB_NOTEBOOK_SSL_CLIENT_CA') or ''
+    key = os.environ.get('JUPYTERHUB_SSL_KEYFILE') or ''
+    cert = os.environ.get('JUPYTERHUB_SSL_CERTFILE') or ''
+    ca = os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
 
     if key and cert and ca:
         ssl_context = make_ssl_context(

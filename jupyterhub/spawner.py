@@ -793,7 +793,7 @@ class Spawner(LoggingConfigurable):
         to another host, moving them to a volume mounted in a docker container,
         or exporting them as a secret in kubernetes.
         """
-        raise NotImplementedError()
+        return paths
 
     def get_args(self):
         """Return the arguments to be passed after self.cmd
