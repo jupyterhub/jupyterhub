@@ -37,7 +37,7 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
 
 RUNNING_SERVERS = Gauge(
     'running_servers',
-    'the number of user servers currently running',
+    'the number of user servers currently running'
 )
 
 RUNNING_SERVERS.set(0)
@@ -78,6 +78,34 @@ class ProxyAddStatus(Enum):
 
 for s in ProxyAddStatus:
     PROXY_ADD_DURATION_SECONDS.labels(status=s)
+
+
+SERVER_POLL_DURATION_SECONDS = Histogram(
+    'server_poll_duration_seconds',
+    'time taken to poll if server is running',
+    ['status']
+)
+
+class ServerPollStatus(Enum):
+    """
+    Possible values for 'status' label of SERVER_POLL_DURATION_SECONDS
+    """
+    running = 'running'
+    stopped = 'stopped'
+
+    @classmethod
+    def from_status(cls, status):
+        """Return enum string for a given poll status"""
+        if status is None:
+            return cls.running
+        return cls.stopped
+
+    def __str__(self):
+        return self.value
+
+for s in ServerPollStatus:
+    SERVER_POLL_DURATION_SECONDS.labels(status=s)
+
 
 def prometheus_log_method(handler):
     """
