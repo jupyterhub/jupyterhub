@@ -327,7 +327,15 @@ class HubAuth(SingletonConfigurable):
         elif r.status_code >= 400:
             app_log.warning("Failed to check authorization: [%i] %s", r.status_code, r.reason)
             app_log.warning(r.text)
-            raise HTTPError(500, "Failed to check authorization")
+            msg = "Failed to check authorization"
+            # pass on error_description from oauth failure
+            try:
+                description = r.json().get("error_description")
+            except Exception:
+                pass
+            else:
+                msg += ": " + description
+            raise HTTPError(500, msg)
         else:
             data = r.json()
 
@@ -872,6 +880,11 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
     
     @coroutine
     def get(self):
+        error = self.get_argument("error", False)
+        if error:
+            msg = self.get_argument("error_description", error)
+            raise HTTPError(400, "Error in oauth: %s" % msg)
+
         code = self.get_argument("code", False)
         if not code:
             raise HTTPError(400, "oauth callback made without a token")

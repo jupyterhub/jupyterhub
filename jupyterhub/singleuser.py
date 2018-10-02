@@ -310,6 +310,7 @@ class SingleUserNotebookApp(NotebookApp):
     # disble some single-user configurables
     token = ''
     open_browser = False
+    quit_button = False
     trust_xheaders = True
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler

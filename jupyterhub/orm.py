@@ -209,6 +209,15 @@ class Spawner(Base):
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
 
+    # properties on the spawner wrapper
+    # some APIs get these low-level objects
+    # when the spawner isn't running,
+    # for which these should all be False
+    active = running = ready = False
+    pending = None
+    @property
+    def orm_spawner(self):
+        return self
 
 class Service(Base):
     """A service run with JupyterHub
@@ -469,6 +478,7 @@ class OAuthAccessToken(Hashed, Base):
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(255))
+    # TODO: drop refresh_expires_at. Refresh tokens shouldn't expire
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
     service = None # for API-equivalence with APIToken
@@ -513,6 +523,7 @@ class OAuthCode(Base):
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
     session_id = Column(Unicode(255))
+    # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
 
@@ -523,6 +534,10 @@ class OAuthClient(Base):
     description = Column(Unicode(1023))
     secret = Column(Unicode(255))
     redirect_uri = Column(Unicode(1023))
+
+    @property
+    def client_id(self):
+        return self.identifier
 
     access_tokens = relationship(
         OAuthAccessToken,
@@ -746,7 +761,7 @@ def new_session_factory(url="sqlite:///:memory:",
     Base.metadata.create_all(engine)
 
     # We set expire_on_commit=False, since we don't actually need
-    # SQLAlchemy to expire objects after commiting - we don't expect
+    # SQLAlchemy to expire objects after committing - we don't expect
     # concurrent runs of the hub talking to the same db. Turning
     # this off gives us a major performance boost
     session_factory = sessionmaker(bind=engine,

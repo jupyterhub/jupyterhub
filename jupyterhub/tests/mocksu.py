@@ -29,7 +29,7 @@ class ArgsHandler(web.RequestHandler):
         self.write(json.dumps(sys.argv))
 
 def main(args):
-    
+
     app = web.Application([
         (r'.*/args', ArgsHandler),
         (r'.*/env', EnvHandler),

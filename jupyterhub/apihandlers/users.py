@@ -24,7 +24,7 @@ class SelfAPIHandler(APIHandler):
     """
 
     async def get(self):
-        user = self.get_current_user()
+        user = self.current_user
         if user is None:
             # whoami can be accessed via oauth token
             user = self.get_current_user_oauth_token()
@@ -99,7 +99,7 @@ class UserListAPIHandler(APIHandler):
 def admin_or_self(method):
     """Decorator for restricting access to either the target user or admin"""
     def m(self, name, *args, **kwargs):
-        current = self.get_current_user()
+        current = self.current_user
         if current is None:
             raise web.HTTPError(403)
         if not (current.name == name or current.admin):
@@ -117,13 +117,13 @@ class UserAPIHandler(APIHandler):
     @admin_or_self
     async def get(self, name):
         user = self.find_user(name)
-        model = self.user_model(user, include_servers=True, include_state=self.get_current_user().admin)
-        # auth state will only be shown if the requestor is an admin
+        model = self.user_model(user, include_servers=True, include_state=self.current_user.admin)
+        # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
         # will see their auth state but normal users won't
-        requestor = self.get_current_user()
-        if requestor.admin:
+        requester = self.current_user
+        if requester.admin:
             model['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(model))
 
@@ -157,7 +157,7 @@ class UserAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
-        if user.name == self.get_current_user().name:
+        if user.name == self.current_user.name:
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.spawner._stop_pending:
             raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
@@ -237,7 +237,7 @@ class UserTokenListAPIHandler(APIHandler):
         if not isinstance(body, dict):
             raise web.HTTPError(400, "Body must be a JSON dict or empty")
 
-        requester = self.get_current_user()
+        requester = self.current_user
         if requester is None:
             # defer to Authenticator for identifying the user
             # can be username+password or an upstream auth token
@@ -378,29 +378,52 @@ class UserServerAPIHandler(APIHandler):
     @admin_or_self
     async def delete(self, name, server_name=''):
         user = self.find_user(name)
+        options = self.get_json_body()
+        remove = (options or {}).get('remove', False)
+
+
+        def _remove_spawner(f=None):
+            if f and f.exception():
+                return
+            self.log.info("Deleting spawner %s", spawner._log_name)
+            self.db.delete(spawner.orm_spawner)
+            self.db.commit()
+
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if server_name not in user.spawners:
+            if server_name not in user.orm_spawners:
                 raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
+        elif remove:
+            raise web.HTTPError(400, "Cannot delete the default server")
 
         spawner = user.spawners[server_name]
         if spawner.pending == 'stop':
             self.log.debug("%s already stopping", spawner._log_name)
             self.set_header('Content-Type', 'text/plain')
             self.set_status(202)
+            if remove:
+                spawner._stop_future.add_done_callback(_remove_spawner)
             return
 
-        if not spawner.ready:
+        if spawner.pending:
             raise web.HTTPError(
-                400, "%s is not running %s" %
-                (spawner._log_name, '(pending: %s)' % spawner.pending if spawner.pending else '')
+                400, "%s is pending %s, please wait" % (spawner._log_name, spawner.pending)
             )
-        # include notify, so that a server that died is noticed immediately
-        status = await spawner.poll_and_notify()
-        if status is not None:
-            raise web.HTTPError(400, "%s is not running" % spawner._log_name)
-        await self.stop_single_user(user, server_name)
+
+        stop_future = None
+        if spawner.ready:
+            # include notify, so that a server that died is noticed immediately
+            status = await spawner.poll_and_notify()
+            if status is None:
+                stop_future = await self.stop_single_user(user, server_name)
+
+        if remove:
+            if stop_future:
+                stop_future.add_done_callback(_remove_spawner)
+            else:
+                _remove_spawner()
+
         status = 202 if spawner._stop_pending else 204
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
@@ -415,7 +438,7 @@ class UserAdminAccessAPIHandler(APIHandler):
     def post(self, name):
         self.log.warning("Deprecated in JupyterHub 0.8."
             " Admin access API is not needed now that we use OAuth.")
-        current = self.get_current_user()
+        current = self.current_user
         self.log.warning("Admin user %s has requested access to %s's server",
             current.name, name,
         )
@@ -428,6 +451,9 @@ class UserAdminAccessAPIHandler(APIHandler):
 
 class SpawnProgressAPIHandler(APIHandler):
     """EventStream handler for pending spawns"""
+
+    keepalive_interval = 8
+
     def get_content_type(self):
         return 'text/event-stream'
 
@@ -439,6 +465,31 @@ class SpawnProgressAPIHandler(APIHandler):
             self.log.warning("Stream closed while handling %s", self.request.uri)
             # raise Finish to halt the handler
             raise web.Finish()
+
+    def initialize(self):
+        super().initialize()
+        self._finish_future = asyncio.Future()
+
+    def on_finish(self):
+        self._finish_future.set_result(None)
+
+    async def keepalive(self):
+        """Write empty lines periodically
+
+        to avoid being closed by intermediate proxies
+        when there's a large gap between events.
+        """
+        while not self._finish_future.done():
+            try:
+                self.write("\n\n")
+                await self.flush()
+            except (StreamClosedError, RuntimeError):
+                return
+
+            await asyncio.wait(
+                [self._finish_future],
+                timeout=self.keepalive_interval,
+            )
 
     @admin_or_self
     async def get(self, username, server_name=''):
@@ -453,6 +504,9 @@ class SpawnProgressAPIHandler(APIHandler):
             # user has no such server
             raise web.HTTPError(404)
         spawner = user.spawners[server_name]
+
+        # start sending keepalive to avoid proxies closing the connection
+        asyncio.ensure_future(self.keepalive())
         # cases:
         # - spawner already started and ready
         # - spawner not running at all

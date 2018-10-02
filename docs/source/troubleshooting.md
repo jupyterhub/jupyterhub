@@ -204,7 +204,7 @@ from there instead of the internet.
 For instance, you can install JupyterHub with pip and configurable-http-proxy
 with npmbox:
 
-    pip wheel jupyterhub
+    python3 -m pip wheel jupyterhub
     npmbox configurable-http-proxy
 
 ### I want access to the whole filesystem, but still default users to their home directory
@@ -236,7 +236,7 @@ then you can change the default URL to `/lab`.
 
 For instance:
 
-    pip install jupyterlab
+    python3 -m pip install jupyterlab
     jupyter serverextension enable --py jupyterlab --sys-prefix
 
 The important thing is that jupyterlab is installed and enabled in the

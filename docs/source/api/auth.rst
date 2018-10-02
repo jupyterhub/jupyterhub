@@ -26,3 +26,8 @@ Module: :mod:`jupyterhub.auth`
 
 .. autoconfigurable:: PAMAuthenticator
 
+:class:`DummyAuthenticator`
+---------------------------
+
+.. autoconfigurable:: DummyAuthenticator
+

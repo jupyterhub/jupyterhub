@@ -37,7 +37,7 @@ Next, you will need [sudospawner](https://github.com/jupyter/sudospawner)
 to enable monitoring the single-user servers with sudo:
 
 ```bash
-sudo pip install sudospawner
+sudo python3 -m pip install sudospawner
 ```
 
 Now we have to configure sudo to allow the Hub user (`rhea`) to launch
@@ -70,7 +70,7 @@ Cmnd_Alias JUPYTER_CMD = /usr/local/bin/sudospawner
 rhea ALL=(JUPYTER_USERS) NOPASSWD:JUPYTER_CMD
 ```
 
-It might be useful to modifiy `secure_path` to add commands in path.
+It might be useful to modify `secure_path` to add commands in path.
 
 As an alternative to adding every user to the `/etc/sudoers` file, you can
 use a group in the last line above, instead of `JUPYTER_USERS`:

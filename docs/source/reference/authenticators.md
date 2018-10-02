@@ -5,8 +5,8 @@ Hub and single user notebook servers.
 
 ## The default PAM Authenticator
 
-JupyterHub ships only with the default [PAM][]-based Authenticator,
-for logging in with local user accounts via a username and password.
+JupyterHub ships with the default [PAM][]-based Authenticator, for
+logging in with local user accounts via a username and password.
 
 ## The OAuthenticator
 
@@ -34,12 +34,17 @@ popular services:
 A generic implementation, which you can use for OAuth authentication
 with any provider, is also available.
 
+## The Dummy Authenticator
+
+When testing, it may be helpful to use the
+:class:`~jupyterhub.auth.DummyAuthenticator`. This allows for any username and
+password unless if a global password has been set. Once set, any username will
+still be accepted but the correct password will need to be provided.
+
 ## Additional Authenticators
 
-- ldapauthenticator for LDAP
-- tmpauthenticator for temporary accounts
-- For Shibboleth, [jhub_shibboleth_auth](https://github.com/gesiscss/jhub_shibboleth_auth)
-  and [jhub_remote_user_authenticator](https://github.com/cwaldbieser/jhub_remote_user_authenticator)
+A partial list of other authenticators is available on the
+[JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 ## Technical Overview of Authentication
 
@@ -70,7 +75,6 @@ Writing an Authenticator that looks up passwords in a dictionary
 requires only overriding this one method:
 
 ```python
-from tornado import gen
 from IPython.utils.traitlets import Dict
 from jupyterhub.auth import Authenticator
 
@@ -80,8 +84,7 @@ class DictionaryAuthenticator(Authenticator):
         help="""dict of username:password for authentication"""
     )
 
-    @gen.coroutine
-    def authenticate(self, handler, data):
+    async def authenticate(self, handler, data):
         if self.passwords.get(data['username']) == data['password']:
             return data['username']
 ```
@@ -137,6 +140,41 @@ See a list of custom Authenticators [on the wiki](https://github.com/jupyterhub/
 
 If you are interested in writing a custom authenticator, you can read
 [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/authenticators.html).
+
+### Registering custom Authenticators via entry points
+
+As of JupyterHub 1.0, custom authenticators can register themselves via
+the `jupyterhub.authenticators` entry point metadata.
+To do this, in your `setup.py` add:
+
+```python
+setup(
+  ...
+  entry_points={
+    'jupyterhub.authenticators': [
+        'myservice = mypackage:MyAuthenticator',
+    ],
+  },
+)
+```
+
+If you have added this metadata to your package,
+users can select your authenticator with the configuration:
+
+```python
+c.JupyterHub.authenticator_class = 'myservice'
+```
+
+instead of the full
+
+```python
+c.JupyterHub.authenticator_class = 'mypackage:MyAuthenticator'
+```
+
+previously required.
+Additionally, configurable attributes for your spawner will
+appear in jupyterhub help output and auto-generated configuration files
+via `jupyterhub --generate-config`.
 
 
 ### Authentication state
@@ -226,5 +264,5 @@ Beginning with version 0.8, JupyterHub is an OAuth provider.
 [OAuth]: https://en.wikipedia.org/wiki/OAuth
 [GitHub OAuth]: https://developer.github.com/v3/oauth/
 [OAuthenticator]: https://github.com/jupyterhub/oauthenticator
-[pre_spawn_start(user, spawner)]: http://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.pre_spawn_start
-[post_spawn_stop(user, spawner)]: http://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.post_spawn_stop
+[pre_spawn_start(user, spawner)]: https://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.pre_spawn_start
+[post_spawn_stop(user, spawner)]: https://jupyterhub.readthedocs.io/en/latest/api/auth.html#jupyterhub.auth.Authenticator.post_spawn_stop

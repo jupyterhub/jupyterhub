@@ -14,7 +14,7 @@ from .base import BaseHandler
 class LogoutHandler(BaseHandler):
     """Log a user out by clearing their login cookie."""
     def get(self):
-        user = self.get_current_user()
+        user = self.current_user
         if user:
             self.log.info("User logged out: %s", user.name)
             self.clear_login_cookie()
@@ -44,11 +44,11 @@ class LoginHandler(BaseHandler):
 
     async def get(self):
         self.statsd.incr('login.request')
-        user = self.get_current_user()
+        user = self.current_user
         if user:
             # set new login cookie
             # because single-user cookie may have been cleared or incorrect
-            self.set_login_cookie(self.get_current_user())
+            self.set_login_cookie(user)
             self.redirect(self.get_next_url(user), permanent=False)
         else:
             if self.authenticator.auto_login:
@@ -83,7 +83,7 @@ class LoginHandler(BaseHandler):
 
         if user:
             # register current user for subsequent requests to user (e.g. logging the request)
-            self.get_current_user = lambda: user
+            self._jupyterhub_user = user
             self.redirect(self.get_next_url(user))
         else:
             html = self._render(

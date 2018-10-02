@@ -45,7 +45,7 @@ is important that these files be put in a secure location on your server, where
 they are not readable by regular users.
 
 If you are using a **chain certificate**, see also chained certificate for SSL
-in the JupyterHub `troubleshooting FAQ <troubleshooting>`_.
+in the JupyterHub `Troubleshooting FAQ <../troubleshooting.html>`_.
 
 Using letsencrypt
 ~~~~~~~~~~~~~~~~~

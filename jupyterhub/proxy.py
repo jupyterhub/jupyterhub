@@ -460,6 +460,14 @@ class ConfigurableHTTPProxy(Proxy):
 
     _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
 
+    def _check_pid(self, pid):
+        if os.name == 'nt':
+            import psutil
+            if not psutil.pid_exists(pid):
+                raise ProcessLookupError
+        else:
+            os.kill(pid, 0)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # check for required token if proxy is external
@@ -484,7 +492,7 @@ class ConfigurableHTTPProxy(Proxy):
             return
 
         try:
-            os.kill(pid, 0)
+            self._check_pid(pid)
         except ProcessLookupError:
             self.log.warning("Proxy no longer running at pid=%s", pid)
             self._remove_pid_file()
@@ -492,19 +500,24 @@ class ConfigurableHTTPProxy(Proxy):
 
         # if we got here, CHP is still running
         self.log.warning("Proxy still running at pid=%s", pid)
-        for i, sig in enumerate([signal.SIGTERM] * 2 + [signal.SIGKILL]):
+        if os.name != 'nt':
+            sig_list = [signal.SIGTERM] * 2 + [signal.SIGKILL]
+        for i in range(3):
             try:
-                os.kill(pid, signal.SIGTERM)
+                if os.name == 'nt':
+                    self._terminate_win(pid)
+                else:
+                    os.kill(pid,sig_list[i])
             except ProcessLookupError:
                 break
             time.sleep(1)
             try:
-                os.kill(pid, 0)
+                self._check_pid(pid)
             except ProcessLookupError:
                 break
 
         try:
-            os.kill(pid, 0)
+            self._check_pid(pid)
         except ProcessLookupError:
             self.log.warning("Stopped proxy at pid=%s", pid)
             self._remove_pid_file()
@@ -627,18 +640,21 @@ class ConfigurableHTTPProxy(Proxy):
         self._check_running_callback = pc
         pc.start()
 
+    def _terminate_win(self, pid):
+        # On Windows we spawned a shell on Popen, so we need to
+        # terminate all child processes as well
+        import psutil
+
+        parent = psutil.Process(pid)
+        children = parent.children(recursive=True)
+        for child in children:
+            child.kill()
+        psutil.wait_procs(children, timeout=5)
+
     def _terminate(self):
         """Terminate our process"""
         if os.name == 'nt':
-            # On Windows we spawned a shell on Popen, so we need to
-            # terminate all child processes as well
-            import psutil
-
-            parent = psutil.Process(self.proxy_process.pid)
-            children = parent.children(recursive=True)
-            for child in children:
-                child.kill()
-            psutil.wait_procs(children, timeout=5)
+            self._terminate_win(self.proxy_process.pid)
         else:
             self.proxy_process.terminate()
 

@@ -1,10 +1,11 @@
 alembic
 async_generator>=1.8
+entrypoints
 traitlets>=4.3.2
 tornado>=5.0
 jinja2
 pamela
-python-oauth2>=1.0
+oauthlib>=2.0
 python-dateutil
 SQLAlchemy>=1.1
 requests

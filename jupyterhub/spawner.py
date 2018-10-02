@@ -135,6 +135,10 @@ class Spawner(LoggingConfigurable):
     proxy_spec = Unicode()
 
     @property
+    def last_activity(self):
+        return self.orm_spawner.last_activity
+
+    @property
     def server(self):
         if hasattr(self, '_server'):
             return self._server
@@ -167,6 +171,7 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
+    handler = Any()
 
     will_resume = Bool(False,
         help="""Whether the Spawner will resume on next start
@@ -199,6 +204,19 @@ class Spawner(LoggingConfigurable):
 
         New in version 0.7.
         """
+    ).tag(config=True)
+
+    consecutive_failure_limit = Integer(
+        0,
+        help="""
+        Maximum number of consecutive failures to allow before
+        shutting down JupyterHub.
+
+        This helps JupyterHub recover from a certain class of problem preventing launch
+        in contexts where the Hub is automatically restarted (e.g. systemd, docker, kubernetes).
+
+        A limit of 0 means no limit and consecutive failures will not be tracked.
+        """,
     ).tag(config=True)
 
     start_timeout = Integer(60,
@@ -849,7 +867,8 @@ class Spawner(LoggingConfigurable):
         This method is always an async generator and will always yield at least one event.
         """
         if not self._spawn_pending:
-            raise RuntimeError("Spawn not pending, can't generate progress")
+            self.log.warning("Spawn not pending, can't generate progress for %s", self._log_name)
+            return
 
         await yield_({
             "progress": 0,

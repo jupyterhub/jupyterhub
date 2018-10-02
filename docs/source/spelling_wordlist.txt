@@ -166,7 +166,7 @@ startup
 statsd
 stdin
 stdout
-stoppped
+stopped
 subclasses
 subcommand
 subdomain

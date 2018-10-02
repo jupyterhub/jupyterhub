@@ -125,7 +125,7 @@ sure are available, I can install their specs system-wide (in /usr/local) with:
 There are two broad categories of user environments that depend on what
 Spawner you choose:
 
-- Multi-user hosts (shared sytem)
+- Multi-user hosts (shared system)
 - Container-based
 
 How you configure user environments for each category can differ a bit

@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from datetime import datetime
 import json
 
 from http.client import responses
@@ -13,11 +14,24 @@ from .. import orm
 from ..handlers import BaseHandler
 from ..utils import isoformat, url_path_join
 
+
 class APIHandler(BaseHandler):
+    """Base class for API endpoints
+
+    Differences from page handlers:
+
+    - JSON responses and errors
+    - strict referer checking for Cookie-authenticated requests
+    - strict content-security-policy
+    - methods for REST API models
+    """
 
     @property
     def content_security_policy(self):
         return '; '.join([super().content_security_policy, "default-src 'none'"])
+
+    def get_content_type(self):
+        return 'application/json'
 
     def check_referer(self):
         """Check Origin for cross-site API requests.
@@ -156,6 +170,7 @@ class APIHandler(BaseHandler):
             'kind': kind,
             'created': isoformat(token.created),
             'last_activity': isoformat(token.last_activity),
+            'expires_at': isoformat(expires_at),
         }
         model.update(extra)
         return model
@@ -253,3 +268,13 @@ class APIHandler(BaseHandler):
 
     def options(self, *args, **kwargs):
         self.finish()
+
+
+class API404(APIHandler):
+    """404 for API requests
+
+    Ensures JSON 404 errors for malformed URLs
+    """
+    async def prepare(self):
+        await super().prepare()
+        raise web.HTTPError(404)

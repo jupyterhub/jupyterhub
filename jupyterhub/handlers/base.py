@@ -3,6 +3,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 import copy
 from datetime import datetime, timedelta
 from http.client import responses
@@ -20,7 +21,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from tornado.log import app_log
 from tornado.httputil import url_concat, HTTPHeaders
 from tornado.ioloop import IOLoop
-from tornado.web import RequestHandler
+from tornado.web import RequestHandler, MissingArgumentError
 from tornado import gen, web
 
 from .. import __version__
@@ -31,6 +32,7 @@ from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
+    RUNNING_SERVERS
 )
 
 # pattern for the authentication token header
@@ -50,6 +52,26 @@ SESSION_COOKIE_NAME = 'jupyterhub-session-id'
 
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
+
+    async def prepare(self):
+        """Identify the user during the prepare stage of each request
+
+        `.prepare()` runs prior to all handler methods,
+        e.g. `.get()`, `.post()`.
+
+        Checking here allows `.get_current_user` to be async without requiring
+        every current user check to be made async.
+
+        The current user (None if not logged in) may be accessed
+        via the `self.current_user` property during the handling of any request.
+        """
+        try:
+            await self.get_current_user()
+        except Exception:
+            self.log.exception("Failed to get current user")
+            self._jupyterhub_user = None
+
+        return await maybe_future(super().prepare())
 
     @property
     def log(self):
@@ -209,6 +231,55 @@ class BaseHandler(RequestHandler):
         self.db.commit()
         return self._user_from_orm(orm_token.user)
 
+    async def refresh_user_auth(self, user, force=False):
+        """Refresh user authentication info
+
+        Calls `authenticator.refresh_user(user)`
+
+        Called at most once per user per request.
+
+        Args:
+            user (User): the user whose auth info is to be refreshed
+            force (bool): force a refresh instead of checking last refresh time
+        Returns:
+            user (User): the user having been refreshed,
+                or None if the user must login again to refresh auth info.
+        """
+        if not force: # TODO: and it's sufficiently recent
+            return user
+
+        # refresh a user at most once per request
+        if not hasattr(self, '_refreshed_users'):
+            self._refreshed_users = set()
+        if user.name in self._refreshed_users:
+            # already refreshed during this request
+            return user
+        self._refreshed_users.add(user.name)
+
+        self.log.debug("Refreshing auth for %s", user.name)
+        auth_info = await self.authenticator.refresh_user(user)
+
+        if not auth_info:
+            self.log.warning(
+                "User %s has stale auth info. Login is required to refresh.",
+                user.name,
+            )
+            return
+
+        if auth_info == True:
+            # refresh_user confirmed that it's up-to-date,
+            # nothing to refresh
+            return user
+
+        # Ensure name field is set. It cannot be updated.
+        auth_info['name'] = user.name
+
+        if 'auth_state' not in auth_info:
+            # refresh didn't specify auth_state,
+            # so preserve previous value to avoid clearing it
+            auth_info['auth_state'] = await user.get_auth_state()
+        return await self.auth_to_user(auth_info, user)
+
     def get_current_user_token(self):
         """get_current_user from Authorization header token"""
         token = self.get_auth_token()
@@ -217,15 +288,18 @@ class BaseHandler(RequestHandler):
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             return None
-        else:
-            # record token activity
-            now = datetime.utcnow()
-            orm_token.last_activity = now
-            if orm_token.user:
-                orm_token.user.last_activity = now
 
-            self.db.commit()
-            return orm_token.service or self._user_from_orm(orm_token.user)
+        # record token activity
+        now = datetime.utcnow()
+        orm_token.last_activity = now
+        if orm_token.user:
+            orm_token.user.last_activity = now
+        self.db.commit()
+
+        if orm_token.service:
+            return orm_token.service
+
+        return self._user_from_orm(orm_token.user)
 
     def _user_for_cookie(self, cookie_name, cookie_value=None):
         """Get the User for a given cookie, if there is one"""
@@ -265,18 +339,30 @@ class BaseHandler(RequestHandler):
         """get_current_user from a cookie token"""
         return self._user_for_cookie(self.hub.cookie_name)
 
-    def get_current_user(self):
+    async def get_current_user(self):
         """get current username"""
         if not hasattr(self, '_jupyterhub_user'):
             try:
                 user = self.get_current_user_token()
                 if user is None:
                     user = self.get_current_user_cookie()
+                if user:
+                    user = await self.refresh_user_auth(user)
                 self._jupyterhub_user = user
             except Exception:
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
-                raise
+                self.log.exception("Error getting current user")
+        return self._jupyterhub_user
+
+    @property
+    def current_user(self):
+        """Override .current_user accessor from tornado
+
+        Allows .get_current_user to be async.
+        """
+        if not hasattr(self, '_jupyterhub_user'):
+            raise RuntimeError("Must call async get_current_user first!")
         return self._jupyterhub_user
 
     def find_user(self, name):
@@ -323,7 +409,6 @@ class BaseHandler(RequestHandler):
                 if count:
                     self.log.debug("Deleted %s access tokens for %s", count, user.name)
                     self.db.commit()
-
 
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
@@ -467,6 +552,43 @@ class BaseHandler(RequestHandler):
                 next_url = url_path_join(self.hub.base_url, 'home')
         return next_url
 
+    async def auth_to_user(self, authenticated, user=None):
+        """Persist data from .authenticate() or .refresh_user() to the User database
+
+        Args:
+            authenticated(dict): return data from .authenticate or .refresh_user
+            user(User, optional): the User object to refresh, if refreshing
+        Return:
+            user(User): the constructed User object
+        """
+        if isinstance(authenticated, str):
+            authenticated = {'name': authenticated}
+        username = authenticated['name']
+        auth_state = authenticated.get('auth_state')
+        admin = authenticated.get('admin')
+        refreshing = user is not None
+
+        if user and username != user.name:
+            raise ValueError("Username doesn't match! %s != %s" % (username, user.name))
+
+        if user is None:
+            new_user = username not in self.users
+            user = self.user_from_username(username)
+            if new_user:
+                await maybe_future(self.authenticator.add_user(user))
+        # Only set `admin` if the authenticator returned an explicit value.
+        if admin is not None and admin != user.admin:
+            user.admin = admin
+            self.db.commit()
+        # always set auth_state and commit,
+        # because there could be key-rotation or clearing of previous values
+        # going on.
+        if not self.authenticator.enable_auth_state:
+            # auth_state is not enabled. Force None.
+            auth_state = None
+        await user.save_auth_state(auth_state)
+        return user
+
     async def login_user(self, data=None):
         """Login a user"""
         auth_timer = self.statsd.timer('login.authenticate').start()
@@ -474,29 +596,11 @@ class BaseHandler(RequestHandler):
         auth_timer.stop(send=False)
 
         if authenticated:
-            username = authenticated['name']
-            auth_state = authenticated.get('auth_state')
-            admin = authenticated.get('admin')
-            new_user = username not in self.users
-            user = self.user_from_username(username)
-            if new_user:
-                await maybe_future(self.authenticator.add_user(user))
-            # Only set `admin` if the authenticator returned an explicit value.
-            if admin is not None and admin != user.admin:
-                user.admin = admin
-                self.db.commit()
-            # always set auth_state and commit,
-            # because there could be key-rotation or clearing of previous values
-            # going on.
-            if not self.authenticator.enable_auth_state:
-                # auth_state is not enabled. Force None.
-                auth_state = None
-            await user.save_auth_state(auth_state)
-            self.db.commit()
+            user = await self.auth_to_user(authenticated)
             self.set_login_cookie(user)
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
-            self.log.info("User logged in: %s", username)
+            self.log.info("User logged in: %s", user.name)
             return user
         else:
             self.statsd.incr('login.failure')
@@ -602,7 +706,7 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Initiating spawn for %s", user_server_name)
 
-        spawn_future = user.spawn(server_name, options)
+        spawn_future = user.spawn(server_name, options, handler=self)
 
         self.log.debug("%i%s concurrent spawns",
             spawn_pending_count,
@@ -627,6 +731,7 @@ class BaseHandler(RequestHandler):
             toc = IOLoop.current().time()
             self.log.info("User %s took %.3f seconds to start", user_server_name, toc-tic)
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
+            RUNNING_SERVERS.inc()
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
@@ -657,6 +762,7 @@ class BaseHandler(RequestHandler):
         # hook up spawner._spawn_future so that other requests can await
         # this result
         finish_spawn_future = spawner._spawn_future = maybe_future(finish_user_spawn())
+
         def _clear_spawn_future(f):
             # clear spawner._spawn_future when it's done
             # keep an exception around, though, to prevent repeated implicit spawns
@@ -665,10 +771,44 @@ class BaseHandler(RequestHandler):
                 spawner._spawn_future = None
             # Now we're all done. clear _spawn_pending flag
             spawner._spawn_pending = False
+
         finish_spawn_future.add_done_callback(_clear_spawn_future)
 
+        # when spawn finishes (success or failure)
+        # update failure count and abort if consecutive failure limit
+        # is reached
+        def _track_failure_count(f):
+            if f.exception() is None:
+                # spawn succeeded, reset failure count
+                self.settings['failure_count'] = 0
+                return
+            # spawn failed, increment count and abort if limit reached
+            self.settings.setdefault('failure_count', 0)
+            self.settings['failure_count'] += 1
+            failure_count = self.settings['failure_count']
+            failure_limit = spawner.consecutive_failure_limit
+            if failure_limit and 1 < failure_count < failure_limit:
+                self.log.warning(
+                    "%i consecutive spawns failed.  "
+                    "Hub will exit if failure count reaches %i before succeeding",
+                    failure_count, failure_limit,
+                )
+            if failure_limit and failure_count >= failure_limit:
+                self.log.critical(
+                    "Aborting due to %i consecutive spawn failures", failure_count
+                )
+                # abort in 2 seconds to allow pending handlers to resolve
+                # mostly propagating errors for the current failures
+                def abort():
+                    raise SystemExit(1)
+                IOLoop.current().call_later(2, abort)
+
+        finish_spawn_future.add_done_callback(_track_failure_count)
+
         try:
-            await gen.with_timeout(timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future)
+            await gen.with_timeout(
+                timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future
+            )
         except gen.TimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
@@ -717,10 +857,10 @@ class BaseHandler(RequestHandler):
         await self.proxy.delete_user(user, server_name)
         await user.stop(server_name)
 
-    async def stop_single_user(self, user, name=''):
-        if name not in user.spawners:
-            raise KeyError("User %s has no such spawner %r", user.name, name)
-        spawner = user.spawners[name]
+    async def stop_single_user(self, user, server_name=''):
+        if server_name not in user.spawners:
+            raise KeyError("User %s has no such spawner %r", user.name, server_name)
+        spawner = user.spawners[server_name]
         if spawner.pending:
             raise RuntimeError("%s pending %s" % (spawner._log_name, spawner.pending))
         # set user._stop_pending before doing anything async
@@ -736,19 +876,27 @@ class BaseHandler(RequestHandler):
             """
             tic = IOLoop.current().time()
             try:
-                await self.proxy.delete_user(user, name)
-                await user.stop(name)
+                await self.proxy.delete_user(user, server_name)
+                await user.stop(server_name)
             finally:
+                spawner._stop_future = None
                 spawner._stop_pending = False
+
             toc = IOLoop.current().time()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
             self.statsd.timing('spawner.stop', (toc - tic) * 1000)
+            RUNNING_SERVERS.dec()
+
+        future = spawner._stop_future = asyncio.ensure_future(stop())
 
         try:
-            await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), stop())
+            await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), future)
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
-            self.log.warning("User %s:%s server is slow to stop", user.name, name)
+            self.log.warning("User %s:%s server is slow to stop", user.name, server_name)
+
+        # return handle on the future for hooking up callbacks
+        return future
 
     #---------------------------------------------------------------
     # template rendering
@@ -780,7 +928,7 @@ class BaseHandler(RequestHandler):
 
     @property
     def template_namespace(self):
-        user = self.get_current_user()
+        user = self.current_user
         ns = dict(
             base_url=self.hub.base_url,
             prefix=self.base_url,
@@ -855,7 +1003,8 @@ class BaseHandler(RequestHandler):
 
 class Template404(BaseHandler):
     """Render our 404 template"""
-    def prepare(self):
+    async def prepare(self):
+        await super().prepare()
         raise web.HTTPError(404)
 
 
@@ -866,6 +1015,11 @@ class PrefixRedirectHandler(BaseHandler):
     """
     def get(self):
         uri = self.request.uri
+        # Since self.base_url will end with trailing slash.
+        # Ensure uri will end with trailing slash when matching
+        # with self.base_url.
+        if not uri.endswith('/'):
+            uri += '/'
         if uri.startswith(self.base_url):
             path = self.request.uri[len(self.base_url):]
         else:
@@ -876,7 +1030,7 @@ class PrefixRedirectHandler(BaseHandler):
 
 
 class UserSpawnHandler(BaseHandler):
-    """Redirect requests to /user/name/* handled by the Hub.
+    """Redirect requests to /user/user_name/* handled by the Hub.
 
     If logged in, spawn a single-user server and redirect request.
     If a user, alice, requests /user/bob/notebooks/mynotebook.ipynb,
@@ -892,21 +1046,21 @@ class UserSpawnHandler(BaseHandler):
         self.write(json.dumps({"message": "%s is not running" % user.name}))
         self.finish()
 
-    async def get(self, name, user_path):
+    async def get(self, user_name, user_path):
         if not user_path:
             user_path = '/'
-        current_user = self.get_current_user()
+        current_user = self.current_user
         if (
             current_user
-            and current_user.name != name
+            and current_user.name != user_name
             and current_user.admin
             and self.settings.get('admin_access', False)
         ):
             # allow admins to spawn on behalf of users
-            user = self.find_user(name)
+            user = self.find_user(user_name)
             if user is None:
                 # no such user
-                raise web.HTTPError(404, "No such user %s" % name)
+                raise web.HTTPError(404, "No such user %s" % user_name)
             self.log.info("Admin %s requesting spawn on behalf of %s",
                           current_user.name, user.name)
             admin_spawn = True
@@ -916,7 +1070,7 @@ class UserSpawnHandler(BaseHandler):
             admin_spawn = False
             # For non-admins, we should spawn if the user matches
             # otherwise redirect users to their own server
-            should_spawn = (current_user and current_user.name == name)
+            should_spawn = (current_user and current_user.name == user_name)
 
         if "api" in user_path.split("/") and not user.active:
             # API request for not-running server (e.g. notebook UI left open)
@@ -928,7 +1082,7 @@ class UserSpawnHandler(BaseHandler):
             # if spawning fails for any reason, point users to /hub/home to retry
             self.extra_error_html = self.spawn_home_error
 
-            # If people visit /user/:name directly on the Hub,
+            # If people visit /user/:user_name directly on the Hub,
             # the redirects will just loop, because the proxy is bypassed.
             # Try to check for that and warn,
             # though the user-facing behavior is unchanged
@@ -944,7 +1098,11 @@ class UserSpawnHandler(BaseHandler):
                     """, self.request.full_url(), self.proxy.public_url)
 
             # logged in as valid user, check for pending spawn
-            spawner = user.spawner
+            if self.allow_named_servers:
+                server_name = self.get_argument('server', '')
+            else:
+                server_name = ''
+            spawner = user.spawners[server_name]
 
             # First, check for previous failure.
             if (
@@ -1009,7 +1167,7 @@ class UserSpawnHandler(BaseHandler):
                                              {'next': self.request.uri}))
                     return
                 else:
-                    await self.spawn_single_user(user)
+                    await self.spawn_single_user(user, server_name)
 
             # spawn didn't finish, show pending page
             if spawner.pending:
@@ -1065,7 +1223,7 @@ class UserSpawnHandler(BaseHandler):
                 url_parts = urlparse(target)
                 query_parts = parse_qs(url_parts.query)
                 query_parts['redirects'] = redirects + 1
-                url_parts = url_parts._replace(query=urlencode(query_parts))
+                url_parts = url_parts._replace(query=urlencode(query_parts, doseq=True))
                 target = urlunparse(url_parts)
             else:
                 target = url_concat(target, {'redirects': 1})
@@ -1103,7 +1261,7 @@ class UserRedirectHandler(BaseHandler):
     """
     @web.authenticated
     def get(self, path):
-        user = self.get_current_user()
+        user = self.current_user
         url = url_path_join(user.url, path)
         if self.request.query:
             # FIXME: use urlunparse instead?
@@ -1133,7 +1291,7 @@ class AddSlashHandler(BaseHandler):
 
 default_handlers = [
     (r'', AddSlashHandler),  # add trailing / to `/hub`
-    (r'/user/([^/]+)(/.*)?', UserSpawnHandler),
+    (r'/user/(?P<user_name>[^/]+)(?P<user_path>/.*)?', UserSpawnHandler),
     (r'/user-redirect/(.*)?', UserRedirectHandler),
     (r'/security/csp-report', CSPReportHandler),
 ]

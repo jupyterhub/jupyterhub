@@ -24,7 +24,7 @@
         {% block thead %}
         {{ th("User (%i)" % users|length, 'name') }}
         {{ th("Admin", 'admin') }}
-        {{ th("Last Seen", 'last_activity') }}
+        {{ th("Last Activity", 'last_activity') }}
         {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
         {% endblock thead %}
       </tr>
@@ -40,38 +40,66 @@
           <a id="shutdown-hub" role="button" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
         </td>
       </tr>
-  {% for u in users %}
-    <tr class="user-row" data-user="{{u.name}}" data-admin="{{u.admin}}">
+      {% for user in users %}
+      {% for spawner in user.all_spawners() %}
+      <tr class="user-row server-row" id="user-{{user.name}}" data-user="{{ user.name }}" data-server-name="{{spawner.name}}" data-admin="{{user.admin}}">
       {% block user_row scoped %}
-      <td class="name-col col-sm-2">{{u.name}}</td>
-      <td class="admin-col col-sm-2">{% if u.admin %}admin{% endif %}</td>
-      <td class="time-col col-sm-3">
-        {%- if u.last_activity -%}
-        {{ u.last_activity.isoformat() + 'Z' }}
-        {%- else -%}
-        Never
+
+      <td class="name-col col-sm-2">{{user.name}}
+        {%- if spawner.name -%}
+        /{{ spawner.name }}
         {%- endif -%}
       </td>
+
+      <td class="admin-col col-sm-2">
+        {%- if spawner.name == '' -%}
+        {% if user.admin %}admin{% endif %}
+        {%- endif -%}
+      </td>
+
+      <td class="time-col col-sm-3">
+      {%- if spawner.last_activity -%}
+        {{ spawner.last_activity.isoformat() + 'Z' }}
+      {%- else -%}
+        Never
+      {%- endif -%}
+      </td>
+
       <td class="server-col col-sm-2 text-center">
-        <a role="button" class="stop-server btn btn-xs btn-danger {% if not u.running %}hidden{% endif %}">stop server</a>
-        <a role="button" class="start-server btn btn-xs btn-primary {% if u.running %}hidden{% endif %}">start server</a>
+        <a role="button" class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}">
+        stop server
+        </a>
+        <a role="button" class="start-server btn btn-xs btn-primary{% if spawner.active %} hidden{% endif %}">
+        start server
+        </a>
       </td>
       <td class="server-col col-sm-1 text-center">
-        {% if admin_access %}
-        <a role="button" class="access-server btn btn-xs btn-primary {% if not u.running %}hidden{% endif %}">access server</a>
-        {% endif %}
+        {%- if admin_access %}
+        <a role="button" class="access-server btn btn-xs btn-primary{% if not spawner.active %} hidden{% endif %}">
+        access server
+        </a>
+        {%- endif %}
       </td>
       <td class="edit-col col-sm-1 text-center">
-        <a role="button" class="edit-user btn btn-xs btn-primary">edit</a>
+      {%- if spawner.name == '' -%}
+        <a role="button" class="edit-user btn btn-xs btn-primary">edit user</a>
+      {%- endif -%}
       </td>
       <td class="edit-col col-sm-1 text-center">
-        {% if u.name != user.name %}
-        <a role="button" class="delete-user btn btn-xs btn-danger">delete</a>
-        {% endif %}
+        {%- if spawner.name == '' -%}
+        {#- user row -#}
+          {%- if user.name != current_user.name -%}
+          <a role="button" class="delete-user btn btn-xs btn-danger">delete user</a>
+          {%- endif -%}
+        {%- else -%}
+          {#- named spawner row -#}
+          <a role="button" class="delete-server btn btn-xs btn-warning">delete server</a>
+        {%- endif -%}
       </td>
+      </tr>
       {% endblock user_row %}
-    </tr>
-  {% endfor %}
+      {% endfor %}
+      {% endfor %}
   </tbody>
   </table>
 </div>

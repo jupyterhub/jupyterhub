@@ -1,6 +1,11 @@
 name: jupyterhub
 type: sphinx
 conda:
-    file: docs/environment.yml
+     file: docs/environment.yml
 python:
   version: 3
+formats:
+  - htmlzip
+  - epub
+  # pdf disabled due to bug in sphinx 1.8 + recommonmark
+  # - pdf

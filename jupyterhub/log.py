@@ -123,8 +123,8 @@ def log_request(handler):
     request_time = 1000.0 * handler.request.request_time()
 
     try:
-        user = handler.get_current_user()
-    except HTTPError:
+        user = handler.current_user
+    except (HTTPError, RuntimeError):
         username = ''
     else:
         if user is None:

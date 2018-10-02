@@ -11,12 +11,16 @@ function get_hub_version() {
   hub_xyz=$(cat hub_version)
   split=( ${hub_xyz//./ } )
   hub_xy="${split[0]}.${split[1]}"
+  # add .dev on hub_xy so it's 1.0.dev
+  if [[ ! -z "${split[3]}" ]]; then
+    hub_xy="${hub_xy}.${split[3]}"
+  fi
 }
 
 
 get_hub_version
 
-# when building master, push 0.9.0 as well
+# when building master, push 0.9.0.dev as well
 docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xyz
 docker push $DOCKER_REPO:$hub_xyz
 docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xyz

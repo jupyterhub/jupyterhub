@@ -10,6 +10,7 @@ and a custom Spawner needs to be able to take three actions:
 
 
 ## Examples
+
 Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).
 Some examples include:
 
@@ -174,6 +175,42 @@ When `Spawner.start` is called, this dictionary is accessible as `self.user_opti
 
 If you are interested in building a custom spawner, you can read [this tutorial](http://jupyterhub-tutorial.readthedocs.io/en/latest/spawners.html).
 
+### Registering custom Spawners via entry points
+
+As of JupyterHub 1.0, custom Spawners can register themselves via
+the `jupyterhub.spawners` entry point metadata.
+To do this, in your `setup.py` add:
+
+```python
+setup(
+  ...
+  entry_points={
+    'jupyterhub.spawners': [
+        'myservice = mypackage:MySpawner',
+    ],
+  },
+)
+```
+
+If you have added this metadata to your package,
+users can select your authenticator with the configuration:
+
+```python
+c.JupyterHub.spawner_class = 'myservice'
+```
+
+instead of the full
+
+```python
+c.JupyterHub.spawner_class = 'mypackage:MySpawner'
+```
+
+previously required.
+Additionally, configurable attributes for your spawner will
+appear in jupyterhub help output and auto-generated configuration files
+via `jupyterhub --generate-config`.
+
+
 ## Spawners, resource limits, and guarantees (Optional)
 
 Some spawners of the single-user notebook servers allow setting limits or
@@ -196,7 +233,7 @@ allocate. Attempting to use more memory than this limit will cause errors. The
 single-user notebook server can discover its own memory limit by looking at
 the environment variable `MEM_LIMIT`, which is specified in absolute bytes.
 
-`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a *minumum amount of
+`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a *minimum amount of
 memory* is desirable. In this case, you can set `c.Spawner.mem_guarantee` to
 to provide a guarantee that at minimum this much memory will always be
 available for the single-user notebook server to use. The environment variable

@@ -95,5 +95,16 @@ popular services:
 A generic implementation, which you can use for OAuth authentication
 with any provider, is also available.
 
+## Use DummyAuthenticator for testing
+
+The :class:`~jupyterhub.auth.DummyAuthenticator` is a simple authenticator that
+allows for any username/password unless if a global password has been set. If
+set, it will allow for any username as long as the correct password is provided.
+To set a global password, add this to the config file:
+
+```python
+c.DummyAuthenticator.password = "some_password"
+```
+
 [PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
 [OAuthenticator]: https://github.com/jupyterhub/oauthenticator

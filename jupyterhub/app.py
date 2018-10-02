@@ -41,7 +41,7 @@ from traitlets import (
     Tuple, Type, Set, Instance, Bytes, Float,
     observe, default,
 )
-from traitlets.config import Application, catch_config_error
+from traitlets.config import Application, Configurable, catch_config_error
 
 here = os.path.dirname(__file__)
 
@@ -53,11 +53,11 @@ from .services.service import Service
 from . import crypto
 from . import dbutil, orm
 from .user import UserDict
-from .oauth.store import make_provider
+from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
-from .traitlets import URLPrefix, Command
+from .traitlets import URLPrefix, Command, EntryPointType
 from .utils import (
     maybe_future,
     url_path_join,
@@ -229,13 +229,19 @@ class JupyterHub(Application):
         'upgrade-db': (UpgradeDB, "Upgrade your JupyterHub state database to the current version."),
     }
 
-    classes = List([
-        Spawner,
-        LocalProcessSpawner,
-        Authenticator,
-        PAMAuthenticator,
-        CryptKeeper,
-    ])
+    classes = List()
+    @default('classes')
+    def _load_classes(self):
+        classes = [Spawner, Authenticator, CryptKeeper]
+        for name, trait in self.traits(config=True).items():
+            # load entry point groups into configurable class list
+            # so that they show up in config files, etc.
+            if isinstance(trait, EntryPointType):
+                for key, entry_point in trait.load_entry_points().items():
+                    cls = entry_point.load()
+                    if cls not in classes and isinstance(cls, Configurable):
+                        classes.append(cls)
+        return classes
 
     load_groups = Dict(List(Unicode()),
         help="""Dict of 'group': ['usernames'] to load at startup.
@@ -750,20 +756,25 @@ class JupyterHub(Application):
     ).tag(config=True)
     _service_map = Dict()
 
-    authenticator_class = Type(PAMAuthenticator, Authenticator,
+    authenticator_class = EntryPointType(
+        default_value=PAMAuthenticator,
+        klass=Authenticator,
+        entry_point_group="jupyterhub.authenticators",
         help="""Class for authenticating users.
 
-        This should be a class with the following form:
+        This should be a subclass of :class:`jupyterhub.auth.Authenticator`
 
-        - constructor takes one kwarg: `config`, the IPython config object.
-
-        with an authenticate method that:
+        with an :meth:`authenticate` method that:
 
         - is a coroutine (asyncio or tornado)
         - returns username on success, None on failure
         - takes two arguments: (handler, data),
           where `handler` is the calling web.RequestHandler,
           and `data` is the POST form data from the login page.
+
+        .. versionchanged:: 1.0
+            authenticators may be registered via entry points,
+            e.g. `c.JupyterHub.authenticator_class = 'pam'`
         """
     ).tag(config=True)
 
@@ -778,10 +789,17 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     # class for spawning single-user servers
-    spawner_class = Type(LocalProcessSpawner, Spawner,
+    spawner_class = EntryPointType(
+        default_value=LocalProcessSpawner,
+        klass=Spawner,
+        entry_point_group="jupyterhub.spawners",
         help="""The class to use for spawning single-user servers.
 
-        Should be a subclass of Spawner.
+        Should be a subclass of :class:`jupyterhub.spawner.Spawner`.
+
+        .. versionchanged:: 1.0
+            spawners may be registered via entry points,
+            e.g. `c.JupyterHub.spawner_class = 'localprocess'`
         """
     ).tag(config=True)
 
@@ -1072,6 +1090,8 @@ class JupyterHub(Application):
         h.extend(self.extra_handlers)
 
         h.append((r'/logo', LogoHandler, {'path': self.logo_file}))
+        h.append((r'/api/(.*)', apihandlers.base.API404))
+
         self.handlers = self.add_url_prefix(self.hub_prefix, h)
         # some extra handlers, outside hub_prefix
         self.handlers.extend([
@@ -1519,7 +1539,7 @@ class JupyterHub(Application):
             host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
         else:
             domain = host = ''
-        client_store = self.oauth_provider.client_authenticator.client_store
+
         for spec in self.services:
             if 'name' not in spec:
                 raise ValueError('service spec must have a name: %r' % spec)
@@ -1578,7 +1598,7 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
-                client_store.add_client(
+                self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
@@ -1678,9 +1698,9 @@ class JupyterHub(Application):
     def init_oauth(self):
         base_url = self.hub.base_url
         self.oauth_provider = make_provider(
-            lambda : self.db,
+            lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
-            login_url=url_path_join(base_url, 'login')
+            login_url=url_path_join(base_url, 'login'),
         )
 
     def cleanup_oauth_clients(self):
@@ -1695,8 +1715,11 @@ class JupyterHub(Application):
         for user in self.users.values():
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
+                # avoid deleting clients created by 0.8
+                # 0.9 uses `jupyterhub-user-...` for the client id, while
+                # 0.8 uses just `user-...`
+                oauth_client_ids.add(spawner.oauth_client_id.split('-', 1)[1])
 
-        client_store = self.oauth_provider.client_authenticator.client_store
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
                 self.log.warning("Deleting OAuth client %s", oauth_client.identifier)
@@ -2144,8 +2167,7 @@ class JupyterHub(Application):
 
     def sigterm(self, signum, frame):
         self.log.critical("Received SIGTERM, shutting down")
-        self.io_loop.stop()
-        self.atexit()
+        raise SystemExit(128 + signum)
 
     _atexit_ran = False
 
@@ -2155,6 +2177,7 @@ class JupyterHub(Application):
             return
         self._atexit_ran = True
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        asyncio.set_event_loop(asyncio.new_event_loop())
         IOLoop.clear_current()
         loop = IOLoop()
         loop.make_current()

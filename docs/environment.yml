@@ -1,3 +1,5 @@
+# ReadTheDocs uses the `environment.yaml` so make sure to update that as well
+# if you change the dependencies of JupyterHub in the various `requirements.txt`
 name: jhub_docs
 channels:
   - conda-forge
@@ -13,7 +15,9 @@ dependencies:
 - traitlets>=4.1
 - sphinx>=1.7
 - pip:
-  - python-oauth2
+  - oauthlib>=2.0
   - recommonmark==0.4.0
   - async_generator
   - prometheus_client
+  - attrs>=17.4.0
+  - sphinx-copybutton

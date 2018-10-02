@@ -26,6 +26,7 @@ Other components
 - public_url
 
 """
+
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import os
@@ -74,18 +75,20 @@ def mock_open_session(username, service, encoding):
 
 class MockSpawner(LocalProcessSpawner):
     """Base mock spawner
-    
+
     - disables user-switching that we need root permissions to do
     - spawns `jupyterhub.tests.mocksu` instead of a full single-user server
     """
     def make_preexec_fn(self, *a, **kw):
         # skip the setuid stuff
         return
-    
+
     def _set_user_changed(self, name, old, new):
         pass
-    
+
     def user_env(self, env):
+        if self.handler:
+            env['HANDLER_ARGS'] = self.handler.request.query
         return env
 
     @default('cmd')
@@ -150,9 +153,8 @@ class BadSpawner(MockSpawner):
 class SlowBadSpawner(MockSpawner):
     """Spawner that fails after a short delay"""
 
-    @gen.coroutine
-    def start(self):
-        yield gen.sleep(0.1)
+    async def start(self):
+        await asyncio.sleep(0.5)
         raise RuntimeError("I don't work!")
 
 

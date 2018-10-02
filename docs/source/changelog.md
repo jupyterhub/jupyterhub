@@ -9,6 +9,40 @@ command line for details.
 
 ## 0.9
 
+### [0.9.4] 2018-09-24
+
+JupyterHub 0.9.4 is a small bugfix release.
+
+- Fixes an  issue that required all running user servers to be restarted
+  when performing an upgrade from 0.8 to 0.9.
+- Fixes content-type for API endpoints back to `application/json`.
+  It was `text/html` in 0.9.0-0.9.3.
+
+### [0.9.3] 2018-09-12
+
+JupyterHub 0.9.3 contains small bugfixes and improvements
+
+- Fix token page and model handling of `expires_at`.
+  This field was missing from the REST API model for tokens
+  and could cause the token page to not render
+- Add keep-alive to progress event stream to avoid proxies dropping
+  the connection due to inactivity
+- Documentation and example improvements
+- Disable quit button when using notebook 5.6
+- Prototype new feature (may change prior to 1.0):
+  pass requesting Handler to Spawners during start,
+  accessible as `self.handler`
+
+### [0.9.2] 2018-08-10
+
+JupyterHub 0.9.2 contains small bugfixes and improvements.
+
+- Documentation and example improvements
+- Add `Spawner.consecutive_failure_limit` config for aborting the Hub if too many spawns fail in a row.
+- Fix for handling SIGTERM when run with asyncio (tornado 5)
+- Windows compatibility fixes
+
+
 ### [0.9.1] 2018-07-04
 
 JupyterHub 0.9.1 contains a number of small bugfixes on top of 0.9.
@@ -108,7 +142,7 @@ and tornado < 5.0.
 - Added "Start All" button to admin page for launching all user servers at once.
 - Services have an `info` field which is a dictionary.
   This is accessible via the REST API.
-- `JupyterHub.extra_handlers` allows defining additonal tornado RequestHandlers attached to the Hub.
+- `JupyterHub.extra_handlers` allows defining additional tornado RequestHandlers attached to the Hub.
 - API tokens may now expire.
   Expiry is available in the REST model as `expires_at`,
   and settable when creating API tokens by specifying `expires_in`.
@@ -392,7 +426,10 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
+[0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
+[0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
+[0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
 [0.9.1]: https://github.com/jupyterhub/jupyterhub/compare/0.9.0...0.9.1
 [0.9.0]: https://github.com/jupyterhub/jupyterhub/compare/0.8.1...0.9.0
 [0.8.1]: https://github.com/jupyterhub/jupyterhub/compare/0.8.0...0.8.1

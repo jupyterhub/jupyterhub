@@ -103,6 +103,8 @@ def api_request(app, *api_path, **kwargs):
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
     assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
     assert 'http' not in resp.headers['Content-Security-Policy']
+    if not kwargs.get('stream', False) and resp.content:
+        assert resp.headers.get('content-type') == 'application/json'
     return resp
 
 
@@ -611,6 +613,32 @@ def test_spawn(app):
     assert app.users.count_active_users()['pending'] == 0
 
 
+@mark.gen_test
+def test_spawn_handler(app):
+    """Test that the requesting Handler is passed to Spawner.handler"""
+    db = app.db
+    name = 'salmon'
+    user = add_user(db, app=app, name=name)
+    app_user = app.users[name]
+
+    # spawn via API with ?foo=bar
+    r = yield api_request(app, 'users', name, 'server', method='post', params={'foo': 'bar'})
+    r.raise_for_status()
+
+    # verify that request params got passed down
+    # implemented in MockSpawner
+    url = public_url(app, user)
+    r = yield async_requests.get(ujoin(url, 'env'))
+    env = r.json()
+    assert 'HANDLER_ARGS' in env
+    assert env['HANDLER_ARGS'] == 'foo=bar'
+    # make user spawner.handler doesn't persist after spawn finishes
+    assert app_user.spawner.handler is None
+
+    r = yield api_request(app, 'users', name, 'server', method='delete')
+    r.raise_for_status()
+
+
 @mark.slow
 @mark.gen_test
 def test_slow_spawn(app, no_patience, slow_spawn):
@@ -656,7 +684,8 @@ def test_slow_spawn(app, no_patience, slow_spawn):
     assert not app_user.spawner._stop_pending
     assert app_user.spawner is not None
     r = yield api_request(app, 'users', name, 'server', method='delete')
-    assert r.status_code == 400
+    # 204 deleted if there's no such server
+    assert r.status_code == 204
     assert app.users.count_active_users()['pending'] == 0
     assert app.users.count_active_users()['active'] == 0
 
@@ -727,6 +756,8 @@ def test_progress(request, app, no_patience, slow_spawn):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
+
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -788,6 +819,7 @@ def test_progress_ready(request, app):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -807,6 +839,7 @@ def test_progress_bad(request, app, no_patience, bad_spawn):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -828,6 +861,7 @@ def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
     r = yield api_request(app, 'users', name, 'server/progress', stream=True)
     r.raise_for_status()
     request.addfinalizer(r.close)
+    assert r.headers['content-type'] == 'text/event-stream'
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = yield ex.submit(next_event, line_iter)
@@ -1195,14 +1229,19 @@ def test_token_as_user_deprecated(app, as_user, for_user, status):
 
 
 @mark.gen_test
-@mark.parametrize("headers, status, note", [
-    ({}, 200, 'test note'),
-    ({}, 200, ''),
-    ({'Authorization': 'token bad'}, 403, ''),
+@mark.parametrize("headers, status, note, expires_in", [
+    ({}, 200, 'test note', None),
+    ({}, 200, '', 100),
+    ({'Authorization': 'token bad'}, 403, '', None),
 ])
-def test_get_new_token(app, headers, status, note):
+def test_get_new_token(app, headers, status, note, expires_in):
+    options = {}
     if note:
-        body = json.dumps({'note': note})
+        options['note'] = note
+    if expires_in:
+        options['expires_in'] = expires_in
+    if options:
+        body = json.dumps(options)
     else:
         body = ''
     # request a new token
@@ -1220,6 +1259,10 @@ def test_get_new_token(app, headers, status, note):
     assert reply['user'] == 'admin'
     assert reply['created']
     assert 'last_activity' in reply
+    if expires_in:
+        assert isinstance(reply['expires_at'], str)
+    else:
+        assert reply['expires_at'] is None
     if note:
         assert reply['note'] == note
     else:
