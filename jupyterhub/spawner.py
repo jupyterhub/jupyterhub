@@ -746,6 +746,11 @@ class Spawner(LoggingConfigurable):
         if self.ssl_alt_names_include_local:
             alt_names = default_names + alt_names
 
+        self.log.info("Creating certs for %s: %s",
+            self._log_name,
+            ';'.join(alt_names),
+        )
+
         common_name = self.user.name or 'service'
         certipy = Certipy(store_dir=self.internal_certs_location)
         notebook_component = 'notebooks-ca'

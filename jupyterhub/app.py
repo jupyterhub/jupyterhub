@@ -1207,6 +1207,7 @@ class JupyterHub(Application):
             self.internal_ssl_authorities.update(self.external_ssl_authorities)
             for authority, files in self.internal_ssl_authorities.items():
                 if files:
+                    self.log.info("Adding CA for %s", authority)
                     certipy.store.add_record(
                         authority, is_ca=True, files=files)
 
@@ -1224,23 +1225,35 @@ class JupyterHub(Application):
                 # the fqdn and (optionally) rev_proxy to the set of alt_names.
                 alt_names += (["DNS:" + socket.getfqdn()]
                                + self.trusted_alt_names)
+                self.log.info(
+                    "Adding CA for %s: %s",
+                    "hub-internal",
+                    ";".join(alt_names),
+                )
                 internal_key_pair = certipy.create_signed_pair(
                     "hub-internal",
                     hub_name,
-                    alt_names=alt_names
+                    alt_names=alt_names,
                 )
+            else:
+                self.log.info("Using existing hub-internal CA")
 
             # Create the proxy certs
             proxy_api = 'proxy-api'
             proxy_client = 'proxy-client'
             for component in [proxy_api, proxy_client]:
                 ca_name = component + '-ca'
-
+                alt_names = default_alt_names + self.trusted_alt_names
+                self.log.info(
+                    "Generating signed signed pair for %s: %s",
+                    component,
+                    ';'.join(alt_names),
+                )
                 record = certipy.create_signed_pair(
                     component,
                     ca_name,
-                    alt_names=default_alt_names,
-                    overwrite=True
+                    alt_names=alt_names,
+                    overwrite=True,
                 )
 
                 self.internal_proxy_certs[component] = {
