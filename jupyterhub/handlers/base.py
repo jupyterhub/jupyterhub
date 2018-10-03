@@ -33,7 +33,7 @@ from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
     SERVER_POLL_DURATION_SECONDS, ServerPollStatus,
-    RUNNING_SERVERS
+    RUNNING_SERVERS, TOTAL_USERS
 )
 
 # pattern for the authentication token header
@@ -740,6 +740,7 @@ class BaseHandler(RequestHandler):
             spawner._proxy_pending = True
             try:
                 await self.proxy.add_user(user, server_name)
+                TOTAL_USERS.inc()
 
                 PROXY_ADD_DURATION_SECONDS.labels(
                     status='success'
@@ -871,6 +872,7 @@ class BaseHandler(RequestHandler):
         )
         await self.proxy.delete_user(user, server_name)
         await user.stop(server_name)
+        TOTAL_USERS.dec()
 
     async def stop_single_user(self, user, server_name=''):
         if server_name not in user.spawners:

@@ -42,6 +42,13 @@ RUNNING_SERVERS = Gauge(
 
 RUNNING_SERVERS.set(0)
 
+TOTAL_USERS = Gauge(
+	'total_users',
+	'toal number of users'
+	)
+
+TOTAL_USERS.set(0)	
+
 class ServerSpawnStatus(Enum):
     """
     Possible values for 'status' label of SERVER_SPAWN_DURATION_SECONDS
