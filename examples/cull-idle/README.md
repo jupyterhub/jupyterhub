@@ -36,6 +36,6 @@ Generate an API token and store it in the `JUPYTERHUB_API_TOKEN` environment
 variable. Run `cull_idle_servers.py` manually. 
 
 ```bash
-    export JUPYTERHUB_API_TOKEN=`jupyterhub token`
+    export JUPYTERHUB_API_TOKEN=$(jupyterhub token)
     python3 cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 ```

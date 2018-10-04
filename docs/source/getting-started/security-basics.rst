@@ -124,7 +124,7 @@ hex-encoded string. You can set it this way:
 
 .. code-block:: bash
 
-    export JPY_COOKIE_SECRET=`openssl rand -hex 32`
+    export JPY_COOKIE_SECRET=$(openssl rand -hex 32)
 
 For security reasons, this environment variable should only be visible to the
 Hub. If you set it dynamically as above, all users will be logged out each time
@@ -173,7 +173,7 @@ using the ``CONFIGPROXY_AUTH_TOKEN`` environment variable:
 
 .. code-block:: bash
 
-    export CONFIGPROXY_AUTH_TOKEN='openssl rand -hex 32'
+    export CONFIGPROXY_AUTH_TOKEN=$(openssl rand -hex 32)
 
 This environment variable needs to be visible to the Hub and Proxy.
 
