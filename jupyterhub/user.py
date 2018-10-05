@@ -17,6 +17,7 @@ from ._version import _check_version, __version__
 from .objects import Server
 from .spawner import LocalProcessSpawner
 from .crypto import encrypt, decrypt, CryptKeeper, EncryptionUnavailable, InvalidToken
+from .metrics import TOTAL_USERS
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -39,6 +40,7 @@ class UserDict(dict):
         """Add a user to the UserDict"""
         if orm_user.id not in self:
             self[orm_user.id] = self.from_orm(orm_user)
+            TOTAL_USERS.inc()
         return self[orm_user.id]
 
     def __contains__(self, key):
@@ -93,6 +95,7 @@ class UserDict(dict):
         self.db.delete(user)
         self.db.commit()
         # delete from dict after commit
+        TOTAL_USERS.dec()
         del self[user_id]
 
     def count_active_users(self):
