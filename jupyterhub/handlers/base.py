@@ -33,7 +33,7 @@ from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
     SERVER_POLL_DURATION_SECONDS, ServerPollStatus,
-    RUNNING_SERVERS
+    RUNNING_SERVERS, SERVER_STOP_DURATION_SECONDS, ServerStopStatus
 )
 
 # pattern for the authentication token header
@@ -873,10 +873,14 @@ class BaseHandler(RequestHandler):
         await user.stop(server_name)
 
     async def stop_single_user(self, user, server_name=''):
+        start_time = time.perf_counter()
         if server_name not in user.spawners:
             raise KeyError("User %s has no such spawner %r", user.name, server_name)
         spawner = user.spawners[server_name]
         if spawner.pending:
+            SERVER_STOP_DURATION_SECONDS.labels(
+                status=ServerStopStatus.pending
+            ).observe(time.perf_counter() - start_time)
             raise RuntimeError("%s pending %s" % (spawner._log_name, spawner.pending))
         # set user._stop_pending before doing anything async
         # to avoid races
@@ -889,7 +893,7 @@ class BaseHandler(RequestHandler):
             2. stop the server
             3. notice that it stopped
             """
-            tic = IOLoop.current().time()
+            tic = time.perf_counter()
             try:
                 await self.proxy.delete_user(user, server_name)
                 await user.stop(server_name)
@@ -897,10 +901,13 @@ class BaseHandler(RequestHandler):
                 spawner._stop_future = None
                 spawner._stop_pending = False
 
-            toc = IOLoop.current().time()
+            toc = time.perf_counter()
             self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
             self.statsd.timing('spawner.stop', (toc - tic) * 1000)
             RUNNING_SERVERS.dec()
+            SERVER_STOP_DURATION_SECONDS.labels(
+                status=ServerStopStatus.stopped
+            ).observe(time.perf_counter() - tic)
 
         future = spawner._stop_future = asyncio.ensure_future(stop())
 
