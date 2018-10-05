@@ -18,7 +18,7 @@ implementations in other web servers or languages.
 
 1. generate an API token:
 
-        export JUPYTERHUB_API_TOKEN=`openssl rand -hex 32`
+        export JUPYTERHUB_API_TOKEN=$(openssl rand -hex 32)
 
 2. launch a version of the the whoami service.
    For `whoami-oauth`:
