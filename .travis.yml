@@ -20,7 +20,8 @@ before_install:
   - set -e
   - nvm install 6; nvm use 6
   - npm install
-  - npm install -g configurable-http-proxy
+  # temporary: install CHP master for ssl tests
+  - npm install -g https://github.com/configurable-http-proxy/archive/master.tar.gz
   - |
     # setup database
     if [[ $JUPYTERHUB_TEST_DB_URL == mysql* ]]; then
