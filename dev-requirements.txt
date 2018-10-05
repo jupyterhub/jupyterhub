@@ -3,6 +3,7 @@ mock
 beautifulsoup4
 codecov
 cryptography
+html5lib  # needed for beautifulsoup
 pytest-cov
 pytest-tornado
 pytest>=3.3
