@@ -115,8 +115,8 @@ class ServerStopStatus(Enum):
     """
     Possible values for 'status' label of SERVER_STOP_DURATION_SECONDS
     """
-    stopped = 'stopped'
-    pending = 'pending'
+    success = 'success'
+    failure = 'failure'
 
     def __str__(self):
         return self.value
