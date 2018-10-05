@@ -627,8 +627,11 @@ def test_spawn_handler(app):
 
     # verify that request params got passed down
     # implemented in MockSpawner
+    kwargs = {}
+    if app.external_certs:
+        kwargs['verify'] = app.external_certs['files']['ca']
     url = public_url(app, user)
-    r = yield async_requests.get(ujoin(url, 'env'))
+    r = yield async_requests.get(ujoin(url, 'env'), **kwargs)
     env = r.json()
     assert 'HANDLER_ARGS' in env
     assert env['HANDLER_ARGS'] == 'foo=bar'
