@@ -49,6 +49,11 @@ TOTAL_USERS = Gauge(
 
 TOTAL_USERS.set(0)	
 
+CHECK_ROUTES_DURATION_SECONDS = Histogram(
+    'check_routes_duration_seconds',
+    'Time taken to validate all routes in proxy'
+)
+
 class ServerSpawnStatus(Enum):
     """
     Possible values for 'status' label of SERVER_SPAWN_DURATION_SECONDS
