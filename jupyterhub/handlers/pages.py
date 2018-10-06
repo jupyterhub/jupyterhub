@@ -12,7 +12,7 @@ from tornado import web, gen
 from tornado.httputil import url_concat
 
 from .. import orm
-from ..utils import admin_only, url_path_join
+from ..utils import admin_only, url_path_join, maybe_future
 from .base import BaseHandler
 
 
@@ -147,7 +147,7 @@ class SpawnHandler(BaseHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
         try:
-            options = user.spawner.options_from_form(form_options)
+            options = await maybe_future(user.spawner.options_from_form(form_options))
             await self.spawn_single_user(user, options=options)
         except Exception as e:
             self.log.error("Failed to spawn single-user server with form", exc_info=True)
