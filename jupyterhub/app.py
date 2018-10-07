@@ -618,6 +618,9 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    authenticate_prometheus = Bool(True,
+        help="Authentication for prometheus metrics").tag(config=True)
+
     @observe('api_tokens')
     def _deprecate_api_tokens(self, change):
         self.log.warning("JupyterHub.api_tokens is pending deprecation"
@@ -1621,6 +1624,7 @@ class JupyterHub(Application):
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
+            authenticate_prometheus=self.authenticate_prometheus
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

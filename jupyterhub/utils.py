@@ -247,6 +247,14 @@ def admin_only(self):
     if user is None or not user.admin:
         raise web.HTTPError(403)
 
+@auth_decorator
+def metrics_authentication(self):
+    """Decorator for restricting access to metrics"""
+    user = self.get_current_user()
+    authenticate_prometheus = self.authenticate_prometheus()
+    if user is None and not user.authenticate_prometheus:
+        raise web.HTTPError(403)
+
 
 # Token utilities
 

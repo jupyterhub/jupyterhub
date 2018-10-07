@@ -206,6 +206,10 @@ class BaseHandler(RequestHandler):
     def redirect_to_server(self):
         return self.settings.get('redirect_to_server', True)
 
+    @property
+    def authenticate_prometheus(self):
+        return self.settings.get('authenticate_prometheus', True)
+
     def get_auth_token(self):
         """Get the authorization token from Authorization header"""
         auth_header = self.request.headers.get('Authorization', '')
