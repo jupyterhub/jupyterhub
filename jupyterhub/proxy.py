@@ -293,7 +293,7 @@ class Proxy(LoggingConfigurable):
     @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy."""
-        start = time.pref_counter() #timer starts here when user is created
+        start = time.perf_counter() #timer starts here when user is created
         if not routes:
             self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
@@ -366,7 +366,7 @@ class Proxy(LoggingConfigurable):
                 futures.append(self.delete_route(routespec))
 
         await gen.multi(futures)
-        stop = time.pref_counter() #timer stops here when user is deleted
+        stop = time.perf_counter() #timer stops here when user is deleted
         CHECK_ROUTES_DURATION_SECONDS.observe(stop - start) #histogram metric
 
     def add_hub_route(self, hub):
