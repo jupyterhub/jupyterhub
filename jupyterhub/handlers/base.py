@@ -33,7 +33,7 @@ from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
     SERVER_POLL_DURATION_SECONDS, ServerPollStatus,
-    RUNNING_SERVERS
+    RUNNING_SERVERS, SERVER_STOP_DURATION_SECONDS, ServerStopStatus
 )
 
 # pattern for the authentication token header
@@ -889,18 +889,25 @@ class BaseHandler(RequestHandler):
             2. stop the server
             3. notice that it stopped
             """
-            tic = IOLoop.current().time()
+            tic = time.perf_counter()
             try:
                 await self.proxy.delete_user(user, server_name)
                 await user.stop(server_name)
+                toc = time.perf_counter()
+                self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
+                self.statsd.timing('spawner.stop', (toc - tic) * 1000)
+                RUNNING_SERVERS.dec()
+                SERVER_STOP_DURATION_SECONDS.labels(
+                    status=ServerStopStatus.success
+                ).observe(toc - tic)
+            except:
+                SERVER_STOP_DURATION_SECONDS.labels(
+                    status=ServerStopStatus.failure
+                ).observe(time.perf_counter() - tic)
             finally:
                 spawner._stop_future = None
                 spawner._stop_pending = False
 
-            toc = IOLoop.current().time()
-            self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
-            self.statsd.timing('spawner.stop', (toc - tic) * 1000)
-            RUNNING_SERVERS.dec()
 
         future = spawner._stop_future = asyncio.ensure_future(stop())
 
