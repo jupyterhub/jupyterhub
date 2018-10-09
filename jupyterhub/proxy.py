@@ -578,6 +578,7 @@ class ConfigurableHTTPProxy(Proxy):
             client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
             client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
 
+            cmd.extend(['--change-origin'])
             cmd.extend(['--api-ssl-key', api_key])
             cmd.extend(['--api-ssl-cert', api_cert])
             cmd.extend(['--api-ssl-ca', api_ca])
