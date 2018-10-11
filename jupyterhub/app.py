@@ -424,6 +424,7 @@ class JupyterHub(Application):
     proxy_class = EntryPointType(
         default_value=ConfigurableHTTPProxy,
         klass=Proxy,
+        entry_point_group="jupyterhub.proxies",
         help="""The class to use for configuring the JupyterHub proxy.
 
         Should be a subclass of :class:`jupyterhub.proxy.Proxy`.

@@ -45,15 +45,12 @@ If your proxy should be launched when the Hub starts, you must define how
 to start and stop your proxy:
 
 ```python
-from tornado import gen
 class MyProxy(Proxy):
     ...
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Start the proxy"""
 
-    @gen.coroutine
-    def stop(self):
+    async def stop(self):
         """Stop the proxy"""
 ```
 
@@ -100,8 +97,7 @@ Python wrapper may have to handle storing the `data` piece itself, e.g in a
 simple file or database.
 
 ```python
-@gen.coroutine
-def add_route(self, routespec, target, data):
+async def add_route(self, routespec, target, data):
     """Proxy `routespec` to `target`.
 
     Store `data` associated with the routespec
@@ -112,7 +108,7 @@ def add_route(self, routespec, target, data):
 Adding a route for a user looks like this:
 
 ```python
-proxy.add_route('/user/pgeorgiou/', 'http://127.0.0.1:1227',
+await proxy.add_route('/user/pgeorgiou/', 'http://127.0.0.1:1227',
                 {'user': 'pgeorgiou'})
 ```
 
@@ -122,8 +118,7 @@ proxy.add_route('/user/pgeorgiou/', 'http://127.0.0.1:1227',
 `delete_route` should still succeed, but a warning may be issued.
 
 ```python
-@gen.coroutine
-def delete_route(self, routespec):
+async def delete_route(self, routespec):
     """Delete the route"""
 ```
 
@@ -135,8 +130,7 @@ routes. The return value for this function should be a dictionary, keyed by
 `add_route` (`routespec`, `target`, `data`)
 
 ```python
-@gen.coroutine
-def get_all_routes(self):
+async def get_all_routes(self):
     """Return all routes, keyed by routespec"""
 ```
 
@@ -179,3 +173,38 @@ tracked, and services such as cull-idle will not work.
 Now that `notebook-5.0` tracks activity internally, we can retrieve activity
 information from the single-user servers instead, removing the need to track
 activity in the proxy. But this is not yet implemented in JupyterHub 0.8.0.
+
+### Registering custom Proxies via entry points
+
+As of JupyterHub 1.0, custom proxy implementations can register themselves via
+the `jupyterhub.proxies` entry point metadata.
+To do this, in your `setup.py` add:
+
+```python
+setup(
+  ...
+  entry_points={
+    'jupyterhub.proxies': [
+        'mything = mypackage:MyProxy',
+    ],
+  },
+)
+```
+
+If you have added this metadata to your package,
+users can select your authenticator with the configuration:
+
+```python
+c.JupyterHub.proxy_class = 'mything'
+```
+
+instead of the full
+
+```python
+c.JupyterHub.proxy_class = 'mypackage:MyProxy'
+```
+
+previously required.
+Additionally, configurable attributes for your proxy will
+appear in jupyterhub help output and auto-generated configuration files
+via `jupyterhub --generate-config`.
