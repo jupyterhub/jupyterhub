@@ -421,9 +421,18 @@ class JupyterHub(Application):
         help="Supply extra arguments that will be passed to Jinja environment."
     ).tag(config=True)
 
-    proxy_class = Type(ConfigurableHTTPProxy, Proxy,
-                       help="""Select the Proxy API implementation."""
-                       ).tag(config=True)
+    proxy_class = EntryPointType(
+        default_value=ConfigurableHTTPProxy,
+        klass=Proxy,
+        help="""The class to use for configuring the JupyterHub proxy.
+
+        Should be a subclass of :class:`jupyterhub.proxy.Proxy`.
+
+        .. versionchanged:: 1.0
+            proxies may be registered via entry points,
+            e.g. `c.JupyterHub.proxy_class = 'traefik'`
+        """
+    ).tag(config=True)
 
     proxy_cmd = Command([], config=True,
         help="DEPRECATED since version 0.8. Use ConfigurableHTTPProxy.command",
