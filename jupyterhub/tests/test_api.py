@@ -91,7 +91,10 @@ def api_request(app, *api_path, **kwargs):
     headers = kwargs.setdefault('headers', {})
 
     if 'Authorization' not in headers and not kwargs.pop('noauth', False):
-        headers.update(auth_header(app.db, 'admin'))
+        # make a copy to avoid modifying arg in-place
+        kwargs['headers'] = h = {}
+        h.update(headers)
+        h.update(auth_header(app.db, 'admin'))
 
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
