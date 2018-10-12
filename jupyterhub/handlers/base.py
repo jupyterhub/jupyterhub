@@ -32,7 +32,8 @@ from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
     PROXY_ADD_DURATION_SECONDS, ProxyAddStatus,
-    RUNNING_SERVERS
+    SERVER_POLL_DURATION_SECONDS, ServerPollStatus,
+    RUNNING_SERVERS, SERVER_STOP_DURATION_SECONDS, ServerStopStatus
 )
 
 # pattern for the authentication token header
@@ -821,13 +822,19 @@ class BaseHandler(RequestHandler):
 
             # start has finished, but the server hasn't come up
             # check if the server died while we were waiting
+            poll_start_time = time.perf_counter()
             status = await spawner.poll()
+            SERVER_POLL_DURATION_SECONDS.labels(
+                status=ServerPollStatus.from_status(status)
+            ).observe(time.perf_counter() - poll_start_time)
+
             if status is not None:
                 toc = IOLoop.current().time()
                 self.statsd.timing('spawner.failure', (toc - tic) * 1000)
                 SERVER_SPAWN_DURATION_SECONDS.labels(
                     status=ServerSpawnStatus.failure
                 ).observe(time.perf_counter() - spawn_start_time)
+
                 raise web.HTTPError(500, "Spawner failed to start [status=%s]. The logs for %s may contain details." % (
                     status, spawner._log_name))
 
@@ -848,9 +855,17 @@ class BaseHandler(RequestHandler):
     async def user_stopped(self, user, server_name):
         """Callback that fires when the spawner has stopped"""
         spawner = user.spawners[server_name]
+
+        poll_start_time = time.perf_counter()
         status = await spawner.poll()
+        SERVER_POLL_DURATION_SECONDS.labels(
+            status=ServerPollStatus.from_status(status)
+        ).observe(time.perf_counter() - poll_start_time)
+
+
         if status is None:
             status = 'unknown'
+
         self.log.warning("User %s server stopped, with exit code: %s",
             user.name, status,
         )
@@ -874,18 +889,25 @@ class BaseHandler(RequestHandler):
             2. stop the server
             3. notice that it stopped
             """
-            tic = IOLoop.current().time()
+            tic = time.perf_counter()
             try:
                 await self.proxy.delete_user(user, server_name)
                 await user.stop(server_name)
+                toc = time.perf_counter()
+                self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
+                self.statsd.timing('spawner.stop', (toc - tic) * 1000)
+                RUNNING_SERVERS.dec()
+                SERVER_STOP_DURATION_SECONDS.labels(
+                    status=ServerStopStatus.success
+                ).observe(toc - tic)
+            except:
+                SERVER_STOP_DURATION_SECONDS.labels(
+                    status=ServerStopStatus.failure
+                ).observe(time.perf_counter() - tic)
             finally:
                 spawner._stop_future = None
                 spawner._stop_pending = False
 
-            toc = IOLoop.current().time()
-            self.log.info("User %s server took %.3f seconds to stop", user.name, toc - tic)
-            self.statsd.timing('spawner.stop', (toc - tic) * 1000)
-            RUNNING_SERVERS.dec()
 
         future = spawner._stop_future = asyncio.ensure_future(stop())
 
@@ -1152,10 +1174,13 @@ class UserSpawnHandler(BaseHandler):
 
             # spawn has supposedly finished, check on the status
             if spawner.ready:
+                poll_start_time = time.perf_counter()
                 status = await spawner.poll()
+                SERVER_POLL_DURATION_SECONDS.labels(
+                    status=ServerPollStatus.from_status(status)
+                ).observe(time.perf_counter() - poll_start_time)
             else:
                 status = 0
-
             # server is not running, trigger spawn
             if status is not None:
                 if spawner.options_form:

@@ -11,7 +11,7 @@ configuration file something like:
             {
                 'name': 'announcement',
                 'url': 'http://127.0.0.1:8888',
-                'command': ["python", "-m", "announcement"],
+                'command': [sys.executable, "-m", "announcement"],
             }
     ]
 

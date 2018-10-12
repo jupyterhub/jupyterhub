@@ -3,6 +3,6 @@ c.JupyterHub.services = [
     {
         'name': 'cull-idle',
         'admin': True,
-        'command': 'python3 cull_idle_servers.py --timeout=3600'.split(),
+        'command': [sys.executable, 'cull_idle_servers.py', '--timeout=3600'],
     }
 ]

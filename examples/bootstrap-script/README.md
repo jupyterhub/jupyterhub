@@ -118,7 +118,7 @@ Here's an example on what you could do in your shell script. See also
 
 # - The first parameter for the Bootstrap Script is the USER.
 USER=$1
-if ["$USER" == ""]; then
+if [ "$USER" == "" ]; then
     exit 1
 fi
 # ----------------------------------------------------------------------------

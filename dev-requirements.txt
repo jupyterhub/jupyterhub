@@ -2,7 +2,9 @@
 mock
 beautifulsoup4
 codecov
+coverage<5  # pin coverage to < 5 due to coveragepy#716
 cryptography
+html5lib  # needed for beautifulsoup
 pytest-cov
 pytest-tornado
 pytest>=3.3
