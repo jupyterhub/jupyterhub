@@ -667,3 +667,20 @@ def test_server_not_running_api_request(app):
     assert r.status_code == 404
     assert r.headers["content-type"] == "application/json"
     assert r.json() == {"message": "bees is not running"}
+
+@pytest.mark.gen_test
+def test_metrics_no_auth(app):
+    r = yield get_page("metrics", app)
+    r.raise_for_status()
+    metrics_url = ujoin(app.hub.base_url, 'metrics')
+    login_url = ujoin(public_host(app), app.hub.base_url, 'login') + '?'+ urlencode({'next': metrics_url})
+    assert r.url == login_url
+
+
+@pytest.mark.gen_test
+def test_metrics_auth(app):
+    cookies = yield app.login_user('river')
+    metrics_url = ujoin(public_host(app), app.hub.base_url, 'metrics')
+    r = yield get_page("metrics", app, cookies=cookies)
+    r.raise_for_status()
+    assert r.url == metrics_url
