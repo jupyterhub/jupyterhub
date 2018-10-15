@@ -71,12 +71,10 @@ def app(request, io_loop, ssl_tmpdir):
     else:
         mocked_app = MockHub.instance(log_level=logging.DEBUG)
 
-    @gen.coroutine
-    def make_app():
-        yield mocked_app.initialize([])
-        yield mocked_app.start()
 
-    io_loop.run_sync(make_app)
+    async def make_app():
+        await mocked_app.initialize([])
+        await mocked_app.start()
 
     def fin():
         # disconnect logging during cleanup because pytest closes captured FDs prematurely
@@ -85,6 +83,7 @@ def app(request, io_loop, ssl_tmpdir):
         mocked_app.stop()
 
     request.addfinalizer(fin)
+    io_loop.run_sync(make_app)
     return mocked_app
 
 
