@@ -51,7 +51,7 @@ import jupyterhub.services.service
 _db = None
 
 
-@fixture(scope='session')
+@fixture(scope='module')
 def ssl_tmpdir(tmpdir_factory):
     return tmpdir_factory.mktemp('ssl')
 
@@ -61,16 +61,16 @@ def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
-
+    kwargs = dict(log_level=logging.DEBUG)
     if ssl_enabled:
-        external_certs = ssl_setup(str(ssl_tmpdir), 'hub-ca')
-        mocked_app = MockHub.instance(
-                log_level=logging.DEBUG,
+        kwargs.update(
+            dict(
                 internal_ssl=True,
-                internal_certs_location=str(ssl_tmpdir))
-    else:
-        mocked_app = MockHub.instance(log_level=logging.DEBUG)
+                internal_certs_location=str(ssl_tmpdir),
+            )
+        )
 
+    mocked_app = MockHub.instance(**kwargs)
 
     async def make_app():
         await mocked_app.initialize([])
