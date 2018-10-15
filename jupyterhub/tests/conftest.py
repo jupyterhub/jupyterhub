@@ -27,6 +27,7 @@ Fixtures to add functionality or spawning behavior
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 from getpass import getuser
 import logging
 import os
@@ -34,6 +35,7 @@ from pytest import fixture, raises
 from subprocess import TimeoutExpired
 from tornado import ioloop, gen
 from tornado.httpclient import HTTPError
+from tornado.platform.asyncio import AsyncIOMainLoop
 from unittest import mock
 
 from .. import orm
@@ -121,8 +123,13 @@ def db():
 @fixture(scope='module')
 def io_loop(request):
     """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
+    ioloop.IOLoop.configure(AsyncIOMainLoop)
+    aio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(aio_loop)
     io_loop = ioloop.IOLoop()
     io_loop.make_current()
+    assert asyncio.get_event_loop() is aio_loop
+    assert io_loop.asyncio_loop is aio_loop
 
     def _close():
         io_loop.clear_current()

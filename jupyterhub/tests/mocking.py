@@ -392,6 +392,7 @@ class StubSingleUserSpawner(MockSpawner):
         evt = threading.Event()
         print(args, env)
         def _run():
+            asyncio.set_event_loop(asyncio.new_event_loop())
             io_loop = IOLoop()
             io_loop.make_current()
             io_loop.add_callback(lambda : evt.set())
