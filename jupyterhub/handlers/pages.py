@@ -107,6 +107,8 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
         if user.spawner.options_form:
+            # Add handler to spawner here so you can access query params in form rendering.
+            user.spawner.handler = self
             form = await self._render_form(for_user=user)
             self.finish(form)
         else:
