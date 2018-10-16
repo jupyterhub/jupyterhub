@@ -1216,6 +1216,8 @@ class JupyterHub(Application):
                 self.internal_ssl_components_trust)
 
             default_alt_names = ["IP:127.0.0.1", "DNS:localhost"]
+            if self.subdomain_host:
+                default_alt_names.append("DNS:%s" % urlparse(self.subdomain_host).hostname)
             # The signed certs used by hub-internal components
             try:
                 internal_key_pair = certipy.store.get_record("hub-internal")

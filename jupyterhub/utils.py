@@ -189,11 +189,9 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
     """
     loop = ioloop.IOLoop.current()
     tic = loop.time()
-    settings = None
-    if ssl_context:
-        settings = {"ssl_options": ssl_context}
-    AsyncHTTPClient.configure(None, defaults=settings)
     client = AsyncHTTPClient()
+    if ssl_context:
+        client.ssl_options = ssl_context
     async def is_reachable():
         try:
             r = await client.fetch(url, follow_redirects=False)

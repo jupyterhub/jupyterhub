@@ -28,7 +28,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets.config import LoggingConfigurable
 from traitlets import (
     Any, Bool, Dict, Instance, Integer, Float, List, Unicode, Union,
-    observe, validate,
+    default, observe, validate,
 )
 
 from .objects import Server
@@ -696,6 +696,8 @@ class Spawner(LoggingConfigurable):
         """
         return s.format(**self.template_namespace())
 
+    trusted_alt_names = List(Unicode())
+
     ssl_alt_names = List(
         Unicode(),
         config=True,
@@ -705,6 +707,13 @@ class Spawner(LoggingConfigurable):
         or set at runtime by Spawner that know their names.
         """
     )
+
+    @default('ssl_alt_names')
+    def _default_ssl_alt_names(self):
+        # by default, use trusted_alt_names
+        # inherited from global app
+        return list(self.trusted_alt_names)
+
     ssl_alt_names_include_local = Bool(
         True,
         config=True,
