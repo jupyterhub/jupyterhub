@@ -755,7 +755,7 @@ class Spawner(LoggingConfigurable):
         certipy = Certipy(store_dir=self.internal_certs_location)
         notebook_component = 'notebooks-ca'
         notebook_key_pair = certipy.create_signed_pair(
-            common_name,
+            'user-' + common_name,
             notebook_component,
             alt_names=alt_names,
             overwrite=True
