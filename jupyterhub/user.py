@@ -229,6 +229,12 @@ class User:
         client_id = 'jupyterhub-user-%s' % quote(self.name)
         if server_name:
             client_id = '%s-%s' % (client_id, quote(server_name))
+
+        trusted_alt_names = []
+        trusted_alt_names.extend(self.settings.get('trusted_alt_names', []))
+        if self.settings.get('subdomain_host'):
+            trusted_alt_names.append('DNS:' + self.domain)
+
         spawn_kwargs = dict(
             user=self,
             orm_spawner=orm_spawner,
@@ -239,7 +245,7 @@ class User:
             db=self.db,
             oauth_client_id=client_id,
             cookie_options = self.settings.get('cookie_options', {}),
-            trusted_alt_names=self.settings.get('trusted_alt_names'),
+            trusted_alt_names=trusted_alt_names,
         )
 
         if self.settings.get('internal_ssl'):

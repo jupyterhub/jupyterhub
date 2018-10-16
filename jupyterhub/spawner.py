@@ -750,7 +750,8 @@ class Spawner(LoggingConfigurable):
         """
         from certipy import Certipy
         default_names = ["DNS:localhost", "IP:127.0.0.1"]
-        alt_names = self.ssl_alt_names or []
+        alt_names = []
+        alt_names.extend(self.ssl_alt_names)
 
         if self.ssl_alt_names_include_local:
             alt_names = default_names + alt_names
