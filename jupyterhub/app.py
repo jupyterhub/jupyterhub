@@ -16,6 +16,7 @@ from operator import itemgetter
 import os
 import re
 import signal
+import socket
 import sys
 from textwrap import dedent
 from urllib.parse import unquote, urlparse, urlunparse
@@ -1219,7 +1220,6 @@ class JupyterHub(Application):
             try:
                 internal_key_pair = certipy.store.get_record("hub-internal")
             except CertNotFoundError:
-                import socket
                 alt_names = list(default_alt_names)
                 # In the event the hub needs to be accessed externally, add
                 # the fqdn and (optionally) rev_proxy to the set of alt_names.
@@ -1244,17 +1244,21 @@ class JupyterHub(Application):
             for component in [proxy_api, proxy_client]:
                 ca_name = component + '-ca'
                 alt_names = default_alt_names + self.trusted_alt_names
-                self.log.info(
-                    "Generating signed signed pair for %s: %s",
-                    component,
-                    ';'.join(alt_names),
-                )
-                record = certipy.create_signed_pair(
-                    component,
-                    ca_name,
-                    alt_names=alt_names,
-                    overwrite=True,
-                )
+                try:
+                    record = certipy.store.get_record(component)
+                except CertNotFoundError:
+                    self.log.info(
+                        "Generating signed pair for %s: %s",
+                        component,
+                        ';'.join(alt_names),
+                    )
+                    record = certipy.create_signed_pair(
+                        component,
+                        ca_name,
+                        alt_names=alt_names,
+                    )
+                else:
+                    self.log.info("Using existing %s CA", component)
 
                 self.internal_proxy_certs[component] = {
                     "keyfile": record['files']['key'],
