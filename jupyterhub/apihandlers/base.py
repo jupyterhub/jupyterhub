@@ -103,7 +103,11 @@ class APIHandler(BaseHandler):
                 status_message = reason
 
         if exception and isinstance(exception, SQLAlchemyError):
-            self.log.warning("Rolling back session due to database error %s", exception)
+            try:
+                exception_str = str(exception)
+                self.log.warning("Rolling back session due to database error %s", exception_str)
+            except Exception:
+                self.log.warning("Rolling back session due to database error %s", type(exception))
             self.db.rollback()
 
         self.set_header('Content-Type', 'application/json')
