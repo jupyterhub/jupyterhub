@@ -47,6 +47,17 @@ def test_server(db):
     assert server.host == 'http://hub:%i' % server.port
     assert server.url == server.host + '/'
 
+    server.connect_url = 'http://hub-url:%i/connect' % server.port
+    assert server.host == 'http://hub-url:%i' % server.port
+
+    server.bind_url = 'http://127.0.0.1/'
+    assert server.port == 80
+
+    check_connect_url = objects.Server(connect_url='http://127.0.0.1:80')
+    assert check_connect_url.connect_url == 'http://127.0.0.1:80/'
+    check_connect_url = objects.Server(connect_url='http://127.0.0.1:80/')
+    assert check_connect_url.connect_url == 'http://127.0.0.1:80/'
+
 
 def test_user(db):
     orm_user = orm.User(name='kaylee')
