@@ -227,9 +227,7 @@ class MockHub(JupyterHub):
     def __init__(self, *args, **kwargs):
         if 'internal_certs_location' in kwargs:
             cert_location = kwargs['internal_certs_location']
-            kwargs['external_certs'] = certs = ssl_setup(cert_location, 'hub-ca')
-            kwargs['ssl_cert'] = certs['files']['cert']
-            kwargs['ssl_key'] = certs['files']['key']
+            kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
         super().__init__(*args, **kwargs)
 
     @default('subdomain_host')
@@ -238,12 +236,11 @@ class MockHub(JupyterHub):
 
     @default('bind_url')
     def _default_bind_url(self):
-        proto = 'https' if self.internal_ssl else 'http'
         if self.subdomain_host:
             port = urlparse(self.subdomain_host).port
         else:
             port = random_port()
-        return '%s://127.0.0.1:%i/@/space%%20word/' % (proto, port)
+        return 'http://127.0.0.1:%i/@/space%%20word/' % (port,)
 
     @default('ip')
     def _ip_default(self):
