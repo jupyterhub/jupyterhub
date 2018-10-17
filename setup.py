@@ -53,11 +53,83 @@ def get_data_files():
     data_files = []
     ntrim = len(here + os.path.sep)
 
+    whitelist = (
+        'share/jupyterhub/static/favicon.ico',
+        'share/jupyterhub/static/components/bootstrap/LICENSE',
+        'share/jupyterhub/static/components/bootstrap/dist/js/bootstrap.min.js',
+        'share/jupyterhub/static/components/bootstrap/dist/js/npm.js',
+        'share/jupyterhub/static/components/bootstrap/dist/css/bootstrap.min.css',
+        'share/jupyterhub/static/components/bootstrap/dist/css/bootstrap-theme.min.css',
+        'share/jupyterhub/static/components/bootstrap/dist/css/bootstrap-theme.min.css.map',
+        'share/jupyterhub/static/components/bootstrap/dist/css/bootstrap.min.css.map',
+        'share/jupyterhub/static/components/bootstrap/dist/fonts/glyphicons-halflings-regular.eot',
+        'share/jupyterhub/static/components/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2',
+        'share/jupyterhub/static/components/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf',
+        'share/jupyterhub/static/components/bootstrap/dist/fonts/glyphicons-halflings-regular.svg',
+        'share/jupyterhub/static/components/bootstrap/dist/fonts/glyphicons-halflings-regular.woff',
+        'share/jupyterhub/static/components/jquery/LICENSE.txt',
+        'share/jupyterhub/static/components/jquery/external/sizzle/LICENSE.txt',
+        'share/jupyterhub/static/components/jquery/external/sizzle/dist/sizzle.min.js',
+        'share/jupyterhub/static/components/jquery/external/sizzle/dist/sizzle.min.map',
+        'share/jupyterhub/static/components/jquery/dist/core.js',
+        'share/jupyterhub/static/components/jquery/dist/jquery.slim.min.js',
+        'share/jupyterhub/static/components/jquery/dist/jquery.slim.min.map',
+        'share/jupyterhub/static/components/jquery/dist/jquery.min.js',
+        'share/jupyterhub/static/components/jquery/dist/jquery.min.map',
+        'share/jupyterhub/static/components/moment/moment.js',
+        'share/jupyterhub/static/components/moment/LICENSE',
+        'share/jupyterhub/static/components/moment/ender.js',
+        'share/jupyterhub/static/components/moment/min/moment.min.js',
+        'share/jupyterhub/static/components/moment/min/locales.min.js',
+        'share/jupyterhub/static/components/moment/min/moment-with-locales.min.js',
+        'share/jupyterhub/static/components/font-awesome/css/font-awesome.css.map',
+        'share/jupyterhub/static/components/font-awesome/css/font-awesome.css',
+        'share/jupyterhub/static/components/font-awesome/css/font-awesome.min.css',
+        'share/jupyterhub/static/components/font-awesome/fonts/fontawesome-webfont.ttf',
+        'share/jupyterhub/static/components/font-awesome/fonts/FontAwesome.otf',
+        'share/jupyterhub/static/components/font-awesome/fonts/fontawesome-webfont.eot',
+        'share/jupyterhub/static/components/font-awesome/fonts/fontawesome-webfont.woff',
+        'share/jupyterhub/static/components/font-awesome/fonts/fontawesome-webfont.svg',
+        'share/jupyterhub/static/components/font-awesome/fonts/fontawesome-webfont.woff2',
+        'share/jupyterhub/static/components/requirejs/require.js',
+        'share/jupyterhub/static/components/requirejs/bin/r.js',
+        'share/jupyterhub/static/js/utils.js',
+        'share/jupyterhub/static/js/token.js',
+        'share/jupyterhub/static/js/jhapi.js',
+        'share/jupyterhub/static/js/home.js',
+        'share/jupyterhub/static/js/admin.js',
+        'share/jupyterhub/static/css/style.min.css',
+        'share/jupyterhub/static/css/style.min.css.map',
+        'share/jupyterhub/static/images/jupyterhub-80.png',
+        'share/jupyterhub/static/images/jupyter.png',
+        'share/jupyterhub/templates/stop_pending.html',
+        'share/jupyterhub/templates/404.html',
+        'share/jupyterhub/templates/page.html',
+        'share/jupyterhub/templates/login.html',
+        'share/jupyterhub/templates/spawn.html',
+        'share/jupyterhub/templates/admin.html',
+        'share/jupyterhub/templates/spawn_pending.html',
+        'share/jupyterhub/templates/error.html',
+        'share/jupyterhub/templates/home.html',
+        'share/jupyterhub/templates/oauth.html',
+        'share/jupyterhub/templates/logout.html',
+        'share/jupyterhub/templates/token.html',
+    )
+
     for (d, dirs, filenames) in os.walk(share_jupyterhub):
-        data_files.append((
-            d[ntrim:],
-            [ pjoin(d, f) for f in filenames ]
-        ))
+        relative_name = d[ntrim:]
+        files = []
+        for f in filenames:
+            toInclude = pjoin(relative_name, f)
+            if toInclude not in whitelist:
+                continue
+            files.append(toInclude)
+
+        if files:
+            data_files.append((
+                relative_name,
+                files
+            ))
     return data_files
 
 def get_package_data():
