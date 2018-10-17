@@ -282,6 +282,13 @@ class MockHub(JupyterHub):
             self.db.expire(service)
         return super().init_services()
 
+    def init_db(self):
+        """Ensure we start with a clean user list"""
+        super().init_db()
+        for user in self.db.query(orm.User):
+            self.db.delete(user)
+        self.db.commit()
+
     @gen.coroutine
     def initialize(self, argv=None):
         self.pid_file = NamedTemporaryFile(delete=False).name
