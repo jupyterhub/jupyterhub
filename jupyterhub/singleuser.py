@@ -43,7 +43,7 @@ from notebook.base.handlers import IPythonHandler
 from ._version import __version__, _check_version
 from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
-from .utils import url_path_join
+from .utils import url_path_join, make_ssl_context
 
 
 # Authenticate requests with the Hub
@@ -245,6 +245,18 @@ class SingleUserNotebookApp(NotebookApp):
 
     hub_prefix = Unicode('/hub/').tag(config=True)
 
+    @default('keyfile')
+    def _keyfile_default(self):
+        return os.environ.get('JUPYTERHUB_SSL_KEYFILE') or ''
+
+    @default('certfile')
+    def _certfile_default(self):
+        return os.environ.get('JUPYTERHUB_SSL_CERTFILE') or ''
+
+    @default('client_ca')
+    def _client_ca_default(self):
+        return os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
+
     @default('hub_prefix')
     def _hub_prefix_default(self):
         base_url = os.environ.get('JUPYTERHUB_BASE_URL') or '/'
@@ -379,6 +391,13 @@ class SingleUserNotebookApp(NotebookApp):
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
+        ssl_context = make_ssl_context(
+            self.keyfile,
+            self.certfile,
+            cafile=self.client_ca,
+        )
+        AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
+
         client = AsyncHTTPClient()
         RETRIES = 5
         for i in range(1, RETRIES+1):
@@ -424,6 +443,9 @@ class SingleUserNotebookApp(NotebookApp):
             api_url=self.hub_api_url,
             hub_prefix=self.hub_prefix,
             base_url=self.base_url,
+            keyfile=self.keyfile,
+            certfile=self.certfile,
+            client_ca=self.client_ca,
         )
         # smoke check
         if not self.hub_auth.oauth_client_id:

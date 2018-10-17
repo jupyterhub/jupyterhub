@@ -196,6 +196,27 @@ class HubAuth(SingletonConfigurable):
     def _default_login_url(self):
         return self.hub_host + url_path_join(self.hub_prefix, 'login')
 
+    keyfile = Unicode('',
+        help="""The ssl key to use for requests
+
+        Use with certfile
+        """
+    ).tag(config=True)
+
+    certfile = Unicode('',
+        help="""The ssl cert to use for requests
+
+        Use with keyfile
+        """
+    ).tag(config=True)
+
+    client_ca = Unicode('',
+        help="""The ssl certificate authority to use to verify requests
+
+        Use with keyfile and certfile
+        """
+    ).tag(config=True)
+
     cookie_name = Unicode('jupyterhub-services',
         help="""The name of the cookie I should be looking for"""
     ).tag(config=True)
@@ -277,6 +298,10 @@ class HubAuth(SingletonConfigurable):
         allow_404 = kwargs.pop('allow_404', False)
         headers = kwargs.setdefault('headers', {})
         headers.setdefault('Authorization', 'token %s' % self.api_token)
+        if "cert" not in kwargs and self.certfile and self.keyfile:
+            kwargs["cert"] = (self.certfile, self.keyfile)
+            if self.client_ca:
+                kwargs["verify"] = self.client_ca
         try:
             r = requests.request(method, url, **kwargs)
         except requests.ConnectionError as e:

@@ -10,7 +10,7 @@ from sqlalchemy import inspect
 from tornado import gen
 from tornado.log import app_log
 
-from .utils import maybe_future, url_path_join
+from .utils import maybe_future, url_path_join, make_ssl_context
 
 from . import orm
 from ._version import _check_version, __version__
@@ -229,6 +229,12 @@ class User:
         client_id = 'jupyterhub-user-%s' % quote(self.name)
         if server_name:
             client_id = '%s-%s' % (client_id, quote(server_name))
+
+        trusted_alt_names = []
+        trusted_alt_names.extend(self.settings.get('trusted_alt_names', []))
+        if self.settings.get('subdomain_host'):
+            trusted_alt_names.append('DNS:' + self.domain)
+
         spawn_kwargs = dict(
             user=self,
             orm_spawner=orm_spawner,
@@ -239,7 +245,19 @@ class User:
             db=self.db,
             oauth_client_id=client_id,
             cookie_options = self.settings.get('cookie_options', {}),
+            trusted_alt_names=trusted_alt_names,
         )
+
+        if self.settings.get('internal_ssl'):
+            ssl_kwargs = dict(
+                internal_ssl=self.settings.get('internal_ssl'),
+                internal_trust_bundles=self.settings.get(
+                    'internal_trust_bundles'),
+                internal_certs_location=self.settings.get(
+                    'internal_certs_location'),
+            )
+            spawn_kwargs.update(ssl_kwargs)
+
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
         spawner = spawner_class(**spawn_kwargs)
@@ -431,6 +449,11 @@ class User:
         try:
             # run optional preparation work to bootstrap the notebook
             await maybe_future(spawner.run_pre_spawn_hook())
+            if self.settings.get('internal_ssl'):
+                self.log.debug("Creating internal SSL certs for %s", spawner._log_name)
+                hub_paths = await maybe_future(spawner.create_certs())
+                spawner.cert_paths = await maybe_future(spawner.move_certs(hub_paths))
+            self.log.debug("Calling Spawner.start for %s", spawner._log_name)
             f = maybe_future(spawner.start())
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
@@ -442,7 +465,8 @@ class User:
                     pass
                 else:
                     # >= 0.7 returns (ip, port)
-                    url = 'http://%s:%i' % url
+                    proto = 'https' if self.settings['internal_ssl'] else 'http'
+                    url = '%s://%s:%i' % ((proto,) + url)
                 urlinfo = urlparse(url)
                 server.proto = urlinfo.scheme
                 server.ip = urlinfo.hostname
@@ -526,8 +550,15 @@ class User:
         spawner.orm_spawner.state = spawner.get_state()
         db.commit()
         spawner._waiting_for_response = True
+        key = self.settings.get('internal_ssl_key')
+        cert = self.settings.get('internal_ssl_cert')
+        ca = self.settings.get('internal_ssl_ca')
+        ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
-            resp = await server.wait_up(http=True, timeout=spawner.http_timeout)
+            resp = await server.wait_up(
+                    http=True,
+                    timeout=spawner.http_timeout,
+                    ssl_context=ssl_context)
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(

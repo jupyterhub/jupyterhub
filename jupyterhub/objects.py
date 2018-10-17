@@ -15,7 +15,7 @@ from .traitlets import URLPrefix
 from . import orm
 from .utils import (
     url_path_join, can_connect, wait_for_server,
-    wait_for_http_server, random_port,
+    wait_for_http_server, random_port, make_ssl_context,
 )
 
 class Server(HasTraits):
@@ -35,6 +35,9 @@ class Server(HasTraits):
     cookie_name = Unicode('')
     connect_url = Unicode('')
     bind_url = Unicode('')
+    certfile = Unicode()
+    keyfile = Unicode()
+    cafile = Unicode()
 
     @default('bind_url')
     def bind_url_default(self):
@@ -157,10 +160,15 @@ class Server(HasTraits):
             uri=self.base_url,
         )
 
-    def wait_up(self, timeout=10, http=False):
+
+    def wait_up(self, timeout=10, http=False, ssl_context=None):
         """Wait for this server to come up"""
         if http:
-            return wait_for_http_server(self.url, timeout=timeout)
+            ssl_context = ssl_context or make_ssl_context(
+                    self.keyfile, self.certfile, cafile=self.cafile)
+
+            return wait_for_http_server(
+                    self.url, timeout=timeout, ssl_context=ssl_context)
         else:
             return wait_for_server(self._connect_ip, self._connect_port, timeout=timeout)
 

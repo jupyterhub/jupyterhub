@@ -59,6 +59,18 @@ These methods **may** be  coroutines.
 `c.Proxy.should_start` is a configurable flag that determines whether the
 Hub should call these methods when the Hub itself starts and stops.
 
+## Encryption
+
+When using `internal_ssl` to encrypt traffic behind the proxy, at minimum,
+your `Proxy` will need client ssl certificates which the `Hub` must be made 
+aware of. These can be generated with the command `jupyterhub --generate-certs`
+which will write them to the `internal_certs_location` in folders named
+`proxy_api` and `proxy_client`. Alternatively, these can be provided to the
+hub via the `jupyterhub_config.py` file by providing a `dict` of named paths
+to the `external_authorities` option. The hub will include all certificates
+provided in that `dict` in the trust bundle utilized by all internal
+components.
+
 ### Purely external proxies
 
 Probably most custom proxies will be externally managed,

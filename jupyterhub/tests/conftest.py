@@ -27,14 +27,18 @@ Fixtures to add functionality or spawning behavior
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
 from getpass import getuser
 import logging
 import os
-from pytest import fixture, raises
+import sys
 from subprocess import TimeoutExpired
+from unittest import mock
+
+from pytest import fixture, raises
 from tornado import ioloop, gen
 from tornado.httpclient import HTTPError
-from unittest import mock
+from tornado.platform.asyncio import AsyncIOMainLoop
 
 from .. import orm
 from .. import crypto
@@ -42,6 +46,7 @@ from ..utils import random_port
 
 from . import mocking
 from .mocking import MockHub
+from .utils import ssl_setup
 from .test_services import mockservice_cmd
 
 import jupyterhub.services.service
@@ -51,24 +56,41 @@ _db = None
 
 
 @fixture(scope='module')
-def app(request, io_loop):
+def ssl_tmpdir(tmpdir_factory):
+    return tmpdir_factory.mktemp('ssl')
+
+
+@fixture(scope='module')
+def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
-    mocked_app = MockHub.instance(log_level=logging.DEBUG)
+    mocked_app = None
+    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+    kwargs = dict(log_level=logging.DEBUG)
+    if ssl_enabled:
+        kwargs.update(
+            dict(
+                internal_ssl=True,
+                internal_certs_location=str(ssl_tmpdir),
+            )
+        )
 
-    @gen.coroutine
-    def make_app():
-        yield mocked_app.initialize([])
-        yield mocked_app.start()
+    mocked_app = MockHub.instance(**kwargs)
 
-    io_loop.run_sync(make_app)
+    async def make_app():
+        await mocked_app.initialize([])
+        await mocked_app.start()
 
     def fin():
         # disconnect logging during cleanup because pytest closes captured FDs prematurely
         mocked_app.log.handlers = []
         MockHub.clear_instance()
-        mocked_app.stop()
+        try:
+            mocked_app.stop()
+        except Exception as e:
+            print("Error stopping Hub: %s" % e, file=sys.stderr)
 
     request.addfinalizer(fin)
+    io_loop.run_sync(make_app)
     return mocked_app
 
 
@@ -106,8 +128,13 @@ def db():
 @fixture(scope='module')
 def io_loop(request):
     """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
+    ioloop.IOLoop.configure(AsyncIOMainLoop)
+    aio_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(aio_loop)
     io_loop = ioloop.IOLoop()
     io_loop.make_current()
+    assert asyncio.get_event_loop() is aio_loop
+    assert io_loop.asyncio_loop is aio_loop
 
     def _close():
         io_loop.clear_current()
@@ -162,7 +189,10 @@ def _mockservice(request, app, url=False):
         'admin': True,
     }
     if url:
-        spec['url'] = 'http://127.0.0.1:%i' % random_port()
+        if app.internal_ssl:
+            spec['url'] = 'https://127.0.0.1:%i' % random_port()
+        else:
+            spec['url'] = 'http://127.0.0.1:%i' % random_port()
 
     io_loop = app.io_loop
 

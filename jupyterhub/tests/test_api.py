@@ -91,11 +91,17 @@ def api_request(app, *api_path, **kwargs):
     headers = kwargs.setdefault('headers', {})
 
     if 'Authorization' not in headers and not kwargs.pop('noauth', False):
-        headers.update(auth_header(app.db, 'admin'))
+        # make a copy to avoid modifying arg in-place
+        kwargs['headers'] = h = {}
+        h.update(headers)
+        h.update(auth_header(app.db, 'admin'))
 
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
     f = getattr(async_requests, method)
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
     resp = yield f(url, **kwargs)
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
     assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
@@ -575,15 +581,19 @@ def test_spawn(app):
 
     assert spawner.server.base_url == ujoin(app.base_url, 'user/%s' % name) + '/'
     url = public_url(app, user)
-    r = yield async_requests.get(url)
+    kwargs = {}
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
+    r = yield async_requests.get(url, **kwargs)
     assert r.status_code == 200
     assert r.text == spawner.server.base_url
 
-    r = yield async_requests.get(ujoin(url, 'args'))
+    r = yield async_requests.get(ujoin(url, 'args'), **kwargs)
     assert r.status_code == 200
     argv = r.json()
     assert '--port' in ' '.join(argv)
-    r = yield async_requests.get(ujoin(url, 'env'))
+    r = yield async_requests.get(ujoin(url, 'env'), **kwargs)
     env = r.json()
     for expected in ['JUPYTERHUB_USER', 'JUPYTERHUB_BASE_URL', 'JUPYTERHUB_API_TOKEN']:
         assert expected in env
@@ -620,8 +630,11 @@ def test_spawn_handler(app):
 
     # verify that request params got passed down
     # implemented in MockSpawner
+    kwargs = {}
+    if app.external_certs:
+        kwargs['verify'] = app.external_certs['files']['ca']
     url = public_url(app, user)
-    r = yield async_requests.get(ujoin(url, 'env'))
+    r = yield async_requests.get(ujoin(url, 'env'), **kwargs)
     env = r.json()
     assert 'HANDLER_ARGS' in env
     assert env['HANDLER_ARGS'] == 'foo=bar'
@@ -1614,7 +1627,11 @@ def test_get_service(app, mockservice_url):
 def test_root_api(app):
     base_url = app.hub.url
     url = ujoin(base_url, 'api')
-    r = yield async_requests.get(url)
+    kwargs = {}
+    if app.internal_ssl:
+        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
+        kwargs["verify"] = app.internal_ssl_ca
+    r = yield async_requests.get(url, **kwargs)
     r.raise_for_status()
     expected = {
         'version': jupyterhub.__version__

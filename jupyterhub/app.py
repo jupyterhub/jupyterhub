@@ -16,10 +16,10 @@ from operator import itemgetter
 import os
 import re
 import signal
+import socket
 import sys
 from textwrap import dedent
 from urllib.parse import unquote, urlparse, urlunparse
-
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
@@ -63,6 +63,7 @@ from .utils import (
     maybe_future,
     url_path_join,
     print_stacks, print_ps_info,
+    make_ssl_context,
 )
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -102,6 +103,8 @@ flags = {
         "set log level to logging.DEBUG (maximize logging output)"),
     'generate-config': ({'JupyterHub': {'generate_config': True}},
         "generate default config file"),
+    'generate-certs': ({'JupyterHub': {'generate_certs': True}},
+        "generate certificates used for internal ssl"),
     'no-db': ({'JupyterHub': {'db_url': 'sqlite:///:memory:'}},
         "disable persisting state database to disk"
     ),
@@ -258,6 +261,9 @@ class JupyterHub(Application):
     generate_config = Bool(False,
         help="Generate default config file",
     ).tag(config=True)
+    generate_certs = Bool(False,
+        help="Generate certs used for internal ssl",
+    ).tag(config=True)
     answer_yes = Bool(False,
         help="Answer yes to any questions (e.g. confirm overwrite)"
     ).tag(config=True)
@@ -318,6 +324,101 @@ class JupyterHub(Application):
         When setting this, you should also set ssl_key
         """
     ).tag(config=True)
+    internal_ssl = Bool(False,
+        help="""Enable SSL for all internal communication
+
+        This enables end-to-end encryption between all JupyterHub components.
+        JupyterHub will automatically create the necessary certificate
+        authority and sign notebook certificates as they're created.
+        """
+    ).tag(config=True)
+    internal_certs_location = Unicode('internal-ssl',
+        help="""The location to store certificates automatically created by
+        JupyterHub.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    recreate_internal_certs = Bool(False,
+        help="""Recreate all certificates used within JupyterHub on restart.
+
+        Note: enabling this feature requires restarting all notebook servers.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    external_ssl_authorities = Dict(
+        help="""Dict authority:dict(files). Specify the key, cert, and/or
+        ca file for an authority. This is useful for externally managed
+        proxies that wish to use internal_ssl.
+
+        The files dict has this format (you must specify at least a cert)::
+
+            {
+                'key': '/path/to/key.key',
+                'cert': '/path/to/cert.crt',
+                'ca': '/path/to/ca.crt'
+            }
+
+        The authorities you can override: 'hub-ca', 'notebooks-ca',
+        'proxy-api-ca', 'proxy-client-ca', and 'services-ca'.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+    internal_ssl_authorities = Dict(
+        default_value={
+            'hub-ca': None,
+            'notebooks-ca': None,
+            'proxy-api-ca': None,
+            'proxy-client-ca': None,
+            'services-ca': None,
+        },
+        help="""Dict authority:dict(files). When creating the various
+        CAs needed for internal_ssl, these are the names that will be used
+        for each authority.
+
+        Use with internal_ssl
+        """
+    )
+    internal_ssl_components_trust = Dict(
+        help="""Dict component:list(components). This dict specifies the
+        relationships of components secured by internal_ssl.
+        """
+    )
+    internal_trust_bundles = Dict(
+        help="""Dict component:path. These are the paths to the trust bundles
+        that each component should have. They will be set during
+        `init_internal_ssl`.
+
+        Use with internal_ssl
+        """
+    )
+    internal_ssl_key = Unicode(
+        help="""The key to be used for internal ssl"""
+    )
+    internal_ssl_cert = Unicode(
+        help="""The cert to be used for internal ssl"""
+    )
+    internal_ssl_ca = Unicode(
+        help="""The certificate authority to be used for internal ssl"""
+    )
+    internal_proxy_certs = Dict(
+        help=""" Dict component:dict(cert files). This dict contains the certs
+        generated for both the proxy API and proxy client.
+        """
+    )
+    trusted_alt_names = List(Unicode(),
+        help="""Names to include in the subject alternative name.
+
+        These names will be used for server name verification. This is useful
+        if JupyterHub is being run behind a reverse proxy or services using ssl
+        are on different hosts.
+
+        Use with internal_ssl
+        """
+    ).tag(config=True)
+
     ip = Unicode('',
         help="""The public facing ip of the whole JupyterHub application
         (specifically referred to as the proxy).
@@ -1093,6 +1194,105 @@ class JupyterHub(Application):
         # store the loaded trait value
         self.cookie_secret = secret
 
+    def init_internal_ssl(self):
+        """Create the certs needed to turn on internal SSL."""
+
+        if self.internal_ssl:
+            from certipy import Certipy, CertNotFoundError
+            certipy = Certipy(store_dir=self.internal_certs_location,
+                              remove_existing=self.recreate_internal_certs)
+
+            # Here we define how trust should be laid out per each component
+            self.internal_ssl_components_trust = {
+                'hub-ca': list(self.internal_ssl_authorities.keys()),
+                'proxy-api-ca': ['hub-ca', 'services-ca', 'notebooks-ca'],
+                'proxy-client-ca': ['hub-ca', 'notebooks-ca'],
+                'notebooks-ca': ['hub-ca', 'proxy-client-ca'],
+                'services-ca': ['hub-ca', 'proxy-api-ca'],
+            }
+
+            hub_name = 'hub-ca'
+
+            # If any external CAs were specified in external_ssl_authorities
+            # add records of them to Certipy's store.
+            self.internal_ssl_authorities.update(self.external_ssl_authorities)
+            for authority, files in self.internal_ssl_authorities.items():
+                if files:
+                    self.log.info("Adding CA for %s", authority)
+                    certipy.store.add_record(
+                        authority, is_ca=True, files=files)
+
+            self.internal_trust_bundles = certipy.trust_from_graph(
+                self.internal_ssl_components_trust)
+
+            default_alt_names = ["IP:127.0.0.1", "DNS:localhost"]
+            if self.subdomain_host:
+                default_alt_names.append("DNS:%s" % urlparse(self.subdomain_host).hostname)
+            # The signed certs used by hub-internal components
+            try:
+                internal_key_pair = certipy.store.get_record("hub-internal")
+            except CertNotFoundError:
+                alt_names = list(default_alt_names)
+                # In the event the hub needs to be accessed externally, add
+                # the fqdn and (optionally) rev_proxy to the set of alt_names.
+                alt_names += (["DNS:" + socket.getfqdn()]
+                               + self.trusted_alt_names)
+                self.log.info(
+                    "Adding CA for %s: %s",
+                    "hub-internal",
+                    ";".join(alt_names),
+                )
+                internal_key_pair = certipy.create_signed_pair(
+                    "hub-internal",
+                    hub_name,
+                    alt_names=alt_names,
+                )
+            else:
+                self.log.info("Using existing hub-internal CA")
+
+            # Create the proxy certs
+            proxy_api = 'proxy-api'
+            proxy_client = 'proxy-client'
+            for component in [proxy_api, proxy_client]:
+                ca_name = component + '-ca'
+                alt_names = default_alt_names + self.trusted_alt_names
+                try:
+                    record = certipy.store.get_record(component)
+                except CertNotFoundError:
+                    self.log.info(
+                        "Generating signed pair for %s: %s",
+                        component,
+                        ';'.join(alt_names),
+                    )
+                    record = certipy.create_signed_pair(
+                        component,
+                        ca_name,
+                        alt_names=alt_names,
+                    )
+                else:
+                    self.log.info("Using existing %s CA", component)
+
+                self.internal_proxy_certs[component] = {
+                    "keyfile": record['files']['key'],
+                    "certfile": record['files']['cert'],
+                    "cafile": record['files']['cert'],
+                }
+
+            self.internal_ssl_key = internal_key_pair['files']['key']
+            self.internal_ssl_cert = internal_key_pair['files']['cert']
+            self.internal_ssl_ca = self.internal_trust_bundles[hub_name]
+
+            # Configure the AsyncHTTPClient. This will affect anything using
+            # AsyncHTTPClient.
+            ssl_context = make_ssl_context(
+                self.internal_ssl_key,
+                self.internal_ssl_cert,
+                cafile=self.internal_ssl_ca,
+            )
+            AsyncHTTPClient.configure(
+                None, defaults={"ssl_options" : ssl_context}
+            )
+
     def init_db(self):
         """Create the database connection"""
 
@@ -1127,6 +1327,9 @@ class JupyterHub(Application):
         hub_args = dict(
             base_url=self.hub_prefix,
             public_host=self.subdomain_host,
+            certfile=self.internal_ssl_cert,
+            keyfile=self.internal_ssl_key,
+            cafile=self.internal_ssl_ca,
         )
         if self.hub_bind_url:
             # ensure hub_prefix is set on bind_url
@@ -1168,6 +1371,8 @@ class JupyterHub(Application):
                 ._replace(path=self.hub_prefix)
             )
             self.hub.connect_url = self.hub_connect_url
+        if self.internal_ssl:
+            self.hub.proto = 'https'
 
     async def init_users(self):
         """Load users into and from the database"""
@@ -1375,6 +1580,7 @@ class JupyterHub(Application):
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
             service = Service(parent=self,
+                app=self,
                 base_url=self.base_url,
                 db=self.db, orm=orm_service,
                 domain=domain, host=host,
@@ -1631,6 +1837,14 @@ class JupyterHub(Application):
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
+            internal_ssl=self.internal_ssl,
+            internal_certs_location=self.internal_certs_location,
+            internal_authorities=self.internal_ssl_authorities,
+            internal_trust_bundles=self.internal_trust_bundles,
+            internal_ssl_key=self.internal_ssl_key,
+            internal_ssl_cert=self.internal_ssl_cert,
+            internal_ssl_ca=self.internal_ssl_ca,
+            trusted_alt_names=self.trusted_alt_names,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -1661,7 +1875,7 @@ class JupyterHub(Application):
     @catch_config_error
     async def initialize(self, *args, **kwargs):
         super().initialize(*args, **kwargs)
-        if self.generate_config or self.subapp:
+        if self.generate_config or self.generate_certs or self.subapp:
             return
         self.load_config_file(self.config_file)
         self.init_logging()
@@ -1704,6 +1918,7 @@ class JupyterHub(Application):
 
         self.init_pycurl()
         self.init_secrets()
+        self.init_internal_ssl()
         self.init_db()
         self.init_hub()
         self.init_proxy()
@@ -1862,8 +2077,28 @@ class JupyterHub(Application):
             loop.stop()
             return
 
+        if self.generate_certs:
+            self.load_config_file(self.config_file)
+            if not self.internal_ssl:
+                self.log.warn("You'll need to enable `internal_ssl` "
+                              "in the `jupyterhub_config` file to use "
+                              "these certs.")
+                self.internal_ssl = True
+            self.init_internal_ssl()
+            self.log.info("Certificates written to directory `{}`".format(
+                self.internal_certs_location))
+            loop.stop()
+            return
+
+        ssl_context = make_ssl_context(
+            self.internal_ssl_key,
+            self.internal_ssl_cert,
+            cafile=self.internal_ssl_ca,
+            check_hostname=False
+        )
+
         # start the webserver
-        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, xheaders=True)
+        self.http_server = tornado.httpserver.HTTPServer(self.tornado_application, ssl_options=ssl_context, xheaders=True)
         bind_url = urlparse(self.hub.bind_url)
         try:
             if bind_url.scheme.startswith('unix+'):
@@ -1913,7 +2148,12 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        await Server.from_orm(service.orm.server).wait_up(http=True, timeout=1)
+                        ssl_context = make_ssl_context(
+                            self.internal_ssl_key,
+                            self.internal_ssl_cert,
+                            cafile=self.internal_ssl_ca
+                        )
+                        await Server.from_orm(service.orm.server).wait_up(http=True, timeout=1, ssl_context=ssl_context)
                     except TimeoutError:
                         if service.managed:
                             status = await service.spawner.poll()

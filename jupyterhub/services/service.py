@@ -224,6 +224,7 @@ class Service(LoggingConfigurable):
     domain = Unicode()
     host = Unicode()
     hub = Any()
+    app = Any()
     proc = Any()
 
     # handles on globals:
@@ -331,6 +332,9 @@ class Service(LoggingConfigurable):
                 server=self.orm.server,
                 host=self.host,
             ),
+            internal_ssl=self.app.internal_ssl,
+            internal_certs_location=self.app.internal_certs_location,
+            internal_trust_bundles=self.app.internal_trust_bundles,
         )
         self.spawner.start()
         self.proc = self.spawner.proc

@@ -16,6 +16,7 @@ import os
 import socket
 import sys
 import threading
+import ssl
 import uuid
 import warnings
 
@@ -69,6 +70,21 @@ def can_connect(ip, port):
         return False
     else:
         return True
+
+
+def make_ssl_context(
+        keyfile, certfile, cafile=None,
+        verify=True, check_hostname=True):
+    """Setup context for starting an https server or making requests over ssl.
+    """
+    if not keyfile or not certfile:
+        return None
+    purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
+    ssl_context = ssl.create_default_context(purpose, cafile=cafile)
+    ssl_context.load_cert_chain(certfile, keyfile)
+    ssl_context.check_hostname = check_hostname
+    return ssl_context
+
 
 async def exponential_backoff(
         pass_func,
@@ -166,12 +182,16 @@ async def wait_for_server(ip, port, timeout=10):
     )
 
 
-async def wait_for_http_server(url, timeout=10):
+async def wait_for_http_server(url, timeout=10, ssl_context=None):
     """Wait for an HTTP Server to respond at url.
 
     Any non-5XX response code will do, even 404.
     """
+    loop = ioloop.IOLoop.current()
+    tic = loop.time()
     client = AsyncHTTPClient()
+    if ssl_context:
+        client.ssl_options = ssl_context
     async def is_reachable():
         try:
             r = await client.fetch(url, follow_redirects=False)
