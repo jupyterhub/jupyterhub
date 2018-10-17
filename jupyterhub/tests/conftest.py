@@ -31,12 +31,14 @@ import asyncio
 from getpass import getuser
 import logging
 import os
-from pytest import fixture, raises
+import sys
 from subprocess import TimeoutExpired
+from unittest import mock
+
+from pytest import fixture, raises
 from tornado import ioloop, gen
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
-from unittest import mock
 
 from .. import orm
 from .. import crypto
@@ -82,7 +84,10 @@ def app(request, io_loop, ssl_tmpdir):
         # disconnect logging during cleanup because pytest closes captured FDs prematurely
         mocked_app.log.handlers = []
         MockHub.clear_instance()
-        mocked_app.stop()
+        try:
+            mocked_app.stop()
+        except Exception as e:
+            print("Error stopping Hub: %s" % e, file=sys.stderr)
 
     request.addfinalizer(fin)
     io_loop.run_sync(make_app)
