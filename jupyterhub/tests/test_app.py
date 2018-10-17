@@ -206,7 +206,7 @@ def test_resume_spawners(tmpdir, request):
         ssl_enabled = getattr(request.module, "ssl_enabled", False)
         if ssl_enabled:
             kwargs['internal_certs_location'] = str(tmpdir)
-        app = MockHub(**kwargs)
+        app = MockHub(clean_users=False, **kwargs)
         app.config.ConfigurableHTTPProxy.should_start = False
         app.config.ConfigurableHTTPProxy.auth_token = 'unused'
         yield app.initialize([])

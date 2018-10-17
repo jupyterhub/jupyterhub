@@ -40,7 +40,7 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from traitlets import default
+from traitlets import Bool, default
 
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
@@ -282,12 +282,15 @@ class MockHub(JupyterHub):
             self.db.expire(service)
         return super().init_services()
 
+    clean_users = Bool(True)
+
     def init_db(self):
         """Ensure we start with a clean user list"""
         super().init_db()
-        for user in self.db.query(orm.User):
-            self.db.delete(user)
-        self.db.commit()
+        if self.clean_users:
+            for user in self.db.query(orm.User):
+                self.db.delete(user)
+            self.db.commit()
 
     @gen.coroutine
     def initialize(self, argv=None):
