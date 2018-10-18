@@ -93,15 +93,22 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
     auth_header = {
         'Authorization': 'token %s' % api_token,
     }
-    req = HTTPRequest(
+    req_users = HTTPRequest(
         url=url + '/users',
         headers=auth_header,
     )
+
+    req_proxy = HTTPRequest(
+        url=url + '/proxy',
+        headers=auth_header,
+    )
+
     now = datetime.now(timezone.utc)
     client = AsyncHTTPClient()
 
     if concurrency:
         semaphore = Semaphore(concurrency)
+
         @coroutine
         def fetch(req):
             """client.fetch wrapped in a semaphore to limit concurrency"""
@@ -113,12 +120,13 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
     else:
         fetch = client.fetch
 
-    resp = yield fetch(req)
-    users = json.loads(resp.body.decode('utf8', 'replace'))
+    resp_users = yield fetch(req_users)
+    users = json.loads(resp_users.body.decode('utf8', 'replace'))
+
     futures = []
 
     @coroutine
-    def handle_server(user, server_name, server):
+    def handle_server(user, server_name, server, server_status):
         """Handle (maybe) culling a single server
 
         Returns True if server is now stopped (user removable),
@@ -154,8 +162,8 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
         # check last activity
         # last_activity can be None in 0.9
-        if server['last_activity']:
-            inactive = now - parse_date(server['last_activity'])
+        if server_status['last_activity']:
+            inactive = now - parse_date(server_status['last_activity'])
         else:
             # no activity yet, use start date
             # last_activity may be None with jupyterhub 0.9,
@@ -209,6 +217,7 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
 
     @coroutine
     def handle_user(user):
+
         """Handle one user.
 
         Create a list of their servers, and async exec them.  Wait for
@@ -233,11 +242,25 @@ def cull_idle(url, api_token, inactive_limit, cull_users=False, max_age=0, concu
                     'pending': user['pending'],
                     'url': user['server'],
                 }
-        server_futures = [
-            handle_server(user, server_name, server)
-            for server_name, server in servers.items()
-        ]
-        results = yield multi(server_futures)
+
+        resp_proxy = yield fetch(req_proxy)
+        proxy_routes = json.loads(resp_proxy.body.decode('utf8', 'replace'))
+        # gets actual users server url to get its status
+        if '/user/%s/' % (user['name']) in proxy_routes:
+            user_server_url = proxy_routes['/user/%s/' % (user['name'])]['target']
+            req_user_server_status = HTTPRequest(
+                url=user_server_url + '/user/%s/api/status' % (user['name']),
+                headers=auth_header,
+            )
+
+            resp_server_status = yield fetch(req_user_server_status)
+            server_status = json.loads(resp_server_status.body.decode('utf8', 'replace'))
+
+            server_futures = [
+                handle_server(user, server_name, server, server_status)
+                for server_name, server in servers.items()
+            ]
+            results = yield multi(server_futures)
         if not cull_users:
             return
         # some servers are still running, cannot cull users
@@ -365,3 +388,4 @@ if __name__ == '__main__':
         loop.start()
     except KeyboardInterrupt:
         pass
+
