@@ -1,4 +1,5 @@
 [run]
+parallel = True
 branch = False
 omit =
     jupyterhub/tests/*
