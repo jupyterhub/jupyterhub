@@ -21,6 +21,7 @@ share/jupyterhub/static/css/style.min.css.map
 *.egg-info
 MANIFEST
 .coverage
+.coverage.*
 htmlcov
 .idea/
 .pytest_cache
