@@ -100,6 +100,11 @@ easy to do with RStudio too.
 
 - https://dsa.missouri.edu/faq/
 
+### Paderborn University
+
+- [Data Science (DICE) group](https://dice.cs.uni-paderborn.de/)
+    - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
+
 ### University of Rochester CIRC 
 
 - [JupyterHub Userguide](https://info.circ.rochester.edu/Web_Applications/JupyterHub.html) - Slurm, beehive

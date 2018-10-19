@@ -45,15 +45,12 @@ If your proxy should be launched when the Hub starts, you must define how
 to start and stop your proxy:
 
 ```python
-from tornado import gen
 class MyProxy(Proxy):
     ...
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         """Start the proxy"""
 
-    @gen.coroutine
-    def stop(self):
+    async def stop(self):
         """Stop the proxy"""
 ```
 
@@ -61,6 +58,18 @@ These methods **may** be  coroutines.
 
 `c.Proxy.should_start` is a configurable flag that determines whether the
 Hub should call these methods when the Hub itself starts and stops.
+
+## Encryption
+
+When using `internal_ssl` to encrypt traffic behind the proxy, at minimum,
+your `Proxy` will need client ssl certificates which the `Hub` must be made 
+aware of. These can be generated with the command `jupyterhub --generate-certs`
+which will write them to the `internal_certs_location` in folders named
+`proxy_api` and `proxy_client`. Alternatively, these can be provided to the
+hub via the `jupyterhub_config.py` file by providing a `dict` of named paths
+to the `external_authorities` option. The hub will include all certificates
+provided in that `dict` in the trust bundle utilized by all internal
+components.
 
 ### Purely external proxies
 
@@ -100,8 +109,7 @@ Python wrapper may have to handle storing the `data` piece itself, e.g in a
 simple file or database.
 
 ```python
-@gen.coroutine
-def add_route(self, routespec, target, data):
+async def add_route(self, routespec, target, data):
     """Proxy `routespec` to `target`.
 
     Store `data` associated with the routespec
@@ -112,7 +120,7 @@ def add_route(self, routespec, target, data):
 Adding a route for a user looks like this:
 
 ```python
-proxy.add_route('/user/pgeorgiou/', 'http://127.0.0.1:1227',
+await proxy.add_route('/user/pgeorgiou/', 'http://127.0.0.1:1227',
                 {'user': 'pgeorgiou'})
 ```
 
@@ -122,8 +130,7 @@ proxy.add_route('/user/pgeorgiou/', 'http://127.0.0.1:1227',
 `delete_route` should still succeed, but a warning may be issued.
 
 ```python
-@gen.coroutine
-def delete_route(self, routespec):
+async def delete_route(self, routespec):
     """Delete the route"""
 ```
 
@@ -135,8 +142,7 @@ routes. The return value for this function should be a dictionary, keyed by
 `add_route` (`routespec`, `target`, `data`)
 
 ```python
-@gen.coroutine
-def get_all_routes(self):
+async def get_all_routes(self):
     """Return all routes, keyed by routespec"""
 ```
 
@@ -179,3 +185,38 @@ tracked, and services such as cull-idle will not work.
 Now that `notebook-5.0` tracks activity internally, we can retrieve activity
 information from the single-user servers instead, removing the need to track
 activity in the proxy. But this is not yet implemented in JupyterHub 0.8.0.
+
+### Registering custom Proxies via entry points
+
+As of JupyterHub 1.0, custom proxy implementations can register themselves via
+the `jupyterhub.proxies` entry point metadata.
+To do this, in your `setup.py` add:
+
+```python
+setup(
+  ...
+  entry_points={
+    'jupyterhub.proxies': [
+        'mything = mypackage:MyProxy',
+    ],
+  },
+)
+```
+
+If you have added this metadata to your package,
+users can select your authenticator with the configuration:
+
+```python
+c.JupyterHub.proxy_class = 'mything'
+```
+
+instead of the full
+
+```python
+c.JupyterHub.proxy_class = 'mypackage:MyProxy'
+```
+
+previously required.
+Additionally, configurable attributes for your proxy will
+appear in jupyterhub help output and auto-generated configuration files
+via `jupyterhub --generate-config`.

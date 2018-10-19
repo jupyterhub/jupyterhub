@@ -112,6 +112,10 @@ setup_args = dict(
             'pam = jupyterhub.auth:PAMAuthenticator',
             'dummy = jupyterhub.auth:DummyAuthenticator',
         ],
+        'jupyterhub.proxies': [
+            'default = jupyterhub.proxy:ConfigurableHTTPProxy',
+            'configurable-http-proxy = jupyterhub.proxy:ConfigurableHTTPProxy',
+        ],
         'jupyterhub.spawners': [
             'default = jupyterhub.spawner:LocalProcessSpawner',
             'localprocess = jupyterhub.spawner:LocalProcessSpawner',

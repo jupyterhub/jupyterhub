@@ -42,6 +42,18 @@ RUNNING_SERVERS = Gauge(
 
 RUNNING_SERVERS.set(0)
 
+TOTAL_USERS = Gauge(
+	'total_users',
+	'toal number of users'
+	)
+
+TOTAL_USERS.set(0)	
+
+CHECK_ROUTES_DURATION_SECONDS = Histogram(
+    'check_routes_duration_seconds',
+    'Time taken to validate all routes in proxy'
+)
+
 class ServerSpawnStatus(Enum):
     """
     Possible values for 'status' label of SERVER_SPAWN_DURATION_SECONDS
@@ -100,11 +112,29 @@ class ServerPollStatus(Enum):
             return cls.running
         return cls.stopped
 
+for s in ServerPollStatus:
+    SERVER_POLL_DURATION_SECONDS.labels(status=s)
+
+
+
+SERVER_STOP_DURATION_SECONDS = Histogram(
+    'server_stop_seconds',
+    'time taken for server stopping operation',
+    ['status'],
+)
+
+class ServerStopStatus(Enum):
+    """
+    Possible values for 'status' label of SERVER_STOP_DURATION_SECONDS
+    """
+    success = 'success'
+    failure = 'failure'
+
     def __str__(self):
         return self.value
 
-for s in ServerPollStatus:
-    SERVER_POLL_DURATION_SECONDS.labels(status=s)
+for s in ServerStopStatus:
+    SERVER_STOP_DURATION_SECONDS.labels(status=s)
 
 
 def prometheus_log_method(handler):

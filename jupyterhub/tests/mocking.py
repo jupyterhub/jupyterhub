@@ -40,7 +40,7 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from traitlets import default
+from traitlets import Bool, default
 
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
@@ -49,7 +49,7 @@ from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
-from .utils import async_requests
+from .utils import async_requests, ssl_setup
 
 from pamela import PAMError
 
@@ -94,6 +94,10 @@ class MockSpawner(LocalProcessSpawner):
     @default('cmd')
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
+
+    def move_certs(self, paths):
+        """Return the paths unmodified"""
+        return paths
 
     use_this_api_token = None
     def start(self):
@@ -217,6 +221,14 @@ class MockHub(JupyterHub):
     db_file = None
     last_activity_interval = 2
     log_datefmt = '%M:%S'
+    external_certs = None
+    log_level = 10
+
+    def __init__(self, *args, **kwargs):
+        if 'internal_certs_location' in kwargs:
+            cert_location = kwargs['internal_certs_location']
+            kwargs['external_certs'] = ssl_setup(cert_location, 'hub-ca')
+        super().__init__(*args, **kwargs)
 
     @default('subdomain_host')
     def _subdomain_host_default(self):
@@ -228,7 +240,7 @@ class MockHub(JupyterHub):
             port = urlparse(self.subdomain_host).port
         else:
             port = random_port()
-        return 'http://127.0.0.1:%i/@/space%%20word/' % port
+        return 'http://127.0.0.1:%i/@/space%%20word/' % (port,)
 
     @default('ip')
     def _ip_default(self):
@@ -270,6 +282,18 @@ class MockHub(JupyterHub):
             self.db.expire(service)
         return super().init_services()
 
+    test_clean_db = Bool(True)
+
+    def init_db(self):
+        """Ensure we start with a clean user list"""
+        super().init_db()
+        if self.test_clean_db:
+            for user in self.db.query(orm.User):
+                self.db.delete(user)
+            for group in self.db.query(orm.Group):
+                self.db.delete(group)
+            self.db.commit()
+
     @gen.coroutine
     def initialize(self, argv=None):
         self.pid_file = NamedTemporaryFile(delete=False).name
@@ -310,12 +334,16 @@ class MockHub(JupyterHub):
     def login_user(self, name):
         """Login a user by name, returning her cookies."""
         base_url = public_url(self)
+        external_ca = None
+        if self.internal_ssl:
+            external_ca = self.external_certs['files']['ca']
         r = yield async_requests.post(base_url + 'hub/login',
             data={
                 'username': name,
                 'password': name,
             },
             allow_redirects=False,
+            verify=external_ca,
         )
         r.raise_for_status()
         assert r.cookies
@@ -373,6 +401,7 @@ class StubSingleUserSpawner(MockSpawner):
         evt = threading.Event()
         print(args, env)
         def _run():
+            asyncio.set_event_loop(asyncio.new_event_loop())
             io_loop = IOLoop()
             io_loop.make_current()
             io_loop.add_callback(lambda : evt.set())

@@ -14,6 +14,7 @@ import shutil
 import signal
 import sys
 import warnings
+import pwd
 from subprocess import Popen
 from tempfile import mkdtemp
 
@@ -27,7 +28,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets.config import LoggingConfigurable
 from traitlets import (
     Any, Bool, Dict, Instance, Integer, Float, List, Unicode, Union,
-    observe, validate,
+    default, observe, validate,
 )
 
 from .objects import Server
@@ -162,6 +163,12 @@ class Spawner(LoggingConfigurable):
         if self.orm_spawner:
             return self.orm_spawner.name
         return ''
+    hub = Any()
+    authenticator = Any()
+    internal_ssl = Bool(False)
+    internal_trust_bundles = Dict()
+    internal_certs_location = Unicode('')
+    cert_paths = Dict()
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
@@ -644,6 +651,11 @@ class Spawner(LoggingConfigurable):
         if self.cpu_guarantee:
             env['CPU_GUARANTEE'] = str(self.cpu_guarantee)
 
+        if self.cert_paths:
+            env['JUPYTERHUB_SSL_KEYFILE'] = self.cert_paths['keyfile']
+            env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
+            env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
+
         return env
 
     def template_namespace(self):
@@ -683,6 +695,115 @@ class Spawner(LoggingConfigurable):
             str: Formatted string, rendered
         """
         return s.format(**self.template_namespace())
+
+    trusted_alt_names = List(Unicode())
+
+    ssl_alt_names = List(
+        Unicode(),
+        config=True,
+        help="""List of SSL alt names
+
+        May be set in config if all spawners should have the same value(s),
+        or set at runtime by Spawner that know their names.
+        """
+    )
+
+    @default('ssl_alt_names')
+    def _default_ssl_alt_names(self):
+        # by default, use trusted_alt_names
+        # inherited from global app
+        return list(self.trusted_alt_names)
+
+    ssl_alt_names_include_local = Bool(
+        True,
+        config=True,
+        help="""Whether to include DNS:localhost, IP:127.0.0.1 in alt names""",
+    )
+
+    async def create_certs(self):
+        """Create and set ownership for the certs to be used for internal ssl
+
+        Keyword Arguments:
+            alt_names (list): a list of alternative names to identify the
+            server by, see:
+            https://en.wikipedia.org/wiki/Subject_Alternative_Name
+
+            override: override the default_names with the provided alt_names
+
+        Returns:
+            dict: Path to cert files and CA
+
+        This method creates certs for use with the singleuser notebook. It
+        enables SSL and ensures that the notebook can perform bi-directional
+        SSL auth with the hub (verification based on CA).
+
+        If the singleuser host has a name or ip other than localhost,
+        an appropriate alternative name(s) must be passed for ssl verification
+        by the hub to work. For example, for Jupyter hosts with an IP of
+        10.10.10.10 or DNS name of jupyter.example.com, this would be:
+
+        alt_names=["IP:10.10.10.10"]
+        alt_names=["DNS:jupyter.example.com"]
+
+        respectively. The list can contain both the IP and DNS names to refer
+        to the host by either IP or DNS name (note the `default_names` below).
+        """
+        from certipy import Certipy
+        default_names = ["DNS:localhost", "IP:127.0.0.1"]
+        alt_names = []
+        alt_names.extend(self.ssl_alt_names)
+
+        if self.ssl_alt_names_include_local:
+            alt_names = default_names + alt_names
+
+        self.log.info("Creating certs for %s: %s",
+            self._log_name,
+            ';'.join(alt_names),
+        )
+
+        common_name = self.user.name or 'service'
+        certipy = Certipy(store_dir=self.internal_certs_location)
+        notebook_component = 'notebooks-ca'
+        notebook_key_pair = certipy.create_signed_pair(
+            'user-' + common_name,
+            notebook_component,
+            alt_names=alt_names,
+            overwrite=True
+        )
+        paths = {
+            "keyfile": notebook_key_pair['files']['key'],
+            "certfile": notebook_key_pair['files']['cert'],
+            "cafile": self.internal_trust_bundles[notebook_component],
+        }
+        return paths
+
+    async def move_certs(self, paths):
+        """Takes certificate paths and makes them available to the notebook server
+
+        Arguments:
+            paths (dict): a list of paths for key, cert, and CA.
+            These paths will be resolvable and readable by the Hub process,
+            but not necessarily by the notebook server.
+
+        Returns:
+            dict: a list (potentially altered) of paths for key, cert,
+            and CA.
+            These paths should be resolvable and readable
+            by the notebook server to be launched.
+
+
+        `.move_certs` is called after certs for the singleuser notebook have
+        been created by create_certs.
+
+        By default, certs are created in a standard, central location defined
+        by `internal_certs_location`. For a local, single-host deployment of
+        JupyterHub, this should suffice. If, however, singleuser notebooks
+        are spawned on other hosts, `.move_certs` should be overridden to move
+        these files appropriately. This could mean using `scp` to copy them
+        to another host, moving them to a volume mounted in a docker container,
+        or exporting them as a secret in kubernetes.
+        """
+        return paths
 
     def get_args(self):
         """Return the arguments to be passed after self.cmd
@@ -927,7 +1048,6 @@ def set_user_setuid(username, chdir=True):
     home directory.
     """
     import grp
-    import pwd
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
@@ -1087,6 +1207,48 @@ class LocalProcessSpawner(Spawner):
         env = super().get_env()
         env = self.user_env(env)
         return env
+
+    async def move_certs(self, paths):
+        """Takes cert paths, moves and sets ownership for them
+
+        Arguments:
+            paths (dict): a list of paths for key, cert, and CA
+
+        Returns:
+            dict: a list (potentially altered) of paths for key, cert,
+            and CA
+
+        Stage certificates into a private home directory
+        and make them readable by the user.
+        """
+        key = paths['keyfile']
+        cert = paths['certfile']
+        ca = paths['cafile']
+
+        user = pwd.getpwnam(self.user.name)
+        uid = user.pw_uid
+        gid = user.pw_gid
+        home = user.pw_dir
+
+        # Create dir for user's certs wherever we're starting
+        out_dir = "{home}/.jupyterhub/jupyterhub-certs".format(home=home)
+        shutil.rmtree(out_dir, ignore_errors=True)
+        os.makedirs(out_dir, 0o700, exist_ok=True)
+
+        # Move certs to users dir
+        shutil.move(paths['keyfile'], out_dir)
+        shutil.move(paths['certfile'], out_dir)
+        shutil.copy(paths['cafile'], out_dir)
+
+        key = os.path.join(out_dir, os.path.basename(paths['keyfile']))
+        cert = os.path.join(out_dir, os.path.basename(paths['certfile']))
+        ca = os.path.join(out_dir, os.path.basename(paths['cafile']))
+
+        # Set cert ownership to user
+        for f in [out_dir, key, cert, ca]:
+            shutil.chown(f, user=uid, group=gid)
+
+        return {"keyfile": key, "certfile": cert, "cafile": ca}
 
     async def start(self):
         """Start the single-user server."""

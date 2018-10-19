@@ -172,7 +172,7 @@ c.JupyterHub.authenticator_class = 'mypackage:MyAuthenticator'
 ```
 
 previously required.
-Additionally, configurable attributes for your spawner will
+Additionally, configurable attributes for your authenticator will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
 
