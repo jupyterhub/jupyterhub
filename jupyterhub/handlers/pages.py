@@ -352,6 +352,12 @@ class ProxyErrorHandler(BaseHandler):
         self.write(html)
 
 
+class HealthCheckHandler(BaseHandler):
+    """Answer to health check"""
+    def get(self, *args):
+        self.finish()
+
+
 default_handlers = [
     (r'/', RootHandler),
     (r'/home', HomeHandler),
@@ -360,4 +366,5 @@ default_handlers = [
     (r'/spawn/([^/]+)', SpawnHandler),
     (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
+    (r'/health$', HealthCheckHandler),
 ]

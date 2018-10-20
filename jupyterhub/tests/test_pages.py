@@ -667,3 +667,9 @@ def test_server_not_running_api_request(app):
     assert r.status_code == 404
     assert r.headers["content-type"] == "application/json"
     assert r.json() == {"message": "bees is not running"}
+
+
+@pytest.mark.gen_test
+def test_health_check_request(app):
+    r = yield get_page('health', app)
+    assert r.status_code == 200
