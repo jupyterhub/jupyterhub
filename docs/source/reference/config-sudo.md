@@ -204,8 +204,8 @@ The simplest way to deal with this is to make a directory owned by your Hub user
 and use that as the CWD when launching the server.
 
 ```bash
-    $ sudo mkdir /etc/jupyterhub
-    $ sudo chown rhea /etc/jupyterhub
+$ sudo mkdir /etc/jupyterhub
+$ sudo chown rhea /etc/jupyterhub
 ```
 
 ## Start jupyterhub
@@ -213,20 +213,20 @@ and use that as the CWD when launching the server.
 Finally, start the server as our newly configured user, `rhea`:
 
 ```bash
-    $ cd /etc/jupyterhub
-    $ sudo -u rhea jupyterhub --JupyterHub.spawner_class=sudospawner.SudoSpawner
-```
+$ cd /etc/jupyterhub
+$ sudo -u rhea jupyterhub --JupyterHub.spawner_class=sudospawner.SudoSpawner
+```                                                                             
 
 And try logging in.
 
-### Troubleshooting: SELinux
+## Troubleshooting: SELinux
 
 If you still get a generic `Permission denied` `PermissionError`, it's possible SELinux is blocking you.  
 Here's how you can make a module to allow this.
-First, put this in a file sudo_exec_selinux.te:
+First, put this in a file  named `sudo_exec_selinux.te`:
 
 ```bash
-module sudo_exec 1.1;
+module sudo_exec_selinux 1.1;
 
 require {
         type unconfined_t;
@@ -246,9 +246,9 @@ $ semodule_package -o sudo_exec_selinux.pp -m sudo_exec_selinux.mod
 $ semodule -i sudo_exec_selinux.pp
 ```
 
-### Troubleshooting: PAM session errors
+## Troubleshooting: PAM session errors
 
 If the PAM authentication doesn't work and you see errors for
-`login:session-auth`, or similar, considering updating to `master` 
-and/or incorporating this commit https://github.com/jupyter/jupyterhub/commit/40368b8f555f04ffdd662ffe99d32392a088b1d2
-and configuration option, `c.PAMAuthenticator.open_sessions = False`.
+`login:session-auth`, or similar, considering updating to a more recent version
+of jupyterhub and disabling the opening of PAM sessions with
+`c.PAMAuthenticator.open_sessions=False`.

@@ -668,10 +668,12 @@ def test_server_not_running_api_request(app):
     assert r.headers["content-type"] == "application/json"
     assert r.json() == {"message": "bees is not running"}
 
+
 @pytest.mark.gen_test
 def test_metrics_no_auth(app):
     r = yield get_page("metrics", app)
     assert r.status_code == 403
+
 
 @pytest.mark.gen_test
 def test_metrics_auth(app):
@@ -680,3 +682,9 @@ def test_metrics_auth(app):
     r = yield get_page("metrics", app, cookies=cookies)
     assert r.status_code == 200
     assert r.url == metrics_url
+
+
+@pytest.mark.gen_test
+def test_health_check_request(app):
+    r = yield get_page('health', app)
+    assert r.status_code == 200
