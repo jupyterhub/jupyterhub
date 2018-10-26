@@ -554,7 +554,12 @@ class LocalAuthenticator(Authenticator):
             if self.create_system_users:
                 await maybe_future(self.add_system_user(user))
             else:
-                raise KeyError("User %s does not exist." % user.name)
+                raise KeyError(
+                    "User {} does not exist on the system."
+                    " Set LocalAuthenticator.create_system_users=True"
+                    " to automatically create system users from jupyterhub users."
+                    .format(user.name)
+                )
 
         await maybe_future(super().add_user(user))
 
