@@ -4,11 +4,13 @@
 # Distributed under the terms of the Modified BSD License.
 
 from concurrent.futures import ThreadPoolExecutor
+import inspect
 import pipes
 import re
 from shutil import which
 import sys
 from subprocess import Popen, PIPE, STDOUT
+import warnings
 
 try:
     import pamela
@@ -222,20 +224,25 @@ class Authenticator(LoggingConfigurable):
         username = self.username_map.get(username, username)
         return username
 
-    def check_whitelist(self, username):
+    # FIXME: Remove None default on removal of old signature compatibility
+    def check_whitelist(self, username, authentication=None):
         """Check if a username is allowed to authenticate based on whitelist configuration
 
         Return True if username is allowed, False otherwise.
         No whitelist means any username is allowed.
 
         Names are normalized *before* being checked against the whitelist.
+
+        .. versionchanged:: 1.0
+            Signature updated to accept authentication data and any future changes
         """
         if not self.whitelist:
             # No whitelist means any name is allowed
             return True
         return username in self.whitelist
 
-    def check_blacklist(self, username):
+    # FIXME: Remove None default on removal of old signature compatibility
+    def check_blacklist(self, username, authentication=None):
         """Check if a username is blocked to authenticate based on blacklist configuration
 
         Return True if username is allowed, False otherwise.
@@ -244,6 +251,9 @@ class Authenticator(LoggingConfigurable):
         Names are normalized *before* being checked against the blacklist.
 
         .. versionadded: 0.9
+
+        .. versionchanged:: 1.0
+            Signature updated to accept authentication data and any future changes
         """
         if not self.blacklist:
             # No blacklist means any name is allowed
@@ -290,13 +300,25 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
-        blacklist_pass = await maybe_future(self.check_blacklist(username))
-        whitelist_pass = await maybe_future(self.check_whitelist(username))
+        if len(inspect.getfullargspec(self.check_blacklist).args) != 3:
+            self.log.warning("DEPRECATION WARNING: check_xlist auth functions are changing signature, refer to docs to prevent future failures.")
+            warnings.warn("check_xlist auth functions are changing signature, refer to docs to prevent future failures", DeprecationWarning)
+            blacklist_pass = await maybe_future(self.check_blacklist(username))
+        else:
+            blacklist_pass = await maybe_future(self.check_blacklist(username, authenticated))
+
         if blacklist_pass:
             pass
         else:
             self.log.warning("User %r in blacklist. Stop authentication", username)
             return
+
+        if len(inspect.getfullargspec(self.check_whitelist).args) != 3:
+            self.log.warning("DEPRECATION WARNING: check_xlist auth functions are changing signature, refer to docs to prevent future failures.")
+            warnings.warn("check_xlist auth functions are changing signature, refer to docs to prevent future failures", DeprecationWarning)
+            whitelist_pass = await maybe_future(self.check_whitelist(username))
+        else:
+            whitelist_pass = await maybe_future(self.check_whitelist(username, authenticated))
 
         if whitelist_pass:
             if authenticated['admin'] is None:
@@ -557,11 +579,12 @@ class LocalAuthenticator(Authenticator):
                 "Ignoring username whitelist because group whitelist supplied!"
             )
 
-    def check_whitelist(self, username):
+    # FIXME: Remove None default on removal of old signature comptability
+    def check_whitelist(self, username, authentication=None):
         if self.group_whitelist:
             return self.check_group_whitelist(username)
         else:
-            return super().check_whitelist(username)
+            return super().check_whitelist(username, authentication)
 
     def check_group_whitelist(self, username):
         """

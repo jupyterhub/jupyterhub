@@ -238,6 +238,24 @@ def test_pam_auth_blacklist():
 
 
 @pytest.mark.gen_test
+def test_deprecated_signatures():
+    deprecated_authenticator = MockPAMAuthenticator()
+
+    def deprecated_xlist(username):
+        return True
+
+    with mock.patch.multiple(deprecated_authenticator,
+                              check_whitelist=deprecated_xlist,
+                              check_blacklist=deprecated_xlist):
+        authorized = yield deprecated_authenticator.get_authenticated_user(None, {
+            'username': 'test',
+            'password': 'test'
+        })
+
+        assert authorized is not None
+            
+
+@pytest.mark.gen_test
 def test_pam_auth_no_such_group():
     authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
     authorized = yield authenticator.get_authenticated_user(None, {

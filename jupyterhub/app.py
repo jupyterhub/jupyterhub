@@ -1490,7 +1490,7 @@ class JupyterHub(Application):
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (await maybe_future(self.authenticator.check_whitelist(username))):
+                if not (await maybe_future(self.authenticator.check_whitelist(username, None))):
                     raise ValueError("Username %r is not in whitelist" % username)
                 user = orm.User.find(db, name=username)
                 if user is None:
@@ -1514,7 +1514,7 @@ class JupyterHub(Application):
         for token, name in token_dict.items():
             if kind == 'user':
                 name = self.authenticator.normalize_username(name)
-                if not (await maybe_future(self.authenticator.check_whitelist(name))):
+                if not (await maybe_future(self.authenticator.check_whitelist(name, None))):
                     raise ValueError("Token name %r is not in whitelist" % name)
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token name %r is not valid" % name)
