@@ -670,6 +670,21 @@ def test_server_not_running_api_request(app):
 
 
 @pytest.mark.gen_test
+def test_metrics_no_auth(app):
+    r = yield get_page("metrics", app)
+    assert r.status_code == 403
+
+
+@pytest.mark.gen_test
+def test_metrics_auth(app):
+    cookies = yield app.login_user('river')
+    metrics_url = ujoin(public_host(app), app.hub.base_url, 'metrics')
+    r = yield get_page("metrics", app, cookies=cookies)
+    assert r.status_code == 200
+    assert r.url == metrics_url
+
+
+@pytest.mark.gen_test
 def test_health_check_request(app):
     r = yield get_page('health', app)
     assert r.status_code == 200
