@@ -523,10 +523,13 @@ class Spawner(LoggingConfigurable):
 
     pre_spawn_hook = Any(
         help="""
-        An optional hook function that you can implement to do some bootstrapping work before
-        the spawner starts. For example, create a directory for your user or load initial content.
+        An optional hook function that you can implement to do some
+        bootstrapping work before the spawner starts. For example, create a
+        directory for your user or load initial content.
 
         This can be set independent of any concrete spawner implementation.
+
+        This maybe a coroutine.
 
         Example::
 
