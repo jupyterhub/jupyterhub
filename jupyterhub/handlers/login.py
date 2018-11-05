@@ -9,13 +9,24 @@ from tornado.httputil import url_concat
 from tornado import web
 
 from .base import BaseHandler
+from ..utils import maybe_future
+
 
 
 class LogoutHandler(BaseHandler):
+
+    @property
+    def shutdown_on_logout(self):
+        return self.settings.get('shutdown_on_logout', False)
+
     """Log a user out by clearing their login cookie."""
-    def get(self):
+    async def get(self):
         user = self.current_user
         if user:
+            if self.shutdown_on_logout:
+                self.log.info("Shutting down all %s's servers", user.name)
+                for name, spawner in user.spawners.items():
+                    await maybe_future(spawner.stop())
             self.log.info("User logged out: %s", user.name)
             self.clear_login_cookie()
             self.statsd.incr('logout')
