@@ -178,6 +178,22 @@ class FormSpawner(MockSpawner):
         return options
 
 
+class MockStructGroup:
+    """Mock grp.struct_group"""
+
+    def __init__(self, name, members, gid=1111):
+        self.gr_name = name
+        self.gr_mem = members
+        self.gr_gid = gid
+
+class MockStructPasswd:
+    """Mock pwd.struct_passwd"""
+
+    def __init__(self, name, gid=1111):
+        self.pw_name = name
+        self.pw_gid = gid
+
+
 class MockPAMAuthenticator(PAMAuthenticator):
     auth_state = None
     # If true, return admin users marked as admin.
@@ -201,15 +217,10 @@ class MockPAMAuthenticator(PAMAuthenticator):
             username = yield super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
         if username is None:
             return
-        if self.auth_state:
+        elif self.auth_state:
             return {
                 'name': username,
                 'auth_state': self.auth_state,
-            }
-        elif self.return_admin:
-            return {
-                'name': username,
-                'admin': username in self.admin_users,
             }
         else:
             return username

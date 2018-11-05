@@ -11,7 +11,7 @@ from requests import HTTPError
 
 from jupyterhub import auth, crypto, orm
 
-from .mocking import MockPAMAuthenticator
+from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
 from .test_api import add_user
 
 @pytest.mark.gen_test
@@ -54,6 +54,87 @@ def test_pam_auth_account_check_disabled():
 
 
 @pytest.mark.gen_test
+def test_pam_auth_admin_groups():
+    jh_users = MockStructGroup('jh_users', ['group_admin', 'also_group_admin', 'override_admin', 'non_admin'], 1234)
+    jh_admins = MockStructGroup('jh_admins', ['group_admin'], 5678)
+    wheel = MockStructGroup('wheel', ['also_group_admin'], 9999)
+    system_groups = [jh_users, jh_admins, wheel]
+
+    group_admin = MockStructPasswd('group_admin', 1234)
+    also_group_admin = MockStructPasswd('also_group_admin', 1234)
+    override_admin = MockStructPasswd('override_admin', 1234)
+    non_admin = MockStructPasswd('non_admin', 1234)
+    system_users = [group_admin, also_group_admin, override_admin, non_admin]
+
+    user_group_map = {
+        'group_admin': [jh_users, jh_admins],
+        'also_group_admin': [jh_users, wheel],
+        'override_admin': [jh_users],
+        'non_admin': [jh_users]
+    }
+
+    def getgrnam(name):
+        return [x for x in system_groups if x.gr_name == name][0]
+
+    def getpwnam(name):
+        return [x for x in system_users if x.pw_name == name][0]
+    
+    def getgrouplist(name, group):
+        return user_group_map[name]
+
+    authenticator = MockPAMAuthenticator(admin_groups={'jh_admins', 'wheel'},
+                                         admin_users={'override_admin'})
+
+    # Check admin_group applies as expected
+    with mock.patch.multiple(auth,
+                             getgrnam=getgrnam,
+                             getpwnam=getpwnam,
+                             getgrouplist=getgrouplist):
+        authorized = yield authenticator.get_authenticated_user(None, {
+            'username': 'group_admin',
+            'password': 'group_admin'
+        })
+    assert authorized['name'] == 'group_admin'
+    assert authorized['admin'] == True
+
+    # Check multiple groups work, just in case.
+    with mock.patch.multiple(auth,
+                             getgrnam=getgrnam,
+                             getpwnam=getpwnam,
+                             getgrouplist=getgrouplist):
+        authorized = yield authenticator.get_authenticated_user(None, {
+            'username': 'also_group_admin',
+            'password': 'also_group_admin'
+        })
+    assert authorized['name'] == 'also_group_admin'
+    assert authorized['admin'] == True
+
+    # Check admin_users still applies correctly
+    with mock.patch.multiple(auth,
+                             getgrnam=getgrnam,
+                             getpwnam=getpwnam,
+                             getgrouplist=getgrouplist):
+        authorized = yield authenticator.get_authenticated_user(None, {
+            'username': 'override_admin',
+            'password': 'override_admin'
+        })
+    assert authorized['name'] == 'override_admin'
+    assert authorized['admin'] == True
+
+    # Check it doesn't admin everyone
+    with mock.patch.multiple(auth,
+                             getgrnam=getgrnam,
+                             getpwnam=getpwnam,
+                             getgrouplist=getgrouplist):
+        authorized = yield authenticator.get_authenticated_user(None, {
+            'username': 'non_admin',
+            'password': 'non_admin'
+        })
+    assert authorized['name'] == 'non_admin'
+    assert authorized['admin'] == False
+
+
+@pytest.mark.gen_test
 def test_pam_auth_whitelist():
     authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
     authorized = yield authenticator.get_authenticated_user(None, {
@@ -75,16 +156,10 @@ def test_pam_auth_whitelist():
     assert authorized is None
 
 
-class MockGroup:
-    def __init__(self, *names):
-        self.gr_mem = names
-
-
 @pytest.mark.gen_test
 def test_pam_auth_group_whitelist():
-    g = MockGroup('kaylee')
     def getgrnam(name):
-        return g
+        return MockStructGroup('grp', ['kaylee'])
 
     authenticator = MockPAMAuthenticator(group_whitelist={'group'})
 
@@ -266,18 +341,8 @@ def test_auth_state(app, auth_state_enabled):
     assert auth_state == app.authenticator.auth_state
 
 
-@pytest.fixture
-def use_auth_admin(app):
-    before_admin = app.authenticator.return_admin
-    app.authenticator.return_admin = True
-    try:
-        yield
-    finally:
-        app.authenticator.return_admin = before_admin
-
-
 @pytest.mark.gen_test
-def test_auth_admin_non_admin(app, use_auth_admin):
+def test_auth_admin_non_admin(app):
     """admin should be passed through for non-admin users"""
     name = 'kiwi'
     user = add_user(app.db, app, name=name, admin=False)
@@ -287,7 +352,7 @@ def test_auth_admin_non_admin(app, use_auth_admin):
 
 
 @pytest.mark.gen_test
-def test_auth_admin_is_admin(app, use_auth_admin):
+def test_auth_admin_is_admin(app):
     """admin should be passed through for admin users"""
     # Admin user defined in MockPAMAuthenticator.
     name = 'admin'
