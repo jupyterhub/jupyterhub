@@ -1383,3 +1383,44 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
+
+
+class SimpleLocalProcessSpawner(LocalProcessSpawner):
+    """
+    A version of LocalProcessSpawner that doesn't require users to exist on
+    the system beforehand.
+
+    Only use this for testing.
+
+    Note: DO NOT USE THIS FOR PRODUCTION USE CASES! It is very insecure, and
+    provides absolutely no isolation between different users!
+    """
+
+    home_path_template = Unicode(
+        '/tmp/{username}',
+        config=True,
+        help='Template to expand to set the user home. {username} is expanded'
+    )
+
+    @property
+    def home_path(self):
+        return self.home_path_template.format(
+            username=self.user.name,
+        )
+
+    def make_preexec_fn(self, name):
+        home = self.home_path
+        def preexec():
+            try:
+                os.makedirs(home, 0o755, exist_ok=True)
+                os.chdir(home)
+            except Exception as e:
+
+                print(e)
+        return preexec
+
+    def user_env(self, env):
+        env['USER'] = self.user.name
+        env['HOME'] = self.home_path
+        env['SHELL'] = '/bin/bash'
+

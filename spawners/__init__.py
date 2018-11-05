@@ -1,1 +1,0 @@
-from .simplespawner import SimpleSpawner
