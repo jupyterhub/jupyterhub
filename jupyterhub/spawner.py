@@ -1426,4 +1426,9 @@ class SimpleLocalProcessSpawner(LocalProcessSpawner):
         env['USER'] = self.user.name
         env['HOME'] = self.home_dir
         env['SHELL'] = '/bin/bash'
+        return env
+
+    def move_certs(self, paths):
+        """No-op for installing certs"""
+        return paths
 
