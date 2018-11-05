@@ -46,7 +46,7 @@ from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
 from ..objects import Server
-from ..spawner import LocalProcessSpawner
+from ..spawner import LocalProcessSpawner, SimpleLocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
 from .utils import async_requests, ssl_setup
@@ -73,20 +73,14 @@ def mock_open_session(username, service, encoding):
     pass
 
 
-class MockSpawner(LocalProcessSpawner):
+class MockSpawner(SimpleLocalProcessSpawner):
     """Base mock spawner
 
     - disables user-switching that we need root permissions to do
     - spawns `jupyterhub.tests.mocksu` instead of a full single-user server
     """
-    def make_preexec_fn(self, *a, **kw):
-        # skip the setuid stuff
-        return
-
-    def _set_user_changed(self, name, old, new):
-        pass
-
     def user_env(self, env):
+        env = super().user_env(env)
         if self.handler:
             env['HANDLER_ARGS'] = self.handler.request.query
         return env
@@ -94,10 +88,6 @@ class MockSpawner(LocalProcessSpawner):
     @default('cmd')
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
-
-    def move_certs(self, paths):
-        """Return the paths unmodified"""
-        return paths
 
     use_this_api_token = None
     def start(self):
