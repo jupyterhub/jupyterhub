@@ -1396,31 +1396,34 @@ class SimpleLocalProcessSpawner(LocalProcessSpawner):
     provides absolutely no isolation between different users!
     """
 
-    home_path_template = Unicode(
+    home_dir_template = Unicode(
         '/tmp/{username}',
         config=True,
-        help='Template to expand to set the user home. {username} is expanded'
+        help="""
+        Template to expand to set the user home.
+        {username} is expanded to the jupyterhub username.
+        """
     )
 
-    @property
-    def home_path(self):
-        return self.home_path_template.format(
+    home_dir = Unicode(help="The home directory for the user")
+    @default('home_dir')
+    def _default_home_dir(self):
+        return self.home_dir_template.format(
             username=self.user.name,
         )
 
     def make_preexec_fn(self, name):
-        home = self.home_path
+        home = self.home_dir
         def preexec():
             try:
                 os.makedirs(home, 0o755, exist_ok=True)
                 os.chdir(home)
             except Exception as e:
-
-                print(e)
+                self.log.exception("Error in preexec for %s", name)
         return preexec
 
     def user_env(self, env):
         env['USER'] = self.user.name
-        env['HOME'] = self.home_path
+        env['HOME'] = self.home_dir
         env['SHELL'] = '/bin/bash'
 
