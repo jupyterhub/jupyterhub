@@ -1,5 +1,6 @@
 """Tests for HTML pages"""
 
+import asyncio
 import sys
 from urllib.parse import urlencode, urlparse
 
@@ -487,6 +488,51 @@ def test_logout(app):
     login_url = public_host(app) + app.tornado_settings['login_url']
     assert r.url == login_url
     assert r.cookies == {}
+
+
+@pytest.mark.parametrize('shutdown_on_logout', [True, False])
+@pytest.mark.gen_test
+async def test_shutdown_on_logout(app, shutdown_on_logout):
+    name = 'shutitdown'
+    cookies = await app.login_user(name)
+    user = app.users[name]
+
+    # start the user's server
+    await user.spawn()
+    spawner = user.spawner
+
+    # wait for any pending state to resolve
+    for i in range(50):
+        if not spawner.pending:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        assert False, "Spawner still pending"
+    assert spawner.active
+
+    # logout
+    with mock.patch.dict(app.tornado_settings, {
+        'shutdown_on_logout': shutdown_on_logout,
+    }):
+        r = await async_requests.get(
+            public_host(app) + app.tornado_settings['logout_url'],
+            cookies=cookies,
+        )
+        r.raise_for_status()
+
+    login_url = public_host(app) + app.tornado_settings['login_url']
+    assert r.url == login_url
+    assert r.cookies == {}
+
+    # wait for any pending state to resolve
+    for i in range(50):
+        if not spawner.pending:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        assert False, "Spawner still pending"
+
+    assert spawner.ready == (not shutdown_on_logout)
 
 
 @pytest.mark.gen_test
