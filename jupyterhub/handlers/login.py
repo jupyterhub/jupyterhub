@@ -3,8 +3,9 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
+
 from tornado.escape import url_escape
-from tornado import gen
 from tornado.httputil import url_concat
 from tornado import web
 
@@ -12,21 +13,31 @@ from .base import BaseHandler
 from ..utils import maybe_future
 
 
-
 class LogoutHandler(BaseHandler):
+    """Log a user out by clearing their login cookie."""
 
     @property
     def shutdown_on_logout(self):
         return self.settings.get('shutdown_on_logout', False)
 
-    """Log a user out by clearing their login cookie."""
     async def get(self):
         user = self.current_user
         if user:
             if self.shutdown_on_logout:
-                self.log.info("Shutting down all %s's servers", user.name)
-                for name, spawner in user.spawners.items():
-                    await maybe_future(spawner.stop())
+                active_servers = [
+                    name
+                    for (name, spawner) in user.spawners.items()
+                    if spawner.active and not spawner.pending
+                ]
+                if active_servers:
+                    self.log.info("Shutting down %s's servers", user.name)
+                    futures = []
+                    for server_name in active_servers:
+                        futures.append(
+                            maybe_future(self.stop_single_user(user, server_name))
+                        )
+                    await asyncio.gather(*futures)
+
             self.log.info("User logged out: %s", user.name)
             self.clear_login_cookie()
             self.statsd.incr('logout')
