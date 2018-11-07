@@ -1383,3 +1383,52 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
+
+
+class SimpleLocalProcessSpawner(LocalProcessSpawner):
+    """
+    A version of LocalProcessSpawner that doesn't require users to exist on
+    the system beforehand.
+
+    Only use this for testing.
+
+    Note: DO NOT USE THIS FOR PRODUCTION USE CASES! It is very insecure, and
+    provides absolutely no isolation between different users!
+    """
+
+    home_dir_template = Unicode(
+        '/tmp/{username}',
+        config=True,
+        help="""
+        Template to expand to set the user home.
+        {username} is expanded to the jupyterhub username.
+        """
+    )
+
+    home_dir = Unicode(help="The home directory for the user")
+    @default('home_dir')
+    def _default_home_dir(self):
+        return self.home_dir_template.format(
+            username=self.user.name,
+        )
+
+    def make_preexec_fn(self, name):
+        home = self.home_dir
+        def preexec():
+            try:
+                os.makedirs(home, 0o755, exist_ok=True)
+                os.chdir(home)
+            except Exception as e:
+                self.log.exception("Error in preexec for %s", name)
+        return preexec
+
+    def user_env(self, env):
+        env['USER'] = self.user.name
+        env['HOME'] = self.home_dir
+        env['SHELL'] = '/bin/bash'
+        return env
+
+    def move_certs(self, paths):
+        """No-op for installing certs"""
+        return paths
+

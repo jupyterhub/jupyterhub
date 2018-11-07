@@ -119,6 +119,7 @@ setup_args = dict(
         'jupyterhub.spawners': [
             'default = jupyterhub.spawner:LocalProcessSpawner',
             'localprocess = jupyterhub.spawner:LocalProcessSpawner',
+            'simple = jupyterhub.spawner:SimpleLocalProcessSpawner',
         ],
     },
     classifiers         = [
