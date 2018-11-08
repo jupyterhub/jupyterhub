@@ -1020,6 +1020,11 @@ class JupyterHub(Application):
 
     statsd = Any(allow_none=False, help="The statsd client, if any. A mock will be used if we aren't using statsd")
 
+    shutdown_on_logout = Bool(
+        False,
+        help="""Shuts down all user servers on logout"""
+    ).tag(config=True)
+
     @default('statsd')
     def _statsd(self):
         if self.statsd_host:
@@ -1849,6 +1854,7 @@ class JupyterHub(Application):
             internal_ssl_cert=self.internal_ssl_cert,
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
+            shutdown_on_logout=self.shutdown_on_logout
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
