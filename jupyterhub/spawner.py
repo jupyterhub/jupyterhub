@@ -661,6 +661,22 @@ class Spawner(LoggingConfigurable):
 
         return env
 
+    async def get_url(self):
+        """Get the URL to connect to the server
+
+        Sometimes JupyterHub may ask the Spawner for its url.
+        This can occur e.g. when JupyterHub has restarted while a server was not finished starting,
+        giving Spawners a chance to recover the URL where their server is running.
+
+        The default is to trust that JupyterHub has the right information.
+        Only override this method in Spawners that know how to
+        check the correct URL for the servers they start.
+
+        This will only be asked of Spawners that claim to be running
+        (`poll()` returns `None`).
+        """
+        return self.server.url
+
     def template_namespace(self):
         """Return the template namespace for format-string formatting.
 
