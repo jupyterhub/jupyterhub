@@ -1098,7 +1098,7 @@ class UserSpawnHandler(BaseHandler):
             # otherwise redirect users to their own server
             should_spawn = (current_user and current_user.name == user_name)
 
-        if "api" in user_path.split("/") and not user.active:
+        if "api" in user_path.split("/") and user and not user.active:
             # API request for not-running server (e.g. notebook UI left open)
             # Avoid triggering a spawn.
             self._fail_api_request(user)
