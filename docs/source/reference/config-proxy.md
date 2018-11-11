@@ -190,3 +190,24 @@ Listen 443
   </Location>
 </VirtualHost>
 ```
+
+ 
+In case of the need to run the jupyterhub under /jhub/ or other location please use the below configurations:
+- JupyterHub running locally at http://127.0.0.1:8000/jhub/ or other location
+
+httpd.conf amendments:
+```bash
+ RewriteRule /jhub/(.*) ws://127.0.0.1:8000/jhub/$1 [P,L]
+ RewriteRule /jhub/(.*) http://127.0.0.1:8000/jhub/$1 [P,L]
+ 
+ ProxyPass /jhub/ http://127.0.0.1:8000/jhub/
+ ProxyPassReverse /jhub/  http://127.0.0.1:8000/jhub/
+ ```
+ 
+jupyterhub_config.py amendments:
+ ```bash
+  --The public facing URL of the whole JupyterHub application.
+  --This is the address on which the proxy will bind. Sets protocol, ip, base_url
+  c.JupyterHub.bind_url = 'http://127.0.0.1:8000/jhub/'
+  ```
+
