@@ -99,6 +99,11 @@ class _ExpiringDict(dict):
         except KeyError:
             return default
 
+    def clear(self):
+        """Clear the cache"""
+        self.values.clear()
+        self.timestamps.clear()
+
 
 class HubAuth(SingletonConfigurable):
     """A class for authenticating with JupyterHub
