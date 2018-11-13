@@ -7,8 +7,8 @@ from concurrent.futures import ThreadPoolExecutor
 import inspect
 import pipes
 import re
-from shutil import which
 import sys
+from shutil import which
 from subprocess import Popen, PIPE, STDOUT
 import warnings
 
@@ -216,6 +216,37 @@ class Authenticator(LoggingConfigurable):
         """
     )
 
+    post_auth_hook = Any(config=True,
+        help="""
+        An optional hook function that you can implement to do some
+        bootstrapping work during authentication. For example, loading user account
+        details from an external system.
+
+        This function is called after the user has passed all authentication checks
+        and is ready to successfully authenticate.
+
+        This maybe a coroutine.
+
+        Example::
+
+            import os, pwd
+            def my_hook(authenticator, handler, authentication):
+                user_data = pwd.getpwnam(authentication['name'])
+                spawn_data = {
+                    'pw_data': user_data
+                    'gid_list': os.getgrouplist(authentication['name'], user_data.pw_gid)
+                }
+
+                if authentication['auth_data'] is None:
+                    authentication['auth_data'] = {'spawn_data': spawn_data}
+                else:
+                    authentication['auth_data']['spawn_data'] = spawn_data
+
+            c.Authenticator.post_auth_hook = my_hook
+
+        """
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         for method_name in ('check_whitelist', 'check_blacklist', 'check_group_whitelist'):
@@ -247,6 +278,22 @@ class Authenticator(LoggingConfigurable):
                 def wrapped_method(username, authentication=None, **kwargs):
                     return original_method(username, **kwargs)
                 setattr(self, method_name, wrapped_method)
+
+    def run_post_auth_hook(self, handler, authentication):
+        """
+        Run the post_auth_hook if defined
+
+        .. versionadded: 1.0
+
+        Args:
+            handler (tornado.web.RequestHandler): the current request handler
+            authentication (dict): User authentication data dictionary. Contains the
+                username ('name'), admin status ('admin'), and auth state dictionary ('auth_state').
+        Returns:
+            None
+        """
+        if self.post_auth_hook is not None:
+            return self.post_auth_hook(self, handler, authentication)
 
     def normalize_username(self, username):
         """Normalize the given username and return it
@@ -346,6 +393,8 @@ class Authenticator(LoggingConfigurable):
         if whitelist_pass:
             if authenticated['admin'] is None:
                 authenticated['admin'] = await maybe_future(self.is_admin(handler, authenticated))
+
+            self.run_post_auth_hook(handler, authenticated)
 
             return authenticated
         else:

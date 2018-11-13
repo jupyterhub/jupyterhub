@@ -453,3 +453,18 @@ def test_validate_names():
     a = auth.PAMAuthenticator(username_pattern='w.*')
     assert not a.validate_username('xander')
     assert a.validate_username('willow')
+
+
+@pytest.mark.gen_test
+def test_post_auth_hook():
+    def test_auth_hook(authenticator, handler, authentication):
+        authentication['testkey'] = 'testvalue'
+
+    a = MockPAMAuthenticator(post_auth_hook=test_auth_hook)
+
+    authorized = yield a.get_authenticated_user(None, {
+        'username': 'test_user',
+        'password': 'test_user'
+    })
+
+    assert authorized['testkey'] == 'testvalue'
