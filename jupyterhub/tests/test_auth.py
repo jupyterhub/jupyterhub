@@ -86,7 +86,7 @@ def test_pam_auth_admin_groups():
                                          admin_users={'override_admin'})
 
     # Check admin_group applies as expected
-    with mock.patch.multiple(auth,
+    with mock.patch.multiple(authenticator,
                              getgrnam=getgrnam,
                              getpwnam=getpwnam,
                              getgrouplist=getgrouplist):
@@ -95,10 +95,10 @@ def test_pam_auth_admin_groups():
             'password': 'group_admin'
         })
     assert authorized['name'] == 'group_admin'
-    assert authorized['admin'] == True
+    assert authorized['admin'] is True
 
     # Check multiple groups work, just in case.
-    with mock.patch.multiple(auth,
+    with mock.patch.multiple(authenticator,
                              getgrnam=getgrnam,
                              getpwnam=getpwnam,
                              getgrouplist=getgrouplist):
@@ -107,10 +107,10 @@ def test_pam_auth_admin_groups():
             'password': 'also_group_admin'
         })
     assert authorized['name'] == 'also_group_admin'
-    assert authorized['admin'] == True
+    assert authorized['admin'] is True
 
     # Check admin_users still applies correctly
-    with mock.patch.multiple(auth,
+    with mock.patch.multiple(authenticator,
                              getgrnam=getgrnam,
                              getpwnam=getpwnam,
                              getgrouplist=getgrouplist):
@@ -119,10 +119,10 @@ def test_pam_auth_admin_groups():
             'password': 'override_admin'
         })
     assert authorized['name'] == 'override_admin'
-    assert authorized['admin'] == True
+    assert authorized['admin'] is True
 
     # Check it doesn't admin everyone
-    with mock.patch.multiple(auth,
+    with mock.patch.multiple(authenticator,
                              getgrnam=getgrnam,
                              getpwnam=getpwnam,
                              getgrouplist=getgrouplist):
@@ -131,7 +131,7 @@ def test_pam_auth_admin_groups():
             'password': 'non_admin'
         })
     assert authorized['name'] == 'non_admin'
-    assert authorized['admin'] == False
+    assert authorized['admin'] is False
 
 
 @pytest.mark.gen_test
@@ -163,14 +163,14 @@ def test_pam_auth_group_whitelist():
 
     authenticator = MockPAMAuthenticator(group_whitelist={'group'})
 
-    with mock.patch.object(auth, 'getgrnam', getgrnam):
+    with mock.patch.object(authenticator, 'getgrnam', getgrnam):
         authorized = yield authenticator.get_authenticated_user(None, {
             'username': 'kaylee',
             'password': 'kaylee',
         })
     assert authorized['name'] == 'kaylee'
 
-    with mock.patch.object(auth, 'getgrnam', getgrnam):
+    with mock.patch.object(authenticator, 'getgrnam', getgrnam):
         authorized = yield authenticator.get_authenticated_user(None, {
             'username': 'mal',
             'password': 'mal',
