@@ -601,9 +601,8 @@ class LocalAuthenticator(Authenticator):
     @staticmethod
     def system_user_exists(user):
         """Check if the user exists on the system"""
-        import pwd
         try:
-            pwd.getpwnam(user.name)
+            getpwnam(user.name)
         except KeyError:
             return False
         else:
