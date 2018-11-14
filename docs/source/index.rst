@@ -115,6 +115,7 @@ helps keep our community welcoming to as many people as possible.
    contributing/setup
    contributing/docs
    contributing/tests
+   contributing/roadmap
 
 Upgrading JupyterHub
 --------------------

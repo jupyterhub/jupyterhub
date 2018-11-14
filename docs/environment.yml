@@ -21,3 +21,4 @@ dependencies:
   - prometheus_client
   - attrs>=17.4.0
   - sphinx-copybutton
+  - alabaster_jupyterhub
