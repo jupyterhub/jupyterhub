@@ -170,6 +170,10 @@ def test_hub_authenticated(request):
         assert r.status_code == 302
         assert auth.login_url in r.headers['Location']
 
+        # clear the cache because we are going to request
+        # the same url again with a different result
+        auth.cache.clear()
+
         # upstream 403
         m.get(bad_url, status_code=403)
         r = requests.get('http://127.0.0.1:%i' % port,

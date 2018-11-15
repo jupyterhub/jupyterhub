@@ -99,6 +99,11 @@ class _ExpiringDict(dict):
         except KeyError:
             return default
 
+    def clear(self):
+        """Clear the cache"""
+        self.values.clear()
+        self.timestamps.clear()
+
 
 class HubAuth(SingletonConfigurable):
     """A class for authenticating with JupyterHub
@@ -277,11 +282,10 @@ class HubAuth(SingletonConfigurable):
             if cache_key is None:
                 raise ValueError("cache_key is required when using cache")
             # check for a cached reply, so we don't check with the Hub if we don't have to
-            cached = self.cache.get(cache_key)
-            if cached is not None:
-                return cached
-            else:
-                app_log.debug("Cache miss: %s" % cache_key)
+            try:
+                return self.cache[cache_key]
+            except KeyError:
+                app_log.debug("HubAuth cache miss: %s", cache_key)
 
         data = self._api_request('GET', url, allow_404=True)
         if data is None:
