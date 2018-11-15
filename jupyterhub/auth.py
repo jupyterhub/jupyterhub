@@ -547,7 +547,7 @@ class LocalAuthenticator(Authenticator):
             return False
         for grnam in self.group_whitelist:
             try:
-                group = self.getgrnam(grnam)
+                group = self._getgrnam(grnam)
             except KeyError:
                 self.log.error('No such group: [%s]' % grnam)
                 continue
@@ -575,7 +575,7 @@ class LocalAuthenticator(Authenticator):
         await maybe_future(super().add_user(user))
 
     @staticmethod
-    def getgrnam(name):
+    def _getgrnam(name):
         """Wrapper function to protect against `grp` not being available
         on Windows
         """
@@ -583,7 +583,7 @@ class LocalAuthenticator(Authenticator):
         return grp.getgrnam(name)
 
     @staticmethod
-    def getpwnam(name):
+    def _getpwnam(name):
         """Wrapper function to protect against `pwd` not being available
         on Windows
         """
@@ -591,8 +591,8 @@ class LocalAuthenticator(Authenticator):
         return pwd.getpwnam(name)
 
     @staticmethod
-    def getgrouplist(name, group):
-        """Wrapper function to protect against `os.getgrouplist` not being available
+    def _getgrouplist(name, group):
+        """Wrapper function to protect against `os._getgrouplist` not being available
         on Windows
         """
         import os
@@ -601,7 +601,7 @@ class LocalAuthenticator(Authenticator):
     def system_user_exists(self, user):
         """Check if the user exists on the system"""
         try:
-            self.getpwnam(user.name)
+            self._getpwnam(user.name)
         except KeyError:
             return False
         else:
@@ -702,8 +702,8 @@ class PAMAuthenticator(LocalAuthenticator):
                 # fail to authenticate and raise instead of soft-failing and not changing admin status
                 # (returning None instead of just the username) as this indicates some sort of system failure
 
-                admin_group_gids = {self.getgrnam(x).gr_gid for x in self.admin_groups}
-                user_group_gids  = {x.gr_gid for x in self.getgrouplist(username, self.getpwnam(username).pw_gid)}
+                admin_group_gids = {self._getgrnam(x).gr_gid for x in self.admin_groups}
+                user_group_gids  = {x.gr_gid for x in self._getgrouplist(username, self._getpwnam(username).pw_gid)}
                 admin_status = len(admin_group_gids & user_group_gids) != 0
 
             except Exception as e:
