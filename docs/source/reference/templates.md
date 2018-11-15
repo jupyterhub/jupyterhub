@@ -25,19 +25,19 @@ supplement the material in the block.  The
 make extensive use of blocks, which allows you to customize parts of the
 interface easily.
 
-In general, a child template can extend a base template, `base.html`, by beginning with:
+In general, a child template can extend a base template, `page.html`, by beginning with:
 
 ```html
-{% extends "base.html" %}
+{% extends "page.html" %}
 ```
 
 This works, unless you are trying to extend the default template for the same
 file name.  Starting in version 0.9, you may refer to the base file with a
-`templates/` prefix.  Thus, if you are writing a custom `base.html`, start the
+`templates/` prefix.  Thus, if you are writing a custom `page.html`, start the
 file with this block:
 
 ```html
-{% extends "templates/base.html" %}
+{% extends "templates/page.html" %}
 ```
 
 By defining `block`s with same name as in the base template, child templates
