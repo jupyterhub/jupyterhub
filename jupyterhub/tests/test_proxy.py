@@ -184,6 +184,18 @@ def test_check_routes(app,  username, disable_check_routes):
     # check that before and after state are the same
     assert before == after
 
+def test_restore_routes(app, username):
+    proxy = app.proxy
+    test_user = add_user(app.db, app, name=username)
+    r = yield api_request(app, 'users/%s/server' % username, method='post')
+    r.raise_for_status()
+
+    #check that all routes are added to hub
+    yield app.users.restore_routes(app.users, app._service_map)
+    routes = yield app.proxy.get_all_routes
+    p = sorted(routes)
+    assert test_user.proxy_spec in p 
+
 
 @pytest.mark.gen_test
 @pytest.mark.parametrize("routespec", [
