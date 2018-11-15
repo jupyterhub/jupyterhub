@@ -204,6 +204,9 @@ and the [`CONTRIBUTING.md`](CONTRIBUTING.md). The `CONTRIBUTING.md` file
 explains how to set up a development installation, how to run the test suite,
 and how to contribute to documentation.
 
+For a high-level view of the vision and next directions of the project, see the
+[JupyterHub community roadmap](docs/source/contributing/roadmap.md).
+
 ### A note about platform support
 
 JupyterHub is supported on Linux/Unix based systems.

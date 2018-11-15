@@ -49,6 +49,7 @@ script:
     if [[ "$TEST" == "docs" ]]; then
       pushd docs
       pip install -r requirements.txt
+      pip install alabaster_jupyterhub
       make html
       popd
     fi
