@@ -14,7 +14,6 @@ import shutil
 import signal
 import sys
 import warnings
-import pwd
 from subprocess import Popen
 from tempfile import mkdtemp
 
@@ -1051,6 +1050,7 @@ def set_user_setuid(username, chdir=True):
     home directory.
     """
     import grp
+    import pwd
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
@@ -1224,6 +1224,7 @@ class LocalProcessSpawner(Spawner):
         Stage certificates into a private home directory
         and make them readable by the user.
         """
+        import pwd
         key = paths['keyfile']
         cert = paths['certfile']
         ca = paths['cafile']
