@@ -283,7 +283,7 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("User %r not in whitelist.", username)
             return
 
-    async def refresh_user(self, user):
+    async def refresh_user(self, user, handler=None):
         """Refresh auth data for a given user
 
         Allows refreshing or invalidating auth data.
@@ -295,6 +295,7 @@ class Authenticator(LoggingConfigurable):
 
         Args:
             user (User): the user to refresh
+            handler (tornado.web.RequestHandler or None): the current request handler
         Returns:
             auth_data (bool or dict):
                 Return **True** if auth data for the user is up-to-date

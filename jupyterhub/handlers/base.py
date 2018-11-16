@@ -262,7 +262,7 @@ class BaseHandler(RequestHandler):
         self._refreshed_users.add(user.name)
 
         self.log.debug("Refreshing auth for %s", user.name)
-        auth_info = await self.authenticator.refresh_user(user)
+        auth_info = await self.authenticator.refresh_user(user, self)
 
         if not auth_info:
             self.log.warning(
