@@ -89,7 +89,6 @@ with open('README.md', encoding="utf8") as f:
 
 setup_args = dict(
     name                = 'jupyterhub',
-    scripts             = glob(pjoin('scripts', '*')),
     packages            = packages,
                         # dummy, so that install_data doesn't get skipped
                         # this will be overridden when bower is run anyway
@@ -121,6 +120,10 @@ setup_args = dict(
             'localprocess = jupyterhub.spawner:LocalProcessSpawner',
             'simple = jupyterhub.spawner:SimpleLocalProcessSpawner',
         ],
+        'console_scripts': [
+            'jupyterhub = jupyterhub.app:main',
+            'jupyterhub-singleuser = jupyterhub.singleuser:main',
+        ]
     },
     classifiers         = [
         'Intended Audience :: Developers',
