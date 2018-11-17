@@ -459,6 +459,7 @@ def test_validate_names():
 def test_post_auth_hook():
     def test_auth_hook(authenticator, handler, authentication):
         authentication['testkey'] = 'testvalue'
+        return authentication
 
     a = MockPAMAuthenticator(post_auth_hook=test_auth_hook)
 

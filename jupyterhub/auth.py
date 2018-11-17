@@ -223,7 +223,8 @@ class Authenticator(LoggingConfigurable):
         details from an external system.
 
         This function is called after the user has passed all authentication checks
-        and is ready to successfully authenticate.
+        and is ready to successfully authenticate. This function must return the
+        authentication dict reguardless of changes to it.
 
         This maybe a coroutine.
 
@@ -236,12 +237,12 @@ class Authenticator(LoggingConfigurable):
                     'pw_data': user_data
                     'gid_list': os.getgrouplist(authentication['name'], user_data.pw_gid)
                 }
-
-                if authentication['auth_data'] is None:
-                    authentication['auth_data'] = {'spawn_data': spawn_data}
+                if authentication['auth_state'] is None:
+                    authentication['auth_state'] = {'spawn_data': spawn_data}
                 else:
-                    authentication['auth_data']['spawn_data'] = spawn_data
+                    authentication['auth_state']['spawn_data'] = spawn_data
 
+                return authentication
             c.Authenticator.post_auth_hook = my_hook
 
         """
@@ -290,10 +291,14 @@ class Authenticator(LoggingConfigurable):
             authentication (dict): User authentication data dictionary. Contains the
                 username ('name'), admin status ('admin'), and auth state dictionary ('auth_state').
         Returns:
-            None
+            Authentication (dict):
+                The hook must always return the authentication dict
         """
         if self.post_auth_hook is not None:
             return self.post_auth_hook(self, handler, authentication)
+        else:
+            # Otherwise we return None and cause problems later
+            return authentication
 
     def normalize_username(self, username):
         """Normalize the given username and return it
@@ -394,7 +399,7 @@ class Authenticator(LoggingConfigurable):
             if authenticated['admin'] is None:
                 authenticated['admin'] = await maybe_future(self.is_admin(handler, authenticated))
 
-            self.run_post_auth_hook(handler, authenticated)
+            authenticated = await maybe_future(self.run_post_auth_hook(handler, authenticated))
 
             return authenticated
         else:
