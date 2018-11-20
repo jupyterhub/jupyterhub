@@ -1165,7 +1165,12 @@ class LocalProcessSpawner(Spawner):
 
         This function can be safely passed to `preexec_fn` of `Popen`
         """
-        return set_user_setuid(name)
+        fn = set_user_setuid(name)
+        def preexec_fn():
+            self.authenticator.pre_exec_fn(self.user, self)
+            fn()
+
+        return preexec_fn
 
     def load_state(self, state):
         """Restore state about spawned single-user server after a hub restart.

@@ -356,6 +356,9 @@ class Authenticator(LoggingConfigurable):
                 persisted; and `admin`, the admin setting value for the user.
         """
 
+    def pre_exec_fn(self, user, spawner):
+        """Hook called before exec is called in the spawned child process """
+
     def pre_spawn_start(self, user, spawner):
         """Hook called before spawning a user's server
 
@@ -746,8 +749,7 @@ class PAMAuthenticator(LocalAuthenticator):
         return username
 
 
-    @run_on_executor
-    def pre_spawn_start(self, user, spawner):
+    def pre_exec_fn(self, user, spawner):
         """Open PAM session for user if so configured"""
         if not self.open_sessions:
             return
@@ -755,8 +757,9 @@ class PAMAuthenticator(LocalAuthenticator):
             pamela.open_session(user.name, service=self.service, encoding=self.encoding)
         except pamela.PAMError as e:
             self.log.warning("Failed to open PAM session for %s: %s", user.name, e)
-            self.log.warning("Disabling PAM sessions from now on.")
-            self.open_sessions = False
+            # this will be ineffective in the child process
+            # self.log.warning("Disabling PAM sessions from now on.")
+            # self.open_sessions = False
 
     @run_on_executor
     def post_spawn_stop(self, user, spawner):
