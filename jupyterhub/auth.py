@@ -761,7 +761,7 @@ class PAMAuthenticator(LocalAuthenticator):
             # self.log.warning("Disabling PAM sessions from now on.")
             # self.open_sessions = False
 
-    @run_on_executor
+    #@run_on_executor
     def post_spawn_stop(self, user, spawner):
         """Close PAM session for user if we were configured to opened one"""
         if not self.open_sessions:
