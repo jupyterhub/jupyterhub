@@ -1167,7 +1167,8 @@ class LocalProcessSpawner(Spawner):
         """
         fn = set_user_setuid(name)
         def preexec_fn():
-            self.authenticator.pre_exec_fn(self.user, self)
+            if self.authenticator:
+                self.authenticator.pre_exec_fn(self.user, self)
             fn()
 
         return preexec_fn
