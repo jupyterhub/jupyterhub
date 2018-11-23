@@ -185,6 +185,15 @@ paths:
           in: path
           required: true
           type: string
+        - options:
+          description: |
+            Spawn options can be passed as a JSON body
+            when spawning via the API instead of spawn form.
+            The structure of the options
+            will depend on the Spawner's configuration.
+          in: body
+          required: false
+          type: object
       responses:
         '201':
           description: The user's notebook server has started
@@ -217,13 +226,15 @@ paths:
           in: path
           required: true
           type: string
-        - name: remove
+        - options:
           description: |
-            Whether to fully remove the server, rather than just stop it.
-            Removing a server deletes things like the state of the stopped server.
+            Spawn options can be passed as a JSON body
+            when spawning via the API instead of spawn form.
+            The structure of the options
+            will depend on the Spawner's configuration.
           in: body
           required: false
-          type: boolean
+          type: object
       responses:
         '201':
           description: The user's notebook named-server has started
@@ -242,6 +253,13 @@ paths:
           in: path
           required: true
           type: string
+        - name: remove
+          description: |
+            Whether to fully remove the server, rather than just stop it.
+            Removing a server deletes things like the state of the stopped server.
+          in: body
+          required: false
+          type: boolean
       responses:
         '204':
           description: The user's notebook named-server has stopped
