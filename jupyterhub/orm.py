@@ -18,7 +18,7 @@ from sqlalchemy import (
     Column, Integer, ForeignKey, Unicode, Boolean,
     DateTime, Enum, Table,
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declarative_base, declared_attr
 from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.orm import (
     Session,
@@ -64,12 +64,22 @@ Base = declarative_base()
 Base.log = app_log
 
 
-class Server(Base):
+class PrefixerBase(Base):
+    """ Base class for models """
+    __abstract__ = True
+    _the_prefix = 'jh_'  # TODO: Read from the config file
+
+    @declared_attr
+    def __tablename__(cls):
+        return cls._the_prefix + cls._tablename
+
+
+class Server(PrefixerBase):
     """The basic state of a server
 
     connection and cookie info
     """
-    __tablename__ = 'servers'
+    _tablename = 'servers'
     id = Column(Integer, primary_key=True)
 
     proto = Column(Unicode(15), default='http')
@@ -89,9 +99,9 @@ user_group_map = Table('user_group_map', Base.metadata,
 )
 
 
-class Group(Base):
+class Group(PrefixerBase):
     """User Groups"""
-    __tablename__ = 'groups'
+    _tablename = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
     users = relationship('User', secondary='user_group_map', backref='groups')
@@ -109,7 +119,7 @@ class Group(Base):
         return db.query(cls).filter(cls.name == name).first()
 
 
-class User(Base):
+class User(PrefixerBase):
     """The User table
 
     Each user can have one or more single user notebook servers.
@@ -131,7 +141,7 @@ class User(Base):
     `servers` is a list that contains a reference for each of the user's single user notebook servers.
     The method `server` returns the first entry in the user's `servers` list.
     """
-    __tablename__ = 'users'
+    _tablename = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
@@ -193,9 +203,10 @@ class User(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
-class Spawner(Base):
+
+class Spawner(PrefixerBase):
     """"State about a Spawner"""
-    __tablename__ = 'spawners'
+    _tablename = 'spawners'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
@@ -219,7 +230,8 @@ class Spawner(Base):
     def orm_spawner(self):
         return self
 
-class Service(Base):
+
+class Service(PrefixerBase):
     """A service run with JupyterHub
 
     A service is similar to a User without a Spawner.
@@ -236,7 +248,7 @@ class Service(Base):
     - pid: the process id (if managed)
 
     """
-    __tablename__ = 'services'
+    _tablename = 'services'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     # common user interface:
@@ -345,7 +357,7 @@ class Hashed(object):
 
 class APIToken(Hashed, Base):
     """An API token"""
-    __tablename__ = 'api_tokens'
+    _tablename = 'api_tokens'
 
     user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
     service_id = Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
@@ -467,7 +479,7 @@ class GrantType(enum.Enum):
 
 
 class OAuthAccessToken(Hashed, Base):
-    __tablename__ = 'oauth_access_tokens'
+    _tablename = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
     @property
@@ -515,8 +527,8 @@ class OAuthAccessToken(Hashed, Base):
         return orm_token
 
 
-class OAuthCode(Base):
-    __tablename__ = 'oauth_codes'
+class OAuthCode(PrefixerBase):
+    _tablename = 'oauth_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
     client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
     code = Column(Unicode(36))
@@ -527,8 +539,8 @@ class OAuthCode(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
 
-class OAuthClient(Base):
-    __tablename__ = 'oauth_clients'
+class OAuthClient(PrefixerBase):
+    _tablename = 'oauth_clients'
     id = Column(Integer, primary_key=True, autoincrement=True)
     identifier = Column(Unicode(255), unique=True)
     description = Column(Unicode(1023))
@@ -550,7 +562,9 @@ class OAuthClient(Base):
         cascade='all, delete-orphan',
     )
 
+
 # General database utilities
+
 
 class DatabaseSchemaMismatch(Exception):
     """Exception raised when the database schema version does not match
