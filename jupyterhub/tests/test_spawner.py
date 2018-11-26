@@ -6,7 +6,7 @@
 import logging
 import os
 import signal
-from subprocess import Popen
+from subprocess import Popen, run, PIPE
 import sys
 import tempfile
 import time
@@ -219,19 +219,12 @@ def test_string_formatting(db):
 
 @pytest.mark.gen_test
 def test_popen_kwargs(db):
-    mock_proc = mock.Mock(spec=Popen)
-    def mock_popen(*args, **kwargs):
-        mock_proc.args = args
-        mock_proc.kwargs = kwargs
-        mock_proc.pid = 5
-        return mock_proc
-
-    s = new_spawner(db, popen_kwargs={'shell': True}, cmd='jupyterhub-singleuser')
-    with mock.patch.object(spawnermod, 'Popen', mock_popen):
-        yield s.start()
-
-    assert mock_proc.kwargs['shell'] == True
-    assert mock_proc.args[0][:1] == (['jupyterhub-singleuser'])
+    s = new_spawner(db, popen_kwargs={'shell': True}, cmd='sleep 5; echo testing popen_kwargs')
+    yield s.start()
+    
+    # test kwargs by checking a shell was invoked in the command instead of just a sleep command 
+    ps_proc = run(['ps', '-o', 'cmd=', str(s.pid)], check=True, stdout=PIPE, universal_newlines=True)
+    assert ps_proc.stdout.startswith('/bin/sh -c sleep 5; echo testing popen_kwargs')
 
 
 @pytest.mark.gen_test
