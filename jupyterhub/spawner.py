@@ -8,7 +8,9 @@ Contains base Spawner class & default implementation
 import asyncio
 import errno
 import json
+import multiprocessing
 import os
+import queue
 import pipes
 import shutil
 import signal
@@ -1146,13 +1148,22 @@ class LocalProcessSpawner(Spawner):
         """
     ).tag(config=True)
 
+
     proc = Instance(Popen,
         allow_none=True,
         help="""
         The process representing the single-user server process spawned for current user.
-
         Is None if no process has been spawned yet.
         """)
+
+    # because the child process is run by an intermediate process we
+    # need a mechanism to communicate from the intermediate process
+    # back to the new main process. We use multiprocessing.Queue for this.
+    # If the process has finished it is set to the return exit code of the
+    # state
+    proc_state = None
+
+
     pid = Integer(0,
         help="""
         The process id (pid) of the single-user server process spawned for current user.
@@ -1165,13 +1176,7 @@ class LocalProcessSpawner(Spawner):
 
         This function can be safely passed to `preexec_fn` of `Popen`
         """
-        fn = set_user_setuid(name)
-        def preexec_fn():
-            if self.authenticator:
-                self.authenticator.pre_exec_fn(self.user, self)
-            fn()
-
-        return preexec_fn
+        return set_user_setuid(name)
 
     def load_state(self, state):
         """Restore state about spawned single-user server after a hub restart.
@@ -1260,6 +1265,36 @@ class LocalProcessSpawner(Spawner):
 
         return {"keyfile": key, "certfile": cert, "cafile": ca}
 
+    # intended to be run as intermediate process that
+    # calls self.authenticator.pre_exec_fn/post_exec_fn()
+    # after before and after starting the child process
+    # needed by PAMAuthenticator to handle PAM_sessions
+    def start_monitor_process(self, q, cmd, popen_kwargs):
+        if self.authenticator:
+                self.authenticator.pre_exec_fn(self.user, self)
+        try:
+            proc = Popen(cmd, **popen_kwargs)
+            q.put(proc.pid)
+
+            # Queue is finished from this side
+            q.put(proc.wait())
+        except PermissionError as e:
+            # use which to get abspath
+            script = shutil.which(cmd[0]) or cmd[0]
+            self.log.error("Permission denied trying to run %r. Does %s have access to this file?",
+                script, self.user.name,
+            )
+            q.put(e)
+            raise e
+        except Exception as e:
+            # passes exception back to parent
+            q.put(e)
+            raise e
+        finally:
+            if self.authenticator:
+                self.authenticator.post_exec_fn(self.user, self)
+
+
     async def start(self):
         """Start the single-user server."""
         self.port = random_port()
@@ -1283,17 +1318,21 @@ class LocalProcessSpawner(Spawner):
         popen_kwargs.update(self.popen_kwargs)
         # don't let user config override env
         popen_kwargs['env'] = env
-        try:
-            self.proc = Popen(cmd, **popen_kwargs)
-        except PermissionError:
-            # use which to get abspath
-            script = shutil.which(cmd[0]) or cmd[0]
-            self.log.error("Permission denied trying to run %r. Does %s have access to this file?",
-                script, self.user.name,
-            )
-            raise
 
-        self.pid = self.proc.pid
+        # start intermidiate process to do startup and cleanup task before and after jupyterhub cmd
+        # executes (needed by PAMAuthenticator for proper PAM sessions)
+        proc_state = multiprocessing.Queue(1)
+        m_proc = multiprocessing.Process(target=self.start_monitor_process, args=(proc_state, cmd, popen_kwargs), daemon=False)
+        m_proc.start()
+
+        # receive the Popen object from the child process
+        pid_or_err = proc_state.get()
+        if isinstance(pid_or_err, int):
+            self.pid = pid_or_err
+        else:
+            raise pid_or_err
+
+        self.proc_state = proc_state
 
         if self.__class__ is not LocalProcessSpawner:
             # subclasses may not pass through return value of super().start,
@@ -1314,12 +1353,18 @@ class LocalProcessSpawner(Spawner):
         we return the exit code of the process if we have access to it, or 0 otherwise.
         """
         # if we started the process, poll with Popen
-        if self.proc is not None:
-            status = self.proc.poll()
-            if status is not None:
-                # clear state if the process is done
+        print('POOL CALLED', self.proc_state, self.pid, file=sys.stderr)
+        if isinstance(self.proc_state, multiprocessing.queues.Queue):
+            try:
+                status = self.proc_state.get(False)
+                print('PROCESS HAS FINISHED (POLL) with code', status, file=sys.stderr)
+                self.proc_state = status
                 self.clear_state()
-            return status
+                return status
+            except queue.Empty:
+                return None
+        elif self.proc_state is not None:
+            return self.proc_state
 
         # if we resumed from stored state,
         # we don't have the Popen handle anymore, so rely on self.pid
