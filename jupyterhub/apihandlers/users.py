@@ -242,7 +242,7 @@ class UserTokenListAPIHandler(APIHandler):
             # defer to Authenticator for identifying the user
             # can be username+password or an upstream auth token
             try:
-                name = await self.authenticator.authenticate(self, body.get('auth'))
+                name = await self.authenticate(body.get('auth'))
                 if isinstance(name, dict):
                     # not a simple string so it has to be a dict
                     name = name.get('name')
