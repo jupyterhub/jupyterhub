@@ -24,7 +24,7 @@ from ..user import User
 from ..utils import new_token, url_path_join
 from .mocking import public_url
 from .test_api import add_user
-from .utils import async_requests
+from .utils import async_requests, check_if_alive
 
 _echo_sleep = """
 import sys, time
@@ -153,7 +153,7 @@ def test_spawner_poll(db):
     first_spawner = new_spawner(db)
     user = first_spawner.user
     yield first_spawner.start()
-    proc = first_spawner.proc
+    pid = first_spawner.pid
     status = yield first_spawner.poll()
     assert status is None
     if user.state is None:
@@ -171,13 +171,17 @@ def test_spawner_poll(db):
     assert status is None
     
     # kill the process
-    proc.terminate()
+    os.kill(pid, signal.SIGTERM)
+
     for i in range(10):
-        if proc.poll() is None:
+        if (yield first_spawner.poll()) is None:
             yield gen.sleep(1)
         else:
             break
-    assert proc.poll() is not None
+
+    # check if process is alive
+    assert (yield first_spawner.poll()) is not None
+    assert not check_if_alive(pid) 
 
     yield gen.sleep(2)
     status = yield spawner.poll()

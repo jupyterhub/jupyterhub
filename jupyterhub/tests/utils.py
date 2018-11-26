@@ -3,6 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from certipy import Certipy
 import requests
+import os
 
 
 class _AsyncRequests:
@@ -42,3 +43,14 @@ def ssl_setup(cert_dir, authority_name):
         "external", authority_name, overwrite=True, alt_names=alt_names
     )
     return external_certs
+
+# uses os kill signal 0 to check if process is alive
+def check_if_alive(pid):
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+

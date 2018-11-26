@@ -1353,7 +1353,6 @@ class LocalProcessSpawner(Spawner):
         we return the exit code of the process if we have access to it, or 0 otherwise.
         """
         # if we started the process, poll with Popen
-        print('POOL CALLED', self.proc_state, self.pid, file=sys.stderr)
         if isinstance(self.proc_state, multiprocessing.queues.Queue):
             try:
                 status = self.proc_state.get(False)

@@ -4,6 +4,7 @@ import binascii
 import os
 import re
 import sys
+import time
 from subprocess import check_output, Popen, PIPE
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
@@ -14,6 +15,7 @@ from traitlets.config import Config
 
 from .mocking import MockHub
 from .test_api import add_user
+from .utils import check_if_alive
 from .. import orm
 from ..app import COOKIE_SECRET_BYTES, JupyterHub
 
@@ -217,15 +219,17 @@ def test_resume_spawners(tmpdir, request):
     name = 'kurt'
     user = add_user(db, app, name=name)
     yield user.spawn()
-    proc = user.spawner.proc
-    assert proc is not None
+    pid = user.spawner.pid
+    assert check_if_alive(pid) == True
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
     yield app.stop()
 
     # proc is still running
-    assert proc.poll() is None
+    assert (yield user.spawner.poll()) is None
+    # if the process exists this will not error
+    os.kill(pid, 0)
 
     # resume Hub, should still be running
     app = yield new_hub()
@@ -239,9 +243,17 @@ def test_resume_spawners(tmpdir, request):
     yield app.stop()
 
     # stop the server while the Hub is down. BAMF!
-    proc.terminate()
-    proc.wait(timeout=10)
-    assert proc.poll() is not None
+    yield user.spawner.stop(now=True)
+
+    # wait for child process to exit
+    wait = 0
+    while check_if_alive(pid):
+        time.sleep(1)
+        wait += 1
+        assert wait < 15 # process never termintated
+
+    # assert process has completed
+    assert (yield user.spawner.poll()) is not None
 
     # resume Hub, should be stopped
     app = yield new_hub()
@@ -256,8 +268,7 @@ def test_resume_spawners(tmpdir, request):
     'hub_config, expected',
     [
         (
-            {'ip': '0.0.0.0'},
-            {'bind_url': 'http://0.0.0.0:8000/'},
+            {'ip': '0.0.0.0'}, {'bind_url': 'http://0.0.0.0:8000/'},
         ),
         (
             {'port': 123, 'base_url': '/prefix'},
