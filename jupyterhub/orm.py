@@ -46,7 +46,7 @@ class JSONDict(TypeDecorator):
 
     """
 
-    impl = types.LargeBinary
+    impl = LargeBinary
 
     def process_bind_param(self, value, dialect):
         if value is not None:
