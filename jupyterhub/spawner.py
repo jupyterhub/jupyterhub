@@ -8,7 +8,6 @@ Contains base Spawner class & default implementation
 import asyncio
 import errno
 import json
-import multiprocessing
 import os
 import queue
 import pipes
@@ -21,6 +20,12 @@ from tempfile import mkdtemp
 
 # FIXME: remove when we drop Python 3.5 support
 from async_generator import async_generator, yield_
+
+from multiprocessing import Process, Queue
+# this is required because multiprocessing.Queue is not a class
+# but a bounded method for a class constructor or something like
+# that
+from multiprocessing.queues import Queue as Queue_class
 
 from sqlalchemy import inspect
 
@@ -1149,12 +1154,12 @@ class LocalProcessSpawner(Spawner):
     ).tag(config=True)
 
 
-    proc = Instance(Popen,
-        allow_none=True,
-        help="""
-        The process representing the single-user server process spawned for current user.
-        Is None if no process has been spawned yet.
-        """)
+    #proc = Instance(Popen,
+    #    allow_none=True,
+    #    help="""
+    #    The process representing the single-user server process spawned for current user.
+    #    Is None if no process has been spawned yet.
+    #    """)
 
     # because the child process is run by an intermediate process we
     # need a mechanism to communicate from the intermediate process
@@ -1321,8 +1326,8 @@ class LocalProcessSpawner(Spawner):
 
         # start intermidiate process to do startup and cleanup task before and after jupyterhub cmd
         # executes (needed by PAMAuthenticator for proper PAM sessions)
-        proc_state = multiprocessing.Queue(1)
-        m_proc = multiprocessing.Process(target=self.start_monitor_process, args=(proc_state, cmd, popen_kwargs), daemon=False)
+        proc_state = Queue(1)
+        m_proc = Process(target=self.start_monitor_process, args=(proc_state, cmd, popen_kwargs), daemon=False)
         m_proc.start()
 
         # receive the Popen object from the child process
@@ -1353,7 +1358,7 @@ class LocalProcessSpawner(Spawner):
         we return the exit code of the process if we have access to it, or 0 otherwise.
         """
         # if we started the process, poll with Popen
-        if isinstance(self.proc_state, multiprocessing.queues.Queue):
+        if isinstance(self.proc_state, Queue_class):
             try:
                 status = self.proc_state.get(False)
                 print('PROCESS HAS FINISHED (POLL) with code', status, file=sys.stderr)
