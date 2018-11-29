@@ -531,7 +531,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
             try:
-                await self.stop(spawner.server_name)
+                await self.stop(spawner.name)
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
@@ -587,7 +587,7 @@ class User:
                 ))
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
-                await self.stop(spawner.server_name)
+                await self.stop(spawner.name)
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
