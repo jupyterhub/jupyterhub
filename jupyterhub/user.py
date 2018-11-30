@@ -531,7 +531,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
             try:
-                await self.stop()
+                await self.stop(spawner.name)
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
@@ -550,6 +550,15 @@ class User:
         spawner.orm_spawner.state = spawner.get_state()
         db.commit()
         spawner._waiting_for_response = True
+        await self._wait_up(spawner)
+
+    async def _wait_up(self, spawner):
+        """Wait for a server to finish starting.
+
+        Shuts the server down if it doesn't respond within
+        spawner.http_timeout.
+        """
+        server = spawner.server
         key = self.settings.get('internal_ssl_key')
         cert = self.settings.get('internal_ssl_cert')
         ca = self.settings.get('internal_ssl_ca')
@@ -578,7 +587,7 @@ class User:
                 ))
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
-                await self.stop()
+                await self.stop(spawner.name)
             except Exception:
                 self.log.error("Failed to cleanup {user}'s server that failed to start".format(
                     user=self.name,
@@ -594,7 +603,7 @@ class User:
         finally:
             spawner._waiting_for_response = False
             spawner._start_pending = False
-        return self
+        return spawner
 
     async def stop(self, server_name=''):
         """Stop the user's spawner
