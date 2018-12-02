@@ -153,7 +153,7 @@ class SpawnHandler(BaseHandler):
             form_options["%s_file"%key] = byte_list
         try:
             options = await maybe_future(spawner.options_from_form(form_options))
-            await self.spawn_single_user(user, options=options)
+            await self.spawn_single_user(user, server_name=server_name, options=options)
         except Exception as e:
             self.log.error("Failed to spawn single-user server with form", exc_info=True)
             form = await self._render_form(message=str(e), for_user=user, server_name=server_name)
@@ -161,7 +161,7 @@ class SpawnHandler(BaseHandler):
             return
         if current_user is user:
             self.set_login_cookie(user)
-        url = user.url
+        url = user.server_url(server_name)
 
         next_url = self.get_argument('next', '')
         if next_url and not next_url.startswith('/'):
