@@ -87,7 +87,7 @@ class SpawnHandler(BaseHandler):
         )
 
     @web.authenticated
-    async def get(self, for_user=None):
+    async def get(self, for_user=None, server_name=''):
         """GET renders form for spawning with user-specified options
 
         or triggers spawn via redirect if there is no form.
@@ -102,32 +102,35 @@ class SpawnHandler(BaseHandler):
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
         if not self.allow_named_servers and user.running:
-            url = user.url
+            url = user.server_url(server_name)
             self.log.debug("User is running: %s", url)
             self.redirect(url)
             return
-        if user.spawner.options_form:
+
+        spawner = user.spawners[server_name]
+        if spawner.options_form:
             # Add handler to spawner here so you can access query params in form rendering.
-            user.spawner.handler = self
+            spawner.handler = self
             form = await self._render_form(for_user=user)
             self.finish(form)
         else:
             # Explicit spawn request: clear _spawn_future
             # which may have been saved to prevent implicit spawns
             # after a failure.
-            if user.spawner._spawn_future and user.spawner._spawn_future.done():
-                user.spawner._spawn_future = None
+            if spawner._spawn_future and spawner._spawn_future.done():
+                spawner._spawn_future = None
             # not running, no form. Trigger spawn by redirecting to /user/:name
-            url = user.url
+            url = user.server_url(server_name)
             if self.request.query:
                 # add query params
                 url += '?' + self.request.query
             self.redirect(url)
 
     @web.authenticated
-    async def post(self, for_user=None):
+    async def post(self, for_user=None, server_name=''):
         """POST spawns with user-specified options"""
         user = current_user = self.current_user
+        spawner = user.spawners[server_name]
         if for_user is not None and for_user != user.name:
             if not user.admin:
                 raise web.HTTPError(403, "Only admins can spawn on behalf of other users")
@@ -139,9 +142,9 @@ class SpawnHandler(BaseHandler):
             self.log.warning("User is already running: %s", url)
             self.redirect(url)
             return
-        if user.spawner.pending:
+        if spawner.pending:
             raise web.HTTPError(
-                400, "%s is pending %s" % (user.spawner._log_name, user.spawner.pending)
+                400, "%s is pending %s" % (spawner._log_name, spawner.pending)
             )
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
@@ -149,7 +152,7 @@ class SpawnHandler(BaseHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file"%key] = byte_list
         try:
-            options = await maybe_future(user.spawner.options_from_form(form_options))
+            options = await maybe_future(spawner.options_from_form(form_options))
             await self.spawn_single_user(user, options=options)
         except Exception as e:
             self.log.error("Failed to spawn single-user server with form", exc_info=True)
@@ -364,6 +367,7 @@ default_handlers = [
     (r'/admin', AdminHandler),
     (r'/spawn', SpawnHandler),
     (r'/spawn/([^/]+)', SpawnHandler),
+    (r'/spawn/([^/]+)/(^[/]+)', SpawnHandler),
     (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
     (r'/health$', HealthCheckHandler),
