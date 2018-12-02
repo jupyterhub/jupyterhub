@@ -367,7 +367,7 @@ default_handlers = [
     (r'/admin', AdminHandler),
     (r'/spawn', SpawnHandler),
     (r'/spawn/([^/]+)', SpawnHandler),
-    (r'/spawn/([^/]+)/(^[/]+)', SpawnHandler),
+    (r'/spawn/([^/]+)/([^/]+)', SpawnHandler),
     (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
     (r'/health$', HealthCheckHandler),
