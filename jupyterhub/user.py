@@ -136,6 +136,7 @@ class User:
     orm_user = None
     log = app_log
     settings = None
+    auth_refreshed = None
 
     def __init__(self, orm_user, settings=None, db=None):
         self.db = db or inspect(orm_user).session
@@ -395,6 +396,11 @@ class User:
         """
         db = self.db
 
+        authenticator = self.authenticator
+        if authenticator and handler and authenticator.pre_spawn_start:
+            auth_user = await handler.refresh_pre_spawn(self, force=True)
+
+
         base_url = url_path_join(self.base_url, server_name) + '/'
 
         orm_server = orm.Server(
@@ -435,7 +441,6 @@ class User:
         db.commit()
 
         # trigger pre-spawn hook on authenticator
-        authenticator = self.authenticator
         if (authenticator):
             await maybe_future(authenticator.pre_spawn_start(self, spawner))
 

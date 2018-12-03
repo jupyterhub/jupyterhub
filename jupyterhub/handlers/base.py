@@ -250,8 +250,14 @@ class BaseHandler(RequestHandler):
             user (User): the user having been refreshed,
                 or None if the user must login again to refresh auth info.
         """
-        if not force: # TODO: and it's sufficiently recent
+        refresh_age = self.settings.get('auth_refresh_age', 0)
+        if not refresh_age:
             return user
+        now = time.monotonic()
+        if not force and user._auth_refreshed and (now - user._auth_refreshed < refresh_age):
+            # auth up-to-date
+            return user
+        user._auth_refreshed = now
 
         # refresh a user at most once per request
         if not hasattr(self, '_refreshed_users'):
@@ -639,6 +645,11 @@ class BaseHandler(RequestHandler):
 
     async def spawn_single_user(self, user, server_name='', options=None):
         # in case of error, include 'try again from /hub/home' message
+        if self.authenticator.refresh_pre_spawn:
+            auth_user = await self.refresh_user(user, force=True)
+            if auth_user is None:
+                raise web.HTTPError(403, "auth has expired for %s, login again", auth_user.name)
+
         spawn_start_time = time.perf_counter()
         self.extra_error_html = self.spawn_home_error
 

@@ -19,7 +19,7 @@ except Exception as e:
 from tornado.concurrent import run_on_executor
 
 from traitlets.config import LoggingConfigurable
-from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
+from traitlets import Bool, Integer, Set, Unicode, Dict, Any, default, observe
 
 from .handlers.login import LoginHandler
 from .utils import maybe_future, url_path_join
@@ -48,6 +48,35 @@ class Authenticator(LoggingConfigurable):
 
         New in JupyterHub 0.8
         """,
+    )
+
+    auth_refresh_age = Integer(
+        300,
+        config=True,
+        help="""The max age (in seconds) of authentication info
+        before forcing a refresh of user auth info.
+
+        Refreshing auth info allows, e.g. requesting/re-validating auth tokens.
+
+        See :meth:`.refresh_user` for what happens when user auth info is refreshed
+        (nothing by default).
+        """
+    )
+
+    refresh_pre_spawn = Bool(
+        False,
+        config=True,
+        help="""Force refresh of auth prior to spawn.
+
+        This forces :meth:`.refresh_user` to be called prior to launching
+        a server, to ensure that auth state is up-to-date.
+
+        This can be important when e.g. auth tokens that may have expired
+        are passed to the spawner via environment variables from auth_state.
+
+        If refresh_user cannot refresh the user auth data,
+        launch will fail until the user logs in again.
+        """
     )
 
     admin_users = Set(
