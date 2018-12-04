@@ -718,7 +718,7 @@ def test_never_spawn(app, no_patience, never_spawn):
 
 
 @mark.gen_test
-def test_bad_spawn(app, no_patience, bad_spawn):
+def test_bad_spawn(app, bad_spawn):
     db = app.db
     name = 'prim'
     user = add_user(db, app=app, name=name)
@@ -835,7 +835,7 @@ def test_progress_ready(request, app):
 
 
 @mark.gen_test
-def test_progress_bad(request, app, no_patience, bad_spawn):
+def test_progress_bad(request, app, bad_spawn):
     """Test progress API when spawner has already failed"""
     db = app.db
     name = 'simon'
