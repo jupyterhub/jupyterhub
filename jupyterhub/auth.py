@@ -703,7 +703,7 @@ class PAMAuthenticator(LocalAuthenticator):
                 # (returning None instead of just the username) as this indicates some sort of system failure
 
                 admin_group_gids = {self._getgrnam(x).gr_gid for x in self.admin_groups}
-                user_group_gids  = {x.gr_gid for x in self._getgrouplist(username, self._getpwnam(username).pw_gid)}
+                user_group_gids  = set(self._getgrouplist(username, self._getpwnam(username).pw_gid))
                 admin_status = len(admin_group_gids & user_group_gids) != 0
 
             except Exception as e:
