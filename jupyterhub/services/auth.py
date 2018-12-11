@@ -852,8 +852,8 @@ class HubAuthenticated(object):
             self._hub_auth_user_cache = None
             raise
 
-        # store ?token=... tokens passed via url in a cookie for future requests
-        url_token = self.get_argument('token', '')
+        # store tokens passed via url or header in a cookie for future requests
+        url_token = self.hub_auth.get_token(self)
         if (
             user_model
             and url_token
