@@ -29,6 +29,7 @@ Fixtures to add functionality or spawning behavior
 
 import asyncio
 from getpass import getuser
+import inspect
 import logging
 import os
 import sys
@@ -53,6 +54,16 @@ import jupyterhub.services.service
 
 # global db session object
 _db = None
+
+
+def pytest_collection_modifyitems(items):
+    """add asyncio marker to all async tests"""
+    for item in items:
+        if inspect.iscoroutinefunction(item.obj):
+            item.add_marker('asyncio')
+        if hasattr(inspect, 'isasyncgenfunction'):
+            # double-check that we aren't mixing yield and async def
+            assert not inspect.isasyncgenfunction(item.obj)
 
 
 @fixture(scope='module')
@@ -126,15 +137,21 @@ def db():
 
 
 @fixture(scope='module')
-def io_loop(request):
+def event_loop(request):
+    """Same as pytest-asyncio.event_loop, but re-scoped to module-level"""
+    event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(event_loop)
+    return event_loop
+
+
+@fixture(scope='module')
+def io_loop(event_loop, request):
     """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
     ioloop.IOLoop.configure(AsyncIOMainLoop)
-    aio_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(aio_loop)
-    io_loop = ioloop.IOLoop()
+    io_loop = AsyncIOMainLoop()
     io_loop.make_current()
-    assert asyncio.get_event_loop() is aio_loop
-    assert io_loop.asyncio_loop is aio_loop
+    assert asyncio.get_event_loop() is event_loop
+    assert io_loop.asyncio_loop is event_loop
 
     def _close():
         io_loop.clear_current()
