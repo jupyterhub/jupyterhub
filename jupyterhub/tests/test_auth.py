@@ -67,10 +67,10 @@ def test_pam_auth_admin_groups():
     system_users = [group_admin, also_group_admin, override_admin, non_admin]
 
     user_group_map = {
-        'group_admin': [jh_users, jh_admins],
-        'also_group_admin': [jh_users, wheel],
-        'override_admin': [jh_users],
-        'non_admin': [jh_users]
+        'group_admin': [jh_users.gr_gid, jh_admins.gr_gid],
+        'also_group_admin': [jh_users.gr_gid, wheel.gr_gid],
+        'override_admin': [jh_users.gr_gid],
+        'non_admin': [jh_users.gr_gid]
     }
 
     def getgrnam(name):
