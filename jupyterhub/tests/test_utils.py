@@ -26,7 +26,6 @@ def schedule_future(io_loop, *, delay, result=None):
     return f
 
 
-@pytest.mark.gen_test
 @pytest.mark.parametrize("deadline, n, delay, expected", [
     (0, 3, 1, []),
     (0, 3, 0, [0, 1, 2]),
@@ -43,7 +42,6 @@ async def test_iterate_until(io_loop, deadline, n, delay, expected):
     assert yielded == expected
 
 
-@pytest.mark.gen_test
 async def test_iterate_until_ready_after_deadline(io_loop):
     f = schedule_future(io_loop, delay=0)
 

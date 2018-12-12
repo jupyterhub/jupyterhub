@@ -39,39 +39,36 @@ def wait_for_spawner(spawner, timeout=10):
     yield wait()
 
 
-@pytest.mark.gen_test
-def test_connection_hub_wrong_certs(app):
+async def test_connection_hub_wrong_certs(app):
     """Connecting to the internal hub url fails without correct certs"""
     with pytest.raises(SSLError):
         kwargs = {'verify': False}
-        r = yield async_requests.get(app.hub.url, **kwargs)
+        r = await async_requests.get(app.hub.url, **kwargs)
         r.raise_for_status()
 
 
-@pytest.mark.gen_test
-def test_connection_proxy_api_wrong_certs(app):
+async def test_connection_proxy_api_wrong_certs(app):
     """Connecting to the proxy api fails without correct certs"""
     with pytest.raises(SSLError):
         kwargs = {'verify': False}
-        r = yield async_requests.get(app.proxy.api_url, **kwargs)
+        r = await async_requests.get(app.proxy.api_url, **kwargs)
         r.raise_for_status()
 
 
-@pytest.mark.gen_test
-def test_connection_notebook_wrong_certs(app):
+async def test_connection_notebook_wrong_certs(app):
     """Connecting to a notebook fails without correct certs"""
     with mock.patch.dict(
             app.config.LocalProcessSpawner,
             {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']}
         ):
         user = add_user(app.db, app, name='foo')
-        yield user.spawn()
-        yield wait_for_spawner(user.spawner)
+        await user.spawn()
+        await wait_for_spawner(user.spawner)
         spawner = user.spawner
-        status = yield spawner.poll()
+        status = await spawner.poll()
         assert status is None
 
         with pytest.raises(SSLError):
             kwargs = {'verify': False}
-            r = yield async_requests.get(spawner.server.url, **kwargs)
+            r = await async_requests.get(spawner.server.url, **kwargs)
             r.raise_for_status()
