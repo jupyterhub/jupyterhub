@@ -9,7 +9,7 @@ import sys
 from threading import Event
 import time
 
-from async_generator import asynccontextmanager
+from async_generator import asynccontextmanager, async_generator, yield_
 import pytest
 import requests
 from tornado import gen
@@ -25,6 +25,7 @@ mockservice_cmd = [sys.executable, mockservice_py]
 
 
 @asynccontextmanager
+@async_generator
 async def external_service(app, name='mockservice'):
     env = {
         'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
@@ -35,7 +36,7 @@ async def external_service(app, name='mockservice'):
     proc = Popen(mockservice_cmd, env=env)
     try:
         await wait_for_http_server(env['JUPYTERHUB_SERVICE_URL'])
-        yield env
+        await yield_(env)
     finally:
         proc.terminate()
 
