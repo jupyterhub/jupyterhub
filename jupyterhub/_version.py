@@ -17,7 +17,7 @@ version_info = (
 # 0.1.0b1.dev
 # 0.1.0.dev
 
-__version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:])
+__version__ = '.'.join([str(i) for i in version_info if i != ''])
 
 
 def _check_version(hub_version, singleuser_version, log):
