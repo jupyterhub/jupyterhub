@@ -13,11 +13,15 @@ class _AsyncRequests:
 
     def __init__(self):
         self.executor = ThreadPoolExecutor(1)
+        real_submit = self.executor.submit
+        self.executor.submit = lambda *args, **kwargs: asyncio.wrap_future(
+            real_submit(*args, **kwargs)
+        )
 
     def __getattr__(self, name):
         requests_method = getattr(requests, name)
-        return lambda *args, **kwargs: asyncio.wrap_future(
-            self.executor.submit(requests_method, *args, **kwargs)
+        return lambda *args, **kwargs: self.executor.submit(
+            requests_method, *args, **kwargs
         )
 
 

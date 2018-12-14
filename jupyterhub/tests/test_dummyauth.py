@@ -7,48 +7,45 @@ import pytest
 
 from jupyterhub.auth import DummyAuthenticator
 
-@pytest.mark.gen_test
-def test_dummy_auth_without_global_password():
+async def test_dummy_auth_without_global_password():
     authenticator = DummyAuthenticator()
-    authorized = yield authenticator.get_authenticated_user(None, {
+    authorized = await authenticator.get_authenticated_user(None, {
         'username': 'test_user',
         'password': 'test_pass',
     })
     assert authorized['name'] == 'test_user'
 
-    authorized = yield authenticator.get_authenticated_user(None, {
+    authorized = await authenticator.get_authenticated_user(None, {
         'username': 'test_user',
         'password': '',
     })
     assert authorized['name'] == 'test_user'
 
-@pytest.mark.gen_test
-def test_dummy_auth_without_username():
+async def test_dummy_auth_without_username():
     authenticator = DummyAuthenticator()
-    authorized = yield authenticator.get_authenticated_user(None, {
+    authorized = await authenticator.get_authenticated_user(None, {
         'username': '',
         'password': 'test_pass',
     })
     assert authorized is None
 
-@pytest.mark.gen_test
-def test_dummy_auth_with_global_password():
+async def test_dummy_auth_with_global_password():
     authenticator = DummyAuthenticator()
     authenticator.password = "test_password"
 
-    authorized = yield authenticator.get_authenticated_user(None, {
+    authorized = await authenticator.get_authenticated_user(None, {
         'username': 'test_user',
         'password': 'test_password',
     })
     assert authorized['name'] == 'test_user'
 
-    authorized = yield authenticator.get_authenticated_user(None, {
+    authorized = await authenticator.get_authenticated_user(None, {
         'username': 'test_user',
         'password': 'qwerty',
     })
     assert authorized is None
 
-    authorized = yield authenticator.get_authenticated_user(None, {
+    authorized = await authenticator.get_authenticated_user(None, {
         'username': 'some_other_user',
         'password': 'test_password',
     })
