@@ -1324,6 +1324,32 @@ async def test_token_authenticator_noauth(app):
     assert reply['name'] == name
 
 
+async def test_token_authenticator_dict_noauth(app):
+    """Create a token for a user relying on Authenticator.authenticate and no auth header"""
+    app.authenticator.auth_state = {
+        'who': 'cares',
+    }
+    name = 'user'
+    data = {
+        'auth': {
+            'username': name,
+            'password': name,
+        },
+    }
+    r = await api_request(app, 'users', name, 'tokens',
+        method='post',
+        data=json.dumps(data) if data else None,
+        noauth=True,
+    )
+    assert r.status_code == 200
+    reply = r.json()
+    assert 'token' in reply
+    r = await api_request(app, 'authorizations', 'token', reply['token'])
+    r.raise_for_status()
+    reply = r.json()
+    assert reply['name'] == name
+
+
 @mark.parametrize("as_user, for_user, status", [
     ('admin', 'other', 200),
     ('admin', 'missing', 404),
