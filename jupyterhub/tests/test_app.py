@@ -63,8 +63,7 @@ def test_generate_config():
     assert 'Authenticator.whitelist' in cfg_text
 
 
-@pytest.mark.gen_test
-def test_init_tokens(request):
+async def test_init_tokens(request):
     with TemporaryDirectory() as td:
         db_file = os.path.join(td, 'jupyterhub.sqlite')
         tokens = {
@@ -77,7 +76,7 @@ def test_init_tokens(request):
         if ssl_enabled:
             kwargs['internal_certs_location'] = td
         app = MockHub(**kwargs)
-        yield app.initialize([])
+        await app.initialize([])
         db = app.db
         for token, username in tokens.items():
             api_token = orm.APIToken.find(db, token)
@@ -87,7 +86,7 @@ def test_init_tokens(request):
 
         # simulate second startup, reloading same tokens:
         app = MockHub(**kwargs)
-        yield app.initialize([])
+        await app.initialize([])
         db = app.db
         for token, username in tokens.items():
             api_token = orm.APIToken.find(db, token)
@@ -99,7 +98,7 @@ def test_init_tokens(request):
         tokens['short'] = 'gman'
         app = MockHub(**kwargs)
         with pytest.raises(ValueError):
-            yield app.initialize([])
+            await app.initialize([])
         assert orm.User.find(app.db, 'gman') is None
 
 
@@ -169,8 +168,7 @@ def test_cookie_secret_env(tmpdir, request):
     assert not os.path.exists(hub.cookie_secret_file)
 
 
-@pytest.mark.gen_test
-def test_load_groups(tmpdir, request):
+async def test_load_groups(tmpdir, request):
     to_load = {
         'blue': ['cyclops', 'rogue', 'wolverine'],
         'gold': ['storm', 'jean-grey', 'colossus'],
@@ -181,8 +179,8 @@ def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
-    yield hub.init_users()
-    yield hub.init_groups()
+    await hub.init_users()
+    await hub.init_groups()
     db = hub.db
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
@@ -192,16 +190,15 @@ def test_load_groups(tmpdir, request):
     assert sorted([ u.name for u in gold.users ]) == sorted(to_load['gold'])
 
 
-@pytest.mark.gen_test
-def test_resume_spawners(tmpdir, request):
+async def test_resume_spawners(tmpdir, request):
     if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
         p = patch.dict(os.environ, {
             'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s' % tmpdir.join('jupyterhub.sqlite'),
         })
         p.start()
         request.addfinalizer(p.stop)
-    @gen.coroutine
-    def new_hub():
+
+    async def new_hub():
         kwargs = {}
         ssl_enabled = getattr(request.module, "ssl_enabled", False)
         if ssl_enabled:
@@ -209,26 +206,27 @@ def test_resume_spawners(tmpdir, request):
         app = MockHub(test_clean_db=False, **kwargs)
         app.config.ConfigurableHTTPProxy.should_start = False
         app.config.ConfigurableHTTPProxy.auth_token = 'unused'
-        yield app.initialize([])
+        await app.initialize([])
         return app
-    app = yield new_hub()
+
+    app = await new_hub()
     db = app.db
     # spawn a user's server
     name = 'kurt'
     user = add_user(db, app, name=name)
-    yield user.spawn()
+    await user.spawn()
     proc = user.spawner.proc
     assert proc is not None
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
-    yield app.stop()
+    app.stop()
 
     # proc is still running
     assert proc.poll() is None
 
     # resume Hub, should still be running
-    app = yield new_hub()
+    app = await new_hub()
     db = app.db
     user = app.users[name]
     assert user.running
@@ -236,7 +234,7 @@ def test_resume_spawners(tmpdir, request):
 
     # stop the Hub without cleaning up servers
     app.cleanup_servers = False
-    yield app.stop()
+    app.stop()
 
     # stop the server while the Hub is down. BAMF!
     proc.terminate()
@@ -244,7 +242,7 @@ def test_resume_spawners(tmpdir, request):
     assert proc.poll() is not None
 
     # resume Hub, should be stopped
-    app = yield new_hub()
+    app = await new_hub()
     db = app.db
     user = app.users[name]
     assert not user.running

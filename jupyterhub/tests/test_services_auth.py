@@ -227,11 +227,10 @@ def test_hub_authenticated(request):
         assert r.status_code == 403
 
 
-@pytest.mark.gen_test
-def test_hubauth_cookie(app, mockservice_url):
+async def test_hubauth_cookie(app, mockservice_url):
     """Test HubAuthenticated service with user cookies"""
-    cookies = yield app.login_user('badger')
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/', cookies=cookies)
+    cookies = await app.login_user('badger')
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/', cookies=cookies)
     r.raise_for_status()
     print(r.text)
     reply = r.json()
@@ -242,15 +241,14 @@ def test_hubauth_cookie(app, mockservice_url):
     }
 
 
-@pytest.mark.gen_test
-def test_hubauth_token(app, mockservice_url):
+async def test_hubauth_token(app, mockservice_url):
     """Test HubAuthenticated service with user API tokens"""
     u = add_user(app.db, name='river')
     token = u.new_api_token()
     app.db.commit()
 
     # token in Authorization header
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/',
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/',
         headers={
             'Authorization': 'token %s' % token,
         })
@@ -262,7 +260,7 @@ def test_hubauth_token(app, mockservice_url):
     }
 
     # token in ?token parameter
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
     r.raise_for_status()
     reply = r.json()
     sub_reply = { key: reply.get(key, 'missing') for key in ['name', 'admin']}
@@ -271,7 +269,7 @@ def test_hubauth_token(app, mockservice_url):
         'admin': False,
     }
 
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -281,17 +279,16 @@ def test_hubauth_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-@pytest.mark.gen_test
-def test_hubauth_service_token(app, mockservice_url):
+async def test_hubauth_service_token(app, mockservice_url):
     """Test HubAuthenticated service with service API tokens"""
-    
+
     token = hexlify(os.urandom(5)).decode('utf8')
     name = 'test-api-service'
     app.service_tokens[token] = name
-    yield app.init_api_tokens()
+    await app.init_api_tokens()
 
     # token in Authorization header
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/',
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/',
         headers={
             'Authorization': 'token %s' % token,
         })
@@ -305,7 +302,7 @@ def test_hubauth_service_token(app, mockservice_url):
     assert not r.cookies
 
     # token in ?token parameter
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=%s' % token)
     r.raise_for_status()
     reply = r.json()
     assert reply == {
@@ -314,7 +311,7 @@ def test_hubauth_service_token(app, mockservice_url):
         'admin': False,
     }
 
-    r = yield async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+    r = await async_requests.get(public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -324,16 +321,15 @@ def test_hubauth_service_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-@pytest.mark.gen_test
-def test_oauth_service(app, mockservice_url):
+async def test_oauth_service(app, mockservice_url):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     # first request is only going to login and get us to the oauth form page
     s = AsyncSession()
     name = 'link'
-    s.cookies = yield app.login_user(name)
+    s.cookies = await app.login_user(name)
 
-    r = yield s.get(url)
+    r = await s.get(url)
     r.raise_for_status()
     # we should be looking at the oauth confirmation page
     assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
@@ -341,7 +337,7 @@ def test_oauth_service(app, mockservice_url):
     assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
 
     # submit the oauth form to complete authorization
-    r = yield s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
@@ -350,7 +346,7 @@ def test_oauth_service(app, mockservice_url):
     assert 'service-%s-oauth-state' % service.name not in set(s.cookies.keys())
 
     # second request should be authenticated, which means no redirects
-    r = yield s.get(url, allow_redirects=False)
+    r = await s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()
@@ -363,7 +359,7 @@ def test_oauth_service(app, mockservice_url):
     # token-authenticated request to HubOAuth
     token = app.users[name].new_api_token()
     # token in ?token parameter
-    r = yield async_requests.get(url_concat(url, {'token': token}))
+    r = await async_requests.get(url_concat(url, {'token': token}))
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
@@ -371,7 +367,7 @@ def test_oauth_service(app, mockservice_url):
     # verify that ?token= requests set a cookie
     assert len(r.cookies) != 0
     # ensure cookie works in future requests
-    r = yield async_requests.get(
+    r = await async_requests.get(
         url,
         cookies=r.cookies,
         allow_redirects=False,
@@ -382,17 +378,16 @@ def test_oauth_service(app, mockservice_url):
     assert reply['name'] == name
 
 
-@pytest.mark.gen_test
-def test_oauth_cookie_collision(app, mockservice_url):
+async def test_oauth_cookie_collision(app, mockservice_url):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/')
     print(url)
     s = AsyncSession()
     name = 'mypha'
-    s.cookies = yield app.login_user(name)
+    s.cookies = await app.login_user(name)
     state_cookie_name = 'service-%s-oauth-state' % service.name
     service_cookie_name = 'service-%s' % service.name
-    oauth_1 = yield s.get(url)
+    oauth_1 = await s.get(url)
     print(oauth_1.headers)
     print(oauth_1.cookies, oauth_1.url, url)
     assert state_cookie_name in s.cookies
@@ -402,7 +397,7 @@ def test_oauth_cookie_collision(app, mockservice_url):
     state_1 = s.cookies[state_cookie_name]
 
     # start second oauth login before finishing the first
-    oauth_2 = yield s.get(url)
+    oauth_2 = await s.get(url)
     state_cookies = [ c for c in s.cookies.keys() if c.startswith(state_cookie_name) ]
     assert len(state_cookies) == 2
     # get the random-suffix cookie name
@@ -412,7 +407,7 @@ def test_oauth_cookie_collision(app, mockservice_url):
 
     # finish oauth 2
     # submit the oauth form to complete authorization
-    r = yield s.post(
+    r = await s.post(
         oauth_2.url,
         data={'scopes': ['identify']},
         headers={'Referer': oauth_2.url},
@@ -426,7 +421,7 @@ def test_oauth_cookie_collision(app, mockservice_url):
     service_cookie_2 = s.cookies[service_cookie_name]
 
     # finish oauth 1
-    r = yield s.post(
+    r = await s.post(
         oauth_1.url,
         data={'scopes': ['identify']},
         headers={'Referer': oauth_1.url},
@@ -445,8 +440,7 @@ def test_oauth_cookie_collision(app, mockservice_url):
     assert state_cookies == []
 
 
-@pytest.mark.gen_test
-def test_oauth_logout(app, mockservice_url):
+async def test_oauth_logout(app, mockservice_url):
     """Verify that logout via the Hub triggers logout for oauth services
 
     1. clears session id cookie
@@ -471,18 +465,18 @@ def test_oauth_logout(app, mockservice_url):
     # ensure we start empty
     assert auth_tokens() == []
 
-    s.cookies = yield app.login_user(name)
+    s.cookies = await app.login_user(name)
     assert 'jupyterhub-session-id' in s.cookies
-    r = yield s.get(url)
+    r = await s.get(url)
     r.raise_for_status()
     assert urlparse(r.url).path.endswith('oauth2/authorize')
     # submit the oauth form to complete authorization
-    r = yield s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
     r.raise_for_status()
     assert r.url == url
 
     # second request should be authenticated
-    r = yield s.get(url, allow_redirects=False)
+    r = await s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()
@@ -501,13 +495,13 @@ def test_oauth_logout(app, mockservice_url):
     assert len(auth_tokens()) == 1
 
     # hit hub logout URL
-    r = yield s.get(public_url(app, path='hub/logout'))
+    r = await s.get(public_url(app, path='hub/logout'))
     r.raise_for_status()
     # verify that all cookies other than the service cookie are cleared
     assert list(s.cookies.keys()) == [service_cookie_name]
     # verify that clearing session id invalidates service cookie
     # i.e. redirect back to login page
-    r = yield s.get(url)
+    r = await s.get(url)
     r.raise_for_status()
     assert r.url.split('?')[0] == public_url(app, path='hub/login')
 
@@ -524,7 +518,7 @@ def test_oauth_logout(app, mockservice_url):
     # check that we got the old session id back
     assert session_id == s.cookies['jupyterhub-session-id']
 
-    r = yield s.get(url, allow_redirects=False)
+    r = await s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
     reply = r.json()

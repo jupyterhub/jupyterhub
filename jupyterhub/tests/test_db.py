@@ -40,8 +40,7 @@ def generate_old_db(env_dir, hub_version, db_url):
         '0.8.1',
     ],
 )
-@pytest.mark.gen_test
-def test_upgrade(tmpdir, hub_version):
+async def test_upgrade(tmpdir, hub_version):
     db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
     if db_url:
         db_url += '_upgrade_' + hub_version.replace('.', '')
@@ -69,7 +68,7 @@ def test_upgrade(tmpdir, hub_version):
         assert len(sqlite_files) == 1
 
     upgradeapp = UpgradeDB(config=cfg)
-    yield upgradeapp.initialize([])
+    upgradeapp.initialize([])
     upgradeapp.start()
 
     # check that backup was created:

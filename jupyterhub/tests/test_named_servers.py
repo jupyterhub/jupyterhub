@@ -17,16 +17,15 @@ def named_servers(app):
         yield
 
 
-@pytest.mark.gen_test
-def test_default_server(app, named_servers):
+async def test_default_server(app, named_servers):
     """Test the default /users/:user/server handler when named servers are enabled"""
     username = 'rosie'
     user = add_user(app.db, app, name=username)
-    r = yield api_request(app, 'users', username, 'server', method='post')
+    r = await api_request(app, 'users', username, 'server', method='post')
     assert r.status_code == 201
     assert r.text == ''
 
-    r = yield api_request(app, 'users', username)
+    r = await api_request(app, 'users', username)
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
@@ -51,11 +50,11 @@ def test_default_server(app, named_servers):
 
 
     # now stop the server
-    r = yield api_request(app, 'users', username, 'server', method='delete')
+    r = await api_request(app, 'users', username, 'server', method='delete')
     assert r.status_code == 204
     assert r.text == ''
 
-    r = yield api_request(app, 'users', username)
+    r = await api_request(app, 'users', username)
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
@@ -66,20 +65,19 @@ def test_default_server(app, named_servers):
     })
 
 
-@pytest.mark.gen_test
-def test_create_named_server(app, named_servers):
+async def test_create_named_server(app, named_servers):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
-    cookies = yield app.login_user(username)
+    cookies = await app.login_user(username)
     servername = 'trevor'
-    r = yield api_request(app, 'users', username, 'servers', servername, method='post')
+    r = await api_request(app, 'users', username, 'servers', servername, method='post')
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
     url = url_path_join(public_url(app, user), servername, 'env')
-    r = yield async_requests.get(url, cookies=cookies)
+    r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
     assert r.url == url
     env = r.json()
@@ -87,7 +85,7 @@ def test_create_named_server(app, named_servers):
     assert prefix == user.spawners[servername].server.base_url
     assert prefix.endswith('/user/%s/%s/' % (username, servername))
 
-    r = yield api_request(app, 'users', username)
+    r = await api_request(app, 'users', username)
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
@@ -111,22 +109,21 @@ def test_create_named_server(app, named_servers):
     })
 
 
-@pytest.mark.gen_test
-def test_delete_named_server(app, named_servers):
+async def test_delete_named_server(app, named_servers):
     username = 'donaar'
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
     cookies = app.login_user(username)
     servername = 'splugoth'
-    r = yield api_request(app, 'users', username, 'servers', servername, method='post')
+    r = await api_request(app, 'users', username, 'servers', servername, method='post')
     r.raise_for_status()
     assert r.status_code == 201
 
-    r = yield api_request(app, 'users', username, 'servers', servername, method='delete')
+    r = await api_request(app, 'users', username, 'servers', servername, method='delete')
     r.raise_for_status()
     assert r.status_code == 204
 
-    r = yield api_request(app, 'users', username)
+    r = await api_request(app, 'users', username)
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
@@ -140,7 +137,7 @@ def test_delete_named_server(app, named_servers):
     # low-level record still exists
     assert servername in user.orm_spawners
 
-    r = yield api_request(
+    r = await api_request(
         app, 'users', username, 'servers', servername,
         method='delete',
         data=json.dumps({'remove': True}),
@@ -151,11 +148,10 @@ def test_delete_named_server(app, named_servers):
     assert servername not in user.orm_spawners
 
 
-@pytest.mark.gen_test
-def test_named_server_disabled(app):
+async def test_named_server_disabled(app):
     username = 'user'
     servername = 'okay'
-    r = yield api_request(app, 'users', username, 'servers', servername, method='post')
+    r = await api_request(app, 'users', username, 'servers', servername, method='post')
     assert r.status_code == 400
-    r = yield api_request(app, 'users', username, 'servers', servername, method='delete')
+    r = await api_request(app, 'users', username, 'servers', servername, method='delete')
     assert r.status_code == 400

@@ -6,7 +6,7 @@ coverage
 cryptography
 html5lib  # needed for beautifulsoup
 pytest-cov
-pytest-tornado
+pytest-asyncio
 pytest>=3.3
 notebook
 requests-mock
