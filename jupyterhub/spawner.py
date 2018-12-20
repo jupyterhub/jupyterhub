@@ -5,6 +5,7 @@ Contains base Spawner class & default implementation
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import ast
 import asyncio
 import errno
 import json
@@ -34,6 +35,23 @@ from .objects import Server
 from .traitlets import Command, ByteSpecification, Callable
 from .utils import iterate_until, maybe_future, random_port, url_path_join, exponential_backoff
 
+
+def _quote_safe(s):
+    """pass a string that is safe on the command-line
+
+    traitlets may parse literals on the command-line, e.g. `--ip=123` will be the number 123 instead of the *string* 123.
+    wrap valid literals in repr to ensure they are safe
+    """
+
+    try:
+        val = ast.literal_eval(s)
+    except Exception:
+        # not valid, leave it alone
+        return s
+    else:
+        # it's a valid literal, wrap it in repr (usually just quotes, but with proper escapes)
+        # to avoid getting interpreted by traitlets
+        return repr(s)
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -831,7 +849,7 @@ class Spawner(LoggingConfigurable):
         args = []
 
         if self.ip:
-            args.append('--ip="%s"' % self.ip)
+            args.append('--ip=%s' % _quote_safe(self.ip))
 
         if self.port:
             args.append('--port=%i' % self.port)
@@ -841,10 +859,10 @@ class Spawner(LoggingConfigurable):
 
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir="%s"' % notebook_dir)
+            args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
         if self.default_url:
             default_url = self.format_string(self.default_url)
-            args.append('--NotebookApp.default_url="%s"' % default_url)
+            args.append('--NotebookApp.default_url=%s' % _quote_safe(default_url))
 
         if self.debug:
             args.append('--debug')
