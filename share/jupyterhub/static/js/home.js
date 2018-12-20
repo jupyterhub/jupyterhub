@@ -113,7 +113,7 @@ require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
 
   $(".new-server-btn").click(function() {
     var row = getRow($(this));
-    var serverName = $(".new-server-name").val();
+    var serverName = row.find(".new-server-name").val();
     api.start_named_server(user, serverName, {
       success: function(reply) {
         // reload after creating the server
