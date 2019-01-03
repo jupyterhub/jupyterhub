@@ -85,8 +85,13 @@ easy to do with RStudio too.
 
 - https://datascience.business.illinois.edu
 
+### IllustrisTNG Simulation Project
+
+- [JupyterHub/Lab-based analysis platform, part of the TNG public data release](http://www.tng-project.org/data/)
+
 ### MIT and Lincoln Labs
 
+- https://supercloud.mit.edu/
 
 ### Michigan State University
 
@@ -146,7 +151,6 @@ easy to do with RStudio too.
 
 [Everware](https://github.com/everware) Reproducible and reusable science powered by jupyterhub and docker. Like nbviewer, but executable. CERN, Geneva [website](http://everware.xyz/)
 
-
 ### Microsoft Azure
 
 - https://docs.microsoft.com/en-us/azure/machine-learning/machine-learning-data-science-linux-dsvm-intro
@@ -156,9 +160,7 @@ easy to do with RStudio too.
 - https://getcarina.com/blog/learning-how-to-whale/
 - http://carolynvanslyck.com/talk/carina/jupyterhub/#/
 
-### jcloud.io
-- Open to public JupyterHub server
-    - https://jcloud.io
+
 ## Miscellaneous
 
 - https://medium.com/@ybarraud/setting-up-jupyterhub-with-sudospawner-and-anaconda-844628c0dbee#.rm3yt87e1
