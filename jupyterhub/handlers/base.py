@@ -250,7 +250,7 @@ class BaseHandler(RequestHandler):
             user (User): the user having been refreshed,
                 or None if the user must login again to refresh auth info.
         """
-        refresh_age = self.settings.get('auth_refresh_age', 0)
+        refresh_age = self.authenticator.auth_refresh_age
         if not refresh_age:
             return user
         now = time.monotonic()
