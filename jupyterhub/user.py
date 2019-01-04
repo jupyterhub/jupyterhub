@@ -138,7 +138,7 @@ class User:
     orm_user = None
     log = app_log
     settings = None
-    auth_refreshed = None
+    _auth_refreshed = None
 
     def __init__(self, orm_user, settings=None, db=None):
         self.db = db or inspect(orm_user).session

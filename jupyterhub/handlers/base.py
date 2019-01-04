@@ -236,7 +236,7 @@ class BaseHandler(RequestHandler):
         self.db.commit()
         return self._user_from_orm(orm_token.user)
 
-    async def refresh_user_auth(self, user, force=False):
+    async def refresh_auth(self, user, force=False):
         """Refresh user authentication info
 
         Calls `authenticator.refresh_user(user)`
@@ -257,7 +257,6 @@ class BaseHandler(RequestHandler):
         if not force and user._auth_refreshed and (now - user._auth_refreshed < refresh_age):
             # auth up-to-date
             return user
-        user._auth_refreshed = now
 
         # refresh a user at most once per request
         if not hasattr(self, '_refreshed_users'):
@@ -276,6 +275,8 @@ class BaseHandler(RequestHandler):
                 user.name,
             )
             return
+
+        user._auth_refreshed = now
 
         if auth_info == True:
             # refresh_user confirmed that it's up-to-date,
@@ -358,7 +359,7 @@ class BaseHandler(RequestHandler):
                 if user is None:
                     user = self.get_current_user_cookie()
                 if user:
-                    user = await self.refresh_user_auth(user)
+                    user = await self.refresh_auth(user)
                 self._jupyterhub_user = user
             except Exception:
                 # don't let errors here raise more than once
@@ -612,6 +613,7 @@ class BaseHandler(RequestHandler):
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
             self.log.info("User logged in: %s", user.name)
+            user._auth_refreshed = time.monotonic()
             return user
         else:
             self.statsd.incr('login.failure')
@@ -646,9 +648,9 @@ class BaseHandler(RequestHandler):
     async def spawn_single_user(self, user, server_name='', options=None):
         # in case of error, include 'try again from /hub/home' message
         if self.authenticator.refresh_pre_spawn:
-            auth_user = await self.refresh_user(user, force=True)
+            auth_user = await self.refresh_auth(user, force=True)
             if auth_user is None:
-                raise web.HTTPError(403, "auth has expired for %s, login again", auth_user.name)
+                raise web.HTTPError(403, "auth has expired for %s, login again", user.name)
 
         spawn_start_time = time.perf_counter()
         self.extra_error_html = self.spawn_home_error

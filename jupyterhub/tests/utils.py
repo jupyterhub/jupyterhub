@@ -129,7 +129,7 @@ async def api_request(app, *api_path, **kwargs):
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}
         h.update(headers)
-        h.update(auth_header(app.db, 'admin'))
+        h.update(auth_header(app.db, kwargs.pop('name', 'admin')))
 
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
