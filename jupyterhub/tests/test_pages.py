@@ -16,18 +16,15 @@ from ..auth import Authenticator
 import mock
 import pytest
 
-from .mocking import FormSpawner, public_url, public_host
-from .test_api import api_request, add_user
-from .utils import async_requests
-
-
-def get_page(path, app, hub=True, **kw):
-    if hub:
-        prefix = app.hub.base_url
-    else:
-        prefix = app.base_url
-    base_url = ujoin(public_host(app), prefix)
-    return async_requests.get(ujoin(base_url, path), **kw)
+from .mocking import FormSpawner
+from .utils import (
+    async_requests,
+    api_request,
+    add_user,
+    get_page,
+    public_url,
+    public_host,
+)
 
 
 async def test_root_no_auth(app):

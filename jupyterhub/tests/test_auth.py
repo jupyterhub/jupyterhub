@@ -12,7 +12,8 @@ from requests import HTTPError
 from jupyterhub import auth, crypto, orm
 
 from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
-from .test_api import add_user
+from .utils import add_user
+
 
 async def test_pam_auth():
     authenticator = MockPAMAuthenticator()
