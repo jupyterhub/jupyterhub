@@ -350,8 +350,13 @@ class UserServerAPIHandler(APIHandler):
     @admin_or_self
     async def post(self, name, server_name=''):
         user = self.find_user(name)
-        if server_name and not self.allow_named_servers:
-            raise web.HTTPError(400, "Named servers are not enabled.")
+        if server_name:
+            if not self.allow_named_servers:
+                raise web.HTTPError(400, "Named servers are not enabled.")
+            if self.named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
+                named_spawners = list(user.all_spawners(include_default=False))
+                if self.named_server_limit_per_user <= len(named_spawners):
+                    raise web.HTTPError(400, "Named servers can not be created any more.")
         spawner = user.spawners[server_name]
         pending = spawner.pending
         if pending == 'spawn':
