@@ -7,7 +7,7 @@ cryptography
 html5lib  # needed for beautifulsoup
 pytest-cov
 pytest-asyncio
-pytest>=3.3
+pytest>=3.6
 notebook
 requests-mock
 virtualenv
