@@ -13,7 +13,7 @@ from .utils import async_requests
 @pytest.fixture
 def named_servers(app):
     with mock.patch.dict(app.tornado_settings,
-                         {'allow_named_servers': True}):
+                         {'allow_named_servers': True, 'named_server_limit_per_user': 2}):
         yield
 
 
@@ -155,3 +155,49 @@ async def test_named_server_disabled(app):
     assert r.status_code == 400
     r = await api_request(app, 'users', username, 'servers', servername, method='delete')
     assert r.status_code == 400
+
+
+async def test_named_server_limit(app, named_servers):
+    username = 'foo'
+    user = add_user(app.db, app, name=username)
+    cookies = await app.login_user(username)
+
+    # Create 1st named server
+    servername1 = 'bar-1'
+    r = await api_request(app, 'users', username, 'servers', servername1, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''
+
+    # Create 2nd named server
+    servername2 = 'bar-2'
+    r = await api_request(app, 'users', username, 'servers', servername2, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''
+
+    # Create 3rd named server
+    servername3 = 'bar-3'
+    r = await api_request(app, 'users', username, 'servers', servername3, method='post')
+    assert r.status_code == 400
+    assert r.json() == {"status": 400, "message": "User foo already has the maximum of 2 named servers.  One must be deleted before a new server can be created"}
+
+    # Create default server
+    r = await api_request(app, 'users', username, 'server', method='post')
+    assert r.status_code == 201
+    assert r.text == ''
+
+    # Delete 1st named server
+    r = await api_request(
+        app, 'users', username, 'servers', servername1,
+        method='delete',
+        data=json.dumps({'remove': True}),
+    )
+    r.raise_for_status()
+    assert r.status_code == 204
+
+    # Create 3rd named server again
+    r = await api_request(app, 'users', username, 'servers', servername3, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''

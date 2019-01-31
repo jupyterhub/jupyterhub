@@ -803,6 +803,16 @@ class JupyterHub(Application):
         help="Allow named single-user servers per user"
     ).tag(config=True)
 
+    named_server_limit_per_user = Integer(0,
+        help="""
+        Maximum number of concurrent named servers that can be created by a user at a time.
+
+        Setting this can limit the total resources a user can consume.
+
+        If set to 0, no limit is enforced.
+        """
+    ).tag(config=True)
+
     # class for spawning single-user servers
     spawner_class = EntryPointType(
         default_value=LocalProcessSpawner,
@@ -1875,6 +1885,7 @@ class JupyterHub(Application):
             domain=self.domain,
             statsd=self.statsd,
             allow_named_servers=self.allow_named_servers,
+            named_server_limit_per_user=self.named_server_limit_per_user,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,

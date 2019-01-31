@@ -58,6 +58,7 @@ class HomeHandler(BaseHandler):
             user=user,
             url=url,
             allow_named_servers=self.allow_named_servers,
+            named_server_limit_per_user=self.named_server_limit_per_user,
             url_path_join=url_path_join,
             # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
             spawners = user.orm_user._orm_spawners,
@@ -230,6 +231,7 @@ class AdminHandler(BaseHandler):
             running=running,
             sort={s:o for s,o in zip(sorts, orders)},
             allow_named_servers=self.allow_named_servers,
+            named_server_limit_per_user=self.named_server_limit_per_user,
         )
         self.finish(html)
 

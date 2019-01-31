@@ -104,6 +104,10 @@ class BaseHandler(RequestHandler):
         return self.settings.get('allow_named_servers', False)
 
     @property
+    def named_server_limit_per_user(self):
+        return self.settings.get('named_server_limit_per_user', 0)
+
+    @property
     def domain(self):
         return self.settings['domain']
 
