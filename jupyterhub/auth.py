@@ -787,7 +787,9 @@ class PAMAuthenticator(LocalAuthenticator):
             import pwd
             uid = pwd.getpwnam(username).pw_uid
             username = pwd.getpwuid(uid).pw_name
-        return super().normalize_username(username)
+            username = self.username_map.get(username, username)
+        else:
+            return super().normalize_username(username)
 
 class DummyAuthenticator(Authenticator):
     """Dummy Authenticator for testing
