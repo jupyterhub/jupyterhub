@@ -113,7 +113,7 @@ def normalize_timestamp(ts):
     """
     if ts is None:
         return
-    return re.sub('\d(\.\d+)?', '0', ts)
+    return re.sub(r'\d(\.\d+)?', '0', ts)
 
 
 def normalize_user(user):
