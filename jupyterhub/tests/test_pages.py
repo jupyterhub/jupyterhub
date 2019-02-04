@@ -2,6 +2,7 @@
 
 import asyncio
 import sys
+from unittest import mock
 from urllib.parse import urlencode, urlparse
 
 from bs4 import BeautifulSoup
@@ -13,7 +14,6 @@ from ..utils import url_path_join as ujoin
 from .. import orm
 from ..auth import Authenticator
 
-import mock
 import pytest
 
 from .mocking import FormSpawner
