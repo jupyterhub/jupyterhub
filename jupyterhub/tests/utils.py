@@ -131,6 +131,12 @@ async def api_request(app, *api_path, **kwargs):
         h.update(headers)
         h.update(auth_header(app.db, kwargs.pop('name', 'admin')))
 
+    if 'cookies' in kwargs:
+        # for cookie-authenticated requests,
+        # set Referer so it looks like the request originated
+        # from a Hub-served page
+        headers.setdefault('Referer', ujoin(base_url, 'test'))
+
     url = ujoin(base_url, 'api', *api_path)
     method = kwargs.pop('method', 'get')
     f = getattr(async_requests, method)
