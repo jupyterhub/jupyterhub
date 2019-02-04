@@ -28,6 +28,7 @@ from .. import __version__
 from .. import orm
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
+from ..user import User
 from ..utils import maybe_future, url_path_join
 from ..metrics import (
     SERVER_SPAWN_DURATION_SECONDS, ServerSpawnStatus,
@@ -358,7 +359,7 @@ class BaseHandler(RequestHandler):
                 user = self.get_current_user_token()
                 if user is None:
                     user = self.get_current_user_cookie()
-                if user:
+                if user and isinstance(user, User):
                     user = await self.refresh_auth(user)
                 self._jupyterhub_user = user
             except Exception:
