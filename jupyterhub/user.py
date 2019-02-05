@@ -8,7 +8,9 @@ import warnings
 
 from sqlalchemy import inspect
 from tornado import gen
+from tornado.httputil import urlencode
 from tornado.log import app_log
+from tornado import web
 
 from .utils import maybe_future, url_path_join, make_ssl_context
 
@@ -136,6 +138,7 @@ class User:
     orm_user = None
     log = app_log
     settings = None
+    _auth_refreshed = None
 
     def __init__(self, orm_user, settings=None, db=None):
         self.db = db or inspect(orm_user).session
@@ -380,6 +383,59 @@ class User:
             url_parts.extend(['server/progress'])
         return url_path_join(*url_parts)
 
+    async def refresh_auth(self, handler):
+        """Refresh authentication if needed
+
+        Checks authentication expiry and refresh it if needed.
+        See Spawner.
+
+        If the auth is expired and cannot be refreshed
+        without forcing a new login, a few things can happen:
+
+        1. if this is a normal user spawn,
+           the user should be redirected to login
+           and back to spawn after login.
+        2. if this is a spawn via API or other user,
+           spawn will fail until the user logs in again.
+
+        Args:
+            handler (RequestHandler):
+                The handler for the request triggering the spawn.
+                May be None
+        """
+        authenticator = self.authenticator
+        if authenticator is None or not authenticator.refresh_pre_spawn:
+            # nothing to do
+            return
+
+        # refresh auth
+        auth_user = await handler.refresh_auth(self, force=True)
+
+        if auth_user:
+            # auth refreshed, all done
+            return
+
+        # if we got to here, auth is expired and couldn't be refreshed
+        self.log.error(
+            "Auth expired for %s; cannot spawn until they login again",
+            self.name,
+        )
+        # auth expired, cannot spawn without a fresh login
+        # it's the current user *and* spawn via GET, trigger login redirect
+        if handler.request.method == 'GET' and handler.current_user is self:
+            self.log.info("Redirecting %s to login to refresh auth", self.name)
+            url = self.get_login_url()
+            next_url = self.request.uri
+            sep = '&' if '?' in url else '?'
+            url += sep + urlencode(dict(next=next_url))
+            self.redirect(url)
+            raise web.Finish()
+        else:
+            # spawn via POST or on behalf of another user.
+            # nothing we can do here but fail
+            raise web.HTTPError(400, "{}'s authentication has expired".format(self.name))
+
+
     async def spawn(self, server_name='', options=None, handler=None):
         """Start the user's spawner
 
@@ -394,6 +450,9 @@ class User:
         url of the server will be /user/:name/:server_name
         """
         db = self.db
+
+        if handler:
+            await self.refresh_auth(handler)
 
         base_url = url_path_join(self.base_url, server_name) + '/'
 
@@ -436,7 +495,7 @@ class User:
 
         # trigger pre-spawn hook on authenticator
         authenticator = self.authenticator
-        if (authenticator):
+        if authenticator:
             await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
         spawner._start_pending = True

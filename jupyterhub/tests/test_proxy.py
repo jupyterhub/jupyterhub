@@ -84,7 +84,8 @@ async def test_external_proxy(request):
     # add user to the db and start a single user server
     name = 'river'
     add_user(app.db, app, name=name)
-    r = await api_request(app, 'users', name, 'server', method='post')
+    r = await api_request(app, 'users', name, 'server', method='post',
+                          bypass_proxy=True)
     r.raise_for_status()
 
     routes = await app.proxy.get_all_routes()
@@ -108,7 +109,7 @@ async def test_external_proxy(request):
     assert list(routes.keys()) == []
 
     # poke the server to update the proxy
-    r = await api_request(app, 'proxy', method='post')
+    r = await api_request(app, 'proxy', method='post', bypass_proxy=True)
     r.raise_for_status()
 
     # check that the routes are correct
@@ -135,10 +136,16 @@ async def test_external_proxy(request):
 
     # tell the hub where the new proxy is
     new_api_url = 'http://{}:{}'.format(proxy_ip, proxy_port)
-    r = await api_request(app, 'proxy', method='patch', data=json.dumps({
-        'api_url': new_api_url,
-        'auth_token': new_auth_token,
-    }))
+    r = await api_request(
+        app,
+        'proxy',
+        method='patch',
+        data=json.dumps({
+            'api_url': new_api_url,
+            'auth_token': new_auth_token,
+        }),
+        bypass_proxy=True,
+    )
     r.raise_for_status()
     assert app.proxy.api_url == new_api_url
 

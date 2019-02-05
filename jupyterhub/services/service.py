@@ -258,7 +258,6 @@ class Service(LoggingConfigurable):
     def _default_redirect_uri(self):
         if self.server is None:
             return ''
-        print(self.domain, self.host, self.server)
         return self.host + url_path_join(self.prefix, 'oauth_callback')
 
     @property

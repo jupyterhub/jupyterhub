@@ -49,7 +49,7 @@ from ..objects import Server
 from ..spawner import LocalProcessSpawner, SimpleLocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
-from .utils import async_requests, ssl_setup
+from .utils import async_requests, ssl_setup, public_host, public_url
 
 from pamela import PAMError
 
@@ -223,7 +223,10 @@ class MockHub(JupyterHub):
     last_activity_interval = 2
     log_datefmt = '%M:%S'
     external_certs = None
-    log_level = 10
+
+    @default('log_level')
+    def _default_log_level(self):
+        return 10
 
     def __init__(self, *args, **kwargs):
         if 'internal_certs_location' in kwargs:
@@ -349,31 +352,6 @@ class MockHub(JupyterHub):
         r.raise_for_status()
         assert r.cookies
         return r.cookies
-
-
-def public_host(app):
-    """Return the public *host* (no URL prefix) of the given JupyterHub instance."""
-    if app.subdomain_host:
-        return app.subdomain_host
-    else:
-        return Server.from_url(app.proxy.public_url).host
-
-
-def public_url(app, user_or_service=None, path=''):
-    """Return the full, public base URL (including prefix) of the given JupyterHub instance."""
-    if user_or_service:
-        if app.subdomain_host:
-            host = user_or_service.host
-        else:
-            host = public_host(app)
-        prefix = user_or_service.prefix
-    else:
-        host = public_host(app)
-        prefix = Server.from_url(app.proxy.public_url).base_url
-    if path:
-        return host + url_path_join(prefix, path)
-    else:
-        return host + prefix
 
 
 # single-user-server mocking:
