@@ -18,97 +18,13 @@ import jupyterhub
 from .. import orm
 from ..utils import url_path_join as ujoin
 from .mocking import public_host, public_url
-from .utils import async_requests
-
-
-def check_db_locks(func):
-    """Decorator that verifies no locks are held on database upon exit.
-
-    This decorator for test functions verifies no locks are held on the
-    application's database upon exit by creating and dropping a dummy table.
-
-    The decorator relies on an instance of JupyterHubApp being the first
-    argument to the decorated function.
-
-    Example
-    -------
-
-        @check_db_locks
-        def api_request(app, *api_path, **kwargs):
-
-    """
-    def new_func(app, *args, **kwargs):
-        retval = func(app, *args, **kwargs)
-
-        temp_session = app.session_factory()
-        temp_session.execute('CREATE TABLE dummy (foo INT)')
-        temp_session.execute('DROP TABLE dummy')
-        temp_session.close()
-
-        return retval
-
-    return new_func
-
-
-def find_user(db, name, app=None):
-    """Find user in database."""
-    orm_user = db.query(orm.User).filter(orm.User.name == name).first()
-    if app is None:
-        return orm_user
-    else:
-        return app.users[orm_user.id]
-
-
-def add_user(db, app=None, **kwargs):
-    """Add a user to the database."""
-    orm_user = find_user(db, name=kwargs.get('name'))
-    if orm_user is None:
-        orm_user = orm.User(**kwargs)
-        db.add(orm_user)
-    else:
-        for attr, value in kwargs.items():
-            setattr(orm_user, attr, value)
-    db.commit()
-    if app:
-        return app.users[orm_user.id]
-    else:
-        return orm_user
-
-
-def auth_header(db, name):
-    """Return header with user's API authorization token."""
-    user = find_user(db, name)
-    if user is None:
-        user = add_user(db, name=name)
-    token = user.new_api_token()
-    return {'Authorization': 'token %s' % token}
-
-
-@check_db_locks
-async def api_request(app, *api_path, **kwargs):
-    """Make an API request"""
-    base_url = app.hub.url
-    headers = kwargs.setdefault('headers', {})
-
-    if 'Authorization' not in headers and not kwargs.pop('noauth', False):
-        # make a copy to avoid modifying arg in-place
-        kwargs['headers'] = h = {}
-        h.update(headers)
-        h.update(auth_header(app.db, 'admin'))
-
-    url = ujoin(base_url, 'api', *api_path)
-    method = kwargs.pop('method', 'get')
-    f = getattr(async_requests, method)
-    if app.internal_ssl:
-        kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
-        kwargs["verify"] = app.internal_ssl_ca
-    resp = await f(url, **kwargs)
-    assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
-    assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
-    assert 'http' not in resp.headers['Content-Security-Policy']
-    if not kwargs.get('stream', False) and resp.content:
-        assert resp.headers.get('content-type') == 'application/json'
-    return resp
+from .utils import (
+    add_user,
+    api_request,
+    async_requests,
+    auth_header,
+    find_user,
+)
 
 
 # --------------------
@@ -197,7 +113,7 @@ def normalize_timestamp(ts):
     """
     if ts is None:
         return
-    return re.sub('\d(\.\d+)?', '0', ts)
+    return re.sub(r'\d(\.\d+)?', '0', ts)
 
 
 def normalize_user(user):

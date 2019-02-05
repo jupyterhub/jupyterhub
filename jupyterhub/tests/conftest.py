@@ -47,7 +47,7 @@ from ..utils import random_port
 
 from . import mocking
 from .mocking import MockHub
-from .utils import ssl_setup
+from .utils import ssl_setup, add_user
 from .test_services import mockservice_cmd
 
 import jupyterhub.services.service
@@ -183,6 +183,43 @@ def cleanup_after(request, io_loop):
                         pass
                     io_loop.run_sync(lambda: user.stop(name))
         app.db.commit()
+
+
+_username_counter = 0
+
+
+def new_username(prefix='testuser'):
+    """Return a new unique username"""
+    global _username_counter
+    _username_counter += 1
+    return '{}-{}'.format(prefix, _username_counter)
+
+
+@fixture
+def username():
+    """allocate a temporary username
+
+    unique each time the fixture is used
+    """
+    yield new_username()
+
+
+@fixture
+def user(app):
+    """Fixture for creating a temporary user
+
+    Each time the fixture is used, a new user is created
+    """
+    user = add_user(app.db, app, name=new_username())
+    yield user
+
+
+@fixture
+def admin_user(app, username):
+    """Fixture for creating a temporary admin user"""
+    user = add_user(app.db, app, name=new_username('testadmin'), admin=True)
+    yield user
+
 
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
