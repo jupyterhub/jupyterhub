@@ -116,14 +116,21 @@ def auth_header(db, name):
 
 
 @check_db_locks
-async def api_request(app, *api_path, **kwargs):
+async def api_request(app, *api_path, method='get',
+                      noauth=False, bypass_proxy=False,
+                      **kwargs):
     """Make an API request"""
-    base_url = public_url(app, path='hub')
+    if bypass_proxy:
+        # make a direct request to the hub,
+        # skipping the proxy
+        base_url = app.hub.url
+    else:
+        base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
 
     if (
         'Authorization' not in headers
-        and not kwargs.pop('noauth', False)
+        and not noauth
         and 'cookies' not in kwargs
     ):
         # make a copy to avoid modifying arg in-place
@@ -138,7 +145,6 @@ async def api_request(app, *api_path, **kwargs):
         headers.setdefault('Referer', ujoin(base_url, 'test'))
 
     url = ujoin(base_url, 'api', *api_path)
-    method = kwargs.pop('method', 'get')
     f = getattr(async_requests, method)
     if app.internal_ssl:
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
