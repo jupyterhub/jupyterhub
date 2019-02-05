@@ -40,7 +40,7 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from traitlets import Bool, default
+from traitlets import Bool, Dict, default
 
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
@@ -219,11 +219,14 @@ class MockPAMAuthenticator(PAMAuthenticator):
 class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
+    # disable some inherited traits with hardcoded values
     db_file = None
     last_activity_interval = 2
     log_datefmt = '%M:%S'
-    external_certs = None
     log_level = 10
+
+    # MockHub additional traits
+    external_certs = Dict()
 
     def __init__(self, *args, **kwargs):
         if 'internal_certs_location' in kwargs:

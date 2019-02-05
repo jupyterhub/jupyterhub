@@ -76,7 +76,7 @@ def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    kwargs = dict(log_level=logging.DEBUG)
+    kwargs = dict()
     if ssl_enabled:
         kwargs.update(
             dict(
