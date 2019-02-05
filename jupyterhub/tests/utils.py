@@ -118,7 +118,7 @@ def auth_header(db, name):
 @check_db_locks
 async def api_request(app, *api_path, **kwargs):
     """Make an API request"""
-    base_url = app.hub.url
+    base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
 
     if (
