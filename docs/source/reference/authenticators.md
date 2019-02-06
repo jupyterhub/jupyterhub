@@ -106,6 +106,16 @@ c.Authenticator.username_map  = {
 }
 ```
 
+When using `PAMAuthenticator`, you can set
+`c.PAMAuthenticator.pam_normalize_username = True`, which will
+normalize usernames using PAM (basically round-tripping them: username
+to uid to username), which is useful in case you use some external
+service that allows multiple usernames mapping to the same user (such
+as ActiveDirectory, yes, this really happens).  When
+`pam_normalize_username` is on, usernames are *not* normalized to
+lowercase.
+
+
 #### Validate usernames
 
 In most cases, there is a very limited set of acceptable usernames.
