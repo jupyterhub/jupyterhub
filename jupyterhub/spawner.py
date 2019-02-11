@@ -658,7 +658,8 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
             self.hub.api_url,
             'users',
-            self.user.escaped_name,
+            # tolerate mocks defining only user.name
+            getattr(self.user, 'escaped_name', self.user.name),
             'activity',
         )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
