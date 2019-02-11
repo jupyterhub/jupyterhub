@@ -674,6 +674,9 @@ class User:
         spawner._start_pending = False
         spawner.stop_polling()
         spawner._stop_pending = True
+
+        self.log.debug("Stopping %s", spawner._log_name)
+
         try:
             api_token = spawner.api_token
             status = await spawner.poll()
@@ -705,6 +708,7 @@ class User:
                     self.log.debug("Deleting oauth client %s", oauth_client.identifier)
                     self.db.delete(oauth_client)
             self.db.commit()
+            self.log.debug("Finished stopping %s", spawner._log_name)
         finally:
             spawner.orm_spawner.started = None
             self.db.commit()
