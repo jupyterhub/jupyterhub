@@ -541,3 +541,9 @@ async def iterate_until(deadline_future, generator):
             else:
                 # neither is done, this shouldn't happen
                 continue
+
+
+def utcnow():
+    """Return timezone-aware utcnow"""
+    return datetime.now(timezone.utc)
+

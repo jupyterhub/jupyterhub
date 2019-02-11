@@ -708,7 +708,7 @@ class ActivityAPIHandler(APIHandler):
                         server_name,
                         isoformat(last_activity),
                     )
-                    spawner.last_activity
+                    spawner.last_activity = last_activity
                 else:
                     self.log.debug(
                         "Not updating server activity on %s/%s: %s < %s",

@@ -1,7 +1,7 @@
 """Tests for the REST API."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from concurrent.futures import Future
 import json
 import re
@@ -16,7 +16,7 @@ from tornado import gen
 
 import jupyterhub
 from .. import orm
-from ..utils import url_path_join as ujoin
+from ..utils import url_path_join as ujoin, utcnow
 from .mocking import public_host, public_url
 from .utils import (
     add_user,
@@ -1547,6 +1547,92 @@ async def test_info(app):
         'class': 'jupyterhub.tests.mocking.MockSpawner',
         'version': jupyterhub.__version__,
     }
+
+
+# ------------------
+# Activity API tests
+# ------------------
+
+
+async def test_update_activity_403(app, user, admin_user):
+    token = user.new_api_token()
+    r = await api_request(
+        app,
+        "users/{}/activity".format(admin_user.name),
+        headers={"Authorization": "token {}".format(token)},
+        data="{}",
+        method="post",
+    )
+    assert r.status_code == 403
+
+
+async def test_update_activity_admin(app, user, admin_user):
+    token = admin_user.new_api_token()
+    r = await api_request(
+        app,
+        "users/{}/activity".format(user.name),
+        headers={"Authorization": "token {}".format(token)},
+        data=json.dumps({"last_activity": utcnow().isoformat()}),
+        method="post",
+    )
+    r.raise_for_status()
+
+
+@mark.parametrize(
+    "server_name, fresh",
+    [
+        ("", True),
+        ("", False),
+        ("exists", True),
+        ("exists", False),
+        ("nope", True),
+        ("nope", False),
+    ],
+)
+async def test_update_server_activity(app, user, server_name, fresh):
+    token = user.new_api_token()
+    sp = user.spawners["exists"]
+    now = utcnow()
+    internal_now = now.replace(tzinfo=None)
+    # we use naive utc internally
+    # initialize last_activity for one named and the default server
+    for name in ("", "exists"):
+        user.spawners[name].orm_spawner.last_activity = now.replace(tzinfo=None)
+    app.db.commit()
+
+    td = timedelta(minutes=1)
+    if fresh:
+        activity = now + td
+    else:
+        activity = now - td
+
+    r = await api_request(
+        app,
+        "users/{}/activity".format(user.name),
+        headers={"Authorization": "token {}".format(token)},
+        data=json.dumps(
+            {"servers": {server_name: {"last_activity": activity.isoformat()}}}
+        ),
+        method="post",
+    )
+    if server_name == "nope":
+        assert r.status_code == 400
+        reply = r.json()
+        assert server_name in reply["message"]
+        assert "No such server" in reply["message"]
+        assert user.name in reply["message"]
+        return
+
+    r.raise_for_status()
+
+    # check that last activity was updated
+
+    if fresh:
+        expected = activity.replace(tzinfo=None)
+    else:
+        expected = now.replace(tzinfo=None)
+
+    assert user.spawners[server_name].orm_spawner.last_activity == expected
 
 
 # -----------------
