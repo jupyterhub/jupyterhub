@@ -1068,6 +1068,10 @@ class PrefixRedirectHandler(BaseHandler):
             path = self.request.uri[len(self.base_url):]
         else:
             path = self.request.path
+        if not path:
+            # default / -> /hub/ redirect
+            # avoiding extra hop through /hub
+            path = '/'
         self.redirect(url_path_join(
             self.hub.base_url, path,
         ), permanent=False)
