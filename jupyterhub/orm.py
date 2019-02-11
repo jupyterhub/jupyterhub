@@ -12,7 +12,7 @@ import alembic.command
 from alembic.script import ScriptDirectory
 from tornado.log import app_log
 
-from sqlalchemy.types import TypeDecorator, TEXT, LargeBinary
+from sqlalchemy.types import TypeDecorator, Text, LargeBinary
 from sqlalchemy import (
     create_engine, event, exc, inspect, or_, select,
     Column, Integer, ForeignKey, Unicode, Boolean,
@@ -45,7 +45,7 @@ class JSONDict(TypeDecorator):
 
     """
 
-    impl = TEXT
+    impl = Text
 
     def process_bind_param(self, value, dialect):
         if value is not None:
