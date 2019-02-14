@@ -21,6 +21,7 @@ class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
     @web.authenticated
     def post(self):
         """Update announcement"""
+        user = self.current_user
         doc = escape.json_decode(self.request.body)
         self.storage["announcement"] = doc["announcement"]
         self.storage["timestamp"] = datetime.datetime.now().isoformat()

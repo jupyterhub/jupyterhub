@@ -1,3 +1,4 @@
+import sys
 
 # To run the announcement service managed by the hub, add this.
 
