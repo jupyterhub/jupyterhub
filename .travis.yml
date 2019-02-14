@@ -41,8 +41,13 @@ install:
 script:
   - |
     # run tests
-    if [[ "$TEST" != "docs" ]]; then
+    if [[ -z "$TEST" ]]; then
       pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    fi
+  - |
+    # run autoformat
+    if [[ "$TEST" == "lint" ]]; then
+      pre-commit run --all-files
     fi
   - |
     # build docs
@@ -55,12 +60,26 @@ script:
     fi
 after_success:
   - codecov
+after_failure:
+  - |
+    # point to auto-lint-fix
+    if [[ "$TEST" == "lint" ]]; then
+      echo "You can install pre-commit hooks to automatically run formatting"
+      echo "on each commit with:"
+      echo "    pre-commit install"
+      echo "or you can run by hand on staged files with"
+      echo "    pre-commit run"
+      echo "or after-the-fact on already committed files with"
+      echo "    pre-commit run --all-files"
+    fi
 
 matrix:
   fast_finish: true
   include:
     - python: 3.6
       env: TEST=docs
+    - python: 3.6
+      env: TEST=lint
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
