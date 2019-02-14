@@ -16,7 +16,7 @@ from ..auth import Authenticator
 
 import pytest
 
-from .mocking import FormSpawner
+from .mocking import FormSpawner, FalsyCallableFormSpawner
 from .utils import (
     async_requests,
     api_request,
@@ -205,6 +205,13 @@ async def test_spawn_page(app):
         r = await get_page('spawn?next=foo', app, cookies=cookies)
         assert r.url.endswith('/spawn?next=foo')
         assert FormSpawner.options_form in r.text
+
+
+async def test_spawn_page_falsy_callable(app):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FalsyCallableFormSpawner}):
+        cookies = await app.login_user('erik')
+        r = await get_page('spawn', app, cookies=cookies)
+        assert 'user/erik' in r.url
 
 
 async def test_spawn_page_admin(app, admin_access):
