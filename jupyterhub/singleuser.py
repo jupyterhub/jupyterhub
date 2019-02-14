@@ -391,6 +391,8 @@ class SingleUserNotebookApp(NotebookApp):
             path = list(_exclude_home(path))
         return path
 
+    # create dynamic default http client,
+    # configured with any relevant ssl config
     hub_http_client = Any()
     @default('hub_http_client')
     def _default_client(self):

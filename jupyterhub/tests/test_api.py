@@ -1591,7 +1591,6 @@ async def test_update_activity_admin(app, user, admin_user):
 )
 async def test_update_server_activity(app, user, server_name, fresh):
     token = user.new_api_token()
-    sp = user.spawners["exists"]
     now = utcnow()
     internal_now = now.replace(tzinfo=None)
     # we use naive utc internally
