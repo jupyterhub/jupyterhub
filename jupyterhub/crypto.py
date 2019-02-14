@@ -1,34 +1,42 @@
-
 import base64
-from binascii import a2b_hex
-from concurrent.futures import ThreadPoolExecutor
 import json
 import os
+from binascii import a2b_hex
+from concurrent.futures import ThreadPoolExecutor
 
-from traitlets.config import SingletonConfigurable, Config
-from traitlets import (
-    Any, Dict, Integer, List,
-    default, observe, validate,
-)
+from traitlets import Any
+from traitlets import default
+from traitlets import Dict
+from traitlets import Integer
+from traitlets import List
+from traitlets import observe
+from traitlets import validate
+from traitlets.config import Config
+from traitlets.config import SingletonConfigurable
 
 try:
     import cryptography
     from cryptography.fernet import Fernet, MultiFernet, InvalidToken
 except ImportError:
     cryptography = None
+
     class InvalidToken(Exception):
         pass
+
 
 from .utils import maybe_future
 
 KEY_ENV = 'JUPYTERHUB_CRYPT_KEY'
 
+
 class EncryptionUnavailable(Exception):
     pass
+
 
 class CryptographyUnavailable(EncryptionUnavailable):
     def __str__(self):
         return "cryptography library is required for encryption"
+
 
 class NoEncryptionKeys(EncryptionUnavailable):
     def __str__(self):
@@ -70,13 +78,16 @@ def _validate_key(key):
 
     return key
 
+
 class CryptKeeper(SingletonConfigurable):
     """Encapsulate encryption configuration
 
     Use via the encryption_config singleton below.
     """
 
-    n_threads = Integer(max(os.cpu_count(), 1), config=True,
+    n_threads = Integer(
+        max(os.cpu_count(), 1),
+        config=True,
         help="The number of threads to allocate for encryption",
     )
 
@@ -84,29 +95,35 @@ class CryptKeeper(SingletonConfigurable):
     def _config_default(self):
         # load application config by default
         from .app import JupyterHub
+
         if JupyterHub.initialized():
             return JupyterHub.instance().config
         else:
             return Config()
 
     executor = Any()
+
     def _executor_default(self):
         return ThreadPoolExecutor(self.n_threads)
 
     keys = List(config=True)
+
     def _keys_default(self):
         if KEY_ENV not in os.environ:
             return []
         # key can be a ;-separated sequence for key rotation.
         # First item in the list is used for encryption.
-        return [ _validate_key(key) for key in os.environ[KEY_ENV].split(';') if key.strip() ]
+        return [
+            _validate_key(key) for key in os.environ[KEY_ENV].split(';') if key.strip()
+        ]
 
     @validate('keys')
     def _ensure_bytes(self, proposal):
         # cast str to bytes
-        return [ _validate_key(key) for key in proposal.value ]
+        return [_validate_key(key) for key in proposal.value]
 
     fernet = Any()
+
     def _fernet_default(self):
         if cryptography is None or not self.keys:
             return None
@@ -152,6 +169,7 @@ def encrypt(data):
     Returns a Future whose result will be bytes.
     """
     return CryptKeeper.instance().encrypt(data)
+
 
 def decrypt(data):
     """decrypt some data with the crypt keeper

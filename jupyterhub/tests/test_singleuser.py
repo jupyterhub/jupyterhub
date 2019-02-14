@@ -1,16 +1,16 @@
 """Tests for jupyterhub.singleuser"""
-
-from subprocess import check_output
 import sys
+from subprocess import check_output
 from urllib.parse import urlparse
 
 import pytest
 
 import jupyterhub
-from .mocking import StubSingleUserSpawner, public_url
 from ..utils import url_path_join
-
-from .utils import async_requests, AsyncSession
+from .mocking import public_url
+from .mocking import StubSingleUserSpawner
+from .utils import async_requests
+from .utils import AsyncSession
 
 
 async def test_singleuser_auth(app):
@@ -47,11 +47,7 @@ async def test_singleuser_auth(app):
     r = await s.get(url)
     assert urlparse(r.url).path.endswith('/oauth2/authorize')
     # submit the oauth form to complete authorization
-    r = await s.post(
-        r.url,
-        data={'scopes': ['identify']},
-        headers={'Referer': r.url},
-    )
+    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
     assert urlparse(r.url).path.rstrip('/').endswith('/user/nandy/tree')
     # user isn't authorized, should raise 403
     assert r.status_code == 403
@@ -85,11 +81,14 @@ async def test_disable_user_config(app):
 
 
 def test_help_output():
-    out = check_output([sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']).decode('utf8', 'replace')
+    out = check_output(
+        [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
+    ).decode('utf8', 'replace')
     assert 'JupyterHub' in out
 
 
 def test_version():
-    out = check_output([sys.executable, '-m', 'jupyterhub.singleuser', '--version']).decode('utf8', 'replace')
+    out = check_output(
+        [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
+    ).decode('utf8', 'replace')
     assert jupyterhub.__version__ in out
-

@@ -1,25 +1,30 @@
 """Test the JupyterHub entry point"""
-
 import binascii
 import os
 import re
 import sys
-from subprocess import check_output, Popen, PIPE
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from subprocess import check_output
+from subprocess import PIPE
+from subprocess import Popen
+from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
 from tornado import gen
 from traitlets.config import Config
 
+from .. import orm
+from ..app import COOKIE_SECRET_BYTES
+from ..app import JupyterHub
 from .mocking import MockHub
 from .test_api import add_user
-from .. import orm
-from ..app import COOKIE_SECRET_BYTES, JupyterHub
 
 
 def test_help_all():
-    out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode('utf8', 'replace')
+    out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode(
+        'utf8', 'replace'
+    )
     assert '--ip' in out
     assert '--JupyterHub.ip' in out
 
@@ -39,9 +44,11 @@ def test_generate_config():
         cfg_file = tf.name
     with open(cfg_file, 'w') as f:
         f.write("c.A = 5")
-    p = Popen([sys.executable, '-m', 'jupyterhub',
-        '--generate-config', '-f', cfg_file],
-        stdout=PIPE, stdin=PIPE)
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--generate-config', '-f', cfg_file],
+        stdout=PIPE,
+        stdin=PIPE,
+    )
     out, _ = p.communicate(b'n')
     out = out.decode('utf8', 'replace')
     assert os.path.exists(cfg_file)
@@ -49,9 +56,11 @@ def test_generate_config():
         cfg_text = f.read()
     assert cfg_text == 'c.A = 5'
 
-    p = Popen([sys.executable, '-m', 'jupyterhub',
-        '--generate-config', '-f', cfg_file],
-        stdout=PIPE, stdin=PIPE)
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--generate-config', '-f', cfg_file],
+        stdout=PIPE,
+        stdin=PIPE,
+    )
     out, _ = p.communicate(b'x\ny')
     out = out.decode('utf8', 'replace')
     assert os.path.exists(cfg_file)
@@ -184,17 +193,21 @@ async def test_load_groups(tmpdir, request):
     db = hub.db
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted([ u.name for u in blue.users ]) == sorted(to_load['blue'])
+    assert sorted([u.name for u in blue.users]) == sorted(to_load['blue'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted([ u.name for u in gold.users ]) == sorted(to_load['gold'])
+    assert sorted([u.name for u in gold.users]) == sorted(to_load['gold'])
 
 
 async def test_resume_spawners(tmpdir, request):
     if not os.getenv('JUPYTERHUB_TEST_DB_URL'):
-        p = patch.dict(os.environ, {
-            'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s' % tmpdir.join('jupyterhub.sqlite'),
-        })
+        p = patch.dict(
+            os.environ,
+            {
+                'JUPYTERHUB_TEST_DB_URL': 'sqlite:///%s'
+                % tmpdir.join('jupyterhub.sqlite')
+            },
+        )
         p.start()
         request.addfinalizer(p.stop)
 
@@ -253,32 +266,18 @@ async def test_resume_spawners(tmpdir, request):
 @pytest.mark.parametrize(
     'hub_config, expected',
     [
-        (
-            {'ip': '0.0.0.0'},
-            {'bind_url': 'http://0.0.0.0:8000/'},
-        ),
+        ({'ip': '0.0.0.0'}, {'bind_url': 'http://0.0.0.0:8000/'}),
         (
             {'port': 123, 'base_url': '/prefix'},
-            {
-                'bind_url': 'http://:123/prefix/',
-                'base_url': '/prefix/',
-            },
+            {'bind_url': 'http://:123/prefix/', 'base_url': '/prefix/'},
         ),
-        (
-            {'bind_url': 'http://0.0.0.0:12345/sub'},
-            {'base_url': '/sub/'},
-        ),
+        ({'bind_url': 'http://0.0.0.0:12345/sub'}, {'base_url': '/sub/'}),
         (
             # no config, test defaults
             {},
-            {
-                'base_url': '/',
-                'bind_url': 'http://:8000',
-                'ip': '',
-                'port': 8000,
-                },
+            {'base_url': '/', 'bind_url': 'http://:8000', 'ip': '', 'port': 8000},
         ),
-    ]
+    ],
 )
 def test_url_config(hub_config, expected):
     # construct the config object

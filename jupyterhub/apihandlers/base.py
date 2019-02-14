@@ -1,10 +1,8 @@
 """Base API handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from datetime import datetime
 import json
-
+from datetime import datetime
 from http.client import responses
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -12,7 +10,8 @@ from tornado import web
 
 from .. import orm
 from ..handlers import BaseHandler
-from ..utils import isoformat, url_path_join
+from ..utils import isoformat
+from ..utils import url_path_join
 
 
 class APIHandler(BaseHandler):
@@ -55,8 +54,11 @@ class APIHandler(BaseHandler):
         host_path = url_path_join(host, self.hub.base_url)
         referer_path = referer.split('://', 1)[-1]
         if not (referer_path + '/').startswith(host_path):
-            self.log.warning("Blocking Cross Origin API request.  Referer: %s, Host: %s",
-                referer, host_path)
+            self.log.warning(
+                "Blocking Cross Origin API request.  Referer: %s, Host: %s",
+                referer,
+                host_path,
+            )
             return False
         return True
 
@@ -105,9 +107,13 @@ class APIHandler(BaseHandler):
         if exception and isinstance(exception, SQLAlchemyError):
             try:
                 exception_str = str(exception)
-                self.log.warning("Rolling back session due to database error %s", exception_str)
+                self.log.warning(
+                    "Rolling back session due to database error %s", exception_str
+                )
             except Exception:
-                self.log.warning("Rolling back session due to database error %s", type(exception))
+                self.log.warning(
+                    "Rolling back session due to database error %s", type(exception)
+                )
             self.db.rollback()
 
         self.set_header('Content-Type', 'application/json')
@@ -121,10 +127,9 @@ class APIHandler(BaseHandler):
             # Content-Length must be recalculated.
             self.clear_header('Content-Length')
 
-        self.write(json.dumps({
-            'status': status_code,
-            'message': message or status_message,
-        }))
+        self.write(
+            json.dumps({'status': status_code, 'message': message or status_message})
+        )
 
     def server_model(self, spawner, include_state=False):
         """Get the JSON model for a Spawner"""
@@ -144,21 +149,17 @@ class APIHandler(BaseHandler):
         expires_at = None
         if isinstance(token, orm.APIToken):
             kind = 'api_token'
-            extra = {
-                'note': token.note,
-            }
+            extra = {'note': token.note}
             expires_at = token.expires_at
         elif isinstance(token, orm.OAuthAccessToken):
             kind = 'oauth'
-            extra = {
-                'oauth_client': token.client.description or token.client.client_id,
-            }
+            extra = {'oauth_client': token.client.description or token.client.client_id}
             if token.expires_at:
                 expires_at = datetime.fromtimestamp(token.expires_at)
         else:
             raise TypeError(
-                "token must be an APIToken or OAuthAccessToken, not %s"
-                % type(token))
+                "token must be an APIToken or OAuthAccessToken, not %s" % type(token)
+            )
 
         if token.user:
             owner_key = 'user'
@@ -188,7 +189,7 @@ class APIHandler(BaseHandler):
             'kind': 'user',
             'name': user.name,
             'admin': user.admin,
-            'groups': [ g.name for g in user.groups ],
+            'groups': [g.name for g in user.groups],
             'server': user.url if user.running else None,
             'pending': None,
             'created': isoformat(user.created),
@@ -214,28 +215,16 @@ class APIHandler(BaseHandler):
         return {
             'kind': 'group',
             'name': group.name,
-            'users': [ u.name for u in group.users ],
+            'users': [u.name for u in group.users],
         }
 
     def service_model(self, service):
         """Get the JSON model for a Service object"""
-        return {
-            'kind': 'service',
-            'name': service.name,
-            'admin': service.admin,
-        }
+        return {'kind': 'service', 'name': service.name, 'admin': service.admin}
 
-    _user_model_types = {
-        'name': str,
-        'admin': bool,
-        'groups': list,
-        'auth_state': dict,
-    }
+    _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
 
-    _group_model_types = {
-        'name': str,
-        'users': list,
-    }
+    _group_model_types = {'name': str, 'users': list}
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
@@ -251,24 +240,29 @@ class APIHandler(BaseHandler):
             raise web.HTTPError(400, "Invalid JSON keys: %r" % model)
         for key, value in model.items():
             if not isinstance(value, model_types[key]):
-                raise web.HTTPError(400, "%s.%s must be %s, not: %r" % (
-                    name, key, model_types[key], type(value)
-                ))
+                raise web.HTTPError(
+                    400,
+                    "%s.%s must be %s, not: %r"
+                    % (name, key, model_types[key], type(value)),
+                )
 
     def _check_user_model(self, model):
         """Check a request-provided user model from a REST API"""
         self._check_model(model, self._user_model_types, 'user')
         for username in model.get('users', []):
             if not isinstance(username, str):
-                raise web.HTTPError(400, ("usernames must be str, not %r", type(username)))
+                raise web.HTTPError(
+                    400, ("usernames must be str, not %r", type(username))
+                )
 
     def _check_group_model(self, model):
         """Check a request-provided group model from a REST API"""
         self._check_model(model, self._group_model_types, 'group')
         for groupname in model.get('groups', []):
             if not isinstance(groupname, str):
-                raise web.HTTPError(400, ("group names must be str, not %r", type(groupname)))
-
+                raise web.HTTPError(
+                    400, ("group names must be str, not %r", type(groupname))
+                )
 
     def options(self, *args, **kwargs):
         self.finish()
@@ -279,6 +273,7 @@ class API404(APIHandler):
 
     Ensures JSON 404 errors for malformed URLs
     """
+
     async def prepare(self):
         await super().prepare()
         raise web.HTTPError(404)

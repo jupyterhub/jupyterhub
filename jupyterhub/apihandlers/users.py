@@ -1,20 +1,24 @@
 """User handlers"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import asyncio
-from datetime import datetime, timedelta, timezone
 import json
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
-from tornado import  web
+from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
 from ..user import User
-from ..utils import admin_only, isoformat, iterate_until, maybe_future, url_path_join
+from ..utils import admin_only
+from ..utils import isoformat
+from ..utils import iterate_until
+from ..utils import maybe_future
+from ..utils import url_path_join
 from .base import APIHandler
 
 
@@ -89,16 +93,19 @@ class UserListAPIHandler(APIHandler):
             except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
-                raise web.HTTPError(400, "Failed to create user %s: %s" % (name, str(e)))
+                raise web.HTTPError(
+                    400, "Failed to create user %s: %s" % (name, str(e))
+                )
             else:
                 created.append(user)
 
-        self.write(json.dumps([ self.user_model(u) for u in created ]))
+        self.write(json.dumps([self.user_model(u) for u in created]))
         self.set_status(201)
 
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target user or admin"""
+
     def m(self, name, *args, **kwargs):
         current = self.current_user
         if current is None:
@@ -110,15 +117,17 @@ def admin_or_self(method):
         if not self.find_user(name):
             raise web.HTTPError(404)
         return method(self, name, *args, **kwargs)
+
     return m
 
 
 class UserAPIHandler(APIHandler):
-
     @admin_or_self
     async def get(self, name):
         user = self.find_user(name)
-        model = self.user_model(user, include_servers=True, include_state=self.current_user.admin)
+        model = self.user_model(
+            user, include_servers=True, include_state=self.current_user.admin
+        )
         # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
@@ -161,11 +170,16 @@ class UserAPIHandler(APIHandler):
         if user.name == self.current_user.name:
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.spawner._stop_pending:
-            raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
+            raise web.HTTPError(
+                400, "%s's server is in the process of stopping, please wait." % name
+            )
         if user.running:
             await self.stop_single_user(user)
             if user.spawner._stop_pending:
-                raise web.HTTPError(400, "%s's server is in the process of stopping, please wait." % name)
+                raise web.HTTPError(
+                    400,
+                    "%s's server is in the process of stopping, please wait." % name,
+                )
 
         await maybe_future(self.authenticator.delete_user(user))
         # remove from registry
@@ -183,7 +197,10 @@ class UserAPIHandler(APIHandler):
         if 'name' in data and data['name'] != name:
             # check if the new name is already taken inside db
             if self.find_user(data['name']):
-                raise web.HTTPError(400, "User %s already exists, username must be unique" % data['name'])
+                raise web.HTTPError(
+                    400,
+                    "User %s already exists, username must be unique" % data['name'],
+                )
         for key, value in data.items():
             if key == 'auth_state':
                 await user.save_auth_state(value)
@@ -197,6 +214,7 @@ class UserAPIHandler(APIHandler):
 
 class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
+
     @admin_or_self
     def get(self, name):
         """Get tokens for a given user"""
@@ -207,6 +225,7 @@ class UserTokenListAPIHandler(APIHandler):
         now = datetime.utcnow()
 
         api_tokens = []
+
         def sort_key(token):
             return token.last_activity or token.created
 
@@ -228,10 +247,7 @@ class UserTokenListAPIHandler(APIHandler):
                 self.db.commit()
                 continue
             oauth_tokens.append(self.token_model(token))
-        self.write(json.dumps({
-            'api_tokens': api_tokens,
-            'oauth_tokens': oauth_tokens,
-        }))
+        self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
     async def post(self, name):
         body = self.get_json_body() or {}
@@ -253,8 +269,9 @@ class UserTokenListAPIHandler(APIHandler):
             except Exception as e:
                 # suppress and log error here in case Authenticator
                 # isn't prepared to handle auth via this data
-                self.log.error("Error authenticating request for %s: %s",
-                    self.request.uri, e)
+                self.log.error(
+                    "Error authenticating request for %s: %s", self.request.uri, e
+                )
                 raise web.HTTPError(403)
             requester = self.find_user(name)
         if requester is None:
@@ -274,9 +291,16 @@ class UserTokenListAPIHandler(APIHandler):
             if requester is not user:
                 note += " by %s %s" % (kind, requester.name)
 
-        api_token = user.new_api_token(note=note, expires_in=body.get('expires_in', None))
+        api_token = user.new_api_token(
+            note=note, expires_in=body.get('expires_in', None)
+        )
         if requester is not user:
-            self.log.info("%s %s requested API token for %s", kind.title(), requester.name, user.name)
+            self.log.info(
+                "%s %s requested API token for %s",
+                kind.title(),
+                requester.name,
+                user.name,
+            )
         else:
             user_kind = 'user' if isinstance(user, User) else 'service'
             self.log.info("%s %s requested new API token", user_kind.title(), user.name)
@@ -308,7 +332,7 @@ class UserTokenAPIHandler(APIHandler):
         except ValueError:
             raise web.HTTPError(404, not_found)
 
-        orm_token = self.db.query(Token).filter(Token.id==id).first()
+        orm_token = self.db.query(Token).filter(Token.id == id).first()
         if orm_token is None or orm_token.user is not user.orm_user:
             raise web.HTTPError(404, "Token not found %s", orm_token)
         return orm_token
@@ -333,8 +357,7 @@ class UserTokenAPIHandler(APIHandler):
         if isinstance(token, orm.OAuthAccessToken):
             client_id = token.client_id
             tokens = [
-                token for token in user.oauth_tokens
-                if token.client_id == client_id
+                token for token in user.oauth_tokens if token.client_id == client_id
             ]
         else:
             tokens = [token]
@@ -354,16 +377,19 @@ class UserServerAPIHandler(APIHandler):
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if self.named_server_limit_per_user > 0 and server_name not in user.orm_spawners:
+            if (
+                self.named_server_limit_per_user > 0
+                and server_name not in user.orm_spawners
+            ):
                 named_spawners = list(user.all_spawners(include_default=False))
                 if self.named_server_limit_per_user <= len(named_spawners):
                     raise web.HTTPError(
                         400,
                         "User {} already has the maximum of {} named servers."
                         "  One must be deleted before a new server can be created".format(
-                            name,
-                            self.named_server_limit_per_user
-                        ))
+                            name, self.named_server_limit_per_user
+                        ),
+                    )
         spawner = user.spawners[server_name]
         pending = spawner.pending
         if pending == 'spawn':
@@ -396,7 +422,6 @@ class UserServerAPIHandler(APIHandler):
         options = self.get_json_body()
         remove = (options or {}).get('remove', False)
 
-
         def _remove_spawner(f=None):
             if f and f.exception():
                 return
@@ -408,7 +433,9 @@ class UserServerAPIHandler(APIHandler):
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
             if server_name not in user.orm_spawners:
-                raise web.HTTPError(404, "%s has no server named '%s'" % (name, server_name))
+                raise web.HTTPError(
+                    404, "%s has no server named '%s'" % (name, server_name)
+                )
         elif remove:
             raise web.HTTPError(400, "Cannot delete the default server")
 
@@ -423,7 +450,8 @@ class UserServerAPIHandler(APIHandler):
 
         if spawner.pending:
             raise web.HTTPError(
-                400, "%s is pending %s, please wait" % (spawner._log_name, spawner.pending)
+                400,
+                "%s is pending %s, please wait" % (spawner._log_name, spawner.pending),
             )
 
         stop_future = None
@@ -449,13 +477,16 @@ class UserAdminAccessAPIHandler(APIHandler):
 
     This handler sets the necessary cookie for an admin to login to a single-user server.
     """
+
     @admin_only
     def post(self, name):
-        self.log.warning("Deprecated in JupyterHub 0.8."
-            " Admin access API is not needed now that we use OAuth.")
+        self.log.warning(
+            "Deprecated in JupyterHub 0.8."
+            " Admin access API is not needed now that we use OAuth."
+        )
         current = self.current_user
-        self.log.warning("Admin user %s has requested access to %s's server",
-            current.name, name,
+        self.log.warning(
+            "Admin user %s has requested access to %s's server", current.name, name
         )
         if not self.settings.get('admin_access', False):
             raise web.HTTPError(403, "admin access to user servers disabled")
@@ -501,10 +532,7 @@ class SpawnProgressAPIHandler(APIHandler):
             except (StreamClosedError, RuntimeError):
                 return
 
-            await asyncio.wait(
-                [self._finish_future],
-                timeout=self.keepalive_interval,
-            )
+            await asyncio.wait([self._finish_future], timeout=self.keepalive_interval)
 
     @admin_or_self
     async def get(self, username, server_name=''):
@@ -535,11 +563,7 @@ class SpawnProgressAPIHandler(APIHandler):
             'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
             'url': url,
         }
-        failed_event = {
-            'progress': 100,
-            'failed': True,
-            'message': "Spawn failed",
-        }
+        failed_event = {'progress': 100, 'failed': True, 'message': "Spawn failed"}
 
         if spawner.ready:
             # spawner already ready. Trigger progress-completion immediately
@@ -561,7 +585,9 @@ class SpawnProgressAPIHandler(APIHandler):
                 raise web.HTTPError(400, "%s is not starting...", spawner._log_name)
 
         # retrieve progress events from the Spawner
-        async with aclosing(iterate_until(spawn_future, spawner._generate_progress())) as events:
+        async with aclosing(
+            iterate_until(spawn_future, spawner._generate_progress())
+        ) as events:
             async for event in events:
                 # don't allow events to sneakily set the 'ready' flag
                 if 'ready' in event:
@@ -584,7 +610,9 @@ class SpawnProgressAPIHandler(APIHandler):
             if f and f.done() and f.exception():
                 failed_event['message'] = "Spawn failed: %s" % f.exception()
             else:
-                self.log.warning("Server %s didn't start for unknown reason", spawner._log_name)
+                self.log.warning(
+                    "Server %s didn't start for unknown reason", spawner._log_name
+                )
             await self.send_event(failed_event)
 
 
@@ -609,13 +637,12 @@ def _parse_timestamp(timestamp):
             400,
             "Rejecting activity from more than an hour in the future: {}".format(
                 isoformat(dt)
-            )
+            ),
         )
     return dt
 
 
 class ActivityAPIHandler(APIHandler):
-
     def _validate_servers(self, user, servers):
         """Validate servers dict argument
 
@@ -632,10 +659,7 @@ class ActivityAPIHandler(APIHandler):
             if server_name not in spawners:
                 raise web.HTTPError(
                     400,
-                    "No such server '{}' for user {}".format(
-                        server_name,
-                        user.name,
-                    )
+                    "No such server '{}' for user {}".format(server_name, user.name),
                 )
             # check that each per-server field is a dict
             if not isinstance(server_info, dict):
@@ -645,7 +669,9 @@ class ActivityAPIHandler(APIHandler):
                 raise web.HTTPError(400, msg)
             # parse last_activity timestamps
             # _parse_timestamp above is responsible for raising errors
-            server_info['last_activity'] = _parse_timestamp(server_info['last_activity'])
+            server_info['last_activity'] = _parse_timestamp(
+                server_info['last_activity']
+            )
         return servers
 
     @admin_or_self
@@ -663,8 +689,7 @@ class ActivityAPIHandler(APIHandler):
         servers = body.get('servers')
         if not last_activity_timestamp and not servers:
             raise web.HTTPError(
-                400,
-                "body must contain at least one of `last_activity` or `servers`"
+                400, "body must contain at least one of `last_activity` or `servers`"
             )
 
         if servers:
@@ -677,13 +702,9 @@ class ActivityAPIHandler(APIHandler):
         # update user.last_activity if specified
         if last_activity_timestamp:
             last_activity = _parse_timestamp(last_activity_timestamp)
-            if (
-                (not user.last_activity)
-                or last_activity > user.last_activity
-            ):
-                self.log.debug("Activity for user %s: %s",
-                    user.name,
-                    isoformat(last_activity),
+            if (not user.last_activity) or last_activity > user.last_activity:
+                self.log.debug(
+                    "Activity for user %s: %s", user.name, isoformat(last_activity)
                 )
                 user.last_activity = last_activity
             else:
@@ -699,11 +720,9 @@ class ActivityAPIHandler(APIHandler):
                 last_activity = server_info['last_activity']
                 spawner = user.orm_spawners[server_name]
 
-                if (
-                    (not spawner.last_activity)
-                    or last_activity > spawner.last_activity
-                ):
-                    self.log.debug("Activity on server %s/%s: %s",
+                if (not spawner.last_activity) or last_activity > spawner.last_activity:
+                    self.log.debug(
+                        "Activity on server %s/%s: %s",
                         user.name,
                         server_name,
                         isoformat(last_activity),

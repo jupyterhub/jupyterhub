@@ -4,9 +4,8 @@ Run with old versions of jupyterhub to test upgrade/downgrade
 
 used in test_db.py
 """
-
-from datetime import datetime
 import os
+from datetime import datetime
 
 import jupyterhub
 from jupyterhub import orm
@@ -90,6 +89,7 @@ def populate_db(url):
 
 if __name__ == '__main__':
     import sys
+
     if len(sys.argv) > 1:
         url = sys.argv[1]
     else:

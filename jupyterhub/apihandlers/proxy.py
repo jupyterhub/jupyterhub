@@ -1,12 +1,11 @@
 """Proxy handlers"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import json
 from urllib.parse import urlparse
 
-from tornado import gen, web
+from tornado import gen
+from tornado import web
 
 from .. import orm
 from ..utils import admin_only
@@ -14,7 +13,6 @@ from .base import APIHandler
 
 
 class ProxyAPIHandler(APIHandler):
-
     @admin_only
     async def get(self):
         """GET /api/proxy fetches the routing table
@@ -58,6 +56,4 @@ class ProxyAPIHandler(APIHandler):
         await self.proxy.check_routes(self.users, self.services)
 
 
-default_handlers = [
-    (r"/api/proxy", ProxyAPIHandler),
-]
+default_handlers = [(r"/api/proxy", ProxyAPIHandler)]

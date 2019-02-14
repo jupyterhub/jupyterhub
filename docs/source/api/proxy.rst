@@ -20,4 +20,3 @@ Module: :mod:`jupyterhub.proxy`
 
 .. autoconfigurable:: ConfigurableHTTPProxy
     :members: debug, auth_token, check_running_interval, api_url, command
-

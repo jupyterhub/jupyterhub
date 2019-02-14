@@ -1,13 +1,15 @@
 """logging utilities"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import json
 import traceback
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
-from tornado.log import LogFormatter, access_log
-from tornado.web import StaticFileHandler, HTTPError
+from tornado.log import access_log
+from tornado.log import LogFormatter
+from tornado.web import HTTPError
+from tornado.web import StaticFileHandler
 
 from .metrics import prometheus_log_method
 
@@ -23,7 +25,11 @@ def coroutine_frames(all_frames):
             continue
         # start out conservative with filename + function matching
         # maybe just filename matching would be sufficient
-        elif frame[0].endswith('tornado/gen.py') and frame[2] in {'run', 'wrapper', '__init__'}:
+        elif frame[0].endswith('tornado/gen.py') and frame[2] in {
+            'run',
+            'wrapper',
+            '__init__',
+        }:
             continue
         elif frame[0].endswith('tornado/concurrent.py') and frame[2] == 'result':
             continue
@@ -51,8 +57,10 @@ def coroutine_traceback(typ, value, tb):
 
 class CoroutineLogFormatter(LogFormatter):
     """Log formatter that scrubs coroutine frames"""
+
     def formatException(self, exc_info):
         return ''.join(coroutine_traceback(*exc_info))
+
 
 # url params to be scrubbed if seen
 # any url param that *contains* one of these
@@ -95,6 +103,7 @@ def _scrub_headers(headers):
 
 
 # log_request adapted from IPython (BSD)
+
 
 def log_request(handler):
     """log a bit more information about each request than tornado's default

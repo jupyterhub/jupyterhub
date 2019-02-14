@@ -2,30 +2,29 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
-
 from datetime import datetime
 from urllib.parse import urlparse
 
-from oauthlib.oauth2 import RequestValidator, WebApplicationServer
-
+from oauthlib.oauth2 import RequestValidator
+from oauthlib.oauth2 import WebApplicationServer
+from oauthlib.oauth2.rfc6749.grant_types import authorization_code
 from sqlalchemy.orm import scoped_session
+from tornado import web
 from tornado.escape import url_escape
 from tornado.log import app_log
-from tornado import web
 
 from .. import orm
-from ..utils import url_path_join, hash_token, compare_token
-
+from ..utils import compare_token
+from ..utils import hash_token
+from ..utils import url_path_join
 
 # patch absolute-uri check
 # because we want to allow relative uri oauth
 # for internal services
-from oauthlib.oauth2.rfc6749.grant_types import authorization_code
 authorization_code.is_absolute_uri = lambda uri: True
 
 
 class JupyterHubRequestValidator(RequestValidator):
-
     def __init__(self, db):
         self.db = db
         super().__init__()
@@ -51,10 +50,7 @@ class JupyterHubRequestValidator(RequestValidator):
         client_id = request.client_id
         client_secret = request.client_secret
         oauth_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if oauth_client is None:
             return False
@@ -78,10 +74,7 @@ class JupyterHubRequestValidator(RequestValidator):
             - Authorization Code Grant
         """
         orm_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
             app_log.warning("No such oauth client %s", client_id)
@@ -89,8 +82,9 @@ class JupyterHubRequestValidator(RequestValidator):
         request.client = orm_client
         return True
 
-    def confirm_redirect_uri(self, client_id, code, redirect_uri, client,
-                             *args, **kwargs):
+    def confirm_redirect_uri(
+        self, client_id, code, redirect_uri, client, *args, **kwargs
+    ):
         """Ensure that the authorization process represented by this authorization
         code began with this 'redirect_uri'.
         If the client specifies a redirect_uri when obtaining code then that
@@ -108,8 +102,10 @@ class JupyterHubRequestValidator(RequestValidator):
         """
         # TODO: record redirect_uri used during oauth
         # if we ever support multiple destinations
-        app_log.debug("confirm_redirect_uri: client_id=%s, redirect_uri=%s",
-            client_id, redirect_uri,
+        app_log.debug(
+            "confirm_redirect_uri: client_id=%s, redirect_uri=%s",
+            client_id,
+            redirect_uri,
         )
         if redirect_uri == client.redirect_uri:
             return True
@@ -127,10 +123,7 @@ class JupyterHubRequestValidator(RequestValidator):
             - Implicit Grant
         """
         orm_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
             raise KeyError(client_id)
@@ -159,7 +152,9 @@ class JupyterHubRequestValidator(RequestValidator):
         """
         raise NotImplementedError()
 
-    def is_within_original_scope(self, request_scopes, refresh_token, request, *args, **kwargs):
+    def is_within_original_scope(
+        self, request_scopes, refresh_token, request, *args, **kwargs
+    ):
         """Check if requested scopes are within a scope of the refresh token.
         When access tokens are refreshed the scope of the new token
         needs to be within the scope of the original token. This is
@@ -227,12 +222,15 @@ class JupyterHubRequestValidator(RequestValidator):
             - Authorization Code Grant
         """
         log_code = code.get('code', 'undefined')[:3] + '...'
-        app_log.debug("Saving authorization code %s, %s, %s, %s", client_id, log_code, args, kwargs)
+        app_log.debug(
+            "Saving authorization code %s, %s, %s, %s",
+            client_id,
+            log_code,
+            args,
+            kwargs,
+        )
         orm_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
             raise ValueError("No such client: %s" % client_id)
@@ -330,7 +328,11 @@ class JupyterHubRequestValidator(RequestValidator):
         app_log.debug("Saving bearer token %s", log_token)
         if request.user is None:
             raise ValueError("No user for access token: %s" % request.user)
-        client = self.db.query(orm.OAuthClient).filter_by(identifier=request.client.client_id).first()
+        client = (
+            self.db.query(orm.OAuthClient)
+            .filter_by(identifier=request.client.client_id)
+            .first()
+        )
         orm_access_token = orm.OAuthAccessToken(
             client=client,
             grant_type=orm.GrantType.authorization_code,
@@ -400,10 +402,7 @@ class JupyterHubRequestValidator(RequestValidator):
         """
         app_log.debug("Validating client id %s", client_id)
         orm_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
             return False
@@ -431,19 +430,13 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant
         """
-        orm_code = (
-            self.db
-            .query(orm.OAuthCode)
-            .filter_by(code=code)
-            .first()
-        )
+        orm_code = self.db.query(orm.OAuthCode).filter_by(code=code).first()
         if orm_code is None:
             app_log.debug("No such code: %s", code)
             return False
         if orm_code.client_id != client_id:
             app_log.debug(
-                "OAuth code client id mismatch: %s != %s",
-                client_id, orm_code.client_id,
+                "OAuth code client id mismatch: %s != %s", client_id, orm_code.client_id
             )
             return False
         request.user = orm_code.user
@@ -453,7 +446,9 @@ class JupyterHubRequestValidator(RequestValidator):
         request.scopes = ['identify']
         return True
 
-    def validate_grant_type(self, client_id, grant_type, client, request, *args, **kwargs):
+    def validate_grant_type(
+        self, client_id, grant_type, client, request, *args, **kwargs
+    ):
         """Ensure client is authorized to use the grant_type requested.
         :param client_id: Unicode client identifier
         :param grant_type: Unicode grant type, i.e. authorization_code, password.
@@ -480,14 +475,13 @@ class JupyterHubRequestValidator(RequestValidator):
             - Authorization Code Grant
             - Implicit Grant
         """
-        app_log.debug("validate_redirect_uri: client_id=%s, redirect_uri=%s",
-            client_id, redirect_uri,
+        app_log.debug(
+            "validate_redirect_uri: client_id=%s, redirect_uri=%s",
+            client_id,
+            redirect_uri,
         )
         orm_client = (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
             app_log.warning("No such oauth client %s", client_id)
@@ -495,7 +489,9 @@ class JupyterHubRequestValidator(RequestValidator):
         if redirect_uri == orm_client.redirect_uri:
             return True
         else:
-            app_log.warning("Redirect uri %s != %s", redirect_uri, orm_client.redirect_uri)
+            app_log.warning(
+                "Redirect uri %s != %s", redirect_uri, orm_client.redirect_uri
+            )
             return False
 
     def validate_refresh_token(self, refresh_token, client, request, *args, **kwargs):
@@ -514,7 +510,9 @@ class JupyterHubRequestValidator(RequestValidator):
         return False
         raise NotImplementedError('Subclasses must implement this method.')
 
-    def validate_response_type(self, client_id, response_type, client, request, *args, **kwargs):
+    def validate_response_type(
+        self, client_id, response_type, client, request, *args, **kwargs
+    ):
         """Ensure client is authorized to use the response_type requested.
         :param client_id: Unicode client identifier
         :param response_type: Unicode response type, i.e. code, token.
@@ -555,10 +553,8 @@ class JupyterHubOAuthServer(WebApplicationServer):
         hash its client_secret before putting it in the database.
         """
         # clear existing clients with same ID
-        for orm_client in (
-            self.db
-            .query(orm.OAuthClient)\
-            .filter_by(identifier=client_id)
+        for orm_client in self.db.query(orm.OAuthClient).filter_by(
+            identifier=client_id
         ):
             self.db.delete(orm_client)
         self.db.commit()
@@ -574,12 +570,7 @@ class JupyterHubOAuthServer(WebApplicationServer):
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
-        return (
-            self.db
-            .query(orm.OAuthClient)
-            .filter_by(identifier=client_id)
-            .first()
-        )
+        return self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
 
 
 def make_provider(session_factory, url_prefix, login_url):
@@ -588,4 +579,3 @@ def make_provider(session_factory, url_prefix, login_url):
     validator = JupyterHubRequestValidator(db)
     server = JupyterHubOAuthServer(db, validator)
     return server
-

@@ -30,4 +30,3 @@ Module: :mod:`jupyterhub.auth`
 ---------------------------
 
 .. autoconfigurable:: DummyAuthenticator
-

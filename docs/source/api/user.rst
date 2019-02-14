@@ -34,4 +34,3 @@ Module: :mod:`jupyterhub.user`
     .. attribute:: spawner
     
         The user's :class:`~.Spawner` instance.
-

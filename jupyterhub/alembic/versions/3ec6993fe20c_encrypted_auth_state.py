@@ -12,7 +12,6 @@ Revises: af4cbdb2d13c
 Create Date: 2017-07-28 16:44:40.413648
 
 """
-
 # revision identifiers, used by Alembic.
 revision = '3ec6993fe20c'
 down_revision = 'af4cbdb2d13c'
@@ -39,12 +38,14 @@ def upgrade():
         # mysql cannot drop _server_id without also dropping
         # implicitly created foreign key
         if op.get_context().dialect.name == 'mysql':
-            op.drop_constraint('users_ibfk_1', 'users',  type_='foreignkey')
+            op.drop_constraint('users_ibfk_1', 'users', type_='foreignkey')
         op.drop_column('users', '_server_id')
     except sa.exc.OperationalError:
         # this won't be a problem moving forward, but downgrade will fail
         if op.get_context().dialect.name == 'sqlite':
-            logger.warning("sqlite cannot drop columns. Leaving unused old columns in place.")
+            logger.warning(
+                "sqlite cannot drop columns. Leaving unused old columns in place."
+            )
         else:
             raise
 
@@ -54,15 +55,13 @@ def upgrade():
 def downgrade():
     # drop all the new tables
     engine = op.get_bind().engine
-    for table in ('oauth_clients',
-                  'oauth_codes',
-                  'oauth_access_tokens',
-                  'spawners'):
+    for table in ('oauth_clients', 'oauth_codes', 'oauth_access_tokens', 'spawners'):
         if engine.has_table(table):
             op.drop_table(table)
 
     op.drop_column('users', 'encrypted_auth_state')
 
     op.add_column('users', sa.Column('auth_state', JSONDict))
-    op.add_column('users',  sa.Column('_server_id', sa.Integer, sa.ForeignKey('servers.id')))
-
+    op.add_column(
+        'users', sa.Column('_server_id', sa.Integer, sa.ForeignKey('servers.id'))
+    )

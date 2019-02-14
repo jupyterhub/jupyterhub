@@ -1,36 +1,45 @@
 """sqlalchemy ORM tools for the state of the constellation of processes"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from datetime import datetime, timedelta
 import enum
 import json
+from datetime import datetime
+from datetime import timedelta
 
-import alembic.config
 import alembic.command
+import alembic.config
 from alembic.script import ScriptDirectory
-from tornado.log import app_log
-
-from sqlalchemy.types import TypeDecorator, Text, LargeBinary
-from sqlalchemy import (
-    create_engine, event, exc, inspect, or_, select,
-    Column, Integer, ForeignKey, Unicode, Boolean,
-    DateTime, Enum, Table,
-)
+from sqlalchemy import Boolean
+from sqlalchemy import Column
+from sqlalchemy import create_engine
+from sqlalchemy import DateTime
+from sqlalchemy import Enum
+from sqlalchemy import event
+from sqlalchemy import exc
+from sqlalchemy import ForeignKey
+from sqlalchemy import inspect
+from sqlalchemy import Integer
+from sqlalchemy import or_
+from sqlalchemy import select
+from sqlalchemy import Table
+from sqlalchemy import Unicode
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import (
-    Session,
-    interfaces, object_session, relationship, sessionmaker,
-)
-
+from sqlalchemy.orm import interfaces
+from sqlalchemy.orm import object_session
+from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Session
+from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
+from sqlalchemy.types import LargeBinary
+from sqlalchemy.types import Text
+from sqlalchemy.types import TypeDecorator
+from tornado.log import app_log
 
-from .utils import (
-    random_port,
-    new_token, hash_token, compare_token,
-)
+from .utils import compare_token
+from .utils import hash_token
+from .utils import new_token
+from .utils import random_port
 
 # top-level variable for easier mocking in tests
 utcnow = datetime.utcnow
@@ -68,6 +77,7 @@ class Server(Base):
 
     connection and cookie info
     """
+
     __tablename__ = 'servers'
     id = Column(Integer, primary_key=True)
 
@@ -82,7 +92,9 @@ class Server(Base):
 
 
 # user:group many:many mapping table
-user_group_map = Table('user_group_map', Base.metadata,
+user_group_map = Table(
+    'user_group_map',
+    Base.metadata,
     Column('user_id', ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
     Column('group_id', ForeignKey('groups.id', ondelete='CASCADE'), primary_key=True),
 )
@@ -90,6 +102,7 @@ user_group_map = Table('user_group_map', Base.metadata,
 
 class Group(Base):
     """User Groups"""
+
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
@@ -97,7 +110,9 @@ class Group(Base):
 
     def __repr__(self):
         return "<%s %s (%i users)>" % (
-            self.__class__.__name__, self.name, len(self.users)
+            self.__class__.__name__,
+            self.name,
+            len(self.users),
         )
 
     @classmethod
@@ -130,15 +145,15 @@ class User(Base):
     `servers` is a list that contains a reference for each of the user's single user notebook servers.
     The method `server` returns the first entry in the user's `servers` list.
     """
+
     __tablename__ = 'users'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
     _orm_spawners = relationship(
-        "Spawner",
-        backref="user",
-        cascade="all, delete-orphan",
+        "Spawner", backref="user", cascade="all, delete-orphan"
     )
+
     @property
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
@@ -147,20 +162,12 @@ class User(Base):
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, nullable=True)
 
-    api_tokens = relationship(
-        "APIToken",
-        backref="user",
-        cascade="all, delete-orphan",
-    )
+    api_tokens = relationship("APIToken", backref="user", cascade="all, delete-orphan")
     oauth_tokens = relationship(
-        "OAuthAccessToken",
-        backref="user",
-        cascade="all, delete-orphan",
+        "OAuthAccessToken", backref="user", cascade="all, delete-orphan"
     )
     oauth_codes = relationship(
-        "OAuthCode",
-        backref="user",
-        cascade="all, delete-orphan",
+        "OAuthCode", backref="user", cascade="all, delete-orphan"
     )
     cookie_id = Column(Unicode(255), default=new_token, nullable=False, unique=True)
     # User.state is actually Spawner state
@@ -192,8 +199,10 @@ class User(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
+
 class Spawner(Base):
     """"State about a Spawner"""
+
     __tablename__ = 'spawners'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
@@ -214,9 +223,11 @@ class Spawner(Base):
     # for which these should all be False
     active = running = ready = False
     pending = None
+
     @property
     def orm_spawner(self):
         return self
+
 
 class Service(Base):
     """A service run with JupyterHub
@@ -235,6 +246,7 @@ class Service(Base):
     - pid: the process id (if managed)
 
     """
+
     __tablename__ = 'services'
     id = Column(Integer, primary_key=True, autoincrement=True)
 
@@ -243,9 +255,7 @@ class Service(Base):
     admin = Column(Boolean, default=False)
 
     api_tokens = relationship(
-        "APIToken",
-        backref="service",
-        cascade="all, delete-orphan",
+        "APIToken", backref="service", cascade="all, delete-orphan"
     )
 
     # service-specific interface
@@ -270,6 +280,7 @@ class Service(Base):
 
 class Hashed(object):
     """Mixin for tables with hashed tokens"""
+
     prefix_length = 4
     algorithm = "sha512"
     rounds = 16384
@@ -289,7 +300,7 @@ class Hashed(object):
     @token.setter
     def token(self, token):
         """Store the hashed value and prefix for a token"""
-        self.prefix = token[:self.prefix_length]
+        self.prefix = token[: self.prefix_length]
         if self.generated:
             # Generated tokens are UUIDs, which have sufficient entropy on their own
             # and don't need salt & hash rounds.
@@ -299,7 +310,9 @@ class Hashed(object):
         else:
             rounds = self.rounds
             salt_bytes = self.salt_bytes
-        self.hashed = hash_token(token, rounds=rounds, salt=salt_bytes, algorithm=self.algorithm)
+        self.hashed = hash_token(
+            token, rounds=rounds, salt=salt_bytes, algorithm=self.algorithm
+        )
 
     def match(self, token):
         """Is this my token?"""
@@ -309,12 +322,13 @@ class Hashed(object):
     def check_token(cls, db, token):
         """Check if a token is acceptable"""
         if len(token) < cls.min_length:
-            raise ValueError("Tokens must be at least %i characters, got %r" % (
-                cls.min_length, token)
+            raise ValueError(
+                "Tokens must be at least %i characters, got %r"
+                % (cls.min_length, token)
             )
         found = cls.find(db, token)
         if found:
-            raise ValueError("Collision on token: %s..." % token[:cls.prefix_length])
+            raise ValueError("Collision on token: %s..." % token[: cls.prefix_length])
 
     @classmethod
     def find_prefix(cls, db, token):
@@ -322,7 +336,7 @@ class Hashed(object):
 
         Returns an SQLAlchemy query already filtered by prefix-matches.
         """
-        prefix = token[:cls.prefix_length]
+        prefix = token[: cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
         return db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
@@ -344,10 +358,13 @@ class Hashed(object):
 
 class APIToken(Hashed, Base):
     """An API token"""
+
     __tablename__ = 'api_tokens'
 
     user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
-    service_id = Column(Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True)
+    service_id = Column(
+        Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True
+    )
 
     id = Column(Integer, primary_key=True)
     hashed = Column(Unicode(255), unique=True)
@@ -375,10 +392,7 @@ class APIToken(Hashed, Base):
             kind = 'owner'
             name = 'unknown'
         return "<{cls}('{pre}...', {kind}='{name}')>".format(
-            cls=self.__class__.__name__,
-            pre=self.prefix,
-            kind=kind,
-            name=name,
+            cls=self.__class__.__name__, pre=self.prefix, kind=kind, name=name
         )
 
     @classmethod
@@ -387,9 +401,7 @@ class APIToken(Hashed, Base):
         now = utcnow()
         deleted = False
         for token in (
-            db.query(cls)
-            .filter(cls.expires_at != None)
-            .filter(cls.expires_at < now)
+            db.query(cls).filter(cls.expires_at != None).filter(cls.expires_at < now)
         ):
             app_log.debug("Purging expired %s", token)
             deleted = True
@@ -421,8 +433,15 @@ class APIToken(Hashed, Base):
                 return orm_token
 
     @classmethod
-    def new(cls, token=None, user=None, service=None, note='', generated=True,
-            expires_in=None):
+    def new(
+        cls,
+        token=None,
+        user=None,
+        service=None,
+        note='',
+        generated=True,
+        expires_in=None,
+    ):
         """Generate a new API token for a user or service"""
         assert user or service
         assert not (user and service)
@@ -451,9 +470,9 @@ class APIToken(Hashed, Base):
         return token
 
 
-#------------------------------------
+# ------------------------------------
 # OAuth tables
-#------------------------------------
+# ------------------------------------
 
 
 class GrantType(enum.Enum):
@@ -473,14 +492,16 @@ class OAuthAccessToken(Hashed, Base):
     def api_id(self):
         return 'o%i' % self.id
 
-    client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
+    client_id = Column(
+        Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
+    )
     grant_type = Column(Enum(GrantType), nullable=False)
     expires_at = Column(Integer)
     refresh_token = Column(Unicode(255))
     # TODO: drop refresh_expires_at. Refresh tokens shouldn't expire
     refresh_expires_at = Column(Integer)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    service = None # for API-equivalence with APIToken
+    service = None  # for API-equivalence with APIToken
 
     # the browser session id associated with a given token
     session_id = Column(Unicode(255))
@@ -517,7 +538,9 @@ class OAuthAccessToken(Hashed, Base):
 class OAuthCode(Base):
     __tablename__ = 'oauth_codes'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    client_id = Column(Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE'))
+    client_id = Column(
+        Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
+    )
     code = Column(Unicode(36))
     expires_at = Column(Integer)
     redirect_uri = Column(Unicode(1023))
@@ -539,17 +562,13 @@ class OAuthClient(Base):
         return self.identifier
 
     access_tokens = relationship(
-        OAuthAccessToken,
-        backref='client',
-        cascade='all, delete-orphan',
+        OAuthAccessToken, backref='client', cascade='all, delete-orphan'
     )
-    codes = relationship(
-        OAuthCode,
-        backref='client',
-        cascade='all, delete-orphan',
-    )
+    codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
+
 
 # General database utilities
+
 
 class DatabaseSchemaMismatch(Exception):
     """Exception raised when the database schema version does not match
@@ -560,6 +579,7 @@ class DatabaseSchemaMismatch(Exception):
 
 def register_foreign_keys(engine):
     """register PRAGMA foreign_keys=on on connection"""
+
     @event.listens_for(engine, "connect")
     def connect(dbapi_con, con_record):
         cursor = dbapi_con.cursor()
@@ -609,6 +629,7 @@ def register_ping_connection(engine):
 
     https://docs.sqlalchemy.org/en/rel_1_1/core/pooling.html#disconnect-handling-pessimistic
     """
+
     @event.listens_for(engine, "engine_connect")
     def ping_connection(connection, branch):
         if branch:
@@ -633,7 +654,9 @@ def register_ping_connection(engine):
             # condition, which is based on inspection of the original exception
             # by the dialect in use.
             if err.connection_invalidated:
-                app_log.error("Database connection error, attempting to reconnect: %s", err)
+                app_log.error(
+                    "Database connection error, attempting to reconnect: %s", err
+                )
                 # run the same SELECT again - the connection will re-validate
                 # itself and establish a new connection.  The disconnect detection
                 # here also causes the whole connection pool to be invalidated
@@ -697,43 +720,50 @@ def check_db_revision(engine):
 
     # check database schema version
     # it should always be defined at this point
-    alembic_revision = engine.execute('SELECT version_num FROM alembic_version').first()[0]
+    alembic_revision = engine.execute(
+        'SELECT version_num FROM alembic_version'
+    ).first()[0]
     if alembic_revision == head:
         app_log.debug("database schema version found: %s", alembic_revision)
         pass
     else:
-        raise DatabaseSchemaMismatch("Found database schema version {found} != {head}. "
-        "Backup your database and run `jupyterhub upgrade-db`"
-        " to upgrade to the latest schema.".format(
-            found=alembic_revision,
-            head=head,
-        ))
+        raise DatabaseSchemaMismatch(
+            "Found database schema version {found} != {head}. "
+            "Backup your database and run `jupyterhub upgrade-db`"
+            " to upgrade to the latest schema.".format(
+                found=alembic_revision, head=head
+            )
+        )
 
 
 def mysql_large_prefix_check(engine):
     """Check mysql has innodb_large_prefix set"""
     if not str(engine.url).startswith('mysql'):
         return False
-    variables =  dict(engine.execute(
-        'show variables where variable_name like '
-        '"innodb_large_prefix" or '
-        'variable_name like "innodb_file_format";').fetchall())
-    if (variables['innodb_file_format'] == 'Barracuda' and
-        variables['innodb_large_prefix'] == 'ON'):
+    variables = dict(
+        engine.execute(
+            'show variables where variable_name like '
+            '"innodb_large_prefix" or '
+            'variable_name like "innodb_file_format";'
+        ).fetchall()
+    )
+    if (
+        variables['innodb_file_format'] == 'Barracuda'
+        and variables['innodb_large_prefix'] == 'ON'
+    ):
         return True
     else:
         return False
 
 
 def add_row_format(base):
-    for t in  base.metadata.tables.values():
+    for t in base.metadata.tables.values():
         t.dialect_kwargs['mysql_ROW_FORMAT'] = 'DYNAMIC'
 
 
-def new_session_factory(url="sqlite:///:memory:",
-                        reset=False,
-                        expire_on_commit=False,
-                        **kwargs):
+def new_session_factory(
+    url="sqlite:///:memory:", reset=False, expire_on_commit=False, **kwargs
+):
     """Create a new session at url"""
     if url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
@@ -757,7 +787,7 @@ def new_session_factory(url="sqlite:///:memory:",
         Base.metadata.drop_all(engine)
 
     if mysql_large_prefix_check(engine):  # if mysql is allows large indexes
-        add_row_format(Base)              # set format on the tables
+        add_row_format(Base)  # set format on the tables
     # check the db revision (will raise, pointing to `upgrade-db` if version doesn't match)
     check_db_revision(engine)
 
@@ -767,7 +797,5 @@ def new_session_factory(url="sqlite:///:memory:",
     # SQLAlchemy to expire objects after committing - we don't expect
     # concurrent runs of the hub talking to the same db. Turning
     # this off gives us a major performance boost
-    session_factory = sessionmaker(bind=engine,
-                                   expire_on_commit=expire_on_commit,
-    )
+    session_factory = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
     return session_factory

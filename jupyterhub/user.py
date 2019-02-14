@@ -1,31 +1,40 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from collections import defaultdict
-from datetime import datetime, timedelta
-from urllib.parse import quote, urlparse
 import warnings
+from collections import defaultdict
+from datetime import datetime
+from datetime import timedelta
+from urllib.parse import quote
+from urllib.parse import urlparse
 
 from sqlalchemy import inspect
 from tornado import gen
+from tornado import web
 from tornado.httputil import urlencode
 from tornado.log import app_log
-from tornado import web
-
-from .utils import maybe_future, url_path_join, make_ssl_context
 
 from . import orm
-from ._version import _check_version, __version__
+from ._version import __version__
+from ._version import _check_version
+from .crypto import CryptKeeper
+from .crypto import decrypt
+from .crypto import encrypt
+from .crypto import EncryptionUnavailable
+from .crypto import InvalidToken
+from .metrics import TOTAL_USERS
 from .objects import Server
 from .spawner import LocalProcessSpawner
-from .crypto import encrypt, decrypt, CryptKeeper, EncryptionUnavailable, InvalidToken
-from .metrics import TOTAL_USERS
+from .utils import make_ssl_context
+from .utils import maybe_future
+from .utils import url_path_join
+
 
 class UserDict(dict):
     """Like defaultdict, but for users
 
     Getting by a user id OR an orm.User instance returns a User wrapper around the orm user.
     """
+
     def __init__(self, db_factory, settings):
         self.db_factory = db_factory
         self.settings = settings
@@ -105,7 +114,7 @@ class UserDict(dict):
 
         Returns dict with counts of active/pending/ready servers
         """
-        counts = defaultdict(lambda : 0)
+        counts = defaultdict(lambda: 0)
         for user in self.values():
             for spawner in user.spawners.values():
                 pending = spawner.pending
@@ -145,11 +154,12 @@ class User:
         self.settings = settings or {}
         self.orm_user = orm_user
 
-
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
-        self.base_url = self.prefix = url_path_join(
-            self.settings.get('base_url', '/'), 'user', self.escaped_name) + '/'
+        self.base_url = self.prefix = (
+            url_path_join(self.settings.get('base_url', '/'), 'user', self.escaped_name)
+            + '/'
+        )
 
         self.spawners = _SpawnerDict(self._new_spawner)
 
@@ -177,8 +187,10 @@ class User:
         try:
             auth_state = await decrypt(encrypted)
         except (ValueError, InvalidToken, EncryptionUnavailable) as e:
-            self.log.warning("Failed to retrieve encrypted auth_state for %s because %s",
-                self.name, e,
+            self.log.warning(
+                "Failed to retrieve encrypted auth_state for %s because %s",
+                self.name,
+                e,
             )
             return
         # loading auth_state
@@ -187,7 +199,6 @@ class User:
             if len(CryptKeeper.instance().keys) > 1:
                 await self.save_auth_state(auth_state)
         return auth_state
-
 
     def all_spawners(self, include_default=True):
         """Generator yielding all my spawners
@@ -247,17 +258,15 @@ class User:
             proxy_spec=url_path_join(self.proxy_spec, server_name, '/'),
             db=self.db,
             oauth_client_id=client_id,
-            cookie_options = self.settings.get('cookie_options', {}),
+            cookie_options=self.settings.get('cookie_options', {}),
             trusted_alt_names=trusted_alt_names,
         )
 
         if self.settings.get('internal_ssl'):
             ssl_kwargs = dict(
                 internal_ssl=self.settings.get('internal_ssl'),
-                internal_trust_bundles=self.settings.get(
-                    'internal_trust_bundles'),
-                internal_certs_location=self.settings.get(
-                    'internal_certs_location'),
+                internal_trust_bundles=self.settings.get('internal_trust_bundles'),
+                internal_certs_location=self.settings.get('internal_certs_location'),
             )
             spawn_kwargs.update(ssl_kwargs)
 
@@ -308,14 +317,16 @@ class User:
 
     @property
     def spawn_pending(self):
-        warnings.warn("User.spawn_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
+        warnings.warn(
+            "User.spawn_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
             DeprecationWarning,
         )
         return self.spawner.pending == 'spawn'
 
     @property
     def stop_pending(self):
-        warnings.warn("User.stop_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
+        warnings.warn(
+            "User.stop_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
             DeprecationWarning,
         )
         return self.spawner.pending == 'stop'
@@ -341,7 +352,9 @@ class User:
     def domain(self):
         """Get the domain for my server."""
         # use underscore as escape char for domains
-        return quote(self.name).replace('%', '_').lower() + '.' + self.settings['domain']
+        return (
+            quote(self.name).replace('%', '_').lower() + '.' + self.settings['domain']
+        )
 
     @property
     def host(self):
@@ -360,10 +373,7 @@ class User:
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
         if self.settings.get('subdomain_host'):
-            return '{host}{path}'.format(
-                host=self.host,
-                path=self.base_url,
-            )
+            return '{host}{path}'.format(host=self.host, path=self.base_url)
         else:
             return self.base_url
 
@@ -417,8 +427,7 @@ class User:
 
         # if we got to here, auth is expired and couldn't be refreshed
         self.log.error(
-            "Auth expired for %s; cannot spawn until they login again",
-            self.name,
+            "Auth expired for %s; cannot spawn until they login again", self.name
         )
         # auth expired, cannot spawn without a fresh login
         # it's the current user *and* spawn via GET, trigger login redirect
@@ -433,8 +442,9 @@ class User:
         else:
             # spawn via POST or on behalf of another user.
             # nothing we can do here but fail
-            raise web.HTTPError(400, "{}'s authentication has expired".format(self.name))
-
+            raise web.HTTPError(
+                400, "{}'s authentication has expired".format(self.name)
+            )
 
     async def spawn(self, server_name='', options=None, handler=None):
         """Start the user's spawner
@@ -456,14 +466,11 @@ class User:
 
         base_url = url_path_join(self.base_url, server_name) + '/'
 
-        orm_server = orm.Server(
-            base_url=base_url,
-        )
+        orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
         note = "Server at %s" % base_url
         api_token = self.new_api_token(note=note)
         db.commit()
-
 
         spawner = self.spawners[server_name]
         spawner.server = server = Server(orm_server=orm_server)
@@ -487,9 +494,11 @@ class User:
             # create a new OAuth client + secret on every launch
             # containers that resume will be updated below
             oauth_provider.add_client(
-                client_id, api_token,
+                client_id,
+                api_token,
                 url_path_join(self.url, server_name, 'oauth_callback'),
-                description="Server at %s" % (url_path_join(self.base_url, server_name) + '/'),
+                description="Server at %s"
+                % (url_path_join(self.base_url, server_name) + '/'),
             )
         db.commit()
 
@@ -500,9 +509,9 @@ class User:
 
         spawner._start_pending = True
         # update spawner start time, and activity for both spawner and user
-        self.last_activity = \
-            spawner.orm_spawner.started = \
-            spawner.orm_spawner.last_activity = datetime.utcnow()
+        self.last_activity = (
+            spawner.orm_spawner.started
+        ) = spawner.orm_spawner.last_activity = datetime.utcnow()
         db.commit()
         # wait for spawner.start to return
         try:
@@ -540,7 +549,9 @@ class User:
             else:
                 # prior to 0.7, spawners had to store this info in user.server themselves.
                 # Handle < 0.7 behavior with a warning, assuming info was stored in db by the Spawner.
-                self.log.warning("DEPRECATION: Spawner.start should return a url or (ip, port) tuple in JupyterHub >= 0.9")
+                self.log.warning(
+                    "DEPRECATION: Spawner.start should return a url or (ip, port) tuple in JupyterHub >= 0.9"
+                )
             if spawner.api_token and spawner.api_token != api_token:
                 # Spawner re-used an API token, discard the unused api_token
                 orm_token = orm.APIToken.find(self.db, api_token)
@@ -551,50 +562,63 @@ class User:
                 found = orm.APIToken.find(self.db, spawner.api_token)
                 if found:
                     if found.user is not self.orm_user:
-                        self.log.error("%s's server is using %s's token! Revoking this token.",
-                            self.name, (found.user or found.service).name)
+                        self.log.error(
+                            "%s's server is using %s's token! Revoking this token.",
+                            self.name,
+                            (found.user or found.service).name,
+                        )
                         self.db.delete(found)
                         self.db.commit()
                         raise ValueError("Invalid token for %s!" % self.name)
                 else:
                     # Spawner.api_token has changed, but isn't in the db.
                     # What happened? Maybe something unclean in a resumed container.
-                    self.log.warning("%s's server specified its own API token that's not in the database",
-                        self.name
+                    self.log.warning(
+                        "%s's server specified its own API token that's not in the database",
+                        self.name,
                     )
                     # use generated=False because we don't trust this token
                     # to have been generated properly
-                    self.new_api_token(spawner.api_token,
+                    self.new_api_token(
+                        spawner.api_token,
                         generated=False,
                         note="retrieved from spawner %s" % server_name,
                     )
                 # update OAuth client secret with updated API token
                 if oauth_provider:
                     oauth_provider.add_client(
-                        client_id, spawner.api_token,
+                        client_id,
+                        spawner.api_token,
                         url_path_join(self.url, server_name, 'oauth_callback'),
                     )
                     db.commit()
 
         except Exception as e:
             if isinstance(e, gen.TimeoutError):
-                self.log.warning("{user}'s server failed to start in {s} seconds, giving up".format(
-                    user=self.name, s=spawner.start_timeout,
-                ))
+                self.log.warning(
+                    "{user}'s server failed to start in {s} seconds, giving up".format(
+                        user=self.name, s=spawner.start_timeout
+                    )
+                )
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.timeout')
             else:
-                self.log.error("Unhandled error starting {user}'s server: {error}".format(
-                    user=self.name, error=e,
-                ))
+                self.log.error(
+                    "Unhandled error starting {user}'s server: {error}".format(
+                        user=self.name, error=e
+                    )
+                )
                 self.settings['statsd'].incr('spawner.failure.error')
                 e.reason = 'error'
             try:
                 await self.stop(spawner.name)
             except Exception:
-                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
-                    user=self.name,
-                ), exc_info=True)
+                self.log.error(
+                    "Failed to cleanup {user}'s server that failed to start".format(
+                        user=self.name
+                    ),
+                    exc_info=True,
+                )
             # raise original exception
             spawner._start_pending = False
             raise e
@@ -624,9 +648,8 @@ class User:
         ssl_context = make_ssl_context(key, cert, cafile=ca)
         try:
             resp = await server.wait_up(
-                    http=True,
-                    timeout=spawner.http_timeout,
-                    ssl_context=ssl_context)
+                http=True, timeout=spawner.http_timeout, ssl_context=ssl_context
+            )
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(
@@ -641,16 +664,21 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.http_timeout')
             else:
                 e.reason = 'error'
-                self.log.error("Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
-                    user=self.name, url=server.url, error=e,
-                ))
+                self.log.error(
+                    "Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
+                        user=self.name, url=server.url, error=e
+                    )
+                )
                 self.settings['statsd'].incr('spawner.failure.http_error')
             try:
                 await self.stop(spawner.name)
             except Exception:
-                self.log.error("Failed to cleanup {user}'s server that failed to start".format(
-                    user=self.name,
-                ), exc_info=True)
+                self.log.error(
+                    "Failed to cleanup {user}'s server that failed to start".format(
+                        user=self.name
+                    ),
+                    exc_info=True,
+                )
             # raise original TimeoutError
             raise e
         else:
@@ -700,10 +728,8 @@ class User:
                     spawner.oauth_client_id,
                     spawner.oauth_client_id.split('-', 1)[1],
                 )
-                for oauth_client in (
-                    self.db
-                        .query(orm.OAuthClient)
-                        .filter(orm.OAuthClient.identifier.in_(client_ids))
+                for oauth_client in self.db.query(orm.OAuthClient).filter(
+                    orm.OAuthClient.identifier.in_(client_ids)
                 ):
                     self.log.debug("Deleting oauth client %s", oauth_client.identifier)
                     self.db.delete(oauth_client)
@@ -718,15 +744,18 @@ class User:
             auth = spawner.authenticator
             try:
                 if auth:
-                    await maybe_future(
-                        auth.post_spawn_stop(self, spawner)
-                    )
+                    await maybe_future(auth.post_spawn_stop(self, spawner))
             except Exception:
-                self.log.exception("Error in Authenticator.post_spawn_stop for %s", self)
+                self.log.exception(
+                    "Error in Authenticator.post_spawn_stop for %s", self
+                )
             spawner._stop_pending = False
             if not (
-                spawner._spawn_future and
-                (not spawner._spawn_future.done() or spawner._spawn_future.exception())
+                spawner._spawn_future
+                and (
+                    not spawner._spawn_future.done()
+                    or spawner._spawn_future.exception()
+                )
             ):
                 # pop Spawner *unless* it's stopping due to an error
                 # because some pages serve latest-spawn error messages

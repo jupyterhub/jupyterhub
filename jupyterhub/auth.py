@@ -1,16 +1,16 @@
 """Base Authenticator class and the default PAM Authenticator"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from concurrent.futures import ThreadPoolExecutor
 import inspect
 import pipes
 import re
 import sys
-from shutil import which
-from subprocess import Popen, PIPE, STDOUT
 import warnings
+from concurrent.futures import ThreadPoolExecutor
+from shutil import which
+from subprocess import PIPE
+from subprocess import Popen
+from subprocess import STDOUT
 
 try:
     import pamela
@@ -33,7 +33,9 @@ class Authenticator(LoggingConfigurable):
 
     db = Any()
 
-    enable_auth_state = Bool(False, config=True,
+    enable_auth_state = Bool(
+        False,
+        config=True,
         help="""Enable persisting auth_state (if available).
 
         auth_state will be encrypted and stored in the Hub's database.
@@ -62,7 +64,7 @@ class Authenticator(LoggingConfigurable):
 
         See :meth:`.refresh_user` for what happens when user auth info is refreshed
         (nothing by default).
-        """
+        """,
     )
 
     refresh_pre_spawn = Bool(
@@ -78,7 +80,7 @@ class Authenticator(LoggingConfigurable):
 
         If refresh_user cannot refresh the user auth data,
         launch will fail until the user logs in again.
-        """
+        """,
     )
 
     admin_users = Set(
@@ -131,8 +133,11 @@ class Authenticator(LoggingConfigurable):
             sorted_names = sorted(short_names)
             single = ''.join(sorted_names)
             string_set_typo = "set('%s')" % single
-            self.log.warning("whitelist contains single-character names: %s; did you mean set([%r]) instead of %s?",
-                sorted_names[:8], single, string_set_typo,
+            self.log.warning(
+                "whitelist contains single-character names: %s; did you mean set([%r]) instead of %s?",
+                sorted_names[:8],
+                single,
+                string_set_typo,
             )
 
     custom_html = Unicode(
@@ -199,7 +204,8 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    delete_invalid_users = Bool(False,
+    delete_invalid_users = Bool(
+        False,
         help="""Delete any users from the database that do not pass validation
 
         When JupyterHub starts, `.add_user` will be called
@@ -213,10 +219,11 @@ class Authenticator(LoggingConfigurable):
         If False (default), invalid users remain in the Hub's database
         and a warning will be issued.
         This is the default to avoid data loss due to config changes.
-        """
+        """,
     )
 
-    post_auth_hook = Any(config=True,
+    post_auth_hook = Any(
+        config=True,
         help="""
         An optional hook function that you can implement to do some
         bootstrapping work during authentication. For example, loading user account
@@ -248,12 +255,16 @@ class Authenticator(LoggingConfigurable):
 
             c.Authenticator.post_auth_hook = my_hook
 
-        """
+        """,
     )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        for method_name in ('check_whitelist', 'check_blacklist', 'check_group_whitelist'):
+        for method_name in (
+            'check_whitelist',
+            'check_blacklist',
+            'check_group_whitelist',
+        ):
             original_method = getattr(self, method_name, None)
             if original_method is None:
                 # no such method (check_group_whitelist is optional)
@@ -273,14 +284,14 @@ class Authenticator(LoggingConfigurable):
 
                     Adapting for compatibility.
                     """.format(
-                        self.__class__.__name__,
-                        method_name,
+                        self.__class__.__name__, method_name
                     ),
-                    DeprecationWarning
+                    DeprecationWarning,
                 )
 
                 def wrapped_method(username, authentication=None, **kwargs):
                     return original_method(username, **kwargs)
+
                 setattr(self, method_name, wrapped_method)
 
     async def run_post_auth_hook(self, handler, authentication):
@@ -299,11 +310,7 @@ class Authenticator(LoggingConfigurable):
         """
         if self.post_auth_hook is not None:
             authentication = await maybe_future(
-                self.post_auth_hook(
-                    self,
-                    handler,
-                    authentication,
-                )
+                self.post_auth_hook(self, handler, authentication)
             )
         return authentication
 
@@ -380,21 +387,25 @@ class Authenticator(LoggingConfigurable):
             if 'name' not in authenticated:
                 raise ValueError("user missing a name: %r" % authenticated)
         else:
-            authenticated = {
-                'name': authenticated,
-            }
+            authenticated = {'name': authenticated}
         authenticated.setdefault('auth_state', None)
         # Leave the default as None, but reevaluate later post-whitelist
         authenticated.setdefault('admin', None)
 
         # normalize the username
-        authenticated['name'] = username = self.normalize_username(authenticated['name'])
+        authenticated['name'] = username = self.normalize_username(
+            authenticated['name']
+        )
         if not self.validate_username(username):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
-        blacklist_pass = await maybe_future(self.check_blacklist(username, authenticated))
-        whitelist_pass = await maybe_future(self.check_whitelist(username, authenticated))
+        blacklist_pass = await maybe_future(
+            self.check_blacklist(username, authenticated)
+        )
+        whitelist_pass = await maybe_future(
+            self.check_whitelist(username, authenticated)
+        )
 
         if blacklist_pass:
             pass
@@ -404,7 +415,9 @@ class Authenticator(LoggingConfigurable):
 
         if whitelist_pass:
             if authenticated['admin'] is None:
-                authenticated['admin'] = await maybe_future(self.is_admin(handler, authenticated))
+                authenticated['admin'] = await maybe_future(
+                    self.is_admin(handler, authenticated)
+                )
 
             authenticated = await self.run_post_auth_hook(handler, authenticated)
 
@@ -534,7 +547,9 @@ class Authenticator(LoggingConfigurable):
         """
         self.whitelist.discard(user.name)
 
-    auto_login = Bool(False, config=True,
+    auto_login = Bool(
+        False,
+        config=True,
         help="""Automatically begin the login process
 
         rather than starting with a "Login with..." link at `/hub/login`
@@ -544,7 +559,7 @@ class Authenticator(LoggingConfigurable):
         registered with `.get_handlers()`.
 
         .. versionadded:: 0.8
-        """
+        """,
     )
 
     def login_url(self, base_url):
@@ -592,9 +607,7 @@ class Authenticator(LoggingConfigurable):
                 list of ``('/url', Handler)`` tuples passed to tornado.
                 The Hub prefix is added to any URLs.
         """
-        return [
-            ('/login', LoginHandler),
-        ]
+        return [('/login', LoginHandler)]
 
 
 class LocalAuthenticator(Authenticator):
@@ -603,12 +616,13 @@ class LocalAuthenticator(Authenticator):
     Checks for local users, and can attempt to create them if they exist.
     """
 
-    create_system_users = Bool(False,
+    create_system_users = Bool(
+        False,
         help="""
         If set to True, will attempt to create local system users if they do not exist already.
 
         Supports Linux and BSD variants only.
-        """
+        """,
     ).tag(config=True)
 
     add_user_cmd = Command(
@@ -699,8 +713,9 @@ class LocalAuthenticator(Authenticator):
                 raise KeyError(
                     "User {} does not exist on the system."
                     " Set LocalAuthenticator.create_system_users=True"
-                    " to automatically create system users from jupyterhub users."
-                    .format(user.name)
+                    " to automatically create system users from jupyterhub users.".format(
+                        user.name
+                    )
                 )
 
         await maybe_future(super().add_user(user))
@@ -711,6 +726,7 @@ class LocalAuthenticator(Authenticator):
         on Windows
         """
         import grp
+
         return grp.getgrnam(name)
 
     @staticmethod
@@ -719,6 +735,7 @@ class LocalAuthenticator(Authenticator):
         on Windows
         """
         import pwd
+
         return pwd.getpwnam(name)
 
     @staticmethod
@@ -727,6 +744,7 @@ class LocalAuthenticator(Authenticator):
         on Windows
         """
         import os
+
         return os.getgrouplist(name, group)
 
     def system_user_exists(self, user):
@@ -744,7 +762,7 @@ class LocalAuthenticator(Authenticator):
         Tested to work on FreeBSD and Linux, at least.
         """
         name = user.name
-        cmd = [ arg.replace('USERNAME', name) for arg in self.add_user_cmd ] + [name]
+        cmd = [arg.replace('USERNAME', name) for arg in self.add_user_cmd] + [name]
         self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
         p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
         p.wait()
@@ -758,23 +776,27 @@ class PAMAuthenticator(LocalAuthenticator):
 
     # run PAM in a thread, since it can be slow
     executor = Any()
+
     @default('executor')
     def _default_executor(self):
         return ThreadPoolExecutor(1)
 
-    encoding = Unicode('utf8',
+    encoding = Unicode(
+        'utf8',
         help="""
         The text encoding to use when communicating with PAM
-        """
+        """,
     ).tag(config=True)
 
-    service = Unicode('login',
+    service = Unicode(
+        'login',
         help="""
         The name of the PAM service to use for authentication
-        """
+        """,
     ).tag(config=True)
 
-    open_sessions = Bool(True,
+    open_sessions = Bool(
+        True,
         help="""
         Whether to open a new PAM session when spawners are started.
 
@@ -784,10 +806,11 @@ class PAMAuthenticator(LocalAuthenticator):
 
         If any errors are encountered when opening/closing PAM sessions,
         this is automatically set to False.
-        """
+        """,
     ).tag(config=True)
 
-    check_account = Bool(True,
+    check_account = Bool(
+        True,
         help="""
         Whether to check the user's account status via PAM during authentication.
 
@@ -797,8 +820,8 @@ class PAMAuthenticator(LocalAuthenticator):
 
         Disabling this can be dangerous as authenticated but unauthorized users may
         be granted access and, therefore, arbitrary execution on the system.
-        """
-     ).tag(config=True)
+        """,
+    ).tag(config=True)
 
     admin_groups = Set(
         help="""
@@ -809,15 +832,16 @@ class PAMAuthenticator(LocalAuthenticator):
         """
     ).tag(config=True)
 
-    pam_normalize_username = Bool(False,
+    pam_normalize_username = Bool(
+        False,
         help="""
         Round-trip the username via PAM lookups to make sure it is unique
 
         PAM can accept multiple usernames that map to the same user,
         for example DOMAIN\\username in some cases.  To prevent this,
         convert username into uid, then back to uid to normalize.
-        """
-        ).tag(config=True)
+        """,
+    ).tag(config=True)
 
     def __init__(self, **kwargs):
         if pamela is None:
@@ -844,17 +868,24 @@ class PAMAuthenticator(LocalAuthenticator):
                 # (returning None instead of just the username) as this indicates some sort of system failure
 
                 admin_group_gids = {self._getgrnam(x).gr_gid for x in self.admin_groups}
-                user_group_gids  = set(self._getgrouplist(username, self._getpwnam(username).pw_gid))
+                user_group_gids = set(
+                    self._getgrouplist(username, self._getpwnam(username).pw_gid)
+                )
                 admin_status = len(admin_group_gids & user_group_gids) != 0
 
             except Exception as e:
                 if handler is not None:
-                    self.log.error("PAM Admin Group Check failed (%s@%s): %s", username, handler.request.remote_ip, e)
+                    self.log.error(
+                        "PAM Admin Group Check failed (%s@%s): %s",
+                        username,
+                        handler.request.remote_ip,
+                        e,
+                    )
                 else:
                     self.log.error("PAM Admin Group Check failed: %s", e)
                 # re-raise to return a 500 to the user and indicate a problem. We failed, not them.
                 raise
-        
+
         return admin_status
 
     @run_on_executor
@@ -865,26 +896,39 @@ class PAMAuthenticator(LocalAuthenticator):
         """
         username = data['username']
         try:
-            pamela.authenticate(username, data['password'], service=self.service, encoding=self.encoding)
+            pamela.authenticate(
+                username, data['password'], service=self.service, encoding=self.encoding
+            )
         except pamela.PAMError as e:
             if handler is not None:
-                self.log.warning("PAM Authentication failed (%s@%s): %s", username, handler.request.remote_ip, e)
+                self.log.warning(
+                    "PAM Authentication failed (%s@%s): %s",
+                    username,
+                    handler.request.remote_ip,
+                    e,
+                )
             else:
                 self.log.warning("PAM Authentication failed: %s", e)
             return None
-    
+
         if self.check_account:
             try:
-                pamela.check_account(username, service=self.service, encoding=self.encoding)
+                pamela.check_account(
+                    username, service=self.service, encoding=self.encoding
+                )
             except pamela.PAMError as e:
                 if handler is not None:
-                    self.log.warning("PAM Account Check failed (%s@%s): %s", username, handler.request.remote_ip, e)
+                    self.log.warning(
+                        "PAM Account Check failed (%s@%s): %s",
+                        username,
+                        handler.request.remote_ip,
+                        e,
+                    )
                 else:
                     self.log.warning("PAM Account Check failed: %s", e)
                 return None
 
         return username
-
 
     @run_on_executor
     def pre_spawn_start(self, user, spawner):
@@ -904,7 +948,9 @@ class PAMAuthenticator(LocalAuthenticator):
         if not self.open_sessions:
             return
         try:
-            pamela.close_session(user.name, service=self.service, encoding=self.encoding)
+            pamela.close_session(
+                user.name, service=self.service, encoding=self.encoding
+            )
         except pamela.PAMError as e:
             self.log.warning("Failed to close PAM session for %s: %s", user.name, e)
             self.log.warning("Disabling PAM sessions from now on.")
@@ -916,11 +962,13 @@ class PAMAuthenticator(LocalAuthenticator):
         PAM can accept multiple usernames as the same user, normalize them."""
         if self.pam_normalize_username:
             import pwd
+
             uid = pwd.getpwnam(username).pw_uid
             username = pwd.getpwuid(uid).pw_name
             username = self.username_map.get(username, username)
         else:
             return super().normalize_username(username)
+
 
 class DummyAuthenticator(Authenticator):
     """Dummy Authenticator for testing
@@ -938,7 +986,7 @@ class DummyAuthenticator(Authenticator):
         Set a global password for all users wanting to log in.
 
         This allows users with any username to log in with the same static password.
-        """
+        """,
     )
 
     async def authenticate(self, handler, data):

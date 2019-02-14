@@ -13,41 +13,40 @@ Handlers and their purpose include:
 """
 import argparse
 import json
-import sys
 import os
+import sys
 
-from tornado import web, httpserver, ioloop
-from .mockservice import EnvHandler
+from tornado import httpserver
+from tornado import ioloop
+from tornado import web
+
 from ..utils import make_ssl_context
+from .mockservice import EnvHandler
+
 
 class EchoHandler(web.RequestHandler):
     def get(self):
         self.write(self.request.path)
 
+
 class ArgsHandler(web.RequestHandler):
     def get(self):
         self.write(json.dumps(sys.argv))
 
+
 def main(args):
 
-    app = web.Application([
-        (r'.*/args', ArgsHandler),
-        (r'.*/env', EnvHandler),
-        (r'.*', EchoHandler),
-    ])
-    
+    app = web.Application(
+        [(r'.*/args', ArgsHandler), (r'.*/env', EnvHandler), (r'.*', EchoHandler)]
+    )
+
     ssl_context = None
     key = os.environ.get('JUPYTERHUB_SSL_KEYFILE') or ''
     cert = os.environ.get('JUPYTERHUB_SSL_CERTFILE') or ''
     ca = os.environ.get('JUPYTERHUB_SSL_CLIENT_CA') or ''
 
     if key and cert and ca:
-        ssl_context = make_ssl_context(
-            key,
-            cert,
-            cafile = ca,
-            check_hostname = False
-        )
+        ssl_context = make_ssl_context(key, cert, cafile=ca, check_hostname=False)
 
     server = httpserver.HTTPServer(app, ssl_options=ssl_context)
     server.listen(args.port)
@@ -55,6 +54,7 @@ def main(args):
         ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:
         print('\nInterrupted')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

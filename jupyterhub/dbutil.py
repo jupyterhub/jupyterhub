@@ -1,15 +1,13 @@
 """Database utilities for JupyterHub"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 # Based on pgcontents.utils.migrate, used under the Apache license.
-
-from contextlib import contextmanager
-from datetime import datetime
 import os
 import shutil
-from subprocess import check_call
 import sys
+from contextlib import contextmanager
+from datetime import datetime
+from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 from sqlalchemy import create_engine
@@ -85,9 +83,7 @@ def upgrade(db_url, revision='head'):
         The alembic revision to upgrade to.
     """
     with _temp_alembic_ini(db_url) as alembic_ini:
-        check_call(
-            ['alembic', '-c', alembic_ini, 'upgrade', revision]
-        )
+        check_call(['alembic', '-c', alembic_ini, 'upgrade', revision])
 
 
 def backup_db_file(db_file, log=None):
@@ -133,30 +129,27 @@ def upgrade_if_needed(db_url, backup=True, log=None):
 def shell(args=None):
     """Start an IPython shell hooked up to the jupyerhub database"""
     from .app import JupyterHub
+
     hub = JupyterHub()
     hub.load_config_file(hub.config_file)
     db_url = hub.db_url
     db = orm.new_session_factory(db_url, **hub.db_kwargs)()
-    ns = {
-        'db': db,
-        'db_url': db_url,
-        'orm': orm,
-    }
+    ns = {'db': db, 'db_url': db_url, 'orm': orm}
 
     import IPython
+
     IPython.start_ipython(args, user_ns=ns)
 
 
 def _alembic(args):
     """Run an alembic command with a temporary alembic.ini"""
     from .app import JupyterHub
+
     hub = JupyterHub()
     hub.load_config_file(hub.config_file)
     db_url = hub.db_url
     with _temp_alembic_ini(db_url) as alembic_ini:
-        check_call(
-            ['alembic', '-c', alembic_ini] + args
-        )
+        check_call(['alembic', '-c', alembic_ini] + args)
 
 
 def main(args=None):

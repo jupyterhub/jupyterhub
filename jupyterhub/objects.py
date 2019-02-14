@@ -1,22 +1,28 @@
 """Some general objects for use in JupyterHub"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import socket
-from urllib.parse import urlparse, urlunparse
 import warnings
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
-from traitlets import (
-    HasTraits, Instance, Integer, Unicode,
-    default, observe, validate,
-)
-from .traitlets import URLPrefix
+from traitlets import default
+from traitlets import HasTraits
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import observe
+from traitlets import Unicode
+from traitlets import validate
+
 from . import orm
-from .utils import (
-    url_path_join, can_connect, wait_for_server,
-    wait_for_http_server, random_port, make_ssl_context,
-)
+from .traitlets import URLPrefix
+from .utils import can_connect
+from .utils import make_ssl_context
+from .utils import random_port
+from .utils import url_path_join
+from .utils import wait_for_http_server
+from .utils import wait_for_server
+
 
 class Server(HasTraits):
     """An object representing an HTTP endpoint.
@@ -24,6 +30,7 @@ class Server(HasTraits):
     *Some* of these reside in the database (user servers),
     but others (Hub, proxy) are in-memory only.
     """
+
     orm_server = Instance(orm.Server, allow_none=True)
 
     ip = Unicode()
@@ -141,36 +148,31 @@ class Server(HasTraits):
     def host(self):
         if self.connect_url:
             parsed = urlparse(self.connect_url)
-            return "{proto}://{host}".format(
-                proto=parsed.scheme,
-                host=parsed.netloc,
-            )
+            return "{proto}://{host}".format(proto=parsed.scheme, host=parsed.netloc)
         return "{proto}://{ip}:{port}".format(
-            proto=self.proto,
-            ip=self._connect_ip,
-            port=self._connect_port,
+            proto=self.proto, ip=self._connect_ip, port=self._connect_port
         )
 
     @property
     def url(self):
         if self.connect_url:
             return self.connect_url
-        return "{host}{uri}".format(
-            host=self.host,
-            uri=self.base_url,
-        )
-
+        return "{host}{uri}".format(host=self.host, uri=self.base_url)
 
     def wait_up(self, timeout=10, http=False, ssl_context=None):
         """Wait for this server to come up"""
         if http:
             ssl_context = ssl_context or make_ssl_context(
-                    self.keyfile, self.certfile, cafile=self.cafile)
+                self.keyfile, self.certfile, cafile=self.cafile
+            )
 
             return wait_for_http_server(
-                    self.url, timeout=timeout, ssl_context=ssl_context)
+                self.url, timeout=timeout, ssl_context=ssl_context
+            )
         else:
-            return wait_for_server(self._connect_ip, self._connect_port, timeout=timeout)
+            return wait_for_server(
+                self._connect_ip, self._connect_port, timeout=timeout
+            )
 
     def is_up(self):
         """Is the server accepting connections?"""
@@ -190,11 +192,13 @@ class Hub(Server):
 
     @property
     def server(self):
-        warnings.warn("Hub.server is deprecated in JupyterHub 0.8. Access attributes on the Hub directly.",
+        warnings.warn(
+            "Hub.server is deprecated in JupyterHub 0.8. Access attributes on the Hub directly.",
             DeprecationWarning,
             stacklevel=2,
         )
         return self
+
     public_host = Unicode()
     routespec = Unicode()
 
@@ -205,5 +209,7 @@ class Hub(Server):
 
     def __repr__(self):
         return "<%s %s:%s>" % (
-            self.__class__.__name__, self.server.ip, self.server.port,
+            self.__class__.__name__,
+            self.server.ip,
+            self.server.port,
         )

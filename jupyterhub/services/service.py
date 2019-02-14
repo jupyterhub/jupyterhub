@@ -38,24 +38,26 @@ A hub-managed service with no URL::
     }
 
 """
-
 import copy
+import os
 import pipes
 import shutil
-import os
 from subprocess import Popen
 
-from traitlets import (
-    HasTraits,
-    Any, Bool, Dict, Unicode, Instance,
-    default,
-)
+from traitlets import Any
+from traitlets import Bool
+from traitlets import default
+from traitlets import Dict
+from traitlets import HasTraits
+from traitlets import Instance
+from traitlets import Unicode
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
 from ..objects import Server
+from ..spawner import LocalProcessSpawner
+from ..spawner import set_user_setuid
 from ..traitlets import Command
-from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..utils import url_path_join
 
 
@@ -81,14 +83,17 @@ class _MockUser(HasTraits):
             return ''
         return self.server.base_url
 
+
 # We probably shouldn't use a Spawner here,
 # but there are too many concepts to share.
+
 
 class _ServiceSpawner(LocalProcessSpawner):
     """Subclass of LocalProcessSpawner
 
     Removes notebook-specific-ness from LocalProcessSpawner.
     """
+
     cwd = Unicode()
     cmd = Command(minlen=0)
 
@@ -115,16 +120,20 @@ class _ServiceSpawner(LocalProcessSpawner):
 
         self.log.info("Spawning %s", ' '.join(pipes.quote(s) for s in cmd))
         try:
-            self.proc = Popen(self.cmd, env=env,
+            self.proc = Popen(
+                self.cmd,
+                env=env,
                 preexec_fn=self.make_preexec_fn(self.user.name),
-                start_new_session=True, # don't forward signals
+                start_new_session=True,  # don't forward signals
                 cwd=self.cwd or None,
             )
         except PermissionError:
             # use which to get abspath
             script = shutil.which(cmd[0]) or cmd[0]
-            self.log.error("Permission denied trying to run %r. Does %s have access to this file?",
-                script, self.user.name,
+            self.log.error(
+                "Permission denied trying to run %r. Does %s have access to this file?",
+                script,
+                self.user.name,
             )
             raise
 
@@ -165,9 +174,9 @@ class Service(LoggingConfigurable):
         If the service has an http endpoint, it
         """
     ).tag(input=True)
-    admin = Bool(False,
-        help="Does the service need admin-access to the Hub API?"
-    ).tag(input=True)
+    admin = Bool(False, help="Does the service need admin-access to the Hub API?").tag(
+        input=True
+    )
     url = Unicode(
         help="""URL of the service.
 
@@ -205,22 +214,23 @@ class Service(LoggingConfigurable):
         """
         return 'managed' if self.managed else 'external'
 
-    command = Command(minlen=0,
-        help="Command to spawn this service, if managed."
-    ).tag(input=True)
-    cwd = Unicode(
-        help="""The working directory in which to run the service."""
-    ).tag(input=True)
+    command = Command(minlen=0, help="Command to spawn this service, if managed.").tag(
+        input=True
+    )
+    cwd = Unicode(help="""The working directory in which to run the service.""").tag(
+        input=True
+    )
     environment = Dict(
         help="""Environment variables to pass to the service.
         Only used if the Hub is spawning the service.
         """
     ).tag(input=True)
-    user = Unicode("",
+    user = Unicode(
+        "",
         help="""The user to become when launching the service.
 
         If unspecified, run the service as the same user as the Hub.
-        """
+        """,
     ).tag(input=True)
 
     domain = Unicode()
@@ -245,6 +255,7 @@ class Service(LoggingConfigurable):
         Default: `service-<name>`
         """
     ).tag(input=True)
+
     @default('oauth_client_id')
     def _default_client_id(self):
         return 'service-%s' % self.name
@@ -256,6 +267,7 @@ class Service(LoggingConfigurable):
         Default: `/services/:name/oauth_callback`
         """
     ).tag(input=True)
+
     @default('oauth_redirect_uri')
     def _default_redirect_uri(self):
         if self.server is None:
@@ -328,10 +340,7 @@ class Service(LoggingConfigurable):
             cwd=self.cwd,
             hub=self.hub,
             user=_MockUser(
-                name=self.user,
-                service=self,
-                server=self.orm.server,
-                host=self.host,
+                name=self.user, service=self, server=self.orm.server, host=self.host
             ),
             internal_ssl=self.app.internal_ssl,
             internal_certs_location=self.app.internal_certs_location,
@@ -344,7 +353,9 @@ class Service(LoggingConfigurable):
 
     def _proc_stopped(self):
         """Called when the service process unexpectedly exits"""
-        self.log.error("Service %s exited with status %i", self.name, self.proc.returncode)
+        self.log.error(
+            "Service %s exited with status %i", self.name, self.proc.returncode
+        )
         self.start()
 
     async def stop(self):
@@ -357,4 +368,4 @@ class Service(LoggingConfigurable):
                 self.db.delete(self.orm.server)
                 self.db.commit()
             self.spawner.stop_polling()
-            return (await self.spawner.stop())
+            return await self.spawner.stop()

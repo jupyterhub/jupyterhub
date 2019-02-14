@@ -3,18 +3,19 @@
 Implements OAuth handshake manually
 so all URLs and requests necessary for OAuth with JupyterHub should be in one place
 """
-
 import json
 import os
 import sys
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
+from urllib.parse import urlparse
 
-from tornado.auth import OAuth2Mixin
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest
-from tornado.httputil import url_concat
-from tornado.ioloop import IOLoop
 from tornado import log
 from tornado import web
+from tornado.auth import OAuth2Mixin
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPRequest
+from tornado.httputil import url_concat
+from tornado.ioloop import IOLoop
 
 
 class JupyterHubLoginHandler(web.RequestHandler):
@@ -32,11 +33,11 @@ class JupyterHubLoginHandler(web.RequestHandler):
             code=code,
             redirect_uri=self.settings['redirect_uri'],
         )
-        req = HTTPRequest(self.settings['token_url'], method='POST',
-                          body=urlencode(params).encode('utf8'),
-                          headers={
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        req = HTTPRequest(
+            self.settings['token_url'],
+            method='POST',
+            body=urlencode(params).encode('utf8'),
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
         )
         response = await AsyncHTTPClient().fetch(req)
         data = json.loads(response.body.decode('utf8', 'replace'))
@@ -55,14 +56,16 @@ class JupyterHubLoginHandler(web.RequestHandler):
             # we are the login handler,
             # begin oauth process which will come back later with an
             # authorization_code
-            self.redirect(url_concat(
-                self.settings['authorize_url'],
-                dict(
-                    redirect_uri=self.settings['redirect_uri'],
-                    client_id=self.settings['client_id'],
-                    response_type='code',
+            self.redirect(
+                url_concat(
+                    self.settings['authorize_url'],
+                    dict(
+                        redirect_uri=self.settings['redirect_uri'],
+                        client_id=self.settings['client_id'],
+                        response_type='code',
+                    ),
                 )
-            ))
+            )
 
 
 class WhoAmIHandler(web.RequestHandler):
@@ -85,10 +88,7 @@ class WhoAmIHandler(web.RequestHandler):
         """Retrieve the user for a given token, via /hub/api/user"""
 
         req = HTTPRequest(
-            self.settings['user_url'],
-            headers={
-                'Authorization': f'token {token}'
-            },
+            self.settings['user_url'], headers={'Authorization': f'token {token}'}
         )
         response = await AsyncHTTPClient().fetch(req)
         return json.loads(response.body.decode('utf8', 'replace'))
@@ -110,23 +110,23 @@ def main():
     token_url = hub_api + '/oauth2/token'
     user_url = hub_api + '/user'
 
-    app = web.Application([
-        ('/oauth_callback', JupyterHubLoginHandler),
-        ('/', WhoAmIHandler),
-    ],
+    app = web.Application(
+        [('/oauth_callback', JupyterHubLoginHandler), ('/', WhoAmIHandler)],
         login_url='/oauth_callback',
         cookie_secret=os.urandom(32),
         api_token=os.environ['JUPYTERHUB_API_TOKEN'],
         client_id=os.environ['JUPYTERHUB_CLIENT_ID'],
-        redirect_uri=os.environ['JUPYTERHUB_SERVICE_URL'].rstrip('/') + '/oauth_callback',
+        redirect_uri=os.environ['JUPYTERHUB_SERVICE_URL'].rstrip('/')
+        + '/oauth_callback',
         authorize_url=authorize_url,
         token_url=token_url,
         user_url=user_url,
     )
 
     url = urlparse(os.environ['JUPYTERHUB_SERVICE_URL'])
-    log.app_log.info("Running basic whoami service on %s",
-                     os.environ['JUPYTERHUB_SERVICE_URL'])
+    log.app_log.info(
+        "Running basic whoami service on %s", os.environ['JUPYTERHUB_SERVICE_URL']
+    )
     app.listen(url.port, url.hostname)
     IOLoop.current().start()
 

@@ -1,30 +1,27 @@
 """Tests for HTML pages"""
-
 import asyncio
 import sys
 from unittest import mock
-from urllib.parse import urlencode, urlparse
+from urllib.parse import urlencode
+from urllib.parse import urlparse
 
+import pytest
 from bs4 import BeautifulSoup
 from tornado import gen
 from tornado.httputil import url_concat
 
-from ..handlers import BaseHandler
-from ..utils import url_path_join as ujoin
 from .. import orm
 from ..auth import Authenticator
-
-import pytest
-
-from .mocking import FormSpawner, FalsyCallableFormSpawner
-from .utils import (
-    async_requests,
-    api_request,
-    add_user,
-    get_page,
-    public_url,
-    public_host,
-)
+from ..handlers import BaseHandler
+from ..utils import url_path_join as ujoin
+from .mocking import FalsyCallableFormSpawner
+from .mocking import FormSpawner
+from .utils import add_user
+from .utils import api_request
+from .utils import async_requests
+from .utils import get_page
+from .utils import public_host
+from .utils import public_url
 
 
 async def test_root_no_auth(app):
@@ -53,8 +50,7 @@ async def test_root_redirect(app):
 
 
 async def test_root_default_url_noauth(app):
-    with mock.patch.dict(app.tornado_settings,
-                         {'default_url': '/foo/bar'}):
+    with mock.patch.dict(app.tornado_settings, {'default_url': '/foo/bar'}):
         r = await get_page('/', app, allow_redirects=False)
     r.raise_for_status()
     url = r.headers.get('Location', '')
@@ -65,8 +61,7 @@ async def test_root_default_url_noauth(app):
 async def test_root_default_url_auth(app):
     name = 'wash'
     cookies = await app.login_user(name)
-    with mock.patch.dict(app.tornado_settings,
-                         {'default_url': '/foo/bar'}):
+    with mock.patch.dict(app.tornado_settings, {'default_url': '/foo/bar'}):
         r = await get_page('/', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     url = r.headers.get('Location', '')
@@ -106,12 +101,7 @@ async def test_admin(app):
     assert r.url.endswith('/admin')
 
 
-@pytest.mark.parametrize('sort', [
-    'running',
-    'last_activity',
-    'admin',
-    'name',
-])
+@pytest.mark.parametrize('sort', ['running', 'last_activity', 'admin', 'name'])
 async def test_admin_sort(app, sort):
     cookies = await app.login_user('admin')
     r = await get_page('admin?sort=%s' % sort, app, cookies=cookies)
@@ -146,7 +136,9 @@ async def test_spawn_redirect(app):
     assert path == ujoin(app.base_url, '/user/%s/' % name)
 
     # stop server to ensure /user/name is handled by the Hub
-    r = await api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
+    r = await api_request(
+        app, 'users', name, 'server', method='delete', cookies=cookies
+    )
     r.raise_for_status()
 
     # test handing of trailing slash on `/user/name`
@@ -208,7 +200,9 @@ async def test_spawn_page(app):
 
 
 async def test_spawn_page_falsy_callable(app):
-    with mock.patch.dict(app.users.settings, {'spawner_class': FalsyCallableFormSpawner}):
+    with mock.patch.dict(
+        app.users.settings, {'spawner_class': FalsyCallableFormSpawner}
+    ):
         cookies = await app.login_user('erik')
         r = await get_page('spawn', app, cookies=cookies)
         assert 'user/erik' in r.url
@@ -276,22 +270,22 @@ async def test_spawn_form_with_file(app):
         u = app.users[orm_u]
         await u.stop()
 
-        r = await async_requests.post(ujoin(base_url, 'spawn'),
-                          cookies=cookies,
-                          data={
-                              'bounds': ['-1', '1'],
-                              'energy': '511keV',
-                          },
-                          files={'hello': ('hello.txt', b'hello world\n')}
-                      )
+        r = await async_requests.post(
+            ujoin(base_url, 'spawn'),
+            cookies=cookies,
+            data={'bounds': ['-1', '1'], 'energy': '511keV'},
+            files={'hello': ('hello.txt', b'hello world\n')},
+        )
         r.raise_for_status()
         assert u.spawner.user_options == {
             'energy': '511keV',
             'bounds': [-1, 1],
             'notspecified': 5,
-            'hello': {'filename': 'hello.txt',
-                      'body': b'hello world\n',
-                      'content_type': 'application/unknown'},
+            'hello': {
+                'filename': 'hello.txt',
+                'body': b'hello world\n',
+                'content_type': 'application/unknown',
+            },
         }
 
 
@@ -305,9 +299,9 @@ async def test_user_redirect(app):
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/hub/login')
     query = urlparse(r.url).query
-    assert query == urlencode({
-        'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')
-    })
+    assert query == urlencode(
+        {'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')}
+    )
 
     r = await get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
     r.raise_for_status()
@@ -339,19 +333,17 @@ async def test_user_redirect_deprecated(app):
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/hub/login')
     query = urlparse(r.url).query
-    assert query == urlencode({
-        'next': ujoin(app.base_url, '/hub/user/baduser/test.ipynb')
-    })
+    assert query == urlencode(
+        {'next': ujoin(app.base_url, '/hub/user/baduser/test.ipynb')}
+    )
 
 
 async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
-    r = await async_requests.post(base_url + 'hub/login',
-        data={
-            'username': name,
-            'password': 'wrong',
-        },
+    r = await async_requests.post(
+        base_url + 'hub/login',
+        data={'username': name, 'password': 'wrong'},
         allow_redirects=False,
     )
     assert not r.cookies
@@ -359,20 +351,17 @@ async def test_login_fail(app):
 
 async def test_login_strip(app):
     """Test that login form doesn't strip whitespace from passwords"""
-    form_data = {
-        'username': 'spiff',
-        'password': ' space man ',
-    }
+    form_data = {'username': 'spiff', 'password': ' space man '}
     base_url = public_url(app)
     called_with = []
+
     @gen.coroutine
     def mock_authenticate(handler, data):
         called_with.append(data)
 
     with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
-        await async_requests.post(base_url + 'hub/login',
-            data=form_data,
-            allow_redirects=False,
+        await async_requests.post(
+            base_url + 'hub/login', data=form_data, allow_redirects=False
         )
 
     assert called_with == [form_data]
@@ -389,12 +378,11 @@ async def test_login_strip(app):
         (False, '/user/other', '/hub/user/other'),
         (False, '/absolute', '/absolute'),
         (False, '/has?query#andhash', '/has?query#andhash'),
-
         # next_url outside is not allowed
         (False, 'https://other.domain', ''),
         (False, 'ftp://other.domain', ''),
         (False, '//other.domain', ''),
-    ]
+    ],
 )
 async def test_login_redirect(app, running, next_url, location):
     cookies = await app.login_user('river')
@@ -427,10 +415,11 @@ async def test_auto_login(app, request):
     class DummyLoginHandler(BaseHandler):
         def get(self):
             self.write('ok!')
+
     base_url = public_url(app) + '/'
-    app.tornado_application.add_handlers(".*$", [
-        (ujoin(app.hub.base_url, 'dummy'), DummyLoginHandler),
-    ])
+    app.tornado_application.add_handlers(
+        ".*$", [(ujoin(app.hub.base_url, 'dummy'), DummyLoginHandler)]
+    )
     # no auto_login: end up at /hub/login
     r = await async_requests.get(base_url)
     assert r.url == public_url(app, path='hub/login')
@@ -438,9 +427,7 @@ async def test_auto_login(app, request):
     authenticator = Authenticator(auto_login=True)
     authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
 
-    with mock.patch.dict(app.tornado_settings, {
-        'authenticator': authenticator,
-    }):
+    with mock.patch.dict(app.tornado_settings, {'authenticator': authenticator}):
         r = await async_requests.get(base_url)
     assert r.url == public_url(app, path='hub/dummy')
 
@@ -449,10 +436,12 @@ async def test_auto_login_logout(app):
     name = 'burnham'
     cookies = await app.login_user(name)
 
-    with mock.patch.dict(app.tornado_settings, {
-        'authenticator': Authenticator(auto_login=True),
-    }):
-        r = await async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
+    with mock.patch.dict(
+        app.tornado_settings, {'authenticator': Authenticator(auto_login=True)}
+    ):
+        r = await async_requests.get(
+            public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
+        )
     r.raise_for_status()
     logout_url = public_host(app) + app.tornado_settings['logout_url']
     assert r.url == logout_url
@@ -462,7 +451,9 @@ async def test_auto_login_logout(app):
 async def test_logout(app):
     name = 'wash'
     cookies = await app.login_user(name)
-    r = await async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
+    r = await async_requests.get(
+        public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
+    )
     r.raise_for_status()
     login_url = public_host(app) + app.tornado_settings['login_url']
     assert r.url == login_url
@@ -489,12 +480,11 @@ async def test_shutdown_on_logout(app, shutdown_on_logout):
     assert spawner.active
 
     # logout
-    with mock.patch.dict(app.tornado_settings, {
-        'shutdown_on_logout': shutdown_on_logout,
-    }):
+    with mock.patch.dict(
+        app.tornado_settings, {'shutdown_on_logout': shutdown_on_logout}
+    ):
         r = await async_requests.get(
-            public_host(app) + app.tornado_settings['logout_url'],
-            cookies=cookies,
+            public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
         )
         r.raise_for_status()
 
@@ -549,7 +539,9 @@ async def test_oauth_token_page(app):
     user = app.users[orm.User.find(app.db, name)]
     client = orm.OAuthClient(identifier='token')
     app.db.add(client)
-    oauth_token = orm.OAuthAccessToken(client=client, user=user, grant_type=orm.GrantType.authorization_code)
+    oauth_token = orm.OAuthAccessToken(
+        client=client, user=user, grant_type=orm.GrantType.authorization_code
+    )
     app.db.add(oauth_token)
     app.db.commit()
     r = await get_page('token', app, cookies=cookies)
@@ -557,23 +549,14 @@ async def test_oauth_token_page(app):
     assert r.status_code == 200
 
 
-@pytest.mark.parametrize("error_status", [
-    503,
-    404,
-])
+@pytest.mark.parametrize("error_status", [503, 404])
 async def test_proxy_error(app, error_status):
     r = await get_page('/error/%i' % error_status, app)
     assert r.status_code == 200
 
 
 @pytest.mark.parametrize(
-    "announcements",
-    [
-        "",
-        "spawn",
-        "spawn,home,login",
-        "login,logout",
-    ]
+    "announcements", ["", "spawn", "spawn,home,login", "login,logout"]
 )
 async def test_announcements(app, announcements):
     """Test announcements on various pages"""
@@ -618,16 +601,13 @@ async def test_announcements(app, announcements):
 
 
 @pytest.mark.parametrize(
-    "params",
-    [
-        "",
-        "redirect_uri=/noexist",
-        "redirect_uri=ok&client_id=nosuchthing",
-    ]
+    "params", ["", "redirect_uri=/noexist", "redirect_uri=ok&client_id=nosuchthing"]
 )
 async def test_bad_oauth_get(app, params):
     cookies = await app.login_user("authorizer")
-    r = await get_page("hub/api/oauth2/authorize?" + params, app, hub=False, cookies=cookies)
+    r = await get_page(
+        "hub/api/oauth2/authorize?" + params, app, hub=False, cookies=cookies
+    )
     assert r.status_code == 400
 
 
@@ -637,11 +617,14 @@ async def test_token_page(app):
     r = await get_page("token", app, cookies=cookies)
     r.raise_for_status()
     assert urlparse(r.url).path.endswith('/hub/token')
+
     def extract_body(r):
         soup = BeautifulSoup(r.text, "html5lib")
         import re
+
         # trim empty lines
         return re.sub(r"(\n\s*)+", "\n", soup.body.find(class_="container").text)
+
     body = extract_body(r)
     assert "Request new API token" in body, body
     # no tokens yet, no lists
