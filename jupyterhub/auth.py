@@ -707,6 +707,16 @@ class PAMAuthenticator(LocalAuthenticator):
         """
     ).tag(config=True)
 
+    pam_normalize_username = Bool(False,
+        help="""
+        Round-trip the username via PAM lookups to make sure it is unique
+
+        PAM can accept multiple usernames that map to the same user,
+        for example DOMAIN\\username in some cases.  To prevent this,
+        convert username into uid, then back to uid to normalize.
+        """
+        ).tag(config=True)
+
     def __init__(self, **kwargs):
         if pamela is None:
             raise _pamela_error from None
@@ -798,6 +808,17 @@ class PAMAuthenticator(LocalAuthenticator):
             self.log.warning("Disabling PAM sessions from now on.")
             self.open_sessions = False
 
+    def normalize_username(self, username):
+        """Round-trip the username to normalize it with PAM
+
+        PAM can accept multiple usernames as the same user, normalize them."""
+        if self.pam_normalize_username:
+            import pwd
+            uid = pwd.getpwnam(username).pw_uid
+            username = pwd.getpwuid(uid).pw_name
+            username = self.username_map.get(username, username)
+        else:
+            return super().normalize_username(username)
 
 class DummyAuthenticator(Authenticator):
     """Dummy Authenticator for testing
