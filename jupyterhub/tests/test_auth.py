@@ -233,14 +233,17 @@ async def test_pam_auth_blacklist():
 
 
 async def test_deprecated_signatures():
-    deprecated_authenticator = MockPAMAuthenticator()
 
-    def deprecated_xlist(username):
+    def deprecated_xlist(self, username):
         return True
 
-    with mock.patch.multiple(deprecated_authenticator,
-                              check_whitelist=deprecated_xlist,
-                              check_blacklist=deprecated_xlist):
+    with mock.patch.multiple(
+        MockPAMAuthenticator,
+        check_whitelist=deprecated_xlist,
+        check_group_whitelist=deprecated_xlist,
+        check_blacklist=deprecated_xlist,
+    ):
+        deprecated_authenticator = MockPAMAuthenticator()
         authorized = await deprecated_authenticator.get_authenticated_user(None, {
             'username': 'test',
             'password': 'test'
