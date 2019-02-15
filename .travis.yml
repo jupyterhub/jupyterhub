@@ -77,9 +77,9 @@ matrix:
   fast_finish: true
   include:
     - python: 3.6
-      env: TEST=docs
-    - python: 3.6
       env: TEST=lint
+    - python: 3.6
+      env: TEST=docs
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
