@@ -4,13 +4,17 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import asyncio
+from datetime import datetime, timezone
+import json
 import os
+import random
 from textwrap import dedent
 from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader, FunctionLoader
 
-from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado import gen
 from tornado import ioloop
 from tornado.web import HTTPError, RequestHandler
@@ -21,8 +25,10 @@ except ImportError:
     raise ImportError("JupyterHub single-user server requires notebook >= 4.0")
 
 from traitlets import (
+    Any,
     Bool,
     Bytes,
+    Integer,
     Unicode,
     CUnicode,
     default,
@@ -43,7 +49,7 @@ from notebook.base.handlers import IPythonHandler
 from ._version import __version__, _check_version
 from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
-from .utils import url_path_join, make_ssl_context
+from .utils import isoformat, url_path_join, make_ssl_context, exponential_backoff
 
 
 # Authenticate requests with the Hub
@@ -385,20 +391,32 @@ class SingleUserNotebookApp(NotebookApp):
             path = list(_exclude_home(path))
         return path
 
+    # create dynamic default http client,
+    # configured with any relevant ssl config
+    hub_http_client = Any()
+    @default('hub_http_client')
+    def _default_client(self):
+        ssl_context = make_ssl_context(
+            self.keyfile,
+            self.certfile,
+            cafile=self.client_ca,
+        )
+        AsyncHTTPClient.configure(
+            None,
+            defaults={
+                "ssl_options": ssl_context,
+            },
+        )
+        return AsyncHTTPClient()
+
+
     async def check_hub_version(self):
         """Test a connection to my Hub
 
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
-        ssl_context = make_ssl_context(
-            self.keyfile,
-            self.certfile,
-            cafile=self.client_ca,
-        )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
-
-        client = AsyncHTTPClient()
+        client = self.hub_http_client
         RETRIES = 5
         for i in range(1, RETRIES+1):
             try:
@@ -415,6 +433,112 @@ class SingleUserNotebookApp(NotebookApp):
         hub_version = resp.headers.get('X-JupyterHub-Version')
         _check_version(hub_version, __version__, self.log)
 
+    server_name = Unicode()
+    @default('server_name')
+    def _server_name_default(self):
+        return os.environ.get('JUPYTERHUB_SERVER_NAME', '')
+
+    hub_activity_url = Unicode(
+        config=True,
+        help="URL for sending JupyterHub activity updates",
+    )
+    @default('hub_activity_url')
+    def _default_activity_url(self):
+        return os.environ.get('JUPYTERHUB_ACTIVITY_URL', '')
+
+    hub_activity_interval = Integer(
+        300,
+        config=True,
+        help="""
+        Interval (in seconds) on which to update the Hub
+        with our latest activity.
+        """
+    )
+    @default('hub_activity_interval')
+    def _default_activity_interval(self):
+        env_value = os.environ.get('JUPYTERHUB_ACTIVITY_INTERVAL')
+        if env_value:
+            return int(env_value)
+        else:
+            return 300
+
+    _last_activity_sent = Any(allow_none=True)
+
+    async def notify_activity(self):
+        """Notify jupyterhub of activity"""
+        client = self.hub_http_client
+        last_activity = self.web_app.last_activity()
+        if not last_activity:
+            self.log.debug("No activity to send to the Hub")
+            return
+        if last_activity:
+            # protect against mixed timezone comparisons
+            if not last_activity.tzinfo:
+                # assume naive timestamps are utc
+                self.log.warning("last activity is using naïve timestamps")
+                last_activity = last_activity.replace(tzinfo=timezone.utc)
+
+        if (
+            self._last_activity_sent
+            and last_activity < self._last_activity_sent
+        ):
+            self.log.debug("No activity since %s", self._last_activity_sent)
+            return
+
+        last_activity_timestamp = isoformat(last_activity)
+
+        async def notify():
+            self.log.debug("Notifying Hub of activity %s", last_activity_timestamp)
+            req = HTTPRequest(
+                url=self.hub_activity_url,
+                method='POST',
+                headers={
+                    "Authorization": "token {}".format(self.hub_auth.api_token),
+                    "Content-Type": "application/json",
+                },
+                body=json.dumps({
+                    'servers': {
+                        self.server_name: {
+                            'last_activity': last_activity_timestamp,
+                        },
+                    },
+                    'last_activity': last_activity_timestamp,
+                })
+            )
+            try:
+                await client.fetch(req)
+            except Exception:
+                self.log.exception("Error notifying Hub of activity")
+                return False
+            else:
+                return True
+
+        await exponential_backoff(
+            notify,
+            fail_message="Failed to notify Hub of activity",
+            start_wait=1,
+            max_wait=15,
+            timeout=60,
+        )
+        self._last_activity_sent = last_activity
+
+    async def keep_activity_updated(self):
+        if not self.hub_activity_url or not self.hub_activity_interval:
+            self.log.warning("Activity events disabled")
+            return
+        self.log.info("Updating Hub with activity every %s seconds",
+            self.hub_activity_interval
+        )
+        while True:
+            try:
+                await self.notify_activity()
+            except Exception as e:
+                self.log.exception("Error notifying Hub of activity")
+            # add 20% jitter to the interval to avoid alignment
+            # of lots of requests from user servers
+            t = self.hub_activity_interval * (1 + 0.2 * (random.random() - 0.5))
+            await asyncio.sleep(t)
+
     def initialize(self, argv=None):
         # disable trash by default
         # this can be re-enabled by config
@@ -425,6 +549,7 @@ class SingleUserNotebookApp(NotebookApp):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
         # start by hitting Hub to check version
         ioloop.IOLoop.current().run_sync(self.check_hub_version)
+        ioloop.IOLoop.current().add_callback(self.keep_activity_updated)
         super(SingleUserNotebookApp, self).start()
 
     def init_hub_auth(self):

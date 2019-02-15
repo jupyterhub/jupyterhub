@@ -4,16 +4,17 @@
 # Distributed under the terms of the Modified BSD License.
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 
 from async_generator import aclosing
+from dateutil.parser import parse as parse_date
 from tornado import  web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
 from ..user import User
-from ..utils import admin_only, iterate_until, maybe_future, url_path_join
+from ..utils import admin_only, isoformat, iterate_until, maybe_future, url_path_join
 from .base import APIHandler
 
 
@@ -587,6 +588,139 @@ class SpawnProgressAPIHandler(APIHandler):
             await self.send_event(failed_event)
 
 
+def _parse_timestamp(timestamp):
+    """Parse and return a utc timestamp
+
+    - raise HTTPError(400) on parse error
+    - handle and strip tz info for internal consistency
+      (we use naïve utc timestamps everywhere)
+    """
+    try:
+        dt = parse_date(timestamp)
+    except Exception:
+        raise web.HTTPError(400, "Not a valid timestamp: %r", timestamp)
+    if dt.tzinfo:
+        # strip timezone info to naïve UTC datetime
+        dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    now = datetime.utcnow()
+    if (dt - now) > timedelta(minutes=59):
+        raise web.HTTPError(
+            400,
+            "Rejecting activity from more than an hour in the future: {}".format(
+                isoformat(dt)
+            )
+        )
+    return dt
+
+
+class ActivityAPIHandler(APIHandler):
+
+    def _validate_servers(self, user, servers):
+        """Validate servers dict argument
+
+        - types are correct
+        - each server exists
+        - last_activity fields are parsed into datetime objects
+        """
+        msg = "servers must be a dict of the form {server_name: {last_activity: timestamp}}"
+        if not isinstance(servers, dict):
+            raise web.HTTPError(400, msg)
+
+        spawners = user.orm_spawners
+        for server_name, server_info in servers.items():
+            if server_name not in spawners:
+                raise web.HTTPError(
+                    400,
+                    "No such server '{}' for user {}".format(
+                        server_name,
+                        user.name,
+                    )
+                )
+            # check that each per-server field is a dict
+            if not isinstance(server_info, dict):
+                raise web.HTTPError(400, msg)
+            # check that last_activity is defined for each per-server dict
+            if 'last_activity' not in server_info:
+                raise web.HTTPError(400, msg)
+            # parse last_activity timestamps
+            # _parse_timestamp above is responsible for raising errors
+            server_info['last_activity'] = _parse_timestamp(server_info['last_activity'])
+        return servers
+
+    @admin_or_self
+    def post(self, username):
+        user = self.find_user(username)
+        if user is None:
+            # no such user
+            raise web.HTTPError(404, "No such user: %r", username)
+
+        body = self.get_json_body()
+        if not isinstance(body, dict):
+            raise web.HTTPError(400, "body must be a json dict")
+
+        last_activity_timestamp = body.get('last_activity')
+        servers = body.get('servers')
+        if not last_activity_timestamp and not servers:
+            raise web.HTTPError(
+                400,
+                "body must contain at least one of `last_activity` or `servers`"
+            )
+
+        if servers:
+            # validate server args
+            servers = self._validate_servers(user, servers)
+            # at this point we know that the servers dict
+            # is valid and contains only servers that exist
+            # and last_activity is defined and a valid datetime object
+
+        # update user.last_activity if specified
+        if last_activity_timestamp:
+            last_activity = _parse_timestamp(last_activity_timestamp)
+            if (
+                (not user.last_activity)
+                or last_activity > user.last_activity
+            ):
+                self.log.debug("Activity for user %s: %s",
+                    user.name,
+                    isoformat(last_activity),
+                )
+                user.last_activity = last_activity
+            else:
+                self.log.debug(
+                    "Not updating activity for %s: %s < %s",
+                    user,
+                    isoformat(last_activity),
+                    isoformat(user.last_activity),
+                )
+
+        if servers:
+            for server_name, server_info in servers.items():
+                last_activity = server_info['last_activity']
+                spawner = user.orm_spawners[server_name]
+
+                if (
+                    (not spawner.last_activity)
+                    or last_activity > spawner.last_activity
+                ):
+                    self.log.debug("Activity on server %s/%s: %s",
+                        user.name,
+                        server_name,
+                        isoformat(last_activity),
+                    )
+                    spawner.last_activity = last_activity
+                else:
+                    self.log.debug(
+                        "Not updating server activity on %s/%s: %s < %s",
+                        user.name,
+                        server_name,
+                        isoformat(last_activity),
+                        isoformat(user.last_activity),
+                    )
+
+        self.db.commit()
+
+
 default_handlers = [
     (r"/api/user", SelfAPIHandler),
     (r"/api/users", UserListAPIHandler),
@@ -597,5 +731,6 @@ default_handlers = [
     (r"/api/users/([^/]+)/tokens/([^/]*)", UserTokenAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)", UserServerAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)/progress", SpawnProgressAPIHandler),
+    (r"/api/users/([^/]+)/activity", ActivityAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]

@@ -310,7 +310,11 @@ class BaseHandler(RequestHandler):
         now = datetime.utcnow()
         orm_token.last_activity = now
         if orm_token.user:
-            orm_token.user.last_activity = now
+            # FIXME: scopes should give us better control than this
+            # don't consider API requests originating from a server
+            # to be activity from the user
+            if not orm_token.note.startswith("Server at "):
+                orm_token.user.last_activity = now
         self.db.commit()
 
         if orm_token.service:
