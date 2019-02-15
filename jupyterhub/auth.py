@@ -219,7 +219,10 @@ class Authenticator(LoggingConfigurable):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         for method_name in ('check_whitelist', 'check_blacklist', 'check_group_whitelist'):
-            original_method = getattr(self, method_name)
+            original_method = getattr(self, method_name, None)
+            if original_method is None:
+                # no such method (check_group_whitelist is optional)
+                continue
             signature = inspect.signature(original_method)
             if 'authentication' not in signature.parameters:
                 # adapt to pre-1.0 signature for compatibility
