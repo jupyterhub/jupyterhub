@@ -9,6 +9,7 @@ cryptography
 html5lib  # needed for beautifulsoup
 mock
 notebook
+pre-commit
 pytest-asyncio
 pytest-cov
 pytest>=3.3
