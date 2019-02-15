@@ -232,6 +232,26 @@ async def test_pam_auth_blacklist():
     assert authorized['name'] == 'kaylee'
 
 
+async def test_deprecated_signatures():
+
+    def deprecated_xlist(self, username):
+        return True
+
+    with mock.patch.multiple(
+        MockPAMAuthenticator,
+        check_whitelist=deprecated_xlist,
+        check_group_whitelist=deprecated_xlist,
+        check_blacklist=deprecated_xlist,
+    ):
+        deprecated_authenticator = MockPAMAuthenticator()
+        authorized = await deprecated_authenticator.get_authenticated_user(None, {
+            'username': 'test',
+            'password': 'test'
+        })
+
+        assert authorized is not None
+
+
 async def test_pam_auth_no_such_group():
     authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
     authorized = await authenticator.get_authenticated_user(None, {
