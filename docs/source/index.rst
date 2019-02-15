@@ -30,7 +30,7 @@ For convenient administration of the Hub, its users, and services,
 JupyterHub also provides a `REST API`_.
 
 The JupyterHub team and Project Jupyter value our community, and JupyterHub
-follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
+follows the Jupyter `Community Guides <https://jupyter.readthedocs.io/en/latest/community/content-community.html>`_.
 
 Contents
 ========
@@ -115,6 +115,7 @@ helps keep our community welcoming to as many people as possible.
    contributing/setup
    contributing/docs
    contributing/tests
+   contributing/roadmap
 
 Upgrading JupyterHub
 --------------------

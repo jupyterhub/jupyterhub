@@ -107,6 +107,8 @@ class _ServiceSpawner(LocalProcessSpawner):
     def start(self):
         """Start the process"""
         env = self.get_env()
+        # no activity url for services
+        env.pop('JUPYTERHUB_ACTIVITY_URL', None)
         if os.name == 'nt':
             env['SYSTEMROOT'] = os.environ['SYSTEMROOT']
         cmd = self.cmd
@@ -258,7 +260,6 @@ class Service(LoggingConfigurable):
     def _default_redirect_uri(self):
         if self.server is None:
             return ''
-        print(self.domain, self.host, self.server)
         return self.host + url_path_join(self.prefix, 'oauth_callback')
 
     @property

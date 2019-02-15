@@ -803,6 +803,16 @@ class JupyterHub(Application):
         help="Allow named single-user servers per user"
     ).tag(config=True)
 
+    named_server_limit_per_user = Integer(0,
+        help="""
+        Maximum number of concurrent named servers that can be created by a user at a time.
+
+        Setting this can limit the total resources a user can consume.
+
+        If set to 0, no limit is enforced.
+        """
+    ).tag(config=True)
+
     # class for spawning single-user servers
     spawner_class = EntryPointType(
         default_value=LocalProcessSpawner,
@@ -1019,6 +1029,11 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     statsd = Any(allow_none=False, help="The statsd client, if any. A mock will be used if we aren't using statsd")
+
+    shutdown_on_logout = Bool(
+        False,
+        help="""Shuts down all user servers on logout"""
+    ).tag(config=True)
 
     @default('statsd')
     def _statsd(self):
@@ -1688,6 +1703,40 @@ class JupyterHub(Application):
                     status = -1
 
             if status is None:
+                # poll claims it's running.
+                # Check if it's really there
+                url_in_db = spawner.server.url
+                url = await spawner.get_url()
+                if url != url_in_db:
+                    self.log.warning(
+                        "%s had invalid url %s. Updating to %s",
+                        spawner._log_name, url_in_db, url,
+                    )
+                    urlinfo = urlparse(url)
+                    spawner.server.protocol = urlinfo.scheme
+                    spawner.server.ip = urlinfo.hostname
+                    if urlinfo.port:
+                        spawner.server.port = urlinfo.port
+                    elif urlinfo.scheme == 'http':
+                        spawner.server.port = 80
+                    elif urlinfo.scheme == 'https':
+                        spawner.server.port = 443
+                    self.db.commit()
+
+                self.log.debug(
+                    "Verifying that %s is running at %s",
+                    spawner._log_name, url,
+                )
+                try:
+                    await user._wait_up(spawner)
+                except TimeoutError:
+                    self.log.error(
+                        "%s does not appear to be running at %s, shutting it down.",
+                        spawner._log_name, url,
+                    )
+                    status = -1
+
+            if status is None:
                 self.log.info("%s still running", user.name)
                 spawner.add_poll_callback(user_stopped, user, name)
                 spawner.start_polling()
@@ -1836,6 +1885,7 @@ class JupyterHub(Application):
             domain=self.domain,
             statsd=self.statsd,
             allow_named_servers=self.allow_named_servers,
+            named_server_limit_per_user=self.named_server_limit_per_user,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,
@@ -1849,6 +1899,7 @@ class JupyterHub(Application):
             internal_ssl_cert=self.internal_ssl_cert,
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
+            shutdown_on_logout=self.shutdown_on_logout
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

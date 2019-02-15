@@ -58,6 +58,7 @@ class HomeHandler(BaseHandler):
             user=user,
             url=url,
             allow_named_servers=self.allow_named_servers,
+            named_server_limit_per_user=self.named_server_limit_per_user,
             url_path_join=url_path_join,
             # can't use user.spawners because the stop method of User pops named servers from user.spawners when they're stopped
             spawners = user.orm_user._orm_spawners,
@@ -73,11 +74,7 @@ class SpawnHandler(BaseHandler):
 
     Only enabled when Spawner.options_form is defined.
     """
-    async def _render_form(self, message='', for_user=None):
-        # Note that 'user' is the authenticated user making the request and
-        # 'for_user' is the user whose server is being spawned.
-        user = for_user or self.get_current_user()
-        spawner_options_form = await user.spawner.get_options_form()
+    def _render_form(self, for_user, spawner_options_form, message=''):
         return self.render_template('spawn.html',
             for_user=for_user,
             spawner_options_form=spawner_options_form,
@@ -106,10 +103,12 @@ class SpawnHandler(BaseHandler):
             self.log.debug("User is running: %s", url)
             self.redirect(url)
             return
-        if user.spawner.options_form:
+
+        spawner_options_form = await user.spawner.get_options_form()
+        if spawner_options_form:
             # Add handler to spawner here so you can access query params in form rendering.
             user.spawner.handler = self
-            form = await self._render_form(for_user=user)
+            form = self._render_form(for_user=user, spawner_options_form=spawner_options_form)
             self.finish(form)
         else:
             # Explicit spawn request: clear _spawn_future
@@ -153,7 +152,8 @@ class SpawnHandler(BaseHandler):
             await self.spawn_single_user(user, options=options)
         except Exception as e:
             self.log.error("Failed to spawn single-user server with form", exc_info=True)
-            form = await self._render_form(message=str(e), for_user=user)
+            spawner_options_form = await user.spawner.get_options_form()
+            form = self._render_form(for_user=user, spawner_options_form=spawner_options_form, message=str(e))
             self.finish(form)
             return
         if current_user is user:
@@ -230,6 +230,7 @@ class AdminHandler(BaseHandler):
             running=running,
             sort={s:o for s,o in zip(sorts, orders)},
             allow_named_servers=self.allow_named_servers,
+            named_server_limit_per_user=self.named_server_limit_per_user,
         )
         self.finish(html)
 

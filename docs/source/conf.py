@@ -67,7 +67,9 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-html_theme = 'alabaster'
+import alabaster_jupyterhub
+html_theme = 'alabaster_jupyterhub'
+html_theme_path = [alabaster_jupyterhub.get_html_theme_path()]
 
 html_logo = '_static/images/logo/logo.png'
 html_favicon = '_static/images/logo/favicon.ico'

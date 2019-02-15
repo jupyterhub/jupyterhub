@@ -1,6 +1,8 @@
 """Tests for HTML pages"""
 
+import asyncio
 import sys
+from unittest import mock
 from urllib.parse import urlencode, urlparse
 
 from bs4 import BeautifulSoup
@@ -12,108 +14,94 @@ from ..utils import url_path_join as ujoin
 from .. import orm
 from ..auth import Authenticator
 
-import mock
 import pytest
 
-from .mocking import FormSpawner, public_url, public_host
-from .test_api import api_request, add_user
-from .utils import async_requests
+from .mocking import FormSpawner, FalsyCallableFormSpawner
+from .utils import (
+    async_requests,
+    api_request,
+    add_user,
+    get_page,
+    public_url,
+    public_host,
+)
 
 
-def get_page(path, app, hub=True, **kw):
-    if hub:
-        prefix = app.hub.base_url
-    else:
-        prefix = app.base_url
-    base_url = ujoin(public_host(app), prefix)
-    return async_requests.get(ujoin(base_url, path), **kw)
-
-
-@pytest.mark.gen_test
-def test_root_no_auth(app):
+async def test_root_no_auth(app):
     url = ujoin(public_host(app), app.hub.base_url)
-    r = yield async_requests.get(url)
+    r = await async_requests.get(url)
     r.raise_for_status()
     assert r.url == ujoin(url, 'login')
 
 
-@pytest.mark.gen_test
-def test_root_auth(app):
-    cookies = yield app.login_user('river')
-    r = yield async_requests.get(public_url(app), cookies=cookies)
+async def test_root_auth(app):
+    cookies = await app.login_user('river')
+    r = await async_requests.get(public_url(app), cookies=cookies)
     r.raise_for_status()
     assert r.url.startswith(public_url(app, app.users['river']))
 
 
-@pytest.mark.gen_test
-def test_root_redirect(app):
+async def test_root_redirect(app):
     name = 'wash'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
     next_url = ujoin(app.base_url, 'user/other/test.ipynb')
     url = '/?' + urlencode({'next': next_url})
-    r = yield get_page(url, app, cookies=cookies)
+    r = await get_page(url, app, cookies=cookies)
     r.raise_for_status()
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, 'user/%s/test.ipynb' % name)
 
 
-@pytest.mark.gen_test
-def test_root_default_url_noauth(app):
+async def test_root_default_url_noauth(app):
     with mock.patch.dict(app.tornado_settings,
                          {'default_url': '/foo/bar'}):
-        r = yield get_page('/', app, allow_redirects=False)
+        r = await get_page('/', app, allow_redirects=False)
     r.raise_for_status()
     url = r.headers.get('Location', '')
     path = urlparse(url).path
     assert path == '/foo/bar'
 
 
-@pytest.mark.gen_test
-def test_root_default_url_auth(app):
+async def test_root_default_url_auth(app):
     name = 'wash'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
     with mock.patch.dict(app.tornado_settings,
                          {'default_url': '/foo/bar'}):
-        r = yield get_page('/', app, cookies=cookies, allow_redirects=False)
+        r = await get_page('/', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     url = r.headers.get('Location', '')
     path = urlparse(url).path
     assert path == '/foo/bar'
 
 
-@pytest.mark.gen_test
-def test_home_no_auth(app):
-    r = yield get_page('home', app, allow_redirects=False)
+async def test_home_no_auth(app):
+    r = await get_page('home', app, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 302
     assert '/hub/login' in r.headers['Location']
 
 
-@pytest.mark.gen_test
-def test_home_auth(app):
-    cookies = yield app.login_user('river')
-    r = yield get_page('home', app, cookies=cookies)
+async def test_home_auth(app):
+    cookies = await app.login_user('river')
+    r = await get_page('home', app, cookies=cookies)
     r.raise_for_status()
     assert r.url.endswith('home')
 
 
-@pytest.mark.gen_test
-def test_admin_no_auth(app):
-    r = yield get_page('admin', app)
+async def test_admin_no_auth(app):
+    r = await get_page('admin', app)
     assert r.status_code == 403
 
 
-@pytest.mark.gen_test
-def test_admin_not_admin(app):
-    cookies = yield app.login_user('wash')
-    r = yield get_page('admin', app, cookies=cookies)
+async def test_admin_not_admin(app):
+    cookies = await app.login_user('wash')
+    r = await get_page('admin', app, cookies=cookies)
     assert r.status_code == 403
 
 
-@pytest.mark.gen_test
-def test_admin(app):
-    cookies = yield app.login_user('admin')
-    r = yield get_page('admin', app, cookies=cookies, allow_redirects=False)
+async def test_admin(app):
+    cookies = await app.login_user('admin')
+    r = await get_page('admin', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.url.endswith('/admin')
 
@@ -124,127 +112,127 @@ def test_admin(app):
     'admin',
     'name',
 ])
-@pytest.mark.gen_test
-def test_admin_sort(app, sort):
-    cookies = yield app.login_user('admin')
-    r = yield get_page('admin?sort=%s' % sort, app, cookies=cookies)
+async def test_admin_sort(app, sort):
+    cookies = await app.login_user('admin')
+    r = await get_page('admin?sort=%s' % sort, app, cookies=cookies)
     r.raise_for_status()
     assert r.status_code == 200
 
 
-@pytest.mark.gen_test
-def test_spawn_redirect(app):
+async def test_spawn_redirect(app):
     name = 'wash'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
     u = app.users[orm.User.find(app.db, name)]
 
-    status = yield u.spawner.poll()
+    status = await u.spawner.poll()
     assert status is not None
 
     # test spawn page when no server is running
-    r = yield get_page('spawn', app, cookies=cookies)
+    r = await get_page('spawn', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, 'user/%s/' % name)
 
     # should have started server
-    status = yield u.spawner.poll()
+    status = await u.spawner.poll()
     assert status is None
 
     # test spawn page when server is already running (just redirect)
-    r = yield get_page('spawn', app, cookies=cookies)
+    r = await get_page('spawn', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
 
     # stop server to ensure /user/name is handled by the Hub
-    r = yield api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
+    r = await api_request(app, 'users', name, 'server', method='delete', cookies=cookies)
     r.raise_for_status()
 
     # test handing of trailing slash on `/user/name`
-    r = yield get_page('user/' + name, app, hub=False, cookies=cookies)
+    r = await get_page('user/' + name, app, hub=False, cookies=cookies)
     r.raise_for_status()
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
 
 
-@pytest.mark.gen_test
-def test_spawn_handler_access(app):
+async def test_spawn_handler_access(app):
     name = 'winston'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
     u = app.users[orm.User.find(app.db, name)]
 
-    status = yield u.spawner.poll()
+    status = await u.spawner.poll()
     assert status is not None
 
     # spawn server via browser link with ?arg=value
-    r = yield get_page('spawn', app, cookies=cookies, params={'arg': 'value'})
+    r = await get_page('spawn', app, cookies=cookies, params={'arg': 'value'})
     r.raise_for_status()
 
     # verify that request params got passed down
     # implemented in MockSpawner
-    r = yield async_requests.get(ujoin(public_url(app, u), 'env'))
+    r = await async_requests.get(ujoin(public_url(app, u), 'env'))
     env = r.json()
     assert 'HANDLER_ARGS' in env
     assert env['HANDLER_ARGS'] == 'arg=value'
 
     # stop server
-    r = yield api_request(app, 'users', name, 'server', method='delete')
+    r = await api_request(app, 'users', name, 'server', method='delete')
     r.raise_for_status()
 
 
-@pytest.mark.gen_test
-def test_spawn_admin_access(app, admin_access):
+async def test_spawn_admin_access(app, admin_access):
     """GET /user/:name as admin with admin-access spawns user's server"""
-    cookies = yield app.login_user('admin')
+    cookies = await app.login_user('admin')
     name = 'mariel'
     user = add_user(app.db, app=app, name=name)
     app.db.commit()
-    r = yield get_page('user/' + name, app, cookies=cookies)
+    r = await get_page('user/' + name, app, cookies=cookies)
     r.raise_for_status()
     assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
-    r = yield get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
+    r = await get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
     r.raise_for_status()
     env = r.json()
     assert env['JUPYTERHUB_USER'] == name
 
 
-@pytest.mark.gen_test
-def test_spawn_page(app):
+async def test_spawn_page(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        cookies = yield app.login_user('jones')
-        r = yield get_page('spawn', app, cookies=cookies)
+        cookies = await app.login_user('jones')
+        r = await get_page('spawn', app, cookies=cookies)
         assert r.url.endswith('/spawn')
         assert FormSpawner.options_form in r.text
 
-        r = yield get_page('spawn?next=foo', app, cookies=cookies)
+        r = await get_page('spawn?next=foo', app, cookies=cookies)
         assert r.url.endswith('/spawn?next=foo')
         assert FormSpawner.options_form in r.text
 
 
-@pytest.mark.gen_test
-def test_spawn_page_admin(app, admin_access):
+async def test_spawn_page_falsy_callable(app):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FalsyCallableFormSpawner}):
+        cookies = await app.login_user('erik')
+        r = await get_page('spawn', app, cookies=cookies)
+        assert 'user/erik' in r.url
+
+
+async def test_spawn_page_admin(app, admin_access):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        cookies = yield app.login_user('admin')
+        cookies = await app.login_user('admin')
         u = add_user(app.db, app=app, name='melanie')
-        r = yield get_page('spawn/' + u.name, app, cookies=cookies)
+        r = await get_page('spawn/' + u.name, app, cookies=cookies)
         assert r.url.endswith('/spawn/' + u.name)
         assert FormSpawner.options_form in r.text
         assert "Spawning server for {}".format(u.name) in r.text
 
 
-@pytest.mark.gen_test
-def test_spawn_form(app):
+async def test_spawn_form(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
-        cookies = yield app.login_user('jones')
+        cookies = await app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
-        yield u.stop()
+        await u.stop()
         next_url = ujoin(app.base_url, 'user/jones/tree')
-        r = yield async_requests.post(
+        r = await async_requests.post(
             url_concat(ujoin(base_url, 'spawn'), {'next': next_url}),
             cookies=cookies,
             data={'bounds': ['-1', '1'], 'energy': '511keV'},
@@ -258,15 +246,14 @@ def test_spawn_form(app):
         }
 
 
-@pytest.mark.gen_test
-def test_spawn_form_admin_access(app, admin_access):
+async def test_spawn_form_admin_access(app, admin_access):
     with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
-        cookies = yield app.login_user('admin')
+        cookies = await app.login_user('admin')
         u = add_user(app.db, app=app, name='martha')
         next_url = ujoin(app.base_url, 'user', u.name, 'tree')
 
-        r = yield async_requests.post(
+        r = await async_requests.post(
             url_concat(ujoin(base_url, 'spawn', u.name), {'next': next_url}),
             cookies=cookies,
             data={'bounds': ['-3', '3'], 'energy': '938MeV'},
@@ -281,16 +268,15 @@ def test_spawn_form_admin_access(app, admin_access):
         }
 
 
-@pytest.mark.gen_test
-def test_spawn_form_with_file(app):
+async def test_spawn_form_with_file(app):
     with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
-        cookies = yield app.login_user('jones')
+        cookies = await app.login_user('jones')
         orm_u = orm.User.find(app.db, 'jones')
         u = app.users[orm_u]
-        yield u.stop()
+        await u.stop()
 
-        r = yield async_requests.post(ujoin(base_url, 'spawn'),
+        r = await async_requests.post(ujoin(base_url, 'spawn'),
                           cookies=cookies,
                           data={
                               'bounds': ['-1', '1'],
@@ -309,12 +295,11 @@ def test_spawn_form_with_file(app):
         }
 
 
-@pytest.mark.gen_test
-def test_user_redirect(app):
+async def test_user_redirect(app):
     name = 'wash'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
 
-    r = yield get_page('/user-redirect/tree/top/', app)
+    r = await get_page('/user-redirect/tree/top/', app)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
@@ -324,32 +309,31 @@ def test_user_redirect(app):
         'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')
     })
 
-    r = yield get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
+    r = await get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
 
 
-@pytest.mark.gen_test
-def test_user_redirect_deprecated(app):
+async def test_user_redirect_deprecated(app):
     """redirecting from /user/someonelse/ URLs (deprecated)"""
     name = 'wash'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
 
-    r = yield get_page('/user/baduser', app, cookies=cookies, hub=False)
+    r = await get_page('/user/baduser', app, cookies=cookies, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/' % name)
 
-    r = yield get_page('/user/baduser/test.ipynb', app, cookies=cookies, hub=False)
+    r = await get_page('/user/baduser/test.ipynb', app, cookies=cookies, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/test.ipynb' % name)
 
-    r = yield get_page('/user/baduser/test.ipynb', app, hub=False)
+    r = await get_page('/user/baduser/test.ipynb', app, hub=False)
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
@@ -360,11 +344,10 @@ def test_user_redirect_deprecated(app):
     })
 
 
-@pytest.mark.gen_test
-def test_login_fail(app):
+async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
-    r = yield async_requests.post(base_url + 'hub/login',
+    r = await async_requests.post(base_url + 'hub/login',
         data={
             'username': name,
             'password': 'wrong',
@@ -374,8 +357,7 @@ def test_login_fail(app):
     assert not r.cookies
 
 
-@pytest.mark.gen_test
-def test_login_strip(app):
+async def test_login_strip(app):
     """Test that login form doesn't strip whitespace from passwords"""
     form_data = {
         'username': 'spiff',
@@ -388,7 +370,7 @@ def test_login_strip(app):
         called_with.append(data)
 
     with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
-        yield async_requests.post(base_url + 'hub/login',
+        await async_requests.post(base_url + 'hub/login',
             data=form_data,
             allow_redirects=False,
         )
@@ -414,9 +396,8 @@ def test_login_strip(app):
         (False, '//other.domain', ''),
     ]
 )
-@pytest.mark.gen_test
-def test_login_redirect(app, running, next_url, location):
-    cookies = yield app.login_user('river')
+async def test_login_redirect(app, running, next_url, location):
+    cookies = await app.login_user('river')
     user = app.users['river']
     if location:
         location = ujoin(app.base_url, location)
@@ -432,18 +413,17 @@ def test_login_redirect(app, running, next_url, location):
 
     if running and not user.active:
         # ensure running
-        yield user.spawn()
+        await user.spawn()
     elif user.active and not running:
         # ensure not running
-        yield user.stop()
-    r = yield get_page(url, app, cookies=cookies, allow_redirects=False)
+        await user.stop()
+    r = await get_page(url, app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 302
     assert location == r.headers['Location']
 
 
-@pytest.mark.gen_test
-def test_auto_login(app, request):
+async def test_auto_login(app, request):
     class DummyLoginHandler(BaseHandler):
         def get(self):
             self.write('ok!')
@@ -452,7 +432,7 @@ def test_auto_login(app, request):
         (ujoin(app.hub.base_url, 'dummy'), DummyLoginHandler),
     ])
     # no auto_login: end up at /hub/login
-    r = yield async_requests.get(base_url)
+    r = await async_requests.get(base_url)
     assert r.url == public_url(app, path='hub/login')
     # enable auto_login: redirect from /hub/login to /hub/dummy
     authenticator = Authenticator(auto_login=True)
@@ -461,78 +441,118 @@ def test_auto_login(app, request):
     with mock.patch.dict(app.tornado_settings, {
         'authenticator': authenticator,
     }):
-        r = yield async_requests.get(base_url)
+        r = await async_requests.get(base_url)
     assert r.url == public_url(app, path='hub/dummy')
 
-@pytest.mark.gen_test
-def test_auto_login_logout(app):
+
+async def test_auto_login_logout(app):
     name = 'burnham'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
 
     with mock.patch.dict(app.tornado_settings, {
         'authenticator': Authenticator(auto_login=True),
     }):
-        r = yield async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
+        r = await async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
     r.raise_for_status()
     logout_url = public_host(app) + app.tornado_settings['logout_url']
     assert r.url == logout_url
     assert r.cookies == {}
 
-@pytest.mark.gen_test
-def test_logout(app):
+
+async def test_logout(app):
     name = 'wash'
-    cookies = yield app.login_user(name)
-    r = yield async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
+    cookies = await app.login_user(name)
+    r = await async_requests.get(public_host(app) + app.tornado_settings['logout_url'], cookies=cookies)
     r.raise_for_status()
     login_url = public_host(app) + app.tornado_settings['login_url']
     assert r.url == login_url
     assert r.cookies == {}
 
 
-@pytest.mark.gen_test
-def test_login_no_whitelist_adds_user(app):
+@pytest.mark.parametrize('shutdown_on_logout', [True, False])
+async def test_shutdown_on_logout(app, shutdown_on_logout):
+    name = 'shutitdown'
+    cookies = await app.login_user(name)
+    user = app.users[name]
+
+    # start the user's server
+    await user.spawn()
+    spawner = user.spawner
+
+    # wait for any pending state to resolve
+    for i in range(50):
+        if not spawner.pending:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        assert False, "Spawner still pending"
+    assert spawner.active
+
+    # logout
+    with mock.patch.dict(app.tornado_settings, {
+        'shutdown_on_logout': shutdown_on_logout,
+    }):
+        r = await async_requests.get(
+            public_host(app) + app.tornado_settings['logout_url'],
+            cookies=cookies,
+        )
+        r.raise_for_status()
+
+    login_url = public_host(app) + app.tornado_settings['login_url']
+    assert r.url == login_url
+    assert r.cookies == {}
+
+    # wait for any pending state to resolve
+    for i in range(50):
+        if not spawner.pending:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        assert False, "Spawner still pending"
+
+    assert spawner.ready == (not shutdown_on_logout)
+
+
+async def test_login_no_whitelist_adds_user(app):
     auth = app.authenticator
     mock_add_user = mock.Mock()
     with mock.patch.object(auth, 'add_user', mock_add_user):
-        cookies = yield app.login_user('jubal')
+        cookies = await app.login_user('jubal')
 
     user = app.users['jubal']
     assert mock_add_user.mock_calls == [mock.call(user)]
 
 
-@pytest.mark.gen_test
-def test_static_files(app):
+async def test_static_files(app):
     base_url = ujoin(public_host(app), app.hub.base_url)
-    r = yield async_requests.get(ujoin(base_url, 'logo'))
+    r = await async_requests.get(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = yield async_requests.get(ujoin(base_url, 'static', 'images', 'jupyter.png'))
+    r = await async_requests.get(ujoin(base_url, 'static', 'images', 'jupyter.png'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = yield async_requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
+    r = await async_requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'text/css'
 
 
-@pytest.mark.gen_test
-def test_token_auth(app):
-    cookies = yield app.login_user('token')
-    r = yield get_page('token', app, cookies=cookies)
+async def test_token_auth(app):
+    cookies = await app.login_user('token')
+    r = await get_page('token', app, cookies=cookies)
     r.raise_for_status()
     assert r.status_code == 200
 
 
-@pytest.mark.gen_test
-def test_oauth_token_page(app):
+async def test_oauth_token_page(app):
     name = 'token'
-    cookies = yield app.login_user(name)
+    cookies = await app.login_user(name)
     user = app.users[orm.User.find(app.db, name)]
     client = orm.OAuthClient(identifier='token')
     app.db.add(client)
     oauth_token = orm.OAuthAccessToken(client=client, user=user, grant_type=orm.GrantType.authorization_code)
     app.db.add(oauth_token)
     app.db.commit()
-    r = yield get_page('token', app, cookies=cookies)
+    r = await get_page('token', app, cookies=cookies)
     r.raise_for_status()
     assert r.status_code == 200
 
@@ -541,14 +561,11 @@ def test_oauth_token_page(app):
     503,
     404,
 ])
-
-@pytest.mark.gen_test
-def test_proxy_error(app, error_status):
-    r = yield get_page('/error/%i' % error_status, app)
+async def test_proxy_error(app, error_status):
+    r = await get_page('/error/%i' % error_status, app)
     assert r.status_code == 200
 
 
-@pytest.mark.gen_test
 @pytest.mark.parametrize(
     "announcements",
     [
@@ -558,7 +575,7 @@ def test_proxy_error(app, error_status):
         "login,logout",
     ]
 )
-def test_announcements(app, announcements):
+async def test_announcements(app, announcements):
     """Test announcements on various pages"""
     # Default announcement - same on all pages
     ann01 = "ANNOUNCE01"
@@ -574,26 +591,26 @@ def test_announcements(app, announcements):
         else:
             assert ann01 in text
 
-    cookies = yield app.login_user("jones")
+    cookies = await app.login_user("jones")
 
     with mock.patch.dict(
         app.tornado_settings,
         {"template_vars": template_vars, "spawner_class": FormSpawner},
     ):
-        r = yield get_page("login", app)
+        r = await get_page("login", app)
         r.raise_for_status()
         assert_announcement("login", r.text)
-        r = yield get_page("spawn", app, cookies=cookies)
+        r = await get_page("spawn", app, cookies=cookies)
         r.raise_for_status()
         assert_announcement("spawn", r.text)
-        r = yield get_page("home", app, cookies=cookies)  # hub/home
+        r = await get_page("home", app, cookies=cookies)  # hub/home
         r.raise_for_status()
         assert_announcement("home", r.text)
         # need auto_login=True to get logout page
         auto_login = app.authenticator.auto_login
         app.authenticator.auto_login = True
         try:
-            r = yield get_page("logout", app, cookies=cookies)
+            r = await get_page("logout", app, cookies=cookies)
         finally:
             app.authenticator.auto_login = auto_login
         r.raise_for_status()
@@ -608,18 +625,16 @@ def test_announcements(app, announcements):
         "redirect_uri=ok&client_id=nosuchthing",
     ]
 )
-@pytest.mark.gen_test
-def test_bad_oauth_get(app, params):
-    cookies = yield app.login_user("authorizer")
-    r = yield get_page("hub/api/oauth2/authorize?" + params, app, hub=False, cookies=cookies)
+async def test_bad_oauth_get(app, params):
+    cookies = await app.login_user("authorizer")
+    r = await get_page("hub/api/oauth2/authorize?" + params, app, hub=False, cookies=cookies)
     assert r.status_code == 400
 
 
-@pytest.mark.gen_test
-def test_token_page(app):
+async def test_token_page(app):
     name = "cake"
-    cookies = yield app.login_user(name)
-    r = yield get_page("token", app, cookies=cookies)
+    cookies = await app.login_user(name)
+    r = await get_page("token", app, cookies=cookies)
     r.raise_for_status()
     assert urlparse(r.url).path.endswith('/hub/token')
     def extract_body(r):
@@ -638,7 +653,7 @@ def test_token_page(app):
     token = user.new_api_token(expires_in=60, note="my-test-token")
     app.db.commit()
 
-    r = yield get_page("token", app, cookies=cookies)
+    r = await get_page("token", app, cookies=cookies)
     r.raise_for_status()
     body = extract_body(r)
     assert "API Tokens" in body, body
@@ -649,10 +664,10 @@ def test_token_page(app):
     # spawn the user to trigger oauth, etc.
     # request an oauth token
     user.spawner.cmd = [sys.executable, '-m', 'jupyterhub.singleuser']
-    r = yield get_page("spawn", app, cookies=cookies)
+    r = await get_page("spawn", app, cookies=cookies)
     r.raise_for_status()
 
-    r = yield get_page("token", app, cookies=cookies)
+    r = await get_page("token", app, cookies=cookies)
     r.raise_for_status()
     body = extract_body(r)
     assert "API Tokens" in body, body
@@ -660,31 +675,27 @@ def test_token_page(app):
     assert "Authorized Applications" in body, body
 
 
-@pytest.mark.gen_test
-def test_server_not_running_api_request(app):
-    cookies = yield app.login_user("bees")
-    r = yield get_page("user/bees/api/status", app, hub=False, cookies=cookies)
+async def test_server_not_running_api_request(app):
+    cookies = await app.login_user("bees")
+    r = await get_page("user/bees/api/status", app, hub=False, cookies=cookies)
     assert r.status_code == 404
     assert r.headers["content-type"] == "application/json"
     assert r.json() == {"message": "bees is not running"}
 
 
-@pytest.mark.gen_test
-def test_metrics_no_auth(app):
-    r = yield get_page("metrics", app)
+async def test_metrics_no_auth(app):
+    r = await get_page("metrics", app)
     assert r.status_code == 403
 
 
-@pytest.mark.gen_test
-def test_metrics_auth(app):
-    cookies = yield app.login_user('river')
+async def test_metrics_auth(app):
+    cookies = await app.login_user('river')
     metrics_url = ujoin(public_host(app), app.hub.base_url, 'metrics')
-    r = yield get_page("metrics", app, cookies=cookies)
+    r = await get_page("metrics", app, cookies=cookies)
     assert r.status_code == 200
     assert r.url == metrics_url
 
 
-@pytest.mark.gen_test
-def test_health_check_request(app):
-    r = yield get_page('health', app)
+async def test_health_check_request(app):
+    r = await get_page('health', app)
     assert r.status_code == 200

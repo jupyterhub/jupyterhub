@@ -19,38 +19,13 @@ except Exception as e:
     _pamela_error = e
 
 from tornado.concurrent import run_on_executor
-from tornado import gen
 
 from traitlets.config import LoggingConfigurable
-from traitlets import Bool, Set, Unicode, Dict, Any, default, observe
+from traitlets import Bool, Integer, Set, Unicode, Dict, Any, default, observe
 
 from .handlers.login import LoginHandler
 from .utils import maybe_future, url_path_join
 from .traitlets import Command
-
-
-def getgrnam(name):
-    """Wrapper function to protect against `grp` not being available
-    on Windows
-    """
-    import grp
-    return grp.getgrnam(name)
-
-
-def getpwnam(name):
-    """Wrapper function to protect against `pwd` not being available
-    on Windows
-    """
-    import pwd
-    return pwd.getpwnam(name)
-
-
-def getgrouplist(name, group):
-    """Wrapper function to protect against `os.getgrouplist` not being available
-    on Windows
-    """
-    import os
-    return os.getgrouplist(name, group)
 
 
 class Authenticator(LoggingConfigurable):
@@ -75,6 +50,35 @@ class Authenticator(LoggingConfigurable):
 
         New in JupyterHub 0.8
         """,
+    )
+
+    auth_refresh_age = Integer(
+        300,
+        config=True,
+        help="""The max age (in seconds) of authentication info
+        before forcing a refresh of user auth info.
+
+        Refreshing auth info allows, e.g. requesting/re-validating auth tokens.
+
+        See :meth:`.refresh_user` for what happens when user auth info is refreshed
+        (nothing by default).
+        """
+    )
+
+    refresh_pre_spawn = Bool(
+        False,
+        config=True,
+        help="""Force refresh of auth prior to spawn.
+
+        This forces :meth:`.refresh_user` to be called prior to launching
+        a server, to ensure that auth state is up-to-date.
+
+        This can be important when e.g. auth tokens that may have expired
+        are passed to the spawner via environment variables from auth_state.
+
+        If refresh_user cannot refresh the user auth data,
+        launch will fail until the user logs in again.
+        """
     )
 
     admin_users = Set(
@@ -329,7 +333,7 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("User %r not in whitelist.", username)
             return
 
-    async def refresh_user(self, user):
+    async def refresh_user(self, user, handler=None):
         """Refresh auth data for a given user
 
         Allows refreshing or invalidating auth data.
@@ -341,6 +345,7 @@ class Authenticator(LoggingConfigurable):
 
         Args:
             user (User): the user to refresh
+            handler (tornado.web.RequestHandler or None): the current request handler
         Returns:
             auth_data (bool or dict):
                 Return **True** if auth data for the user is up-to-date
@@ -594,7 +599,7 @@ class LocalAuthenticator(Authenticator):
             return False
         for grnam in self.group_whitelist:
             try:
-                group = getgrnam(grnam)
+                group = self._getgrnam(grnam)
             except KeyError:
                 self.log.error('No such group: [%s]' % grnam)
                 continue
@@ -622,11 +627,33 @@ class LocalAuthenticator(Authenticator):
         await maybe_future(super().add_user(user))
 
     @staticmethod
-    def system_user_exists(user):
-        """Check if the user exists on the system"""
+    def _getgrnam(name):
+        """Wrapper function to protect against `grp` not being available
+        on Windows
+        """
+        import grp
+        return grp.getgrnam(name)
+
+    @staticmethod
+    def _getpwnam(name):
+        """Wrapper function to protect against `pwd` not being available
+        on Windows
+        """
         import pwd
+        return pwd.getpwnam(name)
+
+    @staticmethod
+    def _getgrouplist(name, group):
+        """Wrapper function to protect against `os._getgrouplist` not being available
+        on Windows
+        """
+        import os
+        return os.getgrouplist(name, group)
+
+    def system_user_exists(self, user):
+        """Check if the user exists on the system"""
         try:
-            pwd.getpwnam(user.name)
+            self._getpwnam(user.name)
         except KeyError:
             return False
         else:
@@ -727,8 +754,8 @@ class PAMAuthenticator(LocalAuthenticator):
                 # fail to authenticate and raise instead of soft-failing and not changing admin status
                 # (returning None instead of just the username) as this indicates some sort of system failure
 
-                admin_group_gids = {getgrnam(x).gr_gid for x in self.admin_groups}
-                user_group_gids  = {x.gr_gid for x in getgrouplist(username, getpwnam(username).pw_gid)}
+                admin_group_gids = {self._getgrnam(x).gr_gid for x in self.admin_groups}
+                user_group_gids  = set(self._getgrouplist(username, self._getpwnam(username).pw_gid))
                 admin_status = len(admin_group_gids & user_group_gids) != 0
 
             except Exception as e:

@@ -12,11 +12,12 @@
 
 [![PyPI](https://img.shields.io/pypi/v/jupyterhub.svg)](https://pypi.python.org/pypi/jupyterhub)
 [![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](https://jupyterhub.readthedocs.org/en/latest/?badge=latest)
-[![Documentation Status](http://readthedocs.org/projects/jupyterhub/badge/?version=0.7.2)](https://jupyterhub.readthedocs.io/en/0.7.2/?badge=0.7.2)
 [![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
 [![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
 [![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
-[![Google Group](https://img.shields.io/badge/google-group-blue.svg)](https://groups.google.com/forum/#!forum/jupyter)
+[![GitHub](https://img.shields.io/badge/issue_tracking-github-blue.svg)](https://github.com/jupyterhub/jupyterhub/issues)
+[![Discourse](https://img.shields.io/badge/help_forum-discourse-blue.svg)](https://discourse.jupyter.org/c/jupyterhub)
+[![Gitter](https://img.shields.io/badge/social_chat-gitter-blue.svg)](https://gitter.im/jupyterhub/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** which spawns, manages, and proxies multiple instances of the
@@ -203,6 +204,9 @@ If you would like to contribute to the project, please read our
 and the [`CONTRIBUTING.md`](CONTRIBUTING.md). The `CONTRIBUTING.md` file
 explains how to set up a development installation, how to run the test suite,
 and how to contribute to documentation.
+
+For a high-level view of the vision and next directions of the project, see the
+[JupyterHub community roadmap](docs/source/contributing/roadmap.md).
 
 ### A note about platform support
 

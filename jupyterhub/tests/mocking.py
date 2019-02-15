@@ -40,16 +40,16 @@ from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 
-from traitlets import Bool, default
+from traitlets import Bool, Dict, default
 
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from .. import orm
 from ..objects import Server
-from ..spawner import LocalProcessSpawner
+from ..spawner import LocalProcessSpawner, SimpleLocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
 from ..utils import random_port, url_path_join
-from .utils import async_requests, ssl_setup
+from .utils import async_requests, ssl_setup, public_host, public_url
 
 from pamela import PAMError
 
@@ -73,20 +73,14 @@ def mock_open_session(username, service, encoding):
     pass
 
 
-class MockSpawner(LocalProcessSpawner):
+class MockSpawner(SimpleLocalProcessSpawner):
     """Base mock spawner
 
     - disables user-switching that we need root permissions to do
     - spawns `jupyterhub.tests.mocksu` instead of a full single-user server
     """
-    def make_preexec_fn(self, *a, **kw):
-        # skip the setuid stuff
-        return
-
-    def _set_user_changed(self, name, old, new):
-        pass
-
     def user_env(self, env):
+        env = super().user_env(env)
         if self.handler:
             env['HANDLER_ARGS'] = self.handler.request.query
         return env
@@ -94,10 +88,6 @@ class MockSpawner(LocalProcessSpawner):
     @default('cmd')
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
-
-    def move_certs(self, paths):
-        """Return the paths unmodified"""
-        return paths
 
     use_this_api_token = None
     def start(self):
@@ -177,6 +167,11 @@ class FormSpawner(MockSpawner):
             options['hello'] = form_data['hello_file'][0]
         return options
 
+class FalsyCallableFormSpawner(FormSpawner):
+    """A spawner that has a callable options form defined returning a falsy value"""
+
+    options_form = lambda a, b: ""
+
 
 class MockStructGroup:
     """Mock grp.struct_group"""
@@ -229,11 +224,17 @@ class MockPAMAuthenticator(PAMAuthenticator):
 class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
+    # disable some inherited traits with hardcoded values
     db_file = None
     last_activity_interval = 2
     log_datefmt = '%M:%S'
-    external_certs = None
-    log_level = 10
+
+    @default('log_level')
+    def _default_log_level(self):
+        return 10
+
+    # MockHub additional traits
+    external_certs = Dict()
 
     def __init__(self, *args, **kwargs):
         if 'internal_certs_location' in kwargs:
@@ -359,31 +360,6 @@ class MockHub(JupyterHub):
         r.raise_for_status()
         assert r.cookies
         return r.cookies
-
-
-def public_host(app):
-    """Return the public *host* (no URL prefix) of the given JupyterHub instance."""
-    if app.subdomain_host:
-        return app.subdomain_host
-    else:
-        return Server.from_url(app.proxy.public_url).host
-
-
-def public_url(app, user_or_service=None, path=''):
-    """Return the full, public base URL (including prefix) of the given JupyterHub instance."""
-    if user_or_service:
-        if app.subdomain_host:
-            host = user_or_service.host
-        else:
-            host = public_host(app)
-        prefix = user_or_service.prefix
-    else:
-        host = public_host(app)
-        prefix = Server.from_url(app.proxy.public_url).base_url
-    if path:
-        return host + url_path_join(prefix, path)
-    else:
-        return host + prefix
 
 
 # single-user-server mocking:

@@ -89,7 +89,7 @@ paths:
     post:
       summary: Create multiple users
       parameters:
-        - name: data
+        - name: body
           in: body
           required: true
           schema:
@@ -147,7 +147,7 @@ paths:
           in: path
           required: true
           type: string
-        - name: data
+        - name: body
           in: body
           required: true
           description: Updated user info. At least one key to be updated (name or admin) is required.
@@ -176,6 +176,60 @@ paths:
       responses:
         '204':
           description: The user has been deleted
+  /users/{name}/activity:
+    post:
+      summary:
+        Notify Hub of activity for a given user.
+      description:
+        Notify the Hub of activity by the user,
+        e.g. accessing a service or (more likely)
+        actively using a server.
+      parameters:
+        - name: name
+          description: username
+          in: path
+          required: true
+          type: string
+        - body:
+          in: body
+          schema:
+            type: object
+            properties:
+              last_activity:
+                type: string
+                format: date-time
+                description: |
+                  Timestamp of last-seen activity for this user.
+                  Only needed if this is not activity associated
+                  with using a given server.
+                required: false
+              servers:
+                description: |
+                  Register activity for specific servers by name.
+                  The keys of this dict are the names of servers.
+                  The default server has an empty name ('').
+                required: false
+                type: object
+                properties:
+                  '<server name>':
+                    description: |
+                      Activity for a single server.
+                    type: object
+                    properties:
+                      last_activity:
+                        required: true
+                        type: string
+                        format: date-time
+                        description: |
+                          Timestamp of last-seen activity on this server.
+          example:
+            last_activity: '2019-02-06T12:54:14Z'
+            servers:
+              '':
+                last_activity: '2019-02-06T12:54:14Z'
+              gpu:
+                last_activity: '2019-02-06T12:54:14Z'
+
   /users/{name}/server:
     post:
       summary: Start a user's single-user notebook server
@@ -185,6 +239,15 @@ paths:
           in: path
           required: true
           type: string
+        - options:
+          description: |
+            Spawn options can be passed as a JSON body
+            when spawning via the API instead of spawn form.
+            The structure of the options
+            will depend on the Spawner's configuration.
+          in: body
+          required: false
+          type: object
       responses:
         '201':
           description: The user's notebook server has started
@@ -217,13 +280,15 @@ paths:
           in: path
           required: true
           type: string
-        - name: remove
+        - options:
           description: |
-            Whether to fully remove the server, rather than just stop it.
-            Removing a server deletes things like the state of the stopped server.
+            Spawn options can be passed as a JSON body
+            when spawning via the API instead of spawn form.
+            The structure of the options
+            will depend on the Spawner's configuration.
           in: body
           required: false
-          type: boolean
+          type: object
       responses:
         '201':
           description: The user's notebook named-server has started
@@ -242,6 +307,13 @@ paths:
           in: path
           required: true
           type: string
+        - name: remove
+          description: |
+            Whether to fully remove the server, rather than just stop it.
+            Removing a server deletes things like the state of the stopped server.
+          in: body
+          required: false
+          type: boolean
       responses:
         '204':
           description: The user's notebook named-server has stopped
@@ -352,7 +424,7 @@ paths:
           in: path
           required: true
           type: string
-        - name: data
+        - name: body
           in: body
           required: true
           description: The users to add to the group
@@ -377,7 +449,7 @@ paths:
           in: path
           required: true
           type: string
-        - name: data
+        - name: body
           in: body
           required: true
           description: The users to remove from the group
@@ -435,7 +507,7 @@ paths:
       summary: Notify the Hub about a new proxy
       description: Notifies the Hub of a new proxy to use.
       parameters:
-        - name: data
+        - name: body
           in: body
           required: true
           description: Any values that have changed for the new proxy. All keys are optional.

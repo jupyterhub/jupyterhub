@@ -29,6 +29,7 @@ Fixtures to add functionality or spawning behavior
 
 import asyncio
 from getpass import getuser
+import inspect
 import logging
 import os
 import sys
@@ -46,13 +47,23 @@ from ..utils import random_port
 
 from . import mocking
 from .mocking import MockHub
-from .utils import ssl_setup
+from .utils import ssl_setup, add_user
 from .test_services import mockservice_cmd
 
 import jupyterhub.services.service
 
 # global db session object
 _db = None
+
+
+def pytest_collection_modifyitems(items):
+    """add asyncio marker to all async tests"""
+    for item in items:
+        if inspect.iscoroutinefunction(item.obj):
+            item.add_marker('asyncio')
+        if hasattr(inspect, 'isasyncgenfunction'):
+            # double-check that we aren't mixing yield and async def
+            assert not inspect.isasyncgenfunction(item.obj)
 
 
 @fixture(scope='module')
@@ -65,7 +76,7 @@ def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    kwargs = dict(log_level=logging.DEBUG)
+    kwargs = dict()
     if ssl_enabled:
         kwargs.update(
             dict(
@@ -126,15 +137,21 @@ def db():
 
 
 @fixture(scope='module')
-def io_loop(request):
+def event_loop(request):
+    """Same as pytest-asyncio.event_loop, but re-scoped to module-level"""
+    event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(event_loop)
+    return event_loop
+
+
+@fixture(scope='module')
+def io_loop(event_loop, request):
     """Same as pytest-tornado.io_loop, but re-scoped to module-level"""
     ioloop.IOLoop.configure(AsyncIOMainLoop)
-    aio_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(aio_loop)
-    io_loop = ioloop.IOLoop()
+    io_loop = AsyncIOMainLoop()
     io_loop.make_current()
-    assert asyncio.get_event_loop() is aio_loop
-    assert io_loop.asyncio_loop is aio_loop
+    assert asyncio.get_event_loop() is event_loop
+    assert io_loop.asyncio_loop is event_loop
 
     def _close():
         io_loop.clear_current()
@@ -166,6 +183,43 @@ def cleanup_after(request, io_loop):
                         pass
                     io_loop.run_sync(lambda: user.stop(name))
         app.db.commit()
+
+
+_username_counter = 0
+
+
+def new_username(prefix='testuser'):
+    """Return a new unique username"""
+    global _username_counter
+    _username_counter += 1
+    return '{}-{}'.format(prefix, _username_counter)
+
+
+@fixture
+def username():
+    """allocate a temporary username
+
+    unique each time the fixture is used
+    """
+    yield new_username()
+
+
+@fixture
+def user(app):
+    """Fixture for creating a temporary user
+
+    Each time the fixture is used, a new user is created
+    """
+    user = add_user(app.db, app, name=new_username())
+    yield user
+
+
+@fixture
+def admin_user(app, username):
+    """Fixture for creating a temporary admin user"""
+    user = add_user(app.db, app, name=new_username('testadmin'), admin=True)
+    yield user
+
 
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):

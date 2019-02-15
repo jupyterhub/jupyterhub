@@ -12,14 +12,13 @@ import alembic.command
 from alembic.script import ScriptDirectory
 from tornado.log import app_log
 
-from sqlalchemy.types import TypeDecorator, TEXT, LargeBinary
+from sqlalchemy.types import TypeDecorator, Text, LargeBinary
 from sqlalchemy import (
     create_engine, event, exc, inspect, or_, select,
     Column, Integer, ForeignKey, Unicode, Boolean,
     DateTime, Enum, Table,
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.interfaces import PoolListener
 from sqlalchemy.orm import (
     Session,
     interfaces, object_session, relationship, sessionmaker,
@@ -46,7 +45,7 @@ class JSONDict(TypeDecorator):
 
     """
 
-    impl = TEXT
+    impl = Text
 
     def process_bind_param(self, value, dialect):
         if value is not None:
@@ -559,10 +558,13 @@ class DatabaseSchemaMismatch(Exception):
     """
 
 
-class ForeignKeysListener(PoolListener):
-    """Enable foreign keys on sqlite"""
-    def connect(self, dbapi_con, con_record):
-        dbapi_con.execute('pragma foreign_keys=ON')
+def register_foreign_keys(engine):
+    """register PRAGMA foreign_keys=on on connection"""
+    @event.listens_for(engine, "connect")
+    def connect(dbapi_con, con_record):
+        cursor = dbapi_con.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 def _expire_relationship(target, relationship_prop):
@@ -735,8 +737,6 @@ def new_session_factory(url="sqlite:///:memory:",
     """Create a new session at url"""
     if url.startswith('sqlite'):
         kwargs.setdefault('connect_args', {'check_same_thread': False})
-        listeners = kwargs.setdefault('listeners', [])
-        listeners.append(ForeignKeysListener())
 
     elif url.startswith('mysql'):
         kwargs.setdefault('pool_recycle', 60)
@@ -747,6 +747,9 @@ def new_session_factory(url="sqlite:///:memory:",
         kwargs.setdefault('poolclass', StaticPool)
 
     engine = create_engine(url, **kwargs)
+    if url.startswith('sqlite'):
+        register_foreign_keys(engine)
+
     # enable pessimistic disconnect handling
     register_ping_connection(engine)
 

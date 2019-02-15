@@ -437,6 +437,9 @@ def print_stacks(file=sys.stderr):
             if (
                 last_frame[0].endswith('threading.py')
                 and last_frame[-1] == 'waiter.acquire()'
+            ) or (
+                last_frame[0].endswith('thread.py')
+                and last_frame[-1].endswith('work_queue.get(block=True)')
             ):
                 # thread is waiting on a condition
                 # call it idle rather than showing the uninteresting stack
@@ -541,3 +544,9 @@ async def iterate_until(deadline_future, generator):
             else:
                 # neither is done, this shouldn't happen
                 continue
+
+
+def utcnow():
+    """Return timezone-aware utcnow"""
+    return datetime.now(timezone.utc)
+

@@ -205,8 +205,7 @@ def test_token_find(db):
     assert found is None
 
 
-@pytest.mark.gen_test
-def test_spawn_fails(db):
+async def test_spawn_fails(db):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
@@ -223,7 +222,7 @@ def test_spawn_fails(db):
     })
 
     with pytest.raises(RuntimeError) as exc:
-        yield user.spawn()
+        await user.spawn()
     assert user.spawners[''].server is None
     assert not user.running
 
@@ -246,8 +245,7 @@ def test_groups(db):
     assert group.users == []
 
 
-@pytest.mark.gen_test
-def test_auth_state(db):
+async def test_auth_state(db):
     orm_user = orm.User(name='eve')
     db.add(orm_user)
     db.commit()
@@ -262,51 +260,51 @@ def test_auth_state(db):
     state = {'key': 'value'}
     ck.keys = []
     with pytest.raises(crypto.EncryptionUnavailable):
-        yield user.save_auth_state(state)
+        await user.save_auth_state(state)
 
     assert user.encrypted_auth_state is None
     # saving/loading None doesn't require keys
-    yield user.save_auth_state(None)
-    current = yield user.get_auth_state()
+    await user.save_auth_state(None)
+    current = await user.get_auth_state()
     assert current is None
 
     first_key = os.urandom(32)
     second_key = os.urandom(32)
     ck.keys = [first_key]
-    yield user.save_auth_state(state)
+    await user.save_auth_state(state)
     assert user.encrypted_auth_state is not None
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state == state
 
     # can't read auth_state without keys
     ck.keys = []
-    auth_state = yield user.get_auth_state()
+    auth_state = await user.get_auth_state()
     assert auth_state is None
 
     # key rotation works
     db.rollback()
     ck.keys = [second_key, first_key]
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state == state
 
     new_state = {'key': 'newvalue'}
-    yield user.save_auth_state(new_state)
+    await user.save_auth_state(new_state)
     db.commit()
 
     ck.keys = [first_key]
     db.rollback()
     # can't read anymore with new-key after encrypting with second-key
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state is None
 
-    yield user.save_auth_state(new_state)
-    decrypted_state = yield user.get_auth_state()
+    await user.save_auth_state(new_state)
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state == new_state
 
     ck.keys = []
     db.rollback()
 
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state is None
 
 

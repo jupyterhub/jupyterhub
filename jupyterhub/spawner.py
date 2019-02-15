@@ -5,6 +5,7 @@ Contains base Spawner class & default implementation
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import ast
 import asyncio
 import errno
 import json
@@ -14,7 +15,6 @@ import shutil
 import signal
 import sys
 import warnings
-import pwd
 from subprocess import Popen
 from tempfile import mkdtemp
 
@@ -35,6 +35,23 @@ from .objects import Server
 from .traitlets import Command, ByteSpecification, Callable
 from .utils import iterate_until, maybe_future, random_port, url_path_join, exponential_backoff
 
+
+def _quote_safe(s):
+    """pass a string that is safe on the command-line
+
+    traitlets may parse literals on the command-line, e.g. `--ip=123` will be the number 123 instead of the *string* 123.
+    wrap valid literals in repr to ensure they are safe
+    """
+
+    try:
+        val = ast.literal_eval(s)
+    except Exception:
+        # not valid, leave it alone
+        return s
+    else:
+        # it's a valid literal, wrap it in repr (usually just quotes, but with proper escapes)
+        # to avoid getting interpreted by traitlets
+        return repr(s)
 
 class Spawner(LoggingConfigurable):
     """Base class for spawning single-user notebook servers.
@@ -636,7 +653,15 @@ class Spawner(LoggingConfigurable):
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
+        env['JUPYTERHUB_SERVER_NAME'] = self.name
         env['JUPYTERHUB_API_URL'] = self.hub.api_url
+        env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
+            self.hub.api_url,
+            'users',
+            # tolerate mocks defining only user.name
+            getattr(self.user, 'escaped_name', self.user.name),
+            'activity',
+        )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
         if self.server:
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
@@ -660,6 +685,22 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
         return env
+
+    async def get_url(self):
+        """Get the URL to connect to the server
+
+        Sometimes JupyterHub may ask the Spawner for its url.
+        This can occur e.g. when JupyterHub has restarted while a server was not finished starting,
+        giving Spawners a chance to recover the URL where their server is running.
+
+        The default is to trust that JupyterHub has the right information.
+        Only override this method in Spawners that know how to
+        check the correct URL for the servers they start.
+
+        This will only be asked of Spawners that claim to be running
+        (`poll()` returns `None`).
+        """
+        return self.server.url
 
     def template_namespace(self):
         """Return the template namespace for format-string formatting.
@@ -816,7 +857,7 @@ class Spawner(LoggingConfigurable):
         args = []
 
         if self.ip:
-            args.append('--ip="%s"' % self.ip)
+            args.append('--ip=%s' % _quote_safe(self.ip))
 
         if self.port:
             args.append('--port=%i' % self.port)
@@ -826,10 +867,10 @@ class Spawner(LoggingConfigurable):
 
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir="%s"' % notebook_dir)
+            args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
         if self.default_url:
             default_url = self.format_string(self.default_url)
-            args.append('--NotebookApp.default_url="%s"' % default_url)
+            args.append('--NotebookApp.default_url=%s' % _quote_safe(default_url))
 
         if self.debug:
             args.append('--debug')
@@ -1051,6 +1092,7 @@ def set_user_setuid(username, chdir=True):
     home directory.
     """
     import grp
+    import pwd
     user = pwd.getpwnam(username)
     uid = user.pw_uid
     gid = user.pw_gid
@@ -1224,6 +1266,7 @@ class LocalProcessSpawner(Spawner):
         Stage certificates into a private home directory
         and make them readable by the user.
         """
+        import pwd
         key = paths['keyfile']
         cert = paths['certfile']
         ca = paths['cafile']
@@ -1383,3 +1426,52 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
+
+
+class SimpleLocalProcessSpawner(LocalProcessSpawner):
+    """
+    A version of LocalProcessSpawner that doesn't require users to exist on
+    the system beforehand.
+
+    Only use this for testing.
+
+    Note: DO NOT USE THIS FOR PRODUCTION USE CASES! It is very insecure, and
+    provides absolutely no isolation between different users!
+    """
+
+    home_dir_template = Unicode(
+        '/tmp/{username}',
+        config=True,
+        help="""
+        Template to expand to set the user home.
+        {username} is expanded to the jupyterhub username.
+        """
+    )
+
+    home_dir = Unicode(help="The home directory for the user")
+    @default('home_dir')
+    def _default_home_dir(self):
+        return self.home_dir_template.format(
+            username=self.user.name,
+        )
+
+    def make_preexec_fn(self, name):
+        home = self.home_dir
+        def preexec():
+            try:
+                os.makedirs(home, 0o755, exist_ok=True)
+                os.chdir(home)
+            except Exception as e:
+                self.log.exception("Error in preexec for %s", name)
+        return preexec
+
+    def user_env(self, env):
+        env['USER'] = self.user.name
+        env['HOME'] = self.home_dir
+        env['SHELL'] = '/bin/bash'
+        return env
+
+    def move_certs(self, paths):
+        """No-op for installing certs"""
+        return paths
+
