@@ -1209,7 +1209,7 @@ class UserSpawnHandler(BaseHandler):
                 status = 0
             # server is not running, trigger spawn
             if status is not None:
-                if spawner.options_form:
+                if await spawner.get_options_form():
                     url_parts = [self.hub.base_url, 'spawn']
                     if current_user.name != user.name:
                         # spawning on behalf of another user

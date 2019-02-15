@@ -167,6 +167,11 @@ class FormSpawner(MockSpawner):
             options['hello'] = form_data['hello_file'][0]
         return options
 
+class FalsyCallableFormSpawner(FormSpawner):
+    """A spawner that has a callable options form defined returning a falsy value"""
+
+    options_form = lambda a, b: ""
+
 
 class MockStructGroup:
     """Mock grp.struct_group"""
