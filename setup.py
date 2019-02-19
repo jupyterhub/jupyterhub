@@ -10,6 +10,12 @@ from __future__ import print_function
 import os
 import shutil
 import sys
+from glob import glob
+from subprocess import check_call
+
+from setuptools import setup
+from setuptools.command.bdist_egg import bdist_egg
+
 
 v = sys.version_info
 if v[:2] < (3, 5):
@@ -23,14 +29,6 @@ if os.name in ('nt', 'dos'):
     warning = "WARNING: Windows is not officially supported"
     print(warning, file=sys.stderr)
 
-# At least we're on the python version we need, move on.
-
-import os
-from glob import glob
-from subprocess import check_call
-
-from setuptools import setup
-from setuptools.command.bdist_egg import bdist_egg
 
 pjoin = os.path.join
 

@@ -4,10 +4,6 @@ import os
 import shlex
 import sys
 
-import recommonmark.parser
-
-# For conversion from markdown to html
-
 # Set paths
 sys.path.insert(0, os.path.abspath('.'))
 
