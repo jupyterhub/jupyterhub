@@ -14,8 +14,9 @@ As a Python project, a development install of JupyterHub follows standard practi
 
 
 1. clone the repo
-
+    ```bash
     git clone https://github.com/jupyterhub/jupyterhub
+    ```
 2. do a development install with pip
 
     ```bash
