@@ -1,9 +1,10 @@
+import logging
 import sys
+from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-import logging
-from logging.config import fileConfig
+from sqlalchemy import engine_from_config
+from sqlalchemy import pool
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -14,6 +15,7 @@ config = context.config
 if 'jupyterhub' in sys.modules:
     from traitlets.config import MultipleInstanceError
     from jupyterhub.app import JupyterHub
+
     app = None
     if JupyterHub.initialized():
         try:
@@ -32,6 +34,7 @@ else:
 
 # add your model's MetaData object here for 'autogenerate' support
 from jupyterhub import orm
+
 target_metadata = orm.Base.metadata
 
 # other values from the config, defined by the needs of env.py,
@@ -53,8 +56,7 @@ def run_migrations_offline():
 
     """
     url = config.get_main_option("sqlalchemy.url")
-    context.configure(
-        url=url, target_metadata=target_metadata, literal_binds=True)
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -70,16 +72,15 @@ def run_migrations_online():
     connectable = engine_from_config(
         config.get_section(config.config_ini_section),
         prefix='sqlalchemy.',
-        poolclass=pool.NullPool)
+        poolclass=pool.NullPool,
+    )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
+
 
 if context.is_offline_mode():
     run_migrations_offline()

@@ -1,11 +1,14 @@
-
 import argparse
 import datetime
 import json
 import os
 
+from tornado import escape
+from tornado import gen
+from tornado import ioloop
+from tornado import web
+
 from jupyterhub.services.auth import HubAuthenticated
-from tornado import escape, gen, ioloop, web
 
 
 class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
@@ -21,6 +24,7 @@ class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
     @web.authenticated
     def post(self):
         """Update announcement"""
+        user = self.current_user
         doc = escape.json_decode(self.request.body)
         self.storage["announcement"] = doc["announcement"]
         self.storage["timestamp"] = datetime.datetime.now().isoformat()
@@ -52,19 +56,19 @@ def main():
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--api-prefix", "-a",
-            default=os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "/"),
-            help="application API prefix")
-    parser.add_argument("--port", "-p",
-            default=8888,
-            help="port for API to listen on",
-            type=int)
+    parser.add_argument(
+        "--api-prefix",
+        "-a",
+        default=os.environ.get("JUPYTERHUB_SERVICE_PREFIX", "/"),
+        help="application API prefix",
+    )
+    parser.add_argument(
+        "--port", "-p", default=8888, help="port for API to listen on", type=int
+    )
     return parser.parse_args()
 
 
-def create_application(api_prefix="/", 
-        handler=AnnouncementRequestHandler,
-        **kwargs):
+def create_application(api_prefix="/", handler=AnnouncementRequestHandler, **kwargs):
     storage = dict(announcement="", timestamp="", user="")
     return web.Application([(api_prefix, handler, dict(storage=storage))])
 

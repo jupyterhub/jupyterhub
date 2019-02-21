@@ -1,30 +1,35 @@
 """Miscellaneous utilities"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import asyncio
-from binascii import b2a_hex
 import concurrent.futures
-from datetime import datetime, timezone
-import random
 import errno
 import hashlib
-from hmac import compare_digest
 import inspect
 import os
+import random
 import socket
+import ssl
 import sys
 import threading
-import ssl
 import uuid
 import warnings
+from binascii import b2a_hex
+from datetime import datetime
+from datetime import timezone
+from hmac import compare_digest
 
-from async_generator import aclosing, asynccontextmanager, async_generator, yield_
-from tornado import gen, ioloop, web
-from tornado.platform.asyncio import to_asyncio_future
-from tornado.httpclient import AsyncHTTPClient, HTTPError
+from async_generator import aclosing
+from async_generator import async_generator
+from async_generator import asynccontextmanager
+from async_generator import yield_
+from tornado import gen
+from tornado import ioloop
+from tornado import web
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPError
 from tornado.log import app_log
+from tornado.platform.asyncio import to_asyncio_future
 
 
 def random_port():
@@ -72,9 +77,7 @@ def can_connect(ip, port):
         return True
 
 
-def make_ssl_context(
-        keyfile, certfile, cafile=None,
-        verify=True, check_hostname=True):
+def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname=True):
     """Setup context for starting an https server or making requests over ssl.
     """
     if not keyfile or not certfile:
@@ -87,14 +90,16 @@ def make_ssl_context(
 
 
 async def exponential_backoff(
-        pass_func,
-        fail_message,
-        start_wait=0.2,
-        scale_factor=2,
-        max_wait=5,
-        timeout=10,
-        timeout_tolerance=0.1,
-        *args, **kwargs):
+    pass_func,
+    fail_message,
+    start_wait=0.2,
+    scale_factor=2,
+    max_wait=5,
+    timeout=10,
+    timeout_tolerance=0.1,
+    *args,
+    **kwargs
+):
     """
     Exponentially backoff until `pass_func` is true.
 
@@ -177,8 +182,10 @@ async def wait_for_server(ip, port, timeout=10):
         ip = '127.0.0.1'
     await exponential_backoff(
         lambda: can_connect(ip, port),
-        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(ip=ip, port=port, timeout=timeout),
-        timeout=timeout
+        "Server at {ip}:{port} didn't respond in {timeout} seconds".format(
+            ip=ip, port=port, timeout=timeout
+        ),
+        timeout=timeout,
     )
 
 
@@ -192,6 +199,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
     client = AsyncHTTPClient()
     if ssl_context:
         client.ssl_options = ssl_context
+
     async def is_reachable():
         try:
             r = await client.fetch(url, follow_redirects=False)
@@ -203,18 +211,26 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
                     # we expect 599 for no connection,
                     # but 502 or other proxy error is conceivable
                     app_log.warning(
-                        "Server at %s responded with error: %s", url, e.code)
+                        "Server at %s responded with error: %s", url, e.code
+                    )
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return e.response
         except (OSError, socket.error) as e:
-            if e.errno not in {errno.ECONNABORTED, errno.ECONNREFUSED, errno.ECONNRESET}:
+            if e.errno not in {
+                errno.ECONNABORTED,
+                errno.ECONNREFUSED,
+                errno.ECONNRESET,
+            }:
                 app_log.warning("Failed to connect to %s (%s)", url, e)
         return False
+
     re = await exponential_backoff(
         is_reachable,
-        "Server at {url} didn't respond in {timeout} seconds".format(url=url, timeout=timeout),
-        timeout=timeout
+        "Server at {url} didn't respond in {timeout} seconds".format(
+            url=url, timeout=timeout
+        ),
+        timeout=timeout,
     )
     return re
 
@@ -226,10 +242,12 @@ def auth_decorator(check_auth):
     I heard you like decorators, so I put a decorator
     in your decorator, so you can decorate while you decorate.
     """
+
     def decorator(method):
         def decorated(self, *args, **kwargs):
             check_auth(self)
             return method(self, *args, **kwargs)
+
         decorated.__name__ = method.__name__
         decorated.__doc__ = method.__doc__
         return decorated
@@ -267,6 +285,7 @@ def admin_only(self):
     if user is None or not user.admin:
         raise web.HTTPError(403)
 
+
 @auth_decorator
 def metrics_authentication(self):
     """Decorator for restricting access to metrics"""
@@ -276,6 +295,7 @@ def metrics_authentication(self):
 
 
 # Token utilities
+
 
 def new_token(*args, **kwargs):
     """Generator for new random tokens
@@ -313,7 +333,9 @@ def compare_token(compare, token):
     Uses the same algorithm and salt of the hashed token for comparison.
     """
     algorithm, srounds, salt, _ = compare.split(':')
-    hashed = hash_token(token, salt=salt, rounds=int(srounds), algorithm=algorithm).encode('utf8')
+    hashed = hash_token(
+        token, salt=salt, rounds=int(srounds), algorithm=algorithm
+    ).encode('utf8')
     compare = compare.encode('utf8')
     if compare_digest(compare, hashed):
         return True
@@ -330,7 +352,7 @@ def url_path_join(*pieces):
     """
     initial = pieces[0].startswith('/')
     final = pieces[-1].endswith('/')
-    stripped = [ s.strip('/') for s in pieces ]
+    stripped = [s.strip('/') for s in pieces]
     result = '/'.join(s for s in stripped if s)
 
     if initial:
@@ -354,7 +376,7 @@ def print_ps_info(file=sys.stderr):
         # nothing to print
         warnings.warn(
             "psutil unavailable. Install psutil to get CPU and memory stats",
-            stacklevel=2
+            stacklevel=2,
         )
         return
     p = psutil.Process()
@@ -368,13 +390,13 @@ def print_ps_info(file=sys.stderr):
     # format memory (only resident set)
     rss = p.memory_info().rss
     if rss >= 1e9:
-        mem_s = '%.1fG' % (rss/1e9)
+        mem_s = '%.1fG' % (rss / 1e9)
     elif rss >= 1e7:
-        mem_s = '%.0fM' % (rss/1e6)
+        mem_s = '%.0fM' % (rss / 1e6)
     elif rss >= 1e6:
-        mem_s = '%.1fM' % (rss/1e6)
+        mem_s = '%.1fM' % (rss / 1e6)
     else:
-        mem_s = '%.0fk' % (rss/1e3)
+        mem_s = '%.0fk' % (rss / 1e3)
 
     # left-justify and shrink-to-fit columns
     cpulen = max(len(cpu_s), 4)
@@ -383,19 +405,22 @@ def print_ps_info(file=sys.stderr):
     fdlen = max(len(fd_s), 3)
     threadlen = len('threads')
 
-    print("%s %s %s %s" % (
-        '%CPU'.ljust(cpulen),
-        'MEM'.ljust(memlen),
-        'FDs'.ljust(fdlen),
-        'threads',
-    ), file=file)
+    print(
+        "%s %s %s %s"
+        % ('%CPU'.ljust(cpulen), 'MEM'.ljust(memlen), 'FDs'.ljust(fdlen), 'threads'),
+        file=file,
+    )
 
-    print("%s %s %s %s" % (
-        cpu_s.ljust(cpulen),
-        mem_s.ljust(memlen),
-        fd_s.ljust(fdlen),
-        str(p.num_threads()).ljust(7),
-    ), file=file)
+    print(
+        "%s %s %s %s"
+        % (
+            cpu_s.ljust(cpulen),
+            mem_s.ljust(memlen),
+            fd_s.ljust(fdlen),
+            str(p.num_threads()).ljust(7),
+        ),
+        file=file,
+    )
 
     # trailing blank line
     print('', file=file)
@@ -522,8 +547,8 @@ async def iterate_until(deadline_future, generator):
         while True:
             item_future = asyncio.ensure_future(aiter.__anext__())
             await asyncio.wait(
-                [item_future, deadline_future],
-                return_when=asyncio.FIRST_COMPLETED)
+                [item_future, deadline_future], return_when=asyncio.FIRST_COMPLETED
+            )
             if item_future.done():
                 try:
                     await yield_(item_future.result())
@@ -549,4 +574,3 @@ async def iterate_until(deadline_future, generator):
 def utcnow():
     """Return timezone-aware utcnow"""
     return datetime.now(timezone.utc)
-

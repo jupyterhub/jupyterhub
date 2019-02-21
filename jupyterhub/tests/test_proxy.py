@@ -1,20 +1,21 @@
 """Test a proxy being started before the Hub"""
-
-from contextlib import contextmanager
 import json
 import os
+from contextlib import contextmanager
 from queue import Queue
 from subprocess import Popen
-from urllib.parse import urlparse, quote
-
-from traitlets.config import Config
+from urllib.parse import quote
+from urllib.parse import urlparse
 
 import pytest
+from traitlets.config import Config
 
 from .. import orm
+from ..utils import url_path_join as ujoin
+from ..utils import wait_for_http_server
 from .mocking import MockHub
-from .test_api import api_request, add_user
-from ..utils import wait_for_http_server, url_path_join as ujoin
+from .test_api import add_user
+from .test_api import api_request
 
 
 @pytest.fixture
@@ -52,25 +53,30 @@ async def test_external_proxy(request):
     env['CONFIGPROXY_AUTH_TOKEN'] = auth_token
     cmd = [
         'configurable-http-proxy',
-        '--ip', app.ip,
-        '--port', str(app.port),
-        '--api-ip', proxy_ip,
-        '--api-port', str(proxy_port),
+        '--ip',
+        app.ip,
+        '--port',
+        str(app.port),
+        '--api-ip',
+        proxy_ip,
+        '--api-port',
+        str(proxy_port),
         '--log-level=debug',
     ]
     if app.subdomain_host:
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
 
-
     def _cleanup_proxy():
         if proxy.poll() is None:
             proxy.terminate()
             proxy.wait(timeout=10)
+
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
         return wait_for_http_server('http://%s:%i' % (proxy_ip, proxy_port))
+
     await wait_for_proxy()
 
     await app.initialize([])
@@ -84,8 +90,9 @@ async def test_external_proxy(request):
     # add user to the db and start a single user server
     name = 'river'
     add_user(app.db, app, name=name)
-    r = await api_request(app, 'users', name, 'server', method='post',
-                          bypass_proxy=True)
+    r = await api_request(
+        app, 'users', name, 'server', method='post', bypass_proxy=True
+    )
     r.raise_for_status()
 
     routes = await app.proxy.get_all_routes()
@@ -122,12 +129,18 @@ async def test_external_proxy(request):
     new_auth_token = 'different!'
     env['CONFIGPROXY_AUTH_TOKEN'] = new_auth_token
     proxy_port = 55432
-    cmd = ['configurable-http-proxy',
-        '--ip', app.ip,
-        '--port', str(app.port),
-        '--api-ip', proxy_ip,
-        '--api-port', str(proxy_port),
-        '--default-target', 'http://%s:%i' % (app.hub_ip, app.hub_port),
+    cmd = [
+        'configurable-http-proxy',
+        '--ip',
+        app.ip,
+        '--port',
+        str(app.port),
+        '--api-ip',
+        proxy_ip,
+        '--api-port',
+        str(proxy_port),
+        '--default-target',
+        'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
     if app.subdomain_host:
         cmd.append('--host-routing')
@@ -140,10 +153,7 @@ async def test_external_proxy(request):
         app,
         'proxy',
         method='patch',
-        data=json.dumps({
-            'api_url': new_api_url,
-            'auth_token': new_auth_token,
-        }),
+        data=json.dumps({'api_url': new_api_url, 'auth_token': new_auth_token}),
         bypass_proxy=True,
     )
     r.raise_for_status()
@@ -156,14 +166,8 @@ async def test_external_proxy(request):
     assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 
 
-@pytest.mark.parametrize("username", [
-    'zoe',
-    '50fia',
-    '秀樹',
-    '~TestJH',
-    'has@',
-])
-async def test_check_routes(app,  username, disable_check_routes):
+@pytest.mark.parametrize("username", ['zoe', '50fia', '秀樹', '~TestJH', 'has@'])
+async def test_check_routes(app, username, disable_check_routes):
     proxy = app.proxy
     test_user = add_user(app.db, app, name=username)
     r = await api_request(app, 'users/%s/server' % username, method='post')
@@ -191,14 +195,17 @@ async def test_check_routes(app,  username, disable_check_routes):
     assert before == after
 
 
-@pytest.mark.parametrize("routespec", [
-    '/has%20space/foo/',
-    '/missing-trailing/slash',
-    '/has/@/',
-    '/has/' + quote('üñîçø∂é'),
-    'host.name/path/',
-    'other.host/path/no/slash',
-])
+@pytest.mark.parametrize(
+    "routespec",
+    [
+        '/has%20space/foo/',
+        '/missing-trailing/slash',
+        '/has/@/',
+        '/has/' + quote('üñîçø∂é'),
+        'host.name/path/',
+        'other.host/path/no/slash',
+    ],
+)
 async def test_add_get_delete(app, routespec, disable_check_routes):
     arg = routespec
     if not routespec.endswith('/'):
@@ -207,6 +214,7 @@ async def test_add_get_delete(app, routespec, disable_check_routes):
     # host-routes when not host-routing raises an error
     # and vice versa
     expect_value_error = bool(app.subdomain_host) ^ (not routespec.startswith('/'))
+
     @contextmanager
     def context():
         if expect_value_error:

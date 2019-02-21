@@ -23,34 +23,33 @@ Fixtures to add functionality or spawning behavior
 - `slow_bad_spawn`
 
 """
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import asyncio
-from getpass import getuser
 import inspect
 import logging
 import os
 import sys
+from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
 
-from pytest import fixture, raises
-from tornado import ioloop, gen
+from pytest import fixture
+from pytest import raises
+from tornado import gen
+from tornado import ioloop
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
 
-from .. import orm
-from .. import crypto
-from ..utils import random_port
-
-from . import mocking
-from .mocking import MockHub
-from .utils import ssl_setup, add_user
-from .test_services import mockservice_cmd
-
 import jupyterhub.services.service
+from . import mocking
+from .. import crypto
+from .. import orm
+from ..utils import random_port
+from .mocking import MockHub
+from .test_services import mockservice_cmd
+from .utils import add_user
+from .utils import ssl_setup
 
 # global db session object
 _db = None
@@ -78,12 +77,7 @@ def app(request, io_loop, ssl_tmpdir):
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
     kwargs = dict()
     if ssl_enabled:
-        kwargs.update(
-            dict(
-                internal_ssl=True,
-                internal_certs_location=str(ssl_tmpdir),
-            )
-        )
+        kwargs.update(dict(internal_ssl=True, internal_certs_location=str(ssl_tmpdir)))
 
     mocked_app = MockHub.instance(**kwargs)
 
@@ -107,9 +101,7 @@ def app(request, io_loop, ssl_tmpdir):
 
 @fixture
 def auth_state_enabled(app):
-    app.authenticator.auth_state = {
-        'who': 'cares',
-    }
+    app.authenticator.auth_state = {'who': 'cares'}
     app.authenticator.enable_auth_state = True
     ck = crypto.CryptKeeper.instance()
     before_keys = ck.keys
@@ -128,9 +120,7 @@ def db():
     global _db
     if _db is None:
         _db = orm.new_session_factory('sqlite:///:memory:')()
-        user = orm.User(
-            name=getuser(),
-        )
+        user = orm.User(name=getuser())
         _db.add(user)
         _db.commit()
     return _db
@@ -221,12 +211,12 @@ def admin_user(app, username):
     yield user
 
 
-
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     """mock services for testing.
 
        Shorter intervals, etc.
     """
+
     poll_interval = 1
 
 
@@ -237,11 +227,7 @@ def _mockservice(request, app, url=False):
     global _mock_service_counter
     _mock_service_counter += 1
     name = 'mock-service-%i' % _mock_service_counter
-    spec = {
-        'name': name,
-        'command': mockservice_cmd,
-        'admin': True,
-    }
+    spec = {'name': name, 'command': mockservice_cmd, 'admin': True}
     if url:
         if app.internal_ssl:
             spec['url'] = 'https://127.0.0.1:%i' % random_port()
@@ -250,22 +236,29 @@ def _mockservice(request, app, url=False):
 
     io_loop = app.io_loop
 
-    with mock.patch.object(jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner):
+    with mock.patch.object(
+        jupyterhub.services.service, '_ServiceSpawner', MockServiceSpawner
+    ):
         app.services = [spec]
         app.init_services()
         assert name in app._service_map
         service = app._service_map[name]
+
         @gen.coroutine
         def start():
             # wait for proxy to be updated before starting the service
             yield app.proxy.add_all_services(app._service_map)
             service.start()
+
         io_loop.run_sync(start)
+
         def cleanup():
             import asyncio
+
             asyncio.get_event_loop().run_until_complete(service.stop())
             app.services[:] = []
             app._service_map.clear()
+
         request.addfinalizer(cleanup)
         # ensure process finishes starting
         with raises(TimeoutExpired):
@@ -290,47 +283,44 @@ def mockservice_url(request, app):
 @fixture
 def admin_access(app):
     """Grant admin-access with this fixture"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'admin_access': True}):
+    with mock.patch.dict(app.tornado_settings, {'admin_access': True}):
         yield
 
 
 @fixture
 def no_patience(app):
     """Set slow-spawning timeouts to zero"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'slow_spawn_timeout': 0.1,
-                          'slow_stop_timeout': 0.1}):
+    with mock.patch.dict(
+        app.tornado_settings, {'slow_spawn_timeout': 0.1, 'slow_stop_timeout': 0.1}
+    ):
         yield
 
 
 @fixture
 def slow_spawn(app):
     """Fixture enabling SlowSpawner"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'spawner_class': mocking.SlowSpawner}):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.SlowSpawner}):
         yield
 
 
 @fixture
 def never_spawn(app):
     """Fixture enabling NeverSpawner"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'spawner_class': mocking.NeverSpawner}):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.NeverSpawner}):
         yield
 
 
 @fixture
 def bad_spawn(app):
     """Fixture enabling BadSpawner"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'spawner_class': mocking.BadSpawner}):
+    with mock.patch.dict(app.tornado_settings, {'spawner_class': mocking.BadSpawner}):
         yield
 
 
 @fixture
 def slow_bad_spawn(app):
     """Fixture enabling SlowBadSpawner"""
-    with mock.patch.dict(app.tornado_settings,
-                         {'spawner_class': mocking.SlowBadSpawner}):
+    with mock.patch.dict(
+        app.tornado_settings, {'spawner_class': mocking.SlowBadSpawner}
+    ):
         yield

@@ -1,8 +1,8 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
-from certipy import Certipy
 import requests
+from certipy import Certipy
 
 from jupyterhub import orm
 from jupyterhub.objects import Server
@@ -68,6 +68,7 @@ def check_db_locks(func):
         def api_request(app, *api_path, **kwargs):
 
     """
+
     def new_func(app, *args, **kwargs):
         retval = func(app, *args, **kwargs)
 
@@ -116,9 +117,9 @@ def auth_header(db, name):
 
 
 @check_db_locks
-async def api_request(app, *api_path, method='get',
-                      noauth=False, bypass_proxy=False,
-                      **kwargs):
+async def api_request(
+    app, *api_path, method='get', noauth=False, bypass_proxy=False, **kwargs
+):
     """Make an API request"""
     if bypass_proxy:
         # make a direct request to the hub,
@@ -128,11 +129,7 @@ async def api_request(app, *api_path, method='get',
         base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
 
-    if (
-        'Authorization' not in headers
-        and not noauth
-        and 'cookies' not in kwargs
-    ):
+    if 'Authorization' not in headers and not noauth and 'cookies' not in kwargs:
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}
         h.update(headers)
@@ -151,7 +148,10 @@ async def api_request(app, *api_path, method='get',
         kwargs["verify"] = app.internal_ssl_ca
     resp = await f(url, **kwargs)
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
-    assert ujoin(app.hub.base_url, "security/csp-report") in resp.headers['Content-Security-Policy']
+    assert (
+        ujoin(app.hub.base_url, "security/csp-report")
+        in resp.headers['Content-Security-Policy']
+    )
     assert 'http' not in resp.headers['Content-Security-Policy']
     if not kwargs.get('stream', False) and resp.content:
         assert resp.headers.get('content-type') == 'application/json'
@@ -190,4 +190,3 @@ def public_url(app, user_or_service=None, path=''):
         return host + ujoin(prefix, path)
     else:
         return host + prefix
-

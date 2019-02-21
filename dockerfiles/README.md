@@ -18,4 +18,3 @@ Dockerfile.alpine  contains base image for jupyterhub. It does not work independ
 * Use dummy authenticator for ease of testing. Update following in jupyterhub_config file
     - c.JupyterHub.authenticator_class = 'dummyauthenticator.DummyAuthenticator'
     - c.DummyAuthenticator.password = "your strong password"
-

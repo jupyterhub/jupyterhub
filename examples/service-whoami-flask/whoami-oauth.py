@@ -2,28 +2,29 @@
 """
 whoami service authentication with the Hub
 """
-
-from functools import wraps
 import json
 import os
+from functools import wraps
 
-from flask import Flask, redirect, request, Response, make_response
+from flask import Flask
+from flask import make_response
+from flask import redirect
+from flask import request
+from flask import Response
 
 from jupyterhub.services.auth import HubOAuth
 
 
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 
-auth = HubOAuth(
-    api_token=os.environ['JUPYTERHUB_API_TOKEN'],
-    cache_max_age=60,
-)
+auth = HubOAuth(api_token=os.environ['JUPYTERHUB_API_TOKEN'], cache_max_age=60)
 
 app = Flask(__name__)
 
 
 def authenticated(f):
     """Decorator for authenticating with the Hub via OAuth"""
+
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.cookies.get(auth.cookie_name)
@@ -39,6 +40,7 @@ def authenticated(f):
             response = make_response(redirect(auth.login_url + '&state=%s' % state))
             response.set_cookie(auth.state_cookie_name, state)
             return response
+
     return decorated
 
 
@@ -46,9 +48,9 @@ def authenticated(f):
 @authenticated
 def whoami(user):
     return Response(
-        json.dumps(user, indent=1, sort_keys=True),
-        mimetype='application/json',
-        )
+        json.dumps(user, indent=1, sort_keys=True), mimetype='application/json'
+    )
+
 
 @app.route(prefix + 'oauth_callback')
 def oauth_callback():

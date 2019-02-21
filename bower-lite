@@ -1,19 +1,16 @@
 #!/usr/bin/env python
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 """
 bower-lite
 
 Since Bower's on its way out,
 stage frontend dependencies from node_modules into components
 """
-
 import json
 import os
-from os.path import join
 import shutil
+from os.path import join
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 

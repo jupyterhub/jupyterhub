@@ -1,27 +1,26 @@
 """Tests for the ORM bits"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from datetime import datetime, timedelta
 import os
 import socket
+from datetime import datetime
+from datetime import timedelta
 from unittest import mock
 
 import pytest
 from tornado import gen
 
-from .. import orm
-from .. import objects
 from .. import crypto
+from .. import objects
+from .. import orm
+from ..emptyclass import EmptyClass
 from ..user import User
 from .mocking import MockSpawner
-from ..emptyclass import EmptyClass
 
 
 def assert_not_found(db, ORMType, id):
     """Assert that an item with a given id is not found"""
-    assert db.query(ORMType).filter(ORMType.id==id).first() is None
+    assert db.query(ORMType).filter(ORMType.id == id).first() is None
 
 
 def test_server(db):
@@ -124,7 +123,9 @@ def test_token_expiry(db):
     # approximate range
     assert orm_token.expires_at > now + timedelta(seconds=50)
     assert orm_token.expires_at < now + timedelta(seconds=70)
-    the_future = mock.patch('jupyterhub.orm.utcnow', lambda : now + timedelta(seconds=70))
+    the_future = mock.patch(
+        'jupyterhub.orm.utcnow', lambda: now + timedelta(seconds=70)
+    )
     with the_future:
         found = orm.APIToken.find(db, token=token)
     assert found is None
@@ -215,11 +216,9 @@ async def test_spawn_fails(db):
         def start(self):
             raise RuntimeError("Split the party")
 
-    user = User(orm_user, {
-        'spawner_class': BadSpawner,
-        'config': None,
-        'statsd': EmptyClass(),
-    })
+    user = User(
+        orm_user, {'spawner_class': BadSpawner, 'config': None, 'statsd': EmptyClass()}
+    )
 
     with pytest.raises(RuntimeError) as exc:
         await user.spawn()
@@ -346,9 +345,7 @@ def test_user_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.OAuthAccessToken(
-        client=oauth_client,
-        user=user,
-        grant_type=orm.GrantType.authorization_code,
+        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
     )
     db.add(oauth_token)
     db.commit()
@@ -384,9 +381,7 @@ def test_oauth_client_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.OAuthAccessToken(
-        client=oauth_client,
-        user=user,
-        grant_type=orm.GrantType.authorization_code,
+        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
     )
     db.add(oauth_token)
     db.commit()
@@ -477,6 +472,3 @@ def test_group_delete_cascade(db):
     db.delete(user1)
     db.commit()
     assert user1 not in group1.users
-
-
-

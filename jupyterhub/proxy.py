@@ -14,36 +14,38 @@ Route Specification:
   'host.tld/path/' for host-based routing or '/path/' for default routing.
 - Route paths should be normalized to always start and end with '/'
 """
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import asyncio
-from functools import wraps
 import json
 import os
 import signal
-from subprocess import Popen
 import time
-from urllib.parse import quote, urlparse
+from functools import wraps
+from subprocess import Popen
+from urllib.parse import quote
+from urllib.parse import urlparse
 
 from tornado import gen
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPError
+from tornado.httpclient import HTTPRequest
 from tornado.ioloop import PeriodicCallback
-
-
-from traitlets import (
-    Any, Bool, Instance, Integer, Unicode,
-    default, observe,
-)
-from jupyterhub.traitlets import Command
-
+from traitlets import Any
+from traitlets import Bool
+from traitlets import default
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import observe
+from traitlets import Unicode
 from traitlets.config import LoggingConfigurable
 
+from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .objects import Server
-from . import utils
-from .utils import url_path_join, make_ssl_context
+from .utils import make_ssl_context
+from .utils import url_path_join
+from jupyterhub.traitlets import Command
 
 
 def _one_at_a_time(method):
@@ -53,6 +55,7 @@ def _one_at_a_time(method):
     queue them instead of allowing them to be concurrently outstanding.
     """
     method._lock = asyncio.Lock()
+
     @wraps(method)
     async def locked_method(*args, **kwargs):
         async with method._lock:
@@ -86,6 +89,7 @@ class Proxy(LoggingConfigurable):
     """
 
     db_factory = Any()
+
     @property
     def db(self):
         return self.db_factory()
@@ -97,13 +101,16 @@ class Proxy(LoggingConfigurable):
     ssl_cert = Unicode()
     host_routing = Bool()
 
-    should_start = Bool(True, config=True,
-                        help="""Should the Hub start the proxy
+    should_start = Bool(
+        True,
+        config=True,
+        help="""Should the Hub start the proxy
 
         If True, the Hub will start the proxy and stop it.
         Set to False if the proxy is managed externally,
         such as by systemd, docker, or another service manager.
-        """)
+        """,
+    )
 
     def start(self):
         """Start the proxy.
@@ -136,9 +143,13 @@ class Proxy(LoggingConfigurable):
         # check host routing
         host_route = not routespec.startswith('/')
         if host_route and not self.host_routing:
-            raise ValueError("Cannot add host-based route %r, not using host-routing" % routespec)
+            raise ValueError(
+                "Cannot add host-based route %r, not using host-routing" % routespec
+            )
         if self.host_routing and not host_route:
-            raise ValueError("Cannot add route without host %r, using host-routing" % routespec)
+            raise ValueError(
+                "Cannot add route without host %r, using host-routing" % routespec
+            )
         # add trailing slash
         if not routespec.endswith('/'):
             return routespec + '/'
@@ -220,16 +231,19 @@ class Proxy(LoggingConfigurable):
         """Add a service's server to the proxy table."""
         if not service.server:
             raise RuntimeError(
-                "Service %s does not have an http endpoint to add to the proxy.", service.name)
+                "Service %s does not have an http endpoint to add to the proxy.",
+                service.name,
+            )
 
-        self.log.info("Adding service %s to proxy %s => %s",
-                      service.name, service.proxy_spec, service.server.host,
-                      )
-
-        await self.add_route(
+        self.log.info(
+            "Adding service %s to proxy %s => %s",
+            service.name,
             service.proxy_spec,
             service.server.host,
-            {'service': service.name}
+        )
+
+        await self.add_route(
+            service.proxy_spec, service.server.host, {'service': service.name}
         )
 
     async def delete_service(self, service, client=None):
@@ -240,22 +254,23 @@ class Proxy(LoggingConfigurable):
     async def add_user(self, user, server_name='', client=None):
         """Add a user's server to the proxy table."""
         spawner = user.spawners[server_name]
-        self.log.info("Adding user %s to proxy %s => %s",
-                      user.name, spawner.proxy_spec, spawner.server.host,
-                      )
+        self.log.info(
+            "Adding user %s to proxy %s => %s",
+            user.name,
+            spawner.proxy_spec,
+            spawner.server.host,
+        )
 
         if spawner.pending and spawner.pending != 'spawn':
             raise RuntimeError(
-                "%s is pending %s, shouldn't be added to the proxy yet!" % (spawner._log_name, spawner.pending)
+                "%s is pending %s, shouldn't be added to the proxy yet!"
+                % (spawner._log_name, spawner.pending)
             )
 
         await self.add_route(
             spawner.proxy_spec,
             spawner.server.host,
-            {
-                'user': user.name,
-                'server_name': server_name,
-            }
+            {'user': user.name, 'server_name': server_name},
         )
 
     async def delete_user(self, user, server_name=''):
@@ -294,7 +309,7 @@ class Proxy(LoggingConfigurable):
     @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
         """Check that all users are properly routed on the proxy."""
-        start = time.perf_counter() #timer starts here when user is created
+        start = time.perf_counter()  # timer starts here when user is created
         if not routes:
             self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
@@ -314,7 +329,9 @@ class Proxy(LoggingConfigurable):
         else:
             route = routes[self.app.hub.routespec]
             if route['target'] != hub.host:
-                self.log.warning("Updating default route %s → %s", route['target'], hub.host)
+                self.log.warning(
+                    "Updating default route %s → %s", route['target'], hub.host
+                )
                 futures.append(self.add_hub_route(hub))
 
         for user in user_dict.values():
@@ -324,14 +341,17 @@ class Proxy(LoggingConfigurable):
                     good_routes.add(spec)
                     if spec not in user_routes:
                         self.log.warning(
-                            "Adding missing route for %s (%s)", spec, spawner.server)
+                            "Adding missing route for %s (%s)", spec, spawner.server
+                        )
                         futures.append(self.add_user(user, name))
                     else:
                         route = routes[spec]
                         if route['target'] != spawner.server.host:
                             self.log.warning(
                                 "Updating route for %s (%s → %s)",
-                                spec, route['target'], spawner.server,
+                                spec,
+                                route['target'],
+                                spawner.server,
                             )
                             futures.append(self.add_user(user, name))
                 elif spawner.pending:
@@ -341,22 +361,26 @@ class Proxy(LoggingConfigurable):
                     good_routes.add(spawner.proxy_spec)
 
         # check service routes
-        service_routes = {r['data']['service']: r
-                          for r in routes.values() if 'service' in r['data']}
+        service_routes = {
+            r['data']['service']: r for r in routes.values() if 'service' in r['data']
+        }
         for service in service_dict.values():
             if service.server is None:
                 continue
             good_routes.add(service.proxy_spec)
             if service.name not in service_routes:
-                self.log.warning("Adding missing route for %s (%s)",
-                                 service.name, service.server)
+                self.log.warning(
+                    "Adding missing route for %s (%s)", service.name, service.server
+                )
                 futures.append(self.add_service(service))
             else:
                 route = service_routes[service.name]
                 if route['target'] != service.server.host:
                     self.log.warning(
                         "Updating route for %s (%s → %s)",
-                        route['routespec'], route['target'], service.server.host,
+                        route['routespec'],
+                        route['target'],
+                        service.server.host,
                     )
                     futures.append(self.add_service(service))
 
@@ -367,8 +391,8 @@ class Proxy(LoggingConfigurable):
                 futures.append(self.delete_route(routespec))
 
         await gen.multi(futures)
-        stop = time.perf_counter() #timer stops here when user is deleted
-        CHECK_ROUTES_DURATION_SECONDS.observe(stop - start) #histogram metric
+        stop = time.perf_counter()  # timer stops here when user is deleted
+        CHECK_ROUTES_DURATION_SECONDS.observe(stop - start)  # histogram metric
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
@@ -408,7 +432,7 @@ class ConfigurableHTTPProxy(Proxy):
         Limiting this number avoids potential timeout errors
         by sending too many requests to update the proxy at once
         """,
-        )
+    )
     semaphore = Any()
 
     @default('semaphore')
@@ -424,7 +448,7 @@ class ConfigurableHTTPProxy(Proxy):
         help="""The Proxy auth token
 
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
-        """,
+        """
     ).tag(config=True)
     check_running_interval = Integer(5, config=True)
 
@@ -437,25 +461,24 @@ class ConfigurableHTTPProxy(Proxy):
             token = utils.new_token()
         return token
 
-    api_url = Unicode(config=True,
-                      help="""The ip (or hostname) of the proxy's API endpoint"""
-                      )
+    api_url = Unicode(
+        config=True, help="""The ip (or hostname) of the proxy's API endpoint"""
+    )
 
     @default('api_url')
     def _api_url_default(self):
-      url = '127.0.0.1:8001'
-      proto = 'http'
-      if self.app.internal_ssl:
-        proto = 'https'
+        url = '127.0.0.1:8001'
+        proto = 'http'
+        if self.app.internal_ssl:
+            proto = 'https'
 
-      return "{proto}://{url}".format(
-            proto=proto,
-            url=url,
-          )
+        return "{proto}://{url}".format(proto=proto, url=url)
 
-    command = Command('configurable-http-proxy', config=True,
-                      help="""The command to start the proxy"""
-                      )
+    command = Command(
+        'configurable-http-proxy',
+        config=True,
+        help="""The command to start the proxy""",
+    )
 
     pid_file = Unicode(
         "jupyterhub-proxy.pid",
@@ -463,11 +486,14 @@ class ConfigurableHTTPProxy(Proxy):
         help="File in which to write the PID of the proxy process.",
     )
 
-    _check_running_callback = Any(help="PeriodicCallback to check if the proxy is running")
+    _check_running_callback = Any(
+        help="PeriodicCallback to check if the proxy is running"
+    )
 
     def _check_pid(self, pid):
         if os.name == 'nt':
             import psutil
+
             if not psutil.pid_exists(pid):
                 raise ProcessLookupError
         else:
@@ -512,7 +538,7 @@ class ConfigurableHTTPProxy(Proxy):
                 if os.name == 'nt':
                     self._terminate_win(pid)
                 else:
-                    os.kill(pid,sig_list[i])
+                    os.kill(pid, sig_list[i])
             except ProcessLookupError:
                 break
             time.sleep(1)
@@ -558,11 +584,16 @@ class ConfigurableHTTPProxy(Proxy):
         env = os.environ.copy()
         env['CONFIGPROXY_AUTH_TOKEN'] = self.auth_token
         cmd = self.command + [
-            '--ip', public_server.ip,
-            '--port', str(public_server.port),
-            '--api-ip', api_server.ip,
-            '--api-port', str(api_server.port),
-            '--error-target', url_path_join(self.hub.url, 'error'),
+            '--ip',
+            public_server.ip,
+            '--port',
+            str(public_server.port),
+            '--api-ip',
+            api_server.ip,
+            '--api-port',
+            str(api_server.port),
+            '--error-target',
+            url_path_join(self.hub.url, 'error'),
         ]
         if self.app.subdomain_host:
             cmd.append('--host-routing')
@@ -595,28 +626,36 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.extend(['--client-ssl-request-cert'])
             cmd.extend(['--client-ssl-reject-unauthorized'])
         if self.app.statsd_host:
-            cmd.extend([
-                '--statsd-host', self.app.statsd_host,
-                '--statsd-port', str(self.app.statsd_port),
-                '--statsd-prefix', self.app.statsd_prefix + '.chp'
-            ])
+            cmd.extend(
+                [
+                    '--statsd-host',
+                    self.app.statsd_host,
+                    '--statsd-port',
+                    str(self.app.statsd_port),
+                    '--statsd-prefix',
+                    self.app.statsd_prefix + '.chp',
+                ]
+            )
         # Warn if SSL is not used
         if ' --ssl' not in ' '.join(cmd):
-            self.log.warning("Running JupyterHub without SSL."
-                             "  I hope there is SSL termination happening somewhere else...")
+            self.log.warning(
+                "Running JupyterHub without SSL."
+                "  I hope there is SSL termination happening somewhere else..."
+            )
         self.log.info("Starting proxy @ %s", public_server.bind_url)
         self.log.debug("Proxy cmd: %s", cmd)
         shell = os.name == 'nt'
         try:
-            self.proxy_process = Popen(cmd, env=env, start_new_session=True, shell=shell)
+            self.proxy_process = Popen(
+                cmd, env=env, start_new_session=True, shell=shell
+            )
         except FileNotFoundError as e:
             self.log.error(
                 "Failed to find proxy %r\n"
                 "The proxy can be installed with `npm install -g configurable-http-proxy`."
                 "To install `npm`, install nodejs which includes `npm`."
                 "If you see an `EACCES` error or permissions error, refer to the `npm` "
-                "documentation on How To Prevent Permissions Errors."
-                % self.command
+                "documentation on How To Prevent Permissions Errors." % self.command
             )
             raise
 
@@ -625,8 +664,7 @@ class ConfigurableHTTPProxy(Proxy):
         def _check_process():
             status = self.proxy_process.poll()
             if status is not None:
-                e = RuntimeError(
-                    "Proxy failed to start with exit code %i" % status)
+                e = RuntimeError("Proxy failed to start with exit code %i" % status)
                 raise e from None
 
         for server in (public_server, api_server):
@@ -678,9 +716,10 @@ class ConfigurableHTTPProxy(Proxy):
         """Check if the proxy is still running"""
         if self.proxy_process.poll() is None:
             return
-        self.log.error("Proxy stopped with exit code %r",
-                       'unknown' if self.proxy_process is None else self.proxy_process.poll()
-                       )
+        self.log.error(
+            "Proxy stopped with exit code %r",
+            'unknown' if self.proxy_process is None else self.proxy_process.poll(),
+        )
         self._remove_pid_file()
         await self.start()
         await self.restore_routes()
@@ -724,12 +763,12 @@ class ConfigurableHTTPProxy(Proxy):
         if isinstance(body, dict):
             body = json.dumps(body)
         self.log.debug("Proxy: Fetching %s %s", method, url)
-        req = HTTPRequest(url,
-                          method=method,
-                          headers={'Authorization': 'token {}'.format(
-                              self.auth_token)},
-                          body=body,
-                          )
+        req = HTTPRequest(
+            url,
+            method=method,
+            headers={'Authorization': 'token {}'.format(self.auth_token)},
+            body=body,
+        )
         async with self.semaphore:
             result = await client.fetch(req)
             return result
@@ -739,11 +778,7 @@ class ConfigurableHTTPProxy(Proxy):
         body['target'] = target
         body['jupyterhub'] = True
         path = self._routespec_to_chp_path(routespec)
-        await self.api_request(
-            path,
-            method='POST',
-            body=body,
-        )
+        await self.api_request(path, method='POST', body=body)
 
     async def delete_route(self, routespec):
         path = self._routespec_to_chp_path(routespec)
@@ -762,11 +797,7 @@ class ConfigurableHTTPProxy(Proxy):
         """Reformat CHP data format to JupyterHub's proxy API."""
         target = chp_data.pop('target')
         chp_data.pop('jupyterhub')
-        return {
-            'routespec': routespec,
-            'target': target,
-            'data': chp_data,
-        }
+        return {'routespec': routespec, 'target': target, 'data': chp_data}
 
     async def get_all_routes(self, client=None):
         """Fetch the proxy's routes."""
@@ -779,6 +810,5 @@ class ConfigurableHTTPProxy(Proxy):
                 # exclude routes not associated with JupyterHub
                 self.log.debug("Omitting non-jupyterhub route %r", routespec)
                 continue
-            all_routes[routespec] = self._reformat_routespec(
-                routespec, chp_data)
+            all_routes[routespec] = self._reformat_routespec(routespec, chp_data)
         return all_routes

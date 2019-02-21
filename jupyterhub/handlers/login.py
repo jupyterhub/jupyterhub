@@ -1,16 +1,14 @@
 """HTTP Handlers for the hub server"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import asyncio
 
+from tornado import web
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
-from tornado import web
 
-from .base import BaseHandler
 from ..utils import maybe_future
+from .base import BaseHandler
 
 
 class LogoutHandler(BaseHandler):
@@ -52,16 +50,17 @@ class LoginHandler(BaseHandler):
     """Render the login page."""
 
     def _render(self, login_error=None, username=None):
-        return self.render_template('login.html',
-                next=url_escape(self.get_argument('next', default='')),
-                username=username,
-                login_error=login_error,
-                custom_html=self.authenticator.custom_html,
-                login_url=self.settings['login_url'],
-                authenticator_login_url=url_concat(
-                    self.authenticator.login_url(self.hub.base_url),
-                    {'next': self.get_argument('next', '')},
-                ),
+        return self.render_template(
+            'login.html',
+            next=url_escape(self.get_argument('next', default='')),
+            username=username,
+            login_error=login_error,
+            custom_html=self.authenticator.custom_html,
+            login_url=self.settings['login_url'],
+            authenticator_login_url=url_concat(
+                self.authenticator.login_url(self.hub.base_url),
+                {'next': self.get_argument('next', '')},
+            ),
         )
 
     async def get(self):
@@ -87,7 +86,9 @@ class LoginHandler(BaseHandler):
                         self.redirect(self.get_next_url(user))
                 else:
                     if self.get_argument('next', default=False):
-                        auto_login_url = url_concat(auto_login_url, {'next': self.get_next_url()})
+                        auto_login_url = url_concat(
+                            auto_login_url, {'next': self.get_next_url()}
+                        )
                     self.redirect(auto_login_url)
                 return
             username = self.get_argument('username', default='')
@@ -109,8 +110,7 @@ class LoginHandler(BaseHandler):
             self.redirect(self.get_next_url(user))
         else:
             html = self._render(
-                login_error='Invalid username or password',
-                username=data['username'],
+                login_error='Invalid username or password', username=data['username']
             )
             self.finish(html)
 
@@ -118,7 +118,4 @@ class LoginHandler(BaseHandler):
 # /login renders the login page or the "Login with..." link,
 # so it should always be registered.
 # /logout clears cookies.
-default_handlers = [
-    (r"/login", LoginHandler),
-    (r"/logout", LogoutHandler),
-]
+default_handlers = [(r"/login", LoginHandler), (r"/logout", LogoutHandler)]

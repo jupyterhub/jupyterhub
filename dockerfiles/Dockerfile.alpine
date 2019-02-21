@@ -7,5 +7,3 @@ ENV LANG=en_US.UTF-8
 
 USER nobody
 CMD ["jupyterhub"]
-
-

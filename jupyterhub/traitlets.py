@@ -3,9 +3,13 @@ Traitlets that are used in JupyterHub
 """
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import entrypoints
-from traitlets import List, Unicode, Integer, Type, TraitType, TraitError
+from traitlets import Integer
+from traitlets import List
+from traitlets import TraitError
+from traitlets import TraitType
+from traitlets import Type
+from traitlets import Unicode
 
 
 class URLPrefix(Unicode):
@@ -22,6 +26,7 @@ class Command(List):
     """Traitlet for a command that should be a list of strings,
     but allows it to be specified as a single string.
     """
+
     def __init__(self, default_value=None, **kwargs):
         kwargs.setdefault('minlen', 1)
         if isinstance(default_value, str):
@@ -69,10 +74,18 @@ class ByteSpecification(Integer):
         try:
             num = float(value[:-1])
         except ValueError:
-            raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
+            raise TraitError(
+                '{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(
+                    val=value
+                )
+            )
         suffix = value[-1]
         if suffix not in self.UNIT_SUFFIXES:
-            raise TraitError('{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(val=value))
+            raise TraitError(
+                '{val} is not a valid memory specification. Must be an int or a string with suffix K, M, G, T'.format(
+                    val=value
+                )
+            )
         else:
             return int(float(num) * self.UNIT_SUFFIXES[suffix])
 
@@ -89,7 +102,7 @@ class Callable(TraitType):
 
     def validate(self, obj, value):
         if callable(value):
-           return value
+            return value
         else:
             self.error(obj, value)
 
@@ -113,7 +126,11 @@ class EntryPointType(Type):
         chunks = [self._original_help]
         chunks.append("Currently installed: ")
         for key, entry_point in self.load_entry_points().items():
-            chunks.append("  - {}: {}.{}".format(key, entry_point.module_name, entry_point.object_name))
+            chunks.append(
+                "  - {}: {}.{}".format(
+                    key, entry_point.module_name, entry_point.object_name
+                )
+            )
         return '\n'.join(chunks)
 
     @help.setter

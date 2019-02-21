@@ -1,22 +1,26 @@
 """Tests for services"""
-
 import asyncio
+import os
+import sys
+import time
 from binascii import hexlify
 from contextlib import contextmanager
-import os
 from subprocess import Popen
-import sys
 from threading import Event
-import time
 
-from async_generator import asynccontextmanager, async_generator, yield_
 import pytest
 import requests
+from async_generator import async_generator
+from async_generator import asynccontextmanager
+from async_generator import yield_
 from tornado import gen
 from tornado.ioloop import IOLoop
 
+from ..utils import maybe_future
+from ..utils import random_port
+from ..utils import url_path_join
+from ..utils import wait_for_http_server
 from .mocking import public_url
-from ..utils import url_path_join, wait_for_http_server, random_port, maybe_future
 from .utils import async_requests
 
 mockservice_path = os.path.dirname(os.path.abspath(__file__))
@@ -80,12 +84,14 @@ async def test_proxy_service(app, mockservice_url):
 async def test_external_service(app):
     name = 'external'
     async with external_service(app, name=name) as env:
-        app.services = [{
-            'name': name,
-            'admin': True,
-            'url': env['JUPYTERHUB_SERVICE_URL'],
-            'api_token': env['JUPYTERHUB_API_TOKEN'],
-        }]
+        app.services = [
+            {
+                'name': name,
+                'admin': True,
+                'url': env['JUPYTERHUB_SERVICE_URL'],
+                'api_token': env['JUPYTERHUB_API_TOKEN'],
+            }
+        ]
         await maybe_future(app.init_services())
         await app.init_api_tokens()
         await app.proxy.add_all_services(app._service_map)

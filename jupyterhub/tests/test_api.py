@@ -1,30 +1,32 @@
 """Tests for the REST API."""
-
 import asyncio
-from datetime import datetime, timedelta
-from concurrent.futures import Future
 import json
 import re
 import sys
-from unittest import mock
-from urllib.parse import urlparse, quote
 import uuid
-from async_generator import async_generator, yield_
+from concurrent.futures import Future
+from datetime import datetime
+from datetime import timedelta
+from unittest import mock
+from urllib.parse import quote
+from urllib.parse import urlparse
 
+from async_generator import async_generator
+from async_generator import yield_
 from pytest import mark
 from tornado import gen
 
 import jupyterhub
 from .. import orm
-from ..utils import url_path_join as ujoin, utcnow
-from .mocking import public_host, public_url
-from .utils import (
-    add_user,
-    api_request,
-    async_requests,
-    auth_header,
-    find_user,
-)
+from ..utils import url_path_join as ujoin
+from ..utils import utcnow
+from .mocking import public_host
+from .mocking import public_url
+from .utils import add_user
+from .utils import api_request
+from .utils import async_requests
+from .utils import auth_header
+from .utils import find_user
 
 
 # --------------------
@@ -48,12 +50,15 @@ async def test_auth_api(app):
     assert reply['name'] == user.name
 
     # check fail
-    r = await api_request(app, 'authorizations/token', api_token,
-        headers={'Authorization': 'no sir'},
+    r = await api_request(
+        app, 'authorizations/token', api_token, headers={'Authorization': 'no sir'}
     )
     assert r.status_code == 403
 
-    r = await api_request(app, 'authorizations/token', api_token,
+    r = await api_request(
+        app,
+        'authorizations/token',
+        api_token,
         headers={'Authorization': 'token: %s' % user.cookie_id},
     )
     assert r.status_code == 403
@@ -67,37 +72,39 @@ async def test_referer_check(app):
         user = add_user(app.db, name='admin', admin=True)
     cookies = await app.login_user('admin')
 
-    r = await api_request(app, 'users',
-        headers={
-            'Authorization': '',
-            'Referer': 'null',
-        }, cookies=cookies,
+    r = await api_request(
+        app, 'users', headers={'Authorization': '', 'Referer': 'null'}, cookies=cookies
     )
     assert r.status_code == 403
 
-    r = await api_request(app, 'users',
+    r = await api_request(
+        app,
+        'users',
         headers={
             'Authorization': '',
             'Referer': 'http://attack.com/csrf/vulnerability',
-        }, cookies=cookies,
+        },
+        cookies=cookies,
     )
     assert r.status_code == 403
 
-    r = await api_request(app, 'users',
-        headers={
-            'Authorization': '',
-            'Referer': url,
-            'Host': host,
-        }, cookies=cookies,
+    r = await api_request(
+        app,
+        'users',
+        headers={'Authorization': '', 'Referer': url, 'Host': host},
+        cookies=cookies,
     )
     assert r.status_code == 200
 
-    r = await api_request(app, 'users',
+    r = await api_request(
+        app,
+        'users',
         headers={
             'Authorization': '',
             'Referer': ujoin(url, 'foo/bar/baz/bat'),
             'Host': host,
-        }, cookies=cookies,
+        },
+        cookies=cookies,
     )
     assert r.status_code == 200
 
@@ -105,6 +112,7 @@ async def test_referer_check(app):
 # --------------
 # User API tests
 # --------------
+
 
 def normalize_timestamp(ts):
     """Normalize a timestamp
@@ -128,11 +136,15 @@ def normalize_user(user):
         for server in user['servers'].values():
             for key in ('started', 'last_activity'):
                 server[key] = normalize_timestamp(server[key])
-            server['progress_url'] = re.sub(r'.*/hub/api', 'PREFIX/hub/api', server['progress_url'])
-            if (isinstance(server['state'], dict)
-                and isinstance(server['state'].get('pid', None), int)):
+            server['progress_url'] = re.sub(
+                r'.*/hub/api', 'PREFIX/hub/api', server['progress_url']
+            )
+            if isinstance(server['state'], dict) and isinstance(
+                server['state'].get('pid', None), int
+            ):
                 server['state']['pid'] = 0
     return user
+
 
 def fill_user(model):
     """Fill a default user model
@@ -153,6 +165,7 @@ def fill_user(model):
 
 TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 
+
 @mark.user
 async def test_get_users(app):
     db = app.db
@@ -160,22 +173,13 @@ async def test_get_users(app):
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
-    users = [ normalize_user(u) for u in users ]
+    users = [normalize_user(u) for u in users]
     assert users == [
-        fill_user({
-            'name': 'admin',
-            'admin': True,
-        }),
-        fill_user({
-            'name': 'user',
-            'admin': False,
-            'last_activity': None,
-        }),
+        fill_user({'name': 'admin', 'admin': True}),
+        fill_user({'name': 'user', 'admin': False, 'last_activity': None}),
     ]
 
-    r = await api_request(app, 'users',
-        headers=auth_header(db, 'user'),
-    )
+    r = await api_request(app, 'users', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
 
@@ -202,17 +206,13 @@ async def test_get_self(app):
     )
     db.add(oauth_token)
     db.commit()
-    r = await api_request(app, 'user', headers={
-        'Authorization': 'token ' + token,
-    })
+    r = await api_request(app, 'user', headers={'Authorization': 'token ' + token})
     r.raise_for_status()
     model = r.json()
     assert model['name'] == u.name
 
     # invalid auth gets 403
-    r = await api_request(app, 'user', headers={
-        'Authorization': 'token notvalid',
-    })
+    r = await api_request(app, 'user', headers={'Authorization': 'token notvalid'})
     assert r.status_code == 403
 
 
@@ -251,8 +251,11 @@ async def test_add_multi_user_bad(app):
 @mark.user
 async def test_add_multi_user_invalid(app):
     app.authenticator.username_pattern = r'w.*'
-    r = await api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': ['Willow', 'Andrew', 'Tara']})
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data=json.dumps({'usernames': ['Willow', 'Andrew', 'Tara']}),
     )
     app.authenticator.username_pattern = ''
     assert r.status_code == 400
@@ -263,12 +266,12 @@ async def test_add_multi_user_invalid(app):
 async def test_add_multi_user(app):
     db = app.db
     names = ['a', 'b']
-    r = await api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names}),
+    r = await api_request(
+        app, 'users', method='post', data=json.dumps({'usernames': names})
     )
     assert r.status_code == 201
     reply = r.json()
-    r_names = [ user['name'] for user in reply ]
+    r_names = [user['name'] for user in reply]
     assert names == r_names
 
     for name in names:
@@ -278,20 +281,20 @@ async def test_add_multi_user(app):
         assert not user.admin
 
     # try to create the same users again
-    r = await api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names}),
+    r = await api_request(
+        app, 'users', method='post', data=json.dumps({'usernames': names})
     )
     assert r.status_code == 409
 
     names = ['a', 'b', 'ab']
 
     # try to create the same users again
-    r = await api_request(app, 'users', method='post',
-        data=json.dumps({'usernames': names}),
+    r = await api_request(
+        app, 'users', method='post', data=json.dumps({'usernames': names})
     )
     assert r.status_code == 201
     reply = r.json()
-    r_names = [ user['name'] for user in reply ]
+    r_names = [user['name'] for user in reply]
     assert r_names == ['ab']
 
 
@@ -299,12 +302,15 @@ async def test_add_multi_user(app):
 async def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
-    r = await api_request(app, 'users', method='post',
+    r = await api_request(
+        app,
+        'users',
+        method='post',
         data=json.dumps({'usernames': names, 'admin': True}),
     )
     assert r.status_code == 201
     reply = r.json()
-    r_names = [ user['name'] for user in reply ]
+    r_names = [user['name'] for user in reply]
     assert names == r_names
 
     for name in names:
@@ -340,8 +346,8 @@ async def test_add_user_duplicate(app):
 async def test_add_admin(app):
     db = app.db
     name = 'newadmin'
-    r = await api_request(app, 'users', name, method='post',
-        data=json.dumps({'admin': True}),
+    r = await api_request(
+        app, 'users', name, method='post', data=json.dumps({'admin': True})
     )
     assert r.status_code == 201
     user = find_user(db, name)
@@ -369,8 +375,8 @@ async def test_make_admin(app):
     assert user.name == name
     assert not user.admin
 
-    r = await api_request(app, 'users', name, method='patch',
-        data=json.dumps({'admin': True})
+    r = await api_request(
+        app, 'users', name, method='patch', data=json.dumps({'admin': True})
     )
     assert r.status_code == 200
     user = find_user(db, name)
@@ -388,8 +394,8 @@ async def test_set_auth_state(app, auth_state_enabled):
     assert user is not None
     assert user.name == name
 
-    r = await api_request(app, 'users', name, method='patch',
-        data=json.dumps({'auth_state': auth_state})
+    r = await api_request(
+        app, 'users', name, method='patch', data=json.dumps({'auth_state': auth_state})
     )
 
     assert r.status_code == 200
@@ -409,7 +415,10 @@ async def test_user_set_auth_state(app, auth_state_enabled):
     assert user_auth_state is None
 
     r = await api_request(
-        app, 'users', name, method='patch',
+        app,
+        'users',
+        name,
+        method='patch',
         data=json.dumps({'auth_state': auth_state}),
         headers=auth_header(app.db, name),
     )
@@ -446,8 +455,7 @@ async def test_user_get_auth_state(app, auth_state_enabled):
     assert user.name == name
     await user.save_auth_state(auth_state)
 
-    r = await api_request(app, 'users', name,
-                          headers=auth_header(app.db, name))
+    r = await api_request(app, 'users', name, headers=auth_header(app.db, name))
 
     assert r.status_code == 200
     assert 'auth_state' not in r.json()
@@ -457,13 +465,10 @@ async def test_spawn(app):
     db = app.db
     name = 'wash'
     user = add_user(db, app=app, name=name)
-    options = {
-        's': ['value'],
-        'i': 5,
-    }
+    options = {'s': ['value'], 'i': 5}
     before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
-    r = await api_request(app, 'users', name, 'server', method='post',
-        data=json.dumps(options),
+    r = await api_request(
+        app, 'users', name, 'server', method='post', data=json.dumps(options)
     )
     assert r.status_code == 201
     assert 'pid' in user.orm_spawners[''].state
@@ -520,7 +525,9 @@ async def test_spawn_handler(app):
     app_user = app.users[name]
 
     # spawn via API with ?foo=bar
-    r = await api_request(app, 'users', name, 'server', method='post', params={'foo': 'bar'})
+    r = await api_request(
+        app, 'users', name, 'server', method='post', params={'foo': 'bar'}
+    )
     r.raise_for_status()
 
     # verify that request params got passed down
@@ -640,6 +647,7 @@ def next_event(it):
         if line.startswith('data:'):
             return json.loads(line.split(':', 1)[1])
 
+
 @mark.slow
 async def test_progress(request, app, no_patience, slow_spawn):
     db = app.db
@@ -655,15 +663,9 @@ async def test_progress(request, app, no_patience, slow_spawn):
     ex = async_requests.executor
     line_iter = iter(r.iter_lines(decode_unicode=True))
     evt = await ex.submit(next_event, line_iter)
-    assert evt == {
-        'progress': 0,
-        'message': 'Server requested',
-    }
+    assert evt == {'progress': 0, 'message': 'Server requested'}
     evt = await ex.submit(next_event, line_iter)
-    assert evt == {
-        'progress': 50,
-        'message': 'Spawning server...',
-    }
+    assert evt == {'progress': 50, 'message': 'Spawning server...'}
     evt = await ex.submit(next_event, line_iter)
     url = app_user.url
     assert evt == {
@@ -769,10 +771,7 @@ async def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
 async def progress_forever():
     """progress function that yields messages forever"""
     for i in range(1, 10):
-        await yield_({
-            'progress': i,
-            'message': 'Stage %s' % i,
-        })
+        await yield_({'progress': i, 'message': 'Stage %s' % i})
         # wait a long time before the next event
         await gen.sleep(10)
 
@@ -781,7 +780,8 @@ if sys.version_info >= (3, 6):
     # additional progress_forever defined as native
     # async generator
     # to test for issues with async_generator wrappers
-    exec("""
+    exec(
+        """
 async def progress_forever_native():
     for i in range(1, 10):
         yield {
@@ -790,7 +790,9 @@ async def progress_forever_native():
         }
         # wait a long time before the next event
         await gen.sleep(10)
-""", globals())
+""",
+        globals(),
+    )
 
 
 async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
@@ -818,24 +820,20 @@ async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
     evt = await ex.submit(next_event, line_iter)
     assert evt['progress'] == 0
     evt = await ex.submit(next_event, line_iter)
-    assert evt == {
-        'progress': 1,
-        'message': 'Stage 1',
-    }
+    assert evt == {'progress': 1, 'message': 'Stage 1'}
     evt = await ex.submit(next_event, line_iter)
     assert evt['progress'] == 100
 
 
 async def test_spawn_limit(app, no_patience, slow_spawn, request):
     db = app.db
-    p = mock.patch.dict(app.tornado_settings,
-                   {'concurrent_spawn_limit': 2})
+    p = mock.patch.dict(app.tornado_settings, {'concurrent_spawn_limit': 2})
     p.start()
     request.addfinalizer(p.stop)
 
     # start two pending spawns
     names = ['ykka', 'hjarka']
-    users = [ add_user(db, app=app, name=name) for name in names ]
+    users = [add_user(db, app=app, name=name) for name in names]
     users[0].spawner._start_future = Future()
     users[1].spawner._start_future = Future()
     for name in names:
@@ -875,17 +873,17 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     while any(u.spawner.active for u in users):
         await gen.sleep(0.1)
 
+
 @mark.slow
 async def test_active_server_limit(app, request):
     db = app.db
-    p = mock.patch.dict(app.tornado_settings,
-                   {'active_server_limit': 2})
+    p = mock.patch.dict(app.tornado_settings, {'active_server_limit': 2})
     p.start()
     request.addfinalizer(p.stop)
 
     # start two pending spawns
     names = ['ykka', 'hjarka']
-    users = [ add_user(db, app=app, name=name) for name in names ]
+    users = [add_user(db, app=app, name=name) for name in names]
     for name in names:
         r = await api_request(app, 'users', name, 'server', method='post')
         r.raise_for_status()
@@ -931,6 +929,7 @@ async def test_active_server_limit(app, request):
     assert counts['active'] == 0
     assert counts['ready'] == 0
     assert counts['pending'] == 0
+
 
 @mark.slow
 async def test_start_stop_race(app, no_patience, slow_spawn):
@@ -996,22 +995,18 @@ async def test_cookie(app):
     cookie_name = app.hub.cookie_name
     # cookie jar gives '"cookie-value"', we want 'cookie-value'
     cookie = cookies[cookie_name][1:-1]
-    r = await api_request(app, 'authorizations/cookie',
-        cookie_name, "nothintoseehere",
-    )
+    r = await api_request(app, 'authorizations/cookie', cookie_name, "nothintoseehere")
     assert r.status_code == 404
 
-    r = await api_request(app, 'authorizations/cookie',
-        cookie_name, quote(cookie, safe=''),
+    r = await api_request(
+        app, 'authorizations/cookie', cookie_name, quote(cookie, safe='')
     )
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
 
     # deprecated cookie in body:
-    r = await api_request(app, 'authorizations/cookie',
-        cookie_name, data=cookie,
-    )
+    r = await api_request(app, 'authorizations/cookie', cookie_name, data=cookie)
     r.raise_for_status()
     reply = r.json()
     assert reply['name'] == name
@@ -1035,15 +1030,11 @@ async def test_check_token(app):
     assert r.status_code == 404
 
 
-@mark.parametrize("headers, status", [
-    ({}, 200),
-    ({'Authorization': 'token bad'}, 403),
-])
+@mark.parametrize("headers, status", [({}, 200), ({'Authorization': 'token bad'}, 403)])
 async def test_get_new_token_deprecated(app, headers, status):
     # request a new token
-    r = await api_request(app, 'authorizations', 'token',
-        method='post',
-        headers=headers,
+    r = await api_request(
+        app, 'authorizations', 'token', method='post', headers=headers
     )
     assert r.status_code == status
     if status != 200:
@@ -1058,11 +1049,11 @@ async def test_get_new_token_deprecated(app, headers, status):
 
 async def test_token_formdata_deprecated(app):
     """Create a token for a user with formdata and no auth header"""
-    data = {
-        'username': 'fake',
-        'password': 'fake',
-    }
-    r = await api_request(app, 'authorizations', 'token',
+    data = {'username': 'fake', 'password': 'fake'}
+    r = await api_request(
+        app,
+        'authorizations',
+        'token',
         method='post',
         data=json.dumps(data) if data else None,
         noauth=True,
@@ -1076,22 +1067,26 @@ async def test_token_formdata_deprecated(app):
     assert reply['name'] == data['username']
 
 
-@mark.parametrize("as_user, for_user, status", [
-    ('admin', 'other', 200),
-    ('admin', 'missing', 400),
-    ('user', 'other', 403),
-    ('user', 'user', 200),
-])
+@mark.parametrize(
+    "as_user, for_user, status",
+    [
+        ('admin', 'other', 200),
+        ('admin', 'missing', 400),
+        ('user', 'other', 403),
+        ('user', 'user', 200),
+    ],
+)
 async def test_token_as_user_deprecated(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
         add_user(app.db, app, name=for_user)
     data = {'username': for_user}
-    headers = {
-        'Authorization': 'token %s' % u.new_api_token(),
-    }
-    r = await api_request(app, 'authorizations', 'token',
+    headers = {'Authorization': 'token %s' % u.new_api_token()}
+    r = await api_request(
+        app,
+        'authorizations',
+        'token',
         method='post',
         data=json.dumps(data),
         headers=headers,
@@ -1107,11 +1102,14 @@ async def test_token_as_user_deprecated(app, as_user, for_user, status):
     assert reply['name'] == data['username']
 
 
-@mark.parametrize("headers, status, note, expires_in", [
-    ({}, 200, 'test note', None),
-    ({}, 200, '', 100),
-    ({'Authorization': 'token bad'}, 403, '', None),
-])
+@mark.parametrize(
+    "headers, status, note, expires_in",
+    [
+        ({}, 200, 'test note', None),
+        ({}, 200, '', 100),
+        ({'Authorization': 'token bad'}, 403, '', None),
+    ],
+)
 async def test_get_new_token(app, headers, status, note, expires_in):
     options = {}
     if note:
@@ -1123,10 +1121,8 @@ async def test_get_new_token(app, headers, status, note, expires_in):
     else:
         body = ''
     # request a new token
-    r = await api_request(app, 'users/admin/tokens',
-        method='post',
-        headers=headers,
-        data=body,
+    r = await api_request(
+        app, 'users/admin/tokens', method='post', headers=headers, data=body
     )
     assert r.status_code == status
     if status != 200:
@@ -1157,30 +1153,34 @@ async def test_get_new_token(app, headers, status, note, expires_in):
     assert normalize_token(reply) == initial
 
     # delete the token
-    r = await api_request(app, 'users/admin/tokens', token_id,
-        method='delete')
+    r = await api_request(app, 'users/admin/tokens', token_id, method='delete')
     assert r.status_code == 204
     # verify deletion
     r = await api_request(app, 'users/admin/tokens', token_id)
     assert r.status_code == 404
 
 
-@mark.parametrize("as_user, for_user, status", [
-    ('admin', 'other', 200),
-    ('admin', 'missing', 404),
-    ('user', 'other', 403),
-    ('user', 'user', 200),
-])
+@mark.parametrize(
+    "as_user, for_user, status",
+    [
+        ('admin', 'other', 200),
+        ('admin', 'missing', 404),
+        ('user', 'other', 403),
+        ('user', 'user', 200),
+    ],
+)
 async def test_token_for_user(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
         add_user(app.db, app, name=for_user)
     data = {'username': for_user}
-    headers = {
-        'Authorization': 'token %s' % u.new_api_token(),
-    }
-    r = await api_request(app, 'users', for_user, 'tokens',
+    headers = {'Authorization': 'token %s' % u.new_api_token()}
+    r = await api_request(
+        app,
+        'users',
+        for_user,
+        'tokens',
         method='post',
         data=json.dumps(data),
         headers=headers,
@@ -1191,9 +1191,7 @@ async def test_token_for_user(app, as_user, for_user, status):
         return
     assert 'token' in reply
     token_id = reply['id']
-    r = await api_request(app, 'users', for_user, 'tokens', token_id,
-        headers=headers,
-    )
+    r = await api_request(app, 'users', for_user, 'tokens', token_id, headers=headers)
     r.raise_for_status()
     reply = r.json()
     assert reply['user'] == for_user
@@ -1203,30 +1201,25 @@ async def test_token_for_user(app, as_user, for_user, status):
         note = 'Requested via api by user %s' % as_user
     assert reply['note'] == note
 
-
     # delete the token
-    r = await api_request(app, 'users', for_user, 'tokens', token_id,
-        method='delete',
-        headers=headers,
+    r = await api_request(
+        app, 'users', for_user, 'tokens', token_id, method='delete', headers=headers
     )
 
     assert r.status_code == 204
-    r = await api_request(app, 'users', for_user, 'tokens', token_id,
-        headers=headers,
-    )
+    r = await api_request(app, 'users', for_user, 'tokens', token_id, headers=headers)
     assert r.status_code == 404
 
 
 async def test_token_authenticator_noauth(app):
     """Create a token for a user relying on Authenticator.authenticate and no auth header"""
     name = 'user'
-    data = {
-        'auth': {
-            'username': name,
-            'password': name,
-        },
-    }
-    r = await api_request(app, 'users', name, 'tokens',
+    data = {'auth': {'username': name, 'password': name}}
+    r = await api_request(
+        app,
+        'users',
+        name,
+        'tokens',
         method='post',
         data=json.dumps(data) if data else None,
         noauth=True,
@@ -1242,17 +1235,14 @@ async def test_token_authenticator_noauth(app):
 
 async def test_token_authenticator_dict_noauth(app):
     """Create a token for a user relying on Authenticator.authenticate and no auth header"""
-    app.authenticator.auth_state = {
-        'who': 'cares',
-    }
+    app.authenticator.auth_state = {'who': 'cares'}
     name = 'user'
-    data = {
-        'auth': {
-            'username': name,
-            'password': name,
-        },
-    }
-    r = await api_request(app, 'users', name, 'tokens',
+    data = {'auth': {'username': name, 'password': name}}
+    r = await api_request(
+        app,
+        'users',
+        name,
+        'tokens',
         method='post',
         data=json.dumps(data) if data else None,
         noauth=True,
@@ -1266,22 +1256,21 @@ async def test_token_authenticator_dict_noauth(app):
     assert reply['name'] == name
 
 
-@mark.parametrize("as_user, for_user, status", [
-    ('admin', 'other', 200),
-    ('admin', 'missing', 404),
-    ('user', 'other', 403),
-    ('user', 'user', 200),
-])
+@mark.parametrize(
+    "as_user, for_user, status",
+    [
+        ('admin', 'other', 200),
+        ('admin', 'missing', 404),
+        ('user', 'other', 403),
+        ('user', 'user', 200),
+    ],
+)
 async def test_token_list(app, as_user, for_user, status):
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
         for_user_obj = add_user(app.db, app, name=for_user)
-    headers = {
-        'Authorization': 'token %s' % u.new_api_token(),
-    }
-    r = await api_request(app, 'users', for_user, 'tokens',
-        headers=headers,
-    )
+    headers = {'Authorization': 'token %s' % u.new_api_token()}
+    r = await api_request(app, 'users', for_user, 'tokens', headers=headers)
     assert r.status_code == status
     if status != 200:
         return
@@ -1292,8 +1281,8 @@ async def test_token_list(app, as_user, for_user, status):
     assert all(token['user'] == for_user for token in reply['oauth_tokens'])
     # validate individual token ids
     for token in reply['api_tokens'] + reply['oauth_tokens']:
-        r = await api_request(app, 'users', for_user, 'tokens', token['id'],
-            headers=headers,
+        r = await api_request(
+            app, 'users', for_user, 'tokens', token['id'], headers=headers
         )
         r.raise_for_status()
         reply = r.json()
@@ -1320,29 +1309,25 @@ async def test_groups_list(app):
     r = await api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
-    assert reply == [{
-        'kind': 'group',
-        'name': 'alphaflight',
-        'users': []
-    }]
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': []}]
 
 
 @mark.group
 async def test_add_multi_group(app):
     db = app.db
     names = ['group1', 'group2']
-    r = await api_request(app, 'groups', method='post',
-                          data=json.dumps({'groups': names}),
-                          )
+    r = await api_request(
+        app, 'groups', method='post', data=json.dumps({'groups': names})
+    )
     assert r.status_code == 201
     reply = r.json()
     r_names = [group['name'] for group in reply]
     assert names == r_names
 
     # try to create the same groups again
-    r = await api_request(app, 'groups', method='post',
-                          data=json.dumps({'groups': names}),
-                          )
+    r = await api_request(
+        app, 'groups', method='post', data=json.dumps({'groups': names})
+    )
     assert r.status_code == 409
 
 
@@ -1359,11 +1344,7 @@ async def test_group_get(app):
     r = await api_request(app, 'groups/alphaflight')
     r.raise_for_status()
     reply = r.json()
-    assert reply == {
-        'kind': 'group',
-        'name': 'alphaflight',
-        'users': ['sasquatch']
-    }
+    assert reply == {'kind': 'group', 'name': 'alphaflight', 'users': ['sasquatch']}
 
 
 @mark.group
@@ -1372,13 +1353,16 @@ async def test_group_create_delete(app):
     r = await api_request(app, 'groups/runaways', method='delete')
     assert r.status_code == 404
 
-    r = await api_request(app, 'groups/new', method='post',
-        data=json.dumps({'users': ['doesntexist']}),
+    r = await api_request(
+        app, 'groups/new', method='post', data=json.dumps({'users': ['doesntexist']})
     )
     assert r.status_code == 400
     assert orm.Group.find(db, name='new') is None
 
-    r = await api_request(app, 'groups/omegaflight', method='post',
+    r = await api_request(
+        app,
+        'groups/omegaflight',
+        method='post',
         data=json.dumps({'users': ['sasquatch']}),
     )
     r.raise_for_status()
@@ -1410,18 +1394,23 @@ async def test_group_add_users(app):
     assert r.status_code == 400
 
     names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
-    users = [ find_user(db, name=name) or add_user(db, app=app, name=name) for name in names ]
-    r = await api_request(app, 'groups/alphaflight/users', method='post', data=json.dumps({
-        'users': names,
-    }))
+    users = [
+        find_user(db, name=name) or add_user(db, app=app, name=name) for name in names
+    ]
+    r = await api_request(
+        app,
+        'groups/alphaflight/users',
+        method='post',
+        data=json.dumps({'users': names}),
+    )
     r.raise_for_status()
 
     for user in users:
         print(user.name)
-        assert [ g.name for g in user.groups ] == ['alphaflight']
+        assert [g.name for g in user.groups] == ['alphaflight']
 
     group = orm.Group.find(db, name='alphaflight')
-    assert sorted([ u.name for u in group.users ]) == sorted(names)
+    assert sorted([u.name for u in group.users]) == sorted(names)
 
 
 @mark.group
@@ -1432,19 +1421,22 @@ async def test_group_delete_users(app):
     assert r.status_code == 400
 
     names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
-    users = [ find_user(db, name=name) for name in names ]
-    r = await api_request(app, 'groups/alphaflight/users', method='delete', data=json.dumps({
-        'users': names[:2],
-    }))
+    users = [find_user(db, name=name) for name in names]
+    r = await api_request(
+        app,
+        'groups/alphaflight/users',
+        method='delete',
+        data=json.dumps({'users': names[:2]}),
+    )
     r.raise_for_status()
 
     for user in users[:2]:
         assert user.groups == []
     for user in users[2:]:
-        assert [ g.name for g in user.groups ] == ['alphaflight']
+        assert [g.name for g in user.groups] == ['alphaflight']
 
     group = orm.Group.find(db, name='alphaflight')
-    assert sorted([ u.name for u in group.users ]) == sorted(names[2:])
+    assert sorted([u.name for u in group.users]) == sorted(names[2:])
 
 
 # -----------------
@@ -1473,9 +1465,7 @@ async def test_get_services(app, mockservice_url):
         }
     }
 
-    r = await api_request(app, 'services',
-        headers=auth_header(db, 'user'),
-    )
+    r = await api_request(app, 'services', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
 
@@ -1498,14 +1488,14 @@ async def test_get_service(app, mockservice_url):
         'info': {},
     }
 
-    r = await api_request(app, 'services/%s' % mockservice.name,
-        headers={
-            'Authorization': 'token %s' % mockservice.api_token
-        }
+    r = await api_request(
+        app,
+        'services/%s' % mockservice.name,
+        headers={'Authorization': 'token %s' % mockservice.api_token},
     )
     r.raise_for_status()
-    r = await api_request(app, 'services/%s' % mockservice.name,
-        headers=auth_header(db, 'user'),
+    r = await api_request(
+        app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
     )
     assert r.status_code == 403
 
@@ -1519,9 +1509,7 @@ async def test_root_api(app):
         kwargs["verify"] = app.internal_ssl_ca
     r = await async_requests.get(url, **kwargs)
     r.raise_for_status()
-    expected = {
-        'version': jupyterhub.__version__
-    }
+    expected = {'version': jupyterhub.__version__}
     assert r.json() == expected
 
 
@@ -1662,15 +1650,20 @@ def test_shutdown(app):
     # which makes gen_test unhappy. So we run the loop ourselves.
 
     async def shutdown():
-        r = await api_request(app, 'shutdown', method='post',
-            data=json.dumps({'servers': True, 'proxy': True,}),
+        r = await api_request(
+            app,
+            'shutdown',
+            method='post',
+            data=json.dumps({'servers': True, 'proxy': True}),
         )
         return r
 
     real_stop = loop.stop
+
     def stop():
         stop.called = True
         loop.call_later(1, real_stop)
+
     with mock.patch.object(loop, 'stop', stop):
         r = loop.run_sync(shutdown, timeout=5)
     r.raise_for_status()

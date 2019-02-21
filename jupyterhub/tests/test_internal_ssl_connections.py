@@ -1,19 +1,17 @@
 """Tests for jupyterhub internal_ssl connections"""
-
+import sys
 import time
 from subprocess import check_output
-import sys
+from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
+from requests.exceptions import SSLError
+from tornado import gen
 
 import jupyterhub
-from tornado import gen
-from unittest import mock
-from requests.exceptions import SSLError
-
-from .utils import async_requests
 from .test_api import add_user
+from .utils import async_requests
 
 ssl_enabled = True
 
@@ -25,8 +23,10 @@ def wait_for_spawner(spawner, timeout=10):
     polling at shorter intervals for early termination
     """
     deadline = time.monotonic() + timeout
+
     def wait():
         return spawner.server.wait_up(timeout=1, http=True)
+
     while time.monotonic() < deadline:
         status = yield spawner.poll()
         assert status is None
@@ -58,9 +58,9 @@ async def test_connection_proxy_api_wrong_certs(app):
 async def test_connection_notebook_wrong_certs(app):
     """Connecting to a notebook fails without correct certs"""
     with mock.patch.dict(
-            app.config.LocalProcessSpawner,
-            {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']}
-        ):
+        app.config.LocalProcessSpawner,
+        {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']},
+    ):
         user = add_user(app.db, app, name='foo')
         await user.spawn()
         await wait_for_spawner(user.spawner)

@@ -22,4 +22,3 @@ In the external example, some extra steps are required to set up supervisor:
 3. install `shared-notebook-service` somewhere on your system, and update `/path/to/shared-notebook-service` to the absolute path of this destination
 3. copy `shared-notebook.conf` to `/etc/supervisor/conf.d/`
 4. `supervisorctl reload`
-

@@ -1,16 +1,17 @@
 -r requirements.txt
-mock
+# temporary pin of attrs for jsonschema 0.3.0a1
+# seems to be a pip bug
+attrs>=17.4.0
 beautifulsoup4
 codecov
 coverage
 cryptography
 html5lib  # needed for beautifulsoup
-pytest-cov
-pytest-asyncio
-pytest>=3.3
+mock
 notebook
+pre-commit
+pytest-asyncio
+pytest-cov
+pytest>=3.3
 requests-mock
 virtualenv
-# temporary pin of attrs for jsonschema 0.3.0a1
-# seems to be a pip bug
-attrs>=17.4.0

@@ -5,15 +5,21 @@ from unittest import mock
 import pytest
 
 from ..utils import url_path_join
-
-from .test_api import api_request, add_user, fill_user, normalize_user, TIMESTAMP
 from .mocking import public_url
+from .test_api import add_user
+from .test_api import api_request
+from .test_api import fill_user
+from .test_api import normalize_user
+from .test_api import TIMESTAMP
 from .utils import async_requests
+
 
 @pytest.fixture
 def named_servers(app):
-    with mock.patch.dict(app.tornado_settings,
-                         {'allow_named_servers': True, 'named_server_limit_per_user': 2}):
+    with mock.patch.dict(
+        app.tornado_settings,
+        {'allow_named_servers': True, 'named_server_limit_per_user': 2},
+    ):
         yield
 
 
@@ -30,24 +36,27 @@ async def test_default_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     print(user_model)
-    assert user_model == fill_user({
-        'name': username,
-        'auth_state': None,
-        'server': user.url,
-        'servers': {
-            '': {
-                'name': '',
-                'started': TIMESTAMP,
-                'last_activity': TIMESTAMP,
-                'url': user.url,
-                'pending': None,
-                'ready': True,
-                'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(username),
-                'state': {'pid': 0},
+    assert user_model == fill_user(
+        {
+            'name': username,
+            'auth_state': None,
+            'server': user.url,
+            'servers': {
+                '': {
+                    'name': '',
+                    'started': TIMESTAMP,
+                    'last_activity': TIMESTAMP,
+                    'url': user.url,
+                    'pending': None,
+                    'ready': True,
+                    'progress_url': 'PREFIX/hub/api/users/{}/server/progress'.format(
+                        username
+                    ),
+                    'state': {'pid': 0},
+                }
             },
-        },
-    })
-
+        }
+    )
 
     # now stop the server
     r = await api_request(app, 'users', username, 'server', method='delete')
@@ -58,11 +67,9 @@ async def test_default_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
-    assert user_model == fill_user({
-        'name': username,
-        'servers': {},
-        'auth_state': None,
-    })
+    assert user_model == fill_user(
+        {'name': username, 'servers': {}, 'auth_state': None}
+    )
 
 
 async def test_create_named_server(app, named_servers):
@@ -89,24 +96,27 @@ async def test_create_named_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
-    assert user_model == fill_user({
-        'name': username,
-        'auth_state': None,
-        'servers': {
-            servername: {
-                'name': name,
-                'started': TIMESTAMP,
-                'last_activity': TIMESTAMP,
-                'url': url_path_join(user.url, name, '/'),
-                'pending': None,
-                'ready': True,
-                'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
-                    username, servername),
-                'state': {'pid': 0},
-            }
-            for name in [servername]
-        },
-    })
+    assert user_model == fill_user(
+        {
+            'name': username,
+            'auth_state': None,
+            'servers': {
+                servername: {
+                    'name': name,
+                    'started': TIMESTAMP,
+                    'last_activity': TIMESTAMP,
+                    'url': url_path_join(user.url, name, '/'),
+                    'pending': None,
+                    'ready': True,
+                    'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
+                        username, servername
+                    ),
+                    'state': {'pid': 0},
+                }
+                for name in [servername]
+            },
+        }
+    )
 
 
 async def test_delete_named_server(app, named_servers):
@@ -119,7 +129,9 @@ async def test_delete_named_server(app, named_servers):
     r.raise_for_status()
     assert r.status_code == 201
 
-    r = await api_request(app, 'users', username, 'servers', servername, method='delete')
+    r = await api_request(
+        app, 'users', username, 'servers', servername, method='delete'
+    )
     r.raise_for_status()
     assert r.status_code == 204
 
@@ -127,18 +139,20 @@ async def test_delete_named_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
-    assert user_model == fill_user({
-        'name': username,
-        'auth_state': None,
-        'servers': {},
-    })
+    assert user_model == fill_user(
+        {'name': username, 'auth_state': None, 'servers': {}}
+    )
     # wrapper Spawner is gone
     assert servername not in user.spawners
     # low-level record still exists
     assert servername in user.orm_spawners
 
     r = await api_request(
-        app, 'users', username, 'servers', servername,
+        app,
+        'users',
+        username,
+        'servers',
+        servername,
         method='delete',
         data=json.dumps({'remove': True}),
     )
@@ -153,7 +167,9 @@ async def test_named_server_disabled(app):
     servername = 'okay'
     r = await api_request(app, 'users', username, 'servers', servername, method='post')
     assert r.status_code == 400
-    r = await api_request(app, 'users', username, 'servers', servername, method='delete')
+    r = await api_request(
+        app, 'users', username, 'servers', servername, method='delete'
+    )
     assert r.status_code == 400
 
 
@@ -180,7 +196,10 @@ async def test_named_server_limit(app, named_servers):
     servername3 = 'bar-3'
     r = await api_request(app, 'users', username, 'servers', servername3, method='post')
     assert r.status_code == 400
-    assert r.json() == {"status": 400, "message": "User foo already has the maximum of 2 named servers.  One must be deleted before a new server can be created"}
+    assert r.json() == {
+        "status": 400,
+        "message": "User foo already has the maximum of 2 named servers.  One must be deleted before a new server can be created",
+    }
 
     # Create default server
     r = await api_request(app, 'users', username, 'server', method='post')
@@ -189,7 +208,11 @@ async def test_named_server_limit(app, named_servers):
 
     # Delete 1st named server
     r = await api_request(
-        app, 'users', username, 'servers', servername1,
+        app,
+        'users',
+        username,
+        'servers',
+        servername1,
         method='delete',
         data=json.dumps({'remove': True}),
     )

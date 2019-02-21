@@ -1,5 +1,10 @@
+from . import auth
+from . import groups
+from . import hub
+from . import proxy
+from . import services
+from . import users
 from .base import *
-from . import auth, hub, proxy, users, groups, services
 
 default_handlers = []
 for mod in (auth, hub, proxy, users, groups, services):

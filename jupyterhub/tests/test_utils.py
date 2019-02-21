@@ -1,9 +1,11 @@
 """Tests for utilities"""
-
 import asyncio
-import pytest
 
-from async_generator import aclosing, async_generator, yield_
+import pytest
+from async_generator import aclosing
+from async_generator import async_generator
+from async_generator import yield_
+
 from ..utils import iterate_until
 
 
@@ -26,12 +28,15 @@ def schedule_future(io_loop, *, delay, result=None):
     return f
 
 
-@pytest.mark.parametrize("deadline, n, delay, expected", [
-    (0, 3, 1, []),
-    (0, 3, 0, [0, 1, 2]),
-    (5, 3, 0.01, [0, 1, 2]),
-    (0.5, 10, 0.2, [0, 1]),
-])
+@pytest.mark.parametrize(
+    "deadline, n, delay, expected",
+    [
+        (0, 3, 1, []),
+        (0, 3, 0, [0, 1, 2]),
+        (5, 3, 0.01, [0, 1, 2]),
+        (0.5, 10, 0.2, [0, 1]),
+    ],
+)
 async def test_iterate_until(io_loop, deadline, n, delay, expected):
     f = schedule_future(io_loop, delay=deadline)
 

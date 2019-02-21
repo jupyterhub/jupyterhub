@@ -1,27 +1,28 @@
 """Tests for process spawning"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import logging
 import os
 import signal
-from subprocess import Popen
 import sys
 import tempfile
 import time
+from subprocess import Popen
 from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
 from tornado import gen
 
-from ..objects import Hub, Server
 from .. import orm
 from .. import spawner as spawnermod
-from ..spawner import LocalProcessSpawner, Spawner
+from ..objects import Hub
+from ..objects import Server
+from ..spawner import LocalProcessSpawner
+from ..spawner import Spawner
 from ..user import User
-from ..utils import new_token, url_path_join
+from ..utils import new_token
+from ..utils import url_path_join
 from .mocking import public_url
 from .test_api import add_user
 from .utils import async_requests
@@ -84,8 +85,10 @@ async def wait_for_spawner(spawner, timeout=10):
     polling at shorter intervals for early termination
     """
     deadline = time.monotonic() + timeout
+
     def wait():
         return spawner.server.wait_up(timeout=1, http=True)
+
     while time.monotonic() < deadline:
         status = await spawner.poll()
         assert status is None
@@ -187,11 +190,13 @@ def test_setcwd():
     os.chdir(cwd)
     chdir = os.chdir
     temp_root = os.path.realpath(os.path.abspath(tempfile.gettempdir()))
+
     def raiser(path):
         path = os.path.realpath(os.path.abspath(path))
         if not path.startswith(temp_root):
             raise OSError(path)
         chdir(path)
+
     with mock.patch('os.chdir', raiser):
         spawnermod._try_setcwd(cwd)
         assert os.getcwd().startswith(temp_root)
@@ -209,6 +214,7 @@ def test_string_formatting(db):
 
 async def test_popen_kwargs(db):
     mock_proc = mock.Mock(spec=Popen)
+
     def mock_popen(*args, **kwargs):
         mock_proc.args = args
         mock_proc.kwargs = kwargs
@@ -226,7 +232,8 @@ async def test_popen_kwargs(db):
 async def test_shell_cmd(db, tmpdir, request):
     f = tmpdir.join('bashrc')
     f.write('export TESTVAR=foo\n')
-    s = new_spawner(db,
+    s = new_spawner(
+        db,
         cmd=[sys.executable, '-m', 'jupyterhub.tests.mocksu'],
         shell_cmd=['bash', '--rcfile', str(f), '-i', '-c'],
     )
@@ -251,8 +258,9 @@ async def test_shell_cmd(db, tmpdir, request):
 def test_inherit_overwrite():
     """On 3.6+ we check things are overwritten at import time
     """
-    if sys.version_info >= (3,6):
+    if sys.version_info >= (3, 6):
         with pytest.raises(NotImplementedError):
+
             class S(Spawner):
                 pass
 
@@ -372,19 +380,14 @@ async def test_spawner_delete_server(app):
     assert spawner.server is None
 
 
-@pytest.mark.parametrize(
-    "name",
-    [
-        "has@x",
-        "has~x",
-        "has%x",
-        "has%40x",
-    ]
-)
+@pytest.mark.parametrize("name", ["has@x", "has~x", "has%x", "has%40x"])
 async def test_spawner_routing(app, name):
     """Test routing of names with special characters"""
     db = app.db
-    with mock.patch.dict(app.config.LocalProcessSpawner, {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']}):
+    with mock.patch.dict(
+        app.config.LocalProcessSpawner,
+        {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']},
+    ):
         user = add_user(app.db, app, name=name)
         await user.spawn()
         await wait_for_spawner(user.spawner)
