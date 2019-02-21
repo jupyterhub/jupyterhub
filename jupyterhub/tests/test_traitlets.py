@@ -1,12 +1,16 @@
 import pytest
-from traitlets import HasTraits, TraitError
+from traitlets import HasTraits
+from traitlets import TraitError
 
-from jupyterhub.traitlets import URLPrefix, Command, ByteSpecification
+from jupyterhub.traitlets import ByteSpecification
+from jupyterhub.traitlets import Command
+from jupyterhub.traitlets import URLPrefix
 
 
 def test_url_prefix():
     class C(HasTraits):
         url = URLPrefix()
+
     c = C()
     c.url = '/a/b/c/'
     assert c.url == '/a/b/c/'
@@ -20,6 +24,7 @@ def test_command():
     class C(HasTraits):
         cmd = Command('default command')
         cmd2 = Command(['default_cmd'])
+
     c = C()
     assert c.cmd == ['default command']
     assert c.cmd2 == ['default_cmd']

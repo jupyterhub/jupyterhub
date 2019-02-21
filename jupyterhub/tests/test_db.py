@@ -1,14 +1,16 @@
-from glob import glob
 import os
-from subprocess import check_call
 import sys
 import tempfile
+from glob import glob
+from subprocess import check_call
 
 import pytest
 from pytest import raises
 from traitlets.config import Config
 
-from ..app import NewToken, UpgradeDB, JupyterHub
+from ..app import JupyterHub
+from ..app import NewToken
+from ..app import UpgradeDB
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -33,15 +35,8 @@ def generate_old_db(env_dir, hub_version, db_url):
     check_call([env_py, populate_db, db_url])
 
 
-@pytest.mark.parametrize(
-    'hub_version',
-    [
-        '0.7.2',
-        '0.8.1',
-    ],
-)
-@pytest.mark.gen_test
-def test_upgrade(tmpdir, hub_version):
+@pytest.mark.parametrize('hub_version', ['0.7.2', '0.8.1'])
+async def test_upgrade(tmpdir, hub_version):
     db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
     if db_url:
         db_url += '_upgrade_' + hub_version.replace('.', '')
@@ -69,7 +64,7 @@ def test_upgrade(tmpdir, hub_version):
         assert len(sqlite_files) == 1
 
     upgradeapp = UpgradeDB(config=cfg)
-    yield upgradeapp.initialize([])
+    upgradeapp.initialize([])
     upgradeapp.start()
 
     # check that backup was created:

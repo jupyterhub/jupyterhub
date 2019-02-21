@@ -1,18 +1,9 @@
 # our user list
-c.Authenticator.whitelist = [
-    'minrk',
-    'ellisonbg',
-    'willingc',
-]
+c.Authenticator.whitelist = ['minrk', 'ellisonbg', 'willingc']
 
 # ellisonbg and willingc have access to a shared server:
 
-c.JupyterHub.load_groups = {
-    'shared': [
-        'ellisonbg',
-        'willingc',
-    ]
-}
+c.JupyterHub.load_groups = {'shared': ['ellisonbg', 'willingc']}
 
 # start the notebook server as a service
 c.JupyterHub.services = [

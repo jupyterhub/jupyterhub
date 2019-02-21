@@ -1,11 +1,10 @@
 """Group handlers"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import json
 
-from tornado import gen, web
+from tornado import gen
+from tornado import web
 
 from .. import orm
 from ..utils import admin_only
@@ -34,11 +33,12 @@ class _GroupAPIHandler(APIHandler):
             raise web.HTTPError(404, "No such group: %s", name)
         return group
 
+
 class GroupListAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self):
         """List groups"""
-        data = [ self.group_model(g) for g in self.db.query(orm.Group) ]
+        data = [self.group_model(g) for g in self.db.query(orm.Group)]
         self.write(json.dumps(data))
 
     @admin_only
@@ -48,7 +48,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
         if not model or not isinstance(model, dict) or not model.get('groups'):
             raise web.HTTPError(400, "Must specify at least one group to create")
 
-        groupnames = model.pop("groups",[])
+        groupnames = model.pop("groups", [])
         self._check_group_model(model)
 
         created = []
@@ -61,9 +61,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
             # check that users exist
             users = self._usernames_to_users(usernames)
             # create the group
-            self.log.info("Creating new group %s with %i users",
-                name, len(users),
-            )
+            self.log.info("Creating new group %s with %i users", name, len(users))
             self.log.debug("Users: %s", usernames)
             group = orm.Group(name=name, users=users)
             self.db.add(group)
@@ -99,9 +97,7 @@ class GroupAPIHandler(_GroupAPIHandler):
         users = self._usernames_to_users(usernames)
 
         # create the group
-        self.log.info("Creating new group %s with %i users",
-            name, len(users),
-        )
+        self.log.info("Creating new group %s with %i users", name, len(users))
         self.log.debug("Users: %s", usernames)
         group = orm.Group(name=name, users=users)
         self.db.add(group)
@@ -121,6 +117,7 @@ class GroupAPIHandler(_GroupAPIHandler):
 
 class GroupUsersAPIHandler(_GroupAPIHandler):
     """Modify a group's user list"""
+
     @admin_only
     def post(self, name):
         """POST adds users to a group"""

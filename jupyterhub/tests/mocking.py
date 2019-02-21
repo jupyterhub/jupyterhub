@@ -26,32 +26,36 @@ Other components
 - public_url
 
 """
-
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import os
 import sys
-from tempfile import NamedTemporaryFile
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from tempfile import NamedTemporaryFile
 from unittest import mock
 from urllib.parse import urlparse
 
+from pamela import PAMError
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
+from traitlets import Bool
+from traitlets import default
+from traitlets import Dict
 
-from traitlets import Bool, default
-
+from .. import orm
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
-from .. import orm
 from ..objects import Server
-from ..spawner import LocalProcessSpawner, SimpleLocalProcessSpawner
 from ..singleuser import SingleUserNotebookApp
-from ..utils import random_port, url_path_join
-from .utils import async_requests, ssl_setup
-
-from pamela import PAMError
+from ..spawner import LocalProcessSpawner
+from ..spawner import SimpleLocalProcessSpawner
+from ..utils import random_port
+from ..utils import url_path_join
+from .utils import async_requests
+from .utils import public_host
+from .utils import public_url
+from .utils import ssl_setup
 
 
 def mock_authenticate(username, password, service, encoding):
@@ -79,6 +83,7 @@ class MockSpawner(SimpleLocalProcessSpawner):
     - disables user-switching that we need root permissions to do
     - spawns `jupyterhub.tests.mocksu` instead of a full single-user server
     """
+
     def user_env(self, env):
         env = super().user_env(env)
         if self.handler:
@@ -90,6 +95,7 @@ class MockSpawner(SimpleLocalProcessSpawner):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
     use_this_api_token = None
+
     def start(self):
         if self.use_this_api_token:
             self.api_token = self.use_this_api_token
@@ -103,6 +109,7 @@ class SlowSpawner(MockSpawner):
 
     delay = 2
     _start_future = None
+
     @gen.coroutine
     def start(self):
         (ip, port) = yield super().start()
@@ -140,6 +147,7 @@ class NeverSpawner(MockSpawner):
 
 class BadSpawner(MockSpawner):
     """Spawner that fails immediately"""
+
     def start(self):
         raise RuntimeError("I don't work!")
 
@@ -154,8 +162,9 @@ class SlowBadSpawner(MockSpawner):
 
 class FormSpawner(MockSpawner):
     """A spawner that has an options form defined"""
+
     options_form = "IMAFORM"
-    
+
     def options_from_form(self, form_data):
         options = {}
         options['notspecified'] = 5
@@ -168,6 +177,12 @@ class FormSpawner(MockSpawner):
         return options
 
 
+class FalsyCallableFormSpawner(FormSpawner):
+    """A spawner that has a callable options form defined returning a falsy value"""
+
+    options_form = lambda a, b: ""
+
+
 class MockStructGroup:
     """Mock grp.struct_group"""
 
@@ -175,6 +190,7 @@ class MockStructGroup:
         self.gr_name = name
         self.gr_mem = members
         self.gr_gid = gid
+
 
 class MockStructPasswd:
     """Mock pwd.struct_passwd"""
@@ -188,30 +204,31 @@ class MockPAMAuthenticator(PAMAuthenticator):
     auth_state = None
     # If true, return admin users marked as admin.
     return_admin = False
+
     @default('admin_users')
     def _admin_users_default(self):
         return {'admin'}
-    
+
     def system_user_exists(self, user):
         # skip the add-system-user bit
         return not user.name.startswith('dne')
-    
+
     @gen.coroutine
     def authenticate(self, *args, **kwargs):
-        with mock.patch.multiple('pamela',
-                authenticate=mock_authenticate,
-                open_session=mock_open_session,
-                close_session=mock_open_session,
-                check_account=mock_check_account,
+        with mock.patch.multiple(
+            'pamela',
+            authenticate=mock_authenticate,
+            open_session=mock_open_session,
+            close_session=mock_open_session,
+            check_account=mock_check_account,
         ):
-            username = yield super(MockPAMAuthenticator, self).authenticate(*args, **kwargs)
+            username = yield super(MockPAMAuthenticator, self).authenticate(
+                *args, **kwargs
+            )
         if username is None:
             return
         elif self.auth_state:
-            return {
-                'name': username,
-                'auth_state': self.auth_state,
-            }
+            return {'name': username, 'auth_state': self.auth_state}
         else:
             return username
 
@@ -219,11 +236,17 @@ class MockPAMAuthenticator(PAMAuthenticator):
 class MockHub(JupyterHub):
     """Hub with various mock bits"""
 
+    # disable some inherited traits with hardcoded values
     db_file = None
     last_activity_interval = 2
     log_datefmt = '%M:%S'
-    external_certs = None
-    log_level = 10
+
+    @default('log_level')
+    def _default_log_level(self):
+        return 10
+
+    # MockHub additional traits
+    external_certs = Dict()
 
     def __init__(self, *args, **kwargs):
         if 'internal_certs_location' in kwargs:
@@ -328,7 +351,7 @@ class MockHub(JupyterHub):
         pool.shutdown()
 
         # ignore the call that will fire in atexit
-        self.cleanup = lambda : None
+        self.cleanup = lambda: None
         self.db_file.close()
 
     @gen.coroutine
@@ -338,11 +361,9 @@ class MockHub(JupyterHub):
         external_ca = None
         if self.internal_ssl:
             external_ca = self.external_certs['files']['ca']
-        r = yield async_requests.post(base_url + 'hub/login',
-            data={
-                'username': name,
-                'password': name,
-            },
+        r = yield async_requests.post(
+            base_url + 'hub/login',
+            data={'username': name, 'password': name},
             allow_redirects=False,
             verify=external_ca,
         )
@@ -351,32 +372,8 @@ class MockHub(JupyterHub):
         return r.cookies
 
 
-def public_host(app):
-    """Return the public *host* (no URL prefix) of the given JupyterHub instance."""
-    if app.subdomain_host:
-        return app.subdomain_host
-    else:
-        return Server.from_url(app.proxy.public_url).host
-
-
-def public_url(app, user_or_service=None, path=''):
-    """Return the full, public base URL (including prefix) of the given JupyterHub instance."""
-    if user_or_service:
-        if app.subdomain_host:
-            host = user_or_service.host
-        else:
-            host = public_host(app)
-        prefix = user_or_service.prefix
-    else:
-        host = public_host(app)
-        prefix = Server.from_url(app.proxy.public_url).base_url
-    if path:
-        return host + url_path_join(prefix, path)
-    else:
-        return host + prefix
-
-
 # single-user-server mocking:
+
 
 class MockSingleUserServer(SingleUserNotebookApp):
     """Mock-out problematic parts of single-user server when run in a thread
@@ -392,7 +389,9 @@ class MockSingleUserServer(SingleUserNotebookApp):
 
 class StubSingleUserSpawner(MockSpawner):
     """Spawner that starts a MockSingleUserServer in a thread."""
+
     _thread = None
+
     @gen.coroutine
     def start(self):
         ip = self.ip = '127.0.0.1'
@@ -401,11 +400,12 @@ class StubSingleUserSpawner(MockSpawner):
         args = self.get_args()
         evt = threading.Event()
         print(args, env)
+
         def _run():
             asyncio.set_event_loop(asyncio.new_event_loop())
             io_loop = IOLoop()
             io_loop.make_current()
-            io_loop.add_callback(lambda : evt.set())
+            io_loop.add_callback(lambda: evt.set())
 
             with mock.patch.dict(os.environ, env):
                 app = self._app = MockSingleUserServer()
@@ -434,4 +434,3 @@ class StubSingleUserSpawner(MockSpawner):
             return None
         else:
             return 0
-

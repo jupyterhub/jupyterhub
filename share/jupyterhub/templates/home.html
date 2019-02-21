@@ -26,9 +26,11 @@
 
   <p>
   In addition to your default server,
-  you may have additional servers with names.
+  you may have additional {% if named_server_limit_per_user > 0 %}{{ named_server_limit_per_user }} {% endif %}server(s) with names.
   This allows you to have more than one server running at the same time.
   </p>
+
+  {% set named_spawners = user.all_spawners(include_default=False)|list %}
 
   <table class="server-table table table-striped">
     <thead>
@@ -42,13 +44,13 @@
     <tbody>
       <tr class="home-server-row add-server-row">
         <td colspan="4">
-          <input id="new-server-name" placeholder="Name your server">
-          <a role="button" id="new-server-btn" class="add-server btn btn-xs btn-primary">
+          <input class="new-server-name" placeholder="Name your server">
+          <a role="button" class="new-server-btn" class="add-server btn btn-xs btn-primary">
             Add New Server
           </a>
         </td>
       </tr>
-      {% for spawner in user.all_spawners(include_default=False) %}
+      {% for spawner in named_spawners %}
       <tr class="home-server-row" data-server-name="{{ spawner.name }}">
         {# name #}
         <td>{{ spawner.name }}</td>

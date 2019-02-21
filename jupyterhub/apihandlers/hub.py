@@ -1,21 +1,18 @@
 """API handlers for administering the Hub itself"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import json
 import sys
 
 from tornado import web
 from tornado.ioloop import IOLoop
 
+from .._version import __version__
 from ..utils import admin_only
 from .base import APIHandler
-from .._version import __version__
 
 
 class ShutdownAPIHandler(APIHandler):
-    
     @admin_only
     def post(self):
         """POST /api/shutdown triggers a clean shutdown
@@ -26,34 +23,36 @@ class ShutdownAPIHandler(APIHandler):
         - proxy: specify whether the proxy should be terminated
         """
         from ..app import JupyterHub
+
         app = JupyterHub.instance()
-        
+
         data = self.get_json_body()
         if data:
             if 'proxy' in data:
                 proxy = data['proxy']
                 if proxy not in {True, False}:
-                    raise web.HTTPError(400, "proxy must be true or false, got %r" % proxy)
+                    raise web.HTTPError(
+                        400, "proxy must be true or false, got %r" % proxy
+                    )
                 app.cleanup_proxy = proxy
             if 'servers' in data:
                 servers = data['servers']
                 if servers not in {True, False}:
-                    raise web.HTTPError(400, "servers must be true or false, got %r" % servers)
+                    raise web.HTTPError(
+                        400, "servers must be true or false, got %r" % servers
+                    )
                 app.cleanup_servers = servers
-        
+
         # finish the request
         self.set_status(202)
-        self.finish(json.dumps({
-            "message": "Shutting down Hub"
-        }))
-        
+        self.finish(json.dumps({"message": "Shutting down Hub"}))
+
         # stop the eventloop, which will trigger cleanup
         loop = IOLoop.current()
         loop.add_callback(loop.stop)
 
 
 class RootAPIHandler(APIHandler):
-
     def get(self):
         """GET /api/ returns info about the Hub and its API.
 
@@ -61,14 +60,11 @@ class RootAPIHandler(APIHandler):
         
         For now, it just returns the version of JupyterHub itself.
         """
-        data = {
-            'version': __version__,
-        }
+        data = {'version': __version__}
         self.finish(json.dumps(data))
 
 
 class InfoAPIHandler(APIHandler):
-
     @admin_only
     def get(self):
         """GET /api/info returns detailed info about the Hub and its API.
@@ -77,10 +73,11 @@ class InfoAPIHandler(APIHandler):
         
         For now, it just returns the version of JupyterHub itself.
         """
+
         def _class_info(typ):
             """info about a class (Spawner or Authenticator)"""
             info = {
-                'class': '{mod}.{name}'.format(mod=typ.__module__, name=typ.__name__),
+                'class': '{mod}.{name}'.format(mod=typ.__module__, name=typ.__name__)
             }
             pkg = typ.__module__.split('.')[0]
             try:

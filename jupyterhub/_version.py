@@ -1,5 +1,4 @@
 """JupyterHub version info"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
@@ -23,16 +22,23 @@ __version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:])
 def _check_version(hub_version, singleuser_version, log):
     """Compare Hub and single-user server versions"""
     if not hub_version:
-        log.warning("Hub has no version header, which means it is likely < 0.8. Expected %s", __version__)
+        log.warning(
+            "Hub has no version header, which means it is likely < 0.8. Expected %s",
+            __version__,
+        )
         return
 
     if not singleuser_version:
-        log.warning("Single-user server has no version header, which means it is likely < 0.8. Expected %s", __version__)
+        log.warning(
+            "Single-user server has no version header, which means it is likely < 0.8. Expected %s",
+            __version__,
+        )
         return
 
     # compare minor X.Y versions
     if hub_version != singleuser_version:
         from distutils.version import LooseVersion as V
+
         hub_major_minor = V(hub_version).version[:2]
         singleuser_major_minor = V(singleuser_version).version[:2]
         extra = ""
@@ -50,4 +56,6 @@ def _check_version(hub_version, singleuser_version, log):
             singleuser_version,
         )
     else:
-        log.debug("jupyterhub and jupyterhub-singleuser both on version %s" % hub_version)
+        log.debug(
+            "jupyterhub and jupyterhub-singleuser both on version %s" % hub_version
+        )

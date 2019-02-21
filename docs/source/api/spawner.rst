@@ -19,4 +19,3 @@ Module: :mod:`jupyterhub.spawner`
 ----------------------------
 
 .. autoconfigurable:: LocalProcessSpawner
-

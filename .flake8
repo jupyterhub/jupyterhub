@@ -11,12 +11,11 @@
 # I100: Import statements are in the wrong order
 # I101: Imported names are in the wrong order. Should be
 ignore = E, C, W, F401, F403, F811, F841, E402, I100, I101, D400
-
+builtins = c, get_config
 exclude =
     .cache,
     .github,
     docs,
-    examples,
     jupyterhub/alembic*,
     onbuild,
     scripts,

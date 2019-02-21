@@ -210,4 +210,3 @@ jupyterhub_config.py amendments:
   --This is the address on which the proxy will bind. Sets protocol, ip, base_url
   c.JupyterHub.bind_url = 'http://127.0.0.1:8000/jhub/'
   ```
-

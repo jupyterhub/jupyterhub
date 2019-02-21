@@ -1,25 +1,23 @@
 """Authorization handlers"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from datetime import datetime
 import json
-from urllib.parse import (
-    parse_qsl,
-    quote,
-    urlencode,
-    urlparse,
-    urlunparse,
-)
+from datetime import datetime
+from urllib.parse import parse_qsl
+from urllib.parse import quote
+from urllib.parse import urlencode
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 from oauthlib import oauth2
 from tornado import web
 
 from .. import orm
 from ..user import User
-from ..utils import token_authenticated, compare_token
-from .base import BaseHandler, APIHandler
+from ..utils import compare_token
+from ..utils import token_authenticated
+from .base import APIHandler
+from .base import BaseHandler
 
 
 class TokenAPIHandler(APIHandler):
@@ -70,7 +68,9 @@ class TokenAPIHandler(APIHandler):
             if data and data.get('username'):
                 user = self.find_user(data['username'])
                 if user is not requester and not requester.admin:
-                    raise web.HTTPError(403, "Only admins can request tokens for other users.")
+                    raise web.HTTPError(
+                        403, "Only admins can request tokens for other users."
+                    )
                 if requester.admin and user is None:
                     raise web.HTTPError(400, "No such user '%s'" % data['username'])
 
@@ -82,11 +82,11 @@ class TokenAPIHandler(APIHandler):
                 note += " by %s %s" % (kind, requester.name)
 
         api_token = user.new_api_token(note=note)
-        self.write(json.dumps({
-            'token': api_token,
-            'warning': warn_msg,
-            'user': self.user_model(user),
-        }))
+        self.write(
+            json.dumps(
+                {'token': api_token, 'warning': warn_msg, 'user': self.user_model(user)}
+            )
+        )
 
 
 class CookieAPIHandler(APIHandler):
@@ -94,7 +94,9 @@ class CookieAPIHandler(APIHandler):
     def get(self, cookie_name, cookie_value=None):
         cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
-            self.log.warning("Cookie values in request body is deprecated, use `/cookie_name/cookie_value`")
+            self.log.warning(
+                "Cookie values in request body is deprecated, use `/cookie_name/cookie_value`"
+            )
             cookie_value = self.request.body
         else:
             cookie_value = cookie_value.encode('utf8')
@@ -134,7 +136,9 @@ class OAuthHandler:
             return uri
         # make absolute local redirects full URLs
         # to satisfy oauthlib's absolute URI requirement
-        redirect_uri = self.request.protocol + "://" + self.request.headers['Host'] + redirect_uri
+        redirect_uri = (
+            self.request.protocol + "://" + self.request.headers['Host'] + redirect_uri
+        )
         parsed_url = urlparse(uri)
         query_list = parse_qsl(parsed_url.query, keep_blank_values=True)
         for idx, item in enumerate(query_list):
@@ -142,10 +146,7 @@ class OAuthHandler:
                 query_list[idx] = ('redirect_uri', redirect_uri)
                 break
 
-        return urlunparse(
-            urlparse(uri)
-            ._replace(query=urlencode(query_list))
-        )
+        return urlunparse(urlparse(uri)._replace(query=urlencode(query_list)))
 
     def add_credentials(self, credentials=None):
         """Add oauth credentials
@@ -164,11 +165,7 @@ class OAuthHandler:
         user = self.current_user
 
         # Extra credentials we need in the validator
-        credentials.update({
-            'user': user,
-            'handler': self,
-            'session_id': session_id,
-        })
+        credentials.update({'user': user, 'handler': self, 'session_id': session_id})
         return credentials
 
     def send_oauth_response(self, headers, body, status):
@@ -193,7 +190,8 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
     def _complete_login(self, uri, headers, scopes, credentials):
         try:
             headers, body, status = self.oauth_provider.create_authorization_response(
-                uri, 'POST', '', headers, scopes, credentials)
+                uri, 'POST', '', headers, scopes, credentials
+            )
 
         except oauth2.FatalClientError as e:
             # TODO: human error page
@@ -213,13 +211,15 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         uri, http_method, body, headers = self.extract_oauth_params()
         try:
             scopes, credentials = self.oauth_provider.validate_authorization_request(
-                uri, http_method, body, headers)
+                uri, http_method, body, headers
+            )
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
             if client.redirect_uri.startswith(self.current_user.url):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
-                    self.current_user, client.description,
+                    self.current_user,
+                    client.description,
                 )
                 # access to my own server doesn't require oauth confirmation
                 # this is the pre-1.0 behavior for all oauth
@@ -228,11 +228,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
             # Render oauth 'Authorize application...' page
             self.write(
-                self.render_template(
-                    "oauth.html",
-                    scopes=scopes,
-                    oauth_client=client,
-                )
+                self.render_template("oauth.html", scopes=scopes, oauth_client=client)
             )
 
         # Errors that should be shown to the user on the provider website
@@ -252,7 +248,9 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         if referer != full_url:
             # OAuth post must be made to the URL it came from
             self.log.error("OAuth POST from %s != %s", referer, full_url)
-            raise web.HTTPError(403, "Authorization form must be sent from authorization page")
+            raise web.HTTPError(
+                403, "Authorization form must be sent from authorization page"
+            )
 
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
@@ -262,7 +260,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
         try:
             headers, body, status = self.oauth_provider.create_authorization_response(
-                uri, http_method, body, headers, scopes, credentials,
+                uri, http_method, body, headers, scopes, credentials
             )
         except oauth2.FatalClientError as e:
             raise web.HTTPError(e.status_code, e.description)
@@ -277,7 +275,8 @@ class OAuthTokenHandler(OAuthHandler, APIHandler):
 
         try:
             headers, body, status = self.oauth_provider.create_token_response(
-                    uri, http_method, body, headers, credentials)
+                uri, http_method, body, headers, credentials
+            )
         except oauth2.FatalClientError as e:
             raise web.HTTPError(e.status_code, e.description)
         else:

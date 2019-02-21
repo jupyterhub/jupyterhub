@@ -13,4 +13,3 @@ Module: :mod:`jupyterhub.app`
 -------------------
 
 .. autoconfigurable:: JupyterHub
-

@@ -19,19 +19,17 @@ This does:
 
 """
 # derived from PyZMQ release/tasks.py (used under BSD)
-
 # Copyright (c) Jupyter Developers
 # Distributed under the terms of the Modified BSD License.
-
 import glob
 import os
 import pipes
 import shutil
-
 from contextlib import contextmanager
 from distutils.version import LooseVersion as V
 
-from invoke import task, run as invoke_run
+from invoke import run as invoke_run
+from invoke import task
 
 pjoin = os.path.join
 here = os.path.dirname(__file__)
@@ -98,7 +96,7 @@ def patch_version(vs, path=pjoin(here, '..')):
                 break
         for line in f:
             post_lines.append(line)
-    
+
     # write new version.py
     with open(version_py, 'w') as f:
         for line in pre_lines:
@@ -107,7 +105,7 @@ def patch_version(vs, path=pjoin(here, '..')):
             f.write('    %r,\n' % part)
         for line in post_lines:
             f.write(line)
-    
+
     # verify result
     ns = {}
     with open(version_py) as f:
@@ -149,15 +147,16 @@ def make_env(*packages):
     """
     if not os.path.exists(env_root):
         os.makedirs(env_root)
-    
+
     env = os.path.join(env_root, os.path.basename(py_exe))
     py = pjoin(env, 'bin', 'python')
     # new env
     if not os.path.exists(py):
-        run('python -m virtualenv {} -p {}'.format(
-            pipes.quote(env),
-            pipes.quote(py_exe),
-        ))
+        run(
+            'python -m virtualenv {} -p {}'.format(
+                pipes.quote(env), pipes.quote(py_exe)
+            )
+        )
         py = pjoin(env, 'bin', 'python')
         run([py, '-V'])
         install(py, 'pip', 'setuptools')
@@ -174,7 +173,7 @@ def build_sdist(py):
     with cd(repo_root):
         cmd = [py, 'setup.py', 'sdist', '--formats=gztar']
         run(cmd)
-    
+
     return glob.glob(pjoin(repo_root, 'dist', '*.tar.gz'))[0]
 
 
@@ -188,7 +187,7 @@ def sdist(vs, upload=False):
         with cd(repo_root):
             install(py, 'twine')
             run([py, '-m', 'twine', 'upload', 'dist/*'])
-    
+
     untag(vs, push=upload)
     return untar(tarball)
 
@@ -214,7 +213,7 @@ def untar(tarball):
     os.makedirs(sdist_root)
     with cd(sdist_root):
         run(['tar', '-xzf', tarball])
-    
+
     return glob.glob(pjoin(sdist_root, '*'))[0]
 
 
@@ -231,7 +230,7 @@ def release(vs, upload=False):
     clone_repo(reset=True)
     if os.path.exists(env_root):
         shutil.rmtree(env_root)
-    
+
     path = sdist(vs, upload=upload)
     print("Working in %r" % path)
     with cd(path):
@@ -239,4 +238,3 @@ def release(vs, upload=False):
         if upload:
             py = make_env('twine')
             run([py, '-m', 'twine', 'upload', 'dist/*'])
-

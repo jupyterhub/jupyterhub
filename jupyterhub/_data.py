@@ -5,6 +5,7 @@ def get_data_files():
     """Walk up until we find share/jupyterhub"""
     import sys
     from os.path import join, abspath, dirname, exists, split
+
     path = abspath(dirname(__file__))
     starting_points = [path]
     if not path.startswith(sys.prefix):

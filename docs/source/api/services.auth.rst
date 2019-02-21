@@ -38,4 +38,3 @@ Module: :mod:`jupyterhub.services.auth`
 --------------------------------
 
 .. autoclass:: HubOAuthCallbackHandler
-

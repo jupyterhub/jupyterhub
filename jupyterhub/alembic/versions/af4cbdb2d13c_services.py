@@ -5,7 +5,6 @@ Revises: eeb276e51423
 Create Date: 2016-07-28 16:16:38.245348
 
 """
-
 # revision identifiers, used by Alembic.
 revision = 'af4cbdb2d13c'
 down_revision = 'eeb276e51423'

@@ -1,27 +1,26 @@
 """Tests for the ORM bits"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from datetime import datetime, timedelta
 import os
 import socket
+from datetime import datetime
+from datetime import timedelta
 from unittest import mock
 
 import pytest
 from tornado import gen
 
-from .. import orm
-from .. import objects
 from .. import crypto
+from .. import objects
+from .. import orm
+from ..emptyclass import EmptyClass
 from ..user import User
 from .mocking import MockSpawner
-from ..emptyclass import EmptyClass
 
 
 def assert_not_found(db, ORMType, id):
     """Assert that an item with a given id is not found"""
-    assert db.query(ORMType).filter(ORMType.id==id).first() is None
+    assert db.query(ORMType).filter(ORMType.id == id).first() is None
 
 
 def test_server(db):
@@ -124,7 +123,9 @@ def test_token_expiry(db):
     # approximate range
     assert orm_token.expires_at > now + timedelta(seconds=50)
     assert orm_token.expires_at < now + timedelta(seconds=70)
-    the_future = mock.patch('jupyterhub.orm.utcnow', lambda : now + timedelta(seconds=70))
+    the_future = mock.patch(
+        'jupyterhub.orm.utcnow', lambda: now + timedelta(seconds=70)
+    )
     with the_future:
         found = orm.APIToken.find(db, token=token)
     assert found is None
@@ -205,8 +206,7 @@ def test_token_find(db):
     assert found is None
 
 
-@pytest.mark.gen_test
-def test_spawn_fails(db):
+async def test_spawn_fails(db):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
@@ -216,14 +216,12 @@ def test_spawn_fails(db):
         def start(self):
             raise RuntimeError("Split the party")
 
-    user = User(orm_user, {
-        'spawner_class': BadSpawner,
-        'config': None,
-        'statsd': EmptyClass(),
-    })
+    user = User(
+        orm_user, {'spawner_class': BadSpawner, 'config': None, 'statsd': EmptyClass()}
+    )
 
     with pytest.raises(RuntimeError) as exc:
-        yield user.spawn()
+        await user.spawn()
     assert user.spawners[''].server is None
     assert not user.running
 
@@ -246,8 +244,7 @@ def test_groups(db):
     assert group.users == []
 
 
-@pytest.mark.gen_test
-def test_auth_state(db):
+async def test_auth_state(db):
     orm_user = orm.User(name='eve')
     db.add(orm_user)
     db.commit()
@@ -262,51 +259,51 @@ def test_auth_state(db):
     state = {'key': 'value'}
     ck.keys = []
     with pytest.raises(crypto.EncryptionUnavailable):
-        yield user.save_auth_state(state)
+        await user.save_auth_state(state)
 
     assert user.encrypted_auth_state is None
     # saving/loading None doesn't require keys
-    yield user.save_auth_state(None)
-    current = yield user.get_auth_state()
+    await user.save_auth_state(None)
+    current = await user.get_auth_state()
     assert current is None
 
     first_key = os.urandom(32)
     second_key = os.urandom(32)
     ck.keys = [first_key]
-    yield user.save_auth_state(state)
+    await user.save_auth_state(state)
     assert user.encrypted_auth_state is not None
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state == state
 
     # can't read auth_state without keys
     ck.keys = []
-    auth_state = yield user.get_auth_state()
+    auth_state = await user.get_auth_state()
     assert auth_state is None
 
     # key rotation works
     db.rollback()
     ck.keys = [second_key, first_key]
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state == state
 
     new_state = {'key': 'newvalue'}
-    yield user.save_auth_state(new_state)
+    await user.save_auth_state(new_state)
     db.commit()
 
     ck.keys = [first_key]
     db.rollback()
     # can't read anymore with new-key after encrypting with second-key
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state is None
 
-    yield user.save_auth_state(new_state)
-    decrypted_state = yield user.get_auth_state()
+    await user.save_auth_state(new_state)
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state == new_state
 
     ck.keys = []
     db.rollback()
 
-    decrypted_state = yield user.get_auth_state()
+    decrypted_state = await user.get_auth_state()
     assert decrypted_state is None
 
 
@@ -348,9 +345,7 @@ def test_user_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.OAuthAccessToken(
-        client=oauth_client,
-        user=user,
-        grant_type=orm.GrantType.authorization_code,
+        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
     )
     db.add(oauth_token)
     db.commit()
@@ -386,9 +381,7 @@ def test_oauth_client_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.OAuthAccessToken(
-        client=oauth_client,
-        user=user,
-        grant_type=orm.GrantType.authorization_code,
+        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
     )
     db.add(oauth_token)
     db.commit()
@@ -479,6 +472,3 @@ def test_group_delete_cascade(db):
     db.delete(user1)
     db.commit()
     assert user1 not in group1.users
-
-
-

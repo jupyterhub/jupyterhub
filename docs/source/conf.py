@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 #
-import sys
 import os
 import shlex
-
-# For conversion from markdown to html
-import recommonmark.parser
+import sys
 
 # Set paths
 sys.path.insert(0, os.path.abspath('.'))
@@ -21,7 +18,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'autodoc_traits',
-    'sphinx_copybutton'
+    'sphinx_copybutton',
 ]
 
 templates_path = ['_templates']
@@ -68,6 +65,7 @@ source_suffix = ['.rst', '.md']
 
 # The theme to use for HTML and HTML Help pages.
 import alabaster_jupyterhub
+
 html_theme = 'alabaster_jupyterhub'
 html_theme_path = [alabaster_jupyterhub.get_html_theme_path()]
 

@@ -34,31 +34,50 @@ before_install:
     fi
 install:
   - pip install --upgrade pip
-  - pip install --pre -r dev-requirements.txt .
+  - pip install --upgrade --pre -r dev-requirements.txt .
   - pip freeze
 
 # running tests
 script:
   - |
     # run tests
-    if [[ "$TEST" != "docs" ]]; then
+    if [[ -z "$TEST" ]]; then
       pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    fi
+  - |
+    # run autoformat
+    if [[ "$TEST" == "lint" ]]; then
+      pre-commit run --all-files
     fi
   - |
     # build docs
     if [[ "$TEST" == "docs" ]]; then
       pushd docs
-      pip install -r requirements.txt
-      pip install alabaster_jupyterhub
+      pip install --upgrade -r requirements.txt
+      pip install --upgrade alabaster_jupyterhub
       make html
       popd
     fi
 after_success:
   - codecov
+after_failure:
+  - |
+    # point to auto-lint-fix
+    if [[ "$TEST" == "lint" ]]; then
+      echo "You can install pre-commit hooks to automatically run formatting"
+      echo "on each commit with:"
+      echo "    pre-commit install"
+      echo "or you can run by hand on staged files with"
+      echo "    pre-commit run"
+      echo "or after-the-fact on already committed files with"
+      echo "    pre-commit run --all-files"
+    fi
 
 matrix:
   fast_finish: true
   include:
+    - python: 3.6
+      env: TEST=lint
     - python: 3.6
       env: TEST=docs
     - python: 3.6

@@ -5,7 +5,6 @@ Revises: d68c98b66cd4
 Create Date: 2018-05-07 11:35:58.050542
 
 """
-
 # revision identifiers, used by Alembic.
 revision = '896818069c98'
 down_revision = 'd68c98b66cd4'

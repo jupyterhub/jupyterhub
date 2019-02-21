@@ -1,19 +1,24 @@
 #!/usr/bin/env python
 """Extend regular notebook server to be aware of multiuser things."""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
+import asyncio
+import json
 import os
+import random
+from datetime import datetime
+from datetime import timezone
 from textwrap import dedent
 from urllib.parse import urlparse
 
-from jinja2 import ChoiceLoader, FunctionLoader
-
-from tornado.httpclient import AsyncHTTPClient
+from jinja2 import ChoiceLoader
+from jinja2 import FunctionLoader
 from tornado import gen
 from tornado import ioloop
-from tornado.web import HTTPError, RequestHandler
+from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPRequest
+from tornado.web import HTTPError
+from tornado.web import RequestHandler
 
 try:
     import notebook
@@ -21,8 +26,10 @@ except ImportError:
     raise ImportError("JupyterHub single-user server requires notebook >= 4.0")
 
 from traitlets import (
+    Any,
     Bool,
     Bytes,
+    Integer,
     Unicode,
     CUnicode,
     default,
@@ -43,7 +50,7 @@ from notebook.base.handlers import IPythonHandler
 from ._version import __version__, _check_version
 from .log import log_request
 from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
-from .utils import url_path_join, make_ssl_context
+from .utils import isoformat, url_path_join, make_ssl_context, exponential_backoff
 
 
 # Authenticate requests with the Hub
@@ -54,7 +61,9 @@ class HubAuthenticatedHandler(HubOAuthenticated):
 
     @property
     def allow_admin(self):
-        return self.settings.get('admin_access', os.getenv('JUPYTERHUB_ADMIN_ACCESS') or False)
+        return self.settings.get(
+            'admin_access', os.getenv('JUPYTERHUB_ADMIN_ACCESS') or False
+        )
 
     @property
     def hub_auth(self):
@@ -62,17 +71,18 @@ class HubAuthenticatedHandler(HubOAuthenticated):
 
     @property
     def hub_users(self):
-        return { self.settings['user'] }
+        return {self.settings['user']}
 
     @property
     def hub_groups(self):
         if self.settings['group']:
-            return { self.settings['group'] }
+            return {self.settings['group']}
         return set()
 
 
 class JupyterHubLoginHandler(LoginHandler):
     """LoginHandler that hooks up Hub authentication"""
+
     @staticmethod
     def login_available(settings):
         return True
@@ -107,12 +117,14 @@ class JupyterHubLogoutHandler(LogoutHandler):
     def get(self):
         self.settings['hub_auth'].clear_cookie(self)
         self.redirect(
-            self.settings['hub_host'] +
-            url_path_join(self.settings['hub_prefix'], 'logout'))
+            self.settings['hub_host']
+            + url_path_join(self.settings['hub_prefix'], 'logout')
+        )
 
 
 class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
     """Mixin IPythonHandler to get the right error pages, etc."""
+
     @property
     def hub_auth(self):
         return self.settings['hub_auth']
@@ -120,23 +132,26 @@ class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
 
 # register new hub related command-line aliases
 aliases = dict(notebook_aliases)
-aliases.update({
-    'user': 'SingleUserNotebookApp.user',
-    'group': 'SingleUserNotebookApp.group',
-    'cookie-name': 'HubAuth.cookie_name',
-    'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
-    'hub-host': 'SingleUserNotebookApp.hub_host',
-    'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
-    'base-url': 'SingleUserNotebookApp.base_url',
-})
+aliases.update(
+    {
+        'user': 'SingleUserNotebookApp.user',
+        'group': 'SingleUserNotebookApp.group',
+        'cookie-name': 'HubAuth.cookie_name',
+        'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
+        'hub-host': 'SingleUserNotebookApp.hub_host',
+        'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
+        'base-url': 'SingleUserNotebookApp.base_url',
+    }
+)
 flags = dict(notebook_flags)
-flags.update({
-    'disable-user-config': ({
-        'SingleUserNotebookApp': {
-            'disable_user_config': True
-        }
-    }, "Disable user-controlled configuration of the notebook server.")
-})
+flags.update(
+    {
+        'disable-user-config': (
+            {'SingleUserNotebookApp': {'disable_user_config': True}},
+            "Disable user-controlled configuration of the notebook server.",
+        )
+    }
+)
 
 page_template = """
 {% extends "templates/page.html" %}
@@ -203,11 +218,14 @@ def _exclude_home(path_list):
 
 class SingleUserNotebookApp(NotebookApp):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
-    description = dedent("""
+
+    description = dedent(
+        """
     Single-user server for JupyterHub. Extends the Jupyter Notebook server.
 
     Meant to be invoked by JupyterHub Spawners, and not directly.
-    """)
+    """
+    )
 
     examples = ""
     subcommands = {}
@@ -223,6 +241,7 @@ class SingleUserNotebookApp(NotebookApp):
     # ensures that each spawn clears any cookies from previous session,
     # triggering OAuth again
     cookie_secret = Bytes()
+
     def _cookie_secret_default(self):
         return os.urandom(32)
 
@@ -273,7 +292,7 @@ class SingleUserNotebookApp(NotebookApp):
     def _base_url_default(self):
         return os.environ.get('JUPYTERHUB_SERVICE_PREFIX') or '/'
 
-    #Note: this may be removed if notebook module is >= 5.0.0b1
+    # Note: this may be removed if notebook module is >= 5.0.0b1
     @validate('base_url')
     def _validate_base_url(self, proposal):
         """ensure base_url starts and ends with /"""
@@ -314,14 +333,17 @@ class SingleUserNotebookApp(NotebookApp):
     trust_xheaders = True
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
-    port_retries = 0  # disable port-retries, since the Spawner will tell us what port to use
+    port_retries = (
+        0
+    )  # disable port-retries, since the Spawner will tell us what port to use
 
-    disable_user_config = Bool(False,
+    disable_user_config = Bool(
+        False,
         help="""Disable user configuration of single-user server.
 
         Prevents user-writable files that normally configure the single-user server
         from being loaded, ensuring admins have full control of configuration.
-        """
+        """,
     ).tag(config=True)
 
     @validate('notebook_dir')
@@ -385,28 +407,37 @@ class SingleUserNotebookApp(NotebookApp):
             path = list(_exclude_home(path))
         return path
 
+    # create dynamic default http client,
+    # configured with any relevant ssl config
+    hub_http_client = Any()
+
+    @default('hub_http_client')
+    def _default_client(self):
+        ssl_context = make_ssl_context(
+            self.keyfile, self.certfile, cafile=self.client_ca
+        )
+        AsyncHTTPClient.configure(None, defaults={"ssl_options": ssl_context})
+        return AsyncHTTPClient()
+
     async def check_hub_version(self):
         """Test a connection to my Hub
 
         - exit if I can't connect at all
         - check version and warn on sufficient mismatch
         """
-        ssl_context = make_ssl_context(
-            self.keyfile,
-            self.certfile,
-            cafile=self.client_ca,
-        )
-        AsyncHTTPClient.configure(None, defaults={"ssl_options" : ssl_context})
-
-        client = AsyncHTTPClient()
+        client = self.hub_http_client
         RETRIES = 5
-        for i in range(1, RETRIES+1):
+        for i in range(1, RETRIES + 1):
             try:
                 resp = await client.fetch(self.hub_api_url)
             except Exception:
-                self.log.exception("Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
-                self.hub_api_url, i, RETRIES)
-                await gen.sleep(min(2**i, 16))
+                self.log.exception(
+                    "Failed to connect to my Hub at %s (attempt %i/%i). Is it running?",
+                    self.hub_api_url,
+                    i,
+                    RETRIES,
+                )
+                await gen.sleep(min(2 ** i, 16))
             else:
                 break
         else:
@@ -414,6 +445,111 @@ class SingleUserNotebookApp(NotebookApp):
 
         hub_version = resp.headers.get('X-JupyterHub-Version')
         _check_version(hub_version, __version__, self.log)
+
+    server_name = Unicode()
+
+    @default('server_name')
+    def _server_name_default(self):
+        return os.environ.get('JUPYTERHUB_SERVER_NAME', '')
+
+    hub_activity_url = Unicode(
+        config=True, help="URL for sending JupyterHub activity updates"
+    )
+
+    @default('hub_activity_url')
+    def _default_activity_url(self):
+        return os.environ.get('JUPYTERHUB_ACTIVITY_URL', '')
+
+    hub_activity_interval = Integer(
+        300,
+        config=True,
+        help="""
+        Interval (in seconds) on which to update the Hub
+        with our latest activity.
+        """,
+    )
+
+    @default('hub_activity_interval')
+    def _default_activity_interval(self):
+        env_value = os.environ.get('JUPYTERHUB_ACTIVITY_INTERVAL')
+        if env_value:
+            return int(env_value)
+        else:
+            return 300
+
+    _last_activity_sent = Any(allow_none=True)
+
+    async def notify_activity(self):
+        """Notify jupyterhub of activity"""
+        client = self.hub_http_client
+        last_activity = self.web_app.last_activity()
+        if not last_activity:
+            self.log.debug("No activity to send to the Hub")
+            return
+        if last_activity:
+            # protect against mixed timezone comparisons
+            if not last_activity.tzinfo:
+                # assume naive timestamps are utc
+                self.log.warning("last activity is using naïve timestamps")
+                last_activity = last_activity.replace(tzinfo=timezone.utc)
+
+        if self._last_activity_sent and last_activity < self._last_activity_sent:
+            self.log.debug("No activity since %s", self._last_activity_sent)
+            return
+
+        last_activity_timestamp = isoformat(last_activity)
+
+        async def notify():
+            self.log.debug("Notifying Hub of activity %s", last_activity_timestamp)
+            req = HTTPRequest(
+                url=self.hub_activity_url,
+                method='POST',
+                headers={
+                    "Authorization": "token {}".format(self.hub_auth.api_token),
+                    "Content-Type": "application/json",
+                },
+                body=json.dumps(
+                    {
+                        'servers': {
+                            self.server_name: {'last_activity': last_activity_timestamp}
+                        },
+                        'last_activity': last_activity_timestamp,
+                    }
+                ),
+            )
+            try:
+                await client.fetch(req)
+            except Exception:
+                self.log.exception("Error notifying Hub of activity")
+                return False
+            else:
+                return True
+
+        await exponential_backoff(
+            notify,
+            fail_message="Failed to notify Hub of activity",
+            start_wait=1,
+            max_wait=15,
+            timeout=60,
+        )
+        self._last_activity_sent = last_activity
+
+    async def keep_activity_updated(self):
+        if not self.hub_activity_url or not self.hub_activity_interval:
+            self.log.warning("Activity events disabled")
+            return
+        self.log.info(
+            "Updating Hub with activity every %s seconds", self.hub_activity_interval
+        )
+        while True:
+            try:
+                await self.notify_activity()
+            except Exception as e:
+                self.log.exception("Error notifying Hub of activity")
+            # add 20% jitter to the interval to avoid alignment
+            # of lots of requests from user servers
+            t = self.hub_activity_interval * (1 + 0.2 * (random.random() - 0.5))
+            await asyncio.sleep(t)
 
     def initialize(self, argv=None):
         # disable trash by default
@@ -425,6 +561,7 @@ class SingleUserNotebookApp(NotebookApp):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
         # start by hitting Hub to check version
         ioloop.IOLoop.current().run_sync(self.check_hub_version)
+        ioloop.IOLoop.current().add_callback(self.keep_activity_updated)
         super(SingleUserNotebookApp, self).start()
 
     def init_hub_auth(self):
@@ -436,7 +573,9 @@ class SingleUserNotebookApp(NotebookApp):
             api_token = os.environ['JUPYTERHUB_API_TOKEN']
 
         if not api_token:
-            self.exit("JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?")
+            self.exit(
+                "JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?"
+            )
         self.hub_auth = HubOAuth(
             parent=self,
             api_token=api_token,
@@ -461,30 +600,33 @@ class SingleUserNotebookApp(NotebookApp):
         s['hub_prefix'] = self.hub_prefix
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
-        csp_report_uri = s['csp_report_uri'] = self.hub_host + url_path_join(self.hub_prefix, 'security/csp-report')
+        csp_report_uri = s['csp_report_uri'] = self.hub_host + url_path_join(
+            self.hub_prefix, 'security/csp-report'
+        )
         headers = s.setdefault('headers', {})
         headers['X-JupyterHub-Version'] = __version__
         # set CSP header directly to workaround bugs in jupyter/notebook 5.0
-        headers.setdefault('Content-Security-Policy', ';'.join([
-            "frame-ancestors 'self'",
-            "report-uri " + csp_report_uri,
-        ]))
+        headers.setdefault(
+            'Content-Security-Policy',
+            ';'.join(["frame-ancestors 'self'", "report-uri " + csp_report_uri]),
+        )
         super(SingleUserNotebookApp, self).init_webapp()
 
         # add OAuth callback
-        self.web_app.add_handlers(r".*$", [(
-            urlparse(self.hub_auth.oauth_redirect_uri).path,
-            OAuthCallbackHandler
-        )])
-        
+        self.web_app.add_handlers(
+            r".*$",
+            [(urlparse(self.hub_auth.oauth_redirect_uri).path, OAuthCallbackHandler)],
+        )
+
         # apply X-JupyterHub-Version to *all* request handlers (even redirects)
         self.patch_default_headers()
         self.patch_templates()
-    
+
     def patch_default_headers(self):
         if hasattr(RequestHandler, '_orig_set_default_headers'):
             return
         RequestHandler._orig_set_default_headers = RequestHandler.set_default_headers
+
         def set_jupyterhub_header(self):
             self._orig_set_default_headers()
             self.set_header('X-JupyterHub-Version', __version__)
@@ -494,13 +636,16 @@ class SingleUserNotebookApp(NotebookApp):
     def patch_templates(self):
         """Patch page templates to add Hub-related buttons"""
 
-        self.jinja_template_vars['logo_url'] = self.hub_host + url_path_join(self.hub_prefix, 'logo')
+        self.jinja_template_vars['logo_url'] = self.hub_host + url_path_join(
+            self.hub_prefix, 'logo'
+        )
         self.jinja_template_vars['hub_host'] = self.hub_host
         self.jinja_template_vars['hub_prefix'] = self.hub_prefix
         env = self.web_app.settings['jinja2_env']
 
-        env.globals['hub_control_panel_url'] = \
-            self.hub_host + url_path_join(self.hub_prefix, 'home')
+        env.globals['hub_control_panel_url'] = self.hub_host + url_path_join(
+            self.hub_prefix, 'home'
+        )
 
         # patch jinja env loading to modify page template
         def get_page(name):
@@ -508,10 +653,7 @@ class SingleUserNotebookApp(NotebookApp):
                 return page_template
 
         orig_loader = env.loader
-        env.loader = ChoiceLoader([
-            FunctionLoader(get_page),
-            orig_loader,
-        ])
+        env.loader = ChoiceLoader([FunctionLoader(get_page), orig_loader])
 
 
 def main(argv=None):
