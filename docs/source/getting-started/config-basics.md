@@ -85,3 +85,16 @@ meant as illustration, are:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
 - Spawning single-user servers with Docker, using the [DockerSpawner](https://github.com/jupyterhub/dockerspawner)
+
+## Run the proxy separately
+
+This is *not* strictly necessary, but useful in many cases.  If you
+use a custom proxy (e.g. Traefik), this also not needed.
+
+Connections to user servers go through the proxy, and *not* the hub
+itself.  If the proxy stays running when the hub restarts (for
+maintnance, re-configuration, etc), then use connections are not
+interrupted.  For simplicity, by default the hub starts the proxy
+automatically, so if the hub restarts, the proxy restarts, and user
+connections are interrupted.  It is easy to run the proxy separately,
+for information see [the separate proxy page](../reference/separate-proxy.html).
