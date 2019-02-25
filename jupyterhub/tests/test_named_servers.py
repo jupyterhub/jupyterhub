@@ -1,10 +1,13 @@
 """Tests for named servers"""
 import json
 from unittest import mock
+from urllib.parse import urlparse
 
 import pytest
+from tornado.httputil import url_concat
 
 from ..utils import url_path_join
+from .mocking import FormSpawner
 from .mocking import public_url
 from .test_api import add_user
 from .test_api import api_request
@@ -12,6 +15,7 @@ from .test_api import fill_user
 from .test_api import normalize_user
 from .test_api import TIMESTAMP
 from .utils import async_requests
+from .utils import get_page
 
 
 @pytest.fixture
@@ -224,3 +228,38 @@ async def test_named_server_limit(app, named_servers):
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
+
+
+async def test_named_server_spawn_form(app, username):
+    server_name = "myserver"
+    base_url = public_url(app)
+    cookies = await app.login_user(username)
+    user = app.users[username]
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        r = await get_page(
+            'spawn/%s/%s' % (username, server_name), app, cookies=cookies
+        )
+        r.raise_for_status()
+        assert r.url.endswith('/spawn/%s/%s' % (username, server_name))
+        assert FormSpawner.options_form in r.text
+
+        # submit the form
+        next_url = url_path_join(
+            app.base_url, 'hub/spawn-pending', username, server_name
+        )
+        r = await async_requests.post(
+            url_concat(
+                url_path_join(base_url, 'hub/spawn', username, server_name),
+                {'next': next_url},
+            ),
+            cookies=cookies,
+            data={'bounds': ['-10', '10'], 'energy': '938MeV'},
+        )
+        r.raise_for_status()
+        assert r.history
+        history = [_.url for _ in r.history] + [r.url]
+        path_history = [urlparse(url).path for url in history]
+        assert next_url in path_history
+    assert server_name in user.spawners
+    spawner = user.spawners[server_name]
+    spawner.user_options == {'energy': '938MeV', 'bounds': [-10, 10], 'notspecified': 5}
