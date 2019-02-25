@@ -1220,7 +1220,7 @@ class UserUrlHandler(BaseHandler):
             self.log.warning(
                 "User %s requested server for %s, which they don't own",
                 current_user.name,
-                user.name,
+                user_name,
             )
             target = url_path_join(current_user.url, user_path or '')
             if self.request.query:
@@ -1270,13 +1270,10 @@ class UserUrlHandler(BaseHandler):
 
         # if request is expecting JSON, assume it's an API request and fail with 503
         # because it won't like the redirect to the pending page
-        if (
-            get_accepted_mimetype(
-                self.request.headers.get('Accept', ''),
-                choices=['application/json', 'text/html'],
-            )
-            == 'application/json'
-        ):
+        if get_accepted_mimetype(
+            self.request.headers.get('Accept', ''),
+            choices=['application/json', 'text/html'],
+        ) == 'application/json' or 'api' in user_path.split('/'):
             self._fail_api_request()
             return
 
@@ -1376,9 +1373,14 @@ class UserRedirectHandler(BaseHandler):
     @web.authenticated
     def get(self, path):
         user = self.current_user
-        url = url_path_join(user.url, path)
+        user_url = url_path_join(user.url, path)
         if self.request.query:
-            url = url_concat(url, parse_qsl(self.request.query))
+            user_url = url_concat(user_url, parse_qsl(self.request.query))
+
+        url = url_concat(
+            url_path_join(self.hub.base_url, "spawn", user.name), {"next": user_url}
+        )
+
         self.redirect(url)
 
 

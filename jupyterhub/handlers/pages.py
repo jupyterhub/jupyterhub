@@ -118,8 +118,8 @@ class SpawnHandler(BaseHandler):
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
         if not self.allow_named_servers and user.running:
-            url = user.server_url(server_name)
-            self.log.debug("User is running: %s", url)
+            url = self.get_next_url(user, default=user.server_url(server_name))
+            self.log.info("User is running: %s", user.name)
             self.redirect(url)
             return
 
@@ -127,10 +127,10 @@ class SpawnHandler(BaseHandler):
             server_name = ''
 
         spawner = user.spawners[server_name]
-        # resolve `?next=...`, falling back on the /hub/user/server url
-        # instead of /hub/home
+        # resolve `?next=...`, falling back on the spawn-pending url
         # must not be /user/server for named servers,
         # which may get handled by the default server if they aren't ready yet
+
         next_url = self.get_next_url(
             user,
             default=url_path_join(
@@ -139,19 +139,28 @@ class SpawnHandler(BaseHandler):
         )
 
         # spawner is active, redirect back to get progress, etc.
-        if spawner.active:
+        if spawner.ready:
+            self.log.info("Server %s is already running", spawner._log_name)
+            next_url = self.get_next_url(user, default=user.server_url(server_name))
+
+        elif spawner.active:
+            self.log.info("Server %s is already active", spawner._log_name)
             self.redirect(next_url)
             return
 
+        # Add handler to spawner here so you can access query params in form rendering.
+        spawner.handler = self
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
-            # Add handler to spawner here so you can access query params in form rendering.
-            spawner.handler = self
+            self.log.debug("Serving options form for %s", spawner._log_name)
             form = self._render_form(
                 for_user=user, spawner_options_form=spawner_options_form
             )
             self.finish(form)
         else:
+            self.log.debug(
+                "Triggering spawn with default options for %s", spawner._log_name
+            )
             # Explicit spawn request: clear _spawn_future
             # which may have been saved to prevent implicit spawns
             # after a failure.
@@ -210,11 +219,6 @@ class SpawnHandler(BaseHandler):
                 self.hub.base_url, "spawn-pending", user.name, server_name
             ),
         )
-
-        # request spawn and redirect immediately
-        # this will send folks to the
-        f = asyncio.ensure_future(self.spawn_single_user(user, server_name))
-        await asyncio.wait([f], timeout=1)
         self.redirect(next_url)
 
 

@@ -44,9 +44,10 @@ async def test_root_redirect(app):
     next_url = ujoin(app.base_url, 'user/other/test.ipynb')
     url = '/?' + urlencode({'next': next_url})
     r = await get_page(url, app, cookies=cookies)
-    r.raise_for_status()
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, 'user/%s/test.ipynb' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/test.ipynb' % name)
+    # serve "server not running" page, which has status 503
+    assert r.status_code == 503
 
 
 async def test_root_default_url_noauth(app):
@@ -122,11 +123,19 @@ async def test_spawn_redirect(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, 'user/%s/' % name)
+    # make sure we visited hub/spawn-pending after spawn
+    # if spawn was really quick, we might get redirected all the way to the running server,
+    # so check history instead of r.url
+    history = [urlparse(_.url).path for _ in r.history]
+    history.append(path)
+    assert ujoin(app.base_url, 'hub/spawn-pending', name) in history
 
     # should have started server
     status = await u.spawner.poll()
     assert status is None
+    # wait for ready signal before checking next redirect
+    while not u.spawner.ready:
+        await asyncio.sleep(0.1)
 
     # test spawn page when server is already running (just redirect)
     r = await get_page('spawn', app, cookies=cookies)
@@ -143,9 +152,9 @@ async def test_spawn_redirect(app):
 
     # test handing of trailing slash on `/user/name`
     r = await get_page('user/' + name, app, hub=False, cookies=cookies)
-    r.raise_for_status()
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/' % name)
+    assert r.status_code == 503
 
 
 async def test_spawn_handler_access(app):
@@ -178,10 +187,11 @@ async def test_spawn_admin_access(app, admin_access):
     name = 'mariel'
     user = add_user(app.db, app=app, name=name)
     app.db.commit()
-    r = await get_page('user/' + name, app, cookies=cookies)
+    r = await get_page('spawn/' + name, app, cookies=cookies)
     r.raise_for_status()
     assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
     r = await get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
+
     r.raise_for_status()
     env = r.json()
     assert env['JUPYTERHUB_USER'] == name
@@ -316,16 +326,16 @@ async def test_user_redirect_deprecated(app):
     cookies = await app.login_user(name)
 
     r = await get_page('/user/baduser', app, cookies=cookies, hub=False)
-    r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/' % name)
+    assert r.status_code == 503
 
     r = await get_page('/user/baduser/test.ipynb', app, cookies=cookies, hub=False)
-    r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/test.ipynb' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/test.ipynb' % name)
+    assert r.status_code == 503
 
     r = await get_page('/user/baduser/test.ipynb', app, hub=False)
     r.raise_for_status()
@@ -389,9 +399,11 @@ async def test_login_redirect(app, running, next_url, location):
     user = app.users['river']
     if location:
         location = ujoin(app.base_url, location)
+    elif running:
+        location = ujoin(app.base_url, 'user/river/')
     else:
         # use default url
-        location = user.url
+        location = ujoin(app.base_url, 'hub/spawn')
 
     url = 'login'
     if next_url:
@@ -575,6 +587,10 @@ async def test_announcements(app, announcements):
             assert ann01 in text
 
     cookies = await app.login_user("jones")
+    # make sure spawner isn't running
+    # so we see the spawn form
+    user = app.users["jones"]
+    await user.stop()
 
     with mock.patch.dict(
         app.tornado_settings,
@@ -650,6 +666,12 @@ async def test_token_page(app):
     r = await get_page("spawn", app, cookies=cookies)
     r.raise_for_status()
 
+    # wait for the server to be running and visit it
+    while not user.spawner.ready:
+        await asyncio.sleep(0.1)
+    r = await get_page("user/" + user.name, app, cookies=cookies)
+    r.raise_for_status()
+
     r = await get_page("token", app, cookies=cookies)
     r.raise_for_status()
     body = extract_body(r)
@@ -661,9 +683,11 @@ async def test_token_page(app):
 async def test_server_not_running_api_request(app):
     cookies = await app.login_user("bees")
     r = await get_page("user/bees/api/status", app, hub=False, cookies=cookies)
-    assert r.status_code == 404
+    assert r.status_code == 503
     assert r.headers["content-type"] == "application/json"
-    assert r.json() == {"message": "bees is not running"}
+    message = r.json()['message']
+    assert "Hub home page" in message
+    assert "/user/bees" in message
 
 
 async def test_metrics_no_auth(app):
