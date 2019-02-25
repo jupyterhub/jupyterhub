@@ -159,6 +159,11 @@ class Server(HasTraits):
             return self.connect_url
         return "{host}{uri}".format(host=self.host, uri=self.base_url)
 
+    def __repr__(self):
+        return "{name}(url={url}, bind_url={bind})".format(
+            name=self.__class__.__name__, url=self.url, bind=self.bind_url
+        )
+
     def wait_up(self, timeout=10, http=False, ssl_context=None):
         """Wait for this server to come up"""
         if http:
