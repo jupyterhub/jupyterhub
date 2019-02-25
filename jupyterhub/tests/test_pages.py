@@ -173,6 +173,10 @@ async def test_spawn_handler_access(app):
     # spawn server via browser link with ?arg=value
     r = await get_page('spawn', app, cookies=cookies, params={'arg': 'value'})
     r.raise_for_status()
+    # wait for spawn-pending to complete
+    while not u.spawner.ready:
+        await asyncio.sleep(0.1)
+        assert u.spawner.active
 
     # verify that request params got passed down
     # implemented in MockSpawner
