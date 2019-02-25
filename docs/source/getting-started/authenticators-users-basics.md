@@ -31,6 +31,15 @@ c.Authenticator.admin_users = {'mal', 'zoe'}
 Users in the admin list are automatically added to the user `whitelist`,
 if they are not already present.
 
+Each authenticator may have different ways of determining whether a user is an
+administrator. By default JupyterHub use the PAMAuthenticator which provide the
+`admin_groups` option and can determine administrator status base on a user
+groups. For example we can let any users in the `wheel` group be admin:
+
+```python
+c.PAMAuthenticator.admin_groups = {'wheel'}
+```
+
 ## Give admin access to other users' notebook servers (`admin_access`)
 
 Since the default `JupyterHub.admin_access` setting is False, the admins
