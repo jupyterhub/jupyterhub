@@ -35,7 +35,12 @@ async def test_root_auth(app):
     cookies = await app.login_user('river')
     r = await async_requests.get(public_url(app), cookies=cookies)
     r.raise_for_status()
-    assert r.url.startswith(public_url(app, app.users['river']))
+    assert r.history
+    history = [_.url for _ in r.history] + [r.url]
+    assert history[1] == ujoin(public_url(app), "hub/")
+    assert history[2] == ujoin(public_url(app), "hub/spawn")
+    assert history[3] == ujoin(public_url(app), "hub/spawn-pending/river")
+    # if spawning was quick, there will be one more entry that's public_url(user)
 
 
 async def test_root_redirect(app):
@@ -215,7 +220,9 @@ async def test_spawn_page_falsy_callable(app):
     ):
         cookies = await app.login_user('erik')
         r = await get_page('spawn', app, cookies=cookies)
-        assert 'user/erik' in r.url
+    history = [_.url for _ in r.history] + [r.url]
+    assert history[0] == ujoin(public_url(app), "hub/spawn")
+    assert history[1] == ujoin(public_url(app), "hub/spawn-pending/erik")
 
 
 async def test_spawn_page_admin(app, admin_access):
