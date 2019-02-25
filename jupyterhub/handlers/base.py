@@ -538,7 +538,7 @@ class BaseHandler(RequestHandler):
     def authenticate(self, data):
         return maybe_future(self.authenticator.get_authenticated_user(self, data))
 
-    def get_next_url(self, user=None):
+    def get_next_url(self, user=None, default=None):
         """Get the next_url for login redirect
 
         Default URL after login:
@@ -577,14 +577,13 @@ class BaseHandler(RequestHandler):
 
         if not next_url:
             # custom default URL
-            next_url = self.default_url
+            next_url = default or self.default_url
 
         if not next_url:
             # default URL after login
             # if self.redirect_to_server, default login URL initiates spawn,
             # otherwise send to Hub home page (control panel)
             if user and self.redirect_to_server:
-                next_url = user.url
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
         return next_url
