@@ -100,12 +100,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
   $(".new-server-btn").click(function() {
     var row = getRow($(this));
     var serverName = row.find(".new-server-name").val();
-    api.start_named_server(user, serverName, {
-      success: function(reply) {
-        // reload after creating the server
-        window.location.reload();
-      },
-    });
+    window.location.href = "../spawn/" + user + "/" + serverName;
   });
 
   $(".stop-server").click(stopServer);

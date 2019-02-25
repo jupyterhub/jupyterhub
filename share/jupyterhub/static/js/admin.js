@@ -123,9 +123,11 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
     // link to spawn page instead of making API requests
     $(".start-server").map(function(i, el) {
       el = $(el);
-      var user = getRow(el).data("user");
+      var row = getRow(el);
+      var user = row.data("user");
+      var serverName = row.data("server-name");
       // TODO: include server-name
-      el.attr("href", utils.url_path_join(prefix, "hub/spawn", user));
+      el.attr("href", utils.url_path_join(prefix, "hub/spawn", user, serverName));
     });
     // cannot start all servers in this case
     // since it would mean opening a bunch of tabs

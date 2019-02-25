@@ -1,6 +1,9 @@
 """Basic html-rendering handlers."""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
+import copy
+import time
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
@@ -11,6 +14,8 @@ from tornado import web
 from tornado.httputil import url_concat
 
 from .. import orm
+from ..metrics import SERVER_POLL_DURATION_SECONDS
+from ..metrics import ServerPollStatus
 from ..utils import admin_only
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -56,9 +61,9 @@ class HomeHandler(BaseHandler):
         # to establish that this is an explicit spawn request rather
         # than an implicit one, which can be caused by any link to `/user/:name(/:server_name)`
         url = (
-            url_path_join(self.hub.base_url, 'user', user.name)
+            url_path_join(self.base_url, 'user', user.name)
             if user.active
-            else url_path_join(self.hub.base_url, 'spawn')
+            else url_path_join(self.hub.base_url, 'spawn', user.name)
         )
         html = self.render_template(
             'home.html',
@@ -75,12 +80,14 @@ class HomeHandler(BaseHandler):
 
 
 class SpawnHandler(BaseHandler):
-    """Handle spawning of single-user servers via form.
+    """Handle spawning of single-user servers
 
     GET renders the form, POST handles form submission.
 
-    Only enabled when Spawner.options_form is defined.
+    If no options_form is enabled, GET triggers spawn directly.
     """
+
+    default_url = None
 
     def _render_form(self, for_user, spawner_options_form, message=''):
         return self.render_template(
@@ -98,6 +105,7 @@ class SpawnHandler(BaseHandler):
 
         or triggers spawn via redirect if there is no form.
         """
+
         user = current_user = self.current_user
         if for_user is not None and for_user != user.name:
             if not user.admin:
@@ -115,7 +123,25 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
 
+        if server_name is None:
+            server_name = ''
+
         spawner = user.spawners[server_name]
+        # resolve `?next=...`, falling back on the /hub/user/server url
+        # instead of /hub/home
+        # must not be /user/server for named servers,
+        # which may get handled by the default server if they aren't ready yet
+        next_url = self.get_next_url(
+            user,
+            default=url_path_join(
+                self.hub.base_url, "spawn-pending", user.name, server_name
+            ),
+        )
+
+        # spawner is active, redirect back to get progress, etc.
+        if spawner.active:
+            self.redirect(next_url)
+            return
 
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
@@ -131,18 +157,15 @@ class SpawnHandler(BaseHandler):
             # after a failure.
             if spawner._spawn_future and spawner._spawn_future.done():
                 spawner._spawn_future = None
-            # not running, no form. Trigger spawn by redirecting to /user/:name
-            url = user.server_url(server_name)
-            if self.request.query:
-                # add query params
-                url += '?' + self.request.query
-            self.redirect(url)
+            # not running, no form. Trigger spawn and redirect back to /user/:name
+            f = asyncio.ensure_future(self.spawn_single_user(user, server_name))
+            await asyncio.wait([f], timeout=1)
+            self.redirect(next_url)
 
     @web.authenticated
     async def post(self, for_user=None, server_name=''):
         """POST spawns with user-specified options"""
         user = current_user = self.current_user
-        spawner = user.spawners[server_name]
         if for_user is not None and for_user != user.name:
             if not user.admin:
                 raise web.HTTPError(
@@ -151,15 +174,16 @@ class SpawnHandler(BaseHandler):
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
-        if not self.allow_named_servers and user.running:
-            url = user.url
-            self.log.warning("User is already running: %s", url)
-            self.redirect(url)
-            return
-        if spawner.pending:
+
+        spawner = user.spawners[server_name]
+
+        if spawner.ready:
+            raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
+        elif spawner.pending:
             raise web.HTTPError(
                 400, "%s is pending %s" % (spawner._log_name, spawner.pending)
             )
+
         form_options = {}
         for key, byte_list in self.request.body_arguments.items():
             form_options[key] = [bs.decode('utf8') for bs in byte_list]
@@ -180,15 +204,134 @@ class SpawnHandler(BaseHandler):
             return
         if current_user is user:
             self.set_login_cookie(user)
-        url = user.server_url(server_name)
+        next_url = self.get_next_url(
+            user,
+            default=url_path_join(
+                self.hub.base_url, "spawn-pending", user.name, server_name
+            ),
+        )
 
-        next_url = self.get_argument('next', '')
-        if next_url and not next_url.startswith('/'):
-            self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
-        elif next_url:
-            url = next_url
+        # request spawn and redirect immediately
+        # this will send folks to the
+        f = asyncio.ensure_future(self.spawn_single_user(user, server_name))
+        await asyncio.wait([f], timeout=1)
+        self.redirect(next_url)
 
-        self.redirect(url)
+
+class SpawnPendingHandler(BaseHandler):
+    """Handle /hub/spawn-pending/:user/:server
+
+    One and only purpose:
+
+    - wait for pending spawn
+    - serve progress bar
+    - redirect to /user/:name when ready
+    - show error if spawn failed
+
+    Functionality split out of /user/:name handler to
+    have clearer behavior at the right time.
+
+    Requests for this URL will never trigger any actions
+    such as spawning new servers.
+    """
+
+    @web.authenticated
+    async def get(self, for_user, server_name=''):
+        user = current_user = self.current_user
+        if for_user is not None and for_user != current_user.name:
+            if not current_user.admin:
+                raise web.HTTPError(
+                    403, "Only admins can spawn on behalf of other users"
+                )
+            user = self.find_user(for_user)
+            if user is None:
+                raise web.HTTPError(404, "No such user: %s" % for_user)
+
+        if server_name and server_name not in user.spawners:
+            raise web.HTTPError(
+                404, "%s has no such server %s" % (user.name, server_name)
+            )
+
+        spawner = user.spawners[server_name]
+
+        if spawner.ready:
+            # spawner is ready and waiting. Redirect to it.
+            next_url = self.get_next_url(default=user.server_url(server_name))
+            self.redirect(next_url)
+            return
+
+        # if spawning fails for any reason, point users to /hub/home to retry
+        self.extra_error_html = self.spawn_home_error
+
+        # First, check for previous failure.
+        if (
+            not spawner.active
+            and spawner._spawn_future
+            and spawner._spawn_future.done()
+            and spawner._spawn_future.exception()
+        ):
+            # Condition: spawner not active and _spawn_future exists and contains an Exception
+            # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
+            # We should point the user to Home if the most recent spawn failed.
+            exc = spawner._spawn_future.exception()
+            self.log.error(
+                "Preventing implicit spawn for %s because last spawn failed: %s",
+                spawner._log_name,
+                exc,
+            )
+            # raise a copy because each time an Exception object is re-raised, its traceback grows
+            raise copy.copy(exc).with_traceback(exc.__traceback__)
+
+        # Check for pending events. This should usually be the case
+        # when we are on this page.
+        # page could be pending spawn *or* stop
+        if spawner.pending:
+            self.log.info("%s is pending %s", spawner._log_name, spawner.pending)
+            # spawn has started, but not finished
+            url_parts = []
+            if spawner.pending == "stop":
+                page = "stop_pending.html"
+            else:
+                page = "spawn_pending.html"
+            html = self.render_template(
+                page, user=user, spawner=spawner, progress_url=spawner._progress_url
+            )
+            self.finish(html)
+            return
+
+        # spawn is supposedly ready, check on the status
+        if spawner.ready:
+            poll_start_time = time.perf_counter()
+            status = await spawner.poll()
+            SERVER_POLL_DURATION_SECONDS.labels(
+                status=ServerPollStatus.from_status(status)
+            ).observe(time.perf_counter() - poll_start_time)
+        else:
+            status = 0
+
+        # server is not running, render "not running" page
+        # further, set status to 404 because this is not
+        # serving the expected page
+        if status is not None:
+            spawn_url = url_concat(
+                url_path_join(self.hub.base_url, "spawn", user.escaped_name),
+                {"next": self.request.uri},
+            )
+            html = self.render_template(
+                "not_running.html",
+                user=user,
+                server_name=server_name,
+                spawn_url=spawn_url,
+            )
+            self.finish(html)
+            return
+
+        # we got here, server appears to be ready and running,
+        # no longer pending.
+        # redirect to the running server.
+
+        next_url = self.get_next_url(default=user.server_url(server_name))
+        self.redirect(next_url)
 
 
 class AdminHandler(BaseHandler):
@@ -382,6 +525,8 @@ default_handlers = [
     (r'/', RootHandler),
     (r'/home', HomeHandler),
     (r'/admin', AdminHandler),
+    (r'/spawn-pending/([^/]+)', SpawnPendingHandler),
+    (r'/spawn-pending/([^/]+)/([^/]+)', SpawnPendingHandler),
     (r'/spawn', SpawnHandler),
     (r'/spawn/([^/]+)', SpawnHandler),
     (r'/spawn/([^/]+)/([^/]+)', SpawnHandler),
