@@ -554,14 +554,20 @@ class BaseHandler(RequestHandler):
                 '%s://%s/' % (self.request.protocol, self.request.host),
                 '//%s/' % self.request.host,
             )
+        ) or (
+            self.subdomain_host
+            and urlparse(next_url).netloc
+            and ("." + urlparse(next_url).netloc).endswith(
+                "." + urlparse(self.subdomain_host).netloc
+            )
         ):
             # treat absolute URLs for our host as absolute paths:
             parsed = urlparse(next_url)
             next_url = parsed.path
             if parsed.query:
                 next_url = next_url + '?' + parsed.query
-            if parsed.hash:
-                next_url = next_url + '#' + parsed.hash
+            if parsed.fragment:
+                next_url = next_url + '#' + parsed.fragment
         if next_url and (urlparse(next_url).netloc or not next_url.startswith('/')):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
