@@ -411,7 +411,7 @@ async def test_login_redirect(app, running, next_url, location):
     if location:
         location = ujoin(app.base_url, location)
     elif running:
-        location = ujoin(app.base_url, 'user/river/')
+        location = public_url(app, user)
     else:
         # use default url
         location = ujoin(app.base_url, 'hub/spawn')
@@ -697,8 +697,8 @@ async def test_server_not_running_api_request(app):
     assert r.status_code == 503
     assert r.headers["content-type"] == "application/json"
     message = r.json()['message']
-    assert "Hub home page" in message
-    assert "/user/bees" in message
+    assert ujoin(app.base_url, "hub/spawn/bees") in message
+    assert " /user/bees" in message
 
 
 async def test_metrics_no_auth(app):

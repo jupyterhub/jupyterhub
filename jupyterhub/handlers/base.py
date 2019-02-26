@@ -1159,20 +1159,28 @@ class UserUrlHandler(BaseHandler):
     Note that this only occurs if bob's server is not already running.
     """
 
-    def _fail_api_request(self, *args, **kwargs):
+    def _fail_api_request(self, user_name='', server_name=''):
         """Fail an API request to a not-running server"""
         self.log.warning(
-            "Failing suspected API request to not-running server: %s", self.request.uri
+            "Failing suspected API request to not-running server: %s", self.request.path
         )
         self.set_status(503)
         self.set_header("Content-Type", "application/json")
+
+        spawn_url = urlparse(self.request.full_url())._replace(query="")
+        spawn_path_parts = [self.hub.base_url, "spawn", user_name]
+        if server_name:
+            spawn_path_parts.append(server_name)
+        spawn_url = urlunparse(
+            spawn_url._replace(path=url_path_join(*spawn_path_parts))
+        )
         self.write(
             json.dumps(
                 {
                     "message": (
-                        "No jupyterhub server running at {}."
-                        " Restart from the Hub home page {}"
-                    ).format(self.request.uri, self.hub.base_url)
+                        "JupyterHub server no longer running at {}."
+                        " Restart the server at {}"
+                    ).format(self.request.path[len(self.hub.base_url) - 1 :], spawn_url)
                 }
             )
         )
@@ -1180,9 +1188,32 @@ class UserUrlHandler(BaseHandler):
 
     # fail all non-GET requests with JSON
     # assuming they are API requests
-    post = _fail_api_request
-    patch = _fail_api_request
-    delete = _fail_api_request
+
+    def non_get(self, user_name, user_path):
+        """Handle non-get requests
+
+        These all fail with a hopefully informative message
+        pointing to how to spawn a stopped server
+        """
+        if (
+            user_name
+            and user_path
+            and self.allow_named_servers
+            and self.current_user
+            and user_name == self.current_user.name
+        ):
+            server_name = user_path.split('/', 1)[0]
+            if server_name not in self.current_user.orm_user.orm_spawners:
+                # no such server, assume default
+                server_name = ''
+        else:
+            server_name = ''
+
+        self._fail_api_request(user_name, server_name)
+
+    post = non_get
+    patch = non_get
+    delete = non_get
 
     @web.authenticated
     async def get(self, user_name, user_path):
@@ -1280,7 +1311,7 @@ class UserUrlHandler(BaseHandler):
             self.request.headers.get('Accept', ''),
             choices=['application/json', 'text/html'],
         ) == 'application/json' or 'api' in user_path.split('/'):
-            self._fail_api_request()
+            self._fail_api_request(user_name, server_name)
             return
 
         pending_url = url_concat(
