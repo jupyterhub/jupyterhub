@@ -411,7 +411,7 @@ async def test_login_redirect(app, running, next_url, location):
     if location:
         location = ujoin(app.base_url, location)
     elif running:
-        location = public_url(app, user)
+        location = user.url
     else:
         # use default url
         location = ujoin(app.base_url, 'hub/spawn')
