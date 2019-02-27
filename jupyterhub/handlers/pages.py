@@ -131,21 +131,24 @@ class SpawnHandler(BaseHandler):
         # must not be /user/server for named servers,
         # which may get handled by the default server if they aren't ready yet
 
-        next_url = self.get_next_url(
-            user,
-            default=url_path_join(
-                self.hub.base_url, "spawn-pending", user.name, server_name
-            ),
+        pending_url = url_path_join(
+            self.hub.base_url, "spawn-pending", user.name, server_name
         )
+
+        if self.get_argument('next', None):
+            # preserve `?next=...` through spawn-pending
+            pending_url = url_concat(pending_url, {'next': self.get_argument('next')})
 
         # spawner is active, redirect back to get progress, etc.
         if spawner.ready:
             self.log.info("Server %s is already running", spawner._log_name)
             next_url = self.get_next_url(user, default=user.server_url(server_name))
+            self.redirect(next_url)
+            return
 
         elif spawner.active:
             self.log.info("Server %s is already active", spawner._log_name)
-            self.redirect(next_url)
+            self.redirect(pending_url)
             return
 
         # Add handler to spawner here so you can access query params in form rendering.
@@ -169,7 +172,7 @@ class SpawnHandler(BaseHandler):
             # not running, no form. Trigger spawn and redirect back to /user/:name
             f = asyncio.ensure_future(self.spawn_single_user(user, server_name))
             await asyncio.wait([f], timeout=1)
-            self.redirect(next_url)
+            self.redirect(pending_url)
 
     @web.authenticated
     async def post(self, for_user=None, server_name=''):
@@ -317,10 +320,7 @@ class SpawnPendingHandler(BaseHandler):
         # further, set status to 404 because this is not
         # serving the expected page
         if status is not None:
-            spawn_url = url_concat(
-                url_path_join(self.hub.base_url, "spawn", user.escaped_name),
-                {"next": self.request.uri},
-            )
+            spawn_url = url_path_join(self.hub.base_url, "spawn", user.escaped_name)
             html = self.render_template(
                 "not_running.html",
                 user=user,

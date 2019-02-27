@@ -2,6 +2,7 @@
 import asyncio
 import sys
 from unittest import mock
+from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
@@ -16,6 +17,7 @@ from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
 from .mocking import FalsyCallableFormSpawner
 from .mocking import FormSpawner
+from .test_api import next_event
 from .utils import add_user
 from .utils import api_request
 from .utils import async_requests
@@ -308,6 +310,61 @@ async def test_spawn_form_with_file(app):
                 'content_type': 'application/unknown',
             },
         }
+
+
+async def test_spawn_pending(app, username, slow_spawn):
+    cookies = await app.login_user(username)
+    # first request, no spawn is pending
+    # spawn-pending shows button linking to spawn
+    r = await get_page('/spawn-pending/' + username, app, cookies=cookies)
+    r.raise_for_status()
+    page = BeautifulSoup(r.text, "html.parser")
+    assert "is not running" in page.body.text
+    link = page.find("a", id="start")
+    assert link
+    assert link['href'] == ujoin(app.base_url, '/hub/spawn/', username)
+
+    # request spawn
+    next_url = ujoin(app.base_url, 'user', username, 'tree/foo')
+    spawn_url = url_concat('/spawn/' + username, dict(next=next_url))
+    r = await get_page(spawn_url, app, cookies=cookies)
+    r.raise_for_status()
+    url = urlparse(r.url)
+    # spawn redirects to spawn-pending
+    assert url.path == ujoin(app.base_url, 'hub/spawn-pending', username)
+    # ?next query arg is preserved
+    assert parse_qs(url.query).get('next') == [next_url]
+
+    # check spawn-pending html
+    page = BeautifulSoup(r.text, "html.parser")
+    assert page.find('div', {'class': 'progress'})
+
+    # validate event source url by consuming it
+    script = page.body.find('script').text
+    assert 'EventSource' in script
+    # find EventSource url in javascript
+    # maybe not the most robust way to check this?
+    eventsource = script.find('new EventSource')
+    start = script.find('(', eventsource)
+    end = script.find(')', start)
+    # strip quotes
+    progress_url = script[start + 2 : end - 1]
+    # verify that it works by watching progress events
+    # (double-duty because we also want to wait for the spawn to finish)
+    progress = await api_request(app, 'users', username, 'server/progress', stream=True)
+    ex = async_requests.executor
+    line_iter = iter(progress.iter_lines(decode_unicode=True))
+    evt = True
+    while evt is not None:
+        evt = await ex.submit(next_event, line_iter)
+        if evt:
+            print(evt)
+
+    # refresh page after progress is complete
+    r = await async_requests.get(r.url, cookies=cookies)
+    r.raise_for_status()
+    # should have redirected to the now-running server
+    assert urlparse(r.url).path == urlparse(next_url).path
 
 
 async def test_user_redirect(app, username):
@@ -650,7 +707,7 @@ async def test_token_page(app):
     assert urlparse(r.url).path.endswith('/hub/token')
 
     def extract_body(r):
-        soup = BeautifulSoup(r.text, "html5lib")
+        soup = BeautifulSoup(r.text, "html.parser")
         import re
 
         # trim empty lines
