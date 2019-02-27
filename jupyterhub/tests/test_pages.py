@@ -310,8 +310,8 @@ async def test_spawn_form_with_file(app):
         }
 
 
-async def test_user_redirect(app):
-    name = 'wash'
+async def test_user_redirect(app, username):
+    name = username
     cookies = await app.login_user(name)
 
     r = await get_page('/user-redirect/tree/top/', app)
@@ -328,12 +328,16 @@ async def test_user_redirect(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
+    while '/spawn-pending/' in path:
+        await asyncio.sleep(0.1)
+        r = await get_page(r.url, app, cookies=cookies)
+        path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
 
 
-async def test_user_redirect_deprecated(app):
+async def test_user_redirect_deprecated(app, username):
     """redirecting from /user/someonelse/ URLs (deprecated)"""
-    name = 'wash'
+    name = username
     cookies = await app.login_user(name)
 
     r = await get_page('/user/baduser', app, cookies=cookies, hub=False)
