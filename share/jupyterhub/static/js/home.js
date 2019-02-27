@@ -36,10 +36,12 @@ require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
       row.find(".start-server").addClass("hidden");
       row.find(".delete-server").addClass("hidden");
       row.find(".stop-server").removeClass("hidden");
+      row.find(".server-link").removeClass("hidden");
     } else {
       row.find(".start-server").removeClass("hidden");
       row.find(".delete-server").removeClass("hidden");
       row.find(".stop-server").addClass("hidden");
+      row.find(".server-link").addClass("hidden");
     }
   }
 
