@@ -7,6 +7,96 @@ command line for details.
 
 ## [Unreleased]
 
+## 1.0
+
+### [1.0.0] 2018-03-XX
+
+JupyterHub 1.0 is a major milestone for JupyterHub.
+Huge thanks to the many people who have contributed to this release,
+whether it was through discussion, testing, documentation, or code.
+
+#### Major new features
+
+- Support TLS encryption and authentication of all internal communication.
+  Spawners must implement `.move_certs` method to make certificates available
+  to the notebook server if it is not local to the Hub.
+- There is now full UI support for managing named servers (TODO: screenshot).
+  With named servers, each jupyterhub user may have more than one named server.
+- Authenticators can now expire and refresh authentication data by implementing
+  `Authenticator.refresh_user(user)`.
+  This allows things like OAuth data and access tokens to be refreshed.
+  By setting `Authenticator.refresh_pre_spawn = True`,
+  auth refresh can be forced prior to Spawn,
+  allowing the Authenticator to *require* that authentication data is fresh
+  immediately before the user's server is launched.
+
+```eval_rst
+.. seealso::
+
+  - :meth:`.Authenticator.refresh_user`
+  - :meth:`.Spawner.create_certs`
+  - :meth:`.Spawner.move_certs`
+```
+
+#### New features
+
+- allow spawners, authenticators, and proxies to register themselves via 'entry points', enabling more convenient configuration such as:
+
+  ```python
+  c.JupyterHub.authenticator_class = 'github'
+  c.JupyterHub.spawner_class = 'docker'
+  c.JupyterHub.proxy_class = 'traefik_etcd'
+  ```
+- Spawners are passed the tornado Handler object that requested their spawn (as `self.handler`),
+  so they can do things like make decisions based on query arguments in the request.
+- SimpleSpawner and DummyAuthenticator, which are useful for testing, have been merged into JupyterHub itself:
+
+  ```python
+  c.JupyterHub.authenticator_class = 'dummy'
+  c.JupyterHub.spawner_class = 'simple'
+  ```
+
+  These classes are **not** appropriate for production use. Only testing.
+- Add health check endpoint at `/hub/health`
+- Several prometheus metrics have been added (thanks to Outreachy applicants!)
+- A new API for registering user activity.
+  To prepare for [alternate proxy implementations](https://github.com/jupyterhub/traefik-proxy),
+  responsibility for tracking activity is taken away from the proxy
+  and moved to the notebook server (which already has activity tracking features).
+  Activity is pushed to the Hub from user servers instead of polled from the
+  proxy API.
+- Dynamic `options_form` callables may now return an empty string
+  which will result in no options form being rendered.
+
+#### Changes
+
+- Prometheus metrics page is now authenticated. Any authenticated user may see the prometheus metrics. To disable prometheus authentication, set `JupyterHub.authenticate_prometheus = False`
+- Visits to `/user/:name` no longer trigger an implicit launch of the user's server.
+  Instead, a page is shown indicating that the server is not running
+  with a link to request the spawn.
+- API requests to `/user/:name` for a not-running server will have status 503 instead of 404.
+
+
+
+#### Fixed
+
+- Various fixes to improve Windows compatibility
+  (default Authenticator and Spawner still do not support Windows, but other Spawners may)
+
+#### Development changes
+
+There have been several changes to development process that shouldn't
+generally affect users of JupyterHub, but may affect folks contributing to it.
+In general, see `CONTRIBUTING.md` for contribution info or ask if you have questions.
+
+- JupyterHub has adopted `black` as a code autoformatter and `pre-commit`
+  as a tool for automatically running code formatting on commit.
+  This is meant to make it *easier* to contribute to JupyterHub,
+  so let us know if it's having the opposite effect.
+- JupyterHub has switched its test suite to using `pytest-asyncio` from `pytest-tornado`.
+- OAuth is now implemented internally using `oauthlib` instead of `python-oauth2`. This should have no effect on behavior.
+
+
 ## 0.9
 
 ### [0.9.4] 2018-09-24
@@ -426,7 +516,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
 [0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
