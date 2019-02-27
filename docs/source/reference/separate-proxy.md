@@ -78,4 +78,3 @@ to run the proxy.
 ## See also
 
 * [jupyterhub configurable-http-proxy](https://github.com/jupyterhub/configurable-http-proxy)
-* 
