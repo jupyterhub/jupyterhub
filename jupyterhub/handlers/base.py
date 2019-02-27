@@ -1389,7 +1389,7 @@ class UserUrlHandler(BaseHandler):
             query_parts['redirects'] = redirects + 1
             url_parts = url_parts._replace(query=urlencode(query_parts, doseq=True))
             target = urlunparse(url_parts)
-        elif '/user/' in referer:
+        elif '/user/{}'.format(user.name) in referer or not referer:
             # add first counter only if it's a redirect from /user/:name -> /hub/user/:name
             target = url_concat(target, {'redirects': 1})
 
