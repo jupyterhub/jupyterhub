@@ -200,6 +200,12 @@ async def test_spawn_admin_access(app, admin_access):
     app.db.commit()
     r = await get_page('spawn/' + name, app, cookies=cookies)
     r.raise_for_status()
+
+    while '/spawn-pending/' in r.url:
+        await asyncio.sleep(0.1)
+        r = await async_requests.get(r.url, cookies=cookies)
+        r.raise_for_status()
+
     assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
     r = await get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
 
