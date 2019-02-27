@@ -274,7 +274,16 @@ class JupyterHub(Application):
             # so that they show up in config files, etc.
             if isinstance(trait, EntryPointType):
                 for key, entry_point in trait.load_entry_points().items():
-                    cls = entry_point.load()
+                    try:
+                        cls = entry_point.load()
+                    except Exception as e:
+                        self.log.warning(
+                            "Failed to load %s entrypoint %r: %r",
+                            trait.entry_point_group,
+                            key,
+                            e,
+                        )
+                        continue
                     if cls not in classes and isinstance(cls, Configurable):
                         classes.append(cls)
         return classes
