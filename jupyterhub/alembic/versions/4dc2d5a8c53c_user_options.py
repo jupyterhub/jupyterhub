@@ -17,7 +17,9 @@ from jupyterhub.orm import JSONDict
 
 
 def upgrade():
-    op.add_column('spawners', sa.Column('user_options', JSONDict()))
+    tables = op.get_bind().engine.table_names()
+    if 'spawners' in tables:
+        op.add_column('spawners', sa.Column('user_options', JSONDict()))
 
 
 def downgrade():
