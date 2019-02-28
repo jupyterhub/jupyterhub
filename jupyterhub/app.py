@@ -2291,7 +2291,10 @@ class JupyterHub(Application):
 
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(
-            self.tornado_application, ssl_options=ssl_context, xheaders=True
+            self.tornado_application,
+            ssl_options=ssl_context,
+            xheaders=True,
+            trusted_downstream=['127.0.0.1'],
         )
         bind_url = urlparse(self.hub.bind_url)
         try:
