@@ -517,6 +517,58 @@ async def test_spawn(app):
     assert app.users.count_active_users()['pending'] == 0
 
 
+async def test_user_options(app, username):
+    db = app.db
+    name = username
+    user = add_user(db, app=app, name=name)
+    options = {'s': ['value'], 'i': 5}
+    before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
+    r = await api_request(
+        app, 'users', name, 'server', method='post', data=json.dumps(options)
+    )
+    assert r.status_code == 201
+    assert 'pid' in user.orm_spawners[''].state
+    app_user = app.users[name]
+    assert app_user.spawner is not None
+    spawner = app_user.spawner
+    assert spawner.user_options == options
+    assert spawner.orm_spawner.user_options == options
+
+    # stop the server
+    r = await api_request(app, 'users', name, 'server', method='delete')
+
+    # orm_spawner still exists and has a reference to the user_options
+    assert spawner.orm_spawner.user_options == options
+
+    # spawn again, no options specified
+    # should re-use options from last spawn
+    r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 201
+    assert 'pid' in user.orm_spawners[''].state
+    app_user = app.users[name]
+    assert app_user.spawner is not None
+    spawner = app_user.spawner
+    assert spawner.user_options == options
+
+    # stop the server
+    r = await api_request(app, 'users', name, 'server', method='delete')
+
+    # spawn again, new options specified
+    # should override options from last spawn
+    new_options = {'key': 'value'}
+    r = await api_request(
+        app, 'users', name, 'server', method='post', data=json.dumps(new_options)
+    )
+    assert r.status_code == 201
+    assert 'pid' in user.orm_spawners[''].state
+    app_user = app.users[name]
+    assert app_user.spawner is not None
+    spawner = app_user.spawner
+    assert spawner.user_options == new_options
+    # saved in db
+    assert spawner.orm_spawner.user_options == new_options
+
+
 async def test_spawn_handler(app):
     """Test that the requesting Handler is passed to Spawner.handler"""
     db = app.db

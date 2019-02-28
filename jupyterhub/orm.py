@@ -216,6 +216,7 @@ class Spawner(Base):
 
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
+    user_options = Column(JSONDict)
 
     # properties on the spawner wrapper
     # some APIs get these low-level objects
