@@ -466,6 +466,18 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    trusted_downstream_ips = List(
+        Unicode(),
+        help="""Downstream proxy IP addresses to trust.
+
+        This sets the list of IP addresses that are trusted and skipped when processing
+        the `X-Forwarded-For` header. For example, if an external proxy is used for TLS
+        termination, its IP address should be added to this list to ensure the correct
+        client IP addresses are recorded in the logs instead of the proxy server's IP
+        address.
+        """,
+    ).tag(config=True)
+
     ip = Unicode(
         '',
         help="""The public facing ip of the whole JupyterHub application
@@ -2294,7 +2306,7 @@ class JupyterHub(Application):
             self.tornado_application,
             ssl_options=ssl_context,
             xheaders=True,
-            trusted_downstream=['127.0.0.1'],
+            trusted_downstream=self.trusted_downstream_ips,
         )
         bind_url = urlparse(self.hub.bind_url)
         try:
