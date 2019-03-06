@@ -3,6 +3,9 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
+import pickle
+from base64 import decodebytes
+from base64 import encodebytes
 from datetime import datetime
 from datetime import timedelta
 
@@ -50,21 +53,41 @@ class JSONDict(TypeDecorator):
 
     Usage::
 
-        JSONEncodedDict(255)
+        JSONDict(255)
 
     """
 
     impl = Text
 
+    def _fallback_pickle(self, obj):
+        """encode unrecognized objects with pickle"""
+        try:
+            pickle_bytes = pickle.dumps(obj, 3)
+        except Exception as e:
+            app_log.warning(
+                "Failed to serialize unpickleable data (%s), will persist None.", e
+            )
+            return None
+
+        return {
+            "__jupyterhub_pickle__": True,
+            "data": encodebytes(pickle_bytes).decode('ascii'),
+        }
+
+    def _object_hook(self, dct):
+        """decode pickle-packed objects"""
+        if dct.get("__jupyterhub_pickle__", False):
+            return pickle.loads(decodebytes(dct['data'].encode('ascii')))
+        return dct
+
     def process_bind_param(self, value, dialect):
         if value is not None:
-            value = json.dumps(value)
-
+            value = json.dumps(value, default=self._fallback_pickle)
         return value
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            value = json.loads(value)
+            value = json.loads(value, object_hook=self._object_hook)
         return value
 
 
