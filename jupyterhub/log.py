@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import traceback
+from http.cookies import SimpleCookie
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
@@ -99,6 +100,12 @@ def _scrub_headers(headers):
         auth = headers['Authorization']
         if auth.startswith('token '):
             headers['Authorization'] = 'token [secret]'
+    if 'Cookie' in headers:
+        c = SimpleCookie(headers['Cookie'])
+        redacted = []
+        for name in c.keys():
+            redacted.append("{}=[secret]".format(name))
+        headers['Cookie'] = '; '.join(redacted)
     return headers
 
 

@@ -102,6 +102,16 @@ class Spawner(LoggingConfigurable):
             return self.user.name
 
     @property
+    def _failed(self):
+        """Did the last spawn fail?"""
+        return (
+            not self.active
+            and self._spawn_future
+            and self._spawn_future.done()
+            and self._spawn_future.exception()
+        )
+
+    @property
     def pending(self):
         """Return the current pending event, if any
 

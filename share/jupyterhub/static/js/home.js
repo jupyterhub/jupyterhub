@@ -1,10 +1,16 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
+require(["jquery", "moment", "jhapi", "utils"], function(
+  $,
+  moment,
+  JHAPI,
+  utils
+) {
   "use strict";
 
   var base_url = window.jhdata.base_url;
+  var prefix = window.jhdata.prefix;
   var user = window.jhdata.user;
   var api = new JHAPI(base_url);
 
@@ -28,7 +34,6 @@ require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
     // enable buttons on a server row
     // once the server is running or not
     row.find(".btn").attr("disabled", false);
-    row.find(".start-server").click(startServer);
     row.find(".stop-server").click(stopServer);
     row.find(".delete-server").click(deleteServer);
 
@@ -56,25 +61,6 @@ require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
     api.stop_named_server(user, serverName, {
       success: function() {
         enableRow(row, false);
-      },
-    });
-  }
-
-  function startServer() {
-    var row = getRow($(this));
-    var serverName = row.data("server-name");
-
-    // before request
-    disableRow(row);
-
-    // request
-    api.start_named_server(user, serverName, {
-      success: function(reply) {
-        enableRow(row, true);
-        // TODO: this may 404 on the wrong server
-        // in case of slow startup
-        // it should really redirect to a `/spawn?server=...` page
-        window.location.href = row.find(".server-link").attr("href");
       },
     });
   }
@@ -116,15 +102,9 @@ require(["jquery", "moment", "jhapi"], function($, moment, JHAPI) {
   $(".new-server-btn").click(function() {
     var row = getRow($(this));
     var serverName = row.find(".new-server-name").val();
-    api.start_named_server(user, serverName, {
-      success: function(reply) {
-        // reload after creating the server
-        window.location.reload();
-      },
-    });
+    window.location.href = "../spawn/" + user + "/" + serverName;
   });
 
-  $(".start-server").click(startServer);
   $(".stop-server").click(stopServer);
   $(".delete-server").click(deleteServer);
 
