@@ -620,6 +620,7 @@ def _parse_accept_header(accept):
                 # and re-write media_type to something like application/json so
                 # it can be used usefully when looking up emitters
                 media_type = '{}/{}'.format(typ, extra)
+
         q = 1.0
         for part in parts:
             (key, value) = part.lstrip().split("=", 1)
