@@ -25,3 +25,4 @@ MANIFEST
 htmlcov
 .idea/
 .pytest_cache
+pip-wheel-metadata
