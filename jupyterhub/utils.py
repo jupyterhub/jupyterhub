@@ -597,8 +597,7 @@ def _parse_accept_header(accept):
         parts = media_range.split(";")
         media_type = parts.pop(0).strip()
         media_params = []
-        # convert vendor-specific content types into something useful (see
-        # docstring)
+        # convert vendor-specific content type to application/json
         typ, subtyp = media_type.split('/')
         # check for a + in the sub-type
         if '+' in subtyp:

@@ -64,10 +64,7 @@ class HomeHandler(BaseHandler):
             url = url_path_join(self.base_url, 'user', user.name)
         else:
             url = url_path_join(self.hub.base_url, 'spawn', user.name)
-            url_path_join(self.base_url, 'user', user.name)
-            if user.active
-            else url_path_join(self.hub.base_url, 'spawn', user.name)
-        )
+
         html = self.render_template(
             'home.html',
             user=user,
