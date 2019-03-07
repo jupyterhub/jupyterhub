@@ -60,7 +60,7 @@ whether it was through discussion, testing, documentation, or development.
 - Add health check endpoint at `/hub/health`
 - Several prometheus metrics have been added (thanks to Outreachy applicants!)
 - A new API for registering user activity.
-  To prepare for [alternate proxy implementations](https://github.com/jupyterhub/traefik-proxy),
+  To prepare for the addition of [alternate proxy implementations](https://github.com/jupyterhub/traefik-proxy),
   responsibility for tracking activity is taken away from the proxy
   and moved to the notebook server (which already has activity tracking features).
   Activity is pushed to the Hub from user servers instead of polled from the
