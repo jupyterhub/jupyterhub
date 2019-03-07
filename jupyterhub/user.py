@@ -479,8 +479,17 @@ class User:
         # pass requesting handler to the spawner
         # e.g. for processing GET params
         spawner.handler = handler
+
         # Passing user_options to the spawner
-        spawner.user_options = options or {}
+        if options is None:
+            # options unspecified, load from db which should have the previous value
+            options = spawner.orm_spawner.user_options or {}
+        else:
+            # options specified, save for use as future defaults
+            spawner.orm_spawner.user_options = options
+            db.commit()
+
+        spawner.user_options = options
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
 

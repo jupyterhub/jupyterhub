@@ -21,7 +21,7 @@ esac
 
 set -x
 
-for SUFFIX in '' _upgrade_072 _upgrade_081; do
+for SUFFIX in '' _upgrade_072 _upgrade_081 _upgrade_094; do
     $SQL "DROP DATABASE jupyterhub${SUFFIX};" 2>/dev/null || true
     $SQL "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE};"
 done
