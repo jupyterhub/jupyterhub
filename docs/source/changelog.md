@@ -63,7 +63,7 @@ whether it was through discussion, testing, documentation, or development.
   To prepare for the addition of [alternate proxy implementations](https://github.com/jupyterhub/traefik-proxy),
   responsibility for tracking activity is taken away from the proxy
   and moved to the notebook server (which already has activity tracking features).
-  Activity is pushed to the Hub from user servers instead of polled from the
+  Activity is now tracked by pushing it to the Hub from user servers instead of polling the
   proxy API.
 - Dynamic `options_form` callables may now return an empty string
   which will result in no options form being rendered.
