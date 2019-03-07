@@ -86,7 +86,7 @@ whether it was through discussion, testing, documentation, or development.
 #### Development changes
 
 There have been several changes to development process that shouldn't
-generally affect users of JupyterHub, but may affect folks contributing to it.
+generally affect users of JupyterHub, but may affect contributors.
 In general, see `CONTRIBUTING.md` for contribution info or ask if you have questions.
 
 - JupyterHub has adopted `black` as a code autoformatter and `pre-commit`
