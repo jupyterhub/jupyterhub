@@ -21,7 +21,7 @@ whether it was through discussion, testing, documentation, or development.
   Spawners must implement `.move_certs` method to make certificates available
   to the notebook server if it is not local to the Hub.
 - There is now full UI support for managing named servers (TODO: screenshot).
-  With named servers, each jupyterhub user may have more than one named server.
+  With named servers, each jupyterhub user may have access to more than one named server. For example, a professor may access a server named `research` and another named `teaching`.
 - Authenticators can now expire and refresh authentication data by implementing
   `Authenticator.refresh_user(user)`.
   This allows things like OAuth data and access tokens to be refreshed.
