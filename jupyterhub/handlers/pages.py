@@ -84,7 +84,7 @@ class SpawnHandler(BaseHandler):
 
     GET renders the form, POST handles form submission.
 
-    If no options_form is enabled, GET triggers spawn directly.
+    If no `options_form` is enabled, GET triggers spawn directly.
     """
 
     default_url = None
