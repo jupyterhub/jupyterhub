@@ -3,7 +3,6 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
-import pickle
 from base64 import decodebytes
 from base64 import encodebytes
 from datetime import datetime
@@ -59,30 +58,29 @@ class JSONDict(TypeDecorator):
 
     impl = Text
 
-    def _fallback_pickle(self, obj):
-        """encode unrecognized objects with pickle"""
-        try:
-            pickle_bytes = pickle.dumps(obj, 3)
-        except Exception as e:
+    def _json_default(self, obj):
+        """encode non-jsonable objects as JSON
+
+        Currently only bytes are supported
+
+        """
+        if not isinstance(obj, bytes):
             app_log.warning(
-                "Failed to serialize unpickleable data (%s), will persist None.", e
+                "Non-jsonable data in user_options: %r; will persist None.", type(obj)
             )
             return None
 
-        return {
-            "__jupyterhub_pickle__": True,
-            "data": encodebytes(pickle_bytes).decode('ascii'),
-        }
+        return {"__jupyterhub_bytes__": True, "data": encodebytes(obj).decode('ascii')}
 
     def _object_hook(self, dct):
-        """decode pickle-packed objects"""
-        if dct.get("__jupyterhub_pickle__", False):
-            return pickle.loads(decodebytes(dct['data'].encode('ascii')))
+        """decode non-json objects packed by _json_default"""
+        if dct.get("__jupyterhub_bytes__", False):
+            return decodebytes(dct['data'].encode('ascii'))
         return dct
 
     def process_bind_param(self, value, dialect):
         if value is not None:
-            value = json.dumps(value, default=self._fallback_pickle)
+            value = json.dumps(value, default=self._json_default)
         return value
 
     def process_result_value(self, value, dialect):
