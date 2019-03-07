@@ -60,7 +60,10 @@ class HomeHandler(BaseHandler):
         # send the user to /spawn if they have no active servers,
         # to establish that this is an explicit spawn request rather
         # than an implicit one, which can be caused by any link to `/user/:name(/:server_name)`
-        url = (
+        if user.active:
+            url = url_path_join(self.base_url, 'user', user.name)
+        else:
+            url = url_path_join(self.hub.base_url, 'spawn', user.name)
             url_path_join(self.base_url, 'user', user.name)
             if user.active
             else url_path_join(self.hub.base_url, 'spawn', user.name)
