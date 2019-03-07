@@ -1143,7 +1143,7 @@ class PrefixRedirectHandler(BaseHandler):
 class UserUrlHandler(BaseHandler):
     """Handle requests to /user/user_name/* routed to the Hub.
 
-    As of 1.0, this does *not* trigger a spawn any more. Instead, it:
+    **Changed Behavior as of 1.0** This handler no longer triggers a spawn. Instead, it checks if:
 
     1. server is not active, serve page prompting for spawn (status: 503)
     2. server is ready (This shouldn't happen! Proxy isn't updated yet. Wait a bit and redirect.)
