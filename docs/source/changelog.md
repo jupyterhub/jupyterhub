@@ -59,7 +59,7 @@ whether it was through discussion, testing, documentation, or development.
 
   These classes are **not** appropriate for production use. Only testing.
 - Add health check endpoint at `/hub/health`
-- Several prometheus metrics have been added (thanks to Outreachy applicants!)
+- Several prometheus metrics have been added (thanks to [Outreachy](https://www.outreachy.org/) applicants!)
 - A new API for registering user activity.
   To prepare for the addition of [alternate proxy implementations](https://github.com/jupyterhub/traefik-proxy),
   responsibility for tracking activity is taken away from the proxy
