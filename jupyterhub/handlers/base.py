@@ -1243,7 +1243,7 @@ class UserUrlHandler(BaseHandler):
         else:
             user = current_user
             admin_spawn = False
-            # For non-admins, we should spawn if the user requested is the current usr
+            # For non-admins, spawn if the user requested is the current user
             # otherwise redirect users to their own server
             should_spawn = current_user and current_user.name == user_name
             redirect_to_self = not should_spawn
