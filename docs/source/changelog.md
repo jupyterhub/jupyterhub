@@ -25,7 +25,7 @@ whether it was through discussion, testing, documentation, or development.
 - Authenticators can now expire and refresh authentication data by implementing
   `Authenticator.refresh_user(user)`.
   This allows things like OAuth data and access tokens to be refreshed.
-  By setting `Authenticator.refresh_pre_spawn = True`,
+  When used together with `Authenticator.refresh_pre_spawn = True`,
   auth refresh can be forced prior to Spawn,
   allowing the Authenticator to *require* that authentication data is fresh
   immediately before the user's server is launched.
