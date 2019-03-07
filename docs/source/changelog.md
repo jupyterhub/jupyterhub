@@ -52,6 +52,7 @@ whether it was through discussion, testing, documentation, or development.
 - SimpleSpawner and DummyAuthenticator, which are useful for testing, have been merged into JupyterHub itself:
 
   ```python
+  # For testing purposes only. Should not be used in production.
   c.JupyterHub.authenticator_class = 'dummy'
   c.JupyterHub.spawner_class = 'simple'
   ```
