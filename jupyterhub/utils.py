@@ -579,7 +579,9 @@ def utcnow():
 
 def _parse_accept_header(accept):
     """
-    Parse the Accept header *accept*, returning a list with 3-tuples of
+    Parse the Accept header *accept*
+    
+    Return a list with 3-tuples of
     [(str(media_type), dict(params), float(q_value)),] ordered by q values.
     If the accept header includes vendor-specific types like::
         application/vnd.yourcompany.yourproduct-v1.1+json
