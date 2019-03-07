@@ -40,7 +40,7 @@ whether it was through discussion, testing, documentation, or development.
 
 #### New features
 
-- allow spawners, authenticators, and proxies to register themselves via 'entry points', enabling more convenient configuration such as:
+- allow custom spawners, authenticators, and proxies to register themselves via 'entry points', enabling more convenient configuration such as:
 
   ```python
   c.JupyterHub.authenticator_class = 'github'
