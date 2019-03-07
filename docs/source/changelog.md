@@ -85,7 +85,7 @@ whether it was through discussion, testing, documentation, or development.
 
 #### Development changes
 
-There have been several changes to development process that shouldn't
+There have been several changes to the development process that shouldn't
 generally affect users of JupyterHub, but may affect contributors.
 In general, see `CONTRIBUTING.md` for contribution info or ask if you have questions.
 
