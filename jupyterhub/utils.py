@@ -641,7 +641,7 @@ def get_accepted_mimetype(accept_header, choices=None):
     If `choices` is given, return the first match,
     otherwise return the first accepted item
 
-    Return None if choices is given and no match is found,
+    Return `None` if choices is given and no match is found,
     or nothing is specified.
     """
     for (mime, params, q) in _parse_accept_header(accept_header):
