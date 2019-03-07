@@ -13,7 +13,7 @@ command line for details.
 
 JupyterHub 1.0 is a major milestone for JupyterHub.
 Huge thanks to the many people who have contributed to this release,
-whether it was through discussion, testing, documentation, or code.
+whether it was through discussion, testing, documentation, or development.
 
 #### Major new features
 
