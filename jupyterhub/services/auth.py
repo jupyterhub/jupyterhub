@@ -979,5 +979,13 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         if user_model is None:
             raise HTTPError(500, "oauth callback failed to identify a user")
         app_log.info("Logged-in user %s", user_model)
+
+        # TODO:: check some flag for user auto-redirected
+        user_server = user_model.get('server', '')
+        if next_url.startswith('/user/') and not next_url.startswith(user_server):
+            def remove_singleuser_server(uri):
+                return uri[uri.find('/', len('/user/'))+1:]
+            new_url = user_server + remove_singleuser_server(next_url)
+            self.redirect(new_url)
         self.hub_auth.set_cookie(self, token)
         self.redirect(next_url or self.hub_auth.base_url)
