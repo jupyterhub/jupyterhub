@@ -120,7 +120,7 @@ sure are available, I can install their specs system-wide (in /usr/local) with:
 ```
 
 
-## Multi-user hosts vs. Containers 
+## Multi-user hosts vs. Containers
 
 There are two broad categories of user environments that depend on what
 Spawner you choose:
@@ -145,3 +145,37 @@ In both cases, you want to *avoid putting configuration in user home
 directories* because users can change those configuration settings. Also,
 home directories typically persist once they are created, so they are
 difficult for admins to update later.
+
+## Named servers
+
+By default, in a JupyterHub deployment each user has exactly one server.
+
+JupyterHub can, however, have multiple servers per user.
+This is most useful in deployments where users can configure the environment
+in which their server will start (e.g. resource requests on an HPC cluster),
+so that a given user can have multiple configurations running at the same time,
+without having to stop and restart their one server.
+
+To allow named servers:
+
+```python
+c.JupyterHub.allow_named_servers = True
+```
+
+Named servers were implemented in the REST API in JupyterHub 0.8,
+and JupyterHub 1.0 introduces UI for managing named servers via the user home page:
+
+![named servers on the home page](../images/named-servers-home.png)
+
+as well as the admin page:
+
+![named servers on the admin page](../images/named-servers-admin.png)
+
+Named servers can be accessed, created, started, stopped, and deleted
+from these pages. Activity tracking is now per-server as well.
+
+The number of named servers per user can be limited by setting
+
+```python
+c.JupyterHub.named_server_limit_per_user = 5
+```
