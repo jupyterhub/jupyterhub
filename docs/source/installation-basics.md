@@ -6,7 +6,7 @@ JupyterHub is supported on Linux/Unix based systems. To use JupyterHub, you need
 a Unix server (typically Linux) running somewhere that is accessible to your
 team on the network. The JupyterHub server can be on an internal network at your
 organization, or it can run on the public internet (in which case, take care
-with the Hub's [security](./security-basics.html)).
+with the Hub's [security](./getting-started/security-basics)).
 
 JupyterHub officially **does not** support Windows. You may be able to use
 JupyterHub on Windows if you use a Spawner and Authenticator that work on
@@ -28,7 +28,7 @@ Prior to beginning installation, it's helpful to consider some of the following:
 - Spawner of singleuser notebook servers (Docker, Batch, etc.)
 - Services (nbgrader, etc.)
 - JupyterHub database (default SQLite; traditional RDBMS such as PostgreSQL,)
-  MySQL, or other databases supported by [SQLAlchemy](http://www.sqlalchemy.org))  
+  MySQL, or other databases supported by [SQLAlchemy](http://www.sqlalchemy.org))
 
 ## Folders and File Locations
 

@@ -14,7 +14,7 @@ document will:
 
 - explain some basic information about API tokens
 - clarify that API tokens can be used to authenticate to
-  single-user servers as of [version 0.8.0](../changelog.html)
+  single-user servers as of [version 0.8.0](../changelog)
 - show how the [cull_idle_servers][] script can be:
     - used in a Hub-managed service
     - run as a standalone script
@@ -29,14 +29,14 @@ Hub via the REST API.
 To run such an external service, an API token must be created and
 provided to the service.
 
-As of [version 0.6.0](../changelog.html), the preferred way of doing
+As of [version 0.6.0](../changelog), the preferred way of doing
 this is to first generate an API token:
 
 ```bash
 openssl rand -hex 32
 ```
 
-In [version 0.8.0](../changelog.html), a TOKEN request page for
+In [version 0.8.0](../changelog), a TOKEN request page for
 generating an API token is available from the JupyterHub user interface:
 
 ![Request API TOKEN page](../images/token-request.png)

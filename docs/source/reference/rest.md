@@ -27,7 +27,7 @@ Hub.
 To send requests using JupyterHub API, you must pass an API token with
 the request.
 
-As of [version 0.6.0](../changelog.html), the preferred way of
+As of [version 0.6.0](../changelog.md), the preferred way of
 generating an API token is:
 
 ```bash
@@ -48,7 +48,7 @@ jupyterhub token <username>
 This command generates a random string to use as a token and registers
 it for the given user with the Hub's database.
 
-In [version 0.8.0](../changelog.html), a TOKEN request page for
+In [version 0.8.0](../changelog.md), a TOKEN request page for
 generating an API token is available from the JupyterHub user interface:
 
 ![Request API TOKEN page](../images/token-request.png)
@@ -138,8 +138,8 @@ First you must enable named-servers by including the following setting in the `j
 
 `c.JupyterHub.allow_named_servers = True`
 
-If using the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) set-up to run JupyterHub, 
-then instead of editing the `jupyterhub_config.py` file directly, you could pass 
+If using the [zero-to-jupyterhub-k8s](https://github.com/jupyterhub/zero-to-jupyterhub-k8s) set-up to run JupyterHub,
+then instead of editing the `jupyterhub_config.py` file directly, you could pass
 the following as part of the `config.yaml` file, as per the [tutorial](https://zero-to-jupyterhub.readthedocs.io/en/latest/):
 
 ```bash
@@ -178,5 +178,5 @@ Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
 [interactive style on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
 [OpenAPI Initiative]: https://www.openapis.org/
-[JupyterHub REST API]: ../_static/rest-api/index.html
+[JupyterHub REST API]: ./rest-api
 [Jupyter Notebook REST API]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/master/notebook/services/api/api.yaml

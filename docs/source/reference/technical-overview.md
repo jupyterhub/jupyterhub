@@ -28,7 +28,7 @@ by the `jupyterhub` command line program:
 - **Single-User Notebook Server** (Python/Tornado): a dedicated,
   single-user, Jupyter Notebook server is started for each user on the system
   when the user logs in. The object that starts the single-user notebook
-  servers is called a **Spawner**.    
+  servers is called a **Spawner**.
 
 ![JupyterHub subsystems](../images/jhub-parts.png)
 
@@ -49,14 +49,14 @@ The proxy is the only process that listens on a public interface. The Hub sits
 behind the proxy at `/hub`. Single-user servers sit behind the proxy at
 `/user/[username]`.
 
-Different **[authenticators](./authenticators.html)** control access
+Different **[authenticators](./authenticators.md)** control access
 to JupyterHub. The default one (PAM) uses the user accounts on the server where
 JupyterHub is running. If you use this, you will need to create a user account
 on the system for each user on your team. Using other authenticators, you can
 allow users to sign in with e.g. a GitHub account, or with any single-sign-on
 system your organization has.
 
-Next, **[spawners](./spawners.html)** control how JupyterHub starts
+Next, **[spawners](./spawners.md)** control how JupyterHub starts
 the individual notebook server for each user. The default spawner will
 start a notebook server on the same machine running under their system username.
 The other main option is to start each server in a separate container, often
@@ -66,10 +66,10 @@ using Docker.
 
 When a user accesses JupyterHub, the following events take place:
 
-- Login data is handed to the [Authenticator](./authenticators.html) instance for
+- Login data is handed to the [Authenticator](./authenticators.md) instance for
   validation
 - The Authenticator returns the username if the login information is valid
-- A single-user notebook server instance is [spawned](./spawners.html) for the
+- A single-user notebook server instance is [spawned](./spawners.md) for the
   logged-in user
 - When the single-user notebook server starts, the proxy is notified to forward
   requests to `/user/[username]/*` to the single-user notebook server.
@@ -111,7 +111,7 @@ working directory:
   This file needs to persist so that a **Hub** server restart will avoid
   invalidating cookies. Conversely, deleting this file and restarting the server
   effectively invalidates all login cookies. The cookie secret file is discussed
-  in the [Cookie Secret section of the Security Settings document](../getting-started/security-basics.html).
+  in the [Cookie Secret section of the Security Settings document](../getting-started/security-basics.md).
 
 The location of these files can be specified via configuration settings. It is
 recommended that these files be stored in standard UNIX filesystem locations,
@@ -122,9 +122,9 @@ all security and runtime files.
 
 There are two basic extension points for JupyterHub:
 
-- How users are authenticated by [Authenticators](./authenticators.html)
+- How users are authenticated by [Authenticators](./authenticators.md)
 - How user's single-user notebook server processes are started by
-  [Spawners](./spawners.html)
+  [Spawners](./spawners.md)
 
 Each is governed by a customizable class, and JupyterHub ships with basic
 defaults for each.
