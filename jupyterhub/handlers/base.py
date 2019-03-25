@@ -1292,13 +1292,10 @@ class UserUrlHandler(BaseHandler):
         server_name = ''
         if self.allow_named_servers:
             # check if url prefix matches an existing server name
-            self.log.debug("user_path " + user_path)
             server_name = user_path.split("/", 2)[1]
-            self.log.debug("server_name " + server_name)
             if server_name not in user.orm_user.orm_spawners:
                 # not found, assume default server
                 server_name = ''
-            self.log.debug("server_name " + server_name)
         else:
             server_name = ''
         spawner = user.spawners[server_name]
