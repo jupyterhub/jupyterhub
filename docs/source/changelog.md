@@ -68,21 +68,67 @@ whether it was through discussion, testing, documentation, or development.
   proxy API.
 - Dynamic `options_form` callables may now return an empty string
   which will result in no options form being rendered.
+- `Spawner.user_options` is persisted to the database to be re-used,
+  so that a server spawned once via the form can be re-spawned via the API
+  with the same options.
+- Added `c.PAMAuthenticator.pam_normalize_username` option for round-tripping
+  usernames through PAM to retrieve the normalized form.
+- Added `c.JupyterHub.named_server_limit_per_user` configuration to limit
+  the number of named servers each user can have.
+  The default is 0, for no limit.
+- API requests to HubAuthenticated services (e.g. single-user servers)
+  may pass a token in the `Authorization` header,
+  matching authentication with the Hub API itself.
+- Added `Authenticator.is_admin(handler, authentication)` method
+  and `Authenticator.admin_groups` configuration for automatically
+  determining that a member of a group should be considered an admin.
+- New `c.Authenticator.post_auth_hook` configuration
+  that can be any callable of the form `async def hook(authenticator, handler, authentication=None):`.
+  This hook may transform the return value of `Authenticator.authenticate()`
+  and return a new authentication dictionary,
+  e.g. specifying admin privileges, group membership,
+  or custom white/blacklisting logic.
+  This hook is called *after* existing normalization and whitelist checking.
+- `Spawner.options_from_form` may now be async
+- Added `JupyterHub.shutdown_on_logout` option to trigger shutdown of a user's
+  servers when they log out.
+
 
 #### Changes
 
-- Prometheus metrics page is now authenticated. Any authenticated user may see the prometheus metrics. To disable prometheus authentication, set `JupyterHub.authenticate_prometheus = False`
+- Authentication methods such as `check_whitelist` should now take an additional
+  `authentication` argument
+  that will be a dictionary (default: None) of authentication data,
+  as returned by `Authenticator.authenticate()`:
+
+  ```python
+  def check_whitelist(self, username, authentication=None):
+      ...
+  ```
+
+  `authentication` should have a default value of None
+  for backward-compatibility with jupyterhub < 1.0.
+- Prometheus metrics page is now authenticated.
+  Any authenticated user may see the prometheus metrics.
+  To disable prometheus authentication,
+  set `JupyterHub.authenticate_prometheus = False`.
 - Visits to `/user/:name` no longer trigger an implicit launch of the user's server.
   Instead, a page is shown indicating that the server is not running
   with a link to request the spawn.
 - API requests to `/user/:name` for a not-running server will have status 503 instead of 404.
-
+- OAuth includes a confirmation page when attempting to visit another user's server,
+  so that users can choose to cancel authentication with the single-user server.
+  Confirmation is still skipped when accessing your own server.
 
 
 #### Fixed
 
 - Various fixes to improve Windows compatibility
   (default Authenticator and Spawner still do not support Windows, but other Spawners may)
+- Fixed compatibility with Oracle db
+- Fewer redirects following a visit to the default `/` url
+- Error when progress is requested before progress is ready
+- Error when API requests are made to a not-running server without authentication
 
 #### Development changes
 
