@@ -10,6 +10,7 @@ Technical Reference
    spawners
    services
    proxy
+   separate-proxy
    rest
    database
    templates

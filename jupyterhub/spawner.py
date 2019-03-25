@@ -102,6 +102,16 @@ class Spawner(LoggingConfigurable):
             return self.user.name
 
     @property
+    def _failed(self):
+        """Did the last spawn fail?"""
+        return (
+            not self.active
+            and self._spawn_future
+            and self._spawn_future.done()
+            and self._spawn_future.exception()
+        )
+
+    @property
     def pending(self):
         """Return the current pending event, if any
 
@@ -350,10 +360,24 @@ class Spawner(LoggingConfigurable):
         Override this function to understand single-values, numbers, etc.
 
         This should coerce form data into the structure expected by self.user_options,
-        which must be a dict.
+        which must be a dict, and should be JSON-serializeable,
+        though it can contain bytes in addition to standard JSON data types.
+
+        This method should not have any side effects.
+        Any handling of `user_options` should be done in `.start()`
+        to ensure consistent behavior across servers
+        spawned via the API and form submission page.
 
         Instances will receive this data on self.user_options, after passing through this function,
         prior to `Spawner.start`.
+
+        .. versionchanged:: 1.0
+            user_options are persisted in the JupyterHub database to be reused
+            on subsequent spawns if no options are given.
+            user_options is serialized to JSON as part of this persistence
+            (with additional support for bytes in case of uploaded file data),
+            and any non-bytes non-jsonable values will be replaced with None
+            if the user_options are re-used.
         """
         return form_data
 

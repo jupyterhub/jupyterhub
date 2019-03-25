@@ -274,7 +274,16 @@ class JupyterHub(Application):
             # so that they show up in config files, etc.
             if isinstance(trait, EntryPointType):
                 for key, entry_point in trait.load_entry_points().items():
-                    cls = entry_point.load()
+                    try:
+                        cls = entry_point.load()
+                    except Exception as e:
+                        self.log.warning(
+                            "Failed to load %s entrypoint %r: %r",
+                            trait.entry_point_group,
+                            key,
+                            e,
+                        )
+                        continue
                     if cls not in classes and isinstance(cls, Configurable):
                         classes.append(cls)
         return classes
@@ -454,6 +463,18 @@ class JupyterHub(Application):
         are on different hosts.
 
         Use with internal_ssl
+        """,
+    ).tag(config=True)
+
+    trusted_downstream_ips = List(
+        Unicode(),
+        help="""Downstream proxy IP addresses to trust.
+
+        This sets the list of IP addresses that are trusted and skipped when processing
+        the `X-Forwarded-For` header. For example, if an external proxy is used for TLS
+        termination, its IP address should be added to this list to ensure the correct
+        client IP addresses are recorded in the logs instead of the proxy server's IP
+        address.
         """,
     ).tag(config=True)
 
@@ -2282,7 +2303,10 @@ class JupyterHub(Application):
 
         # start the webserver
         self.http_server = tornado.httpserver.HTTPServer(
-            self.tornado_application, ssl_options=ssl_context, xheaders=True
+            self.tornado_application,
+            ssl_options=ssl_context,
+            xheaders=True,
+            trusted_downstream=self.trusted_downstream_ips,
         )
         bind_url = urlparse(self.hub.bind_url)
         try:

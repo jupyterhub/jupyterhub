@@ -35,7 +35,7 @@
 require(["jquery"], function ($) {
   $("#refresh").click(function () {
     window.location.reload();
-  })
+  });
 
   // hook up event-stream for progress
   var evtSource = new EventSource("{{ progress_url }}");
@@ -85,7 +85,7 @@ require(["jquery"], function ($) {
       // open event log for debugging
       $('#progress-details').prop('open', true);
     }
-  }
+  };
 
 });
 </script>

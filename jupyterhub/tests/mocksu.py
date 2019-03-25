@@ -18,7 +18,9 @@ import sys
 
 from tornado import httpserver
 from tornado import ioloop
+from tornado import log
 from tornado import web
+from tornado.options import options
 
 from ..utils import make_ssl_context
 from .mockservice import EnvHandler
@@ -35,7 +37,8 @@ class ArgsHandler(web.RequestHandler):
 
 
 def main(args):
-
+    options.logging = 'debug'
+    log.enable_pretty_logging()
     app = web.Application(
         [(r'.*/args', ArgsHandler), (r'.*/env', EnvHandler), (r'.*', EchoHandler)]
     )
@@ -49,7 +52,8 @@ def main(args):
         ssl_context = make_ssl_context(key, cert, cafile=ca, check_hostname=False)
 
     server = httpserver.HTTPServer(app, ssl_options=ssl_context)
-    server.listen(args.port)
+    log.app_log.info("Starting mock singleuser server at 127.0.0.1:%s", args.port)
+    server.listen(args.port, '127.0.0.1')
     try:
         ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:

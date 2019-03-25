@@ -2,6 +2,7 @@
 import asyncio
 import sys
 from unittest import mock
+from urllib.parse import parse_qs
 from urllib.parse import urlencode
 from urllib.parse import urlparse
 
@@ -16,6 +17,7 @@ from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
 from .mocking import FalsyCallableFormSpawner
 from .mocking import FormSpawner
+from .test_api import next_event
 from .utils import add_user
 from .utils import api_request
 from .utils import async_requests
@@ -35,7 +37,12 @@ async def test_root_auth(app):
     cookies = await app.login_user('river')
     r = await async_requests.get(public_url(app), cookies=cookies)
     r.raise_for_status()
-    assert r.url.startswith(public_url(app, app.users['river']))
+    assert r.history
+    history = [_.url for _ in r.history] + [r.url]
+    assert history[1] == ujoin(public_url(app), "hub/")
+    assert history[2] == ujoin(public_url(app), "hub/spawn")
+    assert history[3] == ujoin(public_url(app), "hub/spawn-pending/river")
+    # if spawning was quick, there will be one more entry that's public_url(user)
 
 
 async def test_root_redirect(app):
@@ -44,9 +51,10 @@ async def test_root_redirect(app):
     next_url = ujoin(app.base_url, 'user/other/test.ipynb')
     url = '/?' + urlencode({'next': next_url})
     r = await get_page(url, app, cookies=cookies)
-    r.raise_for_status()
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, 'user/%s/test.ipynb' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/test.ipynb' % name)
+    # serve "server not running" page, which has status 503
+    assert r.status_code == 503
 
 
 async def test_root_default_url_noauth(app):
@@ -122,11 +130,19 @@ async def test_spawn_redirect(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, 'user/%s/' % name)
+    # make sure we visited hub/spawn-pending after spawn
+    # if spawn was really quick, we might get redirected all the way to the running server,
+    # so check history instead of r.url
+    history = [urlparse(_.url).path for _ in r.history]
+    history.append(path)
+    assert ujoin(app.base_url, 'hub/spawn-pending', name) in history
 
     # should have started server
     status = await u.spawner.poll()
     assert status is None
+    # wait for ready signal before checking next redirect
+    while not u.spawner.ready:
+        await asyncio.sleep(0.1)
 
     # test spawn page when server is already running (just redirect)
     r = await get_page('spawn', app, cookies=cookies)
@@ -143,9 +159,9 @@ async def test_spawn_redirect(app):
 
     # test handing of trailing slash on `/user/name`
     r = await get_page('user/' + name, app, hub=False, cookies=cookies)
-    r.raise_for_status()
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/' % name)
+    assert r.status_code == 503
 
 
 async def test_spawn_handler_access(app):
@@ -159,6 +175,10 @@ async def test_spawn_handler_access(app):
     # spawn server via browser link with ?arg=value
     r = await get_page('spawn', app, cookies=cookies, params={'arg': 'value'})
     r.raise_for_status()
+    # wait for spawn-pending to complete
+    while not u.spawner.ready:
+        await asyncio.sleep(0.1)
+        assert u.spawner.active
 
     # verify that request params got passed down
     # implemented in MockSpawner
@@ -178,10 +198,17 @@ async def test_spawn_admin_access(app, admin_access):
     name = 'mariel'
     user = add_user(app.db, app=app, name=name)
     app.db.commit()
-    r = await get_page('user/' + name, app, cookies=cookies)
+    r = await get_page('spawn/' + name, app, cookies=cookies)
     r.raise_for_status()
+
+    while '/spawn-pending/' in r.url:
+        await asyncio.sleep(0.1)
+        r = await async_requests.get(r.url, cookies=cookies)
+        r.raise_for_status()
+
     assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
     r = await get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
+
     r.raise_for_status()
     env = r.json()
     assert env['JUPYTERHUB_USER'] == name
@@ -205,7 +232,9 @@ async def test_spawn_page_falsy_callable(app):
     ):
         cookies = await app.login_user('erik')
         r = await get_page('spawn', app, cookies=cookies)
-        assert 'user/erik' in r.url
+    history = [_.url for _ in r.history] + [r.url]
+    assert history[0] == ujoin(public_url(app), "hub/spawn")
+    assert history[1] == ujoin(public_url(app), "hub/spawn-pending/erik")
 
 
 async def test_spawn_page_admin(app, admin_access):
@@ -289,8 +318,63 @@ async def test_spawn_form_with_file(app):
         }
 
 
-async def test_user_redirect(app):
-    name = 'wash'
+async def test_spawn_pending(app, username, slow_spawn):
+    cookies = await app.login_user(username)
+    # first request, no spawn is pending
+    # spawn-pending shows button linking to spawn
+    r = await get_page('/spawn-pending/' + username, app, cookies=cookies)
+    r.raise_for_status()
+    page = BeautifulSoup(r.text, "html.parser")
+    assert "is not running" in page.body.text
+    link = page.find("a", id="start")
+    assert link
+    assert link['href'] == ujoin(app.base_url, '/hub/spawn/', username)
+
+    # request spawn
+    next_url = ujoin(app.base_url, 'user', username, 'tree/foo')
+    spawn_url = url_concat('/spawn/' + username, dict(next=next_url))
+    r = await get_page(spawn_url, app, cookies=cookies)
+    r.raise_for_status()
+    url = urlparse(r.url)
+    # spawn redirects to spawn-pending
+    assert url.path == ujoin(app.base_url, 'hub/spawn-pending', username)
+    # ?next query arg is preserved
+    assert parse_qs(url.query).get('next') == [next_url]
+
+    # check spawn-pending html
+    page = BeautifulSoup(r.text, "html.parser")
+    assert page.find('div', {'class': 'progress'})
+
+    # validate event source url by consuming it
+    script = page.body.find('script').text
+    assert 'EventSource' in script
+    # find EventSource url in javascript
+    # maybe not the most robust way to check this?
+    eventsource = script.find('new EventSource')
+    start = script.find('(', eventsource)
+    end = script.find(')', start)
+    # strip quotes
+    progress_url = script[start + 2 : end - 1]
+    # verify that it works by watching progress events
+    # (double-duty because we also want to wait for the spawn to finish)
+    progress = await api_request(app, 'users', username, 'server/progress', stream=True)
+    ex = async_requests.executor
+    line_iter = iter(progress.iter_lines(decode_unicode=True))
+    evt = True
+    while evt is not None:
+        evt = await ex.submit(next_event, line_iter)
+        if evt:
+            print(evt)
+
+    # refresh page after progress is complete
+    r = await async_requests.get(r.url, cookies=cookies)
+    r.raise_for_status()
+    # should have redirected to the now-running server
+    assert urlparse(r.url).path == urlparse(next_url).path
+
+
+async def test_user_redirect(app, username):
+    name = username
     cookies = await app.login_user(name)
 
     r = await get_page('/user-redirect/tree/top/', app)
@@ -307,25 +391,29 @@ async def test_user_redirect(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
+    while '/spawn-pending/' in path:
+        await asyncio.sleep(0.1)
+        r = await get_page(r.url, app, cookies=cookies)
+        path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
 
 
-async def test_user_redirect_deprecated(app):
+async def test_user_redirect_deprecated(app, username):
     """redirecting from /user/someonelse/ URLs (deprecated)"""
-    name = 'wash'
+    name = username
     cookies = await app.login_user(name)
 
     r = await get_page('/user/baduser', app, cookies=cookies, hub=False)
-    r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/' % name)
+    assert r.status_code == 503
 
     r = await get_page('/user/baduser/test.ipynb', app, cookies=cookies, hub=False)
-    r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/user/%s/test.ipynb' % name)
+    assert path == ujoin(app.base_url, 'hub/user/%s/test.ipynb' % name)
+    assert r.status_code == 503
 
     r = await get_page('/user/baduser/test.ipynb', app, hub=False)
     r.raise_for_status()
@@ -389,9 +477,11 @@ async def test_login_redirect(app, running, next_url, location):
     user = app.users['river']
     if location:
         location = ujoin(app.base_url, location)
+    elif running:
+        location = user.url
     else:
         # use default url
-        location = user.url
+        location = ujoin(app.base_url, 'hub/spawn')
 
     url = 'login'
     if next_url:
@@ -575,6 +665,10 @@ async def test_announcements(app, announcements):
             assert ann01 in text
 
     cookies = await app.login_user("jones")
+    # make sure spawner isn't running
+    # so we see the spawn form
+    user = app.users["jones"]
+    await user.stop()
 
     with mock.patch.dict(
         app.tornado_settings,
@@ -619,7 +713,7 @@ async def test_token_page(app):
     assert urlparse(r.url).path.endswith('/hub/token')
 
     def extract_body(r):
-        soup = BeautifulSoup(r.text, "html5lib")
+        soup = BeautifulSoup(r.text, "html.parser")
         import re
 
         # trim empty lines
@@ -650,6 +744,12 @@ async def test_token_page(app):
     r = await get_page("spawn", app, cookies=cookies)
     r.raise_for_status()
 
+    # wait for the server to be running and visit it
+    while not user.spawner.ready:
+        await asyncio.sleep(0.1)
+    r = await get_page("user/" + user.name, app, cookies=cookies)
+    r.raise_for_status()
+
     r = await get_page("token", app, cookies=cookies)
     r.raise_for_status()
     body = extract_body(r)
@@ -661,9 +761,11 @@ async def test_token_page(app):
 async def test_server_not_running_api_request(app):
     cookies = await app.login_user("bees")
     r = await get_page("user/bees/api/status", app, hub=False, cookies=cookies)
-    assert r.status_code == 404
+    assert r.status_code == 503
     assert r.headers["content-type"] == "application/json"
-    assert r.json() == {"message": "bees is not running"}
+    message = r.json()['message']
+    assert ujoin(app.base_url, "hub/spawn/bees") in message
+    assert " /user/bees" in message
 
 
 async def test_metrics_no_auth(app):

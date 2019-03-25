@@ -72,6 +72,7 @@
         <td>
           <a role="button" class="stop-server btn btn-xs btn-danger{% if not spawner.active %} hidden{% endif %}" id="stop-{{ spawner.name }}">stop</a>
           <a role="button" class="start-server btn btn-xs btn-primary {% if spawner.active %} hidden{% endif %}" id="start-{{ spawner.name }}"
+          href="{{ base_url }}spawn/{{ user.name }}/{{ spawner.name }}"
           >
             start
           </a>

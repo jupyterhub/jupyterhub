@@ -233,6 +233,7 @@ async def test_pam_auth_blacklist():
     assert authorized['name'] == 'kaylee'
 
 
+@pytest.mark.filterwarnings("ignore::DeprecationWarning")
 async def test_deprecated_signatures():
     def deprecated_xlist(self, username):
         return True
@@ -448,15 +449,14 @@ def test_validate_names():
     assert a.validate_username('willow')
 
 
-@pytest.mark.gen_test
-def test_post_auth_hook():
+async def test_post_auth_hook():
     def test_auth_hook(authenticator, handler, authentication):
         authentication['testkey'] = 'testvalue'
         return authentication
 
     a = MockPAMAuthenticator(post_auth_hook=test_auth_hook)
 
-    authorized = yield a.get_authenticated_user(
+    authorized = await a.get_authenticated_user(
         None, {'username': 'test_user', 'password': 'test_user'}
     )
 

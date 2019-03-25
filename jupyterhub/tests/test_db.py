@@ -35,7 +35,7 @@ def generate_old_db(env_dir, hub_version, db_url):
     check_call([env_py, populate_db, db_url])
 
 
-@pytest.mark.parametrize('hub_version', ['0.7.2', '0.8.1'])
+@pytest.mark.parametrize('hub_version', ['0.7.2', '0.8.1', '0.9.4'])
 async def test_upgrade(tmpdir, hub_version):
     db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
     if db_url:

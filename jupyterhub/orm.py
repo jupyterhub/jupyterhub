@@ -3,6 +3,8 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
+from base64 import decodebytes
+from base64 import encodebytes
 from datetime import datetime
 from datetime import timedelta
 
@@ -50,21 +52,40 @@ class JSONDict(TypeDecorator):
 
     Usage::
 
-        JSONEncodedDict(255)
+        JSONDict(255)
 
     """
 
     impl = Text
 
+    def _json_default(self, obj):
+        """encode non-jsonable objects as JSON
+
+        Currently only bytes are supported
+
+        """
+        if not isinstance(obj, bytes):
+            app_log.warning(
+                "Non-jsonable data in user_options: %r; will persist None.", type(obj)
+            )
+            return None
+
+        return {"__jupyterhub_bytes__": True, "data": encodebytes(obj).decode('ascii')}
+
+    def _object_hook(self, dct):
+        """decode non-json objects packed by _json_default"""
+        if dct.get("__jupyterhub_bytes__", False):
+            return decodebytes(dct['data'].encode('ascii'))
+        return dct
+
     def process_bind_param(self, value, dialect):
         if value is not None:
-            value = json.dumps(value)
-
+            value = json.dumps(value, default=self._json_default)
         return value
 
     def process_result_value(self, value, dialect):
         if value is not None:
-            value = json.loads(value)
+            value = json.loads(value, object_hook=self._object_hook)
         return value
 
 
@@ -216,6 +237,7 @@ class Spawner(Base):
 
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
+    user_options = Column(JSONDict)
 
     # properties on the spawner wrapper
     # some APIs get these low-level objects
