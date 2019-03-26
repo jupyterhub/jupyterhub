@@ -27,7 +27,7 @@ As a Python project, a development install of JupyterHub follows standard practi
    which include things like testing tools
 
     ```bash
-    python3 -m pip install -r dev-requirements.text
+    python3 -m pip install -r dev-requirements.txt
     ```
 4. install configurable-http-proxy with npm:
 
