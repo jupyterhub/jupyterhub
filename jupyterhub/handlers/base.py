@@ -1202,7 +1202,7 @@ class UserUrlHandler(BaseHandler):
             and self.current_user
             and user_name == self.current_user.name
         ):
-            server_name = user_path.split('/', 2)[1]
+            server_name = user_path.lstrip('/').split('/', 1)[0]
             if server_name not in self.current_user.orm_user.orm_spawners:
                 # no such server, assume default
                 server_name = ''
@@ -1292,7 +1292,7 @@ class UserUrlHandler(BaseHandler):
         server_name = ''
         if self.allow_named_servers:
             # check if url prefix matches an existing server name
-            server_name = user_path.split("/", 2)[1]
+            server_name = user_path.lstrip('/').split('/', 1)[0]
             if server_name not in user.orm_user.orm_spawners:
                 # not found, assume default server
                 server_name = ''
