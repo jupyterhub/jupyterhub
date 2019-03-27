@@ -7,6 +7,145 @@ command line for details.
 
 ## [Unreleased]
 
+## 1.0
+
+### [1.0.0] 2018-03-XX
+
+JupyterHub 1.0 is a major milestone for JupyterHub.
+Huge thanks to the many people who have contributed to this release,
+whether it was through discussion, testing, documentation, or development.
+
+#### Major new features
+
+- Support TLS encryption and authentication of all internal communication.
+  Spawners must implement `.move_certs` method to make certificates available
+  to the notebook server if it is not local to the Hub.
+- There is now full UI support for managing named servers.
+  With named servers, each jupyterhub user may have access to more than one named server. For example, a professor may access a server named `research` and another named `teaching`.
+
+  ![named servers on the home page](./images/named-servers-home.png)
+- Authenticators can now expire and refresh authentication data by implementing
+  `Authenticator.refresh_user(user)`.
+  This allows things like OAuth data and access tokens to be refreshed.
+  When used together with `Authenticator.refresh_pre_spawn = True`,
+  auth refresh can be forced prior to Spawn,
+  allowing the Authenticator to *require* that authentication data is fresh
+  immediately before the user's server is launched.
+
+```eval_rst
+.. seealso::
+
+  - :meth:`.Authenticator.refresh_user`
+  - :meth:`.Spawner.create_certs`
+  - :meth:`.Spawner.move_certs`
+```
+
+#### New features
+
+- allow custom spawners, authenticators, and proxies to register themselves via 'entry points', enabling more convenient configuration such as:
+
+  ```python
+  c.JupyterHub.authenticator_class = 'github'
+  c.JupyterHub.spawner_class = 'docker'
+  c.JupyterHub.proxy_class = 'traefik_etcd'
+  ```
+- Spawners are passed the tornado Handler object that requested their spawn (as `self.handler`),
+  so they can do things like make decisions based on query arguments in the request.
+- SimpleSpawner and DummyAuthenticator, which are useful for testing, have been merged into JupyterHub itself:
+
+  ```python
+  # For testing purposes only. Should not be used in production.
+  c.JupyterHub.authenticator_class = 'dummy'
+  c.JupyterHub.spawner_class = 'simple'
+  ```
+
+  These classes are **not** appropriate for production use. Only testing.
+- Add health check endpoint at `/hub/health`
+- Several prometheus metrics have been added (thanks to [Outreachy](https://www.outreachy.org/) applicants!)
+- A new API for registering user activity.
+  To prepare for the addition of [alternate proxy implementations](https://github.com/jupyterhub/traefik-proxy),
+  responsibility for tracking activity is taken away from the proxy
+  and moved to the notebook server (which already has activity tracking features).
+  Activity is now tracked by pushing it to the Hub from user servers instead of polling the
+  proxy API.
+- Dynamic `options_form` callables may now return an empty string
+  which will result in no options form being rendered.
+- `Spawner.user_options` is persisted to the database to be re-used,
+  so that a server spawned once via the form can be re-spawned via the API
+  with the same options.
+- Added `c.PAMAuthenticator.pam_normalize_username` option for round-tripping
+  usernames through PAM to retrieve the normalized form.
+- Added `c.JupyterHub.named_server_limit_per_user` configuration to limit
+  the number of named servers each user can have.
+  The default is 0, for no limit.
+- API requests to HubAuthenticated services (e.g. single-user servers)
+  may pass a token in the `Authorization` header,
+  matching authentication with the Hub API itself.
+- Added `Authenticator.is_admin(handler, authentication)` method
+  and `Authenticator.admin_groups` configuration for automatically
+  determining that a member of a group should be considered an admin.
+- New `c.Authenticator.post_auth_hook` configuration
+  that can be any callable of the form `async def hook(authenticator, handler, authentication=None):`.
+  This hook may transform the return value of `Authenticator.authenticate()`
+  and return a new authentication dictionary,
+  e.g. specifying admin privileges, group membership,
+  or custom white/blacklisting logic.
+  This hook is called *after* existing normalization and whitelist checking.
+- `Spawner.options_from_form` may now be async
+- Added `JupyterHub.shutdown_on_logout` option to trigger shutdown of a user's
+  servers when they log out.
+
+
+#### Changes
+
+- Authentication methods such as `check_whitelist` should now take an additional
+  `authentication` argument
+  that will be a dictionary (default: None) of authentication data,
+  as returned by `Authenticator.authenticate()`:
+
+  ```python
+  def check_whitelist(self, username, authentication=None):
+      ...
+  ```
+
+  `authentication` should have a default value of None
+  for backward-compatibility with jupyterhub < 1.0.
+- Prometheus metrics page is now authenticated.
+  Any authenticated user may see the prometheus metrics.
+  To disable prometheus authentication,
+  set `JupyterHub.authenticate_prometheus = False`.
+- Visits to `/user/:name` no longer trigger an implicit launch of the user's server.
+  Instead, a page is shown indicating that the server is not running
+  with a link to request the spawn.
+- API requests to `/user/:name` for a not-running server will have status 503 instead of 404.
+- OAuth includes a confirmation page when attempting to visit another user's server,
+  so that users can choose to cancel authentication with the single-user server.
+  Confirmation is still skipped when accessing your own server.
+
+
+#### Fixed
+
+- Various fixes to improve Windows compatibility
+  (default Authenticator and Spawner still do not support Windows, but other Spawners may)
+- Fixed compatibility with Oracle db
+- Fewer redirects following a visit to the default `/` url
+- Error when progress is requested before progress is ready
+- Error when API requests are made to a not-running server without authentication
+
+#### Development changes
+
+There have been several changes to the development process that shouldn't
+generally affect users of JupyterHub, but may affect contributors.
+In general, see `CONTRIBUTING.md` for contribution info or ask if you have questions.
+
+- JupyterHub has adopted `black` as a code autoformatter and `pre-commit`
+  as a tool for automatically running code formatting on commit.
+  This is meant to make it *easier* to contribute to JupyterHub,
+  so let us know if it's having the opposite effect.
+- JupyterHub has switched its test suite to using `pytest-asyncio` from `pytest-tornado`.
+- OAuth is now implemented internally using `oauthlib` instead of `python-oauth2`. This should have no effect on behavior.
+
+
 ## 0.9
 
 ### [0.9.4] 2018-09-24
@@ -426,7 +565,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
 [0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2

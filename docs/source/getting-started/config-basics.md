@@ -1,7 +1,7 @@
 # Configuration Basics
 
 The section contains basic information about configuring settings for a JupyterHub
-deployment. The [Technical Reference](../reference/index.html)
+deployment. The [Technical Reference](../reference/index)
 documentation provides additional details.
 
 This section will help you learn how to:
@@ -44,7 +44,7 @@ jupyterhub -f /etc/jupyterhub/jupyterhub_config.py
 ```
 
 The IPython documentation provides additional information on the
-[config system](http://ipython.readthedocs.io/en/stable/development/config.html)
+[config system](http://ipython.readthedocs.io/en/stable/development/config)
 that Jupyter uses.
 
 ## Configure using command line options
@@ -61,7 +61,7 @@ would enter:
 
 ```bash
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
-```    
+```
 
 All configurable options may technically be set on the command-line,
 though some are inconvenient to type. To set a particular configuration
@@ -77,10 +77,10 @@ jupyterhub --Spawner.notebook_dir='~/assignments'
 ## Configure for various deployment environments
 
 The default authentication and process spawning mechanisms can be replaced, and
-specific [authenticators](./authenticators-users-basics.html) and
-[spawners](./spawners-basics.html) can be set in the configuration file.
+specific [authenticators](./authenticators-users-basics) and
+[spawners](./spawners-basics) can be set in the configuration file.
 This enables JupyterHub to be used with a variety of authentication methods or
-process control and deployment environments. [Some examples](../reference/config-examples.html),
+process control and deployment environments. [Some examples](../reference/config-examples),
 meant as illustration, are:
 
 - Using GitHub OAuth instead of PAM with [OAuthenticator](https://github.com/jupyterhub/oauthenticator)
@@ -93,8 +93,8 @@ use a custom proxy (e.g. Traefik), this also not needed.
 
 Connections to user servers go through the proxy, and *not* the hub
 itself.  If the proxy stays running when the hub restarts (for
-maintnance, re-configuration, etc), then use connections are not
+maintenance, re-configuration, etc.), then use connections are not
 interrupted.  For simplicity, by default the hub starts the proxy
 automatically, so if the hub restarts, the proxy restarts, and user
 connections are interrupted.  It is easy to run the proxy separately,
-for information see [the separate proxy page](../reference/separate-proxy.html).
+for information see [the separate proxy page](../reference/separate-proxy).
