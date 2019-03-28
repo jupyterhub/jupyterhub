@@ -14,7 +14,7 @@ function get_hub_version() {
   split=( ${hub_xyz//./ } )
   hub_xy="${split[0]}.${split[1]}"
   # add .dev on hub_xy so it's 1.0.dev
-  if [[ ! -z "${split[3]}" ]]; then
+  if [[ ! -z "${split[3]:-}" ]]; then
     hub_xy="${hub_xy}.${split[3]}"
   fi
 }
