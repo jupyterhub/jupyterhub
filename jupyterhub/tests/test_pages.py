@@ -393,7 +393,7 @@ async def test_user_redirect(app, username):
     path = urlparse(r.url).path
     while '/spawn-pending/' in path:
         await asyncio.sleep(0.1)
-        r = await get_page(r.url, app, cookies=cookies)
+        r = await async_requests.get(r.url, cookies=cookies)
         path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
 
