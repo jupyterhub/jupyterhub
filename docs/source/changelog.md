@@ -9,6 +9,14 @@ command line for details.
 
 ## 0.9
 
+### [0.9.5] 2019-03-28
+
+JupyterHub 0.9.5 is a security release.
+
+- Fixes an Open Redirect vulnerability on some browsers
+  which improperly handle backslashes in URLs (Chrome).
+  A CVE has been requested for this vulnerability.
+
 ### [0.9.4] 2018-09-24
 
 JupyterHub 0.9.4 is a small bugfix release.
@@ -426,7 +434,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/0.9.5...HEAD
+[0.9.5]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...0.9.5
 [0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
