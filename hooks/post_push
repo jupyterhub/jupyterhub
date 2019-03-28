@@ -14,6 +14,9 @@ function get_hub_version() {
   # add .dev on hub_xy so it's 1.0.dev
   if [[ ! -z "${split[3]:-}" ]]; then
     hub_xy="${hub_xy}.${split[3]}"
+    latest=0
+  else
+    latest=1
   fi
 }
 
@@ -31,3 +34,11 @@ docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xy
 docker push $DOCKER_REPO:$hub_xy
 docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xy
 docker push $ONBUILD:$hub_xyz
+
+# if building a stable release, tag latest as well
+if [[ "$latest" == "1" ]]; then
+  docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:latest
+  docker push $DOCKER_REPO:latest
+  docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:latest
+  docker push $ONBUILD:latest
+fi
