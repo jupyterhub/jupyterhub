@@ -549,6 +549,8 @@ class BaseHandler(RequestHandler):
         - else: /hub/home
         """
         next_url = self.get_argument('next', default='')
+        # protect against some browsers' buggy handling of backslash as slash
+        next_url = next_url.replace('\\', '%5C')
         if (next_url + '/').startswith(
             (
                 '%s://%s/' % (self.request.protocol, self.request.host),
