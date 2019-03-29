@@ -9,7 +9,7 @@ command line for details.
 
 ## 1.0
 
-### [1.0.0] 2018-03-XX
+### [1.0.0] 2019-04-XX
 
 JupyterHub 1.0 is a major milestone for JupyterHub.
 Huge thanks to the many people who have contributed to this release,
