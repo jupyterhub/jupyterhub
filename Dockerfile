@@ -48,7 +48,7 @@ ENV PATH=/opt/conda/bin:$PATH
 ADD . /src/jupyterhub
 WORKDIR /src/jupyterhub
 
-RUN pip install . && \
+RUN pip install --no-cache . 'tornado<6' && \
     rm -rf $PWD ~/.cache ~/.npm
 
 RUN mkdir -p /srv/jupyterhub/
