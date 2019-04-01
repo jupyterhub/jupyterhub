@@ -564,15 +564,23 @@ class BaseHandler(RequestHandler):
             )
         ):
             # treat absolute URLs for our host as absolute paths:
+            # below, redirects that aren't strictly paths
             parsed = urlparse(next_url)
             next_url = parsed.path
             if parsed.query:
                 next_url = next_url + '?' + parsed.query
             if parsed.fragment:
                 next_url = next_url + '#' + parsed.fragment
-        if next_url and (urlparse(next_url).netloc or not next_url.startswith('/')):
+
+        # if it still has host info, it didn't match our above check for *this* host
+        if next_url and (
+            '://' in next_url
+            or next_url.startswith('//')
+            or not next_url.startswith('/')
+        ):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
+
         if next_url and next_url.startswith(url_path_join(self.base_url, 'user/')):
             # add /hub/ prefix, to ensure we redirect to the right user's server.
             # The next request will be handled by SpawnHandler,
