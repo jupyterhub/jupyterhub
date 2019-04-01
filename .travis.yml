@@ -27,7 +27,7 @@ before_install:
       unset MYSQL_UNIX_PORT
       DB=mysql bash ci/docker-db.sh
       DB=mysql bash ci/init-db.sh
-      pip install 'mysql-connector<2.2'
+      pip install 'mysql-connector-python'
     elif [[ $JUPYTERHUB_TEST_DB_URL == postgresql* ]]; then
       DB=postgres bash ci/init-db.sh
       pip install psycopg2-binary
