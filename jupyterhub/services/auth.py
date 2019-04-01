@@ -960,7 +960,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
         # validate OAuth state
         arg_state = self.get_argument("state", None)
         if arg_state is None:
-            raise HTTPError("oauth state is missing. Try logging in again.")
+            raise HTTPError(500, "oauth state is missing. Try logging in again.")
         cookie_name = self.hub_auth.get_state_cookie_name(arg_state)
         cookie_state = self.get_secure_cookie(cookie_name)
         # clear cookie state now that we've consumed it
