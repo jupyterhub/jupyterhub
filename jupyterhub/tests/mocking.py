@@ -323,6 +323,8 @@ class MockHub(JupyterHub):
         self.pid_file = NamedTemporaryFile(delete=False).name
         self.db_file = NamedTemporaryFile()
         self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
+        if 'mysql' in self.db_url:
+            self.db_kwargs['connect_args'] = {'auth_plugin': 'mysql_native_password'}
         yield super().initialize([])
 
         # add an initial user
