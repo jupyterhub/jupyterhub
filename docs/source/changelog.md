@@ -148,13 +148,13 @@ In general, see `CONTRIBUTING.md` for contribution info or ask if you have quest
 
 ## 0.9
 
-### [0.9.5] 2019-03-28
+### [0.9.6] 2019-04-01
 
-JupyterHub 0.9.5 is a security release.
+JupyterHub 0.9.6 is a security release.
 
-- Fixes an Open Redirect vulnerability on some browsers
-  which improperly handle backslashes in URLs (Chrome).
-  A CVE has been requested for this vulnerability.
+- Fixes an Open Redirect vulnerability (CVE-2019-10255).
+
+JupyterHub 0.9.5 included a partial fix for this issue.
 
 ### [0.9.4] 2018-09-24
 
@@ -575,7 +575,7 @@ First preview release
 
 [Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.0.0...HEAD
 [1.0.0]: https://github.com/jupyterhub/jupyterhub/compare/0.9.5...HEAD
-[0.9.5]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...0.9.5
+[0.9.6]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...0.9.6
 [0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
 [0.9.2]: https://github.com/jupyterhub/jupyterhub/compare/0.9.1...0.9.2
