@@ -409,10 +409,13 @@ def test_login_strip(app):
         (False, '/has?query#andhash', '/has?query#andhash'),
 
         # next_url outside is not allowed
+        (False, 'relative/path', ''),
         (False, 'https://other.domain', ''),
         (False, 'ftp://other.domain', ''),
         (False, '//other.domain', ''),
-    ]
+        (False, '///other.domain/triple', ''),
+        (False, '\\\\other.domain/backslashes', ''),
+    ],
 )
 @pytest.mark.gen_test
 def test_login_redirect(app, running, next_url, location):
@@ -426,7 +429,7 @@ def test_login_redirect(app, running, next_url, location):
 
     url = 'login'
     if next_url:
-        if '//' not in next_url:
+        if '//' not in next_url and next_url.startswith('/'):
             next_url = ujoin(app.base_url, next_url, '')
         url = url_concat(url, dict(next=next_url))
 
