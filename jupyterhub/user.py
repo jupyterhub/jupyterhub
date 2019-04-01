@@ -163,6 +163,10 @@ class User:
 
         self.spawners = _SpawnerDict(self._new_spawner)
 
+        # ensure default spawner exists in the database
+        if '' not in self.orm_user.orm_spawners:
+            self._new_orm_spawner('')
+
     @property
     def authenticator(self):
         return self.settings.get('authenticator', None)
@@ -221,6 +225,14 @@ class User:
                 # otherwise, yield low-level ORM object (server is not active)
                 yield orm_spawner
 
+    def _new_orm_spawner(self, server_name):
+        """Creat the low-level orm Spawner object"""
+        orm_spawner = orm.Spawner(user=self.orm_user, name=server_name)
+        self.db.add(orm_spawner)
+        self.db.commit()
+        assert server_name in self.orm_spawners
+        return orm_spawner
+
     def _new_spawner(self, server_name, spawner_class=None, **kwargs):
         """Create a new spawner"""
         if spawner_class is None:
@@ -229,10 +241,7 @@ class User:
 
         orm_spawner = self.orm_spawners.get(server_name)
         if orm_spawner is None:
-            orm_spawner = orm.Spawner(user=self.orm_user, name=server_name)
-            self.db.add(orm_spawner)
-            self.db.commit()
-            assert server_name in self.orm_spawners
+            orm_spawner = self._new_orm_spawner(server_name)
         if server_name == '' and self.state:
             # migrate user.state to spawner.state
             orm_spawner.state = self.state
