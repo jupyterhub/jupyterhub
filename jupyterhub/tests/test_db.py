@@ -28,7 +28,7 @@ def generate_old_db(env_dir, hub_version, db_url):
     check_call([sys.executable, '-m', 'virtualenv', env_dir])
     pkgs = ['jupyterhub==' + hub_version]
     if 'mysql' in db_url:
-        pkgs.append('mysql-connector<2.2')
+        pkgs.append('mysql-connector-python')
     elif 'postgres' in db_url:
         pkgs.append('psycopg2')
     check_call([env_pip, 'install'] + pkgs)
