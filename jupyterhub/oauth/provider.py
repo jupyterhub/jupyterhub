@@ -5,9 +5,11 @@ implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 from datetime import datetime
 from urllib.parse import urlparse
 
+from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code
+from oauthlib.oauth2.rfc6749.grant_types import base
 from sqlalchemy.orm import scoped_session
 from tornado import web
 from tornado.escape import url_escape
@@ -21,7 +23,16 @@ from ..utils import url_path_join
 # patch absolute-uri check
 # because we want to allow relative uri oauth
 # for internal services
-authorization_code.is_absolute_uri = lambda uri: True
+
+
+def is_absolute_uri(uri):
+    if uri.startswith('/'):
+        return True
+    return uri_validate.is_absolute_uri(uri)
+
+
+authorization_code.is_absolute_uri = is_absolute_uri
+base.is_absolute_uri = is_absolute_uri
 
 
 class JupyterHubRequestValidator(RequestValidator):
