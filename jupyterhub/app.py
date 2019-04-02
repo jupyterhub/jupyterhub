@@ -1410,7 +1410,13 @@ class JupyterHub(Application):
     def init_db(self):
         """Create the database connection"""
 
-        self.log.debug("Connecting to db: %s", self.db_url)
+        #Do not log the entire DB connection string, strip the password
+        try:
+            db_info = ':'.join(self.db_url.split(':')[0:2]) + '@' + self.db_url.split('@')[1]
+        except IndexError:
+            #sqlite file string
+            db_info = self.db_url
+        self.log.debug("Connecting to db: %s", db_info)
         if self.upgrade_db:
             dbutil.upgrade_if_needed(self.db_url, log=self.log)
 
@@ -1420,7 +1426,7 @@ class JupyterHub(Application):
             )
             self.db = self.session_factory()
         except OperationalError as e:
-            self.log.error("Failed to connect to db: %s", self.db_url)
+            self.log.error("Failed to connect to db: %s", db_info)
             self.log.debug("Database error was:", exc_info=True)
             if self.db_url.startswith('sqlite:///'):
                 self._check_db_path(self.db_url.split(':///', 1)[1])

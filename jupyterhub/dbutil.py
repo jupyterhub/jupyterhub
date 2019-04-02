@@ -118,7 +118,13 @@ def upgrade_if_needed(db_url, backup=True, log=None):
     else:
         # nothing to do
         return
-    log.info("Upgrading %s", db_url)
+    #Do not log the entire DB connection string, strip the password
+    try:
+        db_info = ':'.join(db_url.split(':')[0:2]) + '@' + db_url.split('@')[1]
+    except IndexError:
+        #sqlite file string
+        db_info = db_url
+    log.info("Upgrading %s", db_info)
     # we need to upgrade, backup the database
     if backup and db_url.startswith('sqlite:///'):
         db_file = db_url.split(':///', 1)[1]
