@@ -18,6 +18,9 @@
       <p>
         {% if failed %}
         The latest attempt to start your server {{ server_name }} has failed.
+        {% if failed_message %}
+          {{ failed_message }}
+        {% endif %}
         Would you like to retry starting it?
         {% else %}
         Your server {{ server_name }} is not running. Would you like to start it?

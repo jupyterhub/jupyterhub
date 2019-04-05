@@ -290,6 +290,7 @@ class SpawnPendingHandler(BaseHandler):
                 server_name=server_name,
                 spawn_url=spawn_url,
                 failed=True,
+                failed_message=getattr(exc, 'jupyterhub_message', ''),
             )
             self.finish(html)
             return
