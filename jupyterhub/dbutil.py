@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from subprocess import check_call
 from tempfile import TemporaryDirectory
+from urllib.parse import urlparse
 
 from sqlalchemy import create_engine
 
@@ -118,7 +119,18 @@ def upgrade_if_needed(db_url, backup=True, log=None):
     else:
         # nothing to do
         return
-    log.info("Upgrading %s", db_url)
+    urlinfo = urlparse(db_url)
+    if urlinfo.password:
+        # avoid logging the database password
+        urlinfo = urlinfo._replace(
+            netloc='{}:[redacted]@{}:{}'.format(
+                urlinfo.username, urlinfo.hostname, urlinfo.port
+            )
+        )
+        db_log_url = urlinfo.geturl()
+    else:
+        db_log_url = db_url
+    log.info("Upgrading %s", db_log_url)
     # we need to upgrade, backup the database
     if backup and db_url.startswith('sqlite:///'):
         db_file = db_url.split(':///', 1)[1]

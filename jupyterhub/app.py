@@ -1410,7 +1410,18 @@ class JupyterHub(Application):
     def init_db(self):
         """Create the database connection"""
 
-        self.log.debug("Connecting to db: %s", self.db_url)
+        urlinfo = urlparse(self.db_url)
+        if urlinfo.password:
+            # avoid logging the database password
+            urlinfo = urlinfo._replace(
+                netloc='{}:[redacted]@{}:{}'.format(
+                    urlinfo.username, urlinfo.hostname, urlinfo.port
+                )
+            )
+            db_log_url = urlinfo.geturl()
+        else:
+            db_log_url = self.db_url
+        self.log.debug("Connecting to db: %s", db_log_url)
         if self.upgrade_db:
             dbutil.upgrade_if_needed(self.db_url, log=self.log)
 
@@ -1420,7 +1431,7 @@ class JupyterHub(Application):
             )
             self.db = self.session_factory()
         except OperationalError as e:
-            self.log.error("Failed to connect to db: %s", self.db_url)
+            self.log.error("Failed to connect to db: %s", db_log_url)
             self.log.debug("Database error was:", exc_info=True)
             if self.db_url.startswith('sqlite:///'):
                 self._check_db_path(self.db_url.split(':///', 1)[1])
