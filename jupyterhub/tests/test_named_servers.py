@@ -162,8 +162,10 @@ async def test_delete_named_server(app, named_servers):
     )
     r.raise_for_status()
     assert r.status_code == 204
-    # low-level record is now removes
+    # low-level record is now removed
     assert servername not in user.orm_spawners
+    # and it's still not in the high-level wrapper dict
+    assert servername not in user.spawners
 
 
 async def test_named_server_disabled(app):
