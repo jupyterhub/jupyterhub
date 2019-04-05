@@ -3,7 +3,7 @@ async_generator>=1.8
 certipy>=0.1.2
 entrypoints
 jinja2
-oauthlib>=2.0,<3
+oauthlib>=3.0
 pamela
 prometheus_client>=0.0.21
 python-dateutil
