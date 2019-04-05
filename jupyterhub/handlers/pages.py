@@ -291,6 +291,7 @@ class SpawnPendingHandler(BaseHandler):
                 spawn_url=spawn_url,
                 failed=True,
                 failed_message=getattr(exc, 'jupyterhub_message', ''),
+                exception=exc,
             )
             self.finish(html)
             return
