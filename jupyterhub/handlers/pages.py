@@ -281,13 +281,20 @@ class SpawnPendingHandler(BaseHandler):
             # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
             # We should point the user to Home if the most recent spawn failed.
             exc = spawner._spawn_future.exception()
-            self.log.error(
-                "Preventing implicit spawn for %s because last spawn failed: %s",
-                spawner._log_name,
-                exc,
+            self.log.error("Previous spawn for %s failed: %s", spawner._log_name, exc)
+            spawn_url = url_path_join(self.hub.base_url, "spawn", user.escaped_name)
+            self.set_status(500)
+            html = self.render_template(
+                "not_running.html",
+                user=user,
+                server_name=server_name,
+                spawn_url=spawn_url,
+                failed=True,
+                failed_message=getattr(exc, 'jupyterhub_message', ''),
+                exception=exc,
             )
-            # raise a copy because each time an Exception object is re-raised, its traceback grows
-            raise copy.copy(exc).with_traceback(exc.__traceback__)
+            self.finish(html)
+            return
 
         # Check for pending events. This should usually be the case
         # when we are on this page.
