@@ -4,8 +4,13 @@
 Community communication channels
 ================================
 
-We use `Gitter <https://gitter.im>`_ for online, real-time text chat. The
-primary channel for JupyterHub is `jupyterhub/jupyterhub <https://gitter.im/jupyterhub/jupyterhub>`_.
+We use `Discourse <https://discourse.jupyter.org>` for online discussion.
+Everyone in the Jupyter community is welcome to bring ideas and questions there.
+In addition, we use `Gitter <https://gitter.im>`_ for online, real-time text chat,
+a place for more ephemeral discussions.
+The primary Gitter channel for JupyterHub is `jupyterhub/jupyterhub <https://gitter.im/jupyterhub/jupyterhub>`_.
+Gitter isn't archived or searchable, so we recommend going to discourse first
+to make sure that discussions are most useful and accessible to the community.
 Remember that our community is distributed across the world in various
 timezones, so be patient if you do not get an answer immediately!
 
