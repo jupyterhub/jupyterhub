@@ -94,6 +94,8 @@ whether it was through discussion, testing, documentation, or development.
 - `Spawner.options_from_form` may now be async
 - Added `JupyterHub.shutdown_on_logout` option to trigger shutdown of a user's
   servers when they log out.
+- When `Spawner.start` raises an Exception,
+  a message can be passed on to the user if the exception has a `.jupyterhub_message` attribute.
 
 
 #### Changes
@@ -131,6 +133,7 @@ whether it was through discussion, testing, documentation, or development.
 - Fewer redirects following a visit to the default `/` url
 - Error when progress is requested before progress is ready
 - Error when API requests are made to a not-running server without authentication
+- Avoid logging database password on connect if password is specified in `JupyterHub.db_url`.
 
 #### Development changes
 
