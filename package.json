@@ -14,16 +14,15 @@
     "lessc": "lessc"
   },
   "devDependencies": {
-    "clean-css": "^3.4.13",
-    "less": "^2.7.1",
+    "less": "^3.9.0",
     "less-plugin-clean-css": "^1.5.1",
-    "prettier": "^1.14.2"
+    "prettier": "^1.16.4"
   },
   "dependencies": {
-    "bootstrap": "^3.4.0",
+    "bootstrap": "^3.4.1",
     "font-awesome": "^4.7.0",
-    "jquery": "^3.2.1",
-    "moment": "^2.19.3",
-    "requirejs": "^2.3.4"
+    "jquery": "^3.3.1",
+    "moment": "^2.24.0",
+    "requirejs": "^2.3.6"
   }
 }
