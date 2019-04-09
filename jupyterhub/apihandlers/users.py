@@ -427,6 +427,7 @@ class UserServerAPIHandler(APIHandler):
                 return
             self.log.info("Deleting spawner %s", spawner._log_name)
             self.db.delete(spawner.orm_spawner)
+            user.spawners.pop(server_name, None)
             self.db.commit()
 
         if server_name:
