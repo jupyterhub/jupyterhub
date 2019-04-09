@@ -126,7 +126,10 @@ require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
       var row = getRow(el);
       var user = row.data("user");
       var serverName = row.data("server-name");
-      el.attr("href", utils.url_path_join(prefix, "hub/spawn", user, serverName));
+      el.attr(
+        "href",
+        utils.url_path_join(prefix, "hub/spawn", user, serverName)
+      );
     });
     // cannot start all servers in this case
     // since it would mean opening a bunch of tabs
