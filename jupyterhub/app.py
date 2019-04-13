@@ -2174,6 +2174,7 @@ class JupyterHub(Application):
             os.remove(self.pid_file)
 
         # finally stop the loop once we are all cleaned up
+        asyncio.get_event_loop().stop()
         self.log.info("...done")
 
     def write_config_file(self):
@@ -2411,37 +2412,50 @@ class JupyterHub(Application):
 
         self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
         # register cleanup on both TERM and INT
-        atexit.register(self.atexit)
         self.init_signal()
 
     def init_signal(self):
-        signal.signal(signal.SIGTERM, self.sigterm)
+        loop = asyncio.get_event_loop()  # TODO: should use running loop
+        for s in (signal.SIGTERM, signal.SIGINT):
+            loop.add_signal_handler(
+                s, lambda s=s: asyncio.ensure_future(self.shutdown_cancel_tasks(s))
+            )
+        infosignals = [signal.SIGUSR1]
         if hasattr(signal, 'SIGINFO'):
-            signal.signal(signal.SIGINFO, self.log_status)
+            infosignals.append(signal.SIGINFO)
+        for s in infosignals:
+            loop.add_signal_handler(
+                s, lambda s=s: asyncio.ensure_future(self.log_status(s))
+            )
 
-    def log_status(self, signum, frame):
+    async def log_status(self, sig):
         """Log current status, triggered by SIGINFO (^T in many terminals)"""
-        self.log.debug("Received signal %s[%s]", signum, signal.getsignal(signum))
+        self.log.critical("Received signal %s...", sig.name)
         print_ps_info()
         print_stacks()
 
-    def sigterm(self, signum, frame):
-        self.log.critical("Received SIGTERM, shutting down")
-        raise SystemExit(128 + signum)
+    async def shutdown_cancel_tasks(self, sig):
+        """Cancel all other tasks of the event loop and initiate cleanup"""
+        self.log.critical("Received signal %s, initiating shutdown...", sig.name)
+        tasks = [
+            t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()
+        ]
 
-    _atexit_ran = False
+        if tasks:
+            self.log.debug("Cancelling pending tasks")
+            [t.cancel() for t in tasks]
 
-    def atexit(self):
-        """atexit callback"""
-        if self._atexit_ran:
-            return
-        self._atexit_ran = True
-        # run the cleanup step (in a new loop, because the interrupted one is unclean)
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        IOLoop.clear_current()
-        loop = IOLoop()
-        loop.make_current()
-        loop.run_sync(self.cleanup)
+            try:
+                await asyncio.wait(tasks)
+            except asyncio.CancelledError as e:
+                self.log.debug("Caught Task CancelledError. Ignoring")
+            except StopAsyncIteration as e:
+                self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
+
+            tasks = [t for t in asyncio.Task.all_tasks()]
+            for t in tasks:
+                self.log.debug("Task status: %s", t)
+        await self.cleanup()
 
     def stop(self):
         if not self.io_loop:
@@ -2468,6 +2482,9 @@ class JupyterHub(Application):
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
+        finally:
+            loop.stop()
+            loop.close()
 
 
 NewToken.classes.append(JupyterHub)
