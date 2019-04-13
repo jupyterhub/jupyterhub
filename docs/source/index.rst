@@ -1,21 +1,37 @@
 JupyterHub
 ==========
 
-`JupyterHub`_, a multi-user **Hub**, spawns, manages, and proxies multiple
+`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. 
+It can be used in a classes of students, a corporate data science group or scientific 
+research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user `Jupyter notebook`_ server.
-JupyterHub can be used to serve notebooks to a class of students, a corporate
-data science group, or a scientific research group.
 
-.. image:: images/jhub-parts.png
+To make life easier, JupyterHub have distributions. Be sure to 
+take a look at them before continuing with the configuration of the broad 
+original system of `JupyterHub`_. Today, you can find two main cases: 
+
+1. If you need a simple case for a small amount of users (0-100) and single server 
+   take a look at 
+   `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution. 
+2. If you need to allow for even more users, a dynamic amount of servers can be used on a cloud,
+   take a look at the `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ .
+
+
+Four subsystems make up JupyterHub:
+
+* a **Hub** (tornado process) that is the heart of JupyterHub
+* a **configurable http proxy** (node-http-proxy) that receives the requests from the client's browser
+* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado) that are monitored by Spawners
+* an **authentication class** that manages how users can access the system
+
+
+Besides these central pieces, you can add optional configurations through a `config.py` file and manage users kernels on an admin panel. A simplification of the whole system can be seen in the figure below:
+
+.. image:: images/jhub-fluxogram.jpeg
    :alt: JupyterHub subsystems
-   :width: 40%
-   :align: right
+   :width: 80%
+   :align: center
 
-Three subsystems make up JupyterHub:
-
-* a multi-user **Hub** (tornado process)
-* a **configurable http proxy** (node-http-proxy)
-* multiple **single-user Jupyter notebook servers** (Python/IPython/tornado)
 
 JupyterHub performs the following functions:
 
