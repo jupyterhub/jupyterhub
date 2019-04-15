@@ -127,3 +127,11 @@ A handy website for testing your deployment is
 
 
 [configurable-http-proxy]: https://github.com/jupyterhub/configurable-http-proxy
+
+## Vulnerability reporting
+
+If you believe you’ve found a security vulnerability in JupyterHub, or any
+Jupyter project, please report it to
+[security@ipython.org](mailto:security@iypthon.org). If you prefer to encrypt
+your security reports, you can use [this PGP public
+key](https://jupyter-notebook.readthedocs.io/en/stable/_downloads/ipython_security.asc).
