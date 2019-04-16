@@ -159,6 +159,10 @@ async def api_request(
 
 
 def get_page(path, app, hub=True, **kw):
+    if "://" in path:
+        raise ValueError(
+            "Not a hub page path: %r. Did you mean async_requests.get?" % path
+        )
     if hub:
         prefix = app.hub.base_url
     else:
