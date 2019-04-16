@@ -2,7 +2,7 @@
 # source this file to setup postgres and mysql
 # for local testing (as similar as possible to docker)
 
-set -e
+set -eu
 
 export MYSQL_HOST=127.0.0.1
 export MYSQL_TCP_PORT=${MYSQL_TCP_PORT:-13306}
@@ -40,6 +40,15 @@ for i in {1..60}; do
 done
 $CHECK
 
+case "$DB" in
+"mysql")
+  ;;
+"postgres")
+  # create the user
+  psql --user postgres -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
+  ;;
+*)
+esac
 
 echo -e "
 Set these environment variables:

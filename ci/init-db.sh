@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # initialize jupyterhub databases for testing
 
-set -e
+set -eu
 
 MYSQL="mysql --user root --host $MYSQL_HOST --port $MYSQL_TCP_PORT -e "
 PSQL="psql --user postgres -c "
@@ -23,5 +23,5 @@ set -x
 
 for SUFFIX in '' _upgrade_072 _upgrade_081 _upgrade_094; do
     $SQL "DROP DATABASE jupyterhub${SUFFIX};" 2>/dev/null || true
-    $SQL "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE};"
+    $SQL "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE:-};"
 done
