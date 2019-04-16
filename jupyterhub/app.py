@@ -2173,8 +2173,6 @@ class JupyterHub(Application):
             self.log.info("Cleaning up PID file %s", self.pid_file)
             os.remove(self.pid_file)
 
-        # finally stop the loop once we are all cleaned up
-        asyncio.get_event_loop().stop()
         self.log.info("...done")
 
     def write_config_file(self):
@@ -2415,7 +2413,7 @@ class JupyterHub(Application):
         self.init_signal()
 
     def init_signal(self):
-        loop = asyncio.get_event_loop()  # TODO: should use running loop
+        loop = asyncio.get_event_loop()
         for s in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(
                 s, lambda s=s: asyncio.ensure_future(self.shutdown_cancel_tasks(s))
@@ -2456,6 +2454,7 @@ class JupyterHub(Application):
             for t in tasks:
                 self.log.debug("Task status: %s", t)
         await self.cleanup()
+        asyncio.get_event_loop().stop()
 
     def stop(self):
         if not self.io_loop:
