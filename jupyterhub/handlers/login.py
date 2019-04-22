@@ -18,27 +18,35 @@ class LogoutHandler(BaseHandler):
     def shutdown_on_logout(self):
         return self.settings.get('shutdown_on_logout', False)
 
-    async def get(self):
+    async def _shutdown_servers(self, user):
+        active_servers = [
+            name
+            for (name, spawner) in user.spawners.items()
+            if spawner.active and not spawner.pending
+        ]
+        if active_servers:
+            self.log.info("Shutting down %s's servers", user.name)
+            futures = []
+            for server_name in active_servers:
+                futures.append(maybe_future(self.stop_single_user(user, server_name)))
+            await asyncio.gather(*futures)
+
+    def _backend_logout_cleanup(self, name):
+        self.log.info("User logged out: %s", name)
+        self.clear_login_cookie()
+        self.statsd.incr('logout')
+
+    async def _shutdown_spawners_and_backend_cleanup(self):
         user = self.current_user
         if user:
             if self.shutdown_on_logout:
-                active_servers = [
-                    name
-                    for (name, spawner) in user.spawners.items()
-                    if spawner.active and not spawner.pending
-                ]
-                if active_servers:
-                    self.log.info("Shutting down %s's servers", user.name)
-                    futures = []
-                    for server_name in active_servers:
-                        futures.append(
-                            maybe_future(self.stop_single_user(user, server_name))
-                        )
-                    await asyncio.gather(*futures)
+                await self._shutdown_servers(user)
 
-            self.log.info("User logged out: %s", user.name)
-            self.clear_login_cookie()
-            self.statsd.incr('logout')
+            self._backend_logout_cleanup(user.name)
+
+    async def get(self):
+        await self._shutdown_spawners_and_backend_cleanup()
+
         if self.authenticator.auto_login:
             html = self.render_template('logout.html')
             self.finish(html)
