@@ -277,7 +277,7 @@ class JupyterHub(Application):
                     try:
                         cls = entry_point.load()
                     except Exception as e:
-                        self.log.warning(
+                        self.log.debug(
                             "Failed to load %s entrypoint %r: %r",
                             trait.entry_point_group,
                             key,
