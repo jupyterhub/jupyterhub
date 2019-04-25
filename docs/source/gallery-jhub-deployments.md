@@ -66,7 +66,7 @@ easy to do with RStudio too.
 
 ### University of Colorado Boulder
 
-- (CU Research Computing) CURC 
+- (CU Research Computing) CURC
     - [JupyterHub User Guide](https://www.rc.colorado.edu/support/user-guide/jupyterhub.html)
         - Slurm job dispatched on Crestone compute cluster
         - log troubleshooting
@@ -110,7 +110,7 @@ easy to do with RStudio too.
 - [Data Science (DICE) group](https://dice.cs.uni-paderborn.de/)
     - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
 
-### University of Rochester CIRC 
+### University of Rochester CIRC
 
 - [JupyterHub Userguide](https://info.circ.rochester.edu/Web_Applications/JupyterHub.html) - Slurm, beehive
 
@@ -126,7 +126,7 @@ easy to do with RStudio too.
 
 - Educational Technology Services - Paul Jamason
     - [jupyterhub.ucsd.edu](https://jupyterhub.ucsd.edu)
-    
+
 ### TACC University of Texas
 
 ### Texas A&M
@@ -159,6 +159,10 @@ easy to do with RStudio too.
 
 - https://getcarina.com/blog/learning-how-to-whale/
 - http://carolynvanslyck.com/talk/carina/jupyterhub/#/
+
+### Hadoop
+
+- [Deploying JupyterHub on Hadoop](https://jcrist.github.io/jupyterhub-on-hadoop/)
 
 
 ## Miscellaneous
