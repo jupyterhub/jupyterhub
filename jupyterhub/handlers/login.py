@@ -81,8 +81,6 @@ class LogoutHandler(BaseHandler):
         """Log the user out, call the custom action, forward the user
             to the logout page
         """
-        # TODO: when these can all be done concurrently, do all of them
-        #       concurrently?
         await self.default_handle_logout()
         await self.handle_logout()
         await self.render_logout_page()
