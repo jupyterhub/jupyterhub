@@ -77,13 +77,17 @@ easy to do with RStudio too.
 - Earth Lab at CU
     - [Tutorial on Parallel R on JupyterHub](https://earthdatascience.org/tutorials/parallel-r-on-jupyterhub/)
 
+### George Washington University
+
+- [Jupyter Hub](http://go.gwu.edu/jupyter) with university single-sign-on. Deployed early 2017.
+
 ### HTCondor
 
 - [HTCondor Python Bindings Tutorial from HTCondor Week 2017 includes information on their JupyterHub tutorials](https://research.cs.wisc.edu/htcondor/HTCondorWeek2017/presentations/TueBockelman_Python.pdf)
 
 ### University of Illinois
 
-- https://datascience.business.illinois.edu
+- https://datascience.business.illinois.edu (currently down; checked 04/26/19)
 
 ### IllustrisTNG Simulation Project
 
@@ -109,6 +113,10 @@ easy to do with RStudio too.
 
 - [Data Science (DICE) group](https://dice.cs.uni-paderborn.de/)
     - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
+
+### Penn State University
+
+- [Press release](https://news.psu.edu/story/523093/2018/05/24/new-open-source-web-apps-available-students-and-faculty): "New open-source web apps available for students and faculty" (but Hub is currently down; checked 04/26/19)
 
 ### University of Rochester CIRC
 
