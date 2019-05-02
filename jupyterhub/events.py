@@ -84,7 +84,7 @@ class EventLog(Configurable):
         for rsf in required_schema_fields:
             if rsf not in schema:
                 raise ValueError(
-                    f'{rsf} is required in schema specification'
+                    '{} is required in schema specification'.format(rsf)
                 )
 
         # Make sure reserved, auto-added fields are not in schema
@@ -92,7 +92,9 @@ class EventLog(Configurable):
         for rf in reserved_fields:
             if rf in schema['properties']:
                 raise ValueError(
-                    f'{rf} field is reserved by event emitter & can not be explicitly set in schema'
+                    '{rf} field is reserved by event emitter & can not be explicitly set in schema'.format(
+                        rf=rf
+                    )
                 )
 
         self.schemas[(schema['$id'], schema['version'])] = schema
@@ -106,7 +108,9 @@ class EventLog(Configurable):
             return
 
         if (schema_name, version) not in self.schemas:
-            raise ValueError(f'Schema {schema_name} version {version} not registered')
+            raise ValueError('Schema {schema_name} version {version} not registered'.format(
+                schema_name=schema_name, version=version
+            ))
         schema = self.schemas[(schema_name, version)]
         jsonschema.validate(event, schema)
 
