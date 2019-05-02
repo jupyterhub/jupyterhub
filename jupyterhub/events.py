@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 import jsonschema
 from pythonjsonlogger import jsonlogger
-from traitlets import TraitType
+from traitlets import TraitType, List
 import json
 import six
 
@@ -49,6 +49,17 @@ class EventLog(Configurable):
         Callable that returns a list of logging.Handler instances to send events to.
 
         When set to None (the default), events are discarded.
+        """
+    )
+
+    allowed_schemas = List(
+        [],
+        config=True,
+        help="""
+        Fully qualified names of schemas to record.
+
+        Each schema you want to record must be manually specified.
+        The default, an empty list, means no events are recorded.
         """
     )
 
@@ -103,8 +114,9 @@ class EventLog(Configurable):
         """
         Emit event with given schema / version in a capsule.
         """
-        if not self.handlers_maker:
-            # If we don't have a handler setup, ignore everything
+        if not (self.handlers_maker and schema_name in self.allowed_schemas):
+            # if handler isn't set up or schema is not explicitly whitelisted,
+            # don't do anything
             return
 
         if (schema_name, version) not in self.schemas:
