@@ -18,32 +18,72 @@ class LogoutHandler(BaseHandler):
     def shutdown_on_logout(self):
         return self.settings.get('shutdown_on_logout', False)
 
-    async def get(self):
+    async def _shutdown_servers(self, user):
+        """Shutdown servers for logout
+
+        Get all active servers for the provided user, stop them.
+        """
+        active_servers = [
+            name
+            for (name, spawner) in user.spawners.items()
+            if spawner.active and not spawner.pending
+        ]
+        if active_servers:
+            self.log.info("Shutting down %s's servers", user.name)
+            futures = []
+            for server_name in active_servers:
+                futures.append(maybe_future(self.stop_single_user(user, server_name)))
+            await asyncio.gather(*futures)
+
+    def _backend_logout_cleanup(self, name):
+        """Default backend logout actions
+
+        Send a log message, clear some cookies, increment the logout counter.
+        """
+        self.log.info("User logged out: %s", name)
+        self.clear_login_cookie()
+        self.statsd.incr('logout')
+
+    async def default_handle_logout(self):
+        """The default logout action
+
+        Optionally cleans up servers, clears cookies, increments logout counter
+        Cleaning up servers can be prevented by setting shutdown_on_logout to
+        False.
+        """
         user = self.current_user
         if user:
             if self.shutdown_on_logout:
-                active_servers = [
-                    name
-                    for (name, spawner) in user.spawners.items()
-                    if spawner.active and not spawner.pending
-                ]
-                if active_servers:
-                    self.log.info("Shutting down %s's servers", user.name)
-                    futures = []
-                    for server_name in active_servers:
-                        futures.append(
-                            maybe_future(self.stop_single_user(user, server_name))
-                        )
-                    await asyncio.gather(*futures)
+                await self._shutdown_servers(user)
 
-            self.log.info("User logged out: %s", user.name)
-            self.clear_login_cookie()
-            self.statsd.incr('logout')
+            self._backend_logout_cleanup(user.name)
+
+    async def handle_logout(self):
+        """Custom user action during logout
+
+        By default a no-op, this function should be overridden in subclasses
+        to have JupyterHub take a custom action on logout.
+        """
+        return
+
+    async def render_logout_page(self):
+        """Render the logout page, if any
+
+        Override this function to set a custom logout page.
+        """
         if self.authenticator.auto_login:
             html = self.render_template('logout.html')
             self.finish(html)
         else:
             self.redirect(self.settings['login_url'], permanent=False)
+
+    async def get(self):
+        """Log the user out, call the custom action, forward the user
+            to the logout page
+        """
+        await self.default_handle_logout()
+        await self.handle_logout()
+        await self.render_logout_page()
 
 
 class LoginHandler(BaseHandler):
