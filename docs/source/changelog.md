@@ -9,7 +9,7 @@ command line for details.
 
 ## 1.0
 
-### [1.0.0] 2019-04-XX
+### [1.0.0] 2019-05-03
 
 JupyterHub 1.0 is a major milestone for JupyterHub.
 Huge thanks to the many people who have contributed to this release,
@@ -577,7 +577,7 @@ First preview release
 
 
 [Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.0.0...HEAD
-[1.0.0]: https://github.com/jupyterhub/jupyterhub/compare/0.9.5...HEAD
+[1.0.0]: https://github.com/jupyterhub/jupyterhub/compare/0.9.6...1.0.0
 [0.9.6]: https://github.com/jupyterhub/jupyterhub/compare/0.9.4...0.9.6
 [0.9.4]: https://github.com/jupyterhub/jupyterhub/compare/0.9.3...0.9.4
 [0.9.3]: https://github.com/jupyterhub/jupyterhub/compare/0.9.2...0.9.3
