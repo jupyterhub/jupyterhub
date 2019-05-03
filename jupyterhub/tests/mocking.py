@@ -166,8 +166,7 @@ class FormSpawner(MockSpawner):
     options_form = "IMAFORM"
 
     def options_from_form(self, form_data):
-        options = {}
-        options['notspecified'] = 5
+        options = {'notspecified': 5}
         if 'bounds' in form_data:
             options['bounds'] = [int(i) for i in form_data['bounds']]
         if 'energy' in form_data:
@@ -379,9 +378,9 @@ class MockHub(JupyterHub):
 
 class MockSingleUserServer(SingleUserNotebookApp):
     """Mock-out problematic parts of single-user server when run in a thread
-    
+
     Currently:
-    
+
     - disable signal handler
     """
 
