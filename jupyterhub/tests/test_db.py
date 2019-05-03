@@ -30,7 +30,7 @@ def generate_old_db(env_dir, hub_version, db_url):
     if 'mysql' in db_url:
         pkgs.append('mysql-connector-python')
     elif 'postgres' in db_url:
-        pkgs.append('psycopg2')
+        pkgs.append('psycopg2-binary')
     check_call([env_pip, 'install'] + pkgs)
     check_call([env_py, populate_db, db_url])
 
