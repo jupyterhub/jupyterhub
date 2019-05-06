@@ -142,7 +142,10 @@ easy to do with RStudio too.
 - Kristen Thyng - Oceanography
     - [Teaching with JupyterHub and nbgrader](http://kristenthyng.com/blog/2016/09/07/jupyterhub+nbgrader/)
 
-
+### Elucidata
+  - What's new in Jupyter Notebooks @[Elucidata](https://elucidata.io/):
+      - Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE
+            - https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d
 
 ## Service Providers
 
