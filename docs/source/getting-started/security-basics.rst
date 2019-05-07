@@ -80,6 +80,12 @@ To achieve this, simply omit the configuration settings
 ``c.JupyterHub.ssl_key`` and ``c.JupyterHub.ssl_cert``
 (setting them to ``None`` does not have the same effect, and is an error).
 
+To be able to still impersonate users, set:
+
+.. code-block:: python
+
+    c.JupyterHub.internal_ssl = True
+
 .. _cookie-secret:
 
 Cookie secret
