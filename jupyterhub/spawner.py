@@ -628,6 +628,10 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    def handle_auth_state(self, auth_state):
+        """Pass optional auth_state to Spawner."""
+        pass
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
