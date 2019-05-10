@@ -2420,28 +2420,54 @@ class JupyterHub(Application):
             pc.start()
 
         self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
+        # Use atexit for Windows, it doesn't have signal handling support
+        if _mswindows:
+            atexit.register(self.atexit)
         # register cleanup on both TERM and INT
         self.init_signal()
 
     def init_signal(self):
         loop = asyncio.get_event_loop()
         for s in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(
-                s, lambda s=s: asyncio.ensure_future(self.shutdown_cancel_tasks(s))
-            )
-        infosignals = [signal.SIGUSR1]
-        if hasattr(signal, 'SIGINFO'):
-            infosignals.append(signal.SIGINFO)
-        for s in infosignals:
-            loop.add_signal_handler(
-                s, lambda s=s: asyncio.ensure_future(self.log_status(s))
-            )
+            if not _mswindows:
+                loop.add_signal_handler(
+                    s, lambda s=s: asyncio.ensure_future(self.shutdown_cancel_tasks(s))
+                )
+            else:
+                signal.signal(s, self.win_shutdown_cancel_tasks)
+
+        if not _mswindows:
+            infosignals = [signal.SIGUSR1]
+            if hasattr(signal, 'SIGINFO'):
+                infosignals.append(signal.SIGINFO)
+            for s in infosignals:
+                loop.add_signal_handler(
+                    s, lambda s=s: asyncio.ensure_future(self.log_status(s))
+                )
 
     async def log_status(self, sig):
         """Log current status, triggered by SIGINFO (^T in many terminals)"""
         self.log.critical("Received signal %s...", sig.name)
         print_ps_info()
         print_stacks()
+
+    def win_shutdown_cancel_tasks(self, signum, frame):
+        self.log.critical("Received signalnum %s, , initiating shutdown...", signum)
+        raise SystemExit(128 + signum)
+
+    _atexit_ran = False
+
+    def atexit(self):
+        """atexit callback"""
+        if self._atexit_ran:
+            return
+        self._atexit_ran = True
+        # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        IOLoop.clear_current()
+        loop = IOLoop()
+        loop.make_current()
+        loop.run_sync(self.cleanup)
 
     async def shutdown_cancel_tasks(self, sig):
         """Cancel all other tasks of the event loop and initiate cleanup"""
