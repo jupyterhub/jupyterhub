@@ -70,7 +70,7 @@ To add announcements to be displayed on a page, you have two options:
 ### Announcement Configuration Variables
 
 If you set the configuration variable `JupyterHub.template_vars =
-{'announcement': 'some_text}`, the given `some_text` will be placed on
+{'announcement': 'some_text'}`, the given `some_text` will be placed on
 the top of all pages.  The more specific variables
 `announcement_login`, `announcement_spawn`, `announcement_home`, and
 `announcement_logout` are more specific and only show on their
