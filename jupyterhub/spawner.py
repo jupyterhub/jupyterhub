@@ -628,9 +628,23 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    def handle_auth_state(self, auth_state):
-        """Pass optional auth_state to Spawner."""
-        pass
+    auth_state_hook = Any(
+        help="""
+        An optional hook function that you can implement to pass `auth_state`
+        to the spawner after it has been initialized but before it starts.
+        The `auth_state` dictionary may be set by the `.authenticate()`
+        method of the authenticator.  This hook enables you to pass some
+        or all of that information to your spawner.
+
+        Example::
+
+            def userdata_hook(spawner, auth_state):
+                spawner.userdata = auth_state["userdata"]
+
+            c.Spawner.auth_state_hook = userdata_hook
+
+        """
+    ).tag(config=True)
 
     def load_state(self, state):
         """Restore state of spawner from database.
@@ -957,6 +971,14 @@ class Spawner(LoggingConfigurable):
                 return self.post_stop_hook(self)
             except Exception:
                 self.log.exception("post_stop_hook failed with exception: %s", self)
+
+    def run_auth_state_hook(self, auth_state):
+        """Run the auth_state_hook if defined"""
+        if self.auth_state_hook is not None:
+            try:
+                return self.auth_state_hook(self, auth_state)
+            except Exception:
+                self.log.exception("auth_stop_hook failed with exception: %s", self)
 
     @property
     def _progress_url(self):
