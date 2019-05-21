@@ -18,7 +18,7 @@ JupyterHub is painless, quick and with minimal user interruption.
 Read the Changelog
 ==================
 
-The `changelog <changelog.html>`_ contains information on what has
+The `changelog <../changelog.html>`_ contains information on what has
 changed with the new JupyterHub release, and any deprecation warnings.
 Read these notes to familiarize yourself with the coming changes. There
 might be new releases of authenticators & spawners you are using, so
