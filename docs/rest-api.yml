@@ -7,7 +7,7 @@ info:
   license:
     name: BSD-3-Clause
 schemes:
-  - [http, https]
+  [http, https]
 securityDefinitions:
   token:
     type: apiKey
@@ -247,7 +247,8 @@ paths:
             will depend on the Spawner's configuration.
           in: body
           required: false
-          type: object
+          schema:
+            type: object
       responses:
         '201':
           description: The user's notebook server has started
@@ -288,7 +289,8 @@ paths:
             will depend on the Spawner's configuration.
           in: body
           required: false
-          type: object
+          schema:
+            type: object
       responses:
         '201':
           description: The user's notebook named-server has started
@@ -313,7 +315,8 @@ paths:
             Removing a server deletes things like the state of the stopped server.
           in: body
           required: false
-          type: boolean
+          schema:
+            type: boolean
       responses:
         '204':
           description: The user's notebook named-server has stopped
@@ -333,12 +336,14 @@ paths:
       summary: Create a new token for the user
       parameters:
         - name: expires_in
-          type: number
+          schema:
+            type: number
           required: false
           in: body
           description: lifetime (in seconds) after which the requested token will expire.
         - name: note
-          type: string
+          schema:
+            type: string
           required: false
           in: body
           description: A note attached to the token for future bookkeeping
@@ -542,11 +547,13 @@ paths:
         - name: username
           in: body
           required: false
-          type: string
+          schema:
+            type: string
         - name: password
           in: body
           required: false
-          type: string
+          schema:
+            type: string
       responses:
         '200':
           description: The new API token
@@ -670,11 +677,13 @@ paths:
       parameters:
         - name: proxy
           in: body
-          type: boolean
+          schema:
+            type: boolean
           description: Whether the proxy should be shutdown as well (default from Hub config)
         - name: servers
           in: body
-          type: boolean
+          schema:
+            type: boolean
           description: Whether users' notebook servers should be shutdown as well (default from Hub config)
 definitions:
   User:
