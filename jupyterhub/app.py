@@ -2487,12 +2487,15 @@ class JupyterHub(Application):
         self = cls.instance()
         AsyncIOMainLoop().install()
         loop = IOLoop.current()
-        loop.add_callback(self.launch_instance_async, argv)
+        task = asyncio.ensure_future(self.launch_instance_async(argv))
         try:
             loop.start()
         except KeyboardInterrupt:
             print("\nInterrupted")
         finally:
+            if task.done():
+                # re-raise exceptions in launch_instance_async
+                task.result()
             loop.stop()
             loop.close()
 
