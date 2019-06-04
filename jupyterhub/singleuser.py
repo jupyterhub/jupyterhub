@@ -21,13 +21,19 @@ from tornado.httpclient import HTTPRequest
 from tornado.web import HTTPError
 from tornado.web import RequestHandler
 
-use_serverapp = os.environ.get('USE_JUPYTER_SERVER', 'False') == 'True'
-
-required_package = 'jupyter_server' if use_serverapp else 'notebook'
 try:
-    parent_module = importlib.import_module(required_package)
+    import notebook
+    use_serverapp = False
+    server_package = 'notebook'
+    app_name = 'notebook.notebookapp'
 except ImportError:
-    raise ImportError("JupyterHub single-user server requires {}".format(required_package))
+    try:
+        import jupyter_server
+        use_serverapp = True
+        server_package = 'jupyter_server'
+        app_name = 'jupyter_server.serverapp'
+    except ImportError:
+        raise ImportError("JupyterHub single-user server requires notebook or jupyter_server packages")
 
 from traitlets import (
     Any,
@@ -42,17 +48,15 @@ from traitlets import (
     TraitError,
 )
 
-app_name = 'jupyter_server.serverapp' if use_serverapp else 'notebook.notebookapp'
 app_module = importlib.import_module(app_name)
-
 NotebookApp = getattr(app_module, 'ServerApp' if use_serverapp else 'NotebookApp')
 notebook_aliases = app_module.aliases
 notebook_flags = app_module.flags
 
-LoginHandler = getattr(importlib.import_module(required_package + '.auth.login'), 'LoginHandler')
-LogoutHandler = getattr(importlib.import_module(required_package + '.auth.logout'), 'LogoutHandler')
+LoginHandler = getattr(importlib.import_module(server_package + '.auth.login'), 'LoginHandler')
+LogoutHandler = getattr(importlib.import_module(server_package + '.auth.logout'), 'LogoutHandler')
 IPythonHandler = getattr(
-    importlib.import_module(required_package + '.base.handlers'),
+    importlib.import_module(server_package + '.base.handlers'),
     'JupyterHandler' if use_serverapp else 'IPythonHandler'
 )
 
