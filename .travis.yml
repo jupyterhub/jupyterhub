@@ -91,6 +91,8 @@ matrix:
     - python: 3.6
       env: TEST=lint
     - python: 3.6
+      env: TEST=jupyter_server
+    - python: 3.6
       env: TEST=docs
     - python: 3.6
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
