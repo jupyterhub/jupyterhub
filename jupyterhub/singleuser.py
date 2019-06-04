@@ -6,6 +6,7 @@ import asyncio
 import json
 import os
 import random
+import importlib
 from datetime import datetime
 from datetime import timezone
 from textwrap import dedent
@@ -20,10 +21,13 @@ from tornado.httpclient import HTTPRequest
 from tornado.web import HTTPError
 from tornado.web import RequestHandler
 
+use_serverapp = os.environ.get('USE_JUPYTER_SERVER', 'False') == 'True'
+
+required_package = 'jupyter_server' if use_serverapp else 'notebook'
 try:
-    import notebook
+    parent_module = importlib.import_module(required_package)
 except ImportError:
-    raise ImportError("JupyterHub single-user server requires notebook >= 4.0")
+    raise ImportError("JupyterHub single-user server requires {}".format(required_package))
 
 from traitlets import (
     Any,
@@ -38,14 +42,19 @@ from traitlets import (
     TraitError,
 )
 
-from notebook.notebookapp import (
-    NotebookApp,
-    aliases as notebook_aliases,
-    flags as notebook_flags,
+app_name = 'jupyter_server.serverapp' if use_serverapp else 'notebook.notebookapp'
+app_module = importlib.import_module(app_name)
+
+NotebookApp = getattr(app_module, 'ServerApp' if use_serverapp else 'NotebookApp')
+notebook_aliases = app_module.aliases
+notebook_flags = app_module.flags
+
+LoginHandler = getattr(importlib.import_module(required_package + '.auth.login'), 'LoginHandler')
+LogoutHandler = getattr(importlib.import_module(required_package + '.auth.logout'), 'LogoutHandler')
+IPythonHandler = getattr(
+    importlib.import_module(required_package + '.base.handlers'),
+    'JupyterHandler' if use_serverapp else 'IPythonHandler'
 )
-from notebook.auth.login import LoginHandler
-from notebook.auth.logout import LogoutHandler
-from notebook.base.handlers import IPythonHandler
 
 from ._version import __version__, _check_version
 from .log import log_request

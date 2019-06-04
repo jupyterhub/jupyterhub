@@ -61,6 +61,13 @@ script:
       make html
       popd
     fi
+  - |
+    if [[ "$TEST" == "jupyter_server" ]]; then
+      pip uninstall notebook
+      pip install jupyter_server
+      export USE_JUPYTER_SERVER=True
+      pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+    fi
 after_success:
   - codecov
 after_failure:
