@@ -65,8 +65,10 @@ script:
     if [[ "$TEST" == "jupyter_server" ]]; then
       pip uninstall notebook
       pip install jupyter_server
-      export USE_JUPYTER_SERVER=True
       pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+      # Make sure that the notebook package is still not installed
+      pip list | grep notebook
+      test $? -eq 1
     fi
 after_success:
   - codecov
