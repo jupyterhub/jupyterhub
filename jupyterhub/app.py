@@ -325,6 +325,18 @@ class JupyterHub(Application):
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
     ).tag(config=True)
+    activity_resolution = Integer(
+        30,
+        help="""
+        Resolution (in seconds) for updating activity
+
+        If activity is registered that is less than activity_resolution seconds
+        more recent than the current value,
+        the new value will be ignored.
+
+        This avoids too many writes to the Hub database.
+        """,
+    ).tag(config=True)
     last_activity_interval = Integer(
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
@@ -2011,6 +2023,7 @@ class JupyterHub(Application):
             db=self.db,
             proxy=self.proxy,
             hub=self.hub,
+            activity_resolution=self.activity_resolution,
             admin_users=self.authenticator.admin_users,
             admin_access=self.admin_access,
             authenticator=self.authenticator,
