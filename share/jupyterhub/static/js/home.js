@@ -90,6 +90,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
       });
     api.stop_server(user, {
       success: function() {
+        $("#stop").hide();
         $("#start")
           .text("Start My Server")
           .attr("title", "Start your default server")
