@@ -99,14 +99,10 @@ class EventLog(Configurable):
                 )
 
         # Make sure reserved, auto-added fields are not in schema
-        reserved_fields = {'timestamp', 'schema', 'version'}
-        for rf in reserved_fields:
-            if rf in schema['properties']:
-                raise ValueError(
-                    '{rf} field is reserved by event emitter & can not be explicitly set in schema'.format(
-                        rf=rf
-                    )
-                )
+        if any([p.startswith('__') for p in schema['properties']]):
+            raise ValueError(
+                'Schema {} has properties beginning with __, which is not allowed'
+            )
 
         self.schemas[(schema['$id'], schema['version'])] = schema
 
@@ -127,9 +123,9 @@ class EventLog(Configurable):
         jsonschema.validate(event, schema)
 
         capsule = {
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'schema': schema_name,
-            'version': version
+            '__timestamp__': datetime.utcnow().isoformat() + 'Z',
+            '__schema__': schema_name,
+            '__version__': version
         }
         capsule.update(event)
         self.log.info(capsule)
