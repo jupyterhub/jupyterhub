@@ -93,7 +93,7 @@ use a custom proxy (e.g. Traefik), this also not needed.
 
 Connections to user servers go through the proxy, and *not* the hub
 itself.  If the proxy stays running when the hub restarts (for
-maintenance, re-configuration, etc.), then use connections are not
+maintenance, re-configuration, etc.), then user connections are not
 interrupted.  For simplicity, by default the hub starts the proxy
 automatically, so if the hub restarts, the proxy restarts, and user
 connections are interrupted.  It is easy to run the proxy separately,

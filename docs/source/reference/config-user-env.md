@@ -7,8 +7,8 @@ environment in some way.
 Since the `jupyterhub-singleuser` server extends the standard Jupyter notebook
 server, most configuration and documentation that applies to Jupyter Notebook
 applies to the single-user environments. Configuration of user environments
-typically does not occur through JupyterHub itself, but rather through system-
-wide configuration of Jupyter, which is inherited by `jupyterhub-singleuser`.
+typically does not occur through JupyterHub itself, but rather through system-wide
+configuration of Jupyter, which is inherited by `jupyterhub-singleuser`.
 
 **Tip:** When searching for configuration tips for JupyterHub user
 environments, try removing JupyterHub from your search because there are a lot
@@ -43,9 +43,13 @@ sudo python3 -m pip install numpy
 to install the numpy package in the default system Python 3 environment
 (typically `/usr/local`).
 
+TODO: Get a link from the conda team for a description of what "appropriate permissions for users" is
+
 You may also use conda to install packages. If you do, you should make sure
 that the conda environment has appropriate permissions for users to be able to
-run Python code in the env.
+run Python code in the env. The env must be *readable and executable* by all
+users. Additionally it must be *writeable* if you want users to install
+additional packages.
 
 
 ## Configuring Jupyter and IPython

@@ -16,9 +16,9 @@ Some examples include:
 
 - [DockerSpawner](https://github.com/jupyterhub/dockerspawner) for spawning user servers in Docker containers
   * `dockerspawner.DockerSpawner` for spawning identical Docker containers for
-    each users
+    each user
   * `dockerspawner.SystemUserSpawner` for spawning Docker containers with an
-    environment and home directory for each users
+    environment and home directory for each user
   * both `DockerSpawner` and `SystemUserSpawner` also work with Docker Swarm for
     launching containers on remote machines
 - [SudoSpawner](https://github.com/jupyterhub/sudospawner) enables JupyterHub to
@@ -222,8 +222,8 @@ discover these resource limits and guarantees, such as for memory and CPU.
 For the limits and guarantees to be useful, **the spawner must implement
 support for them**. For example, LocalProcessSpawner, the default
 spawner, does not support limits and guarantees. One of the spawners
-that supports limits and guarantees is the `systemdspawner`.
-
+that supports limits and guarantees is the
+[`systemdspawner`](https://github.com/jupyterhub/systemdspawner).
 
 ### Memory Limits & Guarantees
 
@@ -283,9 +283,10 @@ container `ip` prior to starting and pass that to `.create_certs` (TODO: edit).
 In general though, this method will not need to be changed and the default
 `ip`/`dns` (localhost) info will suffice.
 
-When `.create_certs` is run, it will `.create_certs` in a default, central
-location specified by `c.JupyterHub.internal_certs_location`. For `Spawners`
-that need access to these certs elsewhere (i.e. on another host altogether),
-the `.move_certs` method can be overridden to move the certs appropriately.
-Again, using `DockerSpawner` as an example, this would entail moving certs
-to a directory that will get mounted into the container this spawner starts.
+When `.create_certs` is run, it will create the certificates in a default,
+central location specified by `c.JupyterHub.internal_certs_location`. For
+`Spawners` that need access to these certs elsewhere (i.e. on another host
+altogether), the `.move_certs` method can be overridden to move the certs
+appropriately.  Again, using `DockerSpawner` as an example, this would entail
+moving certs to a directory that will get mounted into the container this
+spawner starts.

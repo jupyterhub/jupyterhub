@@ -119,14 +119,9 @@ This URL indicates a request for a user server that is not running
 (because `/user/...` would have been handled by the notebook server
 if the specified server were running).
 
-Handling this URL is the most complicated condition in JupyterHub,
-because there can be many states:
+Handling this URL depends on two conditions: whether a requested user is found
+as a match and the state of the requested user's notebook server.
 
-1. server is not active
-  a. user matches
-  b. user doesn't match
-2. server is ready
-3. server is pending, but not ready
 
 If the server is pending spawn,
 the browser will be redirected to `/hub/spawn-pending/:username/:servername`

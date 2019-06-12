@@ -30,6 +30,9 @@ JupyterHub, is written in Javascript to run on `NodeJS
 recommend installing it in the ``miniconda`` environment you set up for
 Python. You can do so with ``conda install nodejs``.
 
+Many in the Jupyter community use [``nvm``](https://github.com/nvm-sh/nvm) to
+managing node dependencies.
+
 Install git
 -----------
 
@@ -75,9 +78,9 @@ happen.
 
       npm install -g configurable-http-proxy
 
-   If you get an error that says ``Error: EACCES: permission denied``,
-   you might need to prefix the command with ``sudo``. If you do not
-   have access to sudo, you may instead run the following commands:
+   If you get an error that says ``Error: EACCES: permission denied``, you might need to prefix the command with ``sudo``.
+   ``sudo`` may be required to perform a system-wide install.
+   If you do not have access to sudo, you may instead run the following commands:
 
    .. code:: bash
 

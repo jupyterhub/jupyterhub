@@ -4,7 +4,7 @@
 Testing JupyterHub
 ==================
 
-Unit test help validate that JupyterHub works the way we think it does,
+Unit testing helps to validate that JupyterHub works the way we think it does,
 and continues to do so when changes occur. They also help communicate
 precisely what we expect our code to do. 
 

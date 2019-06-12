@@ -27,7 +27,7 @@ change renders correctly, it is good practice to test it locally.
       python3 -m pip install -r docs/requirements.txt
 
 #. Build the html version of the docs. This is the most commonly used
-   output format, so verifying it renders as you should is usually good
+   output format, so verifying it renders correctly is usually good
    enough.
 
    .. code-block:: bash
@@ -46,6 +46,8 @@ change renders correctly, it is good practice to test it locally.
 
       On macOS, you can open a file from the terminal with ``open <path-to-file>``.
       On Linux, you can do the same with ``xdg-open <path-to-file>``.
+      After opening index.html in your browser you can just refresh the page whenever
+      you rebuild the docs via ``make html``
 
 
 .. _contributing/docs/conventions:

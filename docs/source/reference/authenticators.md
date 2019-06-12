@@ -31,8 +31,7 @@ popular services:
 - Okpy
 - OpenShift
 
-A generic implementation, which you can use for OAuth authentication
-with any provider, is also available.
+A [generic implementation](https://github.com/jupyterhub/oauthenticator/blob/master/oauthenticator/generic.py), which you can use for OAuth authentication with any provider, is also available.
 
 ## The Dummy Authenticator
 
@@ -113,7 +112,9 @@ to uid to username), which is useful in case you use some external
 service that allows multiple usernames mapping to the same user (such
 as ActiveDirectory, yes, this really happens).  When
 `pam_normalize_username` is on, usernames are *not* normalized to
-lowercase.
+lowercase. 
+NOTE: Earlier it says that usernames are normalized using PAM. 
+I guess that doesn't normalize them?
 
 
 #### Validate usernames
@@ -169,7 +170,7 @@ setup(
 ```
 
 If you have added this metadata to your package,
-users can select your authenticator with the configuration:
+admins can select your authenticator with the configuration:
 
 ```python
 c.JupyterHub.authenticator_class = 'myservice'
@@ -259,8 +260,8 @@ class MyAuthenticator(Authenticator):
 ## pre_spawn_start and post_spawn_stop hooks
 
 Authenticators uses two hooks, [pre_spawn_start(user, spawner)][] and
-[post_spawn_stop(user, spawner)][] to add pass additional state information
-between the authenticator and a spawner. These hooks are typically used auth-related
+[post_spawn_stop(user, spawner)][] to pass additional state information
+between the authenticator and a spawner. These hooks are typically used for auth-related
 startup, i.e. opening a PAM session, and auth-related cleanup, i.e. closing a
 PAM session.
 

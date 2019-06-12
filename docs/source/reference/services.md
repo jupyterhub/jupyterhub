@@ -65,7 +65,7 @@ If a service is also to be managed by the Hub, it has a few extra options:
 A **Hub-Managed Service** is started by the Hub, and the Hub is responsible
 for the Service's actions. A Hub-Managed Service can only be a local
 subprocess of the Hub. The Hub will take care of starting the process and
-restarts it if it stops.
+restart the service if the service stops.
 
 While Hub-Managed Services share some similarities with notebook Spawners,
 there are no plans for Hub-Managed Services to support the same spawning
@@ -201,8 +201,18 @@ below.
 The reference, or base, implementation is the [`HubAuth`][HubAuth] class,
 which implements the requests to the Hub.
 
-To use HubAuth, you must set the `.api_token`, either programmatically when constructing the class,
-or via the `JUPYTERHUB_API_TOKEN` environment variable.
+To use HubAuth, you must set the `.api_token` instance variable. This can be
+done either programmatically when constructing the class, or via the
+`JUPYTERHUB_API_TOKEN` environment variable. A number of the examples in the
+root of the jupyterhub git repository set the `JUPYTERHUB_API_TOKEN` variable
+so consider having a look at those for futher reading
+([cull-idle](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle), 
+[external-oauth](https://github.com/jupyterhub/jupyterhub/tree/master/examples/external-oauth),
+[service-notebook](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-notebook)
+and [service-whoiami](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami))
+
+
+(TODO: Where is this API TOKen set?)
 
 Most of the logic for authentication implementation is found in the 
 [`HubAuth.user_for_cookie`][HubAuth.user_for_cookie] 
@@ -353,13 +363,13 @@ and taking note of the following process:
    ```json
    {
      "name": "inara",
-     "groups": ["serenity", "guild"],
+     "groups": ["serenity", "guild"]
 
    }
    ```
 
 An example of using an Externally-Managed Service and authentication is
-in [nbviewer README][nbviewer example] section on securing the notebook viewer,
+in the [nbviewer README][nbviewer example] section on securing the notebook viewer,
 and an example of its configuration is found [here](https://github.com/jupyter/nbviewer/blob/master/nbviewer/providers/base.py#L94).
 nbviewer can also be run as a Hub-Managed Service as described [nbviewer README][nbviewer example]
 section on securing the notebook viewer.

@@ -101,6 +101,9 @@ popular services:
 - Okpy
 - OpenShift
 
+NOTE: Open issue asking for more details on this generic implementation.
+It's not clear if this is a different implementation or if the JupyterHub OAuth
+_is_ the generic implementation.
 A generic implementation, which you can use for OAuth authentication
 with any provider, is also available.
 

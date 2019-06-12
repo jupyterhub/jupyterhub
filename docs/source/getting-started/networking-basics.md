@@ -12,7 +12,7 @@ This section will help you with basic proxy and network configuration to:
 The Proxy's main IP address setting determines where JupyterHub is available to users.
 By default, JupyterHub is configured to be available on all network interfaces
 (`''`) on port 8000. *Note*: Use of `'*'` is discouraged for IP configuration;
-instead, use of `'0.0.0.0'` is preferred.
+instead, use of `'0.0.0.0'` is preferred. 
 
 Changing the Proxy's main IP address and port can be done with the following
 JupyterHub **command line options**:
@@ -41,9 +41,9 @@ port.
 
 ## Set the Proxy's REST API communication URL (optional)
 
-By default, this REST API listens on port 8081 of `localhost` only.
-The Hub service talks to the proxy via a REST API on a secondary port. The
-API URL can be configured separately and override the default settings.
+By default, the proxy's REST API listens on port 8081 of `localhost` only.
+The Hub service talks to the proxy via a REST API on a secondary port. 
+The REST API URL (hostname and port) can be configured separately and override the default settings.
 
 ### Set api_url
 

@@ -138,7 +138,7 @@ async def delete_route(self, routespec):
 
 For retrieval, you only *need* to implement a single method that retrieves all
 routes. The return value for this function should be a dictionary, keyed by
-`routespect`, of dicts whose keys are the same three arguments passed to
+`routespec`, of dicts whose keys are the same three arguments passed to
 `add_route` (`routespec`, `target`, `data`)
 
 ```python
@@ -204,7 +204,7 @@ setup(
 ```
 
 If you have added this metadata to your package,
-users can select your proxy with the configuration:
+admins can select your authenticator with the configuration:
 
 ```python
 c.JupyterHub.proxy_class = 'mything'
@@ -216,7 +216,7 @@ instead of the full
 c.JupyterHub.proxy_class = 'mypackage:MyProxy'
 ```
 
-previously required.
+as previously required.
 Additionally, configurable attributes for your proxy will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.

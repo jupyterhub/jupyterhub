@@ -70,7 +70,8 @@ Cmnd_Alias JUPYTER_CMD = /usr/local/bin/sudospawner
 rhea ALL=(JUPYTER_USERS) NOPASSWD:JUPYTER_CMD
 ```
 
-It might be useful to modify `secure_path` to add commands in path.
+It might be useful to modify `secure_path` to add commands in path. (Search for
+`secure_path` in the [sudo docs](https://www.sudo.ws/man/1.8.14/sudoers.man.html) 
 
 As an alternative to adding every user to the `/etc/sudoers` file, you can
 use a group in the last line above, instead of `JUPYTER_USERS`:
@@ -152,7 +153,8 @@ then you will need to give `node` permission to do so:
 ```bash
 sudo setcap 'cap_net_bind_service=+ep' /usr/bin/node
 ```
-However, you may want to further understand the consequences of this.
+However, you may want to further understand the consequences of this. 
+([Further reading](http://man7.org/linux/man-pages/man7/capabilities.7.html))
 
 You may also be interested in limiting the amount of CPU any process can use
 on your server. `cpulimit` is a useful tool that is available for many Linux
@@ -163,7 +165,8 @@ instructions](http://ubuntuforums.org/showthread.php?t=992706).
 
 ### Shadow group (FreeBSD)
 
-**NOTE:** This has not been tested and may not work as expected.
+**NOTE:** This has not been tested on FreeBSD and may not work as expected on
+the FreeBSD platform. *Do not use in production without verifying that it works properly!*
 
 ```bash
 $ ls -l /etc/spwd.db /etc/master.passwd
@@ -249,6 +252,6 @@ $ semodule -i sudo_exec_selinux.pp
 ## Troubleshooting: PAM session errors
 
 If the PAM authentication doesn't work and you see errors for
-`login:session-auth`, or similar, considering updating to a more recent version
+`login:session-auth`, or similar, consider updating to a more recent version
 of jupyterhub and disabling the opening of PAM sessions with
 `c.PAMAuthenticator.open_sessions=False`.
