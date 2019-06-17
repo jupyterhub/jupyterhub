@@ -26,6 +26,7 @@ from tornado.httputil import HTTPHeaders
 from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
+from tornado.web import addslash
 from tornado.web import MissingArgumentError
 from tornado.web import RequestHandler
 
@@ -1450,10 +1451,9 @@ class CSPReportHandler(BaseHandler):
 class AddSlashHandler(BaseHandler):
     """Handler for adding trailing slash to URLs that need them"""
 
-    def get(self, *args):
-        src = urlparse(self.request.uri)
-        dest = src._replace(path=src.path + '/')
-        self.redirect(urlunparse(dest))
+    @addslash
+    def get(self):
+        pass
 
 
 default_handlers = [
