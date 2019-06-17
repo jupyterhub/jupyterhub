@@ -216,7 +216,7 @@ class HubAuth(SingletonConfigurable):
         return self.hub_host + url_path_join(self.hub_prefix, 'login')
 
     keyfile = Unicode(
-        '',
+        os.getenv('JUPYTERHUB_SSL_KEYFILE', ''),
         help="""The ssl key to use for requests
 
         Use with certfile
@@ -224,7 +224,7 @@ class HubAuth(SingletonConfigurable):
     ).tag(config=True)
 
     certfile = Unicode(
-        '',
+        os.getenv('JUPYTERHUB_SSL_CERTFILE', ''),
         help="""The ssl cert to use for requests
 
         Use with keyfile
@@ -232,7 +232,7 @@ class HubAuth(SingletonConfigurable):
     ).tag(config=True)
 
     client_ca = Unicode(
-        '',
+        os.getenv('JUPYTERHUB_SSL_CLIENT_CA', ''),
         help="""The ssl certificate authority to use to verify requests
 
         Use with keyfile and certfile
