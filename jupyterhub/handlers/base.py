@@ -249,9 +249,39 @@ class BaseHandler(RequestHandler):
         orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             return None
-        orm_token.last_activity = orm_token.user.last_activity = datetime.utcnow()
-        self.db.commit()
+
+        now = datetime.utcnow()
+        recorded = self._record_activity(orm_token, now)
+        if self._record_activity(orm_token.user, now) or recorded:
+            self.db.commit()
         return self._user_from_orm(orm_token.user)
+
+    def _record_activity(self, obj, timestamp=None):
+        """record activity on an ORM object
+
+        If last_activity was more recent than self.activity_resolution seconds ago,
+        do nothing to avoid unnecessarily frequent database commits.
+
+        Args:
+            obj: an ORM object with a last_activity attribute
+            timestamp (datetime, optional): the timestamp of activity to register.
+        Returns:
+            recorded (bool): True if activity was recorded, False if not.
+        """
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+        resolution = self.settings.get("activity_resolution", 0)
+        if not obj.last_activity or resolution == 0:
+            self.log.debug("Recording first activity for %s", obj)
+            obj.last_activity = timestamp
+            return True
+        if (timestamp - obj.last_activity).total_seconds() > resolution:
+            # this debug line will happen just too often
+            # uncomment to debug last_activity updates
+            # self.log.debug("Recording activity for %s", obj)
+            obj.last_activity = timestamp
+            return True
+        return False
 
     async def refresh_auth(self, user, force=False):
         """Refresh user authentication info
@@ -323,14 +353,15 @@ class BaseHandler(RequestHandler):
 
         # record token activity
         now = datetime.utcnow()
-        orm_token.last_activity = now
+        recorded = self._record_activity(orm_token, now)
         if orm_token.user:
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
             if not orm_token.note.startswith("Server at "):
-                orm_token.user.last_activity = now
-        self.db.commit()
+                recorded = self._record_activity(orm_token.user, now) or recorded
+        if recorded:
+            self.db.commit()
 
         if orm_token.service:
             return orm_token.service
@@ -360,8 +391,8 @@ class BaseHandler(RequestHandler):
             clear()
             return
         # update user activity
-        user.last_activity = datetime.utcnow()
-        self.db.commit()
+        if self._record_activity(user):
+            self.db.commit()
         return user
 
     def _user_from_orm(self, orm_user):
