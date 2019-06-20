@@ -297,7 +297,11 @@ class User:
     # pass get/setattr to ORM user
     def __getattr__(self, attr):
         if hasattr(self.orm_user, attr):
-            return getattr(self.orm_user, attr)
+            orm_attr = getattr(self.orm_user, attr)
+            # handle the special case where the username contains a space
+            if attr == 'name':
+                orm_attr = orm_attr.replace(' ','.')
+            return orm_attr
         else:
             raise AttributeError(attr)
 
