@@ -17,9 +17,11 @@ satisfy the following:
 Let's start out with needed JupyterHub configuration in `jupyterhub_config.py`:
 
 ```python
-# Force the proxy to only listen to connections to 127.0.0.1
-c.JupyterHub.ip = '127.0.0.1'
+# Force the proxy to only listen to connections to 127.0.0.1 (on port 8000)
+c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
 ```
+
+(For Jupyterhub < 0.9 use `c.JupyterHub.ip = '127.0.0.1'`.)
 
 For high-quality SSL configuration, we also generate Diffie-Helman parameters.
 This can take a few minutes:
