@@ -759,6 +759,7 @@ class BaseHandler(RequestHandler):
             active_counts['spawn_pending'] + active_counts['proxy_pending']
         )
         active_count = active_counts['active']
+        RUNNING_SERVERS.set(active_count)
 
         concurrent_spawn_limit = self.concurrent_spawn_limit
         active_server_limit = self.active_server_limit
@@ -842,7 +843,6 @@ class BaseHandler(RequestHandler):
                 "User %s took %.3f seconds to start", user_server_name, toc - tic
             )
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
-            RUNNING_SERVERS.inc()
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
@@ -854,6 +854,7 @@ class BaseHandler(RequestHandler):
                 PROXY_ADD_DURATION_SECONDS.labels(status='success').observe(
                     time.perf_counter() - proxy_add_start_time
                 )
+                RUNNING_SERVERS.inc()
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
                 self.log.error(
@@ -1022,7 +1023,6 @@ class BaseHandler(RequestHandler):
                     "User %s server took %.3f seconds to stop", user.name, toc - tic
                 )
                 self.statsd.timing('spawner.stop', (toc - tic) * 1000)
-                RUNNING_SERVERS.dec()
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.success
                 ).observe(toc - tic)

@@ -39,9 +39,7 @@ RUNNING_SERVERS = Gauge(
     'running_servers', 'the number of user servers currently running'
 )
 
-RUNNING_SERVERS.set(0)
-
-TOTAL_USERS = Gauge('total_users', 'toal number of users')
+TOTAL_USERS = Gauge('total_users', 'total number of users')
 
 TOTAL_USERS.set(0)
 
