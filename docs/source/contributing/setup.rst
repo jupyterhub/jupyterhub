@@ -112,13 +112,12 @@ happen.
 
 Happy developing!
 
-Using DummyAuthenticator & SimpleSpawner
-========================================
+Using DummyAuthenticator & SimpleLocalProcessSpawner
+====================================================
 
 To simplify testing of JupyterHub, it’s helpful to use
 :class:`~jupyterhub.auth.DummyAuthenticator` instead of the default JupyterHub
-authenticator and `SimpleSpawner <https://github.com/jupyterhub/simplespawner>`_ 
-instead of the default spawner.
+authenticator and SimpleLocalProcessSpawner instead of the default spawner.
 
 There is a sample configuration file that does this in
 ``testing/jupyterhub_config.py``. To launch jupyterhub with this
@@ -126,7 +125,6 @@ configuration:
 
 .. code:: bash
 
-   pip install jupyterhub-simplespawner
    jupyterhub -f testing/jupyterhub_config.py
 
 The default JupyterHub `authenticator
@@ -137,15 +135,15 @@ require your system to have user accounts for each user you want to log in to
 JupyterHub as.
 
 DummyAuthenticator allows you to log in with any username & password,
-while SimpleSpawner allows you to start servers without having to
+while SimpleLocalProcessSpawner allows you to start servers without having to
 create a unix user for each JupyterHub user. Together, these make it
 much easier to test JupyterHub.
 
 Tip: If you are working on parts of JupyterHub that are common to all
 authenticators & spawners, we recommend using both DummyAuthenticator &
-SimpleSpawner. If you are working on just authenticator related parts,
-use only SimpleSpawner. Similarly, if you are working on just spawner
-related parts, use only DummyAuthenticator.
+SimpleLocalProcessSpawner. If you are working on just authenticator related
+parts, use only SimpleLocalProcessSpawner. Similarly, if you are working on
+just spawner related parts, use only DummyAuthenticator.
 
 Troubleshooting
 ===============
