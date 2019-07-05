@@ -12,7 +12,7 @@ Dockerfile.alpine  contains base image for jupyterhub. It does not work independ
 
 * start configurable-http-proxy in another container
 * specify CONFIGPROXY_AUTH_TOKEN env in both containers
-* put both containers on the same network (e.g. docker create network jupyterhub; docker run ... --net jupyterhub)
+* put both containers on the same network (e.g. docker network create jupyterhub; docker run ... --net jupyterhub)
 * tell jupyterhub where CHP is (e.g. c.ConfigurableHTTPProxy.api_url = 'http://chp:8001')
 * tell jupyterhub not to start the proxy itself (c.ConfigurableHTTPProxy.should_start = False)
 * Use dummy authenticator for ease of testing. Update following in jupyterhub_config file
