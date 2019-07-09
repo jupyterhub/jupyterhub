@@ -1,0 +1,59 @@
+"$id": hub.jupyter.org/server-action
+version: 1
+title: JupyterHub server events
+description: |
+  Record actions on user servers made via JupyterHub.
+
+  JupyterHub can perform various actions on user servers via 
+  direct interaction from users, or via the API. This event is 
+  recorded whenever either of those happen.
+
+  Limitations:
+
+  1. This does not record all server starts / stops, only those
+     explicitly performed by JupyterHub. For example, a user's server
+     can go down because the node it was running on dies. That will
+     not cause an event to be recorded, since it was not initiated
+     by JupyterHub. In practice this happens often, so this is not
+     a complete record.
+  2. Events are only recorded when an action succeeds.
+type: object
+required:
+- action
+- username
+- servername
+properties:
+  action:
+    enum:
+    - start
+    - stop
+    description: |
+      Action performed by JupyterHub.
+
+      This is a required field.
+
+      Possibl Values:
+
+      1. start
+         A user's server was successfully started
+      
+      2. stop
+         A user's server was successfully stopped
+  username:
+    type: string
+    description: |
+      Name of the user whose server this action was performed on.
+
+      This is the normalized name used by JupyterHub itself,
+      which is derived from the authentication provider used but 
+      might not be the same as used in the authentication provider.
+  servername:
+    type: string
+    description: |
+      Name of the server this action was performed on.
+
+      JupyterHub supports each user having multiple servers with
+      arbitrary names, and this field specifies the name of the
+      server.
+
+      The 'default' server is denoted by the empty string

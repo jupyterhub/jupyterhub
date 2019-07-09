@@ -2151,8 +2151,11 @@ class JupyterHub(Application):
 
         self.eventlog = EventLog(parent=self)
 
-        for schema_file in glob(os.path.join(here, 'event-schemas', '*.json')):
-            self.eventlog.register_schema_file(schema_file)
+        for dirname, _, files in os.walk(os.path.join(here, 'event-schemas')):
+            for file in files:
+                if not file.endswith('.yaml'):
+                    continue
+                self.eventlog.register_schema_file(os.path.join(dirname, file))
 
         self.init_pycurl()
         self.init_secrets()
