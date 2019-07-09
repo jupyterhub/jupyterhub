@@ -59,6 +59,8 @@ from traitlets import (
 )
 from traitlets.config import Application, Configurable, catch_config_error
 
+from jupyter_telemetry.eventlog import EventLog
+
 here = os.path.dirname(__file__)
 
 import jupyterhub
@@ -89,7 +91,6 @@ from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
 from .spawner import Spawner, LocalProcessSpawner
 from .objects import Hub, Server
-from .events import EventLog
 
 # For faking stats
 from .emptyclass import EmptyClass
@@ -2072,7 +2073,7 @@ class JupyterHub(Application):
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
-            event_log=self.event_log
+            eventlog=self.eventlog
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -2148,11 +2149,10 @@ class JupyterHub(Application):
         _log_cls("Authenticator", self.authenticator_class)
         _log_cls("Spawner", self.spawner_class)
 
-        self.event_log = EventLog(parent=self)
+        self.eventlog = EventLog(parent=self)
 
-        for schema_file in glob(os.path.join(here, 'event-schemas','*.json')):
-            with open(schema_file) as f:
-                self.event_log.register_schema(json.load(f))
+        for schema_file in glob(os.path.join(here, 'event-schemas', '*.json')):
+            self.eventlog.register_schema_file(schema_file)
 
         self.init_pycurl()
         self.init_secrets()
