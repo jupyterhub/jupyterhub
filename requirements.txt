@@ -11,5 +11,4 @@ requests
 SQLAlchemy>=1.1
 tornado>=5.0
 traitlets>=4.3.2
-jsonschema
-python-json-logger
+jupyter_telemetry
