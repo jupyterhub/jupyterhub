@@ -5,19 +5,19 @@
 import asyncio
 import atexit
 import binascii
+import json
 import logging
 import os
 import re
 import signal
 import socket
 import sys
-import json
-from glob import glob
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from datetime import timezone
 from functools import partial
 from getpass import getuser
+from glob import glob
 from operator import itemgetter
 from textwrap import dedent
 from urllib.parse import unquote
@@ -2052,7 +2052,7 @@ class JupyterHub(Application):
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
-            eventlog=self.eventlog
+            eventlog=self.eventlog,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
