@@ -79,6 +79,7 @@ from .utils import (
     print_ps_info,
     make_ssl_context,
 )
+from .metrics import RUNNING_SERVERS
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -1936,6 +1937,9 @@ class JupyterHub(Application):
         if self.log_level <= logging.DEBUG:
             user_summaries = map(_user_summary, self.users.values())
             self.log.debug("Loaded users:\n%s", '\n'.join(user_summaries))
+
+        active_counts = self.users.count_active_users()
+        RUNNING_SERVERS.set(active_counts['active'])
 
     def init_oauth(self):
         base_url = self.hub.base_url
