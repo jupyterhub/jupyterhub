@@ -63,7 +63,7 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.name|escapejs}}",
+        user: "{{json_encode(user.name)}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
