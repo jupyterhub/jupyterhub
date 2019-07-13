@@ -103,7 +103,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
   $(".new-server-btn").click(function() {
     var row = getRow($(this));
     var serverName = row.find(".new-server-name").val();
-    window.location.href = "../spawn/" + escape(user) + "/" + serverName;
+    window.location.href = "../spawn/" + encodeURIComponent(user) + "/" + serverName;
   });
 
   $(".stop-server").click(stopServer);
