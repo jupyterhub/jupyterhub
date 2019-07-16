@@ -41,8 +41,6 @@ RUNNING_SERVERS = Gauge(
 
 TOTAL_USERS = Gauge('total_users', 'total number of users')
 
-TOTAL_USERS.set(0)
-
 CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'check_routes_duration_seconds', 'Time taken to validate all routes in proxy'
 )

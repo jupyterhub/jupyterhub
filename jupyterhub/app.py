@@ -80,6 +80,7 @@ from .utils import (
     make_ssl_context,
 )
 from .metrics import RUNNING_SERVERS
+from .metrics import TOTAL_USERS
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -1940,6 +1941,7 @@ class JupyterHub(Application):
 
         active_counts = self.users.count_active_users()
         RUNNING_SERVERS.set(active_counts['active'])
+        TOTAL_USERS.set(len(self.users))
 
     def init_oauth(self):
         base_url = self.hub.base_url
