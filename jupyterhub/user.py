@@ -353,7 +353,7 @@ class User:
 
     @property
     def json_escaped_name(self):
-        """My name, escaped for use in javascript inserts, etc."""
+        """The user name, escaped for use in javascript inserts, etc."""
         return json.dumps(self.name)[1:-1]
 
     @property
