@@ -351,6 +351,11 @@ class User:
         return quote(self.name, safe='@~')
 
     @property
+    def unicode_escaped_name(self):
+        """My name, escaped for use in javascript inserts, etc."""
+        return self.name.decode('unicode_escape')
+
+    @property
     def proxy_spec(self):
         """The proxy routespec for my default server"""
         if self.settings.get('subdomain_host'):
