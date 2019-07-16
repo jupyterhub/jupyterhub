@@ -68,6 +68,7 @@ class HomeHandler(BaseHandler):
         html = self.render_template(
             'home.html',
             user=user,
+            user_unicode=codecs.unicode_escape_encode(user)[0].decode(),
             url=url,
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
