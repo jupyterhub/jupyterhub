@@ -226,7 +226,7 @@ class SpawnHandler(BaseHandler):
         next_url = self.get_next_url(
             user,
             default=url_path_join(
-                self.hub.base_url, "spawn-pending", user.unicode_escaped_name, server_name
+                self.hub.base_url, "spawn-pending", user.name, server_name
             ),
         )
         self.redirect(next_url)
