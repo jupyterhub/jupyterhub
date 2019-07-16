@@ -63,7 +63,8 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.unicode_escaped_name}}",
+        user: "{{user.name}}",
+        user_unicode: "{{user.name.decode('unicode_escape')}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
