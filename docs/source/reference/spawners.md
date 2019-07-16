@@ -25,7 +25,7 @@ Some examples include:
   run without being root, by spawning an intermediate process via `sudo`
 - [BatchSpawner](https://github.com/jupyterhub/batchspawner) for spawning remote
   servers using batch systems
-- [YarnSpawner](https://github.com/jcrist/yarnspawner) for spawning notebook
+- [YarnSpawner](https://github.com/jupyterhub/yarnspawner) for spawning notebook
   servers in YARN containers on a Hadoop cluster
 - [RemoteSpawner](https://github.com/zonca/remotespawner) to spawn notebooks
   and a remote server and tunnel the port via SSH
