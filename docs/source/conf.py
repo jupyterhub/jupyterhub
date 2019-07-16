@@ -192,9 +192,7 @@ intersphinx_mapping = {'https://docs.python.org/3/': None}
 # -- Read The Docs --------------------------------------------------------
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if not on_rtd:
-    html_theme = 'alabaster'
-else:
+if on_rtd:
     # readthedocs.org uses their theme by default, so no need to specify it
     # build rest-api, since RTD doesn't run make
     from subprocess import check_call as sh

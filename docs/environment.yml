@@ -4,6 +4,7 @@ name: jhub_docs
 channels:
   - conda-forge
 dependencies:
+- pip
 - nodejs
 - python=3.6
 - alembic
