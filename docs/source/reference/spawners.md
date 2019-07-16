@@ -195,7 +195,7 @@ setup(
 ```
 
 If you have added this metadata to your package,
-users can select your authenticator with the configuration:
+users can select your spawner with the configuration:
 
 ```python
 c.JupyterHub.spawner_class = 'myservice'
