@@ -54,12 +54,6 @@ class HomeHandler(BaseHandler):
     @web.authenticated
     async def get(self):
         user = self.current_user
-        user_unicode = codecs.unicode_escape_encode(self.current_user.name)[0].decode()
-        user_unicode_1 = self.current_user.unicode_escaped_name
-        self.log.info("user: %s", user)
-        self.log.info("user.name: %s", user.name)
-        self.log.info("user_unicode: %s", user_unicode)
-        self.log.info("user_unicode_1: %s", user_unicode_1)
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             await user.spawner.poll_and_notify()
