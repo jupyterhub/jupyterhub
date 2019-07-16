@@ -76,7 +76,7 @@ resolves the cross-site issues.
 
 ### Disable user config
 
-If subdomains are not available or not desirable, JupyterHub provides a a
+If subdomains are not available or not desirable, JupyterHub provides a
 configuration option `Spawner.disable_user_config`, which can be set to prevent
 the user-owned configuration files from being loaded. After implementing this
 option, PATHs and package installation and PATHs are the other things that the
