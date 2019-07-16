@@ -353,7 +353,10 @@ class User:
     @property
     def unicode_escaped_name(self):
         """My name, escaped for use in javascript inserts, etc."""
-        return self.name.decode('unicode_escape')
+        unicoded = self.name.decode('unicode_escape')
+        self.log.info(f'unicode escaping: name={ self.name }, escaped={ unicoded }')
+        print("in unicode_escaped_name")
+        return self.name # return normal name for now
 
     @property
     def proxy_spec(self):
