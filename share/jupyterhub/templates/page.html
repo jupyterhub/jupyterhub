@@ -63,7 +63,8 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.name}}",
+        user: "{{user.unicode_escaped_name}}",
+        user_original: "{{user.name}}",
         user_unicode: "{{user_unicode}}",
         user_unicode_1: "{{user_unicode_1}}",
         {% endif %}
