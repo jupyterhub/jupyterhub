@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
+import codecs
 import copy
 import time
 from collections import defaultdict
@@ -53,6 +54,10 @@ class HomeHandler(BaseHandler):
     @web.authenticated
     async def get(self):
         user = self.current_user
+        user_unicode = codecs.unicode_escape_encode(self.current_user.name)[0].decode()
+        self.log.info("user: %s", user)
+        self.log.info("user.name: %s", user.name)
+        self.log.info("user_unicode: %s", user_unicode)
         if user.running:
             # trigger poll_and_notify event in case of a server that died
             await user.spawner.poll_and_notify()
@@ -68,7 +73,7 @@ class HomeHandler(BaseHandler):
         html = self.render_template(
             'home.html',
             user=user,
-            user_unicode=codecs.unicode_escape_encode(user.name)[0].decode(),
+            user_unicode=user_unicode,
             url=url,
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
