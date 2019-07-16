@@ -64,7 +64,7 @@
         prefix: "{{prefix}}",
         {% if user %}
         user: "{{user.name}}",
-        user_unicode: "{{user.name.decode('unicode_escape')}}",
+        user_unicode: "{{user_unicode}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
