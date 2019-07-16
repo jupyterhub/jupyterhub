@@ -1,6 +1,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import codecs
+import json
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -352,9 +352,9 @@ class User:
         return quote(self.name, safe='@~')
 
     @property
-    def unicode_escaped_name(self):
+    def json_escaped_name(self):
         """My name, escaped for use in javascript inserts, etc."""
-        return codecs.unicode_escape_encode(self.name)[0].decode()
+        return json.dumps(self.name)[1:-1]
 
     @property
     def proxy_spec(self):
