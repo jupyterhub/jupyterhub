@@ -1,5 +1,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import codecs
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -353,10 +354,11 @@ class User:
     @property
     def unicode_escaped_name(self):
         """My name, escaped for use in javascript inserts, etc."""
-        unicoded = self.name.decode('unicode_escape')
+        #unicoded = self.name.decode('unicode_escape')
+        unicoded = codecs.unicode_escape_encode(self.name)[0].decode()
         self.log.info(f'unicode escaping: name={ self.name }, escaped={ unicoded }')
         print("in unicode_escaped_name")
-        return self.name # return normal name for now
+        return unicoded # return normal name for now
 
     @property
     def proxy_spec(self):
