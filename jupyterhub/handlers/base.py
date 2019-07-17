@@ -1073,7 +1073,13 @@ class BaseHandler(RequestHandler):
         template_ns.update(self.template_namespace)
         template_ns.update(ns)
         template = self.get_template(name)
-        return template.render(**template_ns)
+        rendered = template.render(**template_ns)
+
+        if self.settings['validate_html']:
+            from AdvancedHTMLParser import ValidatingAdvancedHTMLParser
+            ValidatingAdvancedHTMLParser().parseStr(rendered)
+        return rendered
+
 
     @property
     def template_namespace(self):
