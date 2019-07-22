@@ -1,5 +1,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import json
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -349,6 +350,11 @@ class User:
     def escaped_name(self):
         """My name, escaped for use in URLs, cookies, etc."""
         return quote(self.name, safe='@~')
+
+    @property
+    def json_escaped_name(self):
+        """The user name, escaped for use in javascript inserts, etc."""
+        return json.dumps(self.name)[1:-1]
 
     @property
     def proxy_spec(self):
