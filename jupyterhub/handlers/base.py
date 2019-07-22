@@ -1357,7 +1357,9 @@ class UserUrlHandler(BaseHandler):
             return
 
         pending_url = url_concat(
-            url_path_join(self.hub.base_url, 'spawn-pending', user.name, server_name),
+            url_path_join(
+                self.hub.base_url, 'spawn-pending', user.escaped_name, server_name
+            ),
             {'next': self.request.uri},
         )
         if spawner.pending or spawner._failed:
@@ -1371,7 +1373,7 @@ class UserUrlHandler(BaseHandler):
         # without explicit user action
         self.set_status(503)
         spawn_url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.name, server_name),
+            url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
         html = self.render_template(
@@ -1459,7 +1461,8 @@ class UserRedirectHandler(BaseHandler):
             user_url = url_concat(user_url, parse_qsl(self.request.query))
 
         url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.name), {"next": user_url}
+            url_path_join(self.hub.base_url, "spawn", user.escaped_name),
+            {"next": user_url},
         )
 
         self.redirect(url)
