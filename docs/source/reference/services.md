@@ -249,7 +249,7 @@ prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 
 auth = HubAuth(
     api_token=os.environ['JUPYTERHUB_API_TOKEN'],
-    cookie_cache_max_age=60,
+    cache_max_age=60,
 )
 
 app = Flask(__name__)
