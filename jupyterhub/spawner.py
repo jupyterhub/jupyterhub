@@ -13,6 +13,7 @@ import shutil
 import signal
 import sys
 import warnings
+from datetime import datetime
 from subprocess import Popen
 from tempfile import mkdtemp
 
@@ -180,6 +181,10 @@ class Spawner(LoggingConfigurable):
     @property
     def last_activity(self):
         return self.orm_spawner.last_activity
+
+    @property
+    def started(self):
+        return self.orm_spawner.started
 
     @property
     def server(self):
@@ -1070,6 +1075,9 @@ class Spawner(LoggingConfigurable):
         if self._poll_callback:
             self._poll_callback.stop()
             self._poll_callback = None
+        if self._cull_callback:
+            self._cull_callback.stop()
+            self._cull_callback = None
 
     def start_polling(self):
         """Start polling periodically for single-user server's running state.
@@ -1089,6 +1097,11 @@ class Spawner(LoggingConfigurable):
             self.poll_and_notify, 1e3 * self.poll_interval
         )
         self._poll_callback.start()
+
+        self._cull_callback = PeriodicCallback(
+            self.cull_check, 1e3 * self.cull_check_interval
+        )
+        self._cull_callback.start()
 
     async def poll_and_notify(self):
         """Used as a callback to periodically poll the process and notify any watchers"""
@@ -1128,6 +1141,49 @@ class Spawner(LoggingConfigurable):
             return r
         except TimeoutError:
             return False
+
+    _cull_callback = Any()
+
+    cull_check_interval = Integer(
+        0,  # FIXME: default to 0 to leave off by default or 300 with the others default to 0?
+        config=True,
+        help="""Interval (in seconds) between calls to :meth:`.cull_check`"""
+    )
+
+    cull_idle_timeout = Integer(
+        0,
+        config=True,
+        help="""Time (in seconds) after which an idle server should be shutdown (0 to disable).
+
+        Due to internal polling intervals, this should be greater than 5 minutes (300 sec)""" # FIXME: This still true?
+    )
+
+    cull_max_age = Integer(
+        0,
+        config=True,
+        help="""Time (in seconds) after which a server should be shutdown (0 to disable).
+
+        Due to internal polling intervals, this should be greater than 5 minutes (300 sec)""" # FIXME: This still true?
+    )
+
+    async def cull_check(self):
+        """Checks state to determine if the server should be shutdown.
+        # FIXME THIS IS PROBABLY INACCURATE BY THE TIME I FINISH THIS
+        .. versionadded: 1.0.1
+        """
+        cull_server = False
+        self.log.debug("Checking cull status for %s", self._log_name)
+        if self.cull_idle_timeout and \
+                (datetime.utcnow() - self.last_activity).seconds > self.cull_idle_timeout:
+            cull_server = True
+
+        elif self.cull_max_age and \
+                (datetime.utcnow() - self.started).seconds > self.cull_max_age:
+             cull_server = True
+
+        if cull_server:
+            self.log.info("Culling server %s", self._log_name)
+            await self.stop()
 
 
 def _try_setcwd(path):
