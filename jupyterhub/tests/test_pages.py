@@ -92,8 +92,9 @@ async def test_home_auth(app):
 
 
 async def test_admin_no_auth(app):
-    r = await get_page('admin', app)
-    assert r.status_code == 403
+    r = await get_page('admin', app, allow_redirects=False)
+    assert r.status_code == 302
+    assert '/hub/login' in r.headers['Location']
 
 
 async def test_admin_not_admin(app):

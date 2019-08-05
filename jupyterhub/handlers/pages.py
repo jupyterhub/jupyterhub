@@ -349,6 +349,7 @@ class SpawnPendingHandler(BaseHandler):
 class AdminHandler(BaseHandler):
     """Render the admin page."""
 
+    @web.authenticated
     @admin_only
     def get(self):
         available = {'name', 'admin', 'running', 'last_activity'}
