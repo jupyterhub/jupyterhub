@@ -612,7 +612,9 @@ async def test_static_files(app):
     r = await async_requests.get(ujoin(base_url, 'logo'))
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
-    r = await async_requests.get(ujoin(base_url, 'static', 'images', 'jupyter.png'))
+    r = await async_requests.get(
+        ujoin(base_url, 'static', 'images', 'jupyterhub-80.png')
+    )
     r.raise_for_status()
     assert r.headers['content-type'] == 'image/png'
     r = await async_requests.get(ujoin(base_url, 'static', 'css', 'style.min.css'))
