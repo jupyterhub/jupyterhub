@@ -283,8 +283,9 @@ class SpawnPendingHandler(BaseHandler):
             # We should point the user to Home if the most recent spawn failed.
             exc = spawner._spawn_future.exception()
             self.log.error("Previous spawn for %s failed: %s", spawner._log_name, exc)
-            spawn_url = url_path_join(self.hub.base_url, "spawn", user.escaped_name,
-                    server_name)
+            spawn_url = url_path_join(
+                self.hub.base_url, "spawn", user.escaped_name, server_name
+            )
             self.set_status(500)
             html = self.render_template(
                 "not_running.html",
@@ -329,8 +330,9 @@ class SpawnPendingHandler(BaseHandler):
         # further, set status to 404 because this is not
         # serving the expected page
         if status is not None:
-            spawn_url = url_path_join(self.hub.base_url, "spawn", user.escaped_name,
-                    server_name)
+            spawn_url = url_path_join(
+                self.hub.base_url, "spawn", user.escaped_name, server_name
+            )
             html = self.render_template(
                 "not_running.html",
                 user=user,
