@@ -790,3 +790,42 @@ async def test_metrics_auth(app):
 async def test_health_check_request(app):
     r = await get_page('health', app)
     assert r.status_code == 200
+
+
+async def test_pre_spawn_start_exc_no_form(app):
+    exc = "pre_spawn_start error"
+
+    # throw exception from pre_spawn_start
+    @gen.coroutine
+    def mock_pre_spawn_start(user, spawner):
+        raise Exception(exc)
+
+    with mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start):
+        cookies = await app.login_user('summer')
+        # spawn page should thow a 500 error and show the pre_spawn_start error message
+        r = await get_page('spawn', app, cookies=cookies)
+        assert r.status_code == 500
+        assert exc in r.text
+
+
+async def test_pre_spawn_start_exc_options_form(app):
+    exc = "pre_spawn_start error"
+
+    # throw exception from pre_spawn_start
+    @gen.coroutine
+    def mock_pre_spawn_start(user, spawner):
+        raise Exception(exc)
+
+    with mock.patch.dict(
+        app.users.settings, {'spawner_class': FormSpawner}
+    ), mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start):
+        cookies = await app.login_user('spring')
+        user = app.users['spring']
+        # spawn page shouldn't throw any error until the spawn is started
+        r = await get_page('spawn', app, cookies=cookies)
+        assert r.url.endswith('/spawn')
+        r.raise_for_status()
+        assert FormSpawner.options_form in r.text
+        # spawning the user server should throw the pre_spawn_start error
+        with pytest.raises(Exception, match="%s" % exc):
+            await user.spawn()
