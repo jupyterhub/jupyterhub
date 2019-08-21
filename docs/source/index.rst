@@ -134,6 +134,14 @@ helps keep our community welcoming to as many people as possible.
    contributing/roadmap
    contributing/security
 
+Eventlogging and Telemetry
+--------------------------
+
+.. toctree::
+   :maxdepth: 1
+   
+   events/index
+
 Upgrading JupyterHub
 --------------------
 

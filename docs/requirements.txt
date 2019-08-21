@@ -5,3 +5,4 @@ alabaster_jupyterhub
 recommonmark==0.5.0
 sphinx-copybutton
 sphinx>=1.7
+sphinx-jsonschema
