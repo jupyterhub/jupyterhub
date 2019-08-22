@@ -177,12 +177,11 @@ class SpawnHandler(BaseHandler):
             # otherwise it may cause a redirect loop
             if f.done() and f.exception():
                 exc = f.exception()
-                if exc:
-                    raise web.HTTPError(
-                        500,
-                        "Error in Authenticator.pre_spawn_start: %s %s"
-                        % (type(exc).__name__, str(exc)),
-                    )
+                raise web.HTTPError(
+                    500,
+                    "Error in Authenticator.pre_spawn_start: %s %s"
+                    % (type(exc).__name__, str(exc)),
+                )
             self.redirect(pending_url)
 
     @web.authenticated
