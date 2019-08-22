@@ -175,16 +175,14 @@ class SpawnHandler(BaseHandler):
             done, pending = await asyncio.wait([f], timeout=1)
             # If spawn_single_user throws an exception, raise a 500 error
             # otherwise it may cause a redirect loop
-            if f in done:
-                future, = done
-                exc = future.exception()
+            if f.done() and f.exception():
+                exc = f.exception()
                 if exc:
                     raise web.HTTPError(
                         500,
                         "Error in Authenticator.pre_spawn_start: %s %s"
                         % (type(exc).__name__, str(exc)),
                     )
-                    return
             self.redirect(pending_url)
 
     @web.authenticated
