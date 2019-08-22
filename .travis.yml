@@ -13,7 +13,6 @@ env:
     - MYSQL_TCP_PORT=13306
 services:
   - postgresql
-  - mysql
   - docker
 
 # installing dependencies
