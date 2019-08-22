@@ -2099,6 +2099,17 @@ class JupyterHub(Application):
                 e,
             )
 
+    def init_eventlog(self):
+        """Set up the event logging system."""
+        self.eventlog = EventLog(parent=self)
+
+        for dirname, _, files in os.walk(os.path.join(here, 'event-schemas')):
+            for file in files:
+                if not file.endswith('.yaml'):
+                    continue
+                self.eventlog.register_schema_file(os.path.join(dirname, file))
+
+
     def write_pid_file(self):
         pid = os.getpid()
         if self.pid_file:
@@ -2149,14 +2160,7 @@ class JupyterHub(Application):
         _log_cls("Authenticator", self.authenticator_class)
         _log_cls("Spawner", self.spawner_class)
 
-        self.eventlog = EventLog(parent=self)
-
-        for dirname, _, files in os.walk(os.path.join(here, 'event-schemas')):
-            for file in files:
-                if not file.endswith('.yaml'):
-                    continue
-                self.eventlog.register_schema_file(os.path.join(dirname, file))
-
+        self.init_eventlog()
         self.init_pycurl()
         self.init_secrets()
         self.init_internal_ssl()
