@@ -778,7 +778,7 @@ class LocalAuthenticator(Authenticator):
         except AttributeError:
             pass
         except KeyError:
-            self.log.warning("No UID for user %s" % name)
+            self.log.debug("No UID for user %s" % name)
         cmd += [name]
         self.log.info("Creating user: %s", ' '.join(map(pipes.quote, cmd)))
         p = Popen(cmd, stdout=PIPE, stderr=STDOUT)
