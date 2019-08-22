@@ -12,7 +12,7 @@ env:
     - MYSQL_HOST=127.0.0.1
     - MYSQL_TCP_PORT=13306
 services:
-  - postgres
+  - postgresql
   - docker
 
 # installing dependencies
@@ -29,7 +29,7 @@ before_install:
       DB=mysql bash ci/init-db.sh
       # FIXME: mysql-connector-python 8.0.16 incorrectly decodes bytes to str
       # ref: https://bugs.mysql.com/bug.php?id=94944
-      pip install 'mysql-connector-python==8.0.15'
+      pip install 'mysql-connector-python==8.0.11'
     elif [[ $JUPYTERHUB_TEST_DB_URL == postgresql* ]]; then
       psql -c "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';" -U postgres
       DB=postgres bash ci/init-db.sh
