@@ -547,7 +547,7 @@ class JupyterHub(Application):
             self.bind_url = bind_url
 
     bind_url = Unicode(
-        "https://:8000",
+        "http://:8000",
         help="""The public facing URL of the whole JupyterHub application.
 
         This is the address on which the proxy will bind.
