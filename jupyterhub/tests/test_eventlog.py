@@ -39,7 +39,7 @@ def get_hub_and_sink():
     sink =  io.StringIO()
     handler = logging.StreamHandler(sink)
 
-    def _record_from_hub(schema):
+    def _get_hub_and_sink(schema):
         # Update the hub config with handler info.
         cfg = Config()
         cfg.EventLog.handlers = [handler]
@@ -52,7 +52,7 @@ def get_hub_and_sink():
         # Record an event from the hub.
         return hub, sink
 
-    yield _record_from_hub
+    yield _get_hub_and_sink
     
     # teardown
     hub.clear_instance()
