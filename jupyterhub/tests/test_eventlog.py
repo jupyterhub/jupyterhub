@@ -66,9 +66,9 @@ def test_valid_events(get_hub_and_sink, schema, version, event):
     hub.eventlog.record_event(schema, version, event)
     # Inspect consumed event.
     output = sink.getvalue()
-    x = json.loads(output)
-
-    assert x is not None
+    data = json.loads(output)
+    # Verify event data was recorded
+    assert data is not None
 
 @pytest.mark.parametrize('schema, version, event', invalid_events)
 def test_invalid_events(get_hub_and_sink, schema, version, event):
