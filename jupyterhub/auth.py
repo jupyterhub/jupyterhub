@@ -1,4 +1,4 @@
-"""Base Authenticator class and the default PAM Authenticator"""
+ """Base Authenticator class and the default PAM Authenticator"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect
@@ -775,8 +775,6 @@ class LocalAuthenticator(Authenticator):
         try:
             uid = self.uids[name]
             cmd += ['--uid', '%d' % uid]
-        except AttributeError:
-            pass
         except KeyError:
             self.log.debug("No UID for user %s" % name)
         cmd += [name]
