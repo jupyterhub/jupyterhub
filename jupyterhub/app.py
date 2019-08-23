@@ -811,14 +811,14 @@ class JupyterHub(Application):
 
     api_tokens = Dict(
         Unicode(),
-        help="""PENDING DEPRECATION: consider using service_tokens
+        help="""PENDING DEPRECATION: consider using services
 
         Dict of token:username to be loaded into the database.
 
         Allows ahead-of-time generation of API tokens for use by externally managed services,
         which authenticate as JupyterHub users.
 
-        Consider using service_tokens for general services that talk to the JupyterHub API.
+        Consider using services for general services that talk to the JupyterHub API.
         """,
     ).tag(config=True)
 
