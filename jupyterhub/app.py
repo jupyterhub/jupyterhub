@@ -1673,6 +1673,12 @@ class JupyterHub(Application):
                     raise ValueError("Token name %r is not in whitelist" % name)
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token name %r is not valid" % name)
+            if kind == 'service':
+                if not any(service["name"] == name for service in self.services):
+                    self.log.warn(
+                        "Warning: service '%s' not in services, creating implicitly. It is recommended to register services using services list."
+                        % name
+                    )
             orm_token = orm.APIToken.find(db, token)
             if orm_token is None:
                 obj = Class.find(db, name)
