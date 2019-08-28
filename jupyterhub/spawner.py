@@ -86,6 +86,7 @@ class Spawner(LoggingConfigurable):
     _start_pending = False
     _stop_pending = False
     _proxy_pending = False
+    _check_pending = False
     _waiting_for_response = False
     _jupyterhub_version = None
     _spawn_future = None
@@ -121,6 +122,8 @@ class Spawner(LoggingConfigurable):
             return 'spawn'
         elif self._stop_pending:
             return 'stop'
+        elif self._check_pending:
+            return 'check'
         return None
 
     @property

@@ -725,6 +725,7 @@ class User:
         spawner = self.spawners[server_name]
         spawner._spawn_pending = False
         spawner._start_pending = False
+        spawner._check_pending = False
         spawner.stop_polling()
         spawner._stop_pending = True
 
