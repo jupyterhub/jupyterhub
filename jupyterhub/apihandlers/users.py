@@ -589,11 +589,14 @@ class SpawnProgressAPIHandler(APIHandler):
         async with aclosing(
             iterate_until(spawn_future, spawner._generate_progress())
         ) as events:
-            async for event in events:
-                # don't allow events to sneakily set the 'ready' flag
-                if 'ready' in event:
-                    event.pop('ready', None)
-                await self.send_event(event)
+            try:
+                async for event in events:
+                    # don't allow events to sneakily set the 'ready' flag
+                    if 'ready' in event:
+                        event.pop('ready', None)
+                    await self.send_event(event)
+            except asyncio.CancelledError:
+                pass
 
         # progress finished, wait for spawn to actually resolve,
         # in case progress finished early
