@@ -770,8 +770,8 @@ def mysql_large_prefix_check(engine):
         ).fetchall()
     )
     if (
-        variables['innodb_file_format'] == 'Barracuda'
-        and variables['innodb_large_prefix'] == 'ON'
+        variables.get('innodb_file_format', 'Barracuda') == 'Barracuda'
+        and variables.get('innodb_large_prefix', 'ON') == 'ON'
     ):
         return True
     else:
