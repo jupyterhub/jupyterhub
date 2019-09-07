@@ -24,3 +24,4 @@ dependencies:
   - attrs>=17.4.0
   - sphinx-copybutton
   - alabaster_jupyterhub
+  - autodoc-traits
