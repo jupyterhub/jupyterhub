@@ -5,6 +5,7 @@ _Explanation_ documentation provide big-picture descriptions of how JupyterHub w
 ```{toctree}
 :maxdepth: 1
 
+concepts
 capacity-planning
 database
 websecurity
