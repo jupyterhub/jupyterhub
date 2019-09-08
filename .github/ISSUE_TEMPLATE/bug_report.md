@@ -12,7 +12,7 @@ If you are reporting an issue with JupyterHub, please use the GitHub search feat
 Some tips:
 - Running `jupyter troubleshoot` from the command line, if possible, and posting
 its output would also be helpful.
-- Running JupyterHub in `--debug` mode (`jupyterhub --debug` can also be helpful for troubleshooting.
+- Running JupyterHub in `--debug` mode (`jupyterhub --debug`) can also be helpful for troubleshooting.
 --->
 
 **Describe the bug**
