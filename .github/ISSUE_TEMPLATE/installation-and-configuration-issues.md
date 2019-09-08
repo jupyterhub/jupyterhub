@@ -1,5 +1,5 @@
 ---
-name: Installation and configuration issues
+name: Installation and configuration questions
 about: Installation and configuration assistance
 
 ---
