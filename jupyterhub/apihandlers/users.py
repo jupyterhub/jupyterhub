@@ -620,6 +620,37 @@ class SpawnProgressAPIHandler(APIHandler):
             await self.send_event(failed_event)
 
 
+class SpawnCallbackAPIHandler(APIHandler):
+    """Singleuser-server alive callback"""
+
+    @admin_or_self
+    async def post(self, username, server_name=''):
+
+        # TODO: may not work
+        # Copied from the progress handler
+
+        self.set_header('Cache-Control', 'no-cache')
+        if server_name is None:
+            server_name = ''
+        user = self.find_user(username)
+        if user is None:
+            # no such user
+            raise web.HTTPError(404)
+        if server_name not in user.spawners:
+            # user has no such server
+            raise web.HTTPError(404)
+        spawner = user.spawners[server_name]
+
+        # do stuff with payload
+        data = self.get_json_body()
+        if hasattr(spawner, 'spawner_callback'):
+            url = spawner.spawner_callback(data)
+
+        spawner.callback_future.set_result(url)
+
+        self.set_status(200)
+
+
 def _parse_timestamp(timestamp):
     """Parse and return a utc timestamp
 
@@ -754,6 +785,7 @@ default_handlers = [
     (r"/api/users/([^/]+)/tokens/([^/]*)", UserTokenAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)", UserServerAPIHandler),
     (r"/api/users/([^/]+)/servers/([^/]*)/progress", SpawnProgressAPIHandler),
+    (r"/api/users/([^/]+)/servers/([^/]*)/spawn_callback", SpawnCallbackAPIHandler),
     (r"/api/users/([^/]+)/activity", ActivityAPIHandler),
     (r"/api/users/([^/]+)/admin-access", UserAdminAccessAPIHandler),
 ]
