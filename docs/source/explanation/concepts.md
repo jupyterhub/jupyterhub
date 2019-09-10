@@ -238,8 +238,12 @@ included in the JupyterHub logs.
 
 ## Single-user notebook server
 
-The role of the spawner is to start the **single-user notebook
-server** - basically, running the command `jupyter notebook`.
+The **single-user notebook server** is the same thing you get by
+running `jupyter notebook` or `jupyter lab` from the command line -
+the actual Jupyter user interface for a single person.
+
+The role of the spawner is to start this server - basically, running
+the command `jupyter notebook`.
 Actually it doesn't run that, it runs `jupyterhub-singleuser` which
 first communicates with the hub to say "I'm alive" before running a
 completely normal Jupyter server.  The single-user server can be
@@ -302,6 +306,7 @@ Does anything need to be said here?
 - how extensions work in lab compared to notebook
 
 
+
 ## Kernel
 
 Normally, our tour of the Jupyter ecosystem would stop here.  But,
@@ -334,7 +339,9 @@ a different environment.
 
 What does this mean?  There is yet *another* layer of configurability.
 Each kernel can run a different programming language, with different
-software, and so on.  The most common way they are configured is by
+software, and so on.  By default, they would run in the same
+environment as the single-user notebook server, and the most common
+other way they are configured is by
 running in different Python virtual environments or conda
 environments.  They can be started and killed independently (there is
 normally one per notebook you have open).  The kernels is what uses
