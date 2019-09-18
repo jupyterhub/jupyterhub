@@ -207,8 +207,6 @@ class Spawner(LoggingConfigurable):
             return self.orm_spawner.name
         return ''
 
-    hub = Any()
-    authenticator = Any()
     internal_ssl = Bool(False)
     internal_trust_bundles = Dict()
     internal_certs_location = Unicode('')
