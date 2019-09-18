@@ -911,6 +911,22 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    default_server_name = Unicode(
+        "",
+        help="If named servers are enabled, default name of server to spawn or open, e.g. by user-redirect.",
+    ).tag(config=True)
+    # Ensure that default_server_name doesn't do anything if named servers aren't allowed
+    _default_server_name = Unicode(
+        help="Non-configurable version exposed to JupyterHub."
+    )
+
+    @default('_default_server_name')
+    def _set_default_server_name(self):
+        if self.allow_named_servers:
+            return self.default_server_name
+        else:
+            return ""
+
     # class for spawning single-user servers
     spawner_class = EntryPointType(
         default_value=LocalProcessSpawner,
@@ -2060,6 +2076,7 @@ class JupyterHub(Application):
             domain=self.domain,
             statsd=self.statsd,
             allow_named_servers=self.allow_named_servers,
+            default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
             oauth_provider=self.oauth_provider,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
