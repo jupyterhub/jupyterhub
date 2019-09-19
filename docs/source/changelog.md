@@ -283,7 +283,7 @@ and tornado < 5.0.
   coroutines, and CPU/memory/FD consumption.
 - Add async `Spawner.get_options_form` alternative to `.options_form`, so it can be a coroutine.
 - Add `JupyterHub.redirect_to_server` config to govern whether
-  users should be sent to their server on login or the JuptyerHub home page.
+  users should be sent to their server on login or the JupyterHub home page.
 - html page templates can be more easily customized and extended.
 - Allow registering external OAuth clients for using the Hub as an OAuth provider.
 - Add basic prometheus metrics at `/hub/metrics` endpoint.

@@ -26,6 +26,7 @@ from tornado.httputil import HTTPHeaders
 from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
+from tornado.web import addslash
 from tornado.web import MissingArgumentError
 from tornado.web import RequestHandler
 
@@ -248,9 +249,39 @@ class BaseHandler(RequestHandler):
         orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             return None
-        orm_token.last_activity = orm_token.user.last_activity = datetime.utcnow()
-        self.db.commit()
+
+        now = datetime.utcnow()
+        recorded = self._record_activity(orm_token, now)
+        if self._record_activity(orm_token.user, now) or recorded:
+            self.db.commit()
         return self._user_from_orm(orm_token.user)
+
+    def _record_activity(self, obj, timestamp=None):
+        """record activity on an ORM object
+
+        If last_activity was more recent than self.activity_resolution seconds ago,
+        do nothing to avoid unnecessarily frequent database commits.
+
+        Args:
+            obj: an ORM object with a last_activity attribute
+            timestamp (datetime, optional): the timestamp of activity to register.
+        Returns:
+            recorded (bool): True if activity was recorded, False if not.
+        """
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+        resolution = self.settings.get("activity_resolution", 0)
+        if not obj.last_activity or resolution == 0:
+            self.log.debug("Recording first activity for %s", obj)
+            obj.last_activity = timestamp
+            return True
+        if (timestamp - obj.last_activity).total_seconds() > resolution:
+            # this debug line will happen just too often
+            # uncomment to debug last_activity updates
+            # self.log.debug("Recording activity for %s", obj)
+            obj.last_activity = timestamp
+            return True
+        return False
 
     async def refresh_auth(self, user, force=False):
         """Refresh user authentication info
@@ -322,14 +353,15 @@ class BaseHandler(RequestHandler):
 
         # record token activity
         now = datetime.utcnow()
-        orm_token.last_activity = now
+        recorded = self._record_activity(orm_token, now)
         if orm_token.user:
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
             if not orm_token.note.startswith("Server at "):
-                orm_token.user.last_activity = now
-        self.db.commit()
+                recorded = self._record_activity(orm_token.user, now) or recorded
+        if recorded:
+            self.db.commit()
 
         if orm_token.service:
             return orm_token.service
@@ -359,8 +391,8 @@ class BaseHandler(RequestHandler):
             clear()
             return
         # update user activity
-        user.last_activity = datetime.utcnow()
-        self.db.commit()
+        if self._record_activity(user):
+            self.db.commit()
         return user
 
     def _user_from_orm(self, orm_user):
@@ -452,6 +484,8 @@ class BaseHandler(RequestHandler):
             path=url_path_join(self.base_url, 'services'),
             **kwargs
         )
+        # Reset _jupyterhub_user
+        self._jupyterhub_user = None
 
     def _set_cookie(self, key, value, encrypted=True, **overrides):
         """Setting any cookie should go through here
@@ -727,6 +761,7 @@ class BaseHandler(RequestHandler):
             active_counts['spawn_pending'] + active_counts['proxy_pending']
         )
         active_count = active_counts['active']
+        RUNNING_SERVERS.set(active_count)
 
         concurrent_spawn_limit = self.concurrent_spawn_limit
         active_server_limit = self.active_server_limit
@@ -810,7 +845,6 @@ class BaseHandler(RequestHandler):
                 "User %s took %.3f seconds to start", user_server_name, toc - tic
             )
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
-            RUNNING_SERVERS.inc()
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
@@ -822,6 +856,7 @@ class BaseHandler(RequestHandler):
                 PROXY_ADD_DURATION_SECONDS.labels(status='success').observe(
                     time.perf_counter() - proxy_add_start_time
                 )
+                RUNNING_SERVERS.inc()
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
                 self.log.error(
@@ -990,7 +1025,6 @@ class BaseHandler(RequestHandler):
                     "User %s server took %.3f seconds to stop", user.name, toc - tic
                 )
                 self.statsd.timing('spawner.stop', (toc - tic) * 1000)
-                RUNNING_SERVERS.dec()
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.success
                 ).observe(toc - tic)
@@ -1325,7 +1359,9 @@ class UserUrlHandler(BaseHandler):
             return
 
         pending_url = url_concat(
-            url_path_join(self.hub.base_url, 'spawn-pending', user.name, server_name),
+            url_path_join(
+                self.hub.base_url, 'spawn-pending', user.escaped_name, server_name
+            ),
             {'next': self.request.uri},
         )
         if spawner.pending or spawner._failed:
@@ -1339,7 +1375,7 @@ class UserUrlHandler(BaseHandler):
         # without explicit user action
         self.set_status(503)
         spawn_url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.name, server_name),
+            url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
         html = self.render_template(
@@ -1427,7 +1463,8 @@ class UserRedirectHandler(BaseHandler):
             user_url = url_concat(user_url, parse_qsl(self.request.query))
 
         url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.name), {"next": user_url}
+            url_path_join(self.hub.base_url, "spawn", user.escaped_name),
+            {"next": user_url},
         )
 
         self.redirect(url)
@@ -1450,10 +1487,9 @@ class CSPReportHandler(BaseHandler):
 class AddSlashHandler(BaseHandler):
     """Handler for adding trailing slash to URLs that need them"""
 
-    def get(self, *args):
-        src = urlparse(self.request.uri)
-        dest = src._replace(path=src.path + '/')
-        self.redirect(urlunparse(dest))
+    @addslash
+    def get(self):
+        pass
 
 
 default_handlers = [

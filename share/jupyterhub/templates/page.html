@@ -63,7 +63,7 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.name}}",
+        user: "{{user.json_escaped_name}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
@@ -148,7 +148,7 @@
 
 {% block announcement %}
 {% if announcement %}
-<div class="container text-center announcement">
+<div class="container text-center announcement alert alert-warning">
   {{ announcement | safe }}
 </div>
 {% endif %}

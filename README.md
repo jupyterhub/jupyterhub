@@ -145,12 +145,12 @@ To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
 
 ### Authenticators
 
-| Authenticator                                                               | Description                                       |
-| --------------------------------------------------------------------------- | ------------------------------------------------- |
-| PAMAuthenticator                                                            | Default, built-in authenticator                   |
-| [OAuthenticator](https://github.com/jupyterhub/oauthenticator)              | OAuth + JupyterHub Authenticator = OAuthenticator |
-| [ldapauthenticator](https://github.com/jupyterhub/ldapauthenticator)        | Simple LDAP Authenticator Plugin for JupyterHub   |
-| [kerberosauthenticator](https://github.com/jcrist/kerberosauthenticator)    | Kerberos Authenticator Plugin for JupyterHub      |
+| Authenticator                                                                | Description                                       |
+| ---------------------------------------------------------------------------- | ------------------------------------------------- |
+| PAMAuthenticator                                                             | Default, built-in authenticator                   |
+| [OAuthenticator](https://github.com/jupyterhub/oauthenticator)               | OAuth + JupyterHub Authenticator = OAuthenticator |
+| [ldapauthenticator](https://github.com/jupyterhub/ldapauthenticator)         | Simple LDAP Authenticator Plugin for JupyterHub   |
+| [kerberosauthenticator](https://github.com/jupyterhub/kerberosauthenticator) | Kerberos Authenticator Plugin for JupyterHub      |
 
 ### Spawners
 
@@ -162,7 +162,7 @@ To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
 | [sudospawner](https://github.com/jupyterhub/sudospawner)       | Spawn single-user servers without being root                               |
 | [systemdspawner](https://github.com/jupyterhub/systemdspawner) | Spawn single-user notebook servers using systemd                           |
 | [batchspawner](https://github.com/jupyterhub/batchspawner)     | Designed for clusters using batch scheduling software                      |
-| [yarnspawner](https://github.com/jcrist/yarnspawner)           | Spawn single-user notebook servers distributed on a Hadoop cluster         |
+| [yarnspawner](https://github.com/jupyterhub/yarnspawner)       | Spawn single-user notebook servers distributed on a Hadoop cluster         |
 | [wrapspawner](https://github.com/jupyterhub/wrapspawner)       | WrapSpawner and ProfilesSpawner enabling runtime configuration of spawners |
 
 ## Docker
@@ -242,6 +242,7 @@ our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
 - [Documentation for JupyterHub's REST API](http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default)
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
+- [Project Jupyter community](https://jupyter.org/community)
 
 JupyterHub follows the Jupyter [Community Guides](https://jupyter.readthedocs.io/en/latest/community/content-community.html).
 

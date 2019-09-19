@@ -79,6 +79,8 @@ from .utils import (
     print_ps_info,
     make_ssl_context,
 )
+from .metrics import RUNNING_SERVERS
+from .metrics import TOTAL_USERS
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
@@ -324,6 +326,18 @@ class JupyterHub(Application):
     ).tag(config=True)
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
+    ).tag(config=True)
+    activity_resolution = Integer(
+        30,
+        help="""
+        Resolution (in seconds) for updating activity
+
+        If activity is registered that is less than activity_resolution seconds
+        more recent than the current value,
+        the new value will be ignored.
+
+        This avoids too many writes to the Hub database.
+        """,
     ).tag(config=True)
     last_activity_interval = Integer(
         300, help="Interval (in seconds) at which to update last-activity timestamps."
@@ -578,7 +592,9 @@ class JupyterHub(Application):
 
     @default('logo_file')
     def _logo_file_default(self):
-        return os.path.join(self.data_files_path, 'static', 'images', 'jupyter.png')
+        return os.path.join(
+            self.data_files_path, 'static', 'images', 'jupyterhub-80.png'
+        )
 
     jinja_environment_options = Dict(
         help="Supply extra arguments that will be passed to Jinja environment."
@@ -795,14 +811,14 @@ class JupyterHub(Application):
 
     api_tokens = Dict(
         Unicode(),
-        help="""PENDING DEPRECATION: consider using service_tokens
+        help="""PENDING DEPRECATION: consider using services
 
         Dict of token:username to be loaded into the database.
 
         Allows ahead-of-time generation of API tokens for use by externally managed services,
         which authenticate as JupyterHub users.
 
-        Consider using service_tokens for general services that talk to the JupyterHub API.
+        Consider using services for general services that talk to the JupyterHub API.
         """,
     ).tag(config=True)
 
@@ -1657,6 +1673,12 @@ class JupyterHub(Application):
                     raise ValueError("Token name %r is not in whitelist" % name)
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token name %r is not valid" % name)
+            if kind == 'service':
+                if not any(service["name"] == name for service in self.services):
+                    self.log.warn(
+                        "Warning: service '%s' not in services, creating implicitly. It is recommended to register services using services list."
+                        % name
+                    )
             orm_token = orm.APIToken.find(db, token)
             if orm_token is None:
                 obj = Class.find(db, name)
@@ -1925,6 +1947,10 @@ class JupyterHub(Application):
             user_summaries = map(_user_summary, self.users.values())
             self.log.debug("Loaded users:\n%s", '\n'.join(user_summaries))
 
+        active_counts = self.users.count_active_users()
+        RUNNING_SERVERS.set(active_counts['active'])
+        TOTAL_USERS.set(len(self.users))
+
     def init_oauth(self):
         base_url = self.hub.base_url
         self.oauth_provider = make_provider(
@@ -2011,6 +2037,7 @@ class JupyterHub(Application):
             db=self.db,
             proxy=self.proxy,
             hub=self.hub,
+            activity_resolution=self.activity_resolution,
             admin_users=self.authenticator.admin_users,
             admin_access=self.admin_access,
             authenticator=self.authenticator,
@@ -2420,28 +2447,54 @@ class JupyterHub(Application):
             pc.start()
 
         self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
+        # Use atexit for Windows, it doesn't have signal handling support
+        if _mswindows:
+            atexit.register(self.atexit)
         # register cleanup on both TERM and INT
         self.init_signal()
 
     def init_signal(self):
         loop = asyncio.get_event_loop()
         for s in (signal.SIGTERM, signal.SIGINT):
-            loop.add_signal_handler(
-                s, lambda s=s: asyncio.ensure_future(self.shutdown_cancel_tasks(s))
-            )
-        infosignals = [signal.SIGUSR1]
-        if hasattr(signal, 'SIGINFO'):
-            infosignals.append(signal.SIGINFO)
-        for s in infosignals:
-            loop.add_signal_handler(
-                s, lambda s=s: asyncio.ensure_future(self.log_status(s))
-            )
+            if not _mswindows:
+                loop.add_signal_handler(
+                    s, lambda s=s: asyncio.ensure_future(self.shutdown_cancel_tasks(s))
+                )
+            else:
+                signal.signal(s, self.win_shutdown_cancel_tasks)
+
+        if not _mswindows:
+            infosignals = [signal.SIGUSR1]
+            if hasattr(signal, 'SIGINFO'):
+                infosignals.append(signal.SIGINFO)
+            for s in infosignals:
+                loop.add_signal_handler(
+                    s, lambda s=s: asyncio.ensure_future(self.log_status(s))
+                )
 
     async def log_status(self, sig):
         """Log current status, triggered by SIGINFO (^T in many terminals)"""
         self.log.critical("Received signal %s...", sig.name)
         print_ps_info()
         print_stacks()
+
+    def win_shutdown_cancel_tasks(self, signum, frame):
+        self.log.critical("Received signalnum %s, , initiating shutdown...", signum)
+        raise SystemExit(128 + signum)
+
+    _atexit_ran = False
+
+    def atexit(self):
+        """atexit callback"""
+        if self._atexit_ran:
+            return
+        self._atexit_ran = True
+        # run the cleanup step (in a new loop, because the interrupted one is unclean)
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        IOLoop.clear_current()
+        loop = IOLoop()
+        loop.make_current()
+        loop.run_sync(self.cleanup)
 
     async def shutdown_cancel_tasks(self, sig):
         """Cancel all other tasks of the event loop and initiate cleanup"""

@@ -90,6 +90,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
       });
     api.stop_server(user, {
       success: function() {
+        $("#stop").hide();
         $("#start")
           .text("Start My Server")
           .attr("title", "Start your default server")
@@ -105,8 +106,9 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     if (serverName === "") {
       // ../spawn/user/ causes a 404, ../spawn/user redirects correctly to the default server
       window.location.href = "../spawn/" + user;
+    } else {
+      window.location.href = "../spawn/" + user + "/" + serverName;
     }
-    window.location.href = "../spawn/" + user + "/" + serverName;
   });
 
   $(".stop-server").click(stopServer);

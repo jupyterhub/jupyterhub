@@ -4,6 +4,7 @@ name: jhub_docs
 channels:
   - conda-forge
 dependencies:
+- pip
 - nodejs
 - python=3.6
 - alembic
@@ -23,3 +24,4 @@ dependencies:
   - attrs>=17.4.0
   - sphinx-copybutton
   - alabaster_jupyterhub
+  - autodoc-traits

@@ -3,9 +3,9 @@
 When working with JupyterHub, a **Service** is defined as a process
 that interacts with the Hub's REST API. A Service may perform a specific
 or action or task. For example, shutting down individuals' single user
-notebook servers that have been is a good example of a task that could
-be automated by a Service. Let's look at how the [cull_idle_servers][]
-script can be used as a Service.
+notebook servers that have been idle for some time is a good example of
+a task that could be automated by a Service. Let's look at how the
+[cull_idle_servers][] script can be used as a Service.
 
 ## Real-world example to cull idle servers
 

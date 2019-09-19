@@ -120,6 +120,8 @@ def cull_idle(
     def handle_server(user, server_name, server):
         """Handle (maybe) culling a single server
 
+        "server" is the entire server model from the API.
+
         Returns True if server is now stopped (user removable),
         False otherwise.
         """
@@ -161,6 +163,20 @@ def cull_idle(
             # which introduces the 'started' field which is never None
             # for running servers
             inactive = age
+
+        # CUSTOM CULLING TEST CODE HERE
+        # Add in additional server tests here.  Return False to mean "don't
+        # cull", True means "cull immediately", or, for example, update some
+        # other variables like inactive_limit.
+        #
+        # Here, server['state'] is the result of the get_state method
+        # on the spawner.  This does *not* contain the below by
+        # default, you may have to modify your spawner to make this
+        # work.  The `user` variable is the user model from the API.
+        #
+        # if server['state']['profile_name'] == 'unlimited'
+        #     return False
+        # inactive_limit = server['state']['culltime']
 
         should_cull = (
             inactive is not None and inactive.total_seconds() >= inactive_limit

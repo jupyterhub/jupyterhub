@@ -173,7 +173,7 @@ easy to do with RStudio too.
 
 ### Hadoop
 
-- [Deploying JupyterHub on Hadoop](https://jcrist.github.io/jupyterhub-on-hadoop/)
+- [Deploying JupyterHub on Hadoop](https://jupyterhub-on-hadoop.readthedocs.io)
 
 
 ## Miscellaneous

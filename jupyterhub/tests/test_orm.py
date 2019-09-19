@@ -74,6 +74,16 @@ def test_user(db):
     assert found is None
 
 
+def test_user_escaping(db):
+    orm_user = orm.User(name='company\\user@company.com,\"quoted\"')
+    db.add(orm_user)
+    db.commit()
+    user = User(orm_user)
+    assert user.name == 'company\\user@company.com,\"quoted\"'
+    assert user.escaped_name == 'company%5Cuser@company.com%2C%22quoted%22'
+    assert user.json_escaped_name == 'company\\\\user@company.com,\\\"quoted\\\"'
+
+
 def test_tokens(db):
     user = orm.User(name='inara')
     db.add(user)
