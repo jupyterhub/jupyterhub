@@ -172,7 +172,16 @@ class SpawnHandler(BaseHandler):
                 spawner._spawn_future = None
             # not running, no form. Trigger spawn and redirect back to /user/:name
             f = asyncio.ensure_future(self.spawn_single_user(user, server_name))
-            await asyncio.wait([f], timeout=1)
+            done, pending = await asyncio.wait([f], timeout=1)
+            # If spawn_single_user throws an exception, raise a 500 error
+            # otherwise it may cause a redirect loop
+            if f.done() and f.exception():
+                exc = f.exception()
+                raise web.HTTPError(
+                    500,
+                    "Error in Authenticator.pre_spawn_start: %s %s"
+                    % (type(exc).__name__, str(exc)),
+                )
             self.redirect(pending_url)
 
     @web.authenticated
