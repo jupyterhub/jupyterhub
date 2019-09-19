@@ -105,9 +105,9 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     var serverName = row.find(".new-server-name").val();
     if (serverName === "") {
       // ../spawn/user/ causes a 404, ../spawn/user redirects correctly to the default server
-      window.location.href = "../spawn/" + user;
+      window.location.href = "./spawn/" + user;
     } else {
-      window.location.href = "../spawn/" + user + "/" + serverName;
+      window.location.href = "./spawn/" + user + "/" + serverName;
     }
   });
 
