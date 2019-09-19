@@ -13,7 +13,7 @@ JupyterHub can be configured to record structured events from a running server u
 How to emit events
 ------------------
 
-Eventlogging is handled by its ``Eventlog`` object. This leverages Python's standing logging_ library to emit, filter, and collect event data. 
+Event logging is handled by its ``Eventlog`` object. This leverages Python's standing logging_ library to emit, filter, and collect event data. 
 
 
 To begin recording events, you'll need to set two configurations:
