@@ -28,7 +28,7 @@ if 'jupyterhub' in sys.modules:
         alembic_logger.propagate = True
         alembic_logger.parent = app.log
     else:
-        fileConfig(config.config_file_name)
+        fileConfig(config.config_file_name, disable_existing_loggers=False)
 else:
     fileConfig(config.config_file_name)
 

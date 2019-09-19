@@ -64,6 +64,7 @@ def test_valid_events(eventlog_sink, schema, version, event):
     eventlog.record_event(schema, version, event)
     # Inspect consumed event
     output = sink.getvalue()
+    assert output
     data = json.loads(output)
     # Verify event data was recorded
     assert data is not None
