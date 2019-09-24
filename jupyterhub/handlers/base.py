@@ -879,7 +879,7 @@ class BaseHandler(RequestHandler):
             # clear spawner._spawn_future when it's done
             # keep an exception around, though, to prevent repeated implicit spawns
             # if spawn is failing
-            if f.exception() is None:
+            if f.cancelled() or f.exception() is None:
                 spawner._spawn_future = None
             # Now we're all done. clear _spawn_pending flag
             spawner._spawn_pending = False
@@ -890,7 +890,7 @@ class BaseHandler(RequestHandler):
         # update failure count and abort if consecutive failure limit
         # is reached
         def _track_failure_count(f):
-            if f.exception() is None:
+            if f.cancelled() or f.exception() is None:
                 # spawn succeeded, reset failure count
                 self.settings['failure_count'] = 0
                 return
