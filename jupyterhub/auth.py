@@ -1,4 +1,4 @@
- """Base Authenticator class and the default PAM Authenticator"""
+"""Base Authenticator class and the default PAM Authenticator"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect
