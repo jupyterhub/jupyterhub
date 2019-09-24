@@ -5,6 +5,7 @@
 import asyncio
 import atexit
 import binascii
+import json
 import logging
 import os
 import re
@@ -18,6 +19,7 @@ from datetime import timedelta
 from datetime import timezone
 from functools import partial
 from getpass import getuser
+from glob import glob
 from operator import itemgetter
 from textwrap import dedent
 from urllib.parse import unquote
@@ -58,6 +60,8 @@ from traitlets import (
     default,
 )
 from traitlets.config import Application, Configurable, catch_config_error
+
+from jupyter_telemetry.eventlog import EventLog
 
 here = os.path.dirname(__file__)
 
@@ -2113,6 +2117,7 @@ class JupyterHub(Application):
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
+            eventlog=self.eventlog,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
@@ -2137,6 +2142,16 @@ class JupyterHub(Application):
                 "Could not load pycurl: %s\npycurl is recommended if you have a large number of users.",
                 e,
             )
+
+    def init_eventlog(self):
+        """Set up the event logging system."""
+        self.eventlog = EventLog(parent=self)
+
+        for dirname, _, files in os.walk(os.path.join(here, 'event-schemas')):
+            for file in files:
+                if not file.endswith('.yaml'):
+                    continue
+                self.eventlog.register_schema_file(os.path.join(dirname, file))
 
     def write_pid_file(self):
         pid = os.getpid()
@@ -2189,6 +2204,7 @@ class JupyterHub(Application):
         _log_cls("Authenticator", self.authenticator_class)
         _log_cls("Spawner", self.spawner_class)
 
+        self.init_eventlog()
         self.init_pycurl()
         self.init_secrets()
         self.init_internal_ssl()

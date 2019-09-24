@@ -156,6 +156,10 @@ class BaseHandler(RequestHandler):
     def oauth_provider(self):
         return self.settings['oauth_provider']
 
+    @property
+    def eventlog(self):
+        return self.settings['eventlog']
+
     def finish(self, *args, **kwargs):
         """Roll back any uncommitted transactions from the handler."""
         if self.db.dirty:
@@ -848,6 +852,11 @@ class BaseHandler(RequestHandler):
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
+            self.eventlog.record_event(
+                'hub.jupyter.org/server-action',
+                1,
+                {'action': 'start', 'username': user.name, 'servername': server_name},
+            )
             proxy_add_start_time = time.perf_counter()
             spawner._proxy_pending = True
             try:
@@ -1028,6 +1037,15 @@ class BaseHandler(RequestHandler):
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.success
                 ).observe(toc - tic)
+                self.eventlog.record_event(
+                    'hub.jupyter.org/server-action',
+                    1,
+                    {
+                        'action': 'stop',
+                        'username': user.name,
+                        'servername': server_name,
+                    },
+                )
             except:
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.failure

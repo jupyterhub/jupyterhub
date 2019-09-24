@@ -19,6 +19,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'autodoc_traits',
     'sphinx_copybutton',
+    'sphinx-jsonschema',
 ]
 
 templates_path = ['_templates']
