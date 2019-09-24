@@ -25,3 +25,5 @@ dependencies:
   - sphinx-copybutton
   - alabaster_jupyterhub
   - autodoc-traits
+  - sphinx-jsonschema
+
