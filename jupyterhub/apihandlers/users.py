@@ -643,6 +643,9 @@ class SpawnCallbackAPIHandler(APIHandler):
 
         # do stuff with payload
         data = self.get_json_body()
+        self.log.debug(
+            "Callback delivered for user %s: %s", user.name, data
+        )
         if hasattr(spawner, 'spawner_callback'):
             url = spawner.spawner_callback(data)
 

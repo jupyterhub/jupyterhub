@@ -565,9 +565,11 @@ class User:
                 # TODO: if we always wait for this then we are not
                 # compatible with older jupyterhub-singleuser, which is
                 # technically allowed but perhaps not useful.
+                self.log.debug("Waiting for spawner callback for %s", spawner._log_name)
                 ret = (
                     await spawner.callback_future
                 )  # spawner.callback_future.set_result(new_url)
+                self.log.debug("Spawner callback completed for %s, ret=%s", spawner._log_name, ret)
                 if ret:
                     url = ret
             if url:
