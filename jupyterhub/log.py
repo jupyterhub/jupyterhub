@@ -130,6 +130,8 @@ def log_request(handler):
         log_method = access_log.info
     elif status < 500:
         log_method = access_log.warning
+    elif getattr(handler, 'failing_non_running_server', False):
+        log_method = access_log.debug
     else:
         log_method = access_log.error
 
@@ -162,7 +164,14 @@ def log_request(handler):
         location='',
     )
     msg = "{status} {method} {uri}{location} ({user}@{ip}) {request_time:.2f}ms"
-    if status >= 500 and status != 502:
+    # failing_non_running_server: user server not running doesn't deserve
+    # verbose logs, silence it because there is another "warn" level right
+    # before anyway.
+    if (
+        status >= 500
+        and status != 502
+        and not getattr(handler, 'failing_non_running_server', False)
+    ):
         log_method(json.dumps(headers, indent=2))
     elif status in {301, 302}:
         # log redirect targets

@@ -1228,6 +1228,7 @@ class UserUrlHandler(BaseHandler):
         )
         self.set_status(503)
         self.set_header("Content-Type", "application/json")
+        self.failing_non_running_server = True
 
         spawn_url = urlparse(self.request.full_url())._replace(query="")
         spawn_path_parts = [self.hub.base_url, "spawn", user_name]
