@@ -162,7 +162,7 @@ def log_request(handler):
         location='',
     )
     msg = "{status} {method} {uri}{location} ({user}@{ip}) {request_time:.2f}ms"
-    if status >= 500 and status != 502:
+    if status >= 500 and status not in {502, 503}:
         log_method(json.dumps(headers, indent=2))
     elif status in {301, 302}:
         # log redirect targets
