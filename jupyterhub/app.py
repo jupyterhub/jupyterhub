@@ -2452,6 +2452,20 @@ class JupyterHub(Application):
             loop.stop()
             return
 
+        # start the proxy
+        if self.proxy.should_start:
+            try:
+                await self.proxy.start()
+            except Exception as e:
+                self.log.critical("Failed to start proxy", exc_info=True)
+                self.exit(1)
+        else:
+            self.log.info("Not starting proxy")
+
+        # verify that we can talk to the proxy before listening.
+        # avoids delayed failure if we can't talk to the proxy
+        await self.proxy.get_all_routes()
+
         ssl_context = make_ssl_context(
             self.internal_ssl_key,
             self.internal_ssl_cert,
@@ -2488,16 +2502,6 @@ class JupyterHub(Application):
         except Exception:
             self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
-
-        # start the proxy
-        if self.proxy.should_start:
-            try:
-                await self.proxy.start()
-            except Exception as e:
-                self.log.critical("Failed to start proxy", exc_info=True)
-                self.exit(1)
-        else:
-            self.log.info("Not starting proxy")
 
         # start the service(s)
         for service_name, service in self._service_map.items():
