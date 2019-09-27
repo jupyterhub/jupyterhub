@@ -2184,6 +2184,7 @@ class JupyterHub(Application):
         self._start_future = asyncio.Future()
         self.load_config_file(self.config_file)
         self.init_logging()
+        self.log.info("Running JupyterHub version %s", jupyterhub.__version__)
         if 'JupyterHubApp' in self.config:
             self.log.warning(
                 "Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
