@@ -141,6 +141,7 @@ class APIHandler(BaseHandler):
             'ready': spawner.ready,
             'state': spawner.get_state() if include_state else None,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
+            'user_options': spawner.user_options,
             'progress_url': spawner._progress_url,
         }
 
