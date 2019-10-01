@@ -57,6 +57,7 @@ async def test_default_server(app, named_servers):
                         username
                     ),
                     'state': {'pid': 0},
+                    'user_options': {},
                 }
             },
         }
@@ -116,6 +117,7 @@ async def test_create_named_server(app, named_servers):
                         username, servername
                     ),
                     'state': {'pid': 0},
+                    'user_options': {},
                 }
                 for name in [servername]
             },
