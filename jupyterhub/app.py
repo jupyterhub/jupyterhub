@@ -2034,7 +2034,7 @@ class JupyterHub(Application):
         for service in self._service_map.values():
             if service.oauth_no_confirm:
                 self.log.warning(
-                    "Allowing service %s to complete OAuth without confirmation",
+                    "Allowing service %s to complete OAuth without confirmation on an authorization web page",
                     service.name,
                 )
                 oauth_no_confirm_whitelist.add(service.oauth_client_id)

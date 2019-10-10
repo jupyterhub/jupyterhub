@@ -209,9 +209,9 @@ class Service(LoggingConfigurable):
         By default, when users authenticate with a service using JupyterHub,
         they are prompted to confirm that they want to grant that service
         access to their credentials.
-        Setting oauth_no_confirm=True skips the confirmation for this service.
-        Useful for admin-managed services that are considered part of the Hub,
-        which shouldn't need extra prompts for login.
+        Setting oauth_no_confirm=True skips the confirmation web page for this service.
+        Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
+        and shouldn't need extra prompts for login.
 
         .. versionadded: 1.1
         """,
