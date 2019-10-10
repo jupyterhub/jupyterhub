@@ -179,3 +179,16 @@ The number of named servers per user can be limited by setting
 ```python
 c.JupyterHub.named_server_limit_per_user = 5
 ```
+
+### The SystemUserSpawner
+
+Spawned containers must have unique names. To be able to spawn more than
+one container per user, the spawner must have a rule to construct unique 
+container names. This can be achieved by adding a template string to the 
+`jupyterhub_config.py` togehter with the allow_named_servers tag mentioned above.
+
+To set up correct server name construction add:
+
+```
+c.SystemUserSpawner.name_template = '{prefix}-{username}-{servername}'
+```
