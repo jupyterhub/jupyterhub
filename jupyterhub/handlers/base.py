@@ -714,7 +714,7 @@ class BaseHandler(RequestHandler):
 
     @property
     def slow_spawn_timeout(self):
-        return self.settings.get('slow_spawn_timeout', 10)
+        return self.settings.get('slow_spawn_timeout', 30)
 
     @property
     def slow_stop_timeout(self):
