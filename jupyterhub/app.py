@@ -576,6 +576,22 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    @validate('bind_url')
+    def _validate_bind_url(self, proposal):
+        """ensure protocol field of bind_url matches ssl"""
+        v = proposal['value']
+        proto, sep, rest = v.partition('://')
+        if self.ssl_cert and proto != 'https':
+            return 'https' + sep + rest
+        elif proto != 'http' and not self.ssl_cert:
+            return 'http' + sep + rest
+        return v
+
+    @default('bind_url')
+    def _bind_url_default(self):
+        proto = 'https' if self.ssl_cert else 'http'
+        return proto + '://:8000'
+
     subdomain_host = Unicode(
         '',
         help="""Run single-user servers on subdomains of this host.
