@@ -118,6 +118,23 @@ class SpawnHandler(BaseHandler):
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
+        if server_name:
+            if not self.allow_named_servers:
+                raise web.HTTPError(400, "Named servers are not enabled.")
+            if (
+                self.named_server_limit_per_user > 0
+                and server_name not in user.orm_spawners
+            ):
+                named_spawners = list(user.all_spawners(include_default=False))
+                if self.named_server_limit_per_user <= len(named_spawners):
+                    raise web.HTTPError(
+                        400,
+                        "User {} already has the maximum of {} named servers."
+                        "  One must be deleted before a new server can be created".format(
+                            user.name, self.named_server_limit_per_user
+                        ),
+                    )
+
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(server_name))
             self.log.info("User is running: %s", user.name)
