@@ -14,6 +14,7 @@ from tornado import gen
 from tornado import web
 from tornado.httputil import url_concat
 
+from .. import __version__
 from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
@@ -422,6 +423,8 @@ class AdminHandler(BaseHandler):
             sort={s: o for s, o in zip(sorts, orders)},
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
+            server_tokens=self.settings.get('server_tokens', True),
+            server_version='{} {}'.format(__version__, self.version_hash),
         )
         self.finish(html)
 

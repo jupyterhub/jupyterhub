@@ -1185,6 +1185,10 @@ class JupyterHub(Application):
         False, help="""Shuts down all user servers on logout"""
     ).tag(config=True)
 
+    server_tokens = Bool(
+        True, help="""Display JupyterHub version information on admin page"""
+    ).tag(config=True)
+
     @default('statsd')
     def _statsd(self):
         if self.statsd_host:
@@ -2133,6 +2137,7 @@ class JupyterHub(Application):
             internal_ssl_ca=self.internal_ssl_ca,
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
+            server_tokens=self.server_tokens,
             eventlog=self.eventlog,
         )
         # allow configured settings to have priority
