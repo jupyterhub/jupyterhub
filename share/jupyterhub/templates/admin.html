@@ -103,13 +103,11 @@
   </tbody>
   </table>
 </div>
-{%- if server_tokens -%}
-  <div class="container-fluid navbar-default small version_footer">
-    <div class="navbar-text">
-      JupyterHub {{ server_version }}
-    </div>
+<div class="container-fluid navbar-default small version_footer">
+  <div class="navbar-text">
+    JupyterHub {{ server_version }}
   </div>
-{%- endif -%}
+</div>
 
 {% call modal('Delete User', btn_class='btn-danger delete-button') %}
   Are you sure you want to delete user <span class="delete-username">USER</span>?
