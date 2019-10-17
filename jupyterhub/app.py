@@ -2220,6 +2220,7 @@ class JupyterHub(Application):
 
         _log_cls("Authenticator", self.authenticator_class)
         _log_cls("Spawner", self.spawner_class)
+        _log_cls("Proxy", self.proxy_class)
 
         self.init_eventlog()
         self.init_pycurl()
