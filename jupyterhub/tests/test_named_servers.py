@@ -232,7 +232,7 @@ async def test_named_server_limit(app, named_servers):
     assert r.text == ''
 
 
-async def test_named_server_spawn_form(app, username):
+async def test_named_server_spawn_form(app, username, named_servers):
     server_name = "myserver"
     base_url = public_url(app)
     cookies = await app.login_user(username)
