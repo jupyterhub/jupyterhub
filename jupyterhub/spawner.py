@@ -1352,7 +1352,8 @@ class LocalProcessSpawner(Spawner):
         home = user.pw_dir
 
         # Create dir for user's certs wherever we're starting
-        out_dir = "{home}/.jupyterhub/jupyterhub-certs".format(home=home)
+        hub_dir = "{home}/.jupyterhub".format(home=home)
+        out_dir = "{hub_dir}/jupyterhub-certs".format(hub_dir=hub_dir)
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir, 0o700, exist_ok=True)
 
@@ -1366,7 +1367,7 @@ class LocalProcessSpawner(Spawner):
         ca = os.path.join(out_dir, os.path.basename(paths['cafile']))
 
         # Set cert ownership to user
-        for f in [out_dir, key, cert, ca]:
+        for f in [hub_dir, out_dir, key, cert, ca]:
             shutil.chown(f, user=uid, group=gid)
 
         return {"keyfile": key, "certfile": cert, "cafile": ca}
