@@ -153,7 +153,6 @@ class Service(LoggingConfigurable):
         The URL where the service is/should be.
         If specified, the service will be added to the proxy at /services/:name
     - oauth_no_confirm: bool(False)
-        .. versionadded:: 1.1
         Whether this service should be allowed to complete oauth
         with logged-in users without prompting for confirmation.
 
