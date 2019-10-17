@@ -147,11 +147,14 @@ class Service(LoggingConfigurable):
 
     - name: str
         the name of the service
-    - admin: bool(false)
+    - admin: bool(False)
         whether the service should have administrative privileges
     - url: str (None)
         The URL where the service is/should be.
         If specified, the service will be added to the proxy at /services/:name
+    - oauth_no_confirm: bool(False)
+        Whether this service should be allowed to complete oauth
+        with logged-in users without prompting for confirmation.
 
     If a service is to be managed by the Hub, it has a few extra options:
 
@@ -184,6 +187,7 @@ class Service(LoggingConfigurable):
         If managed, will be passed as JUPYTERHUB_SERVICE_URL env.
         """
     ).tag(input=True)
+
     api_token = Unicode(
         help="""The API token to use for the service.
 
@@ -195,6 +199,21 @@ class Service(LoggingConfigurable):
         help="""Provide a place to include miscellaneous information about the service,
         provided through the configuration
         """
+    ).tag(input=True)
+
+    oauth_no_confirm = Bool(
+        False,
+        help="""Skip OAuth confirmation when users access this service.
+
+        By default, when users authenticate with a service using JupyterHub,
+        they are prompted to confirm that they want to grant that service
+        access to their credentials.
+        Setting oauth_no_confirm=True skips the confirmation web page for this service.
+        Skipping the confirmation page is useful for admin-managed services that are considered part of the Hub
+        and shouldn't need extra prompts for login.
+
+        .. versionadded: 1.1
+        """,
     ).tag(input=True)
 
     # Managed service API:

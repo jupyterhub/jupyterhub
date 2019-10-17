@@ -2087,6 +2087,15 @@ class JupyterHub(Application):
         else:
             version_hash = datetime.now().strftime("%Y%m%d%H%M%S")
 
+        oauth_no_confirm_whitelist = set()
+        for service in self._service_map.values():
+            if service.oauth_no_confirm:
+                self.log.warning(
+                    "Allowing service %s to complete OAuth without confirmation on an authorization web page",
+                    service.name,
+                )
+                oauth_no_confirm_whitelist.add(service.oauth_client_id)
+
         settings = dict(
             log_function=log_request,
             config=self.config,
@@ -2120,6 +2129,7 @@ class JupyterHub(Application):
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
             oauth_provider=self.oauth_provider,
+            oauth_no_confirm_whitelist=oauth_no_confirm_whitelist,
             concurrent_spawn_limit=self.concurrent_spawn_limit,
             spawn_throttle_retry_range=self.spawn_throttle_retry_range,
             active_server_limit=self.active_server_limit,
