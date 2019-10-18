@@ -33,7 +33,9 @@ from tornado.web import RequestHandler
 from .. import __version__
 from .. import orm
 from ..metrics import PROXY_ADD_DURATION_SECONDS
+from ..metrics import PROXY_DELETE_DURATION_SECONDS
 from ..metrics import ProxyAddStatus
+from ..metrics import ProxyDeleteStatus
 from ..metrics import RUNNING_SERVERS
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import SERVER_SPAWN_DURATION_SECONDS
@@ -1005,7 +1007,17 @@ class BaseHandler(RequestHandler):
         self.log.warning(
             "User %s server stopped, with exit code: %s", user.name, status
         )
-        await self.proxy.delete_user(user, server_name)
+        proxy_deletion_start_time = time.perf_counter()
+        try:
+            await self.proxy.delete_user(user, server_name)
+            PROXY_DELETE_DURATION_SECONDS.labels(
+                status=ProxyDeleteStatus.success
+            ).observe(time.perf_counter() - proxy_deletion_start_time)
+        except:
+            PROXY_DELETE_DURATION_SECONDS.labels(
+                status=ProxyDeleteStatus.failure
+            ).observe(time.perf_counter() - proxy_deletion_start_time)
+
         await user.stop(server_name)
 
     async def stop_single_user(self, user, server_name=''):
@@ -1028,6 +1040,10 @@ class BaseHandler(RequestHandler):
             tic = time.perf_counter()
             try:
                 await self.proxy.delete_user(user, server_name)
+                PROXY_DELETE_DURATION_SECONDS.labels(
+                    status=ProxyDeleteStatus.success
+                ).observe(time.perf_counter() - tic)
+
                 await user.stop(server_name)
                 toc = time.perf_counter()
                 self.log.info(
@@ -1047,6 +1063,9 @@ class BaseHandler(RequestHandler):
                     },
                 )
             except:
+                PROXY_DELETE_DURATION_SECONDS.labels(
+                    status=ProxyDeleteStatus.failure
+                ).observe(time.perf_counter() - tic)
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.failure
                 ).observe(time.perf_counter() - tic)
