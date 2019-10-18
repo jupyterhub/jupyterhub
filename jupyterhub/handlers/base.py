@@ -1114,7 +1114,9 @@ class BaseHandler(RequestHandler):
         return ns
 
     def get_accessible_services(self, user):
-        accessible_services = list()
+        accessible_services = []
+        if user is None:
+            return accessible_services
         for service in self.services.values():
             if not service.url:
                 continue
