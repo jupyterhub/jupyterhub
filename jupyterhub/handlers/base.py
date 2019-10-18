@@ -1120,8 +1120,6 @@ class BaseHandler(RequestHandler):
         for service in self.services.values():
             if not service.url:
                 continue
-            if service.admin and not user.admin:
-                continue
             accessible_services.append(service)
         return accessible_services
 
