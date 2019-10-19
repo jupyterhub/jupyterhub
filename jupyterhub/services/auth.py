@@ -428,7 +428,7 @@ class HubAuth(SingletonConfigurable):
         )
 
     auth_header_name = 'Authorization'
-    auth_header_pat = re.compile('token\s+(.+)', re.IGNORECASE)
+    auth_header_pat = re.compile(r'token\s+(.+)', re.IGNORECASE)
 
     def get_token(self, handler):
         """Get the user token from a request
