@@ -141,6 +141,10 @@ class BaseHandler(RequestHandler):
         return self.settings['hub']
 
     @property
+    def app(self):
+        return self.settings['app']
+
+    @property
     def proxy(self):
         return self.settings['proxy']
 
@@ -1470,20 +1474,31 @@ class UserRedirectHandler(BaseHandler):
 
     If the user is not logged in, send to login URL, redirecting back here.
 
+    If c.JupyterHub.user_redirect_hook is set, the return value of that
+    callable is used to generate the redirect URL.
+
     .. versionadded:: 0.7
     """
 
     @web.authenticated
-    def get(self, path):
-        user = self.current_user
-        user_url = url_path_join(user.url, path)
-        if self.request.query:
-            user_url = url_concat(user_url, parse_qsl(self.request.query))
+    async def get(self, path):
+        # If hook is present to generate URL to redirect to, use that instead
+        # of the default. The configurer is responsible for making sure this
+        # URL is right. If None is returned by the hook, we do our normal
+        # processing
+        url = None
+        if self.app.user_redirect_hook:
+            url = await self.app.user_redirect_hook(self, path)
+        if url is None:
+            user = self.current_user
+            user_url = url_path_join(user.url, path)
+            if self.request.query:
+                user_url = url_concat(user_url, parse_qsl(self.request.query))
 
-        url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.escaped_name),
-            {"next": user_url},
-        )
+            url = url_concat(
+                url_path_join(self.hub.base_url, "spawn", user.escaped_name),
+                {"next": user_url},
+            )
 
         self.redirect(url)
 

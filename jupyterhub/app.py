@@ -76,7 +76,7 @@ from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
-from .traitlets import URLPrefix, Command, EntryPointType
+from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
     maybe_future,
     url_path_join,
@@ -1258,6 +1258,21 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
+    user_redirect_hook = Callable(
+        None,
+        allow_none=True,
+        help="""
+        Callable to affect behavior of /user-redirect/
+
+        A callable that receives two parameters - a handler and the path passed to
+        `/user-redirect/<path>`, and returns a URL to redirect the user to. This
+        can be used to customize how the `user-redirect` URL works.
+
+        To get the default behavior of /user-redirect/ leave this property unset
+        or return None from your callable.
+        """
+    ).tag(config=True)
+
     def init_handlers(self):
         h = []
         # load handlers from the authenticator
@@ -2144,6 +2159,7 @@ class JupyterHub(Application):
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
             eventlog=self.eventlog,
+            app=self
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)
