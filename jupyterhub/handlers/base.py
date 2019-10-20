@@ -1013,10 +1013,11 @@ class BaseHandler(RequestHandler):
             PROXY_DELETE_DURATION_SECONDS.labels(
                 status=ProxyDeleteStatus.success
             ).observe(time.perf_counter() - proxy_deletion_start_time)
-        except:
+        except Exception:
             PROXY_DELETE_DURATION_SECONDS.labels(
                 status=ProxyDeleteStatus.failure
             ).observe(time.perf_counter() - proxy_deletion_start_time)
+            raise
 
         await user.stop(server_name)
 
