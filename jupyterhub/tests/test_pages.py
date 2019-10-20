@@ -398,6 +398,36 @@ async def test_user_redirect(app, username):
         path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
 
+async def test_user_redirect_hook(app, username):
+    """
+    Test proper behavior of user_redirect_hook
+    """
+    name = username
+    cookies = await app.login_user(name)
+
+    async def dummy_redirect(handler, path):
+        assert path == 'redirect-to-terminal'
+        url = ujoin(handler.current_user.url, '/terminals/1')
+        return url
+
+    app.user_redirect_hook = dummy_redirect
+
+    r = await get_page('/user-redirect/redirect-to-terminal', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, '/hub/login')
+    query = urlparse(r.url).query
+    assert query == urlencode(
+        {'next': ujoin(app.hub.base_url, '/user-redirect/redirect-to-terminal')}
+    )
+
+    # We don't actually want to start the server by going through spawn - just want to make sure
+    # the redirect is to the right place
+    r = await get_page('/user-redirect/redirect-to-terminal', app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    redirected_url = urlparse(r.headers['Location'])
+    assert redirected_url.path == ujoin(app.base_url, f'/user/{username}/terminals/1')
 
 async def test_user_redirect_deprecated(app, username):
     """redirecting from /user/someonelse/ URLs (deprecated)"""
