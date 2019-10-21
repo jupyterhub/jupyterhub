@@ -110,6 +110,13 @@ async def test_admin(app):
     assert r.url.endswith('/admin')
 
 
+async def test_admin_version(app):
+    cookies = await app.login_user('admin')
+    r = await get_page('admin', app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    assert "version_footer" in r.text
+
+
 @pytest.mark.parametrize('sort', ['running', 'last_activity', 'admin', 'name'])
 async def test_admin_sort(app, sort):
     cookies = await app.login_user('admin')
