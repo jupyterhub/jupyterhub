@@ -1718,7 +1718,7 @@ class JupyterHub(Application):
                     raise ValueError("Token name %r is not valid" % name)
             if kind == 'service':
                 if not any(service["name"] == name for service in self.services):
-                    self.log.warn(
+                    self.log.warning(
                         "Warning: service '%s' not in services, creating implicitly. It is recommended to register services using services list."
                         % name
                     )
@@ -2449,7 +2449,7 @@ class JupyterHub(Application):
         if self.generate_certs:
             self.load_config_file(self.config_file)
             if not self.internal_ssl:
-                self.log.warn(
+                self.log.warning(
                     "You'll need to enable `internal_ssl` "
                     "in the `jupyterhub_config` file to use "
                     "these certs."
