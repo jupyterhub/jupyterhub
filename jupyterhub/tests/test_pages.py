@@ -427,7 +427,7 @@ async def test_user_redirect_hook(app, username):
     r = await get_page('/user-redirect/redirect-to-terminal', app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     redirected_url = urlparse(r.headers['Location'])
-    assert redirected_url.path == ujoin(app.base_url, f'/user/{username}/terminals/1')
+    assert redirected_url.path == ujoin(app.base_url, 'user', username, 'terminals/1')
 
 async def test_user_redirect_deprecated(app, username):
     """redirecting from /user/someonelse/ URLs (deprecated)"""
