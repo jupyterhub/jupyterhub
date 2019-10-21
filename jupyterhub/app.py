@@ -1264,9 +1264,12 @@ class JupyterHub(Application):
         help="""
         Callable to affect behavior of /user-redirect/
 
-        A callable that receives two parameters - a handler and the path passed to
-        `/user-redirect/<path>`, and returns a URL to redirect the user to. This
-        can be used to customize how the `user-redirect` URL works.
+        A callable that receives two parameters - the authenticated user and
+        the tornado request object for the current request passed to
+        `/user-redirect/<path>`, and returns a URL to redirect the user to.
+        This can be used to customize how the `user-redirect` URL works.
+
+        Could be async or not.
 
         To get the default behavior of /user-redirect/ leave this property unset
         or return None from your callable.
@@ -2159,7 +2162,7 @@ class JupyterHub(Application):
             trusted_alt_names=self.trusted_alt_names,
             shutdown_on_logout=self.shutdown_on_logout,
             eventlog=self.eventlog,
-            app=self
+            app=self,
         )
         # allow configured settings to have priority
         settings.update(self.tornado_settings)

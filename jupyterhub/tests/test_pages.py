@@ -405,9 +405,9 @@ async def test_user_redirect_hook(app, username):
     name = username
     cookies = await app.login_user(name)
 
-    async def dummy_redirect(handler, path):
-        assert path == 'redirect-to-terminal'
-        url = ujoin(handler.current_user.url, '/terminals/1')
+    async def dummy_redirect(request, user):
+        assert request.uri == ujoin(app.hub.base_url, 'user-redirect', 'redirect-to-terminal')
+        url = ujoin(user.url, '/terminals/1')
         return url
 
     app.user_redirect_hook = dummy_redirect
