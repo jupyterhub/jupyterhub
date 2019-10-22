@@ -398,6 +398,7 @@ async def test_user_redirect(app, username):
         path = urlparse(r.url).path
     assert path == ujoin(app.base_url, '/user/%s/notebooks/test.ipynb' % name)
 
+
 async def test_user_redirect_hook(app, username):
     """
     Test proper behavior of user_redirect_hook
@@ -406,7 +407,9 @@ async def test_user_redirect_hook(app, username):
     cookies = await app.login_user(name)
 
     async def dummy_redirect(request, user):
-        assert request.uri == ujoin(app.hub.base_url, 'user-redirect', 'redirect-to-terminal')
+        assert request.uri == ujoin(
+            app.hub.base_url, 'user-redirect', 'redirect-to-terminal'
+        )
         url = ujoin(user.url, '/terminals/1')
         return url
 
@@ -424,10 +427,16 @@ async def test_user_redirect_hook(app, username):
 
     # We don't actually want to start the server by going through spawn - just want to make sure
     # the redirect is to the right place
-    r = await get_page('/user-redirect/redirect-to-terminal', app, cookies=cookies, allow_redirects=False)
+    r = await get_page(
+        '/user-redirect/redirect-to-terminal',
+        app,
+        cookies=cookies,
+        allow_redirects=False,
+    )
     r.raise_for_status()
     redirected_url = urlparse(r.headers['Location'])
     assert redirected_url.path == ujoin(app.base_url, 'user', username, 'terminals/1')
+
 
 async def test_user_redirect_deprecated(app, username):
     """redirecting from /user/someonelse/ URLs (deprecated)"""

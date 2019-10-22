@@ -1273,7 +1273,7 @@ class JupyterHub(Application):
 
         To get the default behavior of /user-redirect/ leave this property unset
         or return None from your callable.
-        """
+        """,
     ).tag(config=True)
 
     def init_handlers(self):
