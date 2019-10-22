@@ -1264,15 +1264,15 @@ class JupyterHub(Application):
         help="""
         Callable to affect behavior of /user-redirect/
 
-        A callable that receives two parameters - the authenticated user and
-        the tornado request object for the current request passed to
-        `/user-redirect/<path>`, and returns a URL to redirect the user to.
-        This can be used to customize how the `user-redirect` URL works.
+        Receives 3 parameters:
+        1. path - URL path that was provided after /user-redirect/
+        2. request - A Tornado HTTPServerRequest object representing the
+           current request.
+        3. user - The currently authenticated user.
+        4. app - The JupyterHub object
 
-        Could be async or not.
-
-        To get the default behavior of /user-redirect/ leave this property unset
-        or return None from your callable.
+        It should return the new URL to redirect to, or None to preserve
+        current behavior.
         """,
     ).tag(config=True)
 
