@@ -1269,7 +1269,8 @@ class JupyterHub(Application):
         2. request - A Tornado HTTPServerRequest object representing the
            current request.
         3. user - The currently authenticated user.
-        4. app - The JupyterHub object
+        4. base_url - The base_url of the current hub, to allow for relative
+                      redirects
 
         It should return the new URL to redirect to, or None to preserve
         current behavior.

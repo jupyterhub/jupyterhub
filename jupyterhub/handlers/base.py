@@ -1490,7 +1490,7 @@ class UserRedirectHandler(BaseHandler):
         if self.app.user_redirect_hook:
             url = await maybe_future(
                 self.app.user_redirect_hook(
-                    path, self.request, self.current_user, self.app
+                    path, self.request, self.current_user, self.base_url
                 )
             )
         if url is None:
