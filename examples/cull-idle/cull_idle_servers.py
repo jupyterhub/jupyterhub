@@ -117,7 +117,7 @@ def cull_idle(
     futures = []
 
     @coroutine
-    def handle_server(user, server_name, server):
+    def handle_server(user, server_name, server, max_age, inactive_limit):
         """Handle (maybe) culling a single server
 
         "server" is the entire server model from the API.
@@ -252,7 +252,7 @@ def cull_idle(
                     'url': user['server'],
                 }
         server_futures = [
-            handle_server(user, server_name, server)
+            handle_server(user, server_name, server, max_age, inactive_limit)
             for server_name, server in servers.items()
         ]
         results = yield multi(server_futures)
