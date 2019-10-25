@@ -1264,7 +1264,7 @@ class JupyterHub(Application):
         help="""
         Callable to affect behavior of /user-redirect/
 
-        Receives 3 parameters:
+        Receives 4 parameters:
         1. path - URL path that was provided after /user-redirect/
         2. request - A Tornado HTTPServerRequest object representing the
            current request.
