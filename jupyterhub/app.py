@@ -1266,11 +1266,9 @@ class JupyterHub(Application):
 
         Receives 4 parameters:
         1. path - URL path that was provided after /user-redirect/
-        2. request - A Tornado HTTPServerRequest object representing the
-           current request.
+        2. request - A Tornado HTTPServerRequest representing the current request.
         3. user - The currently authenticated user.
-        4. base_url - The base_url of the current hub, to allow for relative
-                      redirects
+        4. base_url - The base_url of the current hub, for relative redirects
 
         It should return the new URL to redirect to, or None to preserve
         current behavior.
