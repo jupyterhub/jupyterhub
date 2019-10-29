@@ -42,6 +42,7 @@ from traitlets.config import LoggingConfigurable
 
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
+from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
 from .utils import make_ssl_context
 from .utils import url_path_join
@@ -801,6 +802,7 @@ class ConfigurableHTTPProxy(Proxy):
 
     async def get_all_routes(self, client=None):
         """Fetch the proxy's routes."""
+        proxy_poll_start_time = time.perf_counter()
         resp = await self.api_request('', client=client)
         chp_routes = json.loads(resp.body.decode('utf8', 'replace'))
         all_routes = {}
@@ -811,4 +813,5 @@ class ConfigurableHTTPProxy(Proxy):
                 self.log.debug("Omitting non-jupyterhub route %r", routespec)
                 continue
             all_routes[routespec] = self._reformat_routespec(routespec, chp_data)
+        PROXY_POLL_DURATION_SECONDS.observe(time.perf_counter() - proxy_poll_start_time)
         return all_routes
