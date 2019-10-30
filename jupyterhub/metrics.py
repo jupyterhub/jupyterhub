@@ -45,6 +45,10 @@ CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'check_routes_duration_seconds', 'Time taken to validate all routes in proxy'
 )
 
+HUB_STARTUP_DURATION_SECONDS = Histogram(
+    'hub_startup_duration_seconds', 'Time taken for Hub to start'
+)
+
 
 class ServerSpawnStatus(Enum):
     """

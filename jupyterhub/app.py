@@ -85,6 +85,7 @@ from .utils import (
     print_ps_info,
     make_ssl_context,
 )
+from .metrics import HUB_STARTUP_DURATION_SECONDS
 from .metrics import RUNNING_SERVERS
 from .metrics import TOTAL_USERS
 
@@ -2220,6 +2221,7 @@ class JupyterHub(Application):
 
     @catch_config_error
     async def initialize(self, *args, **kwargs):
+        hub_startup_start_time = time.perf_counter()
         super().initialize(*args, **kwargs)
         if self.generate_config or self.generate_certs or self.subapp:
             return
@@ -2279,6 +2281,9 @@ class JupyterHub(Application):
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()
+        HUB_STARTUP_DURATION_SECONDS.observe(
+            time.perf_counter() - hub_startup_start_time
+        )
 
         # init_spawners can take a while
         init_spawners_timeout = self.init_spawners_timeout
