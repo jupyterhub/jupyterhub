@@ -86,6 +86,7 @@ Getting Started
    :maxdepth: 1
 
    getting-started/index
+   getting-started/institutional-faq
    getting-started/config-basics
    getting-started/networking-basics
    getting-started/security-basics
