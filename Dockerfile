@@ -25,6 +25,8 @@
 ARG BASE_CONTAINER=ubuntu:bionic-20190612@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
 FROM $BASE_CONTAINER
 
+LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+
 USER root
 
 # Install all OS dependencies for notebook server that starts but lacks all
