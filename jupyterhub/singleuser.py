@@ -334,8 +334,8 @@ class SingleUserNotebookApp(NotebookApp):
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
     port_retries = (
-        0
-    )  # disable port-retries, since the Spawner will tell us what port to use
+        0  # disable port-retries, since the Spawner will tell us what port to use
+    )
 
     disable_user_config = Bool(
         False,
