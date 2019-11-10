@@ -152,8 +152,8 @@ flags = {
 }
 
 COOKIE_SECRET_BYTES = (
-    32
-)  # the number of bytes to use when generating new cookie secrets
+    32  # the number of bytes to use when generating new cookie secrets
+)
 
 HEX_RE = re.compile('^([a-f0-9]{2})+$', re.IGNORECASE)
 
