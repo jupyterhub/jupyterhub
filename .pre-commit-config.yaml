@@ -1,15 +1,15 @@
 repos:
 - repo: https://github.com/asottile/reorder_python_imports
-  rev: v1.3.5
+  rev: v1.8.0
   hooks:
   - id: reorder-python-imports
     language_version: python3.6
 - repo: https://github.com/ambv/black
-  rev: 18.9b0
+  rev: 19.10b0
   hooks:
   - id: black
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v2.1.0
+  rev: v2.4.0
   hooks:
   - id: end-of-file-fixer
   - id: check-json
