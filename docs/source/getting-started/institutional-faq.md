@@ -47,10 +47,13 @@ scalable infrastructure, large datasets, and high-performance computing.
 
 ## Who else uses JupyterHub?
 
-JupyterHub has been used at a variety of institutions in academia,
-industry, and governmental research labs. These include:
+JupyterHub is used at a variety of institutions in academia,
+industry, and governmental research labs. It is most-commonly used by two kinds of groups:
 
-* <list of orgs>
+* Small teams (e.g., data science teams, research labs, or collaborative projects) to provide a
+  shared resource for interactive computing, collaboration, and analytics.
+* Large teams (e.g., a department, a large class, or a large group of remote users) to provide
+  access to organizational hardware, data, and analytics environments at scale.
 
 ## How does JupyterHub compare with hosted products, like Google Colaboratory, RStudio.cloud, or Anaconda Enterprise?
 
@@ -125,32 +128,119 @@ JupyterHub has no internal concept of "data", but is designed to be able to comm
 
 ## How do I manage users?
 
+JupyterHub offers a few options for managing your users. Upon setting up a JupyterHub, you can choose what
+kind of **authentication** you'd like to use. For example, you can have users sign up with an institutional
+email address, or choose a username / password when they first log-in, or offload authentication onto
+another service such as an organization's OAuth.
 
+The users of a JupyterHub are stored locally, and can be modified manually by an administrator of the JupyterHub.
+Moreover, the *active* users on a JupyterHub can be found on the administrator's page. This page
+gives you the abiltiy to stop or restart kernels, inspect user filesystems, and even take over user
+sessions to assist them with debugging.
 
 ## How do I manage software environments?
 
+A key benefit of JupyterHub is the ability for an administrator to define the environment(s) that users
+have access to. There are many ways to do this, depending on what kind of infrastructure you're using for
+your JupyterHub.
+
+For example, **The Littlest JupyterHub** runs on a single VM. In this case, the administrator defines
+an environment by installing packages to a shared folder that exists on the path of all users. The
+**JupyterHub for Kubernetes** deployment uses Docker images to define environments. You can create your
+own list of Docker images that users can select from, and can also control things like the amount of
+RAM available to users, or the types of machines that their sessions will use in the cloud.
+
 ## How does JupyterHub manage computational resources?
+
+For interactive computing sessions, JupyterHub controls computational resources via a **spawner**.
+Spawners define how a new user session is created, and are customized for particular kinds of
+infrastructure. For example, the KubeSpawner knows how to control a Kubernetes deployment
+to create new pods when users log in.
+
+For more sophisticated computational resources (like distributed computing), JupyterHub can
+connect with other infrastructure tools (like Dask or Spark). This allows users to control
+scalable or high-performance resources from within their JupyterHub sessions. The logic of
+how those resources are controlled is taken care of by the non-JupyterHub application.
+
 
 ## Can JupyterHub be used with my high-performance computing resources?
 
+Yes - JupyterHub can provide access to many kinds of computing infrastructure.
+Especially when combined with other open-source schedulers such as Dask, you can manage fairly
+complex computing infrastructure from the interactive sessions of a JupyterHub. For example
+[see the Dask HPC page](https://docs.dask.org/en/latest/setup/hpc.html).
+
 ## How much resources do user sessions take?
 
-## Can I customize the look and feel of a JupyterHub?
-* Branding notebook server / jupyter lab. Custom error pages / support and help pages
+This is highly configurable by the administrator. If you wish for your users to have simple
+data analytics environments for prototyping and light data exploring, you can restrict their
+memory and CPU based on the resources that you have available. If you'd like your JupyterHub
+to serve as a gateway to high-performance compute or data resources, you may increase the
+resources available on user machines, or connect them with computing infrastructure elsewhere.
 
+## Can I customize the look and feel of a JupyterHub?
+
+JupyterHub provides some customization of the graphics displayed to users. The most common
+modification is to add custom branding to the JupyterHub login page, loading pages, and
+various elements that persist across all pages (such as headers).
 
 # For Technical Leads
 
 ## Will JupyterHub “just work” with our team's interactive computing setup?
 
+Depending on the complexity of your setup, you'll have different experiences with "out of the box"
+distributions of JupyterHub. If all of the resources you need will fit on a single VM, then
+[The Littlest JupyterHub](https://tljh.jupyter.org) should get you up-and-running within
+a half day or so. For more complex setups, such as scalable Kubernetes clusters or access
+to high-performance computing and data, it will require more time and expertise with
+the technologies your JupyterHub will use (e.g., dev-ops knowledge with cloud computing).
+
+In general, the base JupyterHub deployment is not the bottleneck for setup, it is connecting
+your JupyterHub with the various services and tools that you wish to provide to your users.
+
+
 ## How well does JupyterHub scale? What are JupyterHub's limitations?
 
-## Will our team have to re-write their code when they want to scale to high-performance compute?
+JupyterHub works well at both a small scale (e.g., a single VM or machine) as well as a
+high scale (e.g., a scalable Kubernetes cluster). It can be used for teams as small a 2, and
+for user bases as large as 10,000. The scalability of JupyterHub largely depends on the
+infrastructure on which it is deployed. JupyterHub has been designed to be lightweight and
+flexible, so you can tailor your JupyterHub deployment to your needs.
+
 
 ## Is JupyterHub resilient? What happens when a machine goes down?
 
+For JupyterHubs that are deployed in a containerized environment (e.g., Kubernetes), it is
+possible to configure the JupyterHub to be fairly resistant to failures in the system.
+For example, if JupyterHub fails, then user sessions will not be affected (though new
+users will not be able to log in). When a JupyterHub process is restarted, it should
+seamlessly connect with the user database and the system will return to normal.
+Again, the details of your JupyterHub deployment (e.g., whether it's deployed on a scalable cluster)
+will affect the resiliency of the deployment.
+
 ## What interfaces does JupyterHub support?
+
+Out of the box, JupyterHub supports a variety of popular data science interfaces for user sessions,
+such as JupyterLab, Jupyter Notebooks, and RStudio. Any interface that can be served
+via a web address can be served with a JupyterHub (with the right setup).
 
 ## Does JupyterHub make it easier for our team to collaborate?
 
+JupyterHub provides a standardized environment and access to shared resources for your teams.
+This greatly reduces the cost associated with sharing analyses and content with other team
+members, and makes it easier to collaborate and build off of one another's ideas. Combined with
+access to high-performance computing and data, JupyterHub provides a common resource to
+amplify your team's ability to prototype their analyses, scale them to larger data, and then
+share their results with one another.
+
+JupyterHub also provides a computational framework to share computational narratives between
+different levels of an organization. For example, data scientists can share Jupyter Notebooks
+rendered as [voila dashboards](https://voila.readthedocs.io/en/stable/) with those who are not
+familiar with programming, or create publicly-available interactive analyses to allow others to
+interact with your work.
+
 ## Can I use JupyterHub with R/RStudio or other languages and environments?
+
+Yes, Jupyter is a polyglot project, and there are over 40 community-provided kernels for a variety
+of languages (the most common being Python, Julia, and R). You can also use a JupyterHub to provide
+access to other interfaces, such as RStudio, that provide their own access to a language kernel.
