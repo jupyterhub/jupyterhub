@@ -5,7 +5,7 @@ broken down by their roles within organizations.
 
 # For all
 
-## Is appropriate for adoption within a larger institutional context?
+## Is it appropriate for adoption within a larger institutional context?
 
 Yes! JupyterHub has been used at-scale for large pools of users, as well
 as complex and high-performance computing. For example, UC Berkeley uses
