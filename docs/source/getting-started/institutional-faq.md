@@ -20,14 +20,14 @@ Here is a quick breakdown of these three tools:
 
 * **The Jupyter Notebook** is a document specification (the `.ipynb`) file that interweaves
   narrative text with code cells and their outputs. It is also a graphical interface
-  that allows users to edit these documents
+  that allows users to edit these documents. There are also several other graphical interfaces
+  that allow users to edit the `.ipynb` format (nteract, Jupyer Lab, Google Colab, Kaggle, etc).
 * **JupyterLab** is a flexible and extendible user interface for interactive computing. It
   has several extensions that are tailored for using Jupyter Notebooks, as well as extensions
   for other parts of the data science stack.
-* **JupyterHub** is an application that can manage **multiple users** with interactive computing
-  sessions, as well as connect with infrastructure those users wish to access. It can provide
-  remote access to Jupyter Notebooks and Jupyter Lab for many people, and can connect them with
-  other compute infrastructure.
+* **JupyterHub** is an application that manages interactive computing sessions for **multiple users**.
+  It also connects them with infrastructure those users wish to access. It can provide
+  remote access to Jupyter Notebooks and Jupyter Lab for many people.
 
 # For management
 
@@ -36,7 +36,7 @@ Here is a quick breakdown of these three tools:
 JupyterHub provides a shared platform for data science and collaboration.
 It allows users to utilize familiar data science workflows (such as the scientific python stack,
 the R tidyverse, and Jupyter Notebooks) on institutional infrastructure. It also allows administrators
-some control over access to resources, security, authentication, and user identity.
+some control over access to resources, security, environments, and authentication.
 
 ## Is JupyterHub mature? Why should we trust it?
 
@@ -57,17 +57,18 @@ industry, and governmental research labs. It is most-commonly used by two kinds 
 
 ## How does JupyterHub compare with hosted products, like Google Colaboratory, RStudio.cloud, or Anaconda Enterprise?
 
-Like the tools listed above, JupyterHub provides access to interactive computing
-environments in the cloud. However, JupyterHub is more flexible, more customizable,
-free, and gives administrators more control over their setup and hardware.
+JupyterHub puts you in control of your data, infrastructure, and coding environment.
+In addition, it is vendor neutral, which reduces lock-in to a particular vendor or service.
+JupyterHub provides access to interactive computing environments in the cloud (similar to each of these services).
+Compared with the tools above, it is more flexible, more customizable, free, and
+gives administrators more control over their setup and hardware.
 
 Because JupyterHub is an open-source, community-driven tool, it can be extended and
 modified to fit an institution's needs. It plays nicely with the open source data science
 stack, and can serve a variety of computing enviroments, user interfaces, and
-computational hardware.
-
-Finally, JupyterHub can be deployed anywhere - on enterprise cloud infrastructure, on
-High-Performance-Computing machines, on local hardware, or even on a single laptop.
+computational hardware. It can also be deployed anywhere - on enterprise cloud infrastructure, on
+High-Performance-Computing machines, on local hardware, or even on a single laptop, which
+is not possible with most other tools for shared interactive computing.
 
 # For IT
 
@@ -107,6 +108,11 @@ as more resources are needed - allowing you to utilize the benefits of a flexibl
 The short answer: yes. JupyterHub as a standalone application has been battle-tested at an institutional
 level for several years, and makes a number of "default" security decisions that are reasonable for most
 users.
+
+* For security considerations in the base JupyterHub application,
+  [see the JupyterHub security page](https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html)
+* For security considerations when deploying JupyterHub on Kubernetes, see the
+  [JupyterHub on Kubernetes security page](https://zero-to-jupyterhub.readthedocs.io/en/latest/security.html).
 
 The longer answer: it depends on your deployment. Because JupyterHub is very flexible, it can be used
 in a variety of deployment setups. This often entails connecting your JupyterHub to **other** infrastructure
