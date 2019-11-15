@@ -13,9 +13,9 @@ helps keep our community welcoming to as many people as possible.
 .. toctree::
    :maxdepth: 2
 
-   contributing/community
-   contributing/setup
-   contributing/docs
-   contributing/tests
-   contributing/roadmap
-   contributing/security
+   community
+   setup
+   docs
+   tests
+   roadmap
+   security

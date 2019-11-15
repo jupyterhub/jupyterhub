@@ -72,15 +72,15 @@ Installation Guide
 ------------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   index-installation
+   installation-guide
 
 Getting Started
 ---------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    getting-started/index
 
@@ -88,9 +88,25 @@ Technical Reference
 -------------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    reference/index
+
+Administrators guide
+--------------------
+
+.. toctree::
+   :maxdepth: 2
+
+   index-admin
+
+API Reference
+-------------
+
+.. toctree::
+   :maxdepth: 2
+
+   api/index
 
 Contributing
 ------------
@@ -108,37 +124,11 @@ helps keep our community welcoming to as many people as possible.
 
    contributing/index
 
-Eventlogging and Telemetry
---------------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   events/index
-
-Administrators guide
---------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   troubleshooting
-   admin/upgrading
-   changelog
-
-API Reference
--------------
-
-.. toctree::
-   :maxdepth: 1
-
-   api/index
-
 About JupyterHub
 ----------------
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    index-about
 

@@ -1,8 +1,8 @@
 .. _api-index:
 
-##################
-The JupyterHub API
-##################
+##############
+JupyterHub API
+##############
 
 :Release: |release|
 :Date: |today|

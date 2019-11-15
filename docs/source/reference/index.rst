@@ -15,6 +15,7 @@ Technical Reference
    rest
    database
    templates
+   ../events/index
    config-user-env
    config-examples
    config-ghoauth
