@@ -7,3 +7,4 @@ recommonmark==0.5.0
 sphinx-copybutton
 sphinx-jsonschema
 sphinx>=1.7
+git+https://github.com/pandas-dev/pandas-sphinx-theme.git@master

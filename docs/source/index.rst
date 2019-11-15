@@ -2,18 +2,18 @@
 JupyterHub
 ==========
 
-`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users. 
-It can be used in a classes of students, a corporate data science group or scientific 
+`JupyterHub`_ is the best way to serve `Jupyter notebook`_ for multiple users.
+It can be used in a classes of students, a corporate data science group or scientific
 research group. It is a multi-user **Hub** that spawns, manages, and proxies multiple
 instances of the single-user `Jupyter notebook`_ server.
 
-To make life easier, JupyterHub have distributions. Be sure to 
-take a look at them before continuing with the configuration of the broad 
-original system of `JupyterHub`_. Today, you can find two main cases: 
+To make life easier, JupyterHub have distributions. Be sure to
+take a look at them before continuing with the configuration of the broad
+original system of `JupyterHub`_. Today, you can find two main cases:
 
-1. If you need a simple case for a small amount of users (0-100) and single server 
-   take a look at 
-   `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution. 
+1. If you need a simple case for a small amount of users (0-100) and single server
+   take a look at
+   `The Littlest JupyterHub <https://github.com/jupyterhub/the-littlest-jupyterhub>`__ distribution.
 2. If you need to allow for even more users, a dynamic amount of servers can be used on a cloud,
    take a look at the `Zero to JupyterHub with Kubernetes <https://github.com/jupyterhub/zero-to-jupyterhub-k8s>`__ .
 
@@ -74,10 +74,7 @@ Installation Guide
 .. toctree::
    :maxdepth: 1
 
-   installation-guide
-   quickstart
-   quickstart-docker
-   installation-basics
+   index-installation
 
 Getting Started
 ---------------
@@ -86,13 +83,6 @@ Getting Started
    :maxdepth: 1
 
    getting-started/index
-   getting-started/institutional-faq
-   getting-started/config-basics
-   getting-started/networking-basics
-   getting-started/security-basics
-   getting-started/authenticators-users-basics
-   getting-started/spawners-basics
-   getting-started/services-basics
 
 Technical Reference
 -------------------
@@ -101,18 +91,6 @@ Technical Reference
    :maxdepth: 1
 
    reference/index
-   reference/technical-overview
-   reference/websecurity
-   reference/authenticators
-   reference/spawners
-   reference/services
-   reference/rest
-   reference/templates
-   reference/config-user-env
-   reference/config-examples
-   reference/config-ghoauth
-   reference/config-proxy
-   reference/config-sudo
 
 Contributing
 ------------
@@ -126,31 +104,25 @@ Our `Code of Conduct <https://github.com/jupyter/governance/blob/master/conduct/
 helps keep our community welcoming to as many people as possible.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   contributing/community
-   contributing/setup
-   contributing/docs
-   contributing/tests
-   contributing/roadmap
-   contributing/security
+   contributing/index
 
 Eventlogging and Telemetry
 --------------------------
 
 .. toctree::
-   :maxdepth: 1
-   
+   :maxdepth: 2
+
    events/index
 
-Upgrading JupyterHub
+Administrators guide
 --------------------
-
-We try to make upgrades between minor versions as painless as possible.
 
 .. toctree::
    :maxdepth: 1
 
+   troubleshooting
    admin/upgrading
    changelog
 
@@ -162,23 +134,13 @@ API Reference
 
    api/index
 
-Troubleshooting
----------------
-
-.. toctree::
-   :maxdepth: 1
-
-   troubleshooting
-
 About JupyterHub
 ----------------
 
 .. toctree::
    :maxdepth: 1
 
-   contributor-list
-   changelog
-   gallery-jhub-deployments
+   index-about
 
 Indices and tables
 ==================
@@ -192,24 +154,6 @@ Questions? Suggestions?
 
 - `Jupyter mailing list <https://groups.google.com/forum/#!forum/jupyter>`_
 - `Jupyter website <https://jupyter.org>`_
-
-.. _contents:
-
-Full Table of Contents
-======================
-
-.. toctree::
-   :maxdepth: 2
-
-   installation-guide
-   getting-started/index
-   reference/index
-   api/index
-   troubleshooting
-   contributor-list
-   gallery-jhub-deployments
-   changelog
-
 
 .. _JupyterHub: https://github.com/jupyterhub/jupyterhub
 .. _Jupyter notebook: https://jupyter-notebook.readthedocs.io/en/latest/

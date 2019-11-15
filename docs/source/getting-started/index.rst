@@ -10,3 +10,4 @@ Getting Started
    authenticators-users-basics
    spawners-basics
    services-basics
+   institutional-faq

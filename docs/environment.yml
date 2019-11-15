@@ -26,3 +26,4 @@ dependencies:
   - alabaster_jupyterhub
   - autodoc-traits
   - sphinx-jsonschema
+  - -r requirements.txt
