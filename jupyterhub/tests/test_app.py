@@ -3,13 +3,13 @@ import binascii
 import os
 import re
 import sys
+import time
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
 from subprocess import run
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
-import time
 from unittest.mock import patch
 
 import pytest
