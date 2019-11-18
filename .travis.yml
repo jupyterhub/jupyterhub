@@ -75,7 +75,6 @@ after_failure:
       echo "or after-the-fact on already committed files with"
       echo "    pre-commit run --all-files"
     fi
-
 matrix:
   fast_finish: true
   include:
@@ -95,6 +94,7 @@ matrix:
         # password in url is url-encoded (urllib.parse.quote($PGPASSWORD, safe=''))
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
     - python: 3.7
+      dist: xenial
     - python: 3.8
       if: tag IS present
   allow_failures:
