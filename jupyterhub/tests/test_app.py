@@ -46,16 +46,20 @@ def test_raise_error_on_missing_specified_config():
     Using the -f or --config flag when starting JupyterHub should require the
     file to be found and exit if it isn't.
     """
+    # subprocess.run doesn't have a timeout flag, so if this test would fail by
+    # not letting jupyterhub error out, we would wait forever. subprocess.Popen
+    # allow us to manually timeout.
     process = Popen(
         [sys.executable, '-m', 'jupyterhub', '--config', 'not-available.py']
     )
-    # wait inpatiently for the process to exit
+    # wait inpatiently for the process to exit like we want it to
     for i in range(100):
         time.sleep(0.1)
         returncode = process.poll()
         if returncode is not None:
             break
-    process.kill()
+    else:
+        process.kill()
     assert returncode == 1
 
 
