@@ -57,6 +57,7 @@ from traitlets import (
     Float,
     observe,
     default,
+    validate,
 )
 from traitlets.config import Application, Configurable, catch_config_error
 
@@ -310,6 +311,19 @@ class JupyterHub(Application):
     config_file = Unicode('jupyterhub_config.py', help="The config file to load").tag(
         config=True
     )
+
+    @validate("config_file")
+    def _validate_config_file(self, proposal):
+        if not os.path.isfile(proposal.value):
+            print(
+                "ERROR: Failed to find specified config file: {}".format(
+                    proposal.value
+                ),
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        return proposal.value
+
     generate_config = Bool(False, help="Generate default config file").tag(config=True)
     generate_certs = Bool(False, help="Generate certs used for internal ssl").tag(
         config=True
