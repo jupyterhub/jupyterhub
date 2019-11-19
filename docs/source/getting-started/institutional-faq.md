@@ -99,7 +99,8 @@ that we currently suggest are:
   guide that runs on Kubernetes. Better for larger or dynamic user groups (50-10,000) or more complex
   compute/data needs.
 * [The Littlest JupyterHub](https://tljh.jupyter.org) is a lightweight JupyterHub that runs on a single
-  VM in the cloud. Better for smaller usergroups (4-80) or more lightweight computational resources.
+  single machine (in the cloud or under your desk). Better for smaller usergroups (4-80) or more
+  lightweight computational resources.
 
 
 ## Does JupyterHub run well in the cloud?
