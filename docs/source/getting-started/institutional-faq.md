@@ -91,7 +91,7 @@ That depends on what kind of hardware you've got. JupyterHub is flexible enough 
 on a variety of hardware, including in-room hardware, on-prem clusters, cloud infrastructure,
 etc.
 
-The most common way to set up a JupyterHub us to use a JupyterHub distribution, these are pre-configured
+The most common way to set up a JupyterHub is to use a JupyterHub distribution, these are pre-configured
 and opinionated ways to set up a JupyterHub on particular kinds of infrastructure. The two distributions
 that we currently suggest are:
 
