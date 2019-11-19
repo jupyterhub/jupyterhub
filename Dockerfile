@@ -21,31 +21,70 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-FROM ubuntu:18.04
+# https://github.com/tianon/docker-brew-ubuntu-core/commit/3c462555392cb188830b7c91e29311b5fad90cfe
+ARG BASE_CONTAINER=ubuntu:bionic-20190612@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
+FROM $BASE_CONTAINER
+
 LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 
-# install nodejs, utf8 locale, set CDN because default httpredir is unreliable
+USER root
+
+# Install all OS dependencies for notebook server that starts but lacks all
+# features (e.g., download as all possible file formats)
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -y update && \
-    apt-get -y upgrade && \
-    apt-get -y install wget git bzip2 && \
-    apt-get purge && \
+RUN apt-get update && \
+    apt-get install -yq --no-install-recommends \
+    wget \
+    bzip2 \
+    ca-certificates \
+    sudo \
+    locales \
+    fonts-liberation \
+    run-one && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-ENV LANG C.UTF-8
 
-# install Python + NodeJS with conda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
-    echo 'e1045ee415162f944b6aebfe560b8fee */tmp/miniconda.sh' | md5sum -c - && \
-    bash /tmp/miniconda.sh -f -b -p /opt/conda && \
-    /opt/conda/bin/conda install --yes -c conda-forge \
-      python=3.6 sqlalchemy tornado jinja2 traitlets requests pip pycurl \
-      nodejs configurable-http-proxy && \
-    /opt/conda/bin/pip install --upgrade pip && \
-    rm /tmp/miniconda.sh
-ENV PATH=/opt/conda/bin:$PATH
+# Configure environment
+ENV CONDA_DIR=/opt/conda \
+    SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8 \
+    MINICONDA_VERSION=4.7.10 \
+    MINICONDA_MD5=1c945f2b3335c7b2b15130b1b2dc5cf4 \
+    CONDA_VERSION=4.7.12
+ENV PATH=$CONDA_DIR/bin:$PATH
 
-ADD . /src/jupyterhub
+# Install Conda and Miniconda
+RUN cd /tmp && \
+    wget --quiet https://repo.continuum.io/miniconda/Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "${MINICONDA_MD5} *Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh" | md5sum -c - && \
+    /bin/bash Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh -f -b -p $CONDA_DIR && \
+    rm Miniconda3-${MINICONDA_VERSION}-Linux-x86_64.sh && \
+    echo "conda ${CONDA_VERSION}" >> $CONDA_DIR/conda-meta/pinned && \
+    $CONDA_DIR/bin/conda config --system --prepend channels conda-forge && \
+    $CONDA_DIR/bin/conda config --system --set auto_update_conda false && \
+    $CONDA_DIR/bin/conda config --system --set show_channel_urls true && \
+    $CONDA_DIR/bin/conda install --quiet --yes conda && \
+    $CONDA_DIR/bin/conda update --all --quiet --yes && \
+    conda list python | grep '^python ' | tr -s ' ' | cut -d '.' -f 1,2 | sed 's/$/.*/' >> $CONDA_DIR/conda-meta/pinned && \
+    conda clean --all -f -y
+
+# Install python and nodejs packages
+RUN conda install --yes -c conda-forge \
+      configurable-http-proxy \
+      jinja2 \
+      nodejs \
+      pip \
+      pycurl \
+      python=3.6 \
+      requests \
+      sqlalchemy \
+      tornado  \
+      traitlets && \
+      conda clean --all -f -y
+
+COPY . /src/jupyterhub
 WORKDIR /src/jupyterhub
 
 RUN pip install . && \
