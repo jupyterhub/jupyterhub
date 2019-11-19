@@ -48,7 +48,7 @@ scalable infrastructure, large datasets, and high-performance computing.
 ## Who else uses JupyterHub?
 
 JupyterHub is used at a variety of institutions in academia,
-industry, and governmental research labs. It is most-commonly used by two kinds of groups:
+industry, and government research labs. It is most-commonly used by two kinds of groups:
 
 * Small teams (e.g., data science teams, research labs, or collaborative projects) to provide a
   shared resource for interactive computing, collaboration, and analytics.
