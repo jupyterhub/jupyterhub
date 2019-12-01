@@ -2281,9 +2281,6 @@ class JupyterHub(Application):
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()
-        HUB_STARTUP_DURATION_SECONDS.observe(
-            time.perf_counter() - hub_startup_start_time
-        )
 
         # init_spawners can take a while
         init_spawners_timeout = self.init_spawners_timeout
@@ -2304,6 +2301,10 @@ class JupyterHub(Application):
             )
 
         init_spawners_future.add_done_callback(log_init_time)
+
+        HUB_STARTUP_DURATION_SECONDS.observe(
+            time.perf_counter() - hub_startup_start_time
+        )
 
         try:
 
