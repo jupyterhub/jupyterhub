@@ -86,6 +86,7 @@ from .utils import (
     make_ssl_context,
 )
 from .metrics import HUB_STARTUP_DURATION_SECONDS
+from .metrics import INIT_SPAWNERS_DURATION_SECONDS
 from .metrics import RUNNING_SERVERS
 from .metrics import TOTAL_USERS
 
@@ -2294,10 +2295,12 @@ class JupyterHub(Application):
 
         def log_init_time(f):
             n_spawners = f.result()
+            spawner_initialization_time = time.perf_counter() - init_start_time
+            INIT_SPAWNERS_DURATION_SECONDS.observe(spawner_initialization_time)
             self.log.info(
                 "Initialized %i spawners in %.3f seconds",
                 n_spawners,
-                time.perf_counter() - init_start_time,
+                spawner_initialization_time,
             )
 
         init_spawners_future.add_done_callback(log_init_time)

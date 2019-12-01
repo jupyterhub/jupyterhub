@@ -49,6 +49,10 @@ HUB_STARTUP_DURATION_SECONDS = Histogram(
     'hub_startup_duration_seconds', 'Time taken for Hub to start'
 )
 
+INIT_SPAWNERS_DURATION_SECONDS = Histogram(
+    'init_spawners_duration_seconds', 'Time taken for spawners to initialize'
+)
+
 
 class ServerSpawnStatus(Enum):
     """
