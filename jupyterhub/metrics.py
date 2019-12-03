@@ -45,6 +45,10 @@ CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'check_routes_duration_seconds', 'Time taken to validate all routes in proxy'
 )
 
+PROXY_POLL_DURATION_SECONDS = Histogram(
+    'proxy_poll_duration_seconds', 'duration for polling all routes from proxy'
+)
+
 
 class ServerSpawnStatus(Enum):
     """
