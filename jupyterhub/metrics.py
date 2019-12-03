@@ -45,6 +45,14 @@ CHECK_ROUTES_DURATION_SECONDS = Histogram(
     'check_routes_duration_seconds', 'Time taken to validate all routes in proxy'
 )
 
+HUB_STARTUP_DURATION_SECONDS = Histogram(
+    'hub_startup_duration_seconds', 'Time taken for Hub to start'
+)
+
+INIT_SPAWNERS_DURATION_SECONDS = Histogram(
+    'init_spawners_duration_seconds', 'Time taken for spawners to initialize'
+)
+
 PROXY_POLL_DURATION_SECONDS = Histogram(
     'proxy_poll_duration_seconds', 'duration for polling all routes from proxy'
 )
