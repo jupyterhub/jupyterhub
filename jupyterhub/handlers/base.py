@@ -1131,10 +1131,21 @@ class BaseHandler(RequestHandler):
             logout_url=self.settings['logout_url'],
             static_url=self.static_url,
             version_hash=self.version_hash,
+            services=self.get_accessible_services(user),
         )
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])
         return ns
+
+    def get_accessible_services(self, user):
+        accessible_services = []
+        if user is None:
+            return accessible_services
+        for service in self.services.values():
+            if not service.url:
+                continue
+            accessible_services.append(service)
+        return accessible_services
 
     def write_error(self, status_code, **kwargs):
         """render custom error pages"""

@@ -118,6 +118,16 @@
             {% if user.admin %}
             <li><a href="{{base_url}}admin">Admin</a></li>
             {% endif %}
+            {% if services %}
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
+              <ul class="dropdown-menu">
+              {% for service in services %}
+                <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+              {% endfor %}
+              </ul>
+            </li>
+            {% endif %}
           {% endblock %}
         </ul>
         {% endif %}
