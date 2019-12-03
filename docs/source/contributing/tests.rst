@@ -23,27 +23,28 @@ Running the tests
 
    .. code-block:: bash
 
-      pytest --async-test-timeout 15 -v jupyterhub/tests
+      pytest -v jupyterhub/tests
 
    This should display progress as it runs all the tests, printing
    information about any test failures as they occur.
+   
+   If you wish to confirm test coverage the run tests with the `--cov` flag:
 
-   The ``--async-test-timeout`` parameter is used by `pytest-tornado
-   <https://github.com/eugeniy/pytest-tornado#markers>`_ to set the
-   asynchronous test timeout to 15 seconds rather than the default 5,
-   since some of our tests take longer than 5s to execute.
+   .. code-block:: bash
+
+      pytest -v --cov=jupyterhub jupyterhub/tests
 
 #. You can also run tests in just a specific file:
 
    .. code-block:: bash
 
-      pytest --async-test-timeout 15 -v jupyterhub/tests/<test-file-name>
+      pytest -v jupyterhub/tests/<test-file-name>
 
 #. To run a specific test only, you can do:
 
    .. code-block:: bash
 
-      pytest --async-test-timeout 15 -v jupyterhub/tests/<test-file-name>::<test-name>
+      pytest -v jupyterhub/tests/<test-file-name>::<test-name>
 
    This runs the test with function name ``<test-name>`` defined in
    ``<test-file-name>``. This is very useful when you are iteratively
@@ -65,14 +66,3 @@ All the tests are failing
 
 Make sure you have completed all the steps in :ref:`contributing/setup` sucessfully, and
 can launch ``jupyterhub`` from the terminal.
-
-Tests are timing out
---------------------
-
-The ``--async-test-timeout`` parameter to ``pytest`` is used by
-`pytest-tornado <https://github.com/eugeniy/pytest-tornado#markers>`_ to set
-the asynchronous test timeout to a higher value than the default of 5s,
-since some of our tests take longer than 5s to execute. If the tests
-are still timing out, try increasing that value even more. You can
-also set an environment variable ``ASYNC_TEST_TIMEOUT`` instead of
-passing ``--async-test-timeout`` to each invocation of pytest.
