@@ -22,8 +22,8 @@
 # from your docker directory.
 
 # https://github.com/tianon/docker-brew-ubuntu-core/commit/3c462555392cb188830b7c91e29311b5fad90cfe
-ARG BASE_CONTAINER=ubuntu:bionic-20190612@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
-FROM $BASE_CONTAINER
+ARG BASE_IMAGE=ubuntu:bionic-20190612@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
+FROM $BASE_IMAGE
 
 USER root
 
@@ -50,7 +50,7 @@ RUN python3 -m pip install --upgrade setuptools pip wheel
 RUN python3 -m pip wheel -v --wheel-dir wheelhouse .
 
 
-FROM $BASE_CONTAINER
+FROM $BASE_IMAGE
 
 USER root
 
