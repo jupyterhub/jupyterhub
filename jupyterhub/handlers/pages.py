@@ -67,6 +67,9 @@ class HomeHandler(BaseHandler):
         else:
             url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
+        auth_state = await user.get_auth_state()
+        user.spawner.run_auth_state_hook(auth_state)
+
         html = self.render_template(
             'home.html',
             user=user,
