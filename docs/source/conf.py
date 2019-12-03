@@ -74,41 +74,13 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-import alabaster_jupyterhub
-
-html_theme = 'alabaster_jupyterhub'
-html_theme_path = [alabaster_jupyterhub.get_html_theme_path()]
+html_theme = 'pandas_sphinx_theme'
 
 html_logo = '_static/images/logo/logo.png'
 html_favicon = '_static/images/logo/favicon.ico'
 
 # Paths that contain custom static files (such as style sheets)
 html_static_path = ['_static']
-
-html_theme_options = {
-    'show_related': True,
-    'description': 'Documentation for JupyterHub',
-    'github_user': 'jupyterhub',
-    'github_repo': 'jupyterhub',
-    'github_banner': False,
-    'github_button': True,
-    'github_type': 'star',
-    'show_powered_by': False,
-    'extra_nav_links': {
-        'GitHub Repo': 'http://github.com/jupyterhub/jupyterhub',
-        'Issue Tracker': 'http://github.com/jupyterhub/jupyterhub/issues',
-    },
-}
-
-html_sidebars = {
-    '**': [
-        'about.html',
-        'searchbox.html',
-        'navigation.html',
-        'relations.html',
-        'sourcelink.html',
-    ]
-}
 
 htmlhelp_basename = 'JupyterHubdoc'
 

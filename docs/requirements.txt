@@ -3,6 +3,7 @@
 -r ../requirements.txt
 alabaster_jupyterhub
 autodoc-traits
+git+https://github.com/pandas-dev/pandas-sphinx-theme.git@master
 recommonmark==0.5.0
 sphinx-copybutton
 sphinx-jsonschema
