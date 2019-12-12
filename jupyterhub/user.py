@@ -389,14 +389,9 @@ class User:
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
         if self.settings.get('subdomain_host'):
-            url = '{host}{path}'.format(host=self.host, path=self.base_url)
+            return '{host}{path}'.format(host=self.host, path=self.base_url)
         else:
-            url = self.base_url
-
-        if self.settings.get('default_server_name'):
-            return url_path_join(url, self.settings.get('default_server_name'))
-        else:
-            return url
+            return self.base_url
 
     def server_url(self, server_name=''):
         """Get the url for a server with a given name"""

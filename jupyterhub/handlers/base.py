@@ -1526,14 +1526,30 @@ class UserRedirectHandler(BaseHandler):
             )
         if url is None:
             user = self.current_user
-            user_url = url_path_join(user.url, path)
+            user_url = user.url
+
+            if self.app.default_server_name:
+                user_url = url_path_join(user_url, self.app.default_server_name)
+
+            user_url = url_path_join(user_url, path)
             if self.request.query:
                 user_url = url_concat(user_url, parse_qsl(self.request.query))
 
-            url = url_concat(
-                url_path_join(self.hub.base_url, "spawn", user.escaped_name),
-                {"next": user_url},
-            )
+            if self.app.default_server_name:
+                url = url_concat(
+                    url_path_join(
+                        self.hub.base_url,
+                        "spawn",
+                        user.escaped_name,
+                        self.app.default_server_name,
+                    ),
+                    {"next": user_url},
+                )
+            else:
+                url = url_concat(
+                    url_path_join(self.hub.base_url, "spawn", user.escaped_name),
+                    {"next": user_url},
+                )
 
         self.redirect(url)
 
