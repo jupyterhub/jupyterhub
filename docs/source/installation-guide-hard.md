@@ -1,21 +1,21 @@
-# Install Jupyterhub and Jupyterlab The Hard Way
+# Install Jupyterhub and Jupyterlab from the ground up
 
 The combination of [Jupyterhub](https://jupyterhub.readthedocs.io) and [Jupyterlab](https://jupyterlab.readthedocs.io)
-is a great way to make shared computing resources available to group.
+is a great way to make shared computing resources available to a group.
 
-These instruction are a guide for a manual, 'bare metal' install of [Jupyterhub](https://jupyterhub.readthedocs.io) 
+These instructions are a guide for a manual, 'bare metal' install of [Jupyterhub](https://jupyterhub.readthedocs.io) 
 and [Jupyterlab](https://jupyterlab.readthedocs.io). This is ideal for running on a single server: build a beast
 of a machine and share it within your lab, or use a virtual machine from any VPS or cloud provider.
 
-This guide has similar goals to that of [The Littlest Jupyerhub](https://the-littlest-jupyterhub.readthedocs.io) setup
-script. However, instead of bundling all these step for you into one installer, we will perform every step manually - The Hard Way.
+This guide has similar goals to [The Littlest Jupyerhub](https://the-littlest-jupyterhub.readthedocs.io) setup
+script. However, instead of bundling all these step for you into one installer, we will perform every step manually.
 This makes it easy to customize any part (e.g. if you want to run other services on the same system and need to make them
 work together), as well as giving you full control and understanding of your setup.
 
 
 ## Prerequisites
 
-Your own server with administrator (root) access. Each user who will need access to Jupyter should have a
+Your own server with administrator (root) access. Each user who will access to Jupyter should have a
 standard user account on the machine. The install will be done through the command line - useful if you log into your 
 machine remotely using SSH.
 
@@ -29,7 +29,7 @@ Jupyterlab enables access to a multiple 'kernels', each one being a given enviro
 common is a Python environment, for scientific computing usually one managed by the `conda` package manager.
 
 This guide will set up Jupyterhub and Jupyterlab seperately from the Python environment. In other words, we treat
-Jupyterhub+Jupyterlab as a 'app' or webservice, which will connect to kernels available on the system. Specifically:
+Jupyterhub+Jupyterlab as a 'app' or webservice, which will connect to the kernels available on the system. Specifically:
 
 - We will create an installation of Jupyterhub and Jupyterlab using a virtualenv under `/opt` using the system Python.
 
@@ -52,7 +52,7 @@ work and a more reliable system.
 
 ### Setup the Jupyterhub and Jupyterlab in a virtual environment
 
-First we create a virtual environment under '/opt/jupyterhub'. The '/opt' folder is apps not belonging to the operating
+First we create a virtual environment under '/opt/jupyterhub'. The '/opt' folder is where apps not belonging to the operating
 system are [commonly installed](https://unix.stackexchange.com/questions/11544/what-is-the-difference-between-opt-and-usr-local).
 Both jupyterlab and jupyterhub will be installed into this virtualenv. Create it with the command:
 
