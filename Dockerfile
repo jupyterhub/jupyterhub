@@ -21,9 +21,9 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-# https://github.com/tianon/docker-brew-ubuntu-core/commit/3c462555392cb188830b7c91e29311b5fad90cfe
-ARG BASE_IMAGE=ubuntu:bionic-20190612@sha256:9b1702dcfe32c873a770a32cfd306dd7fc1c4fd134adfb783db68defc8894b3c
-FROM $BASE_IMAGE
+# https://github.com/tianon/docker-brew-ubuntu-core/commit/d4313e13366d24a97bd178db4450f63e221803f1
+ARG BASE_CONTAINER=ubuntu:bionic-20191029@sha256:6e9f67fa63b0323e9a1e587fd71c561ba48a034504fb804fd26fd8800039835d
+FROM $BASE_IMAGE AS builder
 
 USER root
 
@@ -83,7 +83,7 @@ RUN npm install -g configurable-http-proxy@^4.2.0 \
  && rm -rf ~/.npm
 
 # install the wheels we built in the first stage
-COPY --from=0 /src/jupyterhub/wheelhouse /tmp/wheelhouse
+COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
 RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
 
 RUN mkdir -p /srv/jupyterhub/
