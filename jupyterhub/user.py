@@ -770,6 +770,7 @@ class User:
             self.log.debug("Finished stopping %s", spawner._log_name)
             RUNNING_SERVERS.dec()
         finally:
+            spawner.server = None
             spawner.orm_spawner.started = None
             self.db.commit()
             # trigger post-stop hook
