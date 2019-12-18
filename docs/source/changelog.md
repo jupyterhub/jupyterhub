@@ -9,7 +9,7 @@ command line for details.
 
 ## 1.0
 
-### [1.1.0] 2019-12-?? (as of abb93ad7)
+### [1.1.0] 2019-12-?? (as of d9955a05)
 
 1.1 is a release with lots of accumulated fixes and improvements,
 especially in performance, metrics, and customization.
@@ -57,6 +57,7 @@ Thanks to everyone who has contributed to this release!
 
 #### Fixes
 
+- Cleanup if spawner stop fails [#2849](https://github.com/jupyterhub/jupyterhub/pull/2849) ([@gabber12](https://github.com/gabber12))
 - Fix an issue occurring with the default spawner and `internal_ssl` enabled [#2785](https://github.com/jupyterhub/jupyterhub/pull/2785) ([@rpwagner](https://github.com/rpwagner))
 - Fix named servers to not be spawnable unless activated [#2772](https://github.com/jupyterhub/jupyterhub/pull/2772) ([@bitnik](https://github.com/bitnik))
 - JupyterHub now awaits proxy availability before accepting web requests [#2750](https://github.com/jupyterhub/jupyterhub/pull/2750) ([@minrk](https://github.com/minrk))
@@ -76,6 +77,7 @@ Thanks to everyone who has contributed to this release!
 
 #### Maintenance
 
+- chore: Dockerfile updates [#2853](https://github.com/jupyterhub/jupyterhub/pull/2853) ([@jgwerner](https://github.com/jgwerner))
 - simplify Dockerfile [#2840](https://github.com/jupyterhub/jupyterhub/pull/2840) ([@minrk](https://github.com/minrk))
 - docker: fix onbuild image arg [#2839](https://github.com/jupyterhub/jupyterhub/pull/2839) ([@minrk](https://github.com/minrk))
 - remove redundant pip package list in docs environment.yml [#2838](https://github.com/jupyterhub/jupyterhub/pull/2838) ([@minrk](https://github.com/minrk))
