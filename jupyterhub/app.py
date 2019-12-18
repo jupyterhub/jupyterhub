@@ -2227,6 +2227,14 @@ class JupyterHub(Application):
         if self.generate_config or self.generate_certs or self.subapp:
             return
         self._start_future = asyncio.Future()
+
+        def record_start(f):
+            startup_time = time.perf_counter() - hub_startup_start_time
+            self.log.debug("It took %.3f seconds for the Hub to start", startup_time)
+            HUB_STARTUP_DURATION_SECONDS.observe(startup_time)
+
+        self._start_future.add_done_callback(record_start)
+
         self.load_config_file(self.config_file)
         self.init_logging()
         self.log.info("Running JupyterHub version %s", jupyterhub.__version__)
@@ -2304,10 +2312,6 @@ class JupyterHub(Application):
             )
 
         init_spawners_future.add_done_callback(log_init_time)
-
-        HUB_STARTUP_DURATION_SECONDS.observe(
-            time.perf_counter() - hub_startup_start_time
-        )
 
         try:
 
