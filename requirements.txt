@@ -10,5 +10,5 @@ prometheus_client>=0.0.21
 python-dateutil
 requests
 SQLAlchemy>=1.1
-tornado>=5.0
+tornado>=5.0,<6.0
 traitlets>=4.3.2
