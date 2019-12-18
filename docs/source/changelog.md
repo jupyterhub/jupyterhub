@@ -9,9 +9,29 @@ command line for details.
 
 ## 1.0
 
-### [1.1.0] 2019-??-?? (as of abb93ad7)
+### [1.1.0] 2019-12-?? (as of abb93ad7)
 
-TODO: Write a summary about the changes.
+1.1 is a release with lots of accumulated fixes and improvements,
+especially in performance, metrics, and customization.
+There are no database changes in 1.1, so no database upgrade is required
+when upgrading from 1.0 to 1.1.
+
+Of particular interest to deployments with automatic health checking and/or large numbers of users is that the slow startup time
+introduced in 1.0 by additional spawner validation can now be mitigated by `JupyterHub.init_spawners_timeout`,
+allowing the Hub to become responsive before the spawners may have finished validating.
+
+Several new Prometheus metrics are added (and others fixed!)
+to measure sources of common performance issues,
+such as proxy interactions and startup.
+
+1.1 also begins adoption of the Jupyter telemetry project in JupyterHub,
+See [The Jupyter Telemetry docs](https://jupyter-telemetry.readthedocs.io)
+for more info. The only events so far are starting and stopping servers,
+but more will be added in future releases.
+
+There are many more fixes and improvements listed below.
+Thanks to everyone who has contributed to this release!
+
 
 #### New
 
