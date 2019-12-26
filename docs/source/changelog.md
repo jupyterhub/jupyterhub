@@ -7,9 +7,9 @@ command line for details.
 
 ## [Unreleased]
 
-## 1.0
+## 1.1
 
-### [1.1.0] 2019-12-?? (as of d9955a05)
+### [1.1.0b1] 2019-12-26
 
 1.1 is a release with lots of accumulated fixes and improvements,
 especially in performance, metrics, and customization.
