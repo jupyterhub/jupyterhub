@@ -90,6 +90,7 @@ RUN npm install -g configurable-http-proxy@^4.2.0 \
 
 # install the wheels we built in the first stage
 COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
+COPY --from=builder /src/jupyterhub/share /src/jupyterhub/share
 RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
 
 RUN mkdir -p /srv/jupyterhub/
