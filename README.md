@@ -10,14 +10,16 @@
 # [JupyterHub](https://github.com/jupyterhub/jupyterhub)
 
 
-[![PyPI](https://img.shields.io/pypi/v/jupyterhub.svg)](https://pypi.python.org/pypi/jupyterhub)
-[![Documentation Status](https://readthedocs.org/projects/jupyterhub/badge/?version=latest)](https://jupyterhub.readthedocs.org/en/latest/?badge=latest)
-[![Build Status](https://travis-ci.org/jupyterhub/jupyterhub.svg?branch=master)](https://travis-ci.org/jupyterhub/jupyterhub)
-[![Circle CI](https://circleci.com/gh/jupyterhub/jupyterhub.svg?style=shield&circle-token=b5b65862eb2617b9a8d39e79340b0a6b816da8cc)](https://circleci.com/gh/jupyterhub/jupyterhub)
-[![codecov.io](https://codecov.io/github/jupyterhub/jupyterhub/coverage.svg?branch=master)](https://codecov.io/github/jupyterhub/jupyterhub?branch=master)
-[![GitHub](https://img.shields.io/badge/issue_tracking-github-blue.svg)](https://github.com/jupyterhub/jupyterhub/issues)
-[![Discourse](https://img.shields.io/badge/help_forum-discourse-blue.svg)](https://discourse.jupyter.org/c/jupyterhub)
-[![Gitter](https://img.shields.io/badge/social_chat-gitter-blue.svg)](https://gitter.im/jupyterhub/jupyterhub)
+[![Latest PyPI version](https://img.shields.io/pypi/v/jupyterhub?logo=pypi)](https://pypi.python.org/pypi/jupyterhub)
+[![Latest conda-forge version](https://img.shields.io/conda/vn/conda-forge/jupyterhub?logo=conda-forge)](https://www.npmjs.com/package/jupyterhub)
+[![Documentation build status](https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest/)
+[![TravisCI build status](https://img.shields.io/travis/jupyterhub/jupyterhub/master?logo=travis)](https://travis-ci.org/jupyterhub/jupyterhub)
+[![DockerHub build status](https://img.shields.io/docker/build/jupyterhub/jupyterhub?logo=docker&label=build)](https://hub.docker.com/r/jupyterhub/jupyterhub/tags)
+[![CircleCI build status](https://img.shields.io/circleci/build/github/jupyterhub/jupyterhub?logo=circleci)](https://circleci.com/gh/jupyterhub/jupyterhub)<!-- CircleCI Token: b5b65862eb2617b9a8d39e79340b0a6b816da8cc -->
+[![Test coverage of code](https://codecov.io/gh/jupyterhub/jupyterhub/branch/master/graph/badge.svg)](https://codecov.io/gh/jupyterhub/jupyterhub)
+[![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
+[![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
+[![Gitter](https://img.shields.io/badge/social_chat-gitter-blue?logo=gitter)](https://gitter.im/jupyterhub/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** which spawns, manages, and proxies multiple instances of the
