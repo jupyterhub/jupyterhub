@@ -3,6 +3,9 @@ language: python
 sudo: false
 cache:
   - pip
+python:
+  - &allowed_failure_1 3.8
+  - &allowed_failure_2 nightly
 env:
   global:
     - MYSQL_HOST=127.0.0.1
@@ -93,9 +96,7 @@ matrix:
         - PGPASSWORD=hub[test/:?
         # password in url is url-encoded (urllib.parse.quote($PGPASSWORD, safe=''))
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
-    - &allowed_failure_1 python: 3.8
-    - &allowed_failure_2 python: nightly
   allow_failures:
-    - *allowed_failure_1
-    - *allowed_failure_2
+    - python: *allowed_failure_1
+    - python: *allowed_failure_2
   fast_finish: true
