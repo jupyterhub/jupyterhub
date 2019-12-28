@@ -1,22 +1,18 @@
-dist: bionic
+dist: xenial
 language: python
 cache:
   - pip
-python:
-  # These lines will yield additional jobs, and they will be separated out as
-  # allowed to fail in the Travis web user interface as compared to if we would
-  # add them in the matrix.include below instead.
-  - &allowed_failure_1 3.8
-  - &allowed_failure_2 nightly
 env:
   global:
     - MYSQL_HOST=127.0.0.1
     - MYSQL_TCP_PORT=13306
+
+# request additional services for the jobs to access
 services:
   - postgresql
   - docker
 
-# installing dependencies
+# install dependencies for running pytest (but not linting)
 before_install:
   - set -e
   - nvm install 6; nvm use 6
@@ -36,58 +32,64 @@ before_install:
       DB=postgres bash ci/init-db.sh
       pip install psycopg2-binary
     fi
+
+# install general dependencies
 install:
   - pip install --upgrade pip
   - pip install --upgrade --pre -r dev-requirements.txt .
   - pip freeze
 
-# running tests
+# run tests
 script:
-  - |
-    # run tests
-    if [[ -z "$TEST" ]]; then
-      pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
-    fi
-  - |
-    # run autoformat
-    if [[ "$TEST" == "lint" ]]; then
-      pre-commit run --all-files
-    fi
+  - pytest -v --maxfail=2 --cov=jupyterhub jupyterhub/tests
+
+# collect test coverage information
 after_success:
   - codecov
-after_failure:
-  - |
-    # point to auto-lint-fix
-    if [[ "$TEST" == "lint" ]]; then
-      echo "You can install pre-commit hooks to automatically run formatting"
-      echo "on each commit with:"
-      echo "    pre-commit install"
-      echo "or you can run by hand on staged files with"
-      echo "    pre-commit run"
-      echo "or after-the-fact on already committed files with"
-      echo "    pre-commit run --all-files"
-    fi
-matrix:
+
+# list the jobs
+jobs:
   include:
-    # With TEST=lint and TEST=docs we won't run pytest
-    - python: 3.7
-      env: TEST=lint
+    - python: 3.6
+      env: ONLY_LINT=true
+      # NOTE: It does not suffice to override to: null, [], or [""]. Travis will
+      #       fall back to the default if we do.
+      before_install: echo "Do nothing before install."
+      script:
+        - pre-commit run --all-files
+      after_success: echo "Do nothing after success."
+      after_failure:
+        - |
+          echo "You can install pre-commit hooks to automatically run formatting"
+          echo "on each commit with:"
+          echo "    pre-commit install"
+          echo "or you can run by hand on staged files with"
+          echo "    pre-commit run"
+          echo "or after-the-fact on already committed files with"
+          echo "    pre-commit run --all-files"
     # When we run pytest, we want to run it with python>=3.5 as well as with
     # various configurations. We increment the python version at the same time
     # as we test new configurations in order to reduce the number of test jobs.
     - python: 3.5
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
-      dist: xenial
       env:
         - JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:$MYSQL_TCP_PORT/jupyterhub
     - python: 3.7
       env:
         - PGUSER=jupyterhub
         - PGPASSWORD=hub[test/:?
-        # password in url is url-encoded (urllib.parse.quote($PGPASSWORD, safe=''))
+        # The password in url below is url-encoded with: urllib.parse.quote($PGPASSWORD, safe='')
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
+    - &allowed_failure_1
+      python: 3.8
+    - &allowed_failure_2
+      python: nightly
+    - &allowed_failure_3
+      python: 3.7
+      dist: bionic
   allow_failures:
-    - python: *allowed_failure_1
-    - python: *allowed_failure_2
+    - *allowed_failure_1
+    - *allowed_failure_2
+    - *allowed_failure_3
   fast_finish: true
