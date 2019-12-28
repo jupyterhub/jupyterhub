@@ -1,6 +1,5 @@
 dist: bionic
 language: python
-sudo: false
 cache:
   - pip
 python:
