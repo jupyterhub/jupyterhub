@@ -1,11 +1,8 @@
+dist: bionic
 language: python
 sudo: false
 cache:
   - pip
-python:
-  - 3.6
-  - 3.5
-  - nightly
 env:
   global:
     - MYSQL_HOST=127.0.0.1
@@ -75,26 +72,30 @@ after_failure:
       echo "    pre-commit run --all-files"
     fi
 matrix:
-  fast_finish: true
   include:
-    - python: 3.6
+    # With TEST=lint and TEST=docs we won't run pytest
+    - python: 3.7
       env: TEST=lint
-    - python: 3.6
+    - python: 3.7
       env: TEST=docs
-    - python: 3.6
+    # When we run pytest, we want to run it with python>=3.5 as well as with
+    # various configurations. We increment the python version at the same time
+    # as we test new configurations in order to reduce the number of test jobs.
+    - python: 3.5
       env: JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000
     - python: 3.6
+      dist: xenial
       env:
         - JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:$MYSQL_TCP_PORT/jupyterhub
-    - python: 3.6
+    - python: 3.7
       env:
         - PGUSER=jupyterhub
         - PGPASSWORD=hub[test/:?
         # password in url is url-encoded (urllib.parse.quote($PGPASSWORD, safe=''))
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
-    - python: 3.7
-      dist: xenial
-    - python: 3.8
-      if: tag IS present
+    - &allowed_failure_1 python: 3.8
+    - &allowed_failure_2 python: nightly
   allow_failures:
-    - python: nightly
+    - *allowed_failure_1
+    - *allowed_failure_2
+  fast_finish: true
