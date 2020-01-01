@@ -2046,7 +2046,7 @@ class JupyterHub(Application):
         self.oauth_provider = make_provider(
             lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
-            login_url=url_path_join(base_url, 'login'),
+            login_url=self.authenticator.login_url(base_url),
         )
 
     def cleanup_oauth_clients(self):
