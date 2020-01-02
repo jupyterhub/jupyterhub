@@ -981,6 +981,7 @@ class PAMAuthenticator(LocalAuthenticator):
             uid = pwd.getpwnam(username).pw_uid
             username = pwd.getpwuid(uid).pw_name
             username = self.username_map.get(username, username)
+            return username
         else:
             return super().normalize_username(username)
 
