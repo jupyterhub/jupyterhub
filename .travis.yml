@@ -84,20 +84,12 @@ jobs:
         - PGPASSWORD=hub[test/:?
         # The password in url below is url-encoded with: urllib.parse.quote($PGPASSWORD, safe='')
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
-    - &allowed_failure_1
-      # Using an python version older than 3.7 on bionic has issues, but bionic
-      # comes with Python 3.7 so let's accept that.
-      name: python:3.8 + dist:bionic
+    - name: python:3.8
+      python: 3.8
+  allow_failures:
+    - name: python:3.8 + dist:bionic
       python: 3.8
       dist: bionic
-    - &allowed_failure_2
-      name: python:3.8
-      python: 3.8
-    - &allowed_failure_3
-      name: python:nightly
+    - name: python:nightly
       python: nightly
-  allow_failures:
-    - *allowed_failure_1
-    - *allowed_failure_2
-    - *allowed_failure_3
   fast_finish: true

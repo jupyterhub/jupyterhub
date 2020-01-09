@@ -76,7 +76,8 @@ async def test_spawner(db, request):
     assert status is None
     await spawner.stop()
     status = await spawner.poll()
-    assert status == 1
+    assert status is not None
+    assert isinstance(status, int)
 
 
 async def wait_for_spawner(spawner, timeout=10):
