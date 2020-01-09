@@ -972,11 +972,11 @@ class Spawner(LoggingConfigurable):
             except Exception:
                 self.log.exception("post_stop_hook failed with exception: %s", self)
 
-    def run_auth_state_hook(self, auth_state):
+    async def run_auth_state_hook(self, auth_state):
         """Run the auth_state_hook if defined"""
         if self.auth_state_hook is not None:
             try:
-                return self.auth_state_hook(self, auth_state)
+                await maybe_future(self.auth_state_hook(self, auth_state))
             except Exception:
                 self.log.exception("auth_stop_hook failed with exception: %s", self)
 

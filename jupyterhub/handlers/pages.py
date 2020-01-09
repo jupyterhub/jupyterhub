@@ -67,9 +67,6 @@ class HomeHandler(BaseHandler):
         else:
             url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
-        auth_state = await user.get_auth_state()
-        user.spawner.run_auth_state_hook(auth_state)
-
         html = self.render_template(
             'home.html',
             user=user,
@@ -149,6 +146,7 @@ class SpawnHandler(BaseHandler):
             server_name = ''
 
         spawner = user.spawners[server_name]
+
         # resolve `?next=...`, falling back on the spawn-pending url
         # must not be /user/server for named servers,
         # which may get handled by the default server if they aren't ready yet
@@ -175,6 +173,12 @@ class SpawnHandler(BaseHandler):
 
         # Add handler to spawner here so you can access query params in form rendering.
         spawner.handler = self
+
+        # auth_state may be an input to options form,
+        # so resolve the auth state hook here
+        auth_state = await user.get_auth_state()
+        await spawner.run_auth_state_hook(auth_state)
+
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
