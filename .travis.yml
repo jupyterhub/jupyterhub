@@ -86,10 +86,11 @@ jobs:
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
     - name: python:3.8
       python: 3.8
-  allow_failures:
     - name: python:3.8 + dist:bionic
       python: 3.8
       dist: bionic
     - name: python:nightly
       python: nightly
+  allow_failures:
+    - name: python:nightly
   fast_finish: true
