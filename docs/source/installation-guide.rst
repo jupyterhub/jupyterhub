@@ -11,3 +11,4 @@ running on your own infrastructure.
    quickstart
    quickstart-docker
    installation-basics
+   installation-guide-hard
