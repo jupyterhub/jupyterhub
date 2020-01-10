@@ -18,6 +18,7 @@ from tempfile import mkdtemp
 
 from async_generator import async_generator
 from async_generator import yield_
+import psutil
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
 from traitlets import Any
@@ -1468,21 +1469,12 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        alive = await self._is_single_user_process_alive()
+        alive = psutil.pid_exists(self.pid)
         if not alive:
             self.clear_state()
             return 0
         else:
             return None
-
-    async def _is_single_user_process_alive(self):
-        """Returns True if the process still exists, False otherwise.
-        
-        Allows subclasses to implement this in a platform specific manner.
-        """
-        # send signal 0 to check if PID exists
-        # this doesn't work on Windows, but that's okay because we don't support Windows.
-        return await self._signal(0)
 
     async def _signal(self, sig):
         """Send given signal to a single-user server's process.
