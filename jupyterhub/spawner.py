@@ -16,9 +16,9 @@ import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
+import psutil
 from async_generator import async_generator
 from async_generator import yield_
-import psutil
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
 from traitlets import Any
