@@ -40,7 +40,7 @@ Jupyterhub+Jupyterlab as a 'app' or webservice, which will connect to the kernel
 - We will show how users can create their own private conda environments, where they can install whatever they like.
 
 
-User accounts for Jupyter are simply the user accounts of the system - this makes it easy for everyone to manage data 
+The default JupyterHub Authenticator uses PAM to authenticate system users with their username and password. One can [choose the authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authenticators) that best suits their needs. In this guide we will use the default Authenticator because it makes it easy for everyone to manage data 
 in their home folder and to mix and match different services and access methods (e.g. SSH) which all work using the 
 Linux system user accounts.
 
@@ -299,5 +299,4 @@ You will need to restart nginx for the new configuration to take effect.
 
   }
 ```
-
 
