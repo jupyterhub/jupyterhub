@@ -15,7 +15,7 @@ work together), as well as giving you full control and understanding of your set
 
 ## Prerequisites
 
-Your own server with administrator (root) access. Each user who will access to Jupyter should have a
+Your own server with administrator (root) access. Each user who will access JupyterHub should have a
 standard user account on the machine. The install will be done through the command line - useful if you log into your 
 machine remotely using SSH.
 
@@ -299,6 +299,5 @@ You will need to restart nginx for the new configuration to take effect.
 
   }
 ```
-
 
 
