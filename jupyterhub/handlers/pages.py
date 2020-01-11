@@ -112,6 +112,9 @@ class SpawnHandler(BaseHandler):
         """
 
         user = current_user = self.current_user
+        auth_state = await user.get_auth_state()
+        user.spawner.run_auth_state_hook(auth_state)
+
         if for_user is not None and for_user != user.name:
             if not user.admin:
                 raise web.HTTPError(
