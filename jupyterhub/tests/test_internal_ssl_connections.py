@@ -5,8 +5,8 @@ from subprocess import check_output
 from unittest import mock
 from urllib.parse import urlparse
 
-import OpenSSL.SSL
 import pytest
+from requests.exceptions import ConnectionError
 from requests.exceptions import SSLError
 from tornado import gen
 
@@ -17,7 +17,7 @@ from .utils import async_requests
 ssl_enabled = True
 
 # possible errors raised by ssl failures
-SSL_ERROR = (SSLError, OpenSSL.SSL.Error)
+SSL_ERROR = (SSLError, ConnectionError)
 
 
 @gen.coroutine
