@@ -267,3 +267,89 @@ async def test_named_server_spawn_form(app, username, named_servers):
     assert server_name in user.spawners
     spawner = user.spawners[server_name]
     spawner.user_options == {'energy': '938MeV', 'bounds': [-10, 10], 'notspecified': 5}
+
+
+async def test_user_redirect_default_server_name(app, username, default_server_name):
+    name = username
+    server_name = default_server_name
+    app.default_server_name = default_server_name
+    cookies = await app.login_user(name)
+
+    r = await api_request(app, 'users', username, 'servers', server_name, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''
+
+    r = await get_page('/user-redirect/tree/top/', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, '/hub/login')
+    query = urlparse(r.url).query
+    assert query == urlencode(
+        {'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')}
+    )
+
+    r = await get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    while '/spawn-pending/' in path:
+        await asyncio.sleep(0.1)
+        r = await async_requests.get(r.url, cookies=cookies)
+        path = urlparse(r.url).path
+    assert path == ujoin(
+        app.base_url, '/user/{}/{}/notebooks/test.ipynb'.format(name, server_name)
+    )
+
+
+async def test_user_redirect_hook_default_server_name(
+    app, username, default_server_name
+):
+    """
+    Test proper behavior of user_redirect_hook when c.JupyterHub.default_server_name is set
+    """
+    name = username
+    server_name = default_server_name
+    app.default_server_name = default_server_name
+    cookies = await app.login_user(name)
+
+    r = await api_request(app, 'users', username, 'servers', server_name, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''
+
+    async def dummy_redirect(path, request, user, base_url):
+        assert base_url == app.base_url
+        assert path == 'redirect-to-terminal'
+        assert request.uri == ujoin(
+            base_url, 'hub', 'user-redirect', 'redirect-to-terminal'
+        )
+        url = ujoin(user.url, '/terminals/1')
+        return url
+
+    app.user_redirect_hook = dummy_redirect
+
+    r = await get_page('/user-redirect/redirect-to-terminal', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == ujoin(app.base_url, '/hub/login')
+    query = urlparse(r.url).query
+    assert query == urlencode(
+        {'next': ujoin(app.hub.base_url, '/user-redirect/redirect-to-terminal')}
+    )
+
+    # We don't actually want to start the server by going through spawn - just want to make sure
+    # the redirect is to the right place
+    r = await get_page(
+        '/user-redirect/redirect-to-terminal',
+        app,
+        cookies=cookies,
+        allow_redirects=False,
+    )
+    r.raise_for_status()
+    redirected_url = urlparse(r.headers['Location'])
+    assert redirected_url.path == ujoin(
+        app.base_url, 'user', username, server_name, 'terminals/1'
+    )
