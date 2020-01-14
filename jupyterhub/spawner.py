@@ -1490,11 +1490,10 @@ class LocalProcessSpawner(Spawner):
         """
         try:
             os.kill(self.pid, sig)
+        except ProcessLookupError:
+            return False  # process is gone
         except OSError as e:
-            if e.errno == errno.ESRCH:
-                return False  # process is gone
-            else:
-                raise
+            raise  # Can be EPERM or EINVAL
         return True  # process exists
 
     async def stop(self, now=False):
