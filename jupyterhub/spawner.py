@@ -16,7 +16,8 @@ import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
-import psutil
+if os.name == 'nt':
+    import psutil
 from async_generator import async_generator
 from async_generator import yield_
 from sqlalchemy import inspect
@@ -1469,7 +1470,11 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        alive = psutil.pid_exists(self.pid)
+        # We use pustil.pid_exists on windows
+        if os.name == 'nt':
+            alive = psutil.pid_exists(self.pid)
+        else:
+            alive = await self._signal(0)
         if not alive:
             self.clear_state()
             return 0
