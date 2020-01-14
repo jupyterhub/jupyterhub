@@ -6,6 +6,7 @@ from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
+from requests.exceptions import ConnectionError
 from requests.exceptions import SSLError
 from tornado import gen
 
@@ -14,6 +15,9 @@ from .test_api import add_user
 from .utils import async_requests
 
 ssl_enabled = True
+
+# possible errors raised by ssl failures
+SSL_ERROR = (SSLError, ConnectionError)
 
 
 @gen.coroutine
@@ -41,7 +45,7 @@ def wait_for_spawner(spawner, timeout=10):
 
 async def test_connection_hub_wrong_certs(app):
     """Connecting to the internal hub url fails without correct certs"""
-    with pytest.raises(SSLError):
+    with pytest.raises(SSL_ERROR):
         kwargs = {'verify': False}
         r = await async_requests.get(app.hub.url, **kwargs)
         r.raise_for_status()
@@ -49,7 +53,7 @@ async def test_connection_hub_wrong_certs(app):
 
 async def test_connection_proxy_api_wrong_certs(app):
     """Connecting to the proxy api fails without correct certs"""
-    with pytest.raises(SSLError):
+    with pytest.raises(SSL_ERROR):
         kwargs = {'verify': False}
         r = await async_requests.get(app.proxy.api_url, **kwargs)
         r.raise_for_status()
@@ -68,7 +72,7 @@ async def test_connection_notebook_wrong_certs(app):
         status = await spawner.poll()
         assert status is None
 
-        with pytest.raises(SSLError):
+        with pytest.raises(SSL_ERROR):
             kwargs = {'verify': False}
             r = await async_requests.get(spawner.server.url, **kwargs)
             r.raise_for_status()
