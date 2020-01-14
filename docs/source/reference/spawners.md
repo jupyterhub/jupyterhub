@@ -74,7 +74,7 @@ It should return `None` if it is still running,
 and an integer exit status, otherwise.
 
 For the local process case, `Spawner.poll` uses `os.kill(PID, 0)`
-to check if the local process is still running.
+to check if the local process is still running. On Windows, it uses `psutil.pid_exists`.
 
 ### Spawner.stop
 
