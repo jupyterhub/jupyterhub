@@ -27,6 +27,17 @@ def named_servers(app):
         yield
 
 
+@pytest.fixture
+def default_server_name(app, named_servers):
+    """configure app to use a default server name"""
+    server_name = 'myserver'
+    try:
+        app.default_server_name = server_name
+        yield server_name
+    finally:
+        app.default_server_name = ''
+
+
 async def test_default_server(app, named_servers):
     """Test the default /users/:user/server handler when named servers are enabled"""
     username = 'rosie'
@@ -269,10 +280,11 @@ async def test_named_server_spawn_form(app, username, named_servers):
     spawner.user_options == {'energy': '938MeV', 'bounds': [-10, 10], 'notspecified': 5}
 
 
-async def test_user_redirect_default_server_name(app, username, default_server_name):
+async def test_user_redirect_default_server_name(
+    app, username, named_servers, default_server_name
+):
     name = username
     server_name = default_server_name
-    app.default_server_name = default_server_name
     cookies = await app.login_user(name)
 
     r = await api_request(app, 'users', username, 'servers', server_name, method='post')
@@ -311,7 +323,6 @@ async def test_user_redirect_hook_default_server_name(
     """
     name = username
     server_name = default_server_name
-    app.default_server_name = default_server_name
     cookies = await app.login_user(name)
 
     r = await api_request(app, 'users', username, 'servers', server_name, method='post')
