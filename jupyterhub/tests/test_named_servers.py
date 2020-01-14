@@ -1,6 +1,8 @@
 """Tests for named servers"""
+import asyncio
 import json
 from unittest import mock
+from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import pytest
@@ -296,10 +298,10 @@ async def test_user_redirect_default_server_name(
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/hub/login')
+    assert path == url_path_join(app.base_url, '/hub/login')
     query = urlparse(r.url).query
     assert query == urlencode(
-        {'next': ujoin(app.hub.base_url, '/user-redirect/tree/top/')}
+        {'next': url_path_join(app.hub.base_url, '/user-redirect/tree/top/')}
     )
 
     r = await get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
@@ -310,13 +312,13 @@ async def test_user_redirect_default_server_name(
         await asyncio.sleep(0.1)
         r = await async_requests.get(r.url, cookies=cookies)
         path = urlparse(r.url).path
-    assert path == ujoin(
+    assert path == url_path_join(
         app.base_url, '/user/{}/{}/notebooks/test.ipynb'.format(name, server_name)
     )
 
 
 async def test_user_redirect_hook_default_server_name(
-    app, username, default_server_name
+    app, username, named_servers, default_server_name
 ):
     """
     Test proper behavior of user_redirect_hook when c.JupyterHub.default_server_name is set
@@ -333,10 +335,10 @@ async def test_user_redirect_hook_default_server_name(
     async def dummy_redirect(path, request, user, base_url):
         assert base_url == app.base_url
         assert path == 'redirect-to-terminal'
-        assert request.uri == ujoin(
+        assert request.uri == url_path_join(
             base_url, 'hub', 'user-redirect', 'redirect-to-terminal'
         )
-        url = ujoin(user.url, '/terminals/1')
+        url = url_path_join(user.url, '/terminals/1')
         return url
 
     app.user_redirect_hook = dummy_redirect
@@ -345,10 +347,10 @@ async def test_user_redirect_hook_default_server_name(
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
-    assert path == ujoin(app.base_url, '/hub/login')
+    assert path == url_path_join(app.base_url, '/hub/login')
     query = urlparse(r.url).query
     assert query == urlencode(
-        {'next': ujoin(app.hub.base_url, '/user-redirect/redirect-to-terminal')}
+        {'next': url_path_join(app.hub.base_url, '/user-redirect/redirect-to-terminal')}
     )
 
     # We don't actually want to start the server by going through spawn - just want to make sure
@@ -361,6 +363,6 @@ async def test_user_redirect_hook_default_server_name(
     )
     r.raise_for_status()
     redirected_url = urlparse(r.headers['Location'])
-    assert redirected_url.path == ujoin(
+    assert redirected_url.path == url_path_join(
         app.base_url, 'user', username, server_name, 'terminals/1'
     )
