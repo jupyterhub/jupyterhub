@@ -48,6 +48,7 @@ help:
 	@echo "  doctest    to run all doctests embedded in the documentation (if enabled)"
 	@echo "  coverage   to run coverage check of the documentation (if enabled)"
 	@echo "  spelling   to run spell check on documentation"
+	@echo "  generate   to generate documentation by inspecting the source code"
 
 clean:
 	rm -rf $(BUILDDIR)/*
@@ -59,6 +60,9 @@ rest-api: source/_static/rest-api/index.html
 
 source/_static/rest-api/index.html: rest-api.yml node_modules
 	npm run rest-api
+
+auto-generate:
+	python3 generator.py
 
 html: rest-api
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
