@@ -61,10 +61,10 @@ rest-api: source/_static/rest-api/index.html
 source/_static/rest-api/index.html: rest-api.yml node_modules
 	npm run rest-api
 
-auto-generate:
+generate:
 	python3 generator.py
 
-html: rest-api
+html: rest-api generate
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
