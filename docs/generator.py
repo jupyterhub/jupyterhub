@@ -3,25 +3,36 @@ from pytablewriter.style import Style
 
 import jupyterhub.metrics
 
+
 class Generator:
-
-    def prometheus_metrics(self):
-        filename = "./source/monitoring/metrics.md"
-
+    @classmethod
+    def create_writer(cls, table_name, headers, values):
         writer = MarkdownTableWriter()
-        writer.table_name = "List of Prometheus Metrics\n"
-        writer.headers = ["Type", "Name", "Description"]
-        writer.value_matrix = []
+        writer.table_name = table_name
+        writer.headers = headers
+        writer.value_matrix = values
         writer.margin = 1
+        [writer.set_style(header, Style(align="center")) for header in headers]
+        return writer
 
+    def _parse_metrics(self):
+        table_rows = []
         for name in dir(jupyterhub.metrics):
             obj = getattr(jupyterhub.metrics, name)
             if obj.__class__.__module__.startswith('prometheus_client.'):
                 for metric in obj.describe():
-                    writer.value_matrix.append([metric.type, metric.name, metric.documentation])
+                    table_rows.append([metric.type, metric.name, metric.documentation])
+        return table_rows
 
+    def prometheus_metrics(self):
+        filename = "./source/monitoring/metrics.md"
+        table_name = "List of Prometheus Metrics\n"
+        headers = ["Type", "Name", "Description"]
+        values = self._parse_metrics()
+        writer = Generator.create_writer(table_name, headers, values)
         with open(filename, 'w') as f:
             f.write(writer.dumps())
+
 
 def main():
     doc_generator = Generator()

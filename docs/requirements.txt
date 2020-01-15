@@ -8,6 +8,5 @@ pydata-sphinx-theme
 recommonmark>=0.6
 sphinx-copybutton
 sphinx-jsonschema
-sphinx>=1.7
-pytablewriter==0.46.3
 sphinx-markdown-tables==0.0.10
+sphinx>=1.7
