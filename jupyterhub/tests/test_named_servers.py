@@ -338,6 +338,8 @@ async def test_user_redirect_hook_default_server_name(
         assert request.uri == url_path_join(
             base_url, 'hub', 'user-redirect', 'redirect-to-terminal'
         )
+        # exclude custom server_name
+        # custom hook is respected exactly
         url = url_path_join(user.url, '/terminals/1')
         return url
 
@@ -364,5 +366,5 @@ async def test_user_redirect_hook_default_server_name(
     r.raise_for_status()
     redirected_url = urlparse(r.headers['Location'])
     assert redirected_url.path == url_path_join(
-        app.base_url, 'user', username, server_name, 'terminals/1'
+        app.base_url, 'user', username, 'terminals/1'
     )
