@@ -223,7 +223,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         return True
 
     @web.authenticated
-    def get(self):
+    async def get(self):
         """GET /oauth/authorization
 
         Render oauth confirmation page:
@@ -251,8 +251,14 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 return
 
             # Render oauth 'Authorize application...' page
+            auth_state = await self.current_user.get_auth_state()
             self.write(
-                self.render_template("oauth.html", scopes=scopes, oauth_client=client)
+                self.render_template(
+                    "oauth.html",
+                    auth_state=auth_state,
+                    scopes=scopes,
+                    oauth_client=client,
+                )
             )
 
         # Errors that should be shown to the user on the provider website

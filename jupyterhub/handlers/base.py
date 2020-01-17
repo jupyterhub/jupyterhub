@@ -1431,8 +1431,13 @@ class UserUrlHandler(BaseHandler):
             url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
+        auth_state = await user.get_auth_state()
         html = self.render_template(
-            "not_running.html", user=user, server_name=server_name, spawn_url=spawn_url
+            "not_running.html",
+            user=user,
+            server_name=server_name,
+            spawn_url=spawn_url,
+            auth_state=auth_state,
         )
         self.finish(html)
 
