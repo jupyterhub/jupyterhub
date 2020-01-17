@@ -186,7 +186,7 @@ class SpawnHandler(BaseHandler):
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
-            form = self._render_form(
+            form = await self._render_form(
                 for_user=user, spawner_options_form=spawner_options_form
             )
             self.finish(form)
@@ -248,7 +248,7 @@ class SpawnHandler(BaseHandler):
                 "Failed to spawn single-user server with form", exc_info=True
             )
             spawner_options_form = await user.spawner.get_options_form()
-            form = self._render_form(
+            form = await self._render_form(
                 for_user=user, spawner_options_form=spawner_options_form, message=str(e)
             )
             self.finish(form)
