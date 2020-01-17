@@ -67,8 +67,10 @@ class HomeHandler(BaseHandler):
         else:
             url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
+        auth_state = await user.get_auth_state()
         html = self.render_template(
             'home.html',
+            auth_state=auth_state,
             user=user,
             url=url,
             allow_named_servers=self.allow_named_servers,
@@ -91,10 +93,12 @@ class SpawnHandler(BaseHandler):
 
     default_url = None
 
-    def _render_form(self, for_user, spawner_options_form, message=''):
+    async def _render_form(self, for_user, spawner_options_form, message=''):
+        auth_state = await for_user.get_auth_state()
         return self.render_template(
             'spawn.html',
             for_user=for_user,
+            auth_state=auth_state,
             spawner_options_form=spawner_options_form,
             error_message=message,
             url=self.request.uri,
@@ -305,6 +309,8 @@ class SpawnPendingHandler(BaseHandler):
         # if spawning fails for any reason, point users to /hub/home to retry
         self.extra_error_html = self.spawn_home_error
 
+        auth_state = await user.get_auth_state()
+
         # First, check for previous failure.
         if (
             not spawner.active
@@ -324,6 +330,7 @@ class SpawnPendingHandler(BaseHandler):
             html = self.render_template(
                 "not_running.html",
                 user=user,
+                auth_state=auth_state,
                 server_name=server_name,
                 spawn_url=spawn_url,
                 failed=True,
@@ -345,7 +352,11 @@ class SpawnPendingHandler(BaseHandler):
             else:
                 page = "spawn_pending.html"
             html = self.render_template(
-                page, user=user, spawner=spawner, progress_url=spawner._progress_url
+                page,
+                user=user,
+                spawner=spawner,
+                progress_url=spawner._progress_url,
+                auth_state=auth_state,
             )
             self.finish(html)
             return
@@ -370,6 +381,7 @@ class SpawnPendingHandler(BaseHandler):
             html = self.render_template(
                 "not_running.html",
                 user=user,
+                auth_state=auth_state,
                 server_name=server_name,
                 spawn_url=spawn_url,
             )
@@ -389,7 +401,7 @@ class AdminHandler(BaseHandler):
 
     @web.authenticated
     @admin_only
-    def get(self):
+    async def get(self):
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
         mapping = {'running': orm.Spawner.server_id}
@@ -438,9 +450,11 @@ class AdminHandler(BaseHandler):
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
 
+        auth_state = await self.current_user.get_auth_state()
         html = self.render_template(
             'admin.html',
             current_user=self.current_user,
+            auth_state=auth_state,
             admin_access=self.settings.get('admin_access', False),
             users=users,
             running=running,
@@ -456,7 +470,7 @@ class TokenPageHandler(BaseHandler):
     """Handler for page requesting new API tokens"""
 
     @web.authenticated
-    def get(self):
+    async def get(self):
         never = datetime(1900, 1, 1)
 
         user = self.current_user
@@ -525,8 +539,12 @@ class TokenPageHandler(BaseHandler):
 
         oauth_clients = sorted(oauth_clients, key=sort_key, reverse=True)
 
+        auth_state = await self.current_user.get_auth_state()
         html = self.render_template(
-            'token.html', api_tokens=api_tokens, oauth_clients=oauth_clients
+            'token.html',
+            api_tokens=api_tokens,
+            oauth_clients=oauth_clients,
+            auth_state=auth_state,
         )
         self.finish(html)
 
