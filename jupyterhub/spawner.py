@@ -16,6 +16,8 @@ import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
 
+if os.name == 'nt':
+    import psutil
 from async_generator import async_generator
 from async_generator import yield_
 from sqlalchemy import inspect
@@ -1468,9 +1470,11 @@ class LocalProcessSpawner(Spawner):
             self.clear_state()
             return 0
 
-        # send signal 0 to check if PID exists
-        # this doesn't work on Windows, but that's okay because we don't support Windows.
-        alive = await self._signal(0)
+        # We use pustil.pid_exists on windows
+        if os.name == 'nt':
+            alive = psutil.pid_exists(self.pid)
+        else:
+            alive = await self._signal(0)
         if not alive:
             self.clear_state()
             return 0
@@ -1486,11 +1490,10 @@ class LocalProcessSpawner(Spawner):
         """
         try:
             os.kill(self.pid, sig)
+        except ProcessLookupError:
+            return False  # process is gone
         except OSError as e:
-            if e.errno == errno.ESRCH:
-                return False  # process is gone
-            else:
-                raise
+            raise  # Can be EPERM or EINVAL
         return True  # process exists
 
     async def stop(self, now=False):
