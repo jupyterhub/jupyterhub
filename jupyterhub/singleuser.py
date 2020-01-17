@@ -490,7 +490,7 @@ class SingleUserNotebookApp(NotebookApp):
             # protect against mixed timezone comparisons
             if not last_activity.tzinfo:
                 # assume naive timestamps are utc
-                self.log.warning("last activity is using naïve timestamps")
+                self.log.warning("last activity is using naive timestamps")
                 last_activity = last_activity.replace(tzinfo=timezone.utc)
 
         if self._last_activity_sent and last_activity < self._last_activity_sent:
