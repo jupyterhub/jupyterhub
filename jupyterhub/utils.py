@@ -50,7 +50,7 @@ ISO8601_s = '%Y-%m-%dT%H:%M:%SZ'
 def isoformat(dt):
     """Render a datetime object as an ISO 8601 UTC timestamp
 
-    Naïve datetime objects are assumed to be UTC
+    Naive datetime objects are assumed to be UTC
     """
     # allow null timestamps to remain None without
     # having to check if isoformat should be called

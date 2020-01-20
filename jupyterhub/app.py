@@ -2452,7 +2452,7 @@ class JupyterHub(Application):
                 continue
             dt = parse_date(route_data['last_activity'])
             if dt.tzinfo:
-                # strip timezone info to naïve UTC datetime
+                # strip timezone info to naive UTC datetime
                 dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
 
             if user.last_activity:

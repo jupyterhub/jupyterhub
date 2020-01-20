@@ -61,7 +61,7 @@ def parse_date(date_string):
     """
     dt = dateutil.parser.parse(date_string)
     if not dt.tzinfo:
-        # assume naïve timestamps are UTC
+        # assume naive timestamps are UTC
         dt = dt.replace(tzinfo=timezone.utc)
     return dt
 

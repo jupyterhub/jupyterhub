@@ -625,14 +625,14 @@ def _parse_timestamp(timestamp):
 
     - raise HTTPError(400) on parse error
     - handle and strip tz info for internal consistency
-      (we use naïve utc timestamps everywhere)
+      (we use naive utc timestamps everywhere)
     """
     try:
         dt = parse_date(timestamp)
     except Exception:
         raise web.HTTPError(400, "Not a valid timestamp: %r", timestamp)
     if dt.tzinfo:
-        # strip timezone info to naïve UTC datetime
+        # strip timezone info to naive UTC datetime
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
 
     now = datetime.utcnow()
