@@ -42,7 +42,8 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # copy only what we need to avoid unnecessary rebuilds
-COPY package.json \
+COPY bower-lite \
+     package.json \
      pyproject.toml \
      README.md \
      requirements.txt \
