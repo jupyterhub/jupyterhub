@@ -41,14 +41,10 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# copy only what we need to avoid unnecessary rebuilds
-COPY bower-lite \
-     package.json \
-     pyproject.toml \
-     README.md \
-     requirements.txt \
-     setup.py \
-     /src/jupyterhub/
+# copy everything except whats in .dockerignore, its a
+# compromise between needing to rebuild and maintaining
+# what needs to be part of the build
+COPY . /src/jupyterhub/
 COPY jupyterhub/ /src/jupyterhub/jupyterhub
 COPY share/ /src/jupyterhub/share
 
