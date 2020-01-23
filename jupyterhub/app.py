@@ -316,7 +316,7 @@ class JupyterHub(Application):
 
     @validate("config_file")
     def _validate_config_file(self, proposal):
-        if not os.path.isfile(proposal.value):
+        if not self.generate_config and not os.path.isfile(proposal.value):
             print(
                 "ERROR: Failed to find specified config file: {}".format(
                     proposal.value
