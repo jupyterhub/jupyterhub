@@ -88,7 +88,7 @@ sudo apt install nodejs npm
 Then install `configurable-http-proxy`:
 
 ```sh
-npm install -g configurable-http-proxy
+sudo npm install -g configurable-http-proxy
 ```
 
 ### Create the configuration for JupyterHub
@@ -206,7 +206,7 @@ sudo install -o root -g root -m 644 conda.gpg /etc/apt/trusted.gpg.d/
 Add Debian repo
 
 ```sh
-sudo echo "deb [arch=amd64] https://repo.anaconda.com/pkgs/misc/debrepo/conda stable main" > /etc/apt/sources.list.d/conda.list
+echo "deb [arch=amd64] https://repo.anaconda.com/pkgs/misc/debrepo/conda stable main" | sudo tee /etc/apt/sources.list.d/conda.list
 ```
 
 Install conda
@@ -314,6 +314,15 @@ Add the following snippet to your nginx configuration file (e.g. `/etc/nginx/sit
     proxy_set_header Connection $connection_upgrade;
 
   }
+```
+
+Also add this snippet before the *server* block:
+
+```
+map $http_upgrade $connection_upgrade {
+        default upgrade;
+        '' close;
+    }
 ```
 
 Nginx will not run if there are errors in the configuration, check your configuration using:
