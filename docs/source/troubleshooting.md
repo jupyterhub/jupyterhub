@@ -75,6 +75,47 @@ tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this
 command: 
 `docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub --ip 0.0.0.0 --port 8000`
 
+### How can I kill ports from JupyterHub managed services that have been orphaned?
+
+I started JupyterHub + nbgrader on the same host without containers. When I try to restart JupyterHub + nbgrader with this configuration, errors appear that the service accounts cannot start because the ports are being used.
+
+How can I kill the processes that are using these ports?
+
+Run the following command:
+
+    sudo kill -9 $(sudo lsof -t -i:<service_port>)
+
+Where `<service_port?` is the port used by the nbgrader course service. This configuration is specified in
+`jupyterhub_config.py`.
+
+### Why am I getting a Spawn failed error message?
+
+After successfully logging in to JupyterHub with a compatible authenticators, I get a 'Spawn failed' error message in the browser. The JupyterHub logs have `jupyterhub KeyError: "getpwnam(): name not found: <my_user_name>`.
+
+This issue occurs when the authenticator requires a local system user to exist. In these cases, you need to use a spawner
+that does not require an existing system user account, such as `DockerSpawner` or `KubeSpawner`.
+
+### How can I run JupyterHub with sudo but use my current env vars and virtualenv location?
+
+When launching JupyterHub with `sudo jupyterhub` I get import errors and my environment variables don't work.
+
+When launching services with `sudo ...` the shell won't have the same environment variables or `PATH`s in place. The most direct way to solve this issue is to use the full path to your python environment and add environment variables. For example:
+
+    sudo MY_ENV=abc123 /home/foo/venv/bin/python3 /srv/jupyterhub/jupyterhub
+
+### How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
+
+Use `docker logs <container>` where `<container>` is the container name defined within `docker-compose.yml`.  For example, to view the logs of the JupyterHub container use:
+
+    docker logs hub
+
+By default, the user's notebook server is named `jupyter-<username>` where `username` is the user's username within JupyterHub's db. So if you wanted to see the logs for user `foo` you would use:
+
+    docker logs jupyter-foo
+
+You can also tail logs to view them in real time using the `-f` option:
+
+    docker logs -f hub
 
 ## Errors
 
@@ -152,6 +193,29 @@ After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
 
+### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error.
+
+If possible, try to run the Jupyter Notebook as an externally managed service with one of the provided [jupyter/docker-stacks](https://github.com/jupyter/docker-stacks).
+
+Standard JupyterHub installations include a [jupyterhub-singleuser](https://github.com/jupyterhub/jupyterhub/blob/9fdab027daa32c9017845572ad9d5ba1722dbc53/setup.py#L116) command which is built from the `jupyterhub.singleuser:main` method. The `jupyterhub-singleuser` command is the default command when JupyterHub launches single-user Jupyter Notebooks. One of the goals of this command is to make sure the version of JupyterHub installed within the Jupyter Notebook coincides with the version of the JupyterHub server itself.
+
+If you launch a Jupyter Notebook with the `jupyterhub-singleuser` command directly from the command line the Jupyter Notebook won't have access to the `JUPYTERHUB_API_TOKEN` and will return:
+
+    JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?
+
+If you plan on testing `jupyterhub-singleuser` independently from JupyterHub, then you can set the api token environment variable. For example, if were to run the single-user Jupyter Notebook on the host, then:
+
+    export JUPYTERHUB_API_TOKEN=my_secret_token
+    jupyterhub-singleuser
+
+With a docker container, pass in the environment variable with the run command:
+
+    docker run -d \
+      -p 8888:8888 \
+      -e JUPYTERHUB_API_TOKEN=my_secret_token \
+      jupyter/datascience-notebook:latest
+
+[This example](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-notebook/external) demonstrates how to combine the use of the `jupyterhub-singleuser` environment variables when launching a Notebook as an externally managed service.
 
 ## How do I...?
 
@@ -280,8 +344,6 @@ logrotate /path/to/above-config
 Or use syslog:
 
     jupyterhub | logger -t jupyterhub
-
-
 
 ## Troubleshooting commands
 
