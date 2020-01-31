@@ -248,10 +248,13 @@ paths:
             when spawning via the API instead of spawn form.
             The structure of the options
             will depend on the Spawner's configuration.
+            The body itself will be available as `user_options` for the
+            Spawner.
           in: body
           required: false
           schema:
             type: object
+
       responses:
         '201':
           description: The user's notebook server has started
@@ -312,14 +315,18 @@ paths:
           in: path
           required: true
           type: string
-        - name: remove
-          description: |
-            Whether to fully remove the server, rather than just stop it.
-            Removing a server deletes things like the state of the stopped server.
+        - name: body
           in: body
           required: false
           schema:
-            type: boolean
+            type: object
+            properties:
+              remove:
+                type: boolean
+                description: |
+                  Whether to fully remove the server, rather than just stop it.
+                  Removing a server deletes things like the state of the stopped server.
+                  Default: false.
       responses:
         '204':
           description: The user's notebook named-server has stopped
