@@ -8,7 +8,7 @@
   "author": "",
   "license": "BSD-3-Clause",
   "devDependencies": {
-    "bootprint": "^1.0.0",
-    "bootprint-openapi": "^1.0.0"
+    "bootprint": "^4.0.4",
+    "bootprint-openapi": "^4.0.4"
   }
 }
