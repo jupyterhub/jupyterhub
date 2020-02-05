@@ -85,8 +85,7 @@ Run the following command:
 
     sudo kill -9 $(sudo lsof -t -i:<service_port>)
 
-Where `<service_port?` is the port used by the nbgrader course service. This configuration is specified in
-`jupyterhub_config.py`.
+Where `<service_port>` is the port used by the nbgrader course service. This configuration is specified in `jupyterhub_config.py`.
 
 ### Why am I getting a Spawn failed error message?
 
@@ -101,7 +100,11 @@ When launching JupyterHub with `sudo jupyterhub` I get import errors and my envi
 
 When launching services with `sudo ...` the shell won't have the same environment variables or `PATH`s in place. The most direct way to solve this issue is to use the full path to your python environment and add environment variables. For example:
 
-    sudo MY_ENV=abc123 /home/foo/venv/bin/python3 /srv/jupyterhub/jupyterhub
+```bash
+sudo MY_ENV=abc123 \
+  /home/foo/venv/bin/python3 \
+  /srv/jupyterhub/jupyterhub
+```
 
 ### How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
 
@@ -193,7 +196,13 @@ After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
 
-### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error.
+### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
+
+[JupyterHub services](https://jupyterhub.readthedocs.io/en/stable/reference/services.html) allow processes to interact with JupyterHub's REST API. Example use-cases include:
+
+* **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
+* **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such grading assignments.
+* **Private Dashboards**: share dashboards with certain group members.
 
 If possible, try to run the Jupyter Notebook as an externally managed service with one of the provided [jupyter/docker-stacks](https://github.com/jupyter/docker-stacks).
 
@@ -201,7 +210,10 @@ Standard JupyterHub installations include a [jupyterhub-singleuser](https://gith
 
 If you launch a Jupyter Notebook with the `jupyterhub-singleuser` command directly from the command line the Jupyter Notebook won't have access to the `JUPYTERHUB_API_TOKEN` and will return:
 
-    JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser. Did you launch it manually?
+```
+    JUPYTERHUB_API_TOKEN env is required to run jupyterhub-singleuser.
+    Did you launch it manually?
+```
 
 If you plan on testing `jupyterhub-singleuser` independently from JupyterHub, then you can set the api token environment variable. For example, if were to run the single-user Jupyter Notebook on the host, then:
 
