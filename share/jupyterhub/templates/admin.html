@@ -18,11 +18,12 @@
 {% block main %}
 
 <div class="container">
+  {{ pagination.info|safe }}
   <table class="table table-striped">
     <thead>
       <tr>
         {% block thead %}
-        {{ th("User (%i)" % users|length, 'name') }}
+        {{ th("User", 'name') }}
         {{ th("Admin", 'admin') }}
         {{ th("Last Activity", 'last_activity') }}
         {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
@@ -102,6 +103,15 @@
       {% endfor %}
   </tbody>
   </table>
+  {% if pagination.links %}
+    <tfoot>
+      <tr>
+        <th colspan="2">
+          <div class="ui right floated pagination menu">{{ pagination.links|safe }}</div>
+        </th>
+      </tr>
+    </tfoot>
+  {% endif %}
 </div>
 <div class="container-fluid navbar-default small version_footer">
   <div class="navbar-text">

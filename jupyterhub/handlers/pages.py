@@ -12,7 +12,8 @@ from http.client import responses
 from jinja2 import TemplateNotFound
 from tornado import gen
 from tornado import web
-from tornado.httputil import url_concat
+from tornado.httputil import url_concat, urlparse
+from python_paginate.web.tornado_paginate import Pagination
 
 from .. import __version__
 from .. import orm
@@ -402,6 +403,15 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
+        DEFAULT_PER_PAGE = 100
+
+        page, per_page, offset = Pagination.get_page_args(self)
+        _per_page = self.get_arguments("per_page")
+        # No arg called per_page in the URL, 
+        # avoiding default value from the python_paginate lib
+        if per_page==10 and len(_per_page)==0: 
+            per_page = DEFAULT_PER_PAGE
+
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
         mapping = {'running': orm.Spawner.server_id}
@@ -442,7 +452,7 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
-        users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered)
+        users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered).limit(per_page).offset(offset)
         users = [self._user_from_orm(u) for u in users]
         from itertools import chain
 
@@ -450,9 +460,16 @@ class AdminHandler(BaseHandler):
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
 
+        total = self.db.query(orm.User.id).count()
+        pagination = Pagination(url=self.request.uri, total=total, record_name='users', 
+        display_msg = 'Displaying {record_name} <b>{start} - {end}</b>. Total {record_name}: {total}',
+        page=page, per_page=per_page)
+
+
         auth_state = await self.current_user.get_auth_state()
         html = self.render_template(
             'admin.html',
+            request=self.request,
             current_user=self.current_user,
             auth_state=auth_state,
             admin_access=self.settings.get('admin_access', False),
@@ -462,6 +479,7 @@ class AdminHandler(BaseHandler):
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
             server_version='{} {}'.format(__version__, self.version_hash),
+            pagination=pagination
         )
         self.finish(html)
 
