@@ -409,7 +409,8 @@ class AdminHandler(BaseHandler):
         page, per_page, offset = Pagination.get_page_args(self)
         _per_page = self.get_arguments("per_page")
         # No arg called per_page in the URL,
-        # avoiding default value from the python_paginate lib
+        # avoiding default value from the python-paginate lib
+        # https://github.com/lixxu/python-paginate/blob/master/python_paginate/web/tornado_paginate.py#L23
         if per_page == 10 and len(_per_page) == 0:
             per_page = DEFAULT_PER_PAGE
 
