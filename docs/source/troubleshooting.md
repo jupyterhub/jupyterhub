@@ -269,7 +269,7 @@ where `ssl_cert` is example-chained.crt and ssl_key to your private key.
 
 Then restart JupyterHub.
 
-See also [JupyterHub SSL encryption](getting-started.md#ssl-encryption).
+See also [JupyterHub SSL encryption](./getting-started/security-basics.html#ssl-encryption).
 
 ### Install JupyterHub without a network connection
 
