@@ -4,7 +4,7 @@
 alabaster_jupyterhub
 autodoc-traits
 git+https://github.com/pandas-dev/pandas-sphinx-theme.git@master
-recommonmark==0.5.0
+recommonmark>=0.6
 sphinx-copybutton
 sphinx-jsonschema
 sphinx>=1.7
