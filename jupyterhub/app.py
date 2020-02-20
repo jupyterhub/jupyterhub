@@ -2019,7 +2019,6 @@ class JupyterHub(Application):
             if not orm_spawners:
                 continue
             orm_spawner = orm_spawners[0]
-            orm_user = orm_spawner.user
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
             user = self.users[orm_spawner.user]
