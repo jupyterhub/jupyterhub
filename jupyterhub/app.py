@@ -1670,9 +1670,12 @@ class JupyterHub(Application):
         # This lets whitelist be used to set up initial list,
         # but changes to the whitelist can occur in the database,
         # and persist across sessions.
+        total_users = 0
         for user in db.query(orm.User):
             try:
-                await maybe_future(self.authenticator.add_user(user))
+                f = self.authenticator.add_user(user)
+                if f:
+                    await maybe_future(f)
             except Exception:
                 self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
@@ -1694,6 +1697,7 @@ class JupyterHub(Application):
                         )
                     )
             else:
+                total_users += 1
                 # handle database upgrades where user.created is undefined.
                 # we don't want to allow user.created to be undefined,
                 # so initialize it to last_activity (if defined) or now.
@@ -1704,6 +1708,8 @@ class JupyterHub(Application):
         # The whitelist set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
         # to the whitelist set and user db, unless the whitelist is empty (all users allowed).
+
+        TOTAL_USERS.set(total_users)
 
     async def init_groups(self):
         """Load predefined groups into the database"""
@@ -2005,21 +2011,23 @@ class JupyterHub(Application):
             spawner._check_pending = False
 
         # parallelize checks for running Spawners
+        # run query on extant Server objects
+        # so this is O(running servers) not O(total users)
         check_futures = []
-        for orm_user in db.query(orm.User):
-            user = self.users[orm_user]
-            self.log.debug("Loading state for %s from db", user.name)
-            for name, orm_spawner in user.orm_spawners.items():
-                if orm_spawner.server is not None:
-                    # spawner should be running
-                    # instantiate Spawner wrapper and check if it's still alive
-                    spawner = user.spawners[name]
-                    # signal that check is pending to avoid race conditions
-                    spawner._check_pending = True
-                    f = asyncio.ensure_future(check_spawner(user, name, spawner))
-                    check_futures.append(f)
-
-        TOTAL_USERS.set(len(self.users))
+        for orm_server in db.query(orm.Server):
+            orm_spawners = orm_server.spawner
+            if not orm_spawners:
+                continue
+            orm_spawner = orm_spawners[0]
+            # instantiate Spawner wrapper and check if it's still alive
+            # spawner should be running
+            user = self.users[orm_spawner.user]
+            spawner = user.spawners[orm_spawner.name]
+            self.log.debug("Loading state for %s from db", spawner._log_name)
+            # signal that check is pending to avoid race conditions
+            spawner._check_pending = True
+            f = asyncio.ensure_future(check_spawner(user, spawner.name, spawner))
+            check_futures.append(f)
 
         # it's important that we get here before the first await
         # so that we know all spawners are instantiated and in the check-pending state

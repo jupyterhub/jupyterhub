@@ -103,7 +103,8 @@ async def wait_for_spawner(spawner, timeout=10):
 
 
 async def test_single_user_spawner(app, request):
-    user = next(iter(app.users.values()), None)
+    orm_user = app.db.query(orm.User).first()
+    user = app.users[orm_user]
     spawner = user.spawner
     spawner.cmd = ['jupyterhub-singleuser']
     await user.spawn()
