@@ -1675,7 +1675,7 @@ class JupyterHub(Application):
             try:
                 f = self.authenticator.add_user(user)
                 if f:
-                    await maybe_future()
+                    await maybe_future(f)
             except Exception:
                 self.log.exception("Error adding user %s already in db", user.name)
                 if self.authenticator.delete_invalid_users:
