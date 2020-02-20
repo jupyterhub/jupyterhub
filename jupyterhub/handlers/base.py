@@ -1430,12 +1430,7 @@ class UserUrlHandler(BaseHandler):
             url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
-        if self.settings["allow_implicit_spawn"]:
-            self.log.warning("Allowing implicit spawn for %s", self.request.path)
-            self.redirect(spawn_url)
-            return
-        else:
-            self.set_status(503)
+        self.set_status(503)
 
         auth_state = await user.get_auth_state()
         html = self.render_template(
@@ -1444,6 +1439,7 @@ class UserUrlHandler(BaseHandler):
             server_name=server_name,
             spawn_url=spawn_url,
             auth_state=auth_state,
+            implicit_spawn_seconds=self.settings.get("implicit_spawn_seconds", 0),
         )
         self.finish(html)
 

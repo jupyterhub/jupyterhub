@@ -917,36 +917,28 @@ class JupyterHub(Application):
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
 
-    allow_implicit_spawn = Bool(
-        False,
-        help="""Allow implicit spawning
+    implicit_spawn_seconds = Float(
+        0,
+        help="""Trigger implicit spawns after this many seconds.
 
         When a user visits a URL for a server that's not running,
-        instead of confirming the spawn request,
-        automatically begin the spawn process.
+        they are shown a page indicating that the requested server
+        is not running with a button to spawn the server.
 
-        Warning: not compatible with named servers,
-        and known to cause issues with redirect loops,
-        server errors, and infinitely respawning servers.
+        Setting this to a positive value will redirect the user
+        after this many seconds, effectively clicking this button
+        automatically for the users,
+        automatically beginning the spawn process.
+
+        Warning: this can result in errors and surprising behavior
+        when sharing access URLs to actual servers,
+        since the wrong server is likely to be started.
         """,
     ).tag(config=True)
-
-    @validate('allow_implicit_spawn')
-    def _allow_named_changed(self, proposal):
-        if proposal.value and self.allow_named_servers:
-            self.log.warning("Implicit spawn cannot work with named servers")
-            return False
-        return proposal.value
 
     allow_named_servers = Bool(
         False, help="Allow named single-user servers per user"
     ).tag(config=True)
-
-    @observe('allow_named_servers')
-    def _allow_named_changed(self, change):
-        if change.new and self.allow_implicit_spawn:
-            self.log.warning("Implicit spawn cannot work with named servers")
-            self.allow_implicit_spawn = False
 
     named_server_limit_per_user = Integer(
         0,
@@ -2185,7 +2177,7 @@ class JupyterHub(Application):
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             statsd=self.statsd,
-            allow_implicit_spawn=self.allow_implicit_spawn,
+            implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
