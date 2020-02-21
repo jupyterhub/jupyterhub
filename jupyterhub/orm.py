@@ -31,6 +31,7 @@ from sqlalchemy.orm import object_session
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm import Session
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm.collections import attribute_mapped_collection
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
 from sqlalchemy.types import LargeBinary
@@ -171,13 +172,12 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
 
-    _orm_spawners = relationship(
-        "Spawner", backref="user", cascade="all, delete-orphan"
+    orm_spawners = relationship(
+        "Spawner",
+        backref="user",
+        cascade="all, delete-orphan",
+        collection_class=attribute_mapped_collection("name"),
     )
-
-    @property
-    def orm_spawners(self):
-        return {s.name: s for s in self._orm_spawners}
 
     admin = Column(Boolean, default=False)
     created = Column(DateTime, default=datetime.utcnow)
@@ -202,8 +202,8 @@ class User(Base):
         return "<{cls}({name} {running}/{total} running)>".format(
             cls=self.__class__.__name__,
             name=self.name,
-            total=len(self._orm_spawners),
-            running=sum(bool(s.server) for s in self._orm_spawners),
+            total=len(self.orm_spawners),
+            running=sum(bool(s.server) for s in self.orm_spawners),
         )
 
     def new_api_token(self, token=None, **kwargs):
@@ -245,6 +245,13 @@ class Spawner(Base):
     # for which these should all be False
     active = running = ready = False
     pending = None
+
+    def __repr__(self):
+        return "{cls}(user={user!r}, name={name!r})".format(
+            cls=self.__class__.__name__,
+            name=self.name,
+            user=self.user and self.user.name,
+        )
 
     @property
     def orm_spawner(self):

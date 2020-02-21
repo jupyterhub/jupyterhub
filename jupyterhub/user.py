@@ -94,7 +94,7 @@ class UserDict(dict):
 
     def __delitem__(self, key):
         user = self[key]
-        for orm_spawner in user.orm_user._orm_spawners:
+        for orm_spawner in user.orm_user.orm_spawners.values():
             if orm_spawner in self.db:
                 self.db.expunge(orm_spawner)
         if user.orm_user in self.db:
@@ -229,11 +229,13 @@ class User:
 
     def _new_orm_spawner(self, server_name):
         """Creat the low-level orm Spawner object"""
-        orm_spawner = orm.Spawner(user=self.orm_user, name=server_name)
-        self.db.add(orm_spawner)
+        assert server_name not in self.orm_spawners
+        self.orm_spawners[server_name] = orm.Spawner(
+            user=self.orm_user, name=server_name
+        )
         self.db.commit()
         assert server_name in self.orm_spawners
-        return orm_spawner
+        return self.orm_spawners[server_name]
 
     def _new_spawner(self, server_name, spawner_class=None, **kwargs):
         """Create a new spawner"""
