@@ -2013,12 +2013,19 @@ class JupyterHub(Application):
         # parallelize checks for running Spawners
         # run query on extant Server objects
         # so this is O(running servers) not O(total users)
+        # Server objects can be associated with either a Spawner or a Service,
+        # we are only interested in the ones associated with a Spawner
         check_futures = []
         for orm_server in db.query(orm.Server):
-            orm_spawners = orm_server.spawner
-            if not orm_spawners:
+            orm_spawner = orm_server.spawner
+            if not orm_spawner:
+                # sanity check for orphaned Server rows
+                # this shouldn't happen if we've got our sqlachemy right
+                if not orm_server.service:
+                    self.log.warning("deleting orphaned server %s", orm_server)
+                    self.db.delete(orm_server)
+                    self.db.commit()
                 continue
-            orm_spawner = orm_spawners[0]
             # instantiate Spawner wrapper and check if it's still alive
             # spawner should be running
             user = self.users[orm_spawner.user]

@@ -26,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy import Table
 from sqlalchemy import Unicode
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import backref
 from sqlalchemy.orm import interfaces
 from sqlalchemy.orm import object_session
 from sqlalchemy.orm import relationship
@@ -230,7 +231,12 @@ class Spawner(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
     server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
-    server = relationship(Server, backref='spawner', cascade="all")
+    server = relationship(
+        Server,
+        backref=backref('spawner', uselist=False),
+        single_parent=True,
+        cascade="all, delete-orphan",
+    )
 
     state = Column(JSONDict)
     name = Column(Unicode(255))
@@ -282,7 +288,12 @@ class Service(Base):
 
     # service-specific interface
     _server_id = Column(Integer, ForeignKey('servers.id', ondelete='SET NULL'))
-    server = relationship(Server, backref='service', cascade='all')
+    server = relationship(
+        Server,
+        backref=backref('service', uselist=False),
+        single_parent=True,
+        cascade="all, delete-orphan",
+    )
     pid = Column(Integer)
 
     def new_api_token(self, token=None, **kwargs):
