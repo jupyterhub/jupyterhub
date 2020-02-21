@@ -634,7 +634,10 @@ def _expire_relationship(target, relationship_prop):
         return
     # many-to-many and one-to-many have a list of peers
     # many-to-one has only one
-    if relationship_prop.direction is interfaces.MANYTOONE:
+    if (
+        relationship_prop.direction is interfaces.MANYTOONE
+        or not relationship_prop.uselist
+    ):
         peers = [peers]
     for obj in peers:
         if inspect(obj).persistent:
