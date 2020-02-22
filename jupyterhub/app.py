@@ -917,6 +917,25 @@ class JupyterHub(Application):
     def _authenticator_default(self):
         return self.authenticator_class(parent=self, db=self.db)
 
+    implicit_spawn_seconds = Float(
+        0,
+        help="""Trigger implicit spawns after this many seconds.
+
+        When a user visits a URL for a server that's not running,
+        they are shown a page indicating that the requested server
+        is not running with a button to spawn the server.
+
+        Setting this to a positive value will redirect the user
+        after this many seconds, effectively clicking this button
+        automatically for the users,
+        automatically beginning the spawn process.
+
+        Warning: this can result in errors and surprising behavior
+        when sharing access URLs to actual servers,
+        since the wrong server is likely to be started.
+        """,
+    ).tag(config=True)
+
     allow_named_servers = Bool(
         False, help="Allow named single-user servers per user"
     ).tag(config=True)
@@ -2166,6 +2185,7 @@ class JupyterHub(Application):
             subdomain_host=self.subdomain_host,
             domain=self.domain,
             statsd=self.statsd,
+            implicit_spawn_seconds=self.implicit_spawn_seconds,
             allow_named_servers=self.allow_named_servers,
             default_server_name=self._default_server_name,
             named_server_limit_per_user=self.named_server_limit_per_user,
