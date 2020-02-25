@@ -1426,11 +1426,12 @@ class UserUrlHandler(BaseHandler):
         # serve a page prompting for spawn and 503 error
         # visiting /user/:name no longer triggers implicit spawn
         # without explicit user action
-        self.set_status(503)
         spawn_url = url_concat(
             url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
+        self.set_status(503)
+
         auth_state = await user.get_auth_state()
         html = self.render_template(
             "not_running.html",
@@ -1438,6 +1439,7 @@ class UserUrlHandler(BaseHandler):
             server_name=server_name,
             spawn_url=spawn_url,
             auth_state=auth_state,
+            implicit_spawn_seconds=self.settings.get("implicit_spawn_seconds", 0),
         )
         self.finish(html)
 

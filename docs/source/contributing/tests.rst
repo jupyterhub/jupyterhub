@@ -64,5 +64,5 @@ Troubleshooting Test Failures
 All the tests are failing
 -------------------------
 
-Make sure you have completed all the steps in :ref:`contributing/setup` sucessfully, and
+Make sure you have completed all the steps in :ref:`contributing/setup` successfully, and
 can launch ``jupyterhub`` from the terminal.

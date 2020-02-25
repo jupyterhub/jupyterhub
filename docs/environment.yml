@@ -2,15 +2,18 @@
 # if you change the dependencies of JupyterHub in the various `requirements.txt`
 name: jhub_docs
 channels:
-  - conda-forge
+  # use metachannel for faster solves / less memory on RTD
+  # which has memory issues with full conda-forge
+  # only need to list 'leaf' dependencies here
+  - https://metachannel.conda-forge.org/conda-forge/jupyterhub,sphinx,recommonmark
 dependencies:
 - pip
-- nodejs
-- python=3.6
+- nodejs=12
+- python=3.7
 - alembic
 - jinja2
 - pamela
-- recommonmark==0.6.0
+- recommonmark>=0.6
 - requests
 - sqlalchemy>=1
 - tornado>=5.0
