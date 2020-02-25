@@ -481,7 +481,6 @@ class AdminHandler(BaseHandler):
         auth_state = await self.current_user.get_auth_state()
         html = self.render_template(
             'admin.html',
-            request=self.request,
             current_user=self.current_user,
             auth_state=auth_state,
             admin_access=self.settings.get('admin_access', False),
