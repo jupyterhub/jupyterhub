@@ -9,7 +9,6 @@ pamela
 prometheus_client>=0.0.21
 psutil>=5.6.5; sys_platform == 'win32'
 python-dateutil
-python-paginate
 requests
 SQLAlchemy>=1.1
 tornado>=5.0

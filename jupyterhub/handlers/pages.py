@@ -10,7 +10,6 @@ from datetime import datetime
 from http.client import responses
 
 from jinja2 import TemplateNotFound
-from python_paginate.web.tornado_paginate import Pagination
 from tornado import gen
 from tornado import web
 from tornado.httputil import url_concat
@@ -404,15 +403,7 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
-        DEFAULT_PER_PAGE = 100
-
         page, per_page, offset = Pagination.get_page_args(self)
-        _per_page = self.get_arguments("per_page")
-        # No arg called per_page in the URL,
-        # avoiding default value from the python-paginate lib
-        # https://github.com/lixxu/python-paginate/blob/master/python_paginate/web/tornado_paginate.py#L23
-        if per_page == 10 and len(_per_page) == 0:
-            per_page = DEFAULT_PER_PAGE
 
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
@@ -472,8 +463,6 @@ class AdminHandler(BaseHandler):
         pagination = Pagination(
             url=self.request.uri,
             total=total,
-            record_name='users',
-            display_msg='Displaying {record_name} <b>{start} - {end}</b>. Total {record_name}: {total}',
             page=page,
             per_page=per_page,
         )
@@ -619,6 +608,63 @@ class HealthCheckHandler(BaseHandler):
     def get(self, *args):
         self.finish()
 
+class Pagination(BaseHandler):
+
+    _page_name = 'page'
+    _per_page_name = 'per_page'
+    _default_page = 1
+    _default_per_page = 100
+    _max_per_page = 250
+    _record_name='users'
+    _display_msg='Displaying {record_name} <b>{start} - {end}</b>. Total {record_name}: {total}'
+
+    def __init__(self, *args, **kwargs):
+        """Detail parameters remark.
+        **url**: current request url
+        **page**: current page
+        **per_page**: how many records displayed on one page. By default 100
+        **total**: total records for pagination
+        **display_msg**: text for pagation information
+        **record_name**: record name showed in pagination information
+        """
+        self.page = kwargs.get(self._page_name, 1)
+
+        if self.per_page > self._max_per_page:
+            self.per_page = self._max_per_page
+
+        self.total = int(kwargs.get('total', 0))
+        self.display_msg = kwargs.get('display_msg', self._display_msg)
+        
+        self.record_name = kwargs.get('record_name', self._record_name)
+        self.url = kwargs.get('url') or self.get_url()
+        self.init_values()
+
+    def init_values(self):
+        self._cached = {}
+        self.skip = (self.page - 1) * self.per_page
+        pages = divmod(self.total, self.per_page)
+        self.total_pages = pages[0] + 1 if pages[1] else pages[0]
+
+        self.has_prev = self.page > 1
+        self.has_next = self.page < self.total_pages
+
+    @classmethod
+    def get_page_args(self, handler):
+        self.page = handler.get_argument(self._page_name, self._default_page)
+        self.per_page = handler.get_argument(self._per_page_name, self._default_per_page)
+        try:
+            self.per_page = int(self.per_page)
+            if self.per_page > self._max_per_page:
+                self.per_page = self._max_per_page
+        except:
+            self.per_page = self._default_per_page
+
+        try:
+            self.page = int(self.page)
+        except:
+            self.page = self._default_page
+
+        return self.page, self.per_page, self.per_page * (self.page - 1)
 
 default_handlers = [
     (r'/', RootHandler),
