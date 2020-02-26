@@ -619,13 +619,13 @@ class Pagination(BaseHandler):
     )
 
     def __init__(self, *args, **kwargs):
-        """Detail parameters remark.
-        **url**: current request url
-        **page**: current page
-        **per_page**: how many records displayed on one page. By default 100
-        **total**: total records for pagination
-        **display_msg**: text for pagation information
-        **record_name**: record name showed in pagination information
+        """Potential parameters.
+        **url**: URL in request
+        **page**: current page in use
+        **per_page**: number of records to display in the page. By default 100
+        **total**: total records considered while paginating
+        **display_msg**: informative text for pagination
+        **record_name**: name of the record, showed in pagination info
         """
         self.page = kwargs.get(self._page_name, 1)
 
