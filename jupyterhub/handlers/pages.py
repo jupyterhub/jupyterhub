@@ -461,10 +461,7 @@ class AdminHandler(BaseHandler):
 
         total = self.db.query(orm.User.id).count()
         pagination = Pagination(
-            url=self.request.uri,
-            total=total,
-            page=page,
-            per_page=per_page,
+            url=self.request.uri, total=total, page=page, per_page=per_page,
         )
 
         auth_state = await self.current_user.get_auth_state()
@@ -608,6 +605,7 @@ class HealthCheckHandler(BaseHandler):
     def get(self, *args):
         self.finish()
 
+
 class Pagination(BaseHandler):
 
     _page_name = 'page'
@@ -615,8 +613,10 @@ class Pagination(BaseHandler):
     _default_page = 1
     _default_per_page = 100
     _max_per_page = 250
-    _record_name='users'
-    _display_msg='Displaying {record_name} <b>{start} - {end}</b>. Total {record_name}: {total}'
+    _record_name = 'users'
+    _display_msg = (
+        'Displaying {record_name} <b>{start} - {end}</b>. Total {record_name}: {total}'
+    )
 
     def __init__(self, *args, **kwargs):
         """Detail parameters remark.
@@ -634,7 +634,7 @@ class Pagination(BaseHandler):
 
         self.total = int(kwargs.get('total', 0))
         self.display_msg = kwargs.get('display_msg', self._display_msg)
-        
+
         self.record_name = kwargs.get('record_name', self._record_name)
         self.url = kwargs.get('url') or self.get_url()
         self.init_values()
@@ -651,7 +651,9 @@ class Pagination(BaseHandler):
     @classmethod
     def get_page_args(self, handler):
         self.page = handler.get_argument(self._page_name, self._default_page)
-        self.per_page = handler.get_argument(self._per_page_name, self._default_per_page)
+        self.per_page = handler.get_argument(
+            self._per_page_name, self._default_per_page
+        )
         try:
             self.per_page = int(self.per_page)
             if self.per_page > self._max_per_page:
@@ -665,6 +667,7 @@ class Pagination(BaseHandler):
             self.page = self._default_page
 
         return self.page, self.per_page, self.per_page * (self.page - 1)
+
 
 default_handlers = [
     (r'/', RootHandler),
