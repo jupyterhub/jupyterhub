@@ -98,8 +98,12 @@ def _scrub_headers(headers):
     headers = dict(headers)
     if 'Authorization' in headers:
         auth = headers['Authorization']
-        if auth.startswith('token '):
-            headers['Authorization'] = 'token [secret]'
+        if ' ' in auth:
+            auth_type = auth.split(' ', 1)[0]
+        else:
+            # no space, hide the whole thing in case there was a mistake
+            auth_type = ''
+        headers['Authorization'] = '{} [secret]'.format(auth_type)
     if 'Cookie' in headers:
         c = SimpleCookie(headers['Cookie'])
         redacted = []
