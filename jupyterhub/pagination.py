@@ -96,28 +96,29 @@ class Pagination:
         after_page = 5
         before_end = 2
 
+        # Add 1 to self.total_pages since our default page is 1 and not 0
+        total_pages = self.total_pages + 1
+
         pages = []
 
-        if self.total_pages > default_pages_to_render:
+        if total_pages > default_pages_to_render:
             if self.page > 1:
                 pages.extend([1, '...'])
 
-            if self.total_pages < self.page + after_page:
-                pages.extend(list(range(self.page, self.total_pages)))
+            if total_pages < self.page + after_page:
+                pages.extend(list(range(self.page, total_pages)))
             else:
-                if self.total_pages > self.page + after_page + before_end:
+                if total_pages > self.page + after_page + before_end:
                     pages.extend(list(range(self.page, self.page + after_page)))
                     pages.append('...')
-                    pages.extend(
-                        list(range(self.total_pages - before_end, self.total_pages))
-                    )
+                    pages.extend(list(range(total_pages - before_end, total_pages)))
                 else:
                     pages.extend(list(range(self.page, self.page + after_page)))
 
             return pages
 
         else:
-            return list(range(1, self.total_pages))
+            return list(range(1, total_pages))
 
     @property
     def links(self):
