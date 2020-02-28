@@ -398,7 +398,7 @@ class User:
         if not server_name:
             return self.url
         else:
-            return url_path_join(self.url, server_name)
+            return url_path_join(self.url, server_name) + '/'
 
     def progress_url(self, server_name=''):
         """API URL for progress endpoint for a server with a given name"""
