@@ -77,3 +77,89 @@ class Pagination:
             start = self.total
 
         return {'total': self.total, 'start': start, 'end': end}
+
+    def calculate_pages_window(self):
+        """Calculates the set of pages to render later in links() method. 
+           It returns the list of pages to render via links for the pagination 
+           By default, as we've observed in other applications, we're going to render
+           only a finite and predefined number of pages, avoiding visual fatigue related
+           to a long list of pages. By default, we render 7 pages plus some inactive links with the characters '...'
+           to point out that there are other pages that aren't explicitly rendered.
+           The primary way of work is to provide current webpage and 5 next pages, the last 2 ones 
+           (in case the current page + 5 does not overflow the total lenght of pages) and the first one for reference.
+           """
+
+        self.separator_character = '...'
+        default_pages_to_render = 7
+        after_page = 5
+        before_end = 2
+
+        pages = []
+
+        if self.total_pages > default_pages_to_render:
+            if self.page > 1:
+                pages.extend([1, '...'])
+
+            if self.total_pages < self.page + after_page:
+                pages.extend(list(range(self.page, self.total_pages)))
+            else:
+                if self.total_pages > self.page + after_page + before_end:
+                    pages.extend(list(range(self.page, self.page + after_page)))
+                    pages.append('...')
+                    pages.extend(
+                        list(range(self.total_pages - before_end, self.total_pages))
+                    )
+                else:
+                    pages.extend(list(range(self.page, self.page + after_page)))
+
+            return pages
+
+        else:
+            return list(range(1, self.total_pages))
+
+    @property
+    def links(self):
+        """Sets the links for the pagination.
+           Getting the input from calculate_pages_window(), generates the HTML code 
+           for the pages to render, plus the arrows to go onwards and backwards (if needed).
+           """
+
+        pages_to_render = self.calculate_pages_window()
+        print(f"pages_to_render {pages_to_render} ")
+
+        links = ['<nav>']
+        links.append('<ul class="pagination">')
+
+        if self.page > 1:
+            prev_page = self.page - 1
+            links.append(f'<li><a href="/hub/admin?page={prev_page}">«</a></li>')
+        else:
+            links.append(
+                '<li class="disabled"><span><span aria-hidden="true">«</span></span></li>'
+            )
+
+        for page in list(pages_to_render):
+            print(f"page {page} ")
+            if page == self.page:
+                links.append(
+                    f'<li class="active"><span>{page}<span class="sr-only">(current)</span></span></li>'
+                )
+            elif page == self.separator_character:
+                links.append(
+                    '<li class="disabled"><span> <span aria-hidden="true">...</span></span></li>'
+                )
+            else:
+                links.append(f'<li><a href="/hub/admin?page={page}">{page}</a></li>')
+
+        if self.page > 1:
+            next_page = self.page + 1
+            links.append(f'<li><a href="/hub/admin?page={next_page}">»</a></li>')
+        else:
+            links.append(
+                '<li class="disabled"><span><span aria-hidden="true">»</span></span></li>'
+            )
+
+        links.append('</ul>')
+        links.append('</nav>')
+
+        return ''.join(links)
