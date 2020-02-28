@@ -24,5 +24,6 @@ MANIFEST
 .coverage.*
 htmlcov
 .idea/
+.vscode/
 .pytest_cache
 pip-wheel-metadata
