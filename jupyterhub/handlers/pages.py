@@ -19,11 +19,11 @@ from .. import __version__
 from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
+from ..pagination import Pagination
 from ..utils import admin_only
 from ..utils import maybe_future
 from ..utils import url_path_join
 from .base import BaseHandler
-from ..pagination import Pagination
 
 
 class RootHandler(BaseHandler):
@@ -605,6 +605,7 @@ class HealthCheckHandler(BaseHandler):
 
     def get(self, *args):
         self.finish()
+
 
 default_handlers = [
     (r'/', RootHandler),

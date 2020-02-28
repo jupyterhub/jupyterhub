@@ -2,7 +2,8 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-class Pagination():
+
+class Pagination:
 
     _page_name = 'page'
     _per_page_name = 'per_page'
