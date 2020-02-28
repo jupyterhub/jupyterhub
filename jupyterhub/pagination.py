@@ -125,7 +125,6 @@ class Pagination:
            """
 
         pages_to_render = self.calculate_pages_window()
-        print(f"pages_to_render {pages_to_render} ")
 
         links = ['<nav>']
         links.append('<ul class="pagination">')
@@ -139,7 +138,6 @@ class Pagination:
             )
 
         for page in list(pages_to_render):
-            print(f"page {page} ")
             if page == self.page:
                 links.append(
                     f'<li class="active"><span>{page}<span class="sr-only">(current)</span></span></li>'
