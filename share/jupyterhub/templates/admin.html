@@ -18,7 +18,9 @@
 {% block main %}
 
 <div class="container">
-  {{ pagination.info|safe }}
+  <div class="pagination-page-info">
+    Displaying users {{ pagination.info.start|safe }} - {{ pagination.info.end|safe }}. Total users {{ pagination.info.total|safe }}
+  </div>
   <table class="table table-striped">
     <thead>
       <tr>

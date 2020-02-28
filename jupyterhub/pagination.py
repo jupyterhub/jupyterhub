@@ -64,3 +64,16 @@ class Pagination:
             self.page = self._default_page
 
         return self.page, self.per_page, self.per_page * (self.page - 1)
+
+    @property
+    def info(self):
+        """Get the pagination information."""
+        start = 1 + (self.page - 1) * self.per_page
+        end = start + self.per_page - 1
+        if end > self.total:
+            end = self.total
+
+        if start > self.total:
+            start = self.total
+
+        return {'total': self.total, 'start': start, 'end': end}
