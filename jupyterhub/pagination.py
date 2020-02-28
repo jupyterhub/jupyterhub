@@ -60,6 +60,8 @@ class Pagination:
 
         try:
             self.page = int(self.page)
+            if self.page < 1 or self.page > self.total_pages:
+                self.page = self._default_page
         except:
             self.page = self._default_page
 
