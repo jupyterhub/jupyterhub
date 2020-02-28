@@ -133,6 +133,15 @@ class APIHandler(BaseHandler):
 
     def server_model(self, spawner, include_state=False):
         """Get the JSON model for a Spawner"""
+        # TODO(mriedem): Need to convert orm.Spawner to spawner.Spawner
+        # to use the `get_state` method, but how to do that conversion?
+        if hasattr(spawner, 'user') and hasattr(spawner.user, 'url'):
+            url = url_path_join(spawner.user.url, spawner.name, '/')
+        else:
+            url = None
+        progress_url = (
+            spawner._progress_url if hasattr(spawner, '_progress_url') else None
+        )
         return {
             'name': spawner.name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
@@ -140,9 +149,9 @@ class APIHandler(BaseHandler):
             'pending': spawner.pending,
             'ready': spawner.ready,
             'state': spawner.get_state() if include_state else None,
-            'url': url_path_join(spawner.user.url, spawner.name, '/'),
+            'url': url,
             'user_options': spawner.user_options,
-            'progress_url': spawner._progress_url,
+            'progress_url': progress_url,
         }
 
     def token_model(self, token):

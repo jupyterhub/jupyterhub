@@ -124,6 +124,27 @@ def normalize_timestamp(ts):
     return re.sub(r'\d(\.\d+)?', '0', ts)
 
 
+def normalize_server(server):
+    """Normalize a server model for comparison
+
+    smooths out a server model with things like timestamps
+    for easier comparison
+    """
+    for key in ('started', 'last_activity'):
+        server[key] = normalize_timestamp(server[key])
+    # TODO(mriedem): Remove this conditional when GET /servers is always
+    # returning a progress_url.
+    if server['progress_url']:
+        server['progress_url'] = re.sub(
+            r'.*/hub/api', 'PREFIX/hub/api', server['progress_url']
+        )
+    if isinstance(server['state'], dict) and isinstance(
+        server['state'].get('pid', None), int
+    ):
+        server['state']['pid'] = 0
+    return server
+
+
 def normalize_user(user):
     """Normalize a user model for comparison
 
@@ -134,15 +155,7 @@ def normalize_user(user):
         user[key] = normalize_timestamp(user[key])
     if 'servers' in user:
         for server in user['servers'].values():
-            for key in ('started', 'last_activity'):
-                server[key] = normalize_timestamp(server[key])
-            server['progress_url'] = re.sub(
-                r'.*/hub/api', 'PREFIX/hub/api', server['progress_url']
-            )
-            if isinstance(server['state'], dict) and isinstance(
-                server['state'].get('pid', None), int
-            ):
-                server['state']['pid'] = 0
+            normalize_server(server)
     return user
 
 
@@ -1339,6 +1352,41 @@ async def test_token_list(app, as_user, for_user, status):
         r.raise_for_status()
         reply = r.json()
         assert normalize_token(reply) == normalize_token(token)
+
+
+# ----------------
+# Server API tests
+# ----------------
+
+
+@mark.server
+async def test_get_servers(app):
+    """
+    Basic test for GET /servers
+    """
+    db = app.db
+    r = await api_request(app, 'servers')
+    assert r.status_code == 200
+
+    servers = sorted(r.json(), key=lambda d: d['name'])
+    servers = [normalize_server(server) for server in servers]
+    # TODO(mriedem): Use something like a fill_server here.
+    assert servers == [
+        {
+            'name': '',
+            'last_activity': None,
+            'started': None,
+            'pending': None,
+            'ready': False,
+            'state': None,
+            'url': None,
+            'user_options': None,
+            'progress_url': None,
+        }
+    ]
+
+    r = await api_request(app, 'servers', headers=auth_header(db, 'user'))
+    assert r.status_code == 403
 
 
 # ---------------
