@@ -606,7 +606,7 @@ class HealthCheckHandler(BaseHandler):
         self.finish()
 
 
-class Pagination(BaseHandler):
+class Pagination():
 
     _page_name = 'page'
     _per_page_name = 'per_page'
