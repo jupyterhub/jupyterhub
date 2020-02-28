@@ -156,7 +156,7 @@ class Pagination:
                 )
             else:
                 links.append(
-                    f'<li><a href="/hub/admin?page={page}">{page}</a></li>'.format(
+                    '<li><a href="/hub/admin?page={page}">{page}</a></li>'.format(
                         page=page
                     )
                 )
@@ -164,7 +164,7 @@ class Pagination:
         if self.page >= 1 and self.page < self.total_pages:
             next_page = self.page + 1
             links.append(
-                f'<li><a href="/hub/admin?page={next_page}">»</a></li>'.format(
+                '<li><a href="/hub/admin?page={next_page}">»</a></li>'.format(
                     next_page=next_page
                 )
             )
