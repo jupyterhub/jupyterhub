@@ -47,6 +47,15 @@ class Pagination:
 
     @classmethod
     def get_page_args(self, handler):
+        """
+        This method gets the arguments used in the webpage to configurate the pagination
+        In case of no arguments, it uses the default values from this class
+
+        It returns:
+          - self.page: The page requested for paginating or the default value (1)
+          - self.per_page: The number of items to return in this page. By default 100 and no more than 250
+          - self.per_page * (self.page - 1): The offset to consider when managing pagination via the ORM
+        """
         self.page = handler.get_argument(self._page_name, self._default_page)
         self.per_page = handler.get_argument(
             self._per_page_name, self._default_per_page
