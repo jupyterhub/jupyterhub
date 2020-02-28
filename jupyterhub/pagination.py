@@ -131,7 +131,11 @@ class Pagination:
 
         if self.page > 1:
             prev_page = self.page - 1
-            links.append(f'<li><a href="/hub/admin?page={prev_page}">«</a></li>')
+            links.append(
+                '<li><a href="/hub/admin?page={prev_page}">«</a></li>'.format(
+                    prev_page=prev_page
+                )
+            )
         else:
             links.append(
                 '<li class="disabled"><span><span aria-hidden="true">«</span></span></li>'
@@ -140,18 +144,28 @@ class Pagination:
         for page in list(pages_to_render):
             if page == self.page:
                 links.append(
-                    f'<li class="active"><span>{page}<span class="sr-only">(current)</span></span></li>'
+                    '<li class="active"><span>{page}<span class="sr-only">(current)</span></span></li>'.format(
+                        page=page
+                    )
                 )
             elif page == self.separator_character:
                 links.append(
                     '<li class="disabled"><span> <span aria-hidden="true">...</span></span></li>'
                 )
             else:
-                links.append(f'<li><a href="/hub/admin?page={page}">{page}</a></li>')
+                links.append(
+                    f'<li><a href="/hub/admin?page={page}">{page}</a></li>'.format(
+                        page=page
+                    )
+                )
 
-        if self.page > 1:
+        if self.page >= 1 and self.page < self.total_pages:
             next_page = self.page + 1
-            links.append(f'<li><a href="/hub/admin?page={next_page}">»</a></li>')
+            links.append(
+                f'<li><a href="/hub/admin?page={next_page}">»</a></li>'.format(
+                    next_page=next_page
+                )
+            )
         else:
             links.append(
                 '<li class="disabled"><span><span aria-hidden="true">»</span></span></li>'
