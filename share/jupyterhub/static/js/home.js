@@ -1,16 +1,14 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "moment", "jhapi", "utils"], function(
+require(["jquery", "moment", "jhapi"], function(
   $,
   moment,
-  JHAPI,
-  utils
+  JHAPI
 ) {
   "use strict";
 
   var base_url = window.jhdata.base_url;
-  var prefix = window.jhdata.prefix;
   var user = window.jhdata.user;
   var api = new JHAPI(base_url);
 
