@@ -109,6 +109,41 @@ async def test_referer_check(app):
     assert r.status_code == 200
 
 
+# ----------------
+# Server API tests
+# ----------------
+
+
+@mark.server
+async def test_get_servers(app):
+    """
+    Basic test for GET /servers. Run this early for predictable results.
+    """
+    db = app.db
+    r = await api_request(app, 'servers')
+    assert r.status_code == 200
+
+    servers = sorted(r.json(), key=lambda d: d['name'])
+    servers = [normalize_server(server) for server in servers]
+    # TODO(mriedem): Use something like a fill_server here.
+    assert servers == [
+        {
+            'name': '',
+            'last_activity': None,
+            'started': None,
+            'pending': None,
+            'ready': False,
+            'state': None,
+            'url': None,
+            'user_options': None,
+            'progress_url': None,
+        }
+    ]
+
+    r = await api_request(app, 'servers', headers=auth_header(db, 'user'))
+    assert r.status_code == 403
+
+
 # --------------
 # User API tests
 # --------------
@@ -1352,41 +1387,6 @@ async def test_token_list(app, as_user, for_user, status):
         r.raise_for_status()
         reply = r.json()
         assert normalize_token(reply) == normalize_token(token)
-
-
-# ----------------
-# Server API tests
-# ----------------
-
-
-@mark.server
-async def test_get_servers(app):
-    """
-    Basic test for GET /servers
-    """
-    db = app.db
-    r = await api_request(app, 'servers')
-    assert r.status_code == 200
-
-    servers = sorted(r.json(), key=lambda d: d['name'])
-    servers = [normalize_server(server) for server in servers]
-    # TODO(mriedem): Use something like a fill_server here.
-    assert servers == [
-        {
-            'name': '',
-            'last_activity': None,
-            'started': None,
-            'pending': None,
-            'ready': False,
-            'state': None,
-            'url': None,
-            'user_options': None,
-            'progress_url': None,
-        }
-    ]
-
-    r = await api_request(app, 'servers', headers=auth_header(db, 'user'))
-    assert r.status_code == 403
 
 
 # ---------------
