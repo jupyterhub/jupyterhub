@@ -405,6 +405,16 @@ paths:
           description: The authenticated user's model is returned.
           schema:
             $ref: '#/definitions/User'
+  /servers:
+    get:
+      summary: List servers
+      responses:
+        '200':
+          description: The Hub's server list
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Server'
   /groups:
     get:
       summary: List groups
@@ -768,6 +778,9 @@ definitions:
   Server:
     type: object
     properties:
+      id:
+        type: integer
+        description: The unique internal ID of the server.
       name:
         type: string
         description: The server's name. The user's default server has an empty name ('')
@@ -787,6 +800,14 @@ definitions:
         description: |
           The URL where the server can be accessed
           (typically /user/:name/:server.name/).
+      user:
+        type: object
+        description: |
+          Contains information about the user that owns the server.
+          Only available on ``GET /servers``.
+          Includes fields:
+
+          - ``name``: The name of the user that owns the server.
       progress_url:
         type: string
         description: |
