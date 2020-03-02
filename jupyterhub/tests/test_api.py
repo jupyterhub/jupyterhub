@@ -114,6 +114,23 @@ async def test_referer_check(app):
 # ----------------
 
 
+def fill_server(model):
+    """Fill a default server model
+
+    Any unspecified fields will be filled with the defaults
+    """
+    model.setdefault('name', '')
+    model.setdefault('ready', False)
+    model.setdefault('pending', None)
+    model.setdefault('url', None)
+    model.setdefault('progress_url', None)
+    model.setdefault('started', None)
+    model.setdefault('last_activity', None)
+    model.setdefault('state', None)
+    model.setdefault('user_options', None)
+    return model
+
+
 @mark.server
 async def test_get_servers(app):
     """
@@ -125,20 +142,10 @@ async def test_get_servers(app):
 
     servers = sorted(r.json(), key=lambda d: d['name'])
     servers = [normalize_server(server) for server in servers]
+    # Note that there are two servers to start because the `app` fixture
+    # creates a user named "user" and test_referer_check creates an admin user.
     # TODO(mriedem): Use something like a fill_server here.
-    assert servers == [
-        {
-            'name': '',
-            'last_activity': None,
-            'started': None,
-            'pending': None,
-            'ready': False,
-            'state': None,
-            'url': None,
-            'user_options': None,
-            'progress_url': None,
-        }
-    ]
+    assert servers == [fill_server({})] * 2
 
     r = await api_request(app, 'servers', headers=auth_header(db, 'user'))
     assert r.status_code == 403
@@ -224,7 +231,7 @@ async def test_get_users(app):
     users = [normalize_user(u) for u in users]
     assert users == [
         fill_user({'name': 'admin', 'admin': True}),
-        fill_user({'name': 'user', 'admin': False, 'last_activity': None}),
+        fill_user({'name': 'user', 'admin': False}),
     ]
 
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
