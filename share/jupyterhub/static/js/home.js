@@ -1,16 +1,14 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "moment", "jhapi", "utils"], function(
+require(["jquery", "moment", "jhapi"], function(
   $,
   moment,
-  JHAPI,
-  utils
+  JHAPI
 ) {
   "use strict";
 
   var base_url = window.jhdata.base_url;
-  var prefix = window.jhdata.prefix;
   var user = window.jhdata.user;
   var api = new JHAPI(base_url);
 
@@ -47,6 +45,17 @@ require(["jquery", "moment", "jhapi", "utils"], function(
       row.find(".delete-server").removeClass("hidden");
       row.find(".stop-server").addClass("hidden");
       row.find(".server-link").addClass("hidden");
+    }
+  }
+
+  function startServer() {
+    var row = getRow($(this));
+    var serverName = row.find(".new-server-name").val();
+    if (serverName === "") {
+      // ../spawn/user/ causes a 404, ../spawn/user redirects correctly to the default server
+      window.location.href = "./spawn/" + user;
+    } else {
+      window.location.href = "./spawn/" + user + "/" + serverName;
     }
   }
 
@@ -100,14 +109,10 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     });
   });
 
-  $(".new-server-btn").click(function() {
-    var row = getRow($(this));
-    var serverName = row.find(".new-server-name").val();
-    if (serverName === "") {
-      // ../spawn/user/ causes a 404, ../spawn/user redirects correctly to the default server
-      window.location.href = "./spawn/" + user;
-    } else {
-      window.location.href = "./spawn/" + user + "/" + serverName;
+  $(".new-server-btn").click(startServer);
+  $(".new-server-name").on('keypress', function(e) {
+    if (e.which === 13) {
+      startServer.call(this);
     }
   });
 
