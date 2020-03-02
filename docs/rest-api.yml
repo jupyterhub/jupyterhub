@@ -802,6 +802,9 @@ definitions:
       state:
         type: object
         description: Arbitrary internal state from this server's spawner.  Only available on the hub's users list or get-user-by-name method, and only if a hub admin.  None otherwise.
+      user_options:
+        type: object
+        description: User specified options for the user's spawned instance of a single-user server.
   Group:
     type: object
     properties:
