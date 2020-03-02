@@ -9,6 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
 
 from .. import orm
+from .. import spawner as spawner_obj
 from ..handlers import BaseHandler
 from ..utils import isoformat
 from ..utils import url_path_join
@@ -131,28 +132,29 @@ class APIHandler(BaseHandler):
             json.dumps({'status': status_code, 'message': message or status_message})
         )
 
-    def server_model(self, spawner, include_state=False):
+    def server_model(self, spawner, include_state=False, include_user_and_id=False):
         """Get the JSON model for a Spawner"""
-        # TODO(mriedem): Need to convert orm.Spawner to spawner.Spawner
-        # to use the `get_state` method, but how to do that conversion?
-        if hasattr(spawner, 'user') and hasattr(spawner.user, 'url'):
-            url = url_path_join(spawner.user.url, spawner.name, '/')
-        else:
-            url = None
-        progress_url = (
-            spawner._progress_url if hasattr(spawner, '_progress_url') else None
-        )
-        return {
+        if isinstance(spawner, orm.Spawner):
+            # TODO(mriedem): Would be nice to join the user field from
+            # the Spawner ORM object when we fetch it from the DB so we don't
+            # need the roundtrip.
+            orm_user = orm.User.find_by_id(self.db, spawner.user_id)
+            user = self._user_from_orm(orm_user)
+            spawner = spawner_obj.Spawner(orm_spawner=spawner, user=user)
+        server = {
             'name': spawner.name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
             'state': spawner.get_state() if include_state else None,
-            'url': url,
+            'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'user_options': spawner.user_options,
-            'progress_url': progress_url,
+            'progress_url': spawner._progress_url,
         }
+        if include_user_and_id:
+            server.update({'id': spawner.id, 'user': {'name': spawner.user.name}})
+        return server
 
     def token_model(self, token):
         """Get the JSON model for an APIToken"""

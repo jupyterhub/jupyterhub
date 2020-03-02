@@ -220,6 +220,15 @@ class User(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
+    @classmethod
+    def find_by_id(cls, db, id):
+        """Find a user by id.
+
+        :param id: The id of the user record.
+        :return: None if not found.
+        """
+        return db.query(cls).filter(cls.id == id).first()
+
 
 class Spawner(Base):
     """"State about a Spawner"""

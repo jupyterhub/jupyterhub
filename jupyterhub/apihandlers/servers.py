@@ -14,9 +14,11 @@ class ServerListAPIHandler(APIHandler):
         # TODO(mriedem): Should include_state be conditional on
         # `spawner.active` like how `user_model` works for
         # `GET /users`?
-        include_state = False
+        include_state = True
         data = [
-            self.server_model(spawner, include_state=include_state)
+            self.server_model(
+                spawner, include_state=include_state, include_user_and_id=True
+            )
             for spawner in self.db.query(orm.Spawner)
         ]
         self.write(json.dumps(data))

@@ -31,6 +31,7 @@ from traitlets import Instance
 from traitlets import Integer
 from traitlets import List
 from traitlets import observe
+from traitlets import TraitError
 from traitlets import Unicode
 from traitlets import Union
 from traitlets import validate
@@ -211,6 +212,19 @@ class Spawner(LoggingConfigurable):
         if self.orm_spawner:
             return self.orm_spawner.name
         return ''
+
+    # pass getattr to ORM spawner
+    def __getattr__(self, attr):
+        # orm_spawner is by default an Any traitlet and might not have a
+        # default value for the attribute requested so handle TraitError
+        # as a normal AttributeError.
+        try:
+            if hasattr(self.orm_spawner, attr):
+                return getattr(self.orm_spawner, attr)
+            else:
+                raise AttributeError(attr)
+        except TraitError:
+            raise AttributeError(attr)
 
     internal_ssl = Bool(False)
     internal_trust_bundles = Dict()

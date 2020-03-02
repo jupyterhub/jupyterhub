@@ -119,15 +119,18 @@ def fill_server(model):
 
     Any unspecified fields will be filled with the defaults
     """
+    user_name = model.get('user', {}).get('name')
     model.setdefault('name', '')
     model.setdefault('ready', False)
     model.setdefault('pending', None)
     model.setdefault('url', None)
-    model.setdefault('progress_url', None)
+    model.setdefault(
+        'progress_url', 'PREFIX/hub/api/users/%s/server/progress' % user_name
+    )
     model.setdefault('started', None)
     model.setdefault('last_activity', None)
     model.setdefault('state', None)
-    model.setdefault('user_options', None)
+    model.setdefault('user_options', {})
     return model
 
 
@@ -140,12 +143,11 @@ async def test_get_servers(app):
     r = await api_request(app, 'servers')
     assert r.status_code == 200
 
-    servers = sorted(r.json(), key=lambda d: d['name'])
+    servers = sorted(r.json(), key=lambda d: d['id'])
     servers = [normalize_server(server) for server in servers]
     # Note that there are two servers to start because the `app` fixture
     # creates a user named "user" and test_referer_check creates an admin user.
-    # TODO(mriedem): Use something like a fill_server here.
-    assert servers == [fill_server({})] * 2
+    assert servers == [fill_server(server) for server in servers]
 
     r = await api_request(app, 'servers', headers=auth_header(db, 'user'))
     assert r.status_code == 403
@@ -174,12 +176,9 @@ def normalize_server(server):
     """
     for key in ('started', 'last_activity'):
         server[key] = normalize_timestamp(server[key])
-    # TODO(mriedem): Remove this conditional when GET /servers is always
-    # returning a progress_url.
-    if server['progress_url']:
-        server['progress_url'] = re.sub(
-            r'.*/hub/api', 'PREFIX/hub/api', server['progress_url']
-        )
+    server['progress_url'] = re.sub(
+        r'.*/hub/api', 'PREFIX/hub/api', server['progress_url']
+    )
     if isinstance(server['state'], dict) and isinstance(
         server['state'].get('pid', None), int
     ):
