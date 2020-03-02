@@ -153,6 +153,29 @@ async def test_get_servers(app):
     assert r.status_code == 403
 
 
+@mark.server
+async def test_delete_server_no_auth(app):
+    """
+    Negative test to make sure DELETE /servers/{id} enforces admin auth.
+    """
+    r = await api_request(app, 'servers', '99999', method='delete', noauth=True)
+    assert r.status_code == 404  # FIXME(mriedem): Why isn't this a 403?
+
+
+@mark.server
+async def test_delete_server_not_found(app):
+    """
+    Negative test to delete a server which does not exist results in a 404 response.
+    """
+    r = await api_request(app, 'servers', '99999', method='delete')
+    assert r.status_code == 404
+
+
+# TODO(mriedem): More server delete negative tests for things like:
+# - trying to delete the default server ('')
+# - trying to delete a pending server (stopping and spawning)
+
+
 # --------------
 # User API tests
 # --------------

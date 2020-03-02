@@ -45,6 +45,7 @@ from ..metrics import ServerSpawnStatus
 from ..metrics import ServerStopStatus
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
+from ..spawner import Spawner
 from ..user import User
 from ..utils import get_accepted_mimetype
 from ..utils import maybe_future
@@ -448,6 +449,16 @@ class BaseHandler(RequestHandler):
         """
         orm_user = orm.User.find(db=self.db, name=name)
         return self._user_from_orm(orm_user)
+
+    def find_spawner_by_id(self, id):
+        """Get a Spawner by ID.
+
+        :param id: The ID of the `spawners` table record.
+        :return: None if no record was found by ID, else a spawn.Spawner object.
+        """
+        orm_spawner = orm.Spawner.find_by_id(self.db, id)
+        if orm_spawner:
+            return self.users[orm_spawner.user_id].spawners[orm_spawner.name]
 
     def user_from_username(self, username):
         """Get User for username, creating if it doesn't exist"""

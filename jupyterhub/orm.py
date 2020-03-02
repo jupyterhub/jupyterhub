@@ -259,6 +259,15 @@ class Spawner(Base):
     def orm_spawner(self):
         return self
 
+    @classmethod
+    def find_by_id(cls, db, id):
+        """Find a spawner by id.
+
+        :param id: The id of the spawner record.
+        :return: None if not found.
+        """
+        return db.query(cls).filter(cls.id == id).first()
+
 
 class Service(Base):
     """A service run with JupyterHub
