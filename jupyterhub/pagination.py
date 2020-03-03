@@ -108,12 +108,16 @@ class Pagination:
             if total_pages < self.page + after_page:
                 pages.extend(list(range(self.page, total_pages)))
             else:
-                if total_pages > self.page + after_page + before_end:
+                if total_pages >= self.page + after_page + before_end:
                     pages.extend(list(range(self.page, self.page + after_page)))
                     pages.append('...')
                     pages.extend(list(range(total_pages - before_end, total_pages)))
                 else:
                     pages.extend(list(range(self.page, self.page + after_page)))
+                    if self.page + after_page < total_pages:
+                        # show only last page when the after_page window left space to show it
+                        pages.append('...')
+                        pages.extend(list(range(total_pages - 1, total_pages)))
 
             return pages
 
