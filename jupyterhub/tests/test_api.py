@@ -159,7 +159,7 @@ async def test_delete_server_no_auth(app):
     Negative test to make sure DELETE /servers/{id} enforces admin auth.
     """
     r = await api_request(app, 'servers', '99999', method='delete', noauth=True)
-    assert r.status_code == 404  # FIXME(mriedem): Why isn't this a 403?
+    assert r.status_code == 403
 
 
 @mark.server
@@ -172,8 +172,25 @@ async def test_delete_server_not_found(app):
 
 
 # TODO(mriedem): More server delete negative tests for things like:
-# - trying to delete the default server ('')
 # - trying to delete a pending server (stopping and spawning)
+
+
+@mark.server
+async def test_delete_default_server_fails(app):
+    """
+    Negative test showing that trying to delete the default server is rejected.
+    """
+    # First list the existing servers and filter to find the "user" owned server.
+    r = await api_request(app, 'servers')
+    assert r.status_code == 200
+    servers = list(filter(lambda server: server['user']['name'] == 'user', r.json()))
+    assert len(servers) == 1, "'user' owns more than one server"
+    # The only server the 'user' user should own is the default server.
+    server = servers[0]
+    assert len(server['name']) == 0, "'user' owns a non-default server"
+    # Now try to delete the default server which should fail with a 400 error.
+    r = await api_request(app, 'servers', str(server['id']), method='delete')
+    assert r.status_code == 400, 'Expected response code 400 to delete default server'
 
 
 # --------------

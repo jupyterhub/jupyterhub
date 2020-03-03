@@ -95,5 +95,5 @@ class ServerAPIHandler(APIHandler):
 
 default_handlers = [
     (r"/api/servers", ServerListAPIHandler),
-    (r"/api/users/([^/]+)", ServerAPIHandler),
+    (r"/api/servers/([^/]+)", ServerAPIHandler),
 ]
