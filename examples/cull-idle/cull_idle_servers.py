@@ -84,6 +84,20 @@ def format_td(td):
     return "{h:02}:{m:02}:{seconds:02}".format(h=h, m=m, seconds=seconds)
 
 
+def get_log_name(user, server_name):
+    """
+    Helper to get a log name for the user and optionally server name.
+
+    :param user: dict user resource from the API expected to have "name" key
+    :param server_name: The name of the server (may be "" for the default server)
+    :return: Log name for the user and server
+    """
+    log_name = user['name']
+    if server_name:
+        log_name = '%s/%s' % (user['name'], server_name)
+    return log_name
+
+
 @coroutine
 def cull_idle(
     url, api_token, inactive_limit, cull_users=False, max_age=0, concurrency=10
@@ -93,7 +107,6 @@ def cull_idle(
     If cull_users, inactive *users* will be deleted as well.
     """
     auth_header = {'Authorization': 'token %s' % api_token}
-    req = HTTPRequest(url=url + '/users', headers=auth_header)
     now = datetime.now(timezone.utc)
     client = AsyncHTTPClient()
 
@@ -112,9 +125,30 @@ def cull_idle(
     else:
         fetch = client.fetch
 
-    resp = yield fetch(req)
-    users = json.loads(resp.body.decode('utf8', 'replace'))
-    futures = []
+    get_users = HTTPRequest(url=url + '/users', headers=auth_header)
+    users = []  # Populated if cull_users is True or cannot GET /servers
+    servers = []  # Populated if cull_users is False and can GET /servers
+    if not cull_users:
+        # We're not culling users so we just care about stopping idle servers
+        # so get those directly. Note that in some large deployments there can
+        # be many more thousands of users than servers so this is a performance
+        # optimization to deal with servers directly rather than query all users
+        # to get at their servers.
+        resp = yield fetch(HTTPRequest(url=url + '/servers', headers=auth_header))
+        if resp.code == 404:
+            # If we got a 404 the Hub API isn't new enough for the GET /servers API
+            # so log it and fallback to using GET /users.
+            app_log.info(
+                'Hub API is not new enough for GET /servers; falling back to '
+                'potentially slower GET /users API.'
+            )
+            resp = yield fetch(get_users)
+            users = json.loads(resp.body.decode('utf8', 'replace'))
+        else:
+            servers = json.loads(resp.body.decode('utf8', 'replace'))
+    else:
+        resp = yield fetch(get_users)
+        users = json.loads(resp.body.decode('utf8', 'replace'))
 
     @coroutine
     def handle_server(user, server_name, server, max_age, inactive_limit):
@@ -125,9 +159,7 @@ def cull_idle(
         Returns True if server is now stopped (user removable),
         False otherwise.
         """
-        log_name = user['name']
-        if server_name:
-            log_name = '%s/%s' % (user['name'], server_name)
+        log_name = get_log_name(user, server_name)
         if server.get('pending'):
             app_log.warning(
                 "Not culling server %s with pending %s", log_name, server['pending']
@@ -319,8 +351,23 @@ def cull_idle(
         yield fetch(req)
         return True
 
-    for user in users:
-        futures.append((user['name'], handle_user(user)))
+    futures = []
+    if servers:
+        # We got servers directly since we're not culling users so avoid handle_user
+        # since it would just pass through to handle_server anyway.
+        for server in servers:
+            log_name = get_log_name(server['user'], server['name'])
+            futures.append(
+                (
+                    log_name,
+                    handle_server(
+                        server['user'], server['name'], server, max_age, inactive_limit
+                    ),
+                )
+            )
+    else:
+        for user in users:
+            futures.append((user['name'], handle_user(user)))
 
     for (name, f) in futures:
         try:
