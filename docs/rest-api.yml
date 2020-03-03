@@ -780,7 +780,7 @@ definitions:
     properties:
       id:
         type: integer
-        description: The unique internal ID of the server.
+        description: The unique internal ID of the server. Only available on ``GET /servers``.
       name:
         type: string
         description: The server's name. The user's default server has an empty name ('')

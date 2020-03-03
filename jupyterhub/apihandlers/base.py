@@ -135,16 +135,12 @@ class APIHandler(BaseHandler):
     def server_model(self, spawner, include_state=False, include_user_and_id=False):
         """Get the JSON model for a Spawner"""
         if isinstance(spawner, orm.Spawner):
-            # TODO(mriedem): Would be nice to join the user field from
-            # the Spawner ORM object when we fetch it from the DB so we don't
-            # need the roundtrip.
-            orm_user = orm.User.find_by_id(self.db, spawner.user_id)
-            user = self._user_from_orm(orm_user)
+            user = self._user_from_orm(spawner.user)
             spawner = spawner_obj.Spawner(orm_spawner=spawner, user=user)
         server = {
             'name': spawner.name,
-            'last_activity': isoformat(spawner.orm_spawner.last_activity),
-            'started': isoformat(spawner.orm_spawner.started),
+            'last_activity': isoformat(spawner.last_activity),
+            'started': isoformat(spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
             'state': spawner.get_state() if include_state else None,
