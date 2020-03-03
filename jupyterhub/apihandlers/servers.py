@@ -27,6 +27,15 @@ class ServerListAPIHandler(APIHandler):
 
 
 class ServerAPIHandler(APIHandler):
+    # FIXME(mriedem): This should be admin_or_self so non-admin users can delete their
+    # own servers just like in DELETE /users/{name}/servers/{server_name} but the only
+    # API that returns the server id is GET /servers which is an admin-only API so how
+    # would a non-admin get the server id? Do we need to modify the response to
+    # GET /user and GET /users/{name} to return the id of each server in the list?
+    # Maybe we just don't need this DELETE /servers/{id} API since GET /servers returns
+    # everything you need (user name and server name) to delete the server via
+    # DELETE /users/{name}/server/{server_name}. That would avoid the duplication below
+    # as well which would be good.
     @admin_only
     async def delete(self, id):
         spawner = self.find_spawner_by_id(id)

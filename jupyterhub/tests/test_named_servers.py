@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import pytest
+from pytest import mark
 from tornado.httputil import url_concat
 
 from ..utils import url_path_join
@@ -368,3 +369,32 @@ async def test_user_redirect_hook_default_server_name(
     assert redirected_url.path == url_path_join(
         app.base_url, 'user', username, 'terminals/1'
     )
+
+
+@mark.server
+async def test_delete_server_ok(app, named_servers):
+    """
+    Happy path test to delete a non-default server.
+    """
+    # First spawn a new named server.
+    r = await api_request(
+        app, 'users', 'user', 'servers', 'test_server', method='post', name='user'
+    )
+    assert r.status_code == 201
+    # Now find that server's id to delete it. Note that it would be nice if that POST
+    # would return the created server resource in the response body so we didn't have
+    # to make another GET call.
+    r = await api_request(app, 'servers')
+    assert r.status_code == 200
+    servers = list(filter(lambda server: server['user']['name'] == 'user', r.json()))
+    # The "user" user should have two servers: a default server and "test_server"
+    assert len(servers) == 2
+    servers = list(filter(lambda server: server['name'] == 'test_server', servers))
+    assert len(servers) == 1
+    # Now delete the named server that we created above.
+    r = await api_request(app, 'servers', str(servers[0]['id']), method='delete')
+    assert r.status_code == 204
+
+
+# TODO(mriedem): More server delete negative tests for things like:
+# - trying to delete a pending server (stopping and spawning)

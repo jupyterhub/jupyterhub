@@ -171,10 +171,6 @@ async def test_delete_server_not_found(app):
     assert r.status_code == 404
 
 
-# TODO(mriedem): More server delete negative tests for things like:
-# - trying to delete a pending server (stopping and spawning)
-
-
 @mark.server
 async def test_delete_default_server_fails(app):
     """
