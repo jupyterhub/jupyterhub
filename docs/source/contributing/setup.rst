@@ -8,7 +8,7 @@ System requirements
 ===================
 
 JupyterHub can only run on MacOS or Linux operating systems. If you are
-using Windows, we recommend using `VirtualBox <https://virtualbox.org>`_ 
+using Windows, we recommend using `VirtualBox <https://virtualbox.org>`_
 or a similar system to run `Ubuntu Linux <https://ubuntu.com>`_ for
 development.
 
@@ -18,7 +18,7 @@ Install Python
 JupyterHub is written in the `Python <https://python.org>`_ programming language, and
 requires you have at least version 3.5 installed locally. If you haven’t
 installed Python before, the recommended way to install it is to use
-`miniconda <https://conda.io/miniconda.html>`_. Remember to get the ‘Python 3’ version, 
+`miniconda <https://conda.io/miniconda.html>`_. Remember to get the ‘Python 3’ version,
 and **not** the ‘Python 2’ version!
 
 Install nodejs
@@ -45,7 +45,13 @@ When developing JupyterHub, you need to make changes to the code & see
 their effects quickly. You need to do a developer install to make that
 happen.
 
-1. Clone the `JupyterHub git repository <https://github.com/jupyterhub/jupyterhub>`_ 
+.. note:: This guide does not attempt to dictate *how* development
+   environements should be isolated since that is a personal preference and can
+   be achieved in many ways, for example `tox`, `conda`, `docker`, etc. See this
+   `forum thread <https://discourse.jupyter.org/t/thoughts-on-using-tox/3497>`_ for
+   a more detailed discussion.
+
+1. Clone the `JupyterHub git repository <https://github.com/jupyterhub/jupyterhub>`_
    to your computer.
 
    .. code:: bash
@@ -93,7 +99,19 @@ happen.
       python3 -m pip install -r dev-requirements.txt
       python3 -m pip install -r requirements.txt
 
-5. Install the development version of JupyterHub. This lets you edit
+5. Setup a database.
+
+   The default database is ``sqlite`` so if you are just trying
+   to get up and running quickly for local development remember to install
+   the native package for your distribution, for example on Ubuntu:
+
+   .. code:: bash
+
+      sudo apt-get install sqlite3
+
+   See :doc:`/reference/database` for details on other supported databases.
+
+6. Install the development version of JupyterHub. This lets you edit
    JupyterHub code in a text editor & restart the JupyterHub process to
    see your code changes immediately.
 
@@ -101,13 +119,13 @@ happen.
 
       python3 -m pip install --editable .
 
-6. You are now ready to start JupyterHub!
+7. You are now ready to start JupyterHub!
 
    .. code:: bash
 
       jupyterhub
 
-7. You can access JupyterHub from your browser at
+8. You can access JupyterHub from your browser at
    ``http://localhost:8000`` now.
 
 Happy developing!
