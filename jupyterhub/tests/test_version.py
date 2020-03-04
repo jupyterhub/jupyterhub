@@ -4,6 +4,11 @@ import logging
 import pytest
 
 from .._version import _check_version
+from .._version import reset_globals
+
+
+def setup_function(function):
+    reset_globals()
 
 
 @pytest.mark.parametrize(
@@ -25,3 +30,17 @@ def test_check_version(hub_version, singleuser_version, log_level, msg, caplog):
     record = caplog.records[0]
     assert record.levelno == log_level
     assert msg in record.getMessage()
+
+
+def test_check_version_singleton(caplog):
+    """Tests that minor version difference logging is only logged once."""
+    # Run test_check_version twice which will assert that the warning is only logged
+    # once.
+    for x in range(2):
+        test_check_version(
+            '1.2.0',
+            '1.1.0',
+            logging.WARNING,
+            'This could cause failure to authenticate',
+            caplog,
+        )
