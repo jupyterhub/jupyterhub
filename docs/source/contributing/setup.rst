@@ -101,14 +101,9 @@ happen.
 
 5. Setup a database.
 
-   The default database is ``sqlite`` so if you are just trying
-   to get up and running quickly for local development remember to install
-   the native package for your distribution, for example on Ubuntu:
-
-   .. code:: bash
-
-      sudo apt-get install sqlite3
-
+   The default database engine is ``sqlite`` so if you are just trying
+   to get up and running quickly for local development that should be
+   available via `python <https://docs.python.org/3.5/library/sqlite3.html>`__.
    See :doc:`/reference/database` for details on other supported databases.
 
 6. Install the development version of JupyterHub. This lets you edit
