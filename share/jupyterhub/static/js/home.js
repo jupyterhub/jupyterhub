@@ -104,6 +104,7 @@ require(["jquery", "moment", "jhapi"], function(
           .text("Start My Server")
           .attr("title", "Start your default server")
           .attr("disabled", false)
+          .attr("href", base_url + "spawn/" + user)
           .off("click");
       },
     });
