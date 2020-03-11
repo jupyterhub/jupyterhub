@@ -38,8 +38,12 @@ from traitlets import (
     TraitError,
 )
 
+try:
+    from jupyterlab.labapp import LabApp as App
+except ImportError:
+    from notebook.notebookapp import NotebookApp as App
+
 from notebook.notebookapp import (
-    NotebookApp,
     aliases as notebook_aliases,
     flags as notebook_flags,
 )
@@ -216,7 +220,7 @@ def _exclude_home(path_list):
             yield p
 
 
-class SingleUserNotebookApp(NotebookApp):
+class SingleUserNotebookApp(App):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
 
     description = dedent(
@@ -230,7 +234,7 @@ class SingleUserNotebookApp(NotebookApp):
     examples = ""
     subcommands = {}
     version = __version__
-    classes = NotebookApp.classes + [HubOAuth]
+    classes = App.classes + [HubOAuth]
 
     # disable single-user app's localhost checking
     allow_remote_access = True
