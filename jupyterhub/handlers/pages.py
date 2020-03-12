@@ -184,7 +184,9 @@ class SpawnHandler(BaseHandler):
             self.log.debug(
                 "Triggering spawn with default options for %s", spawner._log_name
             )
-            return await self._wrap_spawn_single_user(user, server_name, spawner, pending_url)
+            return await self._wrap_spawn_single_user(
+                user, server_name, spawner, pending_url
+            )
 
     @web.authenticated
     async def post(self, for_user=None, server_name=''):
@@ -219,7 +221,9 @@ class SpawnHandler(BaseHandler):
             )
             options = await maybe_future(spawner.options_from_form(form_options))
             pending_url = self._get_pending_url(user, server_name)
-            return await self._wrap_spawn_single_user(user, server_name, spawner, pending_url, options)
+            return await self._wrap_spawn_single_user(
+                user, server_name, spawner, pending_url, options
+            )
         except Exception as e:
             self.log.error(
                 "Failed to spawn single-user server with form", exc_info=True
@@ -255,14 +259,18 @@ class SpawnHandler(BaseHandler):
 
         return pending_url
 
-    async def _wrap_spawn_single_user(self, user, server_name, spawner, pending_url, options=None):
+    async def _wrap_spawn_single_user(
+        self, user, server_name, spawner, pending_url, options=None
+    ):
         # Explicit spawn request: clear _spawn_future
         # which may have been saved to prevent implicit spawns
         # after a failure.
         if spawner._spawn_future and spawner._spawn_future.done():
             spawner._spawn_future = None
         # not running, no form. Trigger spawn and redirect back to /user/:name
-        f = asyncio.ensure_future(self.spawn_single_user(user, server_name, options=options))
+        f = asyncio.ensure_future(
+            self.spawn_single_user(user, server_name, options=options)
+        )
         done, pending = await asyncio.wait([f], timeout=1)
         # If spawn_single_user throws an exception, raise a 500 error
         # otherwise it may cause a redirect loop
@@ -272,8 +280,9 @@ class SpawnHandler(BaseHandler):
                 500,
                 "Error in Authenticator.pre_spawn_start: %s %s"
                 % (type(exc).__name__, str(exc)),
-                )
+            )
         return self.redirect(pending_url)
+
 
 class SpawnPendingHandler(BaseHandler):
     """Handle /hub/spawn-pending/:user/:server
