@@ -18,14 +18,14 @@ version_info = (
 
 __version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:])
 
-# Singleton flag to only log the major/minor mismatch warning once.
-_version_mismatch_warning_logged = False
+# Singleton flag to only log the major/minor mismatch warning once per mismatch combo.
+_version_mismatch_warning_logged = {}
 
 
 def reset_globals():
     """Used to reset globals between test cases."""
     global _version_mismatch_warning_logged
-    _version_mismatch_warning_logged = False
+    _version_mismatch_warning_logged = {}
 
 
 def _check_version(hub_version, singleuser_version, log):
@@ -58,13 +58,14 @@ def _check_version(hub_version, singleuser_version, log):
             log_method = log.debug
         else:
             # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
+            key = '%s-%s' % (hub_version, singleuser_version)
             global _version_mismatch_warning_logged
-            if _version_mismatch_warning_logged:
+            if _version_mismatch_warning_logged.get(key):
                 do_log = False  # We already logged this warning so don't log it again.
             else:
                 log_method = log.warning
                 extra = " This could cause failure to authenticate and result in redirect loops!"
-                _version_mismatch_warning_logged = True
+                _version_mismatch_warning_logged[key] = True
         if do_log:
             log_method(
                 "jupyterhub version %s != jupyterhub-singleuser version %s." + extra,

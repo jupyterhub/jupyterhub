@@ -44,3 +44,13 @@ def test_check_version_singleton(caplog):
             'This could cause failure to authenticate',
             caplog,
         )
+    # Run it again with a different singleuser_version to make sure that is logged as
+    # a warning.
+    caplog.clear()
+    test_check_version(
+        '1.2.0',
+        '1.1.1',
+        logging.WARNING,
+        'This could cause failure to authenticate',
+        caplog,
+    )
