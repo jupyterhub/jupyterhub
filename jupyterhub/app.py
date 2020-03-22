@@ -2019,7 +2019,7 @@ class JupyterHub(Application):
         for orm_server in db.query(orm.Server):
             orm_spawner = orm_server.spawner
             if not orm_spawner:
-                # sanity check for orphaned Server rows
+                # check for orphaned Server rows
                 # this shouldn't happen if we've got our sqlachemy right
                 if not orm_server.service:
                     self.log.warning("deleting orphaned server %s", orm_server)
