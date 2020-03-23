@@ -3,7 +3,7 @@
 The combination of [JupyterHub](https://jupyterhub.readthedocs.io) and [JupyterLab](https://jupyterlab.readthedocs.io)
 is a great way to make shared computing resources available to a group.
 
-These instructions are a guide for a manual, 'bare metal' install of [JupyterHub](https://jupyterhub.readthedocs.io) 
+These instructions are a guide for a manual, 'bare metal' install of [JupyterHub](https://jupyterhub.readthedocs.io)
 and [JupyterLab](https://jupyterlab.readthedocs.io). This is ideal for running on a single server: build a beast
 of a machine and share it within your lab, or use a virtual machine from any VPS or cloud provider.
 
@@ -19,7 +19,7 @@ Your own server with administrator (root) access. This could be a local machine,
 or VPS. Each user who will access JupyterHub should have a standard user account on the machine. The install will be done
 through the command line - useful if you log into your machine remotely using SSH.
 
-This tutorial was tested on **Ubuntu 18.04**. No other Linux distributions have been tested, but the instructions 
+This tutorial was tested on **Ubuntu 18.04**. No other Linux distributions have been tested, but the instructions
 should be reasonably straightforward to adapt.
 
 
@@ -41,9 +41,9 @@ JupyterHub+JupyterLab as a 'app' or webservice, which will connect to the kernel
 
 
 The default JupyterHub Authenticator uses PAM to authenticate system users with their username and password. One can
-[choose the authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authenticators) 
-that best suits their needs. In this guide we will use the default Authenticator because it makes it easy for everyone to manage data 
-in their home folder and to mix and match different services and access methods (e.g. SSH) which all work using the 
+[choose the authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authenticators)
+that best suits their needs. In this guide we will use the default Authenticator because it makes it easy for everyone to manage data
+in their home folder and to mix and match different services and access methods (e.g. SSH) which all work using the
 Linux system user accounts. Therefore, each user of JupyterHub will need a standard system user account.
 
 Another goal of this guide is to use system provided packages wherever possible. This has the advantage that these packages
@@ -62,10 +62,10 @@ Both jupyterlab and jupyterhub will be installed into this virtualenv. Create it
 sudo python3 -m venv /opt/jupyterhub/
 ```
 
-Now we use pip to install the required Python packages into the new virtual environment. Be sure to install 
-`wheel` first. Since we are separating the user interface from the computing kernels, we don't install 
-any Python scientific packages here. The only exception is `ipywidgets` because this is needed to allow connection 
-between interactive tools running in the kernel and the user interface. 
+Now we use pip to install the required Python packages into the new virtual environment. Be sure to install
+`wheel` first. Since we are separating the user interface from the computing kernels, we don't install
+any Python scientific packages here. The only exception is `ipywidgets` because this is needed to allow connection
+between interactive tools running in the kernel and the user interface.
 
 Note that we use `/opt/jupyterhub/bin/python3 -m pip install` each time - this [makes sure](https://snarky.ca/why-you-should-use-python-m-pip/)
 that the packages are installed to the correct virtual environment.
@@ -95,7 +95,7 @@ sudo npm install -g configurable-http-proxy
 
 Now we start creating configuration files. To keep everything together, we put all the configuration into the folder
 created for the virtualenv, under `/opt/jupyterhub/etc/`. For each thing needing configuration, we will create a further
-subfolder and necessary files. 
+subfolder and necessary files.
 
 First create the folder for the JupyterHub configuration and navigate to it:
 
@@ -110,19 +110,19 @@ sudo /opt/jupyterhub/bin/jupyterhub --generate-config
 ```
 This will produce the default configuration file `/opt/jupyterhub/etc/jupyterhub/jupyterhub_config.py`
 
-You will need to edit the configuration file to make the JupyterLab interface by the default. 
+You will need to edit the configuration file to make the JupyterLab interface by the default.
 Set the following configuration option in your `jupyterhub_config.py` file:
 
 ```python
-c.Spawner.default_url = '/lab' 
+c.Spawner.default_url = '/lab'
 ```
 
 Further configuration options may be found in the documentation.
 
 ### Setup Systemd service
 
-We will setup JupyterHub to run as a system service using Systemd (which is responsible for managing all services and 
-servers that run on startup in Ubuntu). We will create a service file in a suitable location in the virtualenv folder 
+We will setup JupyterHub to run as a system service using Systemd (which is responsible for managing all services and
+servers that run on startup in Ubuntu). We will create a service file in a suitable location in the virtualenv folder
 and then link it to the system services. First create the folder for the service file:
 
 ```sh
@@ -167,7 +167,7 @@ Then tell systemd to reload its configuration files
 sudo systemctl daemon-reload
 ```
 
-And finally enable the service 
+And finally enable the service
 
 ```sh
 sudo systemctl enable jupyterhub.service
@@ -187,7 +187,7 @@ sudo systemctl status jupyterhub.service
 
 You should now be already be able to access jupyterhub using `<your servers ip>:8000` (assuming you haven't already set
 up a firewall or something). However, when you log in the jupyter notebooks will be trying to use the Python virtualenv
-that was created to install JupyterHub, this is not what we want. So on to part 2   
+that was created to install JupyterHub, this is not what we want. So on to part 2
 
 ## Part 2: Conda environments
 
@@ -199,7 +199,7 @@ instructions are copied from [here](https://docs.conda.io/projects/conda/en/late
 
 Install Anacononda public gpg key to trusted store
 ```sh
-curl https://repo.anaconda.com/pkgs/misc/gpgkeys/anaconda.asc | gpg --dearmor > conda.gpg 
+curl https://repo.anaconda.com/pkgs/misc/gpgkeys/anaconda.asc | gpg --dearmor > conda.gpg
 sudo install -o root -g root -m 644 conda.gpg /etc/apt/trusted.gpg.d/
 ```
 
@@ -239,7 +239,7 @@ be the obvious default - call it whatever you like. You can install whatever you
 sudo /opt/conda/bin/conda create --prefix /opt/conda/envs/python python=3.7 ipykernel
 ```
 
-Once your env is set up as desired, make it visible to Jupyter by installing the kernel spec. There are two options here: 
+Once your env is set up as desired, make it visible to Jupyter by installing the kernel spec. There are two options here:
 
 1 ) Install into the JupyterHub virtualenv - this ensures it overrides the default python version. It will only be visible
 to the JupyterHub installation we have just created. This is useful to avoid conda environments appearing where they are not expected.
@@ -258,7 +258,7 @@ sudo /opt/conda/envs/python/bin/python -m ipykernel install --prefix /usr/local/
 
 ### Setting up users' own conda environments
 
-There is relatively little for the administrator to do here, as users will have to set up their own environments using the shell. 
+There is relatively little for the administrator to do here, as users will have to set up their own environments using the shell.
 On login they should run `conda init` or  `/opt/conda/bin/conda`. The can then use conda to set up their environment,
 although they must also install `ipykernel`. Once done, they can enable their kernel using:
 
@@ -269,21 +269,21 @@ although they must also install `ipykernel`. Once done, they can enable their ke
 This will place the kernel spec into their home folder, where Jupyter will look for it on startup.
 
 
-## Setting up a reverse proxy 
+## Setting up a reverse proxy
 
-The guide so far results in JupyterHub running on port 8000. It is not generally advisable to run open web services in 
+The guide so far results in JupyterHub running on port 8000. It is not generally advisable to run open web services in
 this way - instead, use a reverse proxy running on standard HTTP/HTTPS ports.
 
-> **Important**: Be aware of the security implications especially if you are running a server that is accessible from the open internet 
-> i.e. not protected within an institutional intranet or private home/office network. You should set up a firewall and 
-> HTTPS encryption, which is outside of the scope of this guide. For HTTPS consider using [LetsEncrypt](https://letsencrypt.org/) 
+> **Important**: Be aware of the security implications especially if you are running a server that is accessible from the open internet
+> i.e. not protected within an institutional intranet or private home/office network. You should set up a firewall and
+> HTTPS encryption, which is outside of the scope of this guide. For HTTPS consider using [LetsEncrypt](https://letsencrypt.org/)
 > or setting up a [self-signed certificate](https://www.digitalocean.com/community/tutorials/how-to-create-a-self-signed-ssl-certificate-for-nginx-in-ubuntu-18-04).
-> Firewalls may be set up using `ufs` or `firewalld` and combined with `fail2ban`.
+> Firewalls may be set up using `ufw` or `firewalld` and combined with `fail2ban`.
 
 ### Using Nginx
 Nginx is a mature and established web server and reverse proxy and is easy to install using `sudo apt install nginx`.
-Details on using Nginx as a reverse proxy can be found elsewhere. Here, we will only outline the additional steps needed 
-to setup JupyterHub with Nginx and host it at a given URL e.g. `<your-server-ip-or-url>/jupyter`. 
+Details on using Nginx as a reverse proxy can be found elsewhere. Here, we will only outline the additional steps needed
+to setup JupyterHub with Nginx and host it at a given URL e.g. `<your-server-ip-or-url>/jupyter`.
 This could be useful for example if you are running several services or web pages on the same server.
 
 To achieve this needs a few tweaks to both the JupyterHub configuration and the Nginx config. First, edit the
@@ -299,7 +299,7 @@ Now Nginx must be configured with a to pass all traffic from `/jupyter` to the t
 Add the following snippet to your nginx configuration file (e.g. `/etc/nginx/sites-available/default`).
 
 ```
-  location /jupyter/ {    
+  location /jupyter/ {
     # NOTE important to also set base url of jupyterhub to /jupyter in its config
     proxy_pass http://127.0.0.1:8000;
 
@@ -340,7 +340,7 @@ sudo systemctl restart nginx.service
 
 ## Getting started using your new JupyterHub
 
-Once you have setup JupyterHub and Nginx proxy as described, you can browse to your JupyterHub IP or URL 
+Once you have setup JupyterHub and Nginx proxy as described, you can browse to your JupyterHub IP or URL
 (e.g. if your server IP address is `123.456.789.1` and you decided to host JupyterHub at the `/jupyter` URL, browse
 to `123.456.789.1/jupyter`). You will find a login page where you enter your Linux username and password. On login
 you will be presented with the JupyterLab interface, with the file browser pane showing the contents of your users'
