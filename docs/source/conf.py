@@ -74,7 +74,7 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-html_theme = 'pandas_sphinx_theme'
+html_theme = 'pydata_sphinx_theme'
 
 html_logo = '_static/images/logo/logo.png'
 html_favicon = '_static/images/logo/favicon.ico'
