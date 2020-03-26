@@ -1,0 +1,4 @@
+contact_links:
+  - name: Need help with JupyterHub?
+    url: https://discourse.jupyter.org
+    about: If there's no similar issue or post on Discourse, please file an issue there.
