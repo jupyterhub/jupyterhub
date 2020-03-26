@@ -1,6 +1,6 @@
 ---
-name: Installation and configuration questions
-about: Installation and configuration assistance
+name: "\U0001F914 Uncommon situation. Not sure what to do."
+about: If nothing fits your situation, file an issue and describe your use-case.
 
 ---
 

@@ -1,4 +1,7 @@
 contact_links:
-  - name: Need help with JupyterHub?
+  - name: "\U0001F198 Need help with JupyterHub?"
     url: https://discourse.jupyter.org
-    about: If there's no similar issue or post on Discourse, please file an issue there.
+    about: Search Discourse for similar questions or ask for help there. 
+  - name: "\u003F Have a short question about JupyterHub?"
+    url: https://gitter.im/jupyterhub/jupyterhub
+    about: Ask on JupyterHub Gitter channel.
