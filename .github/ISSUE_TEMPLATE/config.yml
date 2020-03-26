@@ -1,7 +1,4 @@
 contact_links:
-  - name: "\U0001F198 Need help with JupyterHub?"
+  - name: "\U0001F914 Uncommon situation, not sure what to do."
     url: https://discourse.jupyter.org
-    about: Search Discourse for similar questions or ask for help there. 
-  - name: "\u003F Have a short question about JupyterHub?"
-    url: https://gitter.im/jupyterhub/jupyterhub
-    about: Ask on JupyterHub Gitter channel.
+    about: Search on Discourse for similar questions or ask for help there.

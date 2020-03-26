@@ -23,4 +23,3 @@ about: Suggest a new feature or a big change to JupyterHub
 
 ### Who can do this work?
 <!-- What skills are needed? Who can be recruited to add this feature? This information will affect who chooses to work on the feature with you. -->
-
