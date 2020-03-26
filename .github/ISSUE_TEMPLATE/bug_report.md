@@ -1,39 +1,33 @@
 ---
-name: Issue report
-about: Create a report to help us improve
+name: "\U0001F41B Bug report"
+about: Create a report to help us repair something that is currently broken
 
 ---
+<!-- Thank you for contributing. These HTML commments will not render in the issue, but you can delete them once you've read them if you prefer! -->
 
-<!---
-Hi! Thanks for using JupyterHub.
+### Bug description
+<!-- Use this section to clearly and concisely describe the bug. -->
 
-If you are reporting an issue with JupyterHub, please use the GitHub search feature to check if your issue has been asked already. If it has, please add your comments to the existing issue.
+#### Expected behaviour
+<!-- Tell us what you thought would happen. -->
 
-Some tips:
-- Running `jupyter troubleshoot` from the command line, if possible, and posting
-its output would also be helpful.
-- Running JupyterHub in `--debug` mode (`jupyterhub --debug`) can also be helpful for troubleshooting.
---->
+#### Actual behaviour
+<!-- Tell us what it actually happens. Tip: running JupyterHub in `--debug` mode (`jupyterhub --debug`) can also be helpful for troubleshooting. -->
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+### How to reproduce
+<!-- Use this section to describe the steps that a user would take to experience this bug. -->
 
-<!---Add description here--->
-
-**To Reproduce**
-<!---
-Please share the steps to reproduce the behavior:
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
 4. See error
---->
 
-**Expected behavior**
-<!---
-A clear and concise description of what you expected to happen.
---->
+### Your personal set up
+<!-- Tell us a little about the system you're using. -->
 
-**Compute Information**
- - Operating System
- - JupyterHub Version [e.g. 22]
+ - OS:
+ <!-- [e.g. linux, OSX] -->
+ - Version:
+ <!-- e.g. jupyterhub --version. --->
+ - Configuration:
+ <!-- Be careful not to share any sensible information. --->
