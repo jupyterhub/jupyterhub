@@ -1,11 +1,19 @@
-name: jupyterhub
-type: sphinx
-conda:
-     file: docs/environment.yml
+version: 2
+
+sphinx:
+  configuration: docs/source/conf.py
+
+build:
+  image: testing
+
 python:
-  version: 3
+  version: 3.7
+  install:
+    - method: pip
+      path: .
+    - requirements: docs/requirements.txt
+
+
 formats:
   - htmlzip
   - epub
-  # pdf disabled due to bug in sphinx 1.8 + recommonmark
-  # - pdf
