@@ -1,5 +1,3 @@
-# ReadTheDocs uses the `environment.yaml` so make sure to update that as well
-# if you change this file
 alabaster_jupyterhub
 alembic
 autodoc-traits
