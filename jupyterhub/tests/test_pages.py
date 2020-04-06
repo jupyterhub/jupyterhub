@@ -255,6 +255,28 @@ async def test_spawn_page_admin(app, admin_access):
         assert "Spawning server for {}".format(u.name) in r.text
 
 
+async def test_spawn_with_query_arguments(app):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        base_url = ujoin(public_host(app), app.hub.base_url)
+        cookies = await app.login_user('jones')
+        orm_u = orm.User.find(app.db, 'jones')
+        u = app.users[orm_u]
+        await u.stop()
+        next_url = ujoin(app.base_url, 'user/jones/tree')
+        r = await async_requests.get(
+            url_concat(
+                ujoin(base_url, 'spawn'), {'next': next_url, 'energy': '510keV'},
+            ),
+            cookies=cookies,
+        )
+        r.raise_for_status()
+        assert r.history
+        assert u.spawner.user_options == {
+            'energy': '510keV',
+            'notspecified': 5,
+        }
+
+
 async def test_spawn_form(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
