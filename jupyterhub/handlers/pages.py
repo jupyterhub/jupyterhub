@@ -174,20 +174,21 @@ class SpawnHandler(BaseHandler):
         await spawner.run_auth_state_hook(auth_state)
 
         # Try to start server directly when query arguments are passed.
-        form_options = {}
+        error_message = ''
+        query_options = {}
         for key, byte_list in self.request.query_arguments.items():
-            form_options[key] = [bs.decode('utf8') for bs in byte_list]
+            query_options[key] = [bs.decode('utf8') for bs in byte_list]
 
         # 'next' is reserved argument for redirect after spawn
-        form_options.pop('next', None)
+        query_options.pop('next', None)
 
-        if len(form_options) > 0:
+        if len(query_options) > 0:
             try:
                 self.log.debug(
                     "Triggering spawn with supplied query arguments for %s",
                     spawner._log_name,
                 )
-                options = await maybe_future(spawner.options_from_form(form_options))
+                options = await maybe_future(spawner.options_from_query(query_options))
                 pending_url = self._get_pending_url(user, server_name)
                 return await self._wrap_spawn_single_user(
                     user, server_name, spawner, pending_url, options
@@ -197,13 +198,16 @@ class SpawnHandler(BaseHandler):
                     "Failed to spawn single-user server with query arguments",
                     exc_info=True,
                 )
+                error_message = str(e)
                 # fallback to behavior without failing query arguments
 
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
             form = await self._render_form(
-                for_user=user, spawner_options_form=spawner_options_form
+                for_user=user,
+                spawner_options_form=spawner_options_form,
+                message=error_message,
             )
             self.finish(form)
         else:
