@@ -561,7 +561,11 @@ class JupyterHub(Application):
     def _url_part_changed(self, change):
         """propagate deprecated ip/port/base_url config to the bind_url"""
         urlinfo = urlparse(self.bind_url)
-        urlinfo = urlinfo._replace(netloc='%s:%i' % (self.ip, self.port))
+        if ':' in self.ip:
+            fmt = '[%s]:%i'
+        else:
+            fmt = '%s:%i'
+        urlinfo = urlinfo._replace(netloc=fmt % (self.ip, self.port))
         urlinfo = urlinfo._replace(path=self.base_url)
         bind_url = urlunparse(urlinfo)
         if bind_url != self.bind_url:
@@ -727,10 +731,10 @@ class JupyterHub(Application):
         help="""The ip or hostname for proxies and spawners to use
         for connecting to the Hub.
 
-        Use when the bind address (`hub_ip`) is 0.0.0.0 or otherwise different
+        Use when the bind address (`hub_ip`) is 0.0.0.0, :: or otherwise different
         from the connect address.
 
-        Default: when `hub_ip` is 0.0.0.0, use `socket.gethostname()`, otherwise use `hub_ip`.
+        Default: when `hub_ip` is 0.0.0.0 or ::, use `socket.gethostname()`, otherwise use `hub_ip`.
 
         Note: Some spawners or proxy implementations might not support hostnames. Check your
         spawner or proxy documentation to see if they have extra requirements.

@@ -66,7 +66,7 @@ def can_connect(ip, port):
 
     Return True if we can connect, False otherwise.
     """
-    if ip in {'', '0.0.0.0'}:
+    if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
     try:
         socket.create_connection((ip, port)).close()
@@ -179,7 +179,7 @@ async def exponential_backoff(
 
 async def wait_for_server(ip, port, timeout=10):
     """Wait for any server to show up at ip:port."""
-    if ip in {'', '0.0.0.0'}:
+    if ip in {'', '0.0.0.0', '::'}:
         ip = '127.0.0.1'
     await exponential_backoff(
         lambda: can_connect(ip, port),
