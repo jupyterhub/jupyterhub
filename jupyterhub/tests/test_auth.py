@@ -1,7 +1,6 @@
 """Tests for PAM authentication"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import os
 from unittest import mock
 
 import pytest

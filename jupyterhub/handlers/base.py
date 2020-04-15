@@ -2,7 +2,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import copy
 import json
 import math
 import random
@@ -27,14 +26,12 @@ from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
 from tornado.web import addslash
-from tornado.web import MissingArgumentError
 from tornado.web import RequestHandler
 
 from .. import __version__
 from .. import orm
 from ..metrics import PROXY_ADD_DURATION_SECONDS
 from ..metrics import PROXY_DELETE_DURATION_SECONDS
-from ..metrics import ProxyAddStatus
 from ..metrics import ProxyDeleteStatus
 from ..metrics import RUNNING_SERVERS
 from ..metrics import SERVER_POLL_DURATION_SECONDS

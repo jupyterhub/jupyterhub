@@ -4,8 +4,6 @@ Contains base Spawner class & default implementation
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import ast
-import asyncio
-import errno
 import json
 import os
 import pipes

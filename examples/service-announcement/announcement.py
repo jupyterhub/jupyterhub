@@ -4,7 +4,6 @@ import json
 import os
 
 from tornado import escape
-from tornado import gen
 from tornado import ioloop
 from tornado import web
 

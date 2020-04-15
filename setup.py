@@ -10,7 +10,6 @@ from __future__ import print_function
 import os
 import shutil
 import sys
-from glob import glob
 from subprocess import check_call
 
 from setuptools import setup

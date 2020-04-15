@@ -7,7 +7,6 @@ authentication can expire in a number of ways:
 - doesn't need refresh
 - needs refresh and cannot be refreshed without new login
 """
-import asyncio
 from contextlib import contextmanager
 from unittest import mock
 from urllib.parse import parse_qs
