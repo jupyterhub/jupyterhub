@@ -20,6 +20,7 @@ extensions = [
     'autodoc_traits',
     'sphinx_copybutton',
     'sphinx-jsonschema',
+    'recommonmark',
 ]
 
 templates_path = ['_templates']
@@ -62,11 +63,9 @@ from recommonmark.transform import AutoStructify
 
 def setup(app):
     app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
-    app.add_stylesheet('custom.css')
+    app.add_css_file('custom.css')
     app.add_transform(AutoStructify)
 
-
-source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
 
 source_suffix = ['.rst', '.md']
 # source_encoding = 'utf-8-sig'
