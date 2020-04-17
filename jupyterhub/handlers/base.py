@@ -1132,6 +1132,7 @@ class BaseHandler(RequestHandler):
             static_url=self.static_url,
             version_hash=self.version_hash,
             services=self.get_accessible_services(user),
+            config=self.config,
         )
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])
