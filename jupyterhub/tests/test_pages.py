@@ -354,7 +354,7 @@ async def test_spawn_pending(app, username, slow_spawn):
     assert page.find('div', {'class': 'progress'})
 
     # validate event source url by consuming it
-    script = page.body.find('script').text
+    script = page.body.find('script').string
     assert 'EventSource' in script
     # find EventSource url in javascript
     # maybe not the most robust way to check this?
