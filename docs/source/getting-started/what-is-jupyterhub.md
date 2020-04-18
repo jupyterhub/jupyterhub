@@ -61,12 +61,12 @@ The main pieces of JupyterHub are:
 
 ### Authenticator
 
-JupyterHub itself doesn't actually manage your users(&).  It has a
+JupyterHub itself doesn't actually manage your users.  It has a
 database of users, but it is usually connected with some other system
 that manages the usernames and passwords.  When someone tries to log
 in to JupyteHub, it just asks the
-**authenticator**([basics](authenticators-users-basics.html),
-[reference](../reference/authenticators.html)) if the
+**authenticator**([basics](authenticators-users-basics),
+[reference](../reference/authenticators)) if the
 username/password is valid(&).  The authenticator can also return user
 groups and admin status of users, so that JupyterHub can do some
 higher-level management.  The authenticator returns a username(&),
@@ -117,8 +117,8 @@ services you are using.
 
 ### Spawner
 
-The **spawner** ([basics](spawners-basics.html),
-[reference](../reference/spawners.html)) is the real core of
+The **spawner** ([basics](spawners-basics),
+[reference](../reference/spawners)) is the real core of
 JupyterHub: when someone wants a notebook server, it allocates
 resources and starts the server.  The notebook server could run on the
 same server as JupyterHub, on another server, on some cloud service,
@@ -202,7 +202,7 @@ running, the notebooks).  By default, the hub starts the proxy
 automatically (so that you don't realize there is a separate proxy)
 and stops the proxy when the hub stops (so that connections get
 interrupted).  But when you [configure the proxy to run
-separately](../reference/separate-proxy.html),
+separately](../reference/separate-proxy),
 users connection will stay working even without the hub.
 
 The default proxy is **ConfigurableHttpProxy** which is simple but
@@ -235,8 +235,8 @@ do configure it, you'll know).
 ### Services
 
 JupyterHub has the concept of **services**
-([basics](services-basics.html),
-[reference](../reference/services.html)), which are other web services
+([basics](services-basics),
+[reference](../reference/services)), which are other web services
 started by the hub, but otherwise are not necessarily related to the
 hub itself.  They are often used to do things related to Jupyter
 (things that user interacts with, usually not the hub), but could
