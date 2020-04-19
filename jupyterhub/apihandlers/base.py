@@ -40,6 +40,12 @@ class APIHandler(BaseHandler):
         - allow unspecified host/referer (e.g. scripts)
         """
         host = self.request.headers.get("Host")
+        # http spec allows for port at end of host header but this causes
+        # cross site scripting check to give false positive
+        if (host.endswith('.443')):
+            host = host[:-4]
+        elif (host.endswith('.80'))::
+            host = host[:-3]
         referer = self.request.headers.get("Referer")
 
         # If no header is provided, assume it comes from a script/curl.
