@@ -42,7 +42,7 @@ class APIHandler(BaseHandler):
         host_header = self.request.headers.get("Host")
         # http spec allows for port at end of host header but this causes
         # cross site scripting check to give false positive
-        host, port = host.split(":", maxsplit=1)
+        host, port = host_header.split(":", maxsplit=1)
         if not (port=='443' or port=='80'):
             host = host_header
 
