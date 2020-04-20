@@ -85,10 +85,11 @@ if (window.location.protocol === "http:") {
   warning.className = warning.className.replace(/\bhidden\b/, '');
 }
 // setup onSubmit feedback
-$('form').submit(() => {
-  $('.feedback-container>input').attr('disabled', true);
-  $('.feedback-container>*').toggleClass('hidden');
-  $('.feedback-widget>*').toggleClass('fa-pulse');
+$('form').submit((e) => {
+  var form = $(e.target);
+  form.find('.feedback-container>input').attr('disabled', true);
+  form.find('.feedback-container>*').toggleClass('hidden');
+  form.find('.feedback-widget>*').toggleClass('fa-pulse');
 });
 </script>
 {% endblock %}
