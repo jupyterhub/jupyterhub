@@ -23,9 +23,26 @@
     <form enctype="multipart/form-data" id="spawn_form" action="{{url}}" method="post" role="form">
       {{spawner_options_form | safe}}
       <br>
-      <input type="submit" value="Start" class="btn btn-jupyter form-control">
+      <div class="feedback-container">
+        <input type="submit" value="Start" class="btn btn-jupyter form-control">
+        <div class="feedback-widget hidden">
+          <i class="fa fa-spinner"></i>
+        </div>
+      </div>
     </form>
   </div>
 </div>
 
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script>
+// setup onSubmit feedback
+$('form').submit(() => {
+  $('.feedback-container>input').attr('disabled', true);
+  $('.feedback-container>*').toggleClass('hidden');
+  $('.feedback-widget>*').toggleClass('fa-pulse');
+});
+</script>
 {% endblock %}
