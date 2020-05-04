@@ -566,7 +566,12 @@ class User:
                 else:
                     # >= 0.7 returns (ip, port)
                     proto = 'https' if self.settings['internal_ssl'] else 'http'
-                    url = '%s://%s:%i' % ((proto,) + url)
+
+                    # check if spawner returned an IPv6 address
+                    if ':' in url[0]:
+                        url = '%s://[%s]:%i' % ((proto,) + url)
+                    else:
+                        url = '%s://%s:%i' % ((proto,) + url)
                 urlinfo = urlparse(url)
                 server.proto = urlinfo.scheme
                 server.ip = urlinfo.hostname
