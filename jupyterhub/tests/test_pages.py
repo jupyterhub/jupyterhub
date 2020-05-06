@@ -277,6 +277,25 @@ async def test_spawn_with_query_arguments(app):
         }
 
 
+async def test_spawn_with_query_arguments_error(app):
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        base_url = ujoin(public_host(app), app.hub.base_url)
+        cookies = await app.login_user('jones')
+        orm_u = orm.User.find(app.db, 'jones')
+        u = app.users[orm_u]
+        await u.stop()
+        next_url = ujoin(app.base_url, 'user/jones/tree')
+        r = await async_requests.get(
+            url_concat(
+                ujoin(base_url, 'spawn'),
+                {'next': next_url, 'energy': '510keV', 'illegal_argument': '42'},
+            ),
+            cookies=cookies,
+        )
+        r.raise_for_status()
+        assert "You are not allowed to specify " in r.text
+
+
 async def test_spawn_form(app):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)

@@ -173,6 +173,9 @@ class FormSpawner(MockSpawner):
             options['energy'] = form_data['energy'][0]
         if 'hello_file' in form_data:
             options['hello'] = form_data['hello_file'][0]
+
+        if 'illegal_argument' in form_data:
+            raise ValueError("You are not allowed to specify 'illegal_argument'")
         return options
 
 
