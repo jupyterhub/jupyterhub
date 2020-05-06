@@ -126,10 +126,12 @@ class Pagination:
 
     @property
     def links(self):
-        """Sets the links for the pagination.
-           Getting the input from calculate_pages_window(), generates the HTML code 
+        """Get the links for the pagination.
+           Getting the input from calculate_pages_window(), generates the HTML code
            for the pages to render, plus the arrows to go onwards and backwards (if needed).
            """
+        if self.total_pages == 1:
+            return []
 
         pages_to_render = self.calculate_pages_window()
 
@@ -139,9 +141,7 @@ class Pagination:
         if self.page > 1:
             prev_page = self.page - 1
             links.append(
-                '<li><a href="/hub/admin?page={prev_page}">«</a></li>'.format(
-                    prev_page=prev_page
-                )
+                '<li><a href="?page={prev_page}">«</a></li>'.format(prev_page=prev_page)
             )
         else:
             links.append(
@@ -161,17 +161,13 @@ class Pagination:
                 )
             else:
                 links.append(
-                    '<li><a href="/hub/admin?page={page}">{page}</a></li>'.format(
-                        page=page
-                    )
+                    '<li><a href="?page={page}">{page}</a></li>'.format(page=page)
                 )
 
         if self.page >= 1 and self.page < self.total_pages:
             next_page = self.page + 1
             links.append(
-                '<li><a href="/hub/admin?page={next_page}">»</a></li>'.format(
-                    next_page=next_page
-                )
+                '<li><a href="?page={next_page}">»</a></li>'.format(next_page=next_page)
             )
         else:
             links.append(
