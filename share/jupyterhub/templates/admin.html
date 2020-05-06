@@ -18,9 +18,6 @@
 {% block main %}
 
 <div class="container">
-  <div class="pagination-page-info">
-    Displaying users {{ pagination.info.start|safe }} - {{ pagination.info.end|safe }}. Total users {{ pagination.info.total|safe }}
-  </div>
   <table class="table table-striped">
     <thead>
       <tr>
@@ -104,16 +101,19 @@
       {% endfor %}
       {% endfor %}
   </tbody>
+  <tfoot>
+    <tr class="pagination-row">
+    <td colspan="3">
+      {% if pagination.links %}
+      <div class="pagination menu">{{ pagination.links|safe }}</div>
+      {% endif %}
+    </td>
+    <td colspan="2" class="pagination-page-info">
+    Displaying users {{ pagination.info.start|safe }} - {{ pagination.info.end|safe }} of {{ pagination.info.total|safe }}
+    </td>
+  </tr>
+  </tfoot>
   </table>
-  {% if pagination.links %}
-    <tfoot>
-      <tr>
-        <th colspan="2">
-          <div class="ui right floated pagination menu">{{ pagination.links|safe }}</div>
-        </th>
-      </tr>
-    </tfoot>
-  {% endif %}
 </div>
 <div class="container-fluid navbar-default small version_footer">
   <div class="navbar-text">
