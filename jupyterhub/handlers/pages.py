@@ -13,11 +13,13 @@ from jinja2 import TemplateNotFound
 from tornado import gen
 from tornado import web
 from tornado.httputil import url_concat
+from tornado.httputil import urlparse
 
 from .. import __version__
 from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
+from ..pagination import Pagination
 from ..utils import admin_only
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -422,6 +424,8 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
+        page, per_page, offset = Pagination.get_page_args(self)
+
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
         mapping = {'running': orm.Spawner.server_id}
@@ -462,13 +466,24 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
-        users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered)
+        users = (
+            self.db.query(orm.User)
+            .outerjoin(orm.Spawner)
+            .order_by(*ordered)
+            .limit(per_page)
+            .offset(offset)
+        )
         users = [self._user_from_orm(u) for u in users]
         from itertools import chain
 
         running = []
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
+
+        total = self.db.query(orm.User.id).count()
+        pagination = Pagination(
+            url=self.request.uri, total=total, page=page, per_page=per_page,
+        )
 
         auth_state = await self.current_user.get_auth_state()
         html = self.render_template(
@@ -482,6 +497,7 @@ class AdminHandler(BaseHandler):
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
             server_version='{} {}'.format(__version__, self.version_hash),
+            pagination=pagination,
         )
         self.finish(html)
 

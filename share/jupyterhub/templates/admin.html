@@ -22,7 +22,7 @@
     <thead>
       <tr>
         {% block thead %}
-        {{ th("User (%i)" % users|length, 'name') }}
+        {{ th("User", 'name') }}
         {{ th("Admin", 'admin') }}
         {{ th("Last Activity", 'last_activity') }}
         {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
@@ -101,6 +101,18 @@
       {% endfor %}
       {% endfor %}
   </tbody>
+  <tfoot>
+    <tr class="pagination-row">
+    <td colspan="3">
+      {% if pagination.links %}
+      <div class="pagination menu">{{ pagination.links|safe }}</div>
+      {% endif %}
+    </td>
+    <td colspan="2" class="pagination-page-info">
+    Displaying users {{ pagination.info.start|safe }} - {{ pagination.info.end|safe }} of {{ pagination.info.total|safe }}
+    </td>
+  </tr>
+  </tfoot>
   </table>
 </div>
 <div class="container-fluid navbar-default small version_footer">
