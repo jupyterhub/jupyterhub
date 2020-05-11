@@ -74,8 +74,7 @@ for administration of the Hub and its users.
     The `nodejs-legacy` package installs the `node` executable and is currently
     required for npm to work on Debian/Ubuntu.
 
-- A [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module) 
-  to use the default Authenticator
+- If using the default PAM Authenticator, a [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module).
 - TLS certificate and key for HTTPS communication
 - Domain name
 
