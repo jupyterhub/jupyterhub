@@ -12,6 +12,7 @@ from tornado.log import LogFormatter
 from tornado.web import HTTPError
 from tornado.web import StaticFileHandler
 
+from .handlers.pages import HealthCheckHandler
 from .metrics import prometheus_log_method
 
 
@@ -127,7 +128,9 @@ def log_request(handler):
     """
     status = handler.get_status()
     request = handler.request
-    if status == 304 or (status < 300 and isinstance(handler, StaticFileHandler)):
+    if status == 304 or (
+        status < 300 and isinstance(handler, (StaticFileHandler, HealthCheckHandler))
+    ):
         # static-file success and 304 Found are debug-level
         log_method = access_log.debug
     elif status < 400:
