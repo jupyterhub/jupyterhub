@@ -26,6 +26,10 @@ Before installing JupyterHub, you will need:
     The `nodejs-legacy` package installs the `node` executable and is currently
     required for npm to work on Debian/Ubuntu.
 
+- A [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module) 
+  to use the [default Authenticator](./getting-started/authenticators-users-basics.md).
+  PAM is often available by default on most distributions, if this is not the case it can be installed by 
+  using the operating system's package manager.
 - TLS certificate and key for HTTPS communication
 - Domain name
 
