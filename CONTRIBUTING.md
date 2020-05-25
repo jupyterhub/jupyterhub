@@ -66,7 +66,7 @@ pre-commit run
 
 which should run any autoformatting on your code
 and tell you about any errors it couldn't fix automatically.
-You may also install [black integration](https://github.com/ambv/black#editor-integration)
+You may also install [black integration](https://github.com/psf/black#editor-integration)
 into your text editor to format code automatically.
 
 If you have already committed files before setting up the pre-commit

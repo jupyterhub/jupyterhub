@@ -3,7 +3,7 @@ repos:
   rev: v1.9.0
   hooks:
   - id: reorder-python-imports
-- repo: https://github.com/ambv/black
+- repo: https://github.com/psf/black
   rev: 19.10b0
   hooks:
   - id: black
