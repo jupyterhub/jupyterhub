@@ -18,6 +18,7 @@ what happens under-the-hood when you deploy and configure your JupyterHub.
    rest
    database
    templates
+   extra-handlers
    ../events/index
    config-user-env
    config-examples
