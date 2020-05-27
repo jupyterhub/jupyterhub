@@ -568,7 +568,16 @@ class JupyterHub(Application):
         urlinfo = urlinfo._replace(netloc=fmt % (self.ip, self.port))
         urlinfo = urlinfo._replace(path=self.base_url)
         bind_url = urlunparse(urlinfo)
+
+        # Warn if both bind_url and ip/port/base_url are set
         if bind_url != self.bind_url:
+            if self.bind_url != "http://:8000" and self.bind_url != "https://:8000":
+                self.log.warning(
+                    "Both bind_url and ip/port/base_url have been configured. "
+                    "JupyterHub.ip, JupyterHub.port, JupyterHub.base_url are"
+                    " deprecated in JupyterHub 0.9,"
+                    " please use JupyterHub.bind_url instead."
+                )
             self.bind_url = bind_url
 
     bind_url = Unicode(
