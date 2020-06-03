@@ -571,7 +571,7 @@ class JupyterHub(Application):
 
         # Warn if both bind_url and ip/port/base_url are set
         if bind_url != self.bind_url:
-            if self.bind_url != "http://:8000" and self.bind_url != "https://:8000":
+            if self.bind_url != self._bind_url_default():
                 self.log.warning(
                     "Both bind_url and ip/port/base_url have been configured. "
                     "JupyterHub.ip, JupyterHub.port, JupyterHub.base_url are"
