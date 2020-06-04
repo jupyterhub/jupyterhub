@@ -1832,17 +1832,27 @@ class JupyterHub(Application):
     # purge expired tokens hourly
     purge_expired_tokens_interval = 3600
 
+    def purge_expired_tokens(self):
+        """purge all expiring token objects from the database
+
+        run periodically
+        """
+        # this should be all the subclasses of Expiring
+        for cls in (orm.APIToken, orm.OAuthAccessToken, orm.OAuthCode):
+            self.log.debug("Purging expired {name}s".format(name=cls.__name__))
+            cls.purge_expired(self.db)
+
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
-        purge_expired_tokens = partial(orm.APIToken.purge_expired, self.db)
-        purge_expired_tokens()
+
+        self.purge_expired_tokens()
         # purge expired tokens hourly
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
         pc = PeriodicCallback(
-            purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
+            self.purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
         )
         pc.start()
 
