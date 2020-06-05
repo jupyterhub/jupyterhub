@@ -37,6 +37,10 @@ before_install:
 install:
   - pip install --upgrade pip
   - pip install --upgrade --pre -r dev-requirements.txt .
+  - |
+    if [[ "$MASTER_DEPENDENCIES" == "True" ]]; then
+       pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
+    fi
   - pip freeze
 
 # run tests
@@ -87,6 +91,14 @@ jobs:
         - PGPASSWORD=hub[test/:?
         # The password in url below is url-encoded with: urllib.parse.quote($PGPASSWORD, safe='')
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
+    - name: python:3.8 + master dependencies
+      python: 3.8
+      env:
+        - PGUSER=jupyterhub
+        - PGPASSWORD=hub[test/:?
+        # The password in url below is url-encoded with: urllib.parse.quote($PGPASSWORD, safe='')
+        - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
+        - MASTER_DEPENDENCIES=True
     - name: python:nightly
       python: nightly
   allow_failures:
