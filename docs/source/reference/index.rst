@@ -24,3 +24,4 @@ what happens under-the-hood when you deploy and configure your JupyterHub.
    config-ghoauth
    config-proxy
    config-sudo
+   config-reference
