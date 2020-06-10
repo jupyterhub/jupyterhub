@@ -152,7 +152,7 @@ You should see a similar 200 message, as above, in the Hub log when you first
 visit your single-user notebook server. If you don't see this message in the log, it
 may mean that your single-user notebook server isn't connecting to your Hub.
 
-If you see 403 (forbidden) like this, it's a token problem:
+If you see 403 (forbidden) like this, it's likely a token problem:
 
 ```
 403 GET /hub/api/authorizations/cookie/jupyterhub-token-name/[secret] (@10.0.1.4) 4.14ms
@@ -196,9 +196,9 @@ After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
 
-##### Proxy settings
+##### Proxy settings (403 GET)
 
-When your whole JupyterHub sits behind a organization proxy (*not* a reverse proxy like NGINX as part of your setup and *not* the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request. This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should unset these environment variables. Using the environment variables `NO_PROXY` and `no_proxy` seems not to work.
+When your whole JupyterHub sits behind a organization proxy (*not* a reverse proxy like NGINX as part of your setup and *not* the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
