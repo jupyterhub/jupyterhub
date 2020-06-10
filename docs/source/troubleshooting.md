@@ -196,6 +196,10 @@ After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
 
+##### Proxy settings
+
+When your whole JupyterHub sits behind a organization proxy (*not* a reverse proxy like NGINX as part of your setup and *not* the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request. This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should unset these environment variables. Using the environment variables `NO_PROXY` and `no_proxy` seems not to work.
+
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
 [JupyterHub services](https://jupyterhub.readthedocs.io/en/stable/reference/services.html) allow processes to interact with JupyterHub's REST API. Example use-cases include:
