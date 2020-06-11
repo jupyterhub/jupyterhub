@@ -467,6 +467,11 @@ class Spawner(LoggingConfigurable):
 
         Note that the spawner class' interface is not guaranteed to be exactly same across upgrades,
         so if you are using the callable take care to verify it continues to work after upgrades!
+
+        .. versionchanged:: 1.2
+            environment from this configuration has highest priority,
+            allowing override of 'default' env variables,
+            such as JUPYTERHUB_API_URL.
         """
     ).tag(config=True)
 
@@ -740,16 +745,6 @@ class Spawner(LoggingConfigurable):
             if key in os.environ:
                 env[key] = os.environ[key]
 
-        # config overrides. If the value is a callable, it will be called with
-        # one parameter - the current spawner instance - and the return value
-        # will be assigned to the environment variable. This will be called at
-        # spawn time.
-        for key, value in self.environment.items():
-            if callable(value):
-                env[key] = value(self)
-            else:
-                env[key] = value
-
         env['JUPYTERHUB_API_TOKEN'] = self.api_token
         # deprecated (as of 0.7.2), for old versions of singleuser
         env['JPY_API_TOKEN'] = self.api_token
@@ -796,6 +791,18 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_SSL_KEYFILE'] = self.cert_paths['keyfile']
             env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
             env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
+
+        # env overrides from config. If the value is a callable, it will be called with
+        # one parameter - the current spawner instance - and the return value
+        # will be assigned to the environment variable. This will be called at
+        # spawn time.
+        # Called last to ensure highest priority, in case of overriding other
+        # 'default' variables like the API url
+        for key, value in self.environment.items():
+            if callable(value):
+                env[key] = value(self)
+            else:
+                env[key] = value
 
         return env
 
