@@ -103,4 +103,5 @@ jobs:
       python: nightly
   allow_failures:
     - name: python:nightly
+    - name: python:3.8 + master dependencies
   fast_finish: true
