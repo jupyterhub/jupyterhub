@@ -45,12 +45,15 @@ RUN apt-get update \
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . /src/jupyterhub/
-COPY jupyterhub/ /src/jupyterhub/jupyterhub
-COPY share/ /src/jupyterhub/share
 
 WORKDIR /src/jupyterhub
+
 RUN python3 -m pip install --upgrade setuptools pip wheel
-RUN python3 -m pip wheel -v --wheel-dir wheelhouse .
+
+# Build client component packages (they will be copied into ./share and
+# packaged with the built wheel.)
+RUN npm install
+RUN python3 -m pip wheel --wheel-dir wheelhouse .
 
 
 FROM $BASE_IMAGE
@@ -87,7 +90,6 @@ RUN npm install -g configurable-http-proxy@^4.2.0 \
 
 # install the wheels we built in the first stage
 COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
-COPY --from=builder /src/jupyterhub/share /src/jupyterhub/share
 RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
 
 RUN mkdir -p /srv/jupyterhub/
