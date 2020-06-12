@@ -2,8 +2,11 @@
 set -exuo pipefail
 
 export ONBUILD=${DOCKER_REPO}-onbuild
+export DEMO=${DOCKER_REPO}-demo
+export REPOS="${DOCKER_REPO} ${ONBUILD} ${DEMO}"
 # push ONBUILD image
 docker push $ONBUILD:$DOCKER_TAG
+docker push $DEMO:$DOCKER_TAG
 
 function get_hub_version() {
   rm -f hub_version
@@ -20,25 +23,20 @@ function get_hub_version() {
   fi
 }
 
-
 get_hub_version
 
-# when building master, push 0.9.0.dev as well
-docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xyz
-docker push $DOCKER_REPO:$hub_xyz
-docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xyz
-docker push $ONBUILD:$hub_xyz
+for repo in ${REPOS}; do
+  # when building master, push 0.9.0.dev as well
+  docker tag $repo:$DOCKER_TAG $repo:$hub_xyz
+  docker push $repo:$hub_xyz
 
-# when building 0.9.x, push 0.9 as well
-docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xy
-docker push $DOCKER_REPO:$hub_xy
-docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:$hub_xy
-docker push $ONBUILD:$hub_xyz
+  # when building 0.9.x, push 0.9 as well
+  docker tag $repo:$DOCKER_TAG $repo:$hub_xy
+  docker push $repo:$hub_xy
 
-# if building a stable release, tag latest as well
-if [[ "$latest" == "1" ]]; then
-  docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:latest
-  docker push $DOCKER_REPO:latest
-  docker tag $ONBUILD:$DOCKER_TAG $ONBUILD:latest
-  docker push $ONBUILD:latest
-fi
+  # if building a stable release, tag latest as well
+  if [[ "$latest" == "1" ]]; then
+    docker tag $repo:$DOCKER_TAG $repo:latest
+    docker push $repo:latest
+  fi
+done
