@@ -2,6 +2,6 @@
 
 c = get_config()
 
-# Use DummyAuthenticator and SympleSpawner
+# Use DummyAuthenticator and SimpleSpawner
 c.JupyterHub.spawner_class = "simple"
 c.JupyterHub.authenticator_class = "dummy"
