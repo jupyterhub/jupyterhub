@@ -27,8 +27,8 @@ Some examples include:
   servers using batch systems
 - [YarnSpawner](https://github.com/jupyterhub/yarnspawner) for spawning notebook
   servers in YARN containers on a Hadoop cluster
-- [RemoteSpawner](https://github.com/zonca/remotespawner) to spawn notebooks
-  and a remote server and tunnel the port via SSH
+- [SSHSpawner](https://github.com/NERSC/sshspawner) to spawn notebooks
+  on a remote server using SSH
 
 
 ## Spawner control methods
