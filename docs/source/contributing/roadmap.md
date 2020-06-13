@@ -83,7 +83,6 @@ these will be moved at a future review of the roadmap.
     - (prometheus?) API for resource monitoring
     - tracking activity on single-user servers instead of the proxy
     - notes and activity tracking per API token
-    - UI for managing named servers
 
 
 ### Later
