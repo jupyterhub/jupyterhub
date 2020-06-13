@@ -206,6 +206,7 @@ class Authenticator(LoggingConfigurable):
 
     delete_invalid_users = Bool(
         False,
+        config=True,
         help="""Delete any users from the database that do not pass validation
 
         When JupyterHub starts, `.add_user` will be called
