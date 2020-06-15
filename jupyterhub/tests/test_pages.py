@@ -686,7 +686,7 @@ async def test_shutdown_on_logout(app, shutdown_on_logout):
     assert spawner.ready == (not shutdown_on_logout)
 
 
-async def test_login_no_whitelist_adds_user(app):
+async def test_login_no_allowed_adds_user(app):
     auth = app.authenticator
     mock_add_user = mock.Mock()
     with mock.patch.object(auth, 'add_user', mock_add_user):

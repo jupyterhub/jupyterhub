@@ -6,6 +6,7 @@ from unittest import mock
 
 import pytest
 from requests import HTTPError
+from traitlets.config import Config
 
 from .mocking import MockPAMAuthenticator
 from .mocking import MockStructGroup
@@ -137,8 +138,8 @@ async def test_pam_auth_admin_groups():
     assert authorized['admin'] is False
 
 
-async def test_pam_auth_whitelist():
-    authenticator = MockPAMAuthenticator(whitelist={'wash', 'kaylee'})
+async def test_pam_auth_allowed():
+    authenticator = MockPAMAuthenticator(allowed={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -155,11 +156,11 @@ async def test_pam_auth_whitelist():
     assert authorized is None
 
 
-async def test_pam_auth_group_whitelist():
+async def test_pam_auth_allowed_groups():
     def getgrnam(name):
         return MockStructGroup('grp', ['kaylee'])
 
-    authenticator = MockPAMAuthenticator(group_whitelist={'group'})
+    authenticator = MockPAMAuthenticator(allowed_groups={'group'})
 
     with mock.patch.object(authenticator, '_getgrnam', getgrnam):
         authorized = await authenticator.get_authenticated_user(
@@ -174,7 +175,7 @@ async def test_pam_auth_group_whitelist():
     assert authorized is None
 
 
-async def test_pam_auth_blacklist():
+async def test_pam_auth_blocked():
     # Null case compared to next case
     authenticator = MockPAMAuthenticator()
     authorized = await authenticator.get_authenticated_user(
@@ -183,50 +184,41 @@ async def test_pam_auth_blacklist():
     assert authorized['name'] == 'wash'
 
     # Blacklist basics
-    authenticator = MockPAMAuthenticator(blacklist={'wash'})
+    authenticator = MockPAMAuthenticator(blocked={'wash'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized is None
 
-    # User in both white and blacklists: default deny.  Make error someday?
-    authenticator = MockPAMAuthenticator(
-        blacklist={'wash'}, whitelist={'wash', 'kaylee'}
-    )
+    # User in both allowed and blocked: default deny.  Make error someday?
+    authenticator = MockPAMAuthenticator(blocked={'wash'}, allowed={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized is None
 
-    # User not in blacklist can log in
-    authenticator = MockPAMAuthenticator(
-        blacklist={'wash'}, whitelist={'wash', 'kaylee'}
-    )
+    # User not in blocked set can log in
+    authenticator = MockPAMAuthenticator(blocked={'wash'}, allowed={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
     assert authorized['name'] == 'kaylee'
 
-    # User in whitelist, blacklist irrelevent
-    authenticator = MockPAMAuthenticator(
-        blacklist={'mal'}, whitelist={'wash', 'kaylee'}
-    )
+    # User in allowed, blocked irrelevent
+    authenticator = MockPAMAuthenticator(blocked={'mal'}, allowed={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized['name'] == 'wash'
 
     # User in neither list
-    authenticator = MockPAMAuthenticator(
-        blacklist={'mal'}, whitelist={'wash', 'kaylee'}
-    )
+    authenticator = MockPAMAuthenticator(blocked={'mal'}, allowed={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'simon', 'password': 'simon'}
     )
     assert authorized is None
 
-    # blacklist == {}
-    authenticator = MockPAMAuthenticator(blacklist=set(), whitelist={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(blocked=set(), allowed={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -253,7 +245,7 @@ async def test_deprecated_signatures():
 
 
 async def test_pam_auth_no_such_group():
-    authenticator = MockPAMAuthenticator(group_whitelist={'nosuchcrazygroup'})
+    authenticator = MockPAMAuthenticator(allowed_groups={'nosuchcrazygroup'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -262,7 +254,7 @@ async def test_pam_auth_no_such_group():
 
 async def test_wont_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed={'mal'})
     authenticator.create_system_users = False
     with pytest.raises(KeyError):
         await authenticator.add_user(user)
@@ -270,7 +262,7 @@ async def test_wont_add_system_user():
 
 async def test_cant_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed={'mal'})
     authenticator.add_user_cmd = ['jupyterhub-fake-command']
     authenticator.create_system_users = True
 
@@ -296,7 +288,7 @@ async def test_cant_add_system_user():
 
 async def test_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(whitelist={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed={'mal'})
     authenticator.create_system_users = True
     authenticator.add_user_cmd = ['echo', '/home/USERNAME']
 
@@ -317,13 +309,13 @@ async def test_add_system_user():
 
 async def test_delete_user():
     user = orm.User(name='zoe')
-    a = MockPAMAuthenticator(whitelist={'mal'})
+    a = MockPAMAuthenticator(allowed={'mal'})
 
-    assert 'zoe' not in a.whitelist
+    assert 'zoe' not in a.allowed
     await a.add_user(user)
-    assert 'zoe' in a.whitelist
+    assert 'zoe' in a.allowed
     a.delete_user(user)
-    assert 'zoe' not in a.whitelist
+    assert 'zoe' not in a.allowed
 
 
 def test_urls():
@@ -461,3 +453,10 @@ async def test_post_auth_hook():
     )
 
     assert authorized['testkey'] == 'testvalue'
+
+
+async def test_deprecations():
+    cfg = Config()
+    cfg.Authenticator.whitelist = {'user'}
+    authenticator = auth.Authenticator(config=cfg)
+    assert authenticator.allowed == {'user'}
