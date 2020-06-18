@@ -294,41 +294,74 @@ class Authenticator(LoggingConfigurable):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        self._init_deprecated_methods()
+
+    def _init_deprecated_methods(self):
         # TODO: properly handle deprecated signature *and* name
         # with correct subclass override priority!
-        for method_name in (
-            'check_whitelist',
-            'check_blacklist',
-            'check_group_whitelist',
+        for old_name, new_name in (
+            ('check_whitelist', 'check_allowed'),
+            ('check_blacklist', 'check_blocked'),
+            ('check_group_whitelist', 'check_allowed_groups'),
         ):
-            original_method = getattr(self, method_name, None)
-            if original_method is None:
+            old_method = getattr(self, old_name, None)
+            if old_method is None:
                 # no such method (check_group_whitelist is optional)
                 continue
-            signature = inspect.signature(original_method)
-            if 'authentication' not in signature.parameters:
+
+            # allow old name to have higher priority
+            # if and only if it's defined in a later subclass
+            # than the new name
+            for cls in self.__class__.mro():
+                has_old_name = old_name in cls.__dict__
+                has_new_name = new_name in cls.__dict__
+                if has_new_name:
+                    break
+                if has_old_name and not has_new_name:
+                    warnings.warn(
+                        "{0}.{1} should be renamed to {0}.{2} for JupyterHub >= 1.2".format(
+                            cls.__name__, old_name, new_name
+                        ),
+                        DeprecationWarning,
+                    )
+                    # use old name instead of new
+                    # if old name is overridden in subclass
+                    def _new_calls_old(old_name, *args, **kwargs):
+                        return getattr(self, old_name)(*args, **kwargs)
+
+                    setattr(self, new_name, partial(_new_calls_old, old_name))
+                    break
+
+            # deprecate pre-1.0 method signatures
+            signature = inspect.signature(old_method)
+            if 'authentication' not in signature.parameters and not any(
+                param.kind == inspect.Parameter.VAR_KEYWORD
+                for param in signature.parameters.values()
+            ):
                 # adapt to pre-1.0 signature for compatibility
                 warnings.warn(
                     """
                     {0}.{1} does not support the authentication argument,
-                    added in JupyterHub 1.0.
+                    added in JupyterHub 1.0. and is renamed to {2} in JupyterHub 1.2.
 
                     It should have the signature:
 
-                    def {1}(self, username, authentication=None):
+                    def {2}(self, username, authentication=None):
                         ...
 
                     Adapting for compatibility.
                     """.format(
-                        self.__class__.__name__, method_name
+                        self.__class__.__name__, old_name, new_name
                     ),
                     DeprecationWarning,
                 )
 
-                def wrapped_method(username, authentication=None, **kwargs):
+                def wrapped_method(
+                    original_method, username, authentication=None, **kwargs
+                ):
                     return original_method(username, **kwargs)
 
-                setattr(self, method_name, wrapped_method)
+                setattr(self, old_name, partial(wrapped_method, old_method))
 
     async def run_post_auth_hook(self, handler, authentication):
         """
@@ -648,25 +681,30 @@ class Authenticator(LoggingConfigurable):
         return [('/login', LoginHandler)]
 
 
-def _deprecated_method(old_name, new_name, version, self, *args, **kwargs):
-    """Method wrapper for a deprecated method name"""
+def _deprecated_method(old_name, new_name, version):
+    """Create a deprecated method wrapper for a deprecated method name"""
 
-    warnings.warn(
-        (
-            "{cls}.{old_name} is deprecated in JupyterHub {version}."
-            " Please use {cls}.{new_name} instead."
-        ).format(
-            cls=self.__class__.__name__,
-            old_name=old_name,
-            new_name=new_name,
-            version=version,
-        ),
-        DeprecationWarning,
-        stacklevel=2,
-    )
-    old_method = getattr(self, new_name)
-    return old_method(*args, **kwargs)
+    def deprecated(self, *args, **kwargs):
+        warnings.warn(
+            (
+                "{cls}.{old_name} is deprecated in JupyterHub {version}."
+                " Please use {cls}.{new_name} instead."
+            ).format(
+                cls=self.__class__.__name__,
+                old_name=old_name,
+                new_name=new_name,
+                version=version,
+            ),
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        old_method = getattr(self, new_name)
+        return old_method(*args, **kwargs)
 
+    return deprecated
+
+
+import types
 
 # deprecate white/blacklist method names
 for _old_name, _new_name, _version in [
@@ -674,9 +712,7 @@ for _old_name, _new_name, _version in [
     ("check_blacklist", "check_blocked", "1.2"),
 ]:
     setattr(
-        Authenticator,
-        _old_name,
-        partial(_deprecated_method, _old_name, _new_name, _version),
+        Authenticator, _old_name, _deprecated_method(_old_name, _new_name, _version),
     )
 
 
@@ -1062,7 +1098,7 @@ for _old_name, _new_name, _version in [
     setattr(
         LocalAuthenticator,
         _old_name,
-        partial(_deprecated_method, _old_name, _new_name, _version),
+        _deprecated_method(_old_name, _new_name, _version),
     )
 
 

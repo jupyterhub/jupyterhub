@@ -1,7 +1,9 @@
 """Tests for PAM authentication"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import logging
 import os
+import warnings
 from unittest import mock
 
 import pytest
@@ -455,8 +457,53 @@ async def test_post_auth_hook():
     assert authorized['testkey'] == 'testvalue'
 
 
-async def test_deprecations():
+class MyAuthenticator(auth.Authenticator):
+    def check_whitelist(self, username, authentication=None):
+        return username == "subclass-allowed"
+
+
+def test_deprecated_config(caplog):
+    cfg = Config()
+    cfg.Authenticator.whitelist = {'user'}
+    log = logging.getLogger("testlog")
+    authenticator = auth.Authenticator(config=cfg, log=log)
+    assert caplog.record_tuples == [
+        (
+            log.name,
+            logging.WARNING,
+            'Authenticator.whitelist is deprecated in JupyterHub 1.2, use '
+            'Authenticator.allowed instead',
+        )
+    ]
+    assert authenticator.allowed == {'user'}
+
+
+def test_deprecated_methods():
     cfg = Config()
     cfg.Authenticator.whitelist = {'user'}
     authenticator = auth.Authenticator(config=cfg)
+
+    assert authenticator.check_allowed("user")
+    with pytest.deprecated_call():
+        assert authenticator.check_whitelist("user")
+    assert not authenticator.check_allowed("otheruser")
+    with pytest.deprecated_call():
+        assert not authenticator.check_whitelist("otheruser")
+
+
+def test_deprecated_config_subclass():
+    cfg = Config()
+    cfg.MyAuthenticator.whitelist = {'user'}
+    with pytest.deprecated_call():
+        authenticator = MyAuthenticator(config=cfg)
     assert authenticator.allowed == {'user'}
+
+
+def test_deprecated_methods_subclass():
+    with pytest.deprecated_call():
+        authenticator = MyAuthenticator()
+
+    assert authenticator.check_allowed("subclass-allowed")
+    assert authenticator.check_whitelist("subclass-allowed")
+    assert not authenticator.check_allowed("otheruser")
+    assert not authenticator.check_whitelist("otheruser")
