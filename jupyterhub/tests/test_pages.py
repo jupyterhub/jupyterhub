@@ -516,6 +516,19 @@ async def test_user_redirect_deprecated(app, username):
     )
 
 
+async def test_login_page(app):
+    url = url_concat('login', dict(next='foo', param1='test'))
+    r = await get_page(url, app)
+    assert r.url.endswith('/hub/login?next=foo&param1=test')
+    # now the login.html rendered template must include the given parameters in the form
+    # action URL, including the next URL
+    page = BeautifulSoup(r.text, "html.parser")
+    form = page.find("form", method="post")
+    action = form.attrs['action']
+    assert 'next=foo' in action
+    assert 'param1=test' in action
+
+
 async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
@@ -546,26 +559,29 @@ async def test_login_strip(app):
 
 
 @pytest.mark.parametrize(
-    'running, next_url, location',
+    'running, next_url, location, params',
     [
         # default URL if next not specified, for both running and not
-        (True, '', ''),
-        (False, '', ''),
+        (True, '', '', None),
+        (False, '', '', None),
         # next_url is respected
-        (False, '/hub/admin', '/hub/admin'),
-        (False, '/user/other', '/hub/user/other'),
-        (False, '/absolute', '/absolute'),
-        (False, '/has?query#andhash', '/has?query#andhash'),
+        (False, '/hub/admin', '/hub/admin', None),
+        (False, '/user/other', '/hub/user/other', None),
+        (False, '/absolute', '/absolute', None),
+        (False, '/has?query#andhash', '/has?query#andhash', None),
         # next_url outside is not allowed
-        (False, 'relative/path', ''),
-        (False, 'https://other.domain', ''),
-        (False, 'ftp://other.domain', ''),
-        (False, '//other.domain', ''),
-        (False, '///other.domain/triple', ''),
-        (False, '\\\\other.domain/backslashes', ''),
+        (False, 'relative/path', '', None),
+        (False, 'https://other.domain', '', None),
+        (False, 'ftp://other.domain', '', None),
+        (False, '//other.domain', '', None),
+        (False, '///other.domain/triple', '', None),
+        (False, '\\\\other.domain/backslashes', '', None),
+        # params are handled correctly
+        (True, '/hub/admin', 'hub/admin?left=1&right=2', dict(left=1, right=2)),
+        (False, '/hub/admin', 'hub/admin?left=1&right=2', dict(left=1, right=2)),
     ],
 )
-async def test_login_redirect(app, running, next_url, location):
+async def test_login_redirect(app, running, next_url, location, params):
     cookies = await app.login_user('river')
     user = app.users['river']
     if location:
@@ -577,6 +593,8 @@ async def test_login_redirect(app, running, next_url, location):
         location = ujoin(app.base_url, 'hub/spawn')
 
     url = 'login'
+    if params:
+        url = url_concat(url, params)
     if next_url:
         if '//' not in next_url and next_url.startswith('/'):
             next_url = ujoin(app.base_url, next_url, '')
