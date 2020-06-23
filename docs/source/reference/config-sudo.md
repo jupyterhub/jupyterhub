@@ -57,7 +57,7 @@ To do this we add to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
 For example:
 
 ```bash
-# comma-separated whitelist of users that can spawn single-user servers
+# comma-separated list of users that can spawn single-user servers
 # this should include all of your Hub users
 Runas_Alias JUPYTER_USERS = rhea, zoe, wash
 

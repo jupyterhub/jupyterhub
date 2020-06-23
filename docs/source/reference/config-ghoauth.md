@@ -52,7 +52,7 @@ c.GitHubOAuthenticator.oauth_callback_url = os.environ['OAUTH_CALLBACK_URL']
 c.LocalAuthenticator.create_system_users = True
 
 # specify users and admin
-c.Authenticator.whitelist = {'rgbkrk', 'minrk', 'jhamrick'}
+c.Authenticator.allowed = {'rgbkrk', 'minrk', 'jhamrick'}
 c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
 
 # uses the default spawner
