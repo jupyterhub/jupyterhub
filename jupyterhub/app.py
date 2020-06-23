@@ -2360,7 +2360,6 @@ class JupyterHub(Application):
         if init_spawners_timeout < 0:
             # negative timeout means forever (previous, most stable behavior)
             init_spawners_timeout = 86400
-        print(init_spawners_timeout)
 
         init_start_time = time.perf_counter()
         init_spawners_future = asyncio.ensure_future(self.init_spawners())
