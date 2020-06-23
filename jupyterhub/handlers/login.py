@@ -90,20 +90,13 @@ class LoginHandler(BaseHandler):
     """Render the login page."""
 
     def _render(self, login_error=None, username=None):
-        # login url with any parameters specified by the user/application
-        login_url = self.append_query_parameters(
-            self.settings['login_url'], exclude=['next']
-        )
-        # the next url for after the login
-        next_url = url_escape(self.get_argument('next', default=''))
-        # now concat the login_url with the next_url
-        login_url = url_concat(login_url, {'next': next_url})
         return self.render_template(
             'login.html',
+            next=url_escape(self.get_argument('next', default='')),
             username=username,
             login_error=login_error,
             custom_html=self.authenticator.custom_html,
-            login_url=login_url,
+            login_url=self.settings['login_url'],
             authenticator_login_url=url_concat(
                 self.authenticator.login_url(self.hub.base_url),
                 {'next': self.get_argument('next', '')},

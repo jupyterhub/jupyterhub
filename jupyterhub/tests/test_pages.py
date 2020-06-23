@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import pytest
 from bs4 import BeautifulSoup
 from tornado import gen
+from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from .. import orm
@@ -516,17 +517,56 @@ async def test_user_redirect_deprecated(app, username):
     )
 
 
-async def test_login_page(app):
-    url = url_concat('login', [('next', 'foo'), ('param1', 'test')])
+@pytest.mark.parametrize(
+    'url, params, redirected_url, form_action',
+    [
+        (
+            # spawn?param=value
+            # will encode given parameters for an unauthenticated URL in the next url
+            # the next parameter will contain the app base URL (replaces BASE_URL in tests)
+            'spawn',
+            [('param', 'value')],
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+        ),
+        (
+            # login?param=fromlogin&next=encoded(/hub/spawn?param=value)
+            # will drop parameters given to the login page, passing only the next url
+            'login',
+            [('param', 'fromlogin'), ('next', '/hub/spawn?param=value')],
+            '/hub/login?param=fromlogin&next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+        ),
+        (
+            # login?param=value&anotherparam=anothervalue
+            # will drop parameters given to the login page, and use an empty next url
+            'login',
+            [('param', 'value'), ('anotherparam', 'anothervalue')],
+            '/hub/login?param=value&anotherparam=anothervalue',
+            '/hub/login?next=',
+        ),
+        (
+            # login
+            # simplest case, accessing the login URL, gives an empty next url
+            'login',
+            [],
+            '/hub/login',
+            '/hub/login?next=',
+        ),
+    ],
+)
+async def test_login_page(app, url, params, redirected_url, form_action):
+    url = url_concat(url, params)
     r = await get_page(url, app)
-    assert r.url.endswith('/hub/login?next=foo&param1=test')
+    redirected_url = redirected_url.replace('{{BASE_URL}}', url_escape(app.base_url))
+    assert r.url.endswith(redirected_url)
     # now the login.html rendered template must include the given parameters in the form
     # action URL, including the next URL
     page = BeautifulSoup(r.text, "html.parser")
     form = page.find("form", method="post")
     action = form.attrs['action']
-    assert 'next=foo' in action
-    assert 'param1=test' in action
+    form_action = form_action.replace('{{BASE_URL}}', url_escape(app.base_url))
+    assert action.endswith(form_action)
 
 
 async def test_login_fail(app):
