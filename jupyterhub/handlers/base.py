@@ -668,12 +668,18 @@ class BaseHandler(RequestHandler):
         This is important to avoid infinite loops with the next parameter being
         added over and over, for instance.
 
+        The default value for ``exclude`` is an array with "next". This is useful
+        as most use cases in JupyterHub (all?) won't want to include the next
+        parameter twice (the next parameter is added elsewhere to the query
+        parameters).
+
         :param str url: a URL
-        :param list exclude: optional list of parameters to be ignored
+        :param list exclude: optional list of parameters to be ignored, defaults to
+        a list with "next" (to avoid redirect-loops)
         :rtype (str)
         """
         if not exclude:
-            exclude = []
+            exclude = ['next']
         if self.request.query:
             query_string = [
                 param

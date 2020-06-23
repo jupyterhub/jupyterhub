@@ -517,7 +517,7 @@ async def test_user_redirect_deprecated(app, username):
 
 
 async def test_login_page(app):
-    url = url_concat('login', dict(next='foo', param1='test'))
+    url = url_concat('login', [('next', 'foo'), ('param1', 'test')])
     r = await get_page(url, app)
     assert r.url.endswith('/hub/login?next=foo&param1=test')
     # now the login.html rendered template must include the given parameters in the form
@@ -577,8 +577,8 @@ async def test_login_strip(app):
         (False, '///other.domain/triple', '', None),
         (False, '\\\\other.domain/backslashes', '', None),
         # params are handled correctly
-        (True, '/hub/admin', 'hub/admin?left=1&right=2', dict(left=1, right=2)),
-        (False, '/hub/admin', 'hub/admin?left=1&right=2', dict(left=1, right=2)),
+        (True, '/hub/admin', 'hub/admin?left=1&right=2', [('left', 1), ('right', 2)]),
+        (False, '/hub/admin', 'hub/admin?left=1&right=2', [('left', 1), ('right', 2)]),
     ],
 )
 async def test_login_redirect(app, running, next_url, location, params):
