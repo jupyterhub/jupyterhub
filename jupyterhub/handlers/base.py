@@ -676,9 +676,10 @@ class BaseHandler(RequestHandler):
             raise ValueError("Username doesn't match! %s != %s" % (username, user.name))
 
         if user is None:
-            new_user = username not in self.users
-            user = self.user_from_username(username)
+            user = self.find_user(username)
+            new_user = user is None
             if new_user:
+                user = self.user_from_username(username)
                 await maybe_future(self.authenticator.add_user(user))
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
