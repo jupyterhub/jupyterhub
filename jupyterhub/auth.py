@@ -297,7 +297,7 @@ class Authenticator(LoggingConfigurable):
         self._init_deprecated_methods()
 
     def _init_deprecated_methods(self):
-        # TODO: properly handle deprecated signature *and* name
+        # handles deprecated signature *and* name
         # with correct subclass override priority!
         for old_name, new_name in (
             ('check_whitelist', 'check_allowed'),
