@@ -93,7 +93,7 @@ def test_generate_config():
     os.remove(cfg_file)
     assert cfg_file in out
     assert 'Spawner.cmd' in cfg_text
-    assert 'Authenticator.allowed' in cfg_text
+    assert 'Authenticator.allowed_users' in cfg_text
 
 
 async def test_init_tokens(request):

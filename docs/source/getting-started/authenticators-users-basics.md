@@ -7,20 +7,20 @@ with an account and password on the system will be allowed to login.
 ## Create a set of allowed users
 
 You can restrict which users are allowed to login with a set,
-`Authenticator.allowed`:
+`Authenticator.allowed_users`:
 
 
 ```python
-c.Authenticator.allowed = {'mal', 'zoe', 'inara', 'kaylee'}
+c.Authenticator.allowed_users = {'mal', 'zoe', 'inara', 'kaylee'}
 ```
 
-Users in the allowed set are added to the Hub database when the Hub is
+Users in the `allowed_users` set are added to the Hub database when the Hub is
 started.
 
 ## Configure admins (`admin_users`)
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
-the user `allowed` set. `admin_users` can take actions on other users'
+the user `allowed_users` set. `admin_users` can take actions on other users'
 behalf, such as stopping and restarting their servers.
 
 A set of initial admin users, `admin_users` can configured be as follows:
@@ -28,7 +28,7 @@ A set of initial admin users, `admin_users` can configured be as follows:
 ```python
 c.Authenticator.admin_users = {'mal', 'zoe'}
 ```
-Users in the admin set are automatically added to the user `allowed` set,
+Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 
 Each authenticator may have different ways of determining whether a user is an
@@ -53,12 +53,12 @@ sure your users know if admin_access is enabled.**
 
 Users can be added to and removed from the Hub via either the admin
 panel or the REST API. When a user is **added**, the user will be
-automatically added to the allowed set and database. Restarting the Hub
-will not require manually updating the allowed set in your config file,
+automatically added to the allowed users set and database. Restarting the Hub
+will not require manually updating the allowed users set in your config file,
 as the users will be loaded from the database.
 
 After starting the Hub once, it is not sufficient to **remove** a user
-from the allowed set in your config file. You must also remove the user
+from the allowed users set in your config file. You must also remove the user
 from the Hub's database, either by deleting the user from JupyterHub's
 admin page, or you can clear the `jupyterhub.sqlite` database and start
 fresh.

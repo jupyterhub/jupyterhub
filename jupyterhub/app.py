@@ -1689,22 +1689,22 @@ class JupyterHub(Application):
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
-        allowed = [
+        allowed_users = [
             self.authenticator.normalize_username(name)
-            for name in self.authenticator.allowed
+            for name in self.authenticator.allowed_users
         ]
-        self.authenticator.allowed = set(allowed)  # force normalization
-        for username in allowed:
+        self.authenticator.allowed_users = set(allowed_users)  # force normalization
+        for username in allowed_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
 
-        if not allowed:
+        if not allowed_users:
             self.log.info(
-                "Not using allowed user list. Any authenticated user will be allowed."
+                "Not using allowed_users. Any authenticated user will be allowed."
             )
 
         # add allowed users to the db
-        for name in allowed:
+        for name in allowed_users:
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name)
@@ -1714,9 +1714,9 @@ class JupyterHub(Application):
         db.commit()
 
         # Notify authenticator of all users.
-        # This ensures Authenticator.allowed is up-to-date with the database.
-        # This lets .allowed be used to set up initial list,
-        # but changes to the allowed list can occur in the database,
+        # This ensures Authenticator.allowed_users is up-to-date with the database.
+        # This lets .allowed_users be used to set up initial list,
+        # but changes to the allowed_users set can occur in the database,
         # and persist across sessions.
         total_users = 0
         for user in db.query(orm.User):
@@ -1753,9 +1753,9 @@ class JupyterHub(Application):
                     user.created = user.last_activity or datetime.utcnow()
         db.commit()
 
-        # The allowed set and the users in the db are now the same.
+        # The allowed_users set and the users in the db are now the same.
         # From this point on, any user changes should be done simultaneously
-        # to the allowed set and user db, unless the allowed set is empty (all users allowed).
+        # to the allowed_users set and user db, unless the allowed set is empty (all users allowed).
 
         TOTAL_USERS.set(total_users)
 
@@ -1773,7 +1773,7 @@ class JupyterHub(Application):
                     await maybe_future(self.authenticator.check_allowed(username, None))
                 ):
                     raise ValueError(
-                        "Username %r is not in Authenticator.allowed" % username
+                        "Username %r is not in Authenticator.allowed_users" % username
                     )
                 user = orm.User.find(db, name=username)
                 if user is None:
@@ -1801,7 +1801,8 @@ class JupyterHub(Application):
                     await maybe_future(self.authenticator.check_allowed(name, None))
                 ):
                     raise ValueError(
-                        "Token user name %r is not in Authenticator.allowed" % name
+                        "Token user name %r is not in Authenticator.allowed_users"
+                        % name
                     )
                 if not self.authenticator.validate_username(name):
                     raise ValueError("Token user name %r is not valid" % name)

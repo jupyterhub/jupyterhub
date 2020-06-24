@@ -141,7 +141,7 @@ async def test_pam_auth_admin_groups():
 
 
 async def test_pam_auth_allowed():
-    authenticator = MockPAMAuthenticator(allowed={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(allowed_users={'wash', 'kaylee'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -186,41 +186,51 @@ async def test_pam_auth_blocked():
     assert authorized['name'] == 'wash'
 
     # Blacklist basics
-    authenticator = MockPAMAuthenticator(blocked={'wash'})
+    authenticator = MockPAMAuthenticator(blocked_users={'wash'})
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized is None
 
     # User in both allowed and blocked: default deny.  Make error someday?
-    authenticator = MockPAMAuthenticator(blocked={'wash'}, allowed={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized is None
 
     # User not in blocked set can log in
-    authenticator = MockPAMAuthenticator(blocked={'wash'}, allowed={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        blocked_users={'wash'}, allowed_users={'wash', 'kaylee'}
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
     assert authorized['name'] == 'kaylee'
 
     # User in allowed, blocked irrelevent
-    authenticator = MockPAMAuthenticator(blocked={'mal'}, allowed={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'wash', 'password': 'wash'}
     )
     assert authorized['name'] == 'wash'
 
     # User in neither list
-    authenticator = MockPAMAuthenticator(blocked={'mal'}, allowed={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        blocked_users={'mal'}, allowed_users={'wash', 'kaylee'}
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'simon', 'password': 'simon'}
     )
     assert authorized is None
 
-    authenticator = MockPAMAuthenticator(blocked=set(), allowed={'wash', 'kaylee'})
+    authenticator = MockPAMAuthenticator(
+        blocked_users=set(), allowed_users={'wash', 'kaylee'}
+    )
     authorized = await authenticator.get_authenticated_user(
         None, {'username': 'kaylee', 'password': 'kaylee'}
     )
@@ -256,7 +266,7 @@ async def test_pam_auth_no_such_group():
 
 async def test_wont_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(allowed={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed_users={'mal'})
     authenticator.create_system_users = False
     with pytest.raises(KeyError):
         await authenticator.add_user(user)
@@ -264,7 +274,7 @@ async def test_wont_add_system_user():
 
 async def test_cant_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(allowed={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed_users={'mal'})
     authenticator.add_user_cmd = ['jupyterhub-fake-command']
     authenticator.create_system_users = True
 
@@ -290,7 +300,7 @@ async def test_cant_add_system_user():
 
 async def test_add_system_user():
     user = orm.User(name='lioness4321')
-    authenticator = auth.PAMAuthenticator(allowed={'mal'})
+    authenticator = auth.PAMAuthenticator(allowed_users={'mal'})
     authenticator.create_system_users = True
     authenticator.add_user_cmd = ['echo', '/home/USERNAME']
 
@@ -311,13 +321,13 @@ async def test_add_system_user():
 
 async def test_delete_user():
     user = orm.User(name='zoe')
-    a = MockPAMAuthenticator(allowed={'mal'})
+    a = MockPAMAuthenticator(allowed_users={'mal'})
 
-    assert 'zoe' not in a.allowed
+    assert 'zoe' not in a.allowed_users
     await a.add_user(user)
-    assert 'zoe' in a.allowed
+    assert 'zoe' in a.allowed_users
     a.delete_user(user)
-    assert 'zoe' not in a.allowed
+    assert 'zoe' not in a.allowed_users
 
 
 def test_urls():
@@ -472,10 +482,10 @@ def test_deprecated_config(caplog):
             log.name,
             logging.WARNING,
             'Authenticator.whitelist is deprecated in JupyterHub 1.2, use '
-            'Authenticator.allowed instead',
+            'Authenticator.allowed_users instead',
         )
     ]
-    assert authenticator.allowed == {'user'}
+    assert authenticator.allowed_users == {'user'}
 
 
 def test_deprecated_methods():
@@ -496,7 +506,7 @@ def test_deprecated_config_subclass():
     cfg.MyAuthenticator.whitelist = {'user'}
     with pytest.deprecated_call():
         authenticator = MyAuthenticator(config=cfg)
-    assert authenticator.allowed == {'user'}
+    assert authenticator.allowed_users == {'user'}
 
 
 def test_deprecated_methods_subclass():

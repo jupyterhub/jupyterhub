@@ -101,9 +101,9 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    whitelist = Set(help="Deprecated, use `Authenticator.allowed`", config=True,)
+    whitelist = Set(help="Deprecated, use `Authenticator.allowed_users`", config=True,)
 
-    allowed = Set(
+    allowed_users = Set(
         help="""
         Set of usernames that are allowed to log in.
 
@@ -114,11 +114,11 @@ class Authenticator(LoggingConfigurable):
         If empty, does not perform any additional restriction.
 
         .. versionchanged:: 1.2
-            `Authenticator.whitelist` renamed to `allowed`
+            `Authenticator.whitelist` renamed to `allowed_users`
         """
     ).tag(config=True)
 
-    blocked = Set(
+    blocked_users = Set(
         help="""
         Set of usernames that are not allowed to log in.
 
@@ -131,13 +131,13 @@ class Authenticator(LoggingConfigurable):
         .. versionadded: 0.9
 
         .. versionchanged:: 1.2
-            `Authenticator.blacklist` renamed to `blocked`
+            `Authenticator.blacklist` renamed to `blocked_users`
         """
     ).tag(config=True)
 
     _deprecated_aliases = {
-        "whitelist": ("allowed", "1.2"),
-        "blacklist": ("blocked", "1.2"),
+        "whitelist": ("allowed_users", "1.2"),
+        "blacklist": ("blocked_users", "1.2"),
     }
 
     @observe(*list(_deprecated_aliases))
@@ -160,15 +160,15 @@ class Authenticator(LoggingConfigurable):
             )
             setattr(self, new_attr, change.new)
 
-    @observe('allowed')
-    def _check_allowed(self, change):
+    @observe('allowed_users')
+    def _check_allowed_users(self, change):
         short_names = [name for name in change['new'] if len(name) <= 1]
         if short_names:
             sorted_names = sorted(short_names)
             single = ''.join(sorted_names)
             string_set_typo = "set('%s')" % single
             self.log.warning(
-                "Allowed list contains single-character names: %s; did you mean set([%r]) instead of %s?",
+                "Allowed set contains single-character names: %s; did you mean set([%r]) instead of %s?",
                 sorted_names[:8],
                 single,
                 string_set_typo,
@@ -301,7 +301,7 @@ class Authenticator(LoggingConfigurable):
         # with correct subclass override priority!
         for old_name, new_name in (
             ('check_whitelist', 'check_allowed'),
-            ('check_blacklist', 'check_blocked'),
+            ('check_blacklist', 'check_blocked_users'),
             ('check_group_whitelist', 'check_allowed_groups'),
         ):
             old_method = getattr(self, old_name, None)
@@ -399,7 +399,7 @@ class Authenticator(LoggingConfigurable):
         """Check if a username is allowed to authenticate based on configuration
 
         Return True if username is allowed, False otherwise.
-        No allowed set means any username is allowed.
+        No allowed_users set means any username is allowed.
 
         Names are normalized *before* being checked against the allowed set.
 
@@ -409,12 +409,12 @@ class Authenticator(LoggingConfigurable):
         .. versionchanged:: 1.2
             Renamed check_whitelist to check_allowed
         """
-        if not self.allowed:
+        if not self.allowed_users:
             # No allowed set means any name is allowed
             return True
-        return username in self.allowed
+        return username in self.allowed_users
 
-    def check_blocked(self, username, authentication=None):
+    def check_blocked_users(self, username, authentication=None):
         """Check if a username is blocked to authenticate based on Authenticator.blocked configuration
 
         Return True if username is allowed, False otherwise.
@@ -428,12 +428,12 @@ class Authenticator(LoggingConfigurable):
             Signature updated to accept authentication data as second argument
 
         .. versionchanged:: 1.2
-            Renamed check_blacklist to check_blocked
+            Renamed check_blacklist to check_blocked_users
         """
-        if not self.blocked:
+        if not self.blocked_users:
             # No block list means any name is allowed
             return True
-        return username not in self.blocked
+        return username not in self.blocked_users
 
     async def get_authenticated_user(self, handler, data):
         """Authenticate the user who is attempting to log in
@@ -450,7 +450,7 @@ class Authenticator(LoggingConfigurable):
         The various stages can be overridden separately:
          - `authenticate` turns formdata into a username
          - `normalize_username` normalizes the username
-         - `check_allowed` checks against the user allowed
+         - `check_allowed` checks against the allowed usernames
 
         .. versionchanged:: 0.8
             return dict instead of username
@@ -475,7 +475,9 @@ class Authenticator(LoggingConfigurable):
             self.log.warning("Disallowing invalid username %r.", username)
             return
 
-        blocked_pass = await maybe_future(self.check_blocked(username, authenticated))
+        blocked_pass = await maybe_future(
+            self.check_blocked_users(username, authenticated)
+        )
         allowed_pass = await maybe_future(self.check_allowed(username, authenticated))
 
         if blocked_pass:
@@ -550,7 +552,7 @@ class Authenticator(LoggingConfigurable):
         It must return the username on successful authentication,
         and return None on failed authentication.
 
-        Checking allowed/blocked is handled separately by the caller.
+        Checking allowed_users/blocked_users is handled separately by the caller.
 
         .. versionchanged:: 0.8
             Allow `authenticate` to return a dict containing auth_state.
@@ -591,10 +593,10 @@ class Authenticator(LoggingConfigurable):
 
         This method may be a coroutine.
 
-        By default, this just adds the user to the allowed set.
+        By default, this just adds the user to the allowed_users set.
 
         Subclasses may do more extensive things, such as adding actual unix users,
-        but they should call super to ensure the allowed set is updated.
+        but they should call super to ensure the allowed_users set is updated.
 
         Note that this should be idempotent, since it is called whenever the hub restarts
         for all users.
@@ -604,19 +606,19 @@ class Authenticator(LoggingConfigurable):
         """
         if not self.validate_username(user.name):
             raise ValueError("Invalid username: %s" % user.name)
-        if self.allowed:
-            self.allowed.add(user.name)
+        if self.allowed_users:
+            self.allowed_users.add(user.name)
 
     def delete_user(self, user):
         """Hook called when a user is deleted
 
-        Removes the user from the allowed set.
-        Subclasses should call super to ensure the allowed set is updated.
+        Removes the user from the allowed_users set.
+        Subclasses should call super to ensure the allowed_users set is updated.
 
         Args:
             user (User): The User wrapper object
         """
-        self.allowed.discard(user.name)
+        self.allowed_users.discard(user.name)
 
     auto_login = Bool(
         False,
@@ -709,7 +711,7 @@ import types
 # deprecate white/blacklist method names
 for _old_name, _new_name, _version in [
     ("check_whitelist", "check_allowed", "1.2"),
-    ("check_blacklist", "check_blocked", "1.2"),
+    ("check_blacklist", "check_blocked_users", "1.2"),
 ]:
     setattr(
         Authenticator, _old_name, _deprecated_method(_old_name, _new_name, _version),
@@ -788,9 +790,9 @@ class LocalAuthenticator(Authenticator):
     @observe('allowed_groups')
     def _allowed_groups_changed(self, change):
         """Log a warning if mutually exclusive user and group allowed sets are specified."""
-        if self.allowed:
+        if self.allowed_users:
             self.log.warning(
-                "Ignoring Authenticator.allowed set because Authenticator.allowed_groups supplied!"
+                "Ignoring Authenticator.allowed_users set because Authenticator.allowed_groups supplied!"
             )
 
     def check_allowed(self, username, authentication=None):
