@@ -13,6 +13,20 @@
   }
 }
 
+.navbar-right {
+  li {
+    span {
+      // same as .nav > li > a from bootstrap, but applied to the span[id="login_widget"]
+      // or any other span that matches .nav > li > span, but only in responsive mode
+      @media (max-width: @grid-float-breakpoint) {
+        position: relative;
+        display: block;
+        padding: 10px 15px;
+      }
+    }
+  }
+}
+
 #header {
   border-bottom: 1px solid #e7e7e7;
 }
