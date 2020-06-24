@@ -1,8 +1,16 @@
+@import "../components/bootstrap/less/variables.less";
+
 @logo-height: 28px;
 
-.jpy-logo {
-  height: @logo-height;
-  margin-top: (@navbar-height - @logo-height) / 2;
+#jupyterhub-logo {
+  @media (max-width: @grid-float-breakpoint) {
+    // same length as the navbar-toggle element, displayed on responsive mode
+    margin-left: 15px;
+  }
+  .jpy-logo {
+    height: @logo-height;
+    margin-top: (@navbar-height - @logo-height) / 2;
+  }
 }
 
 #header {
