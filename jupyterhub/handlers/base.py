@@ -678,7 +678,7 @@ class BaseHandler(RequestHandler):
         a list with "next" (to avoid redirect-loops)
         :rtype (str)
         """
-        if not exclude:
+        if exclude is None:
             exclude = ['next']
         if self.request.query:
             query_string = [
