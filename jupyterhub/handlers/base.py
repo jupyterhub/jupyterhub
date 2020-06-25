@@ -654,7 +654,41 @@ class BaseHandler(RequestHandler):
                     next_url = url_path_join(self.hub.base_url, 'spawn')
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
+
+        next_url = self.append_query_parameters(next_url, exclude=['next'])
         return next_url
+
+    def append_query_parameters(self, url, exclude=None):
+        """Append the current request's query parameters to the given URL.
+
+        Supports an extra optional parameter ``exclude`` that when provided must
+        contain a list of parameters to be ignored, i.e. these parameters will
+        not be added to the URL.
+
+        This is important to avoid infinite loops with the next parameter being
+        added over and over, for instance.
+
+        The default value for ``exclude`` is an array with "next". This is useful
+        as most use cases in JupyterHub (all?) won't want to include the next
+        parameter twice (the next parameter is added elsewhere to the query
+        parameters).
+
+        :param str url: a URL
+        :param list exclude: optional list of parameters to be ignored, defaults to
+        a list with "next" (to avoid redirect-loops)
+        :rtype (str)
+        """
+        if exclude is None:
+            exclude = ['next']
+        if self.request.query:
+            query_string = [
+                param
+                for param in parse_qsl(self.request.query)
+                if param[0] not in exclude
+            ]
+            if query_string:
+                url = url_concat(url, query_string)
+        return url
 
     async def auth_to_user(self, authenticated, user=None):
         """Persist data from .authenticate() or .refresh_user() to the User database

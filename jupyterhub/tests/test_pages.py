@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 import pytest
 from bs4 import BeautifulSoup
 from tornado import gen
+from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from .. import orm
@@ -516,6 +517,58 @@ async def test_user_redirect_deprecated(app, username):
     )
 
 
+@pytest.mark.parametrize(
+    'url, params, redirected_url, form_action',
+    [
+        (
+            # spawn?param=value
+            # will encode given parameters for an unauthenticated URL in the next url
+            # the next parameter will contain the app base URL (replaces BASE_URL in tests)
+            'spawn',
+            [('param', 'value')],
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next={{BASE_URL}}hub%2Fspawn%3Fparam%3Dvalue',
+        ),
+        (
+            # login?param=fromlogin&next=encoded(/hub/spawn?param=value)
+            # will drop parameters given to the login page, passing only the next url
+            'login',
+            [('param', 'fromlogin'), ('next', '/hub/spawn?param=value')],
+            '/hub/login?param=fromlogin&next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+            '/hub/login?next=%2Fhub%2Fspawn%3Fparam%3Dvalue',
+        ),
+        (
+            # login?param=value&anotherparam=anothervalue
+            # will drop parameters given to the login page, and use an empty next url
+            'login',
+            [('param', 'value'), ('anotherparam', 'anothervalue')],
+            '/hub/login?param=value&anotherparam=anothervalue',
+            '/hub/login?next=',
+        ),
+        (
+            # login
+            # simplest case, accessing the login URL, gives an empty next url
+            'login',
+            [],
+            '/hub/login',
+            '/hub/login?next=',
+        ),
+    ],
+)
+async def test_login_page(app, url, params, redirected_url, form_action):
+    url = url_concat(url, params)
+    r = await get_page(url, app)
+    redirected_url = redirected_url.replace('{{BASE_URL}}', url_escape(app.base_url))
+    assert r.url.endswith(redirected_url)
+    # now the login.html rendered template must include the given parameters in the form
+    # action URL, including the next URL
+    page = BeautifulSoup(r.text, "html.parser")
+    form = page.find("form", method="post")
+    action = form.attrs['action']
+    form_action = form_action.replace('{{BASE_URL}}', url_escape(app.base_url))
+    assert action.endswith(form_action)
+
+
 async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
@@ -546,26 +599,29 @@ async def test_login_strip(app):
 
 
 @pytest.mark.parametrize(
-    'running, next_url, location',
+    'running, next_url, location, params',
     [
         # default URL if next not specified, for both running and not
-        (True, '', ''),
-        (False, '', ''),
+        (True, '', '', None),
+        (False, '', '', None),
         # next_url is respected
-        (False, '/hub/admin', '/hub/admin'),
-        (False, '/user/other', '/hub/user/other'),
-        (False, '/absolute', '/absolute'),
-        (False, '/has?query#andhash', '/has?query#andhash'),
+        (False, '/hub/admin', '/hub/admin', None),
+        (False, '/user/other', '/hub/user/other', None),
+        (False, '/absolute', '/absolute', None),
+        (False, '/has?query#andhash', '/has?query#andhash', None),
         # next_url outside is not allowed
-        (False, 'relative/path', ''),
-        (False, 'https://other.domain', ''),
-        (False, 'ftp://other.domain', ''),
-        (False, '//other.domain', ''),
-        (False, '///other.domain/triple', ''),
-        (False, '\\\\other.domain/backslashes', ''),
+        (False, 'relative/path', '', None),
+        (False, 'https://other.domain', '', None),
+        (False, 'ftp://other.domain', '', None),
+        (False, '//other.domain', '', None),
+        (False, '///other.domain/triple', '', None),
+        (False, '\\\\other.domain/backslashes', '', None),
+        # params are handled correctly
+        (True, '/hub/admin', 'hub/admin?left=1&right=2', [('left', 1), ('right', 2)]),
+        (False, '/hub/admin', 'hub/admin?left=1&right=2', [('left', 1), ('right', 2)]),
     ],
 )
-async def test_login_redirect(app, running, next_url, location):
+async def test_login_redirect(app, running, next_url, location, params):
     cookies = await app.login_user('river')
     user = app.users['river']
     if location:
@@ -577,6 +633,8 @@ async def test_login_redirect(app, running, next_url, location):
         location = ujoin(app.base_url, 'hub/spawn')
 
     url = 'login'
+    if params:
+        url = url_concat(url, params)
     if next_url:
         if '//' not in next_url and next_url.startswith('/'):
             next_url = ujoin(app.base_url, next_url, '')

@@ -285,6 +285,8 @@ class SpawnHandler(BaseHandler):
             self.hub.base_url, "spawn-pending", user.escaped_name, server_name
         )
 
+        pending_url = self.append_query_parameters(pending_url, exclude=['next'])
+
         if self.get_argument('next', None):
             # preserve `?next=...` through spawn-pending
             pending_url = url_concat(pending_url, {'next': self.get_argument('next')})
