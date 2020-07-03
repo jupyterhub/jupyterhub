@@ -7,6 +7,8 @@ command line for details.
 
 ## [Unreleased]
 
+
+
 ## 1.1
 
 ### [1.1.0] 2020-01-17
@@ -116,7 +118,7 @@ Thanks to everyone who has contributed to this release!
 - Log JupyterHub version on startup [#2752](https://github.com/jupyterhub/jupyterhub/pull/2752) ([@consideRatio](https://github.com/consideRatio))
 - Reduce verbosity for "Failing suspected API request to not-running server" (new) [#2751](https://github.com/jupyterhub/jupyterhub/pull/2751) ([@rkdarst](https://github.com/rkdarst))
 - Add missing package for json schema doc build [#2744](https://github.com/jupyterhub/jupyterhub/pull/2744) ([@willingc](https://github.com/willingc))
-- blacklist urllib3 versions with encoding bug [#2743](https://github.com/jupyterhub/jupyterhub/pull/2743) ([@minrk](https://github.com/minrk))
+- block urllib3 versions with encoding bug [#2743](https://github.com/jupyterhub/jupyterhub/pull/2743) ([@minrk](https://github.com/minrk))
 - Remove tornado deprecated/unnecessary AsyncIOMainLoop().install() call [#2740](https://github.com/jupyterhub/jupyterhub/pull/2740) ([@kinow](https://github.com/kinow))
 - Fix deprecated call [#2739](https://github.com/jupyterhub/jupyterhub/pull/2739) ([@kinow](https://github.com/kinow))
 - Remove duplicate hub and authenticator traitlets from Spawner [#2736](https://github.com/jupyterhub/jupyterhub/pull/2736) ([@eslavich](https://github.com/eslavich))
@@ -231,8 +233,8 @@ whether it was through discussion, testing, documentation, or development.
   This hook may transform the return value of `Authenticator.authenticate()`
   and return a new authentication dictionary,
   e.g. specifying admin privileges, group membership,
-  or custom white/blacklisting logic.
-  This hook is called *after* existing normalization and whitelist checking.
+  or custom allowed/blocked logic.
+  This hook is called *after* existing normalization and allowed-username checking.
 - `Spawner.options_from_form` may now be async
 - Added `JupyterHub.shutdown_on_logout` option to trigger shutdown of a user's
   servers when they log out.
@@ -418,7 +420,7 @@ and tornado < 5.0.
   launching an IPython session connected to your JupyterHub database.
 - Include `User.auth_state` in user model on single-user REST endpoints for admins only.
 - Include `Server.state` in server model on REST endpoints for admins only.
-- Add `Authenticator.blacklist` for blacklisting users instead of whitelisting.
+- Add `Authenticator.blacklist` for blocking users instead of allowing.
 - Pass `c.JupyterHub.tornado_settings['cookie_options']` down to Spawners
   so that cookie options (e.g. `expires_days`) can be set globally for the whole application.
 - SIGINFO (`ctrl-t`) handler showing the current status of all running threads,

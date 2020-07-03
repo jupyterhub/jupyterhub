@@ -860,15 +860,15 @@ class HubAuthenticated(object):
         if kind == 'service':
             # it's a service, check hub_services
             if self.hub_services and name in self.hub_services:
-                app_log.debug("Allowing whitelisted Hub service %s", name)
+                app_log.debug("Allowing Hub service %s", name)
                 return model
             else:
                 app_log.warning("Not allowing Hub service %s", name)
                 raise UserNotAllowed(model)
 
         if self.hub_users and name in self.hub_users:
-            # user in whitelist
-            app_log.debug("Allowing whitelisted Hub user %s", name)
+            # user in allowed list
+            app_log.debug("Allowing Hub user %s", name)
             return model
         elif self.hub_groups and set(model['groups']).intersection(self.hub_groups):
             allowed_groups = set(model['groups']).intersection(self.hub_groups)
@@ -877,7 +877,7 @@ class HubAuthenticated(object):
                 name,
                 ','.join(sorted(allowed_groups)),
             )
-            # group in whitelist
+            # group in allowed list
             return model
         else:
             app_log.warning("Not allowing Hub user %s", name)

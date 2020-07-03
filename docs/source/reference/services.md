@@ -313,7 +313,7 @@ class MyHandler(HubAuthenticated, web.RequestHandler):
 The HubAuth will automatically load the desired configuration from the Service
 environment variables.
 
-If you want to limit user access, you can whitelist users through either the
+If you want to limit user access, you can specify allowed users through either the
 `.hub_users` attribute or `.hub_groups`. These are sets that check against the
 username and user group list, respectively. If a user matches neither the user
 list nor the group list, they will not be allowed access. If both are left

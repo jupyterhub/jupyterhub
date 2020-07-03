@@ -7,8 +7,8 @@ problem and how to resolve it.
 [*Behavior*](#behavior)
 - JupyterHub proxy fails to start
 - sudospawner fails to run
-- What is the default behavior when none of the lists (admin, whitelist,
-  group whitelist) are set?
+- What is the default behavior when none of the lists (admin, allowed,
+  allowed groups) are set?
 - JupyterHub Docker container not accessible at localhost
 
 [*Errors*](#errors)
@@ -55,14 +55,14 @@ or add:
 
 to the config file, `jupyterhub_config.py`.
 
-### What is the default behavior when none of the lists (admin, whitelist, group whitelist) are set?
+### What is the default behavior when none of the lists (admin, allowed, allowed groups) are set?
 
 When nothing is given for these lists, there will be no admins, and all users
 who can authenticate on the system (i.e. all the unix users on the server with
-a password) will be allowed to start a server. The whitelist lets you limit
-this to a particular set of users, and the admin_users lets you specify who
+a password) will be allowed to start a server. The allowed username set lets you limit
+this to a particular set of users, and admin_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
-things like inspect other users' servers, or modify the userlist at runtime).
+things like inspect other users' servers, or modify the user list at runtime).
 
 ### JupyterHub Docker container not accessible at localhost
 
@@ -332,8 +332,7 @@ notebook servers to default to JupyterLab:
 ### How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
 1. Set up JupyterHub using OAuthenticator for GitHub authentication
-2. Configure whitelist to be an empty list in` jupyterhub_config.py`
-3. Configure admin list to have workshop leaders be listed with administrator privileges.
+2. Configure admin list to have workshop leaders be listed with administrator privileges.
 
 Users will need a GitHub account to login and be authenticated by the Hub.
 

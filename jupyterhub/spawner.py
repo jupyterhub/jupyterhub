@@ -435,9 +435,9 @@ class Spawner(LoggingConfigurable):
             'LC_ALL',
         ],
         help="""
-        Whitelist of environment variables for the single-user server to inherit from the JupyterHub process.
+        List of environment variables for the single-user server to inherit from the JupyterHub process.
 
-        This whitelist is used to ensure that sensitive information in the JupyterHub process's environment
+        This list is used to ensure that sensitive information in the JupyterHub process's environment
         (such as `CONFIGPROXY_AUTH_TOKEN`) is not passed to the single-user server's process.
         """,
     ).tag(config=True)
@@ -456,7 +456,7 @@ class Spawner(LoggingConfigurable):
 
         Environment variables that end up in the single-user server's process come from 3 sources:
           - This `environment` configurable
-          - The JupyterHub process' environment variables that are whitelisted in `env_keep`
+          - The JupyterHub process' environment variables that are listed in `env_keep`
           - Variables to establish contact between the single-user notebook and the hub (such as JUPYTERHUB_API_TOKEN)
 
         The `environment` configurable should be set by JupyterHub administrators to add
