@@ -23,8 +23,6 @@ extensions = [
     'recommonmark',
 ]
 
-templates_path = ['_templates']
-
 # The master toctree document.
 master_doc = 'index'
 
