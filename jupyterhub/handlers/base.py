@@ -912,7 +912,7 @@ class BaseHandler(RequestHandler):
                 self.log.error(
                     "Stopping %s to avoid inconsistent state", user_server_name
                 )
-                await user.stop()
+                await user.stop(server_name)
                 PROXY_ADD_DURATION_SECONDS.labels(status='failure').observe(
                     time.perf_counter() - proxy_add_start_time
                 )
