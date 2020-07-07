@@ -389,6 +389,7 @@ async def test_named_server_stop_server(app, username, named_servers):
         r.raise_for_status()
         assert r.status_code == 201
         assert r.text == ''
-        assert user.spawners[server_name].server is None
-        assert user.spawners[''].server
-        assert user.running
+
+    assert user.spawners[server_name].server is None
+    assert user.spawners[''].server
+    assert user.running
