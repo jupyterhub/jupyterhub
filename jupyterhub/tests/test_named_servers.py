@@ -372,35 +372,23 @@ async def test_user_redirect_hook_default_server_name(
 
 async def test_named_server_stop_server(app, username, named_servers):
     server_name = "myserver"
-    base_url = public_url(app)
-    cookies = await app.login_user(username)
+    await app.login_user(username)
     user = app.users[username]
-    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        with mock.patch.object(
-            app.proxy, 'add_user', side_effect=Exception('mock exception')
-        ):
-            await user.spawn()  # spawn default server
 
-            r = await get_page(
-                'spawn/%s/%s' % (username, server_name), app, cookies=cookies
-            )
-            r.raise_for_status()
-            assert r.url.endswith('/spawn/%s/%s' % (username, server_name))
-            assert FormSpawner.options_form in r.text
+    r = await api_request(app, 'users', username, 'server', method='post')
+    assert r.status_code == 201
+    assert r.text == ''
+    assert user.spawners[''].server
 
-            # submit the form, should throw Exceotion when add_user is called
-            next_url = url_path_join(
-                app.base_url, 'hub/spawn-pending', username, server_name
-            )
-            r = await async_requests.post(
-                url_concat(
-                    url_path_join(base_url, 'hub/spawn', username, server_name),
-                    {'next': next_url},
-                ),
-                cookies=cookies,
-                data={'bounds': ['-10', '10'], 'energy': '938MeV'},
-            )
-            r.raise_for_status()
-            assert user.spawners[server_name].server is None
-            assert user.running
-            assert user.spawners[''].server
+    with mock.patch.object(
+        app.proxy, 'add_user', side_effect=Exception('mock exception')
+    ):
+        r = await api_request(
+            app, 'users', username, 'servers', server_name, method='post'
+        )
+        r.raise_for_status()
+        assert r.status_code == 201
+        assert r.text == ''
+        assert user.spawners[server_name].server is None
+        assert user.spawners[''].server
+        assert user.running
