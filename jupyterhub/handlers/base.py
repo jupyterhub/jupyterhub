@@ -1120,7 +1120,10 @@ class BaseHandler(RequestHandler):
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
             self.log.warning(
-                "User %s:%s server is slow to stop", user.name, server_name
+                "User %s:%s server is slow to stop (timeout=%s)",
+                user.name,
+                server_name,
+                self.slow_stop_timeout,
             )
 
         # return handle on the future for hooking up callbacks
