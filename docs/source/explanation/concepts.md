@@ -45,7 +45,7 @@ process runs.  But this process is not *too* special.
 ## JupyterHub
 
 **JupyterHub** is the central piece that provides multi-user
-login. Despite this, the end user only briefly interacts with
+login capabilities. Despite this, the end user only briefly interacts with
 JupyterHub and most of the actual Jupyter session does not relate to
 the hub at all: the hub mainly handles authentication and creating (jargon: spawning) the
 single-user server.  In short, anything which is related to *starting*
@@ -67,11 +67,11 @@ that manages the usernames and passwords.  When someone tries to log
 in to JupyteHub, it just asks the
 **authenticator**([basics](authenticators-users-basics),
 [reference](../reference/authenticators)) if the
-username/password is valid(&).  The authenticator can also return user
-groups and admin status of users, so that JupyterHub can do some
-higher-level management.  The authenticator returns a username(&),
+username/password is valid(&).  The authenticator returns a username(&),
 which is passed on to the spawner, which has to use it to start that
-user's environment.
+user's environment.  The authenticator can also return user
+groups and admin status of users, so that JupyterHub can do some
+higher-level management.
 
 The following authenticators are included with JupyterHub:
 
@@ -195,8 +195,8 @@ Previously, we said that the hub is between the user's web browser and
 the user's notebook servers.  It actually isn't directly between,
 because the JupyterHub **proxy** relays connections between the users
 and their single-user notebook servers.  What this basically means is
-that the hub itself can shut down, and if the proxy can continue to
-allow users to communicate with their notebook servers.  (This 
+that the hub itself can shut down and the proxy can continue to
+allow users to communicate with their notebook servers.  (This
 further emphasizes that the hub is responsible for starting, not
 running, the notebooks).  By default, the hub starts the proxy
 automatically (so that you don't realize there is a separate proxy)
