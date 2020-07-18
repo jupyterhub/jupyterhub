@@ -47,7 +47,7 @@ process runs.  But this process is not *too* special.
 **JupyterHub** is the central piece that provides multi-user
 login. Despite this, the end user only briefly interacts with
 JupyterHub and most of the actual Jupyter session does not relate to
-the hub at all: the hub mainly handles authentication and spawning the
+the hub at all: the hub mainly handles authentication and creating (jargon: spawning) the
 single-user server.  In short, anything which is related to *starting*
 the user's workspace/environment is about JupyterHub, anything about
 *running* usually isn't.
@@ -119,9 +119,9 @@ services you are using.
 
 The **spawner** ([basics](spawners-basics),
 [reference](../reference/spawners)) is the real core of
-JupyterHub: when someone wants a notebook server, it allocates
+JupyterHub: when someone wants a notebook server, the spawner allocates
 resources and starts the server.  The notebook server could run on the
-same server as JupyterHub, on another server, on some cloud service,
+same machine as JupyterHub, on another machine, on some cloud service,
 or even more.  They can limit resources (CPU, memory) or isolate users
 from each other - if the spawner supports it.  They can also do no
 limiting and allow any user to access any other user's files if they
@@ -196,14 +196,14 @@ the user's notebook servers.  It actually isn't directly between,
 because the JupyterHub **proxy** relays connections between the users
 and their single-user notebook servers.  What this basically means is
 that the hub itself can shut down, and if the proxy can continue to
-allow users to communicate with their notebook servers.  (This just
+allow users to communicate with their notebook servers.  (This 
 further emphasizes that the hub is responsible for starting, not
 running, the notebooks).  By default, the hub starts the proxy
 automatically (so that you don't realize there is a separate proxy)
 and stops the proxy when the hub stops (so that connections get
 interrupted).  But when you [configure the proxy to run
 separately](../reference/separate-proxy),
-users connection will stay working even without the hub.
+user's connections will continue to work even without the hub.
 
 The default proxy is **ConfigurableHttpProxy** which is simple but
 effective.  A more advanced option is the **Traefik Proxy**, which
@@ -213,7 +213,7 @@ When users "connect to JupyterHub", they *always* first connect to the
 proxy and the proxy relays the connection to the hub.  Thus, the proxy
 is responsible for SSL and accepting connections from the rest of the
 internet.  The user uses the hub to authenticate and start the server,
-and then the hub connect back to the proxy to adjust the proxy routes
+and then the hub connects back to the proxy to adjust the proxy routes
 for the user's server (e.g. the web path `/user/someone` redirects to
 the server of someone at a certain internal address).  The proxy has
 to be able to internally connect to both the hub and all the
