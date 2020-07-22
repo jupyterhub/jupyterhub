@@ -2751,13 +2751,16 @@ class JupyterHub(Application):
             try:
                 from asyncio import (
                     WindowsProactorEventLoopPolicy,
-                    WindowsSelectorEventLoopPolicy
+                    WindowsSelectorEventLoopPolicy,
                 )
             except ImportError:
                 pass
                 # not affected
             else:
-                if type(asyncio.get_event_loop_policy()) is WindowsProactorEventLoopPolicy:
+                if (
+                    type(asyncio.get_event_loop_policy())
+                    is WindowsProactorEventLoopPolicy
+                ):
                     # WindowsProactorEventLoopPolicy is not compatible with Tornado 6.
                     # Fallback to the pre-3.8 default of WindowsSelectorEventLoopPolicy.
                     asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
