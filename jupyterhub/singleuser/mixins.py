@@ -1,5 +1,11 @@
 #!/usr/bin/env python
-"""Extend regular notebook server to be aware of multiuser things."""
+"""Mixins to regular notebook server to add JupyterHub auth.
+
+Meant to be compatible with jupyter_server and classic notebook
+
+Use make_singleuser_app to create a compatible Application class
+with JupyterHub authentication mixins enabled.
+"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -20,58 +26,28 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
 from tornado.web import HTTPError
 from tornado.web import RequestHandler
+from traitlets import Any
+from traitlets import Bool
+from traitlets import Bytes
+from traitlets import CUnicode
+from traitlets import default
+from traitlets import Integer
+from traitlets import observe
+from traitlets import TraitError
+from traitlets import Unicode
+from traitlets import validate
+from traitlets.config import Configurable
 
-try:
-    import notebook
-
-    use_serverapp = False
-    server_package = 'notebook'
-    app_name = 'notebook.notebookapp'
-except ImportError:
-    try:
-        import jupyter_server
-
-        use_serverapp = True
-        server_package = 'jupyter_server'
-        app_name = 'jupyter_server.serverapp'
-    except ImportError:
-        raise ImportError(
-            "JupyterHub single-user server requires notebook or jupyter_server packages"
-        )
-
-from traitlets import (
-    Any,
-    Bool,
-    Bytes,
-    Integer,
-    Unicode,
-    CUnicode,
-    default,
-    observe,
-    validate,
-    TraitError,
-)
-
-app_module = importlib.import_module(app_name)
-NotebookApp = getattr(app_module, 'ServerApp' if use_serverapp else 'NotebookApp')
-notebook_aliases = app_module.aliases
-notebook_flags = app_module.flags
-
-LoginHandler = getattr(
-    importlib.import_module(server_package + '.auth.login'), 'LoginHandler'
-)
-LogoutHandler = getattr(
-    importlib.import_module(server_package + '.auth.logout'), 'LogoutHandler'
-)
-IPythonHandler = getattr(
-    importlib.import_module(server_package + '.base.handlers'),
-    'JupyterHandler' if use_serverapp else 'IPythonHandler',
-)
-
-from ._version import __version__, _check_version
-from .log import log_request
-from .services.auth import HubOAuth, HubOAuthenticated, HubOAuthCallbackHandler
-from .utils import isoformat, url_path_join, make_ssl_context, exponential_backoff
+from .._version import __version__
+from .._version import _check_version
+from ..log import log_request
+from ..services.auth import HubOAuth
+from ..services.auth import HubOAuthCallbackHandler
+from ..services.auth import HubOAuthenticated
+from ..utils import exponential_backoff
+from ..utils import isoformat
+from ..utils import make_ssl_context
+from ..utils import url_path_join
 
 
 # Authenticate requests with the Hub
@@ -101,7 +77,7 @@ class HubAuthenticatedHandler(HubOAuthenticated):
         return set()
 
 
-class JupyterHubLoginHandler(LoginHandler):
+class JupyterHubLoginHandlerMixin:
     """LoginHandler that hooks up Hub authentication"""
 
     @staticmethod
@@ -134,7 +110,7 @@ class JupyterHubLoginHandler(LoginHandler):
         return
 
 
-class JupyterHubLogoutHandler(LogoutHandler):
+class JupyterHubLogoutHandlerMixin:
     def get(self):
         self.settings['hub_auth'].clear_cookie(self)
         self.redirect(
@@ -143,7 +119,7 @@ class JupyterHubLogoutHandler(LogoutHandler):
         )
 
 
-class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
+class OAuthCallbackHandlerMixin(HubOAuthCallbackHandler):
     """Mixin IPythonHandler to get the right error pages, etc."""
 
     @property
@@ -152,27 +128,22 @@ class OAuthCallbackHandler(HubOAuthCallbackHandler, IPythonHandler):
 
 
 # register new hub related command-line aliases
-aliases = dict(notebook_aliases)
-aliases.update(
-    {
-        'user': 'SingleUserNotebookApp.user',
-        'group': 'SingleUserNotebookApp.group',
-        'cookie-name': 'HubAuth.cookie_name',
-        'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
-        'hub-host': 'SingleUserNotebookApp.hub_host',
-        'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
-        'base-url': 'SingleUserNotebookApp.base_url',
-    }
-)
-flags = dict(notebook_flags)
-flags.update(
-    {
-        'disable-user-config': (
-            {'SingleUserNotebookApp': {'disable_user_config': True}},
-            "Disable user-controlled configuration of the notebook server.",
-        )
-    }
-)
+aliases = {
+    'user': 'SingleUserNotebookApp.user',
+    'group': 'SingleUserNotebookApp.group',
+    'cookie-name': 'HubAuth.cookie_name',
+    'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
+    'hub-host': 'SingleUserNotebookApp.hub_host',
+    'hub-api-url': 'SingleUserNotebookApp.hub_api_url',
+    'base-url': 'SingleUserNotebookApp.base_url',
+}
+flags = {
+    'disable-user-config': (
+        {'SingleUserNotebookApp': {'disable_user_config': True}},
+        "Disable user-controlled configuration of the notebook server.",
+    )
+}
+
 
 page_template = """
 {% extends "templates/page.html" %}
@@ -237,21 +208,32 @@ def _exclude_home(path_list):
             yield p
 
 
-class SingleUserNotebookApp(NotebookApp):
+from traitlets import HasTraits
+
+
+class SingleUserNotebookAppMixin(Configurable):
     """A Subclass of the regular NotebookApp that is aware of the parent multiuser context."""
 
     description = dedent(
         """
     Single-user server for JupyterHub. Extends the Jupyter Notebook server.
 
-    Meant to be invoked by JupyterHub Spawners, and not directly.
+    Meant to be invoked by JupyterHub Spawners, not directly.
     """
     )
 
     examples = ""
     subcommands = {}
     version = __version__
-    classes = NotebookApp.classes + [HubOAuth]
+
+    # must be set in mixin subclass
+    # make_singleuser_app sets these
+    # aliases = aliases
+    # flags = flags
+    # login_handler_class = JupyterHubLoginHandler
+    # logout_handler_class = JupyterHubLogoutHandler
+    # oauth_callback_handler_class = OAuthCallbackHandler
+    # classes = NotebookApp.classes + [HubOAuth]
 
     # disable single-user app's localhost checking
     allow_remote_access = True
@@ -344,16 +326,12 @@ class SingleUserNotebookApp(NotebookApp):
                 return url.hostname
         return '127.0.0.1'
 
-    aliases = aliases
-    flags = flags
-
-    # disble some single-user configurables
+    # disable some single-user configurables
     token = ''
     open_browser = False
     quit_button = False
     trust_xheaders = True
-    login_handler_class = JupyterHubLoginHandler
-    logout_handler_class = JupyterHubLogoutHandler
+
     port_retries = (
         0  # disable port-retries, since the Spawner will tell us what port to use
     )
@@ -402,11 +380,11 @@ class SingleUserNotebookApp(NotebookApp):
             # disable config-migration when user config is disabled
             return
         else:
-            super(SingleUserNotebookApp, self).migrate_config()
+            super().migrate_config()
 
     @property
     def config_file_paths(self):
-        path = super(SingleUserNotebookApp, self).config_file_paths
+        path = super().config_file_paths
 
         if self.disable_user_config:
             # filter out user-writable config dirs if user config is disabled
@@ -415,7 +393,7 @@ class SingleUserNotebookApp(NotebookApp):
 
     @property
     def nbextensions_path(self):
-        path = super(SingleUserNotebookApp, self).nbextensions_path
+        path = super().nbextensions_path
 
         if self.disable_user_config:
             path = list(_exclude_home(path))
@@ -583,7 +561,7 @@ class SingleUserNotebookApp(NotebookApp):
         # start by hitting Hub to check version
         ioloop.IOLoop.current().run_sync(self.check_hub_version)
         ioloop.IOLoop.current().add_callback(self.keep_activity_updated)
-        super(SingleUserNotebookApp, self).start()
+        super().start()
 
     def init_hub_auth(self):
         api_token = None
@@ -631,12 +609,17 @@ class SingleUserNotebookApp(NotebookApp):
             'Content-Security-Policy',
             ';'.join(["frame-ancestors 'self'", "report-uri " + csp_report_uri]),
         )
-        super(SingleUserNotebookApp, self).init_webapp()
+        super().init_webapp()
 
         # add OAuth callback
         self.web_app.add_handlers(
             r".*$",
-            [(urlparse(self.hub_auth.oauth_redirect_uri).path, OAuthCallbackHandler)],
+            [
+                (
+                    urlparse(self.hub_auth.oauth_redirect_uri).path,
+                    self.oauth_callback_handler_class,
+                )
+            ],
         )
 
         # apply X-JupyterHub-Version to *all* request handlers (even redirects)
@@ -677,9 +660,49 @@ class SingleUserNotebookApp(NotebookApp):
         env.loader = ChoiceLoader([FunctionLoader(get_page), orig_loader])
 
 
-def main(argv=None):
-    return SingleUserNotebookApp.launch_instance(argv)
+def make_singleuser_app(App, LoginHandler, LogoutHandler, BaseHandler):
+    """Make and return a singleuser notebook app
 
+    given existing notebook or jupyter_server classes,
+    mix-in jupyterhub auth.
 
-if __name__ == "__main__":
-    main()
+    App should be a subclass of `notebook.notebookapp.NotebookApp`
+    or `jupyter_server.serverapp.ServerApp`
+
+    Must be passed base classes for:
+
+    - App
+    - LoginHandler
+    - LogoutHandler
+    - BaseHandler
+    """
+    # create handler classes from mixins + bases
+    class JupyterHubLoginHandler(JupyterHubLoginHandlerMixin, LoginHandler):
+        pass
+
+    class JupyterHubLogoutHandler(JupyterHubLogoutHandlerMixin, LogoutHandler):
+        pass
+
+    class OAuthCallbackHandler(OAuthCallbackHandlerMixin, BaseHandler):
+        pass
+
+    # create merged aliases & flags
+    empty_parent_app = App()
+    merged_aliases = {}
+    merged_aliases.update(empty_parent_app.aliases)
+    merged_aliases.update(aliases)
+
+    merged_flags = {}
+    merged_flags.update(empty_parent_app.flags)
+    merged_flags.update(flags)
+    # create mixed-in App class, bringing it all together
+    class SingleUserNotebookApp(SingleUserNotebookAppMixin, App):
+        aliases = merged_aliases
+        flags = merged_flags
+        classes = empty_parent_app.classes + [HubOAuth]
+
+        login_handler_class = JupyterHubLoginHandler
+        logout_handler_class = JupyterHubLogoutHandler
+        oauth_callback_handler_class = OAuthCallbackHandler
+
+    return SingleUserNotebookApp
