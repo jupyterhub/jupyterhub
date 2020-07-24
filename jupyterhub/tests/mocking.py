@@ -394,6 +394,17 @@ class MockSingleUserServer(SingleUserNotebookApp):
 class StubSingleUserSpawner(MockSpawner):
     """Spawner that starts a MockSingleUserServer in a thread."""
 
+    @default("default_url")
+    def _default_url(self):
+        """Use a default_url that any jupyter server will provide
+
+        Should be:
+
+        - authenticated, so we are testing auth
+        - always available (i.e. in base ServerApp and NotebookApp
+        """
+        return "/api/status"
+
     _thread = None
 
     @gen.coroutine

@@ -108,6 +108,8 @@ jobs:
       python: 3.8
       env:
         - TEST=jupyter_server
+        - JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp
+
     - name: python:nightly
       python: nightly
   allow_failures:
