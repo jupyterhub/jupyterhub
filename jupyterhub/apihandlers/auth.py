@@ -198,14 +198,38 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             raise
         self.send_oauth_response(headers, body, status)
 
+    def needs_oauth_confirm(self, user, oauth_client):
+        """Return whether the given oauth client needs to prompt for access for the given user
+
+        Checks list for oauth clients that don't need confirmation
+
+        (i.e. the user's own server)
+
+        .. versionadded: 1.1
+        """
+        # get the oauth client ids for the user's own server(s)
+        own_oauth_client_ids = set(
+            spawner.oauth_client_id for spawner in user.spawners.values()
+        )
+        if (
+            # it's the user's own server
+            oauth_client.identifier in own_oauth_client_ids
+            # or it's in the global no-confirm list
+            or oauth_client.identifier in self.settings.get('oauth_no_confirm', set())
+        ):
+            return False
+        # default: require confirmation
+        return True
+
     @web.authenticated
-    def get(self):
+    async def get(self):
         """GET /oauth/authorization
 
         Render oauth confirmation page:
         "Server at ... would like permission to ...".
 
-        Users accessing their own server will skip confirmation.
+        Users accessing their own server or a blessed service
+        will skip confirmation.
         """
 
         uri, http_method, body, headers = self.extract_oauth_params()
@@ -215,20 +239,25 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             )
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
-            if client.redirect_uri.startswith(self.current_user.url):
+            if not self.needs_oauth_confirm(self.current_user, client):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
                     self.current_user,
                     client.description,
                 )
-                # access to my own server doesn't require oauth confirmation
                 # this is the pre-1.0 behavior for all oauth
                 self._complete_login(uri, headers, scopes, credentials)
                 return
 
             # Render oauth 'Authorize application...' page
+            auth_state = await self.current_user.get_auth_state()
             self.write(
-                self.render_template("oauth.html", scopes=scopes, oauth_client=client)
+                self.render_template(
+                    "oauth.html",
+                    auth_state=auth_state,
+                    scopes=scopes,
+                    oauth_client=client,
+                )
             )
 
         # Errors that should be shown to the user on the provider website

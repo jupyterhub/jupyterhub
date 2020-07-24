@@ -1,6 +1,8 @@
 """Tests for named servers"""
+import asyncio
 import json
 from unittest import mock
+from urllib.parse import urlencode
 from urllib.parse import urlparse
 
 import pytest
@@ -25,6 +27,17 @@ def named_servers(app):
         {'allow_named_servers': True, 'named_server_limit_per_user': 2},
     ):
         yield
+
+
+@pytest.fixture
+def default_server_name(app, named_servers):
+    """configure app to use a default server name"""
+    server_name = 'myserver'
+    try:
+        app.default_server_name = server_name
+        yield server_name
+    finally:
+        app.default_server_name = ''
 
 
 async def test_default_server(app, named_servers):
@@ -57,6 +70,7 @@ async def test_default_server(app, named_servers):
                         username
                     ),
                     'state': {'pid': 0},
+                    'user_options': {},
                 }
             },
         }
@@ -116,6 +130,7 @@ async def test_create_named_server(app, named_servers):
                         username, servername
                     ),
                     'state': {'pid': 0},
+                    'user_options': {},
                 }
                 for name in [servername]
             },
@@ -232,7 +247,7 @@ async def test_named_server_limit(app, named_servers):
     assert r.text == ''
 
 
-async def test_named_server_spawn_form(app, username):
+async def test_named_server_spawn_form(app, username, named_servers):
     server_name = "myserver"
     base_url = public_url(app)
     cookies = await app.login_user(username)
@@ -265,3 +280,116 @@ async def test_named_server_spawn_form(app, username):
     assert server_name in user.spawners
     spawner = user.spawners[server_name]
     spawner.user_options == {'energy': '938MeV', 'bounds': [-10, 10], 'notspecified': 5}
+
+
+async def test_user_redirect_default_server_name(
+    app, username, named_servers, default_server_name
+):
+    name = username
+    server_name = default_server_name
+    cookies = await app.login_user(name)
+
+    r = await api_request(app, 'users', username, 'servers', server_name, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''
+
+    r = await get_page('/user-redirect/tree/top/', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == url_path_join(app.base_url, '/hub/login')
+    query = urlparse(r.url).query
+    assert query == urlencode(
+        {'next': url_path_join(app.hub.base_url, '/user-redirect/tree/top/')}
+    )
+
+    r = await get_page('/user-redirect/notebooks/test.ipynb', app, cookies=cookies)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    while '/spawn-pending/' in path:
+        await asyncio.sleep(0.1)
+        r = await async_requests.get(r.url, cookies=cookies)
+        path = urlparse(r.url).path
+    assert path == url_path_join(
+        app.base_url, '/user/{}/{}/notebooks/test.ipynb'.format(name, server_name)
+    )
+
+
+async def test_user_redirect_hook_default_server_name(
+    app, username, named_servers, default_server_name
+):
+    """
+    Test proper behavior of user_redirect_hook when c.JupyterHub.default_server_name is set
+    """
+    name = username
+    server_name = default_server_name
+    cookies = await app.login_user(name)
+
+    r = await api_request(app, 'users', username, 'servers', server_name, method='post')
+    r.raise_for_status()
+    assert r.status_code == 201
+    assert r.text == ''
+
+    async def dummy_redirect(path, request, user, base_url):
+        assert base_url == app.base_url
+        assert path == 'redirect-to-terminal'
+        assert request.uri == url_path_join(
+            base_url, 'hub', 'user-redirect', 'redirect-to-terminal'
+        )
+        # exclude custom server_name
+        # custom hook is respected exactly
+        url = url_path_join(user.url, '/terminals/1')
+        return url
+
+    app.user_redirect_hook = dummy_redirect
+
+    r = await get_page('/user-redirect/redirect-to-terminal', app)
+    r.raise_for_status()
+    print(urlparse(r.url))
+    path = urlparse(r.url).path
+    assert path == url_path_join(app.base_url, '/hub/login')
+    query = urlparse(r.url).query
+    assert query == urlencode(
+        {'next': url_path_join(app.hub.base_url, '/user-redirect/redirect-to-terminal')}
+    )
+
+    # We don't actually want to start the server by going through spawn - just want to make sure
+    # the redirect is to the right place
+    r = await get_page(
+        '/user-redirect/redirect-to-terminal',
+        app,
+        cookies=cookies,
+        allow_redirects=False,
+    )
+    r.raise_for_status()
+    redirected_url = urlparse(r.headers['Location'])
+    assert redirected_url.path == url_path_join(
+        app.base_url, 'user', username, 'terminals/1'
+    )
+
+
+async def test_named_server_stop_server(app, username, named_servers):
+    server_name = "myserver"
+    await app.login_user(username)
+    user = app.users[username]
+
+    r = await api_request(app, 'users', username, 'server', method='post')
+    assert r.status_code == 201
+    assert r.text == ''
+    assert user.spawners[''].server
+
+    with mock.patch.object(
+        app.proxy, 'add_user', side_effect=Exception('mock exception')
+    ):
+        r = await api_request(
+            app, 'users', username, 'servers', server_name, method='post'
+        )
+        r.raise_for_status()
+        assert r.status_code == 201
+        assert r.text == ''
+
+    assert user.spawners[server_name].server is None
+    assert user.spawners[''].server
+    assert user.running

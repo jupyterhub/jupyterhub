@@ -34,9 +34,14 @@
     {% block stylesheet %}
     <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
     {% endblock %}
+    {% block favicon %}
+    <link rel="icon" href="{{ static_url("favicon.ico") }}" type="image/x-icon">
+    {% endblock %}
+    {% block scripts %}
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/bootstrap/dist/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script>
+    {% endblock %}
     <script>
       require.config({
           {% if version_hash %}
@@ -63,7 +68,7 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.name}}",
+        user: "{{user.json_escaped_name}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
@@ -118,6 +123,16 @@
             {% if user.admin %}
             <li><a href="{{base_url}}admin">Admin</a></li>
             {% endif %}
+            {% if services %}
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
+              <ul class="dropdown-menu">
+              {% for service in services %}
+                <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+              {% endfor %}
+              </ul>
+            </li>
+            {% endif %}
           {% endblock %}
         </ul>
         {% endif %}
@@ -148,7 +163,7 @@
 
 {% block announcement %}
 {% if announcement %}
-<div class="container text-center announcement">
+<div class="container text-center announcement alert alert-warning">
   {{ announcement | safe }}
 </div>
 {% endif %}

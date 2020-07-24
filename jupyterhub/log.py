@@ -12,6 +12,7 @@ from tornado.log import LogFormatter
 from tornado.web import HTTPError
 from tornado.web import StaticFileHandler
 
+from .handlers.pages import HealthCheckHandler
 from .metrics import prometheus_log_method
 
 
@@ -98,8 +99,12 @@ def _scrub_headers(headers):
     headers = dict(headers)
     if 'Authorization' in headers:
         auth = headers['Authorization']
-        if auth.startswith('token '):
-            headers['Authorization'] = 'token [secret]'
+        if ' ' in auth:
+            auth_type = auth.split(' ', 1)[0]
+        else:
+            # no space, hide the whole thing in case there was a mistake
+            auth_type = ''
+        headers['Authorization'] = '{} [secret]'.format(auth_type)
     if 'Cookie' in headers:
         c = SimpleCookie(headers['Cookie'])
         redacted = []
@@ -123,7 +128,9 @@ def log_request(handler):
     """
     status = handler.get_status()
     request = handler.request
-    if status == 304 or (status < 300 and isinstance(handler, StaticFileHandler)):
+    if status == 304 or (
+        status < 300 and isinstance(handler, (StaticFileHandler, HealthCheckHandler))
+    ):
         # static-file success and 304 Found are debug-level
         log_method = access_log.debug
     elif status < 400:
@@ -162,7 +169,7 @@ def log_request(handler):
         location='',
     )
     msg = "{status} {method} {uri}{location} ({user}@{ip}) {request_time:.2f}ms"
-    if status >= 500 and status != 502:
+    if status >= 500 and status not in {502, 503}:
         log_method(json.dumps(headers, indent=2))
     elif status in {301, 302}:
         # log redirect targets

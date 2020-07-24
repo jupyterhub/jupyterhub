@@ -3,9 +3,11 @@ import binascii
 import os
 import re
 import sys
+import time
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
+from subprocess import run
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -39,6 +41,28 @@ def test_token_app():
     assert re.match(r'^[a-z0-9]+$', out)
 
 
+def test_raise_error_on_missing_specified_config():
+    """
+    Using the -f or --config flag when starting JupyterHub should require the
+    file to be found and exit if it isn't.
+    """
+    # subprocess.run doesn't have a timeout flag, so if this test would fail by
+    # not letting jupyterhub error out, we would wait forever. subprocess.Popen
+    # allow us to manually timeout.
+    process = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--config', 'not-available.py']
+    )
+    # wait inpatiently for the process to exit like we want it to
+    for i in range(100):
+        time.sleep(0.1)
+        returncode = process.poll()
+        if returncode is not None:
+            break
+    else:
+        process.kill()
+    assert returncode == 1
+
+
 def test_generate_config():
     with NamedTemporaryFile(prefix='jupyterhub_config', suffix='.py') as tf:
         cfg_file = tf.name
@@ -69,7 +93,7 @@ def test_generate_config():
     os.remove(cfg_file)
     assert cfg_file in out
     assert 'Spawner.cmd' in cfg_text
-    assert 'Authenticator.whitelist' in cfg_text
+    assert 'Authenticator.allowed_users' in cfg_text
 
 
 async def test_init_tokens(request):

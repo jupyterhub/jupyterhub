@@ -3,10 +3,10 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
+import importlib
 import json
 import os
 import random
-import importlib
 from datetime import datetime
 from datetime import timezone
 from textwrap import dedent
@@ -23,17 +23,21 @@ from tornado.web import RequestHandler
 
 try:
     import notebook
+
     use_serverapp = False
     server_package = 'notebook'
     app_name = 'notebook.notebookapp'
 except ImportError:
     try:
         import jupyter_server
+
         use_serverapp = True
         server_package = 'jupyter_server'
         app_name = 'jupyter_server.serverapp'
     except ImportError:
-        raise ImportError("JupyterHub single-user server requires notebook or jupyter_server packages")
+        raise ImportError(
+            "JupyterHub single-user server requires notebook or jupyter_server packages"
+        )
 
 from traitlets import (
     Any,
@@ -53,11 +57,15 @@ NotebookApp = getattr(app_module, 'ServerApp' if use_serverapp else 'NotebookApp
 notebook_aliases = app_module.aliases
 notebook_flags = app_module.flags
 
-LoginHandler = getattr(importlib.import_module(server_package + '.auth.login'), 'LoginHandler')
-LogoutHandler = getattr(importlib.import_module(server_package + '.auth.logout'), 'LogoutHandler')
+LoginHandler = getattr(
+    importlib.import_module(server_package + '.auth.login'), 'LoginHandler'
+)
+LogoutHandler = getattr(
+    importlib.import_module(server_package + '.auth.logout'), 'LogoutHandler'
+)
 IPythonHandler = getattr(
     importlib.import_module(server_package + '.base.handlers'),
-    'JupyterHandler' if use_serverapp else 'IPythonHandler'
+    'JupyterHandler' if use_serverapp else 'IPythonHandler',
 )
 
 from ._version import __version__, _check_version
@@ -347,8 +355,8 @@ class SingleUserNotebookApp(NotebookApp):
     login_handler_class = JupyterHubLoginHandler
     logout_handler_class = JupyterHubLogoutHandler
     port_retries = (
-        0
-    )  # disable port-retries, since the Spawner will tell us what port to use
+        0  # disable port-retries, since the Spawner will tell us what port to use
+    )
 
     disable_user_config = Bool(
         False,
@@ -503,7 +511,7 @@ class SingleUserNotebookApp(NotebookApp):
             # protect against mixed timezone comparisons
             if not last_activity.tzinfo:
                 # assume naive timestamps are utc
-                self.log.warning("last activity is using naïve timestamps")
+                self.log.warning("last activity is using naive timestamps")
                 last_activity = last_activity.replace(tzinfo=timezone.utc)
 
         if self._last_activity_sent and last_activity < self._last_activity_sent:

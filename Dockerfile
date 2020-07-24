@@ -21,40 +21,83 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-FROM ubuntu:18.04
-LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
+# https://github.com/tianon/docker-brew-ubuntu-core/commit/d4313e13366d24a97bd178db4450f63e221803f1
+ARG BASE_IMAGE=ubuntu:bionic-20191029@sha256:6e9f67fa63b0323e9a1e587fd71c561ba48a034504fb804fd26fd8800039835d
+FROM $BASE_IMAGE AS builder
 
-# install nodejs, utf8 locale, set CDN because default httpredir is unreliable
+USER root
+
 ENV DEBIAN_FRONTEND noninteractive
-RUN apt-get -y update && \
-    apt-get -y upgrade && \
-    apt-get -y install wget git bzip2 && \
-    apt-get purge && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-ENV LANG C.UTF-8
+RUN apt-get update \
+ && apt-get install -yq --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    locales \
+    python3-dev \
+    python3-pip \
+    python3-pycurl \
+    nodejs \
+    npm \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
 
-# install Python + NodeJS with conda
-RUN wget -q https://repo.continuum.io/miniconda/Miniconda3-4.5.11-Linux-x86_64.sh -O /tmp/miniconda.sh  && \
-    echo 'e1045ee415162f944b6aebfe560b8fee */tmp/miniconda.sh' | md5sum -c - && \
-    bash /tmp/miniconda.sh -f -b -p /opt/conda && \
-    /opt/conda/bin/conda install --yes -c conda-forge \
-      python=3.6 sqlalchemy tornado jinja2 traitlets requests pip pycurl \
-      nodejs configurable-http-proxy && \
-    /opt/conda/bin/pip install --upgrade pip && \
-    rm /tmp/miniconda.sh
-ENV PATH=/opt/conda/bin:$PATH
+# copy everything except whats in .dockerignore, its a
+# compromise between needing to rebuild and maintaining
+# what needs to be part of the build
+COPY . /src/jupyterhub/
 
-ADD . /src/jupyterhub
 WORKDIR /src/jupyterhub
 
-RUN pip install . && \
-    rm -rf $PWD ~/.cache ~/.npm
+RUN python3 -m pip install --upgrade setuptools pip wheel
+
+# Build client component packages (they will be copied into ./share and
+# packaged with the built wheel.)
+RUN npm install
+RUN python3 -m pip wheel --wheel-dir wheelhouse .
+
+
+FROM $BASE_IMAGE
+
+USER root
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -yq --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    locales \
+    python3-pip \
+    python3-pycurl \
+    nodejs \
+    npm \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+ENV SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8
+
+RUN  locale-gen $LC_ALL
+
+# always make sure pip is up to date!
+RUN python3 -m pip install --no-cache --upgrade setuptools pip
+
+RUN npm install -g configurable-http-proxy@^4.2.0 \
+ && rm -rf ~/.npm
+
+# install the wheels we built in the first stage
+COPY --from=builder /src/jupyterhub/wheelhouse /tmp/wheelhouse
+RUN python3 -m pip install --no-cache /tmp/wheelhouse/*
 
 RUN mkdir -p /srv/jupyterhub/
 WORKDIR /srv/jupyterhub/
+
 EXPOSE 8000
 
+LABEL maintainer="Jupyter Project <jupyter@googlegroups.com>"
 LABEL org.jupyter.service="jupyterhub"
 
 CMD ["jupyterhub"]

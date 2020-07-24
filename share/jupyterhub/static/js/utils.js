@@ -2,7 +2,7 @@
 // Original Copyright (c) IPython Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-// Modifications Copyright (c) Juptyer Development Team.
+// Modifications Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
 define(["jquery"], function($) {

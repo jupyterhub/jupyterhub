@@ -1,5 +1,9 @@
-Installation Guide
-==================
+Installation
+============
+
+These sections cover how to get up-and-running with JupyterHub. They cover
+some basics of the tools needed to deploy JupyterHub as well as how to get it
+running on your own infrastructure.
 
 .. toctree::
    :maxdepth: 3
@@ -7,3 +11,4 @@ Installation Guide
    quickstart
    quickstart-docker
    installation-basics
+   installation-guide-hard
