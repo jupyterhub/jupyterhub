@@ -2772,6 +2772,7 @@ class JupyterHub(Application):
         if self._atexit_ran:
             return
         self._atexit_ran = True
+        self._init_asyncio_patch()
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
         asyncio.set_event_loop(asyncio.new_event_loop())
         IOLoop.clear_current()
