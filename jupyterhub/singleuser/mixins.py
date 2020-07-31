@@ -31,6 +31,7 @@ from traitlets import Bool
 from traitlets import Bytes
 from traitlets import CUnicode
 from traitlets import default
+from traitlets import import_item
 from traitlets import Integer
 from traitlets import observe
 from traitlets import TraitError
@@ -206,9 +207,6 @@ def _exclude_home(path_list):
     for p in path_list:
         if not p.startswith(home):
             yield p
-
-
-from traitlets import HasTraits
 
 
 class SingleUserNotebookAppMixin(Configurable):
@@ -660,23 +658,57 @@ class SingleUserNotebookAppMixin(Configurable):
         env.loader = ChoiceLoader([FunctionLoader(get_page), orig_loader])
 
 
-def make_singleuser_app(App, LoginHandler, LogoutHandler, BaseHandler):
+def detect_base_package(App):
+    """Detect the base package for an App class
+
+    Will return 'notebook' or 'jupyter_server'
+    based on which package App subclasses from.
+
+    Will return None if neither is identified (e.g. fork package, or duck-typing).
+    """
+    # guess notebook or jupyter_server based on App class inheritance
+    for cls in App.mro():
+        pkg = cls.__module__.split(".", 1)[0]
+        if pkg in {"notebook", "jupyter_server"}:
+            return pkg
+    return None
+
+
+def make_singleuser_app(App):
     """Make and return a singleuser notebook app
 
-    given existing notebook or jupyter_server classes,
+    given existing notebook or jupyter_server Application classes,
     mix-in jupyterhub auth.
 
+    Instances of App must have the following attributes defining classes:
+
+    - .login_handler_class
+    - .logout_handler_class
+    - .base_handler_class (only required if not a subclass of the default app
+      in jupyter_server or notebook)
+
     App should be a subclass of `notebook.notebookapp.NotebookApp`
-    or `jupyter_server.serverapp.ServerApp`
-
-    Must be passed base classes for:
-
-    - App
-    - LoginHandler
-    - LogoutHandler
-    - BaseHandler
+    or `jupyter_server.serverapp.ServerApp`.
     """
-    # create handler classes from mixins + bases
+
+    empty_parent_app = App()
+
+    # detect base classes
+    LoginHandler = empty_parent_app.login_handler_class
+    LogoutHandler = empty_parent_app.logout_handler_class
+    BaseHandler = getattr(empty_parent_app, "base_handler_class", None)
+    if BaseHandler is None:
+        pkg = detect_base_package(App)
+        if pkg == "jupyter_server":
+            BaseHandler = import_item("jupyter_server.base.handlers.JupyterHandler")
+        elif pkg == "notebook":
+            BaseHandler = import_item("notebook.base.handlers.IPythonHandler")
+        else:
+            raise ValueError(
+                "{}.base_handler_class must be defined".format(App.__name__)
+            )
+
+    # create Handler classes from mixins + bases
     class JupyterHubLoginHandler(JupyterHubLoginHandlerMixin, LoginHandler):
         pass
 
@@ -687,13 +719,12 @@ def make_singleuser_app(App, LoginHandler, LogoutHandler, BaseHandler):
         pass
 
     # create merged aliases & flags
-    empty_parent_app = App()
     merged_aliases = {}
-    merged_aliases.update(empty_parent_app.aliases)
+    merged_aliases.update(empty_parent_app.aliases or {})
     merged_aliases.update(aliases)
 
     merged_flags = {}
-    merged_flags.update(empty_parent_app.flags)
+    merged_flags.update(empty_parent_app.flags or {})
     merged_flags.update(flags)
     # create mixed-in App class, bringing it all together
     class SingleUserNotebookApp(SingleUserNotebookAppMixin, App):
