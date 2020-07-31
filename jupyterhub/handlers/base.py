@@ -977,13 +977,16 @@ class BaseHandler(RequestHandler):
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
             if spawner._spawn_pending and not spawner._waiting_for_response:
-                # still in Spawner.start, which is taking a long time
-                # we shouldn't poll while spawn is incomplete.
-                self.log.warning(
-                    "User %s is slow to start (timeout=%s)",
-                    user_server_name,
-                    self.slow_spawn_timeout,
-                )
+                # If slow_spawn_timeout is intentionally disabled then we
+                # don't need to log a warning, just return.
+                if self.slow_spawn_timeout > 0:
+                    # still in Spawner.start, which is taking a long time
+                    # we shouldn't poll while spawn is incomplete.
+                    self.log.warning(
+                        "User %s is slow to start (timeout=%s)",
+                        user_server_name,
+                        self.slow_spawn_timeout,
+                    )
                 return
 
             # start has finished, but the server hasn't come up
