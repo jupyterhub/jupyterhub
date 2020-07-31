@@ -433,6 +433,7 @@ class Spawner(LoggingConfigurable):
             'VIRTUAL_ENV',
             'LANG',
             'LC_ALL',
+            'JUPYTERHUB_SINGLEUSER_APP',
         ],
         help="""
         List of environment variables for the single-user server to inherit from the JupyterHub process.
