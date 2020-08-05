@@ -638,8 +638,15 @@ class BaseHandler(RequestHandler):
             )
 
         if not next_url:
-            # custom default URL
-            next_url = default or self.default_url
+            # custom default URL, usually passed because user landed on that page but was not logged in
+            if default:
+                next_url = default
+            else:
+                # As set in jupyterhub_config.py
+                if callable(self.default_url):
+                    next_url = self.default_url(user)
+                else:
+                    next_url = self.default_url
 
         if not next_url:
             # default URL after login
