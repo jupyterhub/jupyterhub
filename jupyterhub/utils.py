@@ -85,6 +85,7 @@ def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname
         return None
     purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
     ssl_context = ssl.create_default_context(purpose, cafile=cafile)
+    ssl_context.load_default_certs()
     ssl_context.load_cert_chain(certfile, keyfile)
     ssl_context.check_hostname = check_hostname
     return ssl_context
@@ -580,7 +581,7 @@ def utcnow():
 def _parse_accept_header(accept):
     """
     Parse the Accept header *accept*
-    
+
     Return a list with 3-tuples of
     [(str(media_type), dict(params), float(q_value)),] ordered by q values.
     If the accept header includes vendor-specific types like::
