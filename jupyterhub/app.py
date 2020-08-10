@@ -2731,6 +2731,40 @@ class JupyterHub(Application):
         self.log.critical("Received signalnum %s, , initiating shutdown...", signum)
         raise SystemExit(128 + signum)
 
+    def _init_asyncio_patch(self):
+        """Set default asyncio policy to be compatible with Tornado.
+
+        Tornado 6 (at least) is not compatible with the default
+        asyncio implementation on Windows.
+
+        Pick the older SelectorEventLoopPolicy on Windows
+        if the known-incompatible default policy is in use.
+
+        Do this as early as possible to make it a low priority and overrideable.
+
+        ref: https://github.com/tornadoweb/tornado/issues/2608
+
+        FIXME: If/when tornado supports the defaults in asyncio,
+               remove and bump tornado requirement for py38.
+        """
+        if sys.platform.startswith("win") and sys.version_info >= (3, 8):
+            try:
+                from asyncio import (
+                    WindowsProactorEventLoopPolicy,
+                    WindowsSelectorEventLoopPolicy,
+                )
+            except ImportError:
+                pass
+                # not affected
+            else:
+                if (
+                    type(asyncio.get_event_loop_policy())
+                    is WindowsProactorEventLoopPolicy
+                ):
+                    # WindowsProactorEventLoopPolicy is not compatible with Tornado 6.
+                    # Fallback to the pre-3.8 default of WindowsSelectorEventLoopPolicy.
+                    asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
+
     _atexit_ran = False
 
     def atexit(self):
@@ -2738,6 +2772,7 @@ class JupyterHub(Application):
         if self._atexit_ran:
             return
         self._atexit_ran = True
+        self._init_asyncio_patch()
         # run the cleanup step (in a new loop, because the interrupted one is unclean)
         asyncio.set_event_loop(asyncio.new_event_loop())
         IOLoop.clear_current()
@@ -2787,6 +2822,7 @@ class JupyterHub(Application):
     @classmethod
     def launch_instance(cls, argv=None):
         self = cls.instance()
+        self._init_asyncio_patch()
         loop = IOLoop.current()
         task = asyncio.ensure_future(self.launch_instance_async(argv))
         try:
