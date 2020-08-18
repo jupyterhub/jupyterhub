@@ -1,7 +1,7 @@
 Monitoring
 ===================
 
-This section covers details on monitoring the state of your Jupyterhub installation.
+This section covers details on monitoring the state of your JupyterHub installation.
 
 .. toctree::
    :maxdepth: 2

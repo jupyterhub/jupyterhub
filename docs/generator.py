@@ -29,7 +29,7 @@ class Generator:
         table_name = "List of Prometheus Metrics\n"
         headers = ["Type", "Name", "Description"]
         values = self._parse_metrics()
-        writer = Generator.create_writer(table_name, headers, values)
+        writer = self.create_writer(table_name, headers, values)
         with open(filename, 'w') as f:
             f.write(writer.dumps())
 
