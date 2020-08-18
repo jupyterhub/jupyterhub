@@ -653,13 +653,14 @@ class ProxyErrorHandler(BaseHandler):
 
 
 class HealthCheckHandler(BaseHandler):
-    """Answer to health check"""
+    """Serve health check probes as quickly as possible"""
 
-    def get(self, *args):
-        self.finish()
+    # There is nothing for us to do other than return a positive
+    # HTTP status code as quickly as possible for GET or HEAD requests
+    def get(self):
+        pass
 
-    def head(self, *args):
-        self.finish()
+    head = get
 
 
 default_handlers = [
