@@ -658,6 +658,9 @@ class HealthCheckHandler(BaseHandler):
     def get(self, *args):
         self.finish()
 
+    def head(self, *args):
+        self.finish()
+
 
 default_handlers = [
     (r'/', RootHandler),
