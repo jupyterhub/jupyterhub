@@ -5,6 +5,7 @@ alabaster_jupyterhub
 # 0.1.0 released.
 https://github.com/jupyterhub/autodoc-traits/archive/75885ee24636efbfebfceed1043459715049cd84.zip
 pydata-sphinx-theme
+pytablewriter==0.56.1
 recommonmark>=0.6
 sphinx-copybutton
 sphinx-jsonschema

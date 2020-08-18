@@ -1,7 +1,12 @@
+import os
+from os.path import join
+
 from pytablewriter import MarkdownTableWriter
 from pytablewriter.style import Style
 
 import jupyterhub.metrics
+
+HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 class Generator:
@@ -25,8 +30,12 @@ class Generator:
         return table_rows
 
     def prometheus_metrics(self):
-        filename = "./source/monitoring/metrics.md"
-        table_name = "List of Prometheus Metrics\n"
+        generated_directory = f"{HERE}/source/monitoring"
+        if not os.path.exists(generated_directory):
+            os.makedirs(generated_directory)
+
+        filename = f"{generated_directory}/metrics.md"
+        table_name = "List of Prometheus Metrics"
         headers = ["Type", "Name", "Description"]
         values = self._parse_metrics()
         writer = self.create_writer(table_name, headers, values)
