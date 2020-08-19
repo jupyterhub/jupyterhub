@@ -945,6 +945,9 @@ class BaseHandler(RequestHandler):
                 self.settings['failure_count'] = 0
                 return
             # spawn failed, increment count and abort if limit reached
+            SERVER_SPAWN_DURATION_SECONDS.labels(
+                    status=ServerSpawnStatus.failure
+                ).observe(time.perf_counter() - spawn_start_time)
             self.settings.setdefault('failure_count', 0)
             self.settings['failure_count'] += 1
             failure_count = self.settings['failure_count']
