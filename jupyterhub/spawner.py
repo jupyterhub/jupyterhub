@@ -944,14 +944,13 @@ class Spawner(LoggingConfigurable):
 
         Arguments:
             paths (dict): a list of paths for key, cert, and CA.
-            These paths will be resolvable and readable by the Hub process,
-            but not necessarily by the notebook server.
+                These paths will be resolvable and readable by the Hub process,
+                but not necessarily by the notebook server.
 
         Returns:
-            dict: a list (potentially altered) of paths for key, cert,
-            and CA.
-            These paths should be resolvable and readable
-            by the notebook server to be launched.
+            dict: a list (potentially altered) of paths for key, cert, and CA.
+                These paths should be resolvable and readable by the notebook
+                server to be launched.
 
 
         `.move_certs` is called after certs for the singleuser notebook have
@@ -1618,5 +1617,5 @@ class SimpleLocalProcessSpawner(LocalProcessSpawner):
         return env
 
     def move_certs(self, paths):
-        """No-op for installing certs"""
+        """No-op for installing certs."""
         return paths
