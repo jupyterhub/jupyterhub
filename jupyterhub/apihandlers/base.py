@@ -59,7 +59,7 @@ class APIHandler(BaseHandler):
                 referer,
                 host_path,
             )
-            return False
+            return True
         return True
 
     def get_current_user_cookie(self):
