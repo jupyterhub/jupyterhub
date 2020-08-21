@@ -448,12 +448,53 @@ class SingleUserNotebookApp(NotebookApp):
 
     server_name = Unicode()
 
+    async def send_spawn_callback(self):
+        # TODO: doesn't work, not sure if auth is correct, etc
+        # TODO: reduce copy and paste here
+        # copied from notify_activity
+        client = self.hub_http_client
+
+        async def notify():
+            self.log.debug("Notifying Hub of readyness via spawn_callback")
+            req = HTTPRequest(
+                url=self.hub_spawn_callback_url,
+                method='POST',
+                headers={
+                    "Authorization": "token {}".format(self.hub_auth.api_token),
+                    "Content-Type": "application/json",
+                },
+                body=json.dumps({}),
+            )
+            try:
+                await client.fetch(req)
+            except Exception:
+                self.log.exception("Error sending spawn callback to Hub")
+                return False
+            else:
+                return True
+
+        await exponential_backoff(
+            notify,
+            fail_message="Failed to send spawn callback to Hub",
+            start_wait=1,
+            max_wait=15,
+            timeout=60,
+        )
+
     @default('server_name')
     def _server_name_default(self):
         return os.environ.get('JUPYTERHUB_SERVER_NAME', '')
 
     hub_activity_url = Unicode(
         config=True, help="URL for sending JupyterHub activity updates"
+    )
+
+    @default('hub_spawn_callback_url')
+    def _default_spawn_callback_url(self):
+        return os.environ.get('JUPYTERHUB_SPAWN_CALLBACK_URL', '')
+
+    hub_spawn_callback_url = Unicode(
+        config=True, help="URL for sending JupyterHub alive callback"
     )
 
     @default('hub_activity_url')
@@ -561,6 +602,8 @@ class SingleUserNotebookApp(NotebookApp):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
         # start by hitting Hub to check version
         ioloop.IOLoop.current().run_sync(self.check_hub_version)
+        if self.hub_spawn_callback_url:
+            ioloop.IOLoop.current().run_sync(self.send_spawn_callback)
         ioloop.IOLoop.current().add_callback(self.keep_activity_updated)
         super(SingleUserNotebookApp, self).start()
 

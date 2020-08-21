@@ -1,5 +1,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import json
 import warnings
 from collections import defaultdict
@@ -601,10 +602,23 @@ class User:
                 hub_paths = await maybe_future(spawner.create_certs())
                 spawner.cert_paths = await maybe_future(spawner.move_certs(hub_paths))
             self.log.debug("Calling Spawner.start for %s", spawner._log_name)
+            spawner.callback_future = asyncio.Future()  # gets set inside the callabkc
             f = maybe_future(spawner.start())
+
             # commit any changes in spawner.start (always commit db changes before yield)
             db.commit()
             url = await gen.with_timeout(timedelta(seconds=spawner.start_timeout), f)
+            if spawner.has_callback:
+                # TODO: if we always wait for this then we are not
+                # compatible with older jupyterhub-singleuser, which is
+                # technically allowed but perhaps not useful.
+                self.log.debug("Waiting for spawner callback for %s", spawner._log_name)
+                ret = (
+                    await spawner.callback_future
+                )  # spawner.callback_future.set_result(new_url)
+                self.log.debug("Spawner callback completed for %s, ret=%s", spawner._log_name, ret)
+                if ret:
+                    url = ret
             if url:
                 # get ip, port info from return value of start()
                 if isinstance(url, str):

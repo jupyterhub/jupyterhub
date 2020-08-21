@@ -770,6 +770,15 @@ class Spawner(LoggingConfigurable):
             getattr(self.user, 'escaped_name', self.user.name),
             'activity',
         )
+        env['JUPYTERHUB_SPAWN_CALLBACK_URL'] = url_path_join(
+            self.hub.api_url,
+            'users',
+            # tolerate mocks defining only user.name
+            getattr(self.user, 'escaped_name', self.user.name),
+            'servers',
+            self.name,  # server name
+            'spawn_callback',
+        )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
         if self.server:
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
@@ -1570,6 +1579,13 @@ class LocalProcessSpawner(Spawner):
         if status is None:
             # it all failed, zombie process
             self.log.warning("Process %i never died", self.pid)
+
+    async def spawn_callback(self, payload):
+        if 'port' in payload:
+            self.port = payload['port']
+        if 'url' in payload:
+            return payload['url']
+        pass
 
 
 class SimpleLocalProcessSpawner(LocalProcessSpawner):
