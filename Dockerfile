@@ -21,8 +21,7 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-# https://github.com/tianon/docker-brew-ubuntu-core/commit/d4313e13366d24a97bd178db4450f63e221803f1
-ARG BASE_IMAGE=ubuntu:bionic-20191029@sha256:6e9f67fa63b0323e9a1e587fd71c561ba48a034504fb804fd26fd8800039835d
+ARG BASE_IMAGE=ubuntu:focal-20200729@sha256:6f2fb2f9fb5582f8b587837afd6ea8f37d8d1d9e41168c90f410a6ef15fa8ce5
 FROM $BASE_IMAGE AS builder
 
 USER root
