@@ -201,6 +201,11 @@ class Service(LoggingConfigurable):
         """
     ).tag(input=True)
 
+    display = Bool(
+        True,
+        help="""Whether to list the service on the JupyterHub UI"""
+    ).tag(input=True)
+
     oauth_no_confirm = Bool(
         False,
         help="""Skip OAuth confirmation when users access this service.
