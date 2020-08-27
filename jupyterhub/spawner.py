@@ -433,6 +433,7 @@ class Spawner(LoggingConfigurable):
             'VIRTUAL_ENV',
             'LANG',
             'LC_ALL',
+            'JUPYTERHUB_SINGLEUSER_APP',
         ],
         help="""
         List of environment variables for the single-user server to inherit from the JupyterHub process.
@@ -989,7 +990,9 @@ class Spawner(LoggingConfigurable):
             args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
         if self.default_url:
             default_url = self.format_string(self.default_url)
-            args.append('--NotebookApp.default_url=%s' % _quote_safe(default_url))
+            args.append(
+                '--SingleUserNotebookApp.default_url=%s' % _quote_safe(default_url)
+            )
 
         if self.debug:
             args.append('--debug')

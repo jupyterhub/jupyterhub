@@ -41,6 +41,11 @@ install:
     if [[ "$MASTER_DEPENDENCIES" == "True" ]]; then
        pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
     fi
+  - |
+    if [[ "$TEST" == "jupyter_server" ]]; then
+       pip uninstall notebook --yes
+       pip install jupyter_server
+    fi
   - pip freeze
 
 # run tests
@@ -99,6 +104,12 @@ jobs:
         # The password in url below is url-encoded with: urllib.parse.quote($PGPASSWORD, safe='')
         - JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1/jupyterhub
         - MASTER_DEPENDENCIES=True
+    - name: python:3.8 + jupyter_server
+      python: 3.8
+      env:
+        - TEST=jupyter_server
+        - JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp
+
     - name: python:nightly
       python: nightly
   allow_failures:
