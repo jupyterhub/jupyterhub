@@ -644,7 +644,7 @@ class BaseHandler(RequestHandler):
             else:
                 # As set in jupyterhub_config.py
                 if callable(self.default_url):
-                    next_url = self.default_url(user)
+                    next_url = self.default_url(self)
                 else:
                     next_url = self.default_url
 

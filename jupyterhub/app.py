@@ -1322,12 +1322,12 @@ class JupyterHub(Application):
 
         By default, redirects users to their own server.
 
-        Can be a Unicode string (e.g. '/hub/home') or a callable based on the user object:
+        Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
 
-            def default_url_fn(user):
-                if user:
-                    if user.admin:
-                        return '/hub/admin'
+            def default_url_fn(handler):
+                user = handler.current_user
+                if user and user.admin:
+                    return '/hub/admin'
                 return '/hub/home'
 
             c.JupyterHub.default_url = default_url_fn
