@@ -9,7 +9,7 @@
     "url": "https://github.com/jupyter/jupyterhub.git"
   },
   "scripts": {
-    "postinstall": "python ./bower-lite",
+    "postinstall": "python3 ./bower-lite",
     "fmt": "prettier --write --trailing-comma es5 share/jupyterhub/static/js/*",
     "lessc": "lessc"
   },

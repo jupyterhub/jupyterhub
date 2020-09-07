@@ -40,19 +40,18 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m pip install --upgrade setuptools pip wheel
+
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . /src/jupyterhub/
-
 WORKDIR /src/jupyterhub
-
-RUN python3 -m pip install --upgrade setuptools pip wheel
 
 # Build client component packages (they will be copied into ./share and
 # packaged with the built wheel.)
-RUN npm install
-RUN python3 -m pip wheel --wheel-dir wheelhouse .
+RUN python3 setup.py bdist_wheel
+RUN python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 
 FROM $BASE_IMAGE
