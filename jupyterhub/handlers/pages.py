@@ -463,7 +463,8 @@ class AdminHandler(BaseHandler):
         mapping = {'running': orm.Spawner.server_id}
         for name in available:
             if name not in mapping:
-                mapping[name] = getattr(orm.User, name)
+                table = orm.User if name != "last_activity" else orm.Spawner
+                mapping[name] = getattr(table, name)
 
         default_order = {
             'name': 'asc',
