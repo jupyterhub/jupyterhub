@@ -13,6 +13,36 @@ securityDefinitions:
     type: apiKey
     name: Authorization
     in: header
+  oauth2:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: 'https://localhost:8000/hub/api/oauth2/authorize' # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
+    tokenUrl: 'https://localhost:8000/hub/api/oauth2/token'
+    scopes:
+      all: Everything a user can do
+      read:all: Read-only access to everything a user can read
+      users: Grants access to managing users including reading users’ model, posting activity and starting/stoping users servers
+      read:users: Read-only access to the above
+      read:users:username: Read-only access to a single user's model
+      read:users:names: Read-only access to users' names
+      read:users:groups: Read-only access to users' groups
+      read:users:activity: Read-only access to users' activity
+      read:users:activity:groupname: Read-only access to specific group's users' activity
+      read:users:servers: Read-only access to users' servers
+      users:activity:username: Update a user's activity
+      users:servers: Grants access to start/stop any server
+      users:servers:servername: Limits the above to a specific server
+      users:tokens: Grants access to users' token (includes create/revoke a token)
+      read:users:tokens: Identify a user from a token
+      admin:users: Grants access to creating/removing users
+      admin:users:servers: Grants access to create/remove users' servers
+      groups: Add/remove users from any group
+      groups:groupname: Add/remove users from a specific group only
+      read:groups: Read-only access to groups
+      admin:groups: Grants access to create/delete groups
+      read:services: Read-only access to services
+      proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
+      shutdown: Grants access to shutdown the Hub
 security:
   - token: []
 basePath: /hub/api
