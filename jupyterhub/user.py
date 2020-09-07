@@ -795,7 +795,6 @@ class User:
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()
-            spawner.orm_spawner.state = {}
             self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
             # remove server entry from db
             spawner.server = None
