@@ -371,9 +371,13 @@ class HubAuth(SingletonConfigurable):
             )
             app_log.warning(r.text)
             msg = "Failed to check authorization"
-            # pass on error_description from oauth failure
+            # pass on error from oauth failure
             try:
-                description = r.json().get("error_description")
+                response = r.json()
+                # prefer more specific 'error_description', fallback to 'error'
+                description = response.get(
+                    "error_description", response.get("error", "Unknown error")
+                )
             except Exception:
                 pass
             else:
