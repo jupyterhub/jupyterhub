@@ -21,8 +21,7 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-# https://github.com/tianon/docker-brew-ubuntu-core/commit/d4313e13366d24a97bd178db4450f63e221803f1
-ARG BASE_IMAGE=ubuntu:bionic-20191029@sha256:6e9f67fa63b0323e9a1e587fd71c561ba48a034504fb804fd26fd8800039835d
+ARG BASE_IMAGE=ubuntu:focal-20200729@sha256:6f2fb2f9fb5582f8b587837afd6ea8f37d8d1d9e41168c90f410a6ef15fa8ce5
 FROM $BASE_IMAGE AS builder
 
 USER root
@@ -41,19 +40,18 @@ RUN apt-get update \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
+RUN python3 -m pip install --upgrade setuptools pip wheel
+
 # copy everything except whats in .dockerignore, its a
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . /src/jupyterhub/
-
 WORKDIR /src/jupyterhub
-
-RUN python3 -m pip install --upgrade setuptools pip wheel
 
 # Build client component packages (they will be copied into ./share and
 # packaged with the built wheel.)
-RUN npm install
-RUN python3 -m pip wheel --wheel-dir wheelhouse .
+RUN python3 setup.py bdist_wheel
+RUN python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
 
 FROM $BASE_IMAGE
