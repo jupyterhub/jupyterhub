@@ -1188,6 +1188,8 @@ class BaseHandler(RequestHandler):
         for service in self.services.values():
             if not service.url:
                 continue
+            if not service.display:
+                continue
             accessible_services.append(service)
         return accessible_services
 

@@ -1514,6 +1514,7 @@ async def test_get_services(app, mockservice_url):
             'prefix': mockservice.server.base_url,
             'url': mockservice.url,
             'info': {},
+            'display': True,
         }
     }
 
@@ -1538,6 +1539,7 @@ async def test_get_service(app, mockservice_url):
         'prefix': mockservice.server.base_url,
         'url': mockservice.url,
         'info': {},
+        'display': True,
     }
 
     r = await api_request(
