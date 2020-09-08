@@ -11,7 +11,7 @@ JupyterHub configuration
 ------------------------
 
 As explained in the `Configuration Basics <../getting-started/config-basics.html#generate-a-default-config-file>`_
-section, the ``jupyterhub-config.py`` can be automatically generated via
+section, the ``jupyterhub_config.py`` can be automatically generated via
 
     .. code-block:: bash
 
