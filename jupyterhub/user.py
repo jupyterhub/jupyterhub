@@ -795,8 +795,6 @@ class User:
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()
-            spawner.clear_state()
-            spawner.orm_spawner.state = spawner.get_state()
             self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
             # remove server entry from db
             spawner.server = None
@@ -826,7 +824,17 @@ class User:
             spawner.orm_spawner.started = None
             self.db.commit()
             # trigger post-stop hook
-            await maybe_future(spawner.run_post_stop_hook())
+            try:
+                await maybe_future(spawner.run_post_stop_hook())
+            except:
+                spawner.clear_state()
+                spawner.orm_spawner.state = spawner.get_state()
+                self.db.commit()
+                raise
+            spawner.clear_state()
+            spawner.orm_spawner.state = spawner.get_state()
+            self.db.commit()
+
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
             try:
