@@ -58,11 +58,65 @@ default_role = 'literal'
 import recommonmark
 from recommonmark.transform import AutoStructify
 
+# -- Config -------------------------------------------------------------
+from jupyterhub.app import JupyterHub
+from docutils import nodes
+from sphinx.directives.other import SphinxDirective
+from contextlib import redirect_stdout
+from io import StringIO
+
+# create a temp instance of JupyterHub just to get the output of the generate-config
+# and help --all commands.
+jupyterhub_app = JupyterHub()
+
+
+class ConfigDirective(SphinxDirective):
+    """Generate the configuration file output for use in the documentation."""
+
+    has_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        # The generated configuration file for this version
+        generated_config = jupyterhub_app.generate_config_file()
+        # post-process output
+        home_dir = os.environ['HOME']
+        generated_config = generated_config.replace(home_dir, '$HOME', 1)
+        par = nodes.literal_block(text=generated_config)
+        return [par]
+
+
+class HelpAllDirective(SphinxDirective):
+    """Print the output of jupyterhub help --all for use in the documentation."""
+
+    has_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        # The output of the help command for this version
+        buffer = StringIO()
+        with redirect_stdout(buffer):
+            jupyterhub_app.print_help('--help-all')
+        all_help = buffer.getvalue()
+        # post-process output
+        home_dir = os.environ['HOME']
+        all_help = all_help.replace(home_dir, '$HOME', 1)
+        par = nodes.literal_block(text=all_help)
+        return [par]
+
 
 def setup(app):
     app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
     app.add_css_file('custom.css')
     app.add_transform(AutoStructify)
+    app.add_directive('jupyterhub-generate-config', ConfigDirective)
+    app.add_directive('jupyterhub-help-all', HelpAllDirective)
 
 
 source_suffix = ['.rst', '.md']
