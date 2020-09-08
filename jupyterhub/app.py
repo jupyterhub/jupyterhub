@@ -1324,6 +1324,8 @@ class JupyterHub(Application):
 
         Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
 
+        ::
+        
             def default_url_fn(handler):
                 user = handler.current_user
                 if user and user.admin:
