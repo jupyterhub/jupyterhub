@@ -55,6 +55,7 @@ from traitlets import (
     Instance,
     Bytes,
     Float,
+    Union,
     observe,
     default,
     validate,
@@ -1314,12 +1315,25 @@ class JupyterHub(Application):
         """
     ).tag(config=True)
 
-    default_url = Unicode(
+    default_url = Union(
+        [Unicode(), Callable()],
         help="""
         The default URL for users when they arrive (e.g. when user directs to "/")
 
         By default, redirects users to their own server.
-        """
+
+        Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
+
+        ::
+        
+            def default_url_fn(handler):
+                user = handler.current_user
+                if user and user.admin:
+                    return '/hub/admin'
+                return '/hub/home'
+
+            c.JupyterHub.default_url = default_url_fn
+        """,
     ).tag(config=True)
 
     user_redirect_hook = Callable(
