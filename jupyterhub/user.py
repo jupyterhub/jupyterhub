@@ -828,8 +828,12 @@ class User:
                 await maybe_future(spawner.run_post_stop_hook())
             except:
                 spawner.clear_state()
+                spawner.orm_spawner.state = spawner.get_state()
+                self.db.commit()
                 raise
             spawner.clear_state()
+            spawner.orm_spawner.state = spawner.get_state()
+            self.db.commit()
 
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
