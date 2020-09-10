@@ -396,7 +396,7 @@ class User:
     @property
     def escaped_name(self):
         """My name, escaped for use in URLs, cookies, etc."""
-        return quote(self.name, safe='@~')
+        return quote(self.name, safe='~')
 
     @property
     def json_escaped_name(self):
