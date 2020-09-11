@@ -737,7 +737,7 @@ paths:
       summary: Identify a user or service from an API token
       security:
         - oauth2:
-          - read:all # minrk: is it really necessary to have a scope for this, or use self handler for token whoami?
+          - read:users:tokens # minrk: is it really necessary to have a scope for this, or use self handler for token whoami?
       parameters:
         - name: token
           in: path
