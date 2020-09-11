@@ -10,7 +10,9 @@ import tempfile
 import time
 from subprocess import Popen
 from unittest import mock
+from urllib.parse import quote
 from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 import pytest
 
@@ -399,10 +401,20 @@ async def test_spawner_routing(app, name):
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
         kwargs["verify"] = app.internal_ssl_ca
     url = url_path_join(public_url(app, user), "test/url")
-    r = await async_requests.get(url, **kwargs)
-    r.raise_for_status()
-    assert r.url == url
-    assert r.text == urlparse(url).path
+    urls = [url]
+
+    if quote(user.name) != user.escaped_name:
+        strict_url = url.replace(
+            f"/user/{user.escaped_name}/", f"/user/{quote(user.name)}/"
+        )
+        urls.append(strict_url)
+
+    for url in urls:
+        print(url)
+        r = await async_requests.get(url, **kwargs)
+        r.raise_for_status()
+        assert r.url == url
+        assert r.text == urlparse(url).path
     await user.stop()
 
 
