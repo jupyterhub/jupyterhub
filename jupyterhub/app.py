@@ -2199,6 +2199,14 @@ class JupyterHub(Application):
             ]
         )
         jinja_env = Environment(loader=loader, **jinja_options)
+        # We need a sync jinja environment too, for the times we *must* use sync
+        # code - particularly in RequestHandler.write_error. Since *that*
+        # is called from inside the asyncio event loop, we can't actulaly just
+        # schedule it on the loop - without starting another thread with its
+        # own loop, which seems not worth the trouble. Instead, we create another
+        # environment, exactly like this one, but sync
+        del jinja_options['enable_async']
+        jinja_env_sync = Environment(loader=loader, **jinja_options)
 
         login_url = url_path_join(base_url, 'login')
         logout_url = self.authenticator.logout_url(base_url)
@@ -2245,6 +2253,7 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             template_vars=self.template_vars,
             jinja2_env=jinja_env,
+            jinja2_env_sync=jinja_env_sync,
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
             domain=self.domain,

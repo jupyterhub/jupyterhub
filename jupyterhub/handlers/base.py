@@ -1156,16 +1156,36 @@ class BaseHandler(RequestHandler):
             "<a href='{home}'>home page</a>.".format(home=home)
         )
 
-    def get_template(self, name):
-        """Return the jinja template object for a given name"""
-        return self.settings['jinja2_env'].get_template(name)
+    def get_template(self, name, sync=False):
+        """
+        Return the jinja template object for a given name
 
-    async def render_template(self, name, **ns):
+        If sync is True, we return a Template that is compiled without async suppor.
+        Only those can be used in synchronous code.
+
+        If sync is False, we return a Template that is compiled with async support
+        """
+        if sync:
+            key = 'jinja2_env_sync'
+        else:
+            key = 'jinja2_env'
+        return self.settings[key].get_template(name)
+
+    def render_template(self, name, sync=False, **ns):
+        """
+        Render jinja2 template
+
+        If sync is set to True, we return an awaitable
+        If sync is set to False, we render the template & return a string
+        """
         template_ns = {}
         template_ns.update(self.template_namespace)
         template_ns.update(ns)
-        template = self.get_template(name)
-        return await template.render_async(**template_ns)
+        template = self.get_template(name, sync)
+        if sync:
+            return template.render(**template_ns)
+        else:
+            return template.render_async(**template_ns)
 
     @property
     def template_namespace(self):
@@ -1197,7 +1217,7 @@ class BaseHandler(RequestHandler):
             accessible_services.append(service)
         return accessible_services
 
-    async def write_error(self, status_code, **kwargs):
+    def write_error(self, status_code, **kwargs):
         """render custom error pages"""
         exc_info = kwargs.get('exc_info')
         message = ''
@@ -1240,17 +1260,20 @@ class BaseHandler(RequestHandler):
             # Content-Length must be recalculated.
             self.clear_header('Content-Length')
 
-        # render the template
+        # render_template is async, but write_error can't be!
+        # so we run it sync here, instead of making a sync version of render_template
+
         try:
-            html = await self.render_template('%s.html' % status_code, **ns)
+            html = self.render_template(f'{status_code}.html', sync=True, **ns)
+            print(html, flush=True)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
             try:
-                html = await self.render_template('error.html', **ns)
+                html = self.render_template('error.html', sync=True, **ns)
             except:
                 # In this case, any side effect must be avoided.
                 ns['no_spawner_check'] = True
-                html = await self.render_template('error.html', **ns)
+                html = self.render_template('error.html', sync=True, **ns)
 
         self.write(html)
 
