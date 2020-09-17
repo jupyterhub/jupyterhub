@@ -1160,12 +1160,12 @@ class BaseHandler(RequestHandler):
         """Return the jinja template object for a given name"""
         return self.settings['jinja2_env'].get_template(name)
 
-    def render_template(self, name, **ns):
+    async def render_template(self, name, **ns):
         template_ns = {}
         template_ns.update(self.template_namespace)
         template_ns.update(ns)
         template = self.get_template(name)
-        return template.render(**template_ns)
+        return await template.render_async(**template_ns)
 
     @property
     def template_namespace(self):
@@ -1197,7 +1197,7 @@ class BaseHandler(RequestHandler):
             accessible_services.append(service)
         return accessible_services
 
-    def write_error(self, status_code, **kwargs):
+    async def write_error(self, status_code, **kwargs):
         """render custom error pages"""
         exc_info = kwargs.get('exc_info')
         message = ''
@@ -1242,15 +1242,15 @@ class BaseHandler(RequestHandler):
 
         # render the template
         try:
-            html = self.render_template('%s.html' % status_code, **ns)
+            html = await self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
             try:
-                html = self.render_template('error.html', **ns)
+                html = await self.render_template('error.html', **ns)
             except:
                 # In this case, any side effect must be avoided.
                 ns['no_spawner_check'] = True
-                html = self.render_template('error.html', **ns)
+                html = await self.render_template('error.html', **ns)
 
         self.write(html)
 
@@ -1483,7 +1483,7 @@ class UserUrlHandler(BaseHandler):
         self.set_status(503)
 
         auth_state = await user.get_auth_state()
-        html = self.render_template(
+        html = await self.render_template(
             "not_running.html",
             user=user,
             server_name=server_name,

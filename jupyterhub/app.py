@@ -2187,7 +2187,7 @@ class JupyterHub(Application):
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.hub.base_url
-        jinja_options = dict(autoescape=True)
+        jinja_options = dict(autoescape=True, enable_async=True)
         jinja_options.update(self.jinja_environment_options)
         base_path = self._template_paths_default()[0]
         if base_path not in self.template_paths:

@@ -72,7 +72,7 @@ class LogoutHandler(BaseHandler):
         Override this function to set a custom logout page.
         """
         if self.authenticator.auto_login:
-            html = self.render_template('logout.html')
+            html = await self.render_template('logout.html')
             self.finish(html)
         else:
             self.redirect(self.settings['login_url'], permanent=False)
@@ -89,8 +89,8 @@ class LogoutHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     """Render the login page."""
 
-    def _render(self, login_error=None, username=None):
-        return self.render_template(
+    async def _render(self, login_error=None, username=None):
+        return await self.render_template(
             'login.html',
             next=url_escape(self.get_argument('next', default='')),
             username=username,
@@ -132,7 +132,7 @@ class LoginHandler(BaseHandler):
                     self.redirect(auto_login_url)
                 return
             username = self.get_argument('username', default='')
-            self.finish(self._render(username=username))
+            self.finish(await self._render(username=username))
 
     async def post(self):
         # parse the arguments dict
@@ -149,7 +149,7 @@ class LoginHandler(BaseHandler):
             self._jupyterhub_user = user
             self.redirect(self.get_next_url(user))
         else:
-            html = self._render(
+            html = await self._render(
                 login_error='Invalid username or password', username=data['username']
             )
             self.finish(html)
