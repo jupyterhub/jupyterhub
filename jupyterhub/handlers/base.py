@@ -1,6 +1,7 @@
 """HTTP Handlers for the hub server"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import sys
 import asyncio
 import json
 import math
@@ -1182,9 +1183,17 @@ class BaseHandler(RequestHandler):
         template_ns.update(self.template_namespace)
         template_ns.update(ns)
         template = self.get_template(name, sync)
+        # render_async isn't supported until Python 3.6
+        supported_python = sys.version_info > (3, 5)
         if sync:
             return template.render(**template_ns)
         else:
+            if not supported_python:
+                # If we're on Python 3.5, jinja doesn't support `templates.render_async``
+                # So we render our template synchronously, and pretend we did not.
+                future = asyncio.get_running_loop().create_future()
+                future.set_result(template.render(**template_ns))
+                return future
             return template.render_async(**template_ns)
 
     @property
