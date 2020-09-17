@@ -1160,7 +1160,7 @@ class BaseHandler(RequestHandler):
         """
         Return the jinja template object for a given name
 
-        If sync is True, we return a Template that is compiled without async suppor.
+        If sync is True, we return a Template that is compiled without async support.
         Only those can be used in synchronous code.
 
         If sync is False, we return a Template that is compiled with async support
