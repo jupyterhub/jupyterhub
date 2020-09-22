@@ -98,6 +98,18 @@ class UserListAPIHandler(APIHandler):
                 )
             else:
                 created.append(user)
+                self.eventlog.record_event(
+                    'http://hub.jupyter.org/user-action',
+                    1,
+                    {
+                        'action': 'create',
+                        'requester': {
+                            'username': self.current_user.name,
+                            'admin': self.current_user.admin,
+                        },
+                        'target_user': {'username': user.name, 'admin': user.admin},
+                    },
+                )
 
         self.write(json.dumps([self.user_model(u) for u in created]))
         self.set_status(201)
@@ -158,6 +170,19 @@ class UserAPIHandler(APIHandler):
             # remove from registry
             self.users.delete(user)
             raise web.HTTPError(400, "Failed to create user: %s" % name)
+        else:
+            self.eventlog.record_event(
+                'http://hub.jupyter.org/user-action',
+                1,
+                {
+                    'action': 'create',
+                    'requester': {
+                        'username': self.current_user.name,
+                        'admin': self.current_user.admin,
+                    },
+                    'target_user': {'username': user.name, 'admin': user.admin},
+                },
+            )
 
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
@@ -184,6 +209,18 @@ class UserAPIHandler(APIHandler):
         await maybe_future(self.authenticator.delete_user(user))
         # remove from registry
         self.users.delete(user)
+        self.eventlog.record_event(
+            'http://hub.jupyter.org/user-action',
+            1,
+            {
+                'action': 'delete',
+                'requester': {
+                    'username': self.current_user.name,
+                    'admin': self.current_user.admin,
+                },
+                'target_user': {'username': user.name, 'admin': user.admin},
+            },
+        )
 
         self.set_status(204)
 
@@ -192,6 +229,7 @@ class UserAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
+        prior_state = {'username': user.name, 'admin': user.admin}
         data = self.get_json_body()
         self._check_user_model(data)
         if 'name' in data and data['name'] != name:
@@ -209,6 +247,20 @@ class UserAPIHandler(APIHandler):
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
+        self.eventlog.record_event(
+            'http://hub.jupyter.org/user-action',
+            1,
+            {
+                'action': 'update',
+                'requester': {
+                    'username': self.current_user.name,
+                    'admin': self.current_user.admin,
+                },
+                'target_user': {'username': user.name, 'admin': user.admin},
+                'prior_state': prior_state,
+                'auth_state_change': 'auth_state' in data,
+            },
+        )
         self.write(json.dumps(user_))
 
 
