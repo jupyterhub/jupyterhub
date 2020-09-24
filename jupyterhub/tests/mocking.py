@@ -44,6 +44,7 @@ from traitlets import default
 from traitlets import Dict
 
 from .. import orm
+from .. import roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from ..objects import Server
@@ -318,6 +319,8 @@ class MockHub(JupyterHub):
                 self.db.delete(user)
             for group in self.db.query(orm.Group):
                 self.db.delete(group)
+            for role in self.db.query(orm.Role):
+                self.db.delete(role)
             self.db.commit()
 
     @gen.coroutine
@@ -333,6 +336,7 @@ class MockHub(JupyterHub):
         user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
         if user is None:
             user = orm.User(name='user')
+            roles.DefaultRoles.add_default_role(self.db, user=user)
             self.db.add(user)
             self.db.commit()
 
@@ -403,7 +407,7 @@ class StubSingleUserSpawner(MockSpawner):
         - authenticated, so we are testing auth
         - always available (i.e. in base ServerApp and NotebookApp
         """
-        return "/api/spec.yaml"
+        return "/api/status"
 
     _thread = None
 

@@ -73,6 +73,7 @@ from .services.service import Service
 
 from . import crypto
 from . import dbutil, orm
+from . import roles
 from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
@@ -308,6 +309,28 @@ class JupyterHub(Application):
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
         That must be done through the API.
+        """,
+    ).tag(config=True)
+
+    load_roles = List(
+        Dict(),
+        help="""List of predefined role dictionaries to load at startup.
+
+        For instance::
+
+            roles = [
+                {
+                    'name': 'teacher',
+                    'description': 'Access users information, servers and groups without create/delete privileges',
+                    'scopes': ['users', 'groups'],
+                    'users': ['cyclops', 'wolverine']
+                }
+            ]
+
+        See all the available scopes in the JupyterHub REST API documentation.
+
+        The default roles are in roles.py.
+
         """,
     ).tag(config=True)
 
@@ -1692,6 +1715,7 @@ class JupyterHub(Application):
 
         for name in admin_users:
             # ensure anyone specified as admin in config is admin in db
+            # and gets admin role
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
@@ -1699,7 +1723,6 @@ class JupyterHub(Application):
                 db.add(user)
             else:
                 user.admin = True
-
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
@@ -1796,6 +1819,37 @@ class JupyterHub(Application):
                     user = orm.User(name=username)
                     db.add(user)
                 group.users.append(user)
+        db.commit()
+
+    async def init_roles(self):
+        """Load default and predefined roles into the database"""
+        db = self.db
+        # load default roles
+        roles.DefaultRoles.load_to_database(db)
+
+        # load predefined roles from config file
+        for predef_role in self.load_roles:
+            role = roles.add_predef_role(db, predef_role)
+            # handle users
+            for username in predef_role['users']:
+                username = self.authenticator.normalize_username(username)
+                if not (
+                    await maybe_future(self.authenticator.check_allowed(username, None))
+                ):
+                    raise ValueError(
+                        "Username %r is not in Authenticator.allowed_users" % username
+                    )
+                user = orm.User.find(db, name=username)
+                if user is None:
+                    if not self.authenticator.validate_username(username):
+                        raise ValueError("Role username %r is not valid" % username)
+                    user = orm.User(name=username)
+                    db.add(user)
+                roles.add_user(db, user=user, role=role)
+
+        # make sure every existing user has a default user or admin role
+        for user in db.query(orm.User):
+            roles.DefaultRoles.add_default_role(db, user)
         db.commit()
 
     async def _add_tokens(self, token_dict, kind):
@@ -2376,6 +2430,7 @@ class JupyterHub(Application):
         self.init_oauth()
         await self.init_users()
         await self.init_groups()
+        await self.init_roles()
         self.init_services()
         await self.init_api_tokens()
         self.init_tornado_settings()

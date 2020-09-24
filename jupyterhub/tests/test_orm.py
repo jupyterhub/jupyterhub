@@ -245,10 +245,12 @@ def test_groups(db):
     db.commit()
     assert group.users == []
     assert user.groups == []
+
     group.users.append(user)
     db.commit()
     assert group.users == [user]
     assert user.groups == [group]
+
     db.delete(user)
     db.commit()
     assert group.users == []
@@ -460,7 +462,7 @@ def test_group_delete_cascade(db):
     assert group2 in user2.groups
 
     # now start deleting
-    # 1. remove group via user.groups
+    # 1. remove group via user.group
     user1.groups.remove(group2)
     db.commit()
     assert user1 not in group2.users
@@ -480,6 +482,7 @@ def test_group_delete_cascade(db):
 
     # 4. delete user object
     db.delete(user1)
+    db.delete(user2)
     db.commit()
     assert user1 not in group1.users
 
@@ -557,3 +560,4 @@ def test_expiring_oauth_code(app, user):
         assert orm_code in db.query(orm.OAuthCode)
         orm.OAuthCode.purge_expired(db)
         assert orm_code not in db.query(orm.OAuthCode)
+

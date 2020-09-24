@@ -13,6 +13,7 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
+from .. import roles
 from ..user import User
 from ..utils import admin_only
 from ..utils import isoformat
@@ -87,7 +88,8 @@ class UserListAPIHandler(APIHandler):
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
-                self.db.commit()
+            roles.DefaultRoles.add_default_role(self.db, user)
+            self.db.commit()
             try:
                 await maybe_future(self.authenticator.add_user(user))
             except Exception as e:
@@ -149,7 +151,8 @@ class UserAPIHandler(APIHandler):
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
-                self.db.commit()
+        roles.DefaultRoles.add_default_role(self.db, user)
+        self.db.commit()
 
         try:
             await maybe_future(self.authenticator.add_user(user))
@@ -205,6 +208,8 @@ class UserAPIHandler(APIHandler):
             if key == 'auth_state':
                 await user.save_auth_state(value)
             else:
+                if key == 'admin' and value != user.admin:
+                    roles.DefaultRoles.change_admin(self.db, user=user, admin=value)
                 setattr(user, key, value)
         self.db.commit()
         user_ = self.user_model(user)

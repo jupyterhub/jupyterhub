@@ -190,6 +190,7 @@ class APIHandler(BaseHandler):
             'kind': 'user',
             'name': user.name,
             'admin': user.admin,
+            'roles': [r.name for r in user.roles],
             'groups': [g.name for g in user.groups],
             'server': user.url if user.running else None,
             'pending': None,
