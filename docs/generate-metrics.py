@@ -1,7 +1,7 @@
 import os
 from os.path import join
 
-from pytablewriter import MarkdownTableWriter
+from pytablewriter import RstSimpleTableWriter
 from pytablewriter.style import Style
 
 import jupyterhub.metrics
@@ -12,7 +12,7 @@ HERE = os.path.abspath(os.path.dirname(__file__))
 class Generator:
     @classmethod
     def create_writer(cls, table_name, headers, values):
-        writer = MarkdownTableWriter()
+        writer = RstSimpleTableWriter()
         writer.table_name = table_name
         writer.headers = headers
         writer.value_matrix = values
@@ -34,13 +34,17 @@ class Generator:
         if not os.path.exists(generated_directory):
             os.makedirs(generated_directory)
 
-        filename = f"{generated_directory}/metrics.md"
-        table_name = "List of Prometheus Metrics"
+        filename = f"{generated_directory}/metrics.rst"
+        table_name = ""
         headers = ["Type", "Name", "Description"]
         values = self._parse_metrics()
         writer = self.create_writer(table_name, headers, values)
+
+        title = "List of Prometheus Metrics"
+        underline = "============================"
+        content = f"{title}\n{underline}\n{writer.dumps()}"
         with open(filename, 'w') as f:
-            f.write(writer.dumps())
+            f.write(content)
 
 
 def main():
