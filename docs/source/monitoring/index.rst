@@ -8,4 +8,4 @@ JupyterHub expose the ``/metrics`` endpoint that returns text describing its cur
 .. toctree::
    :maxdepth: 2
 
-   gen/metrics
+   _gen/metrics

@@ -220,7 +220,7 @@ if on_rtd:
     # build rest-api, since RTD doesn't run make
     from subprocess import check_call as sh
 
-    sh(['make', 'rest-api'], cwd=docs)
+    sh(['make', 'metrics', 'rest-api'], cwd=docs)
 
 # -- Spell checking -------------------------------------------------------
 

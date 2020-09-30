@@ -64,7 +64,7 @@ jobs:
           name: Build docs to store
           command: |
             cd docs
-            make html
+            make metrics html
       # Tell Circle to store the documentation output in a folder that we can access later
       - store_artifacts:
           path: docs/build/html/
