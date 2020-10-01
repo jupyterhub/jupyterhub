@@ -2,15 +2,12 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import codecs
-import copy
 import time
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
 
 from jinja2 import TemplateNotFound
-from tornado import gen
 from tornado import web
 from tornado.httputil import url_concat
 from tornado.httputil import urlparse
@@ -507,7 +504,6 @@ class AdminHandler(BaseHandler):
             .offset(offset)
         )
         users = [self._user_from_orm(u) for u in users]
-        from itertools import chain
 
         running = []
         for u in users:

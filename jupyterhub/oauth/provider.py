@@ -2,15 +2,11 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
-from urllib.parse import urlparse
-
 from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code
 from oauthlib.oauth2.rfc6749.grant_types import base
-from sqlalchemy.orm import scoped_session
-from tornado import web
 from tornado.escape import url_escape
 from tornado.log import app_log
 

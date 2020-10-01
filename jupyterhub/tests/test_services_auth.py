@@ -11,7 +11,6 @@ from threading import Thread
 from unittest import mock
 from urllib.parse import urlparse
 
-import pytest
 import requests
 import requests_mock
 from pytest import raises

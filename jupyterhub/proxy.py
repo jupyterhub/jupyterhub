@@ -24,7 +24,6 @@ import time
 from functools import wraps
 from subprocess import Popen
 from urllib.parse import quote
-from urllib.parse import urlparse
 
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient

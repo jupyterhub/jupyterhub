@@ -3,8 +3,6 @@ import sys
 from subprocess import check_output
 from urllib.parse import urlparse
 
-import pytest
-
 import jupyterhub
 from ..utils import url_path_join
 from .mocking import public_url

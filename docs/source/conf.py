@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 import os
-import shlex
 import sys
 
 # Set paths

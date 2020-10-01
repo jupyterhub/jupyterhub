@@ -2,7 +2,6 @@
 import json
 import os
 from contextlib import contextmanager
-from queue import Queue
 from subprocess import Popen
 from urllib.parse import quote
 from urllib.parse import urlparse
