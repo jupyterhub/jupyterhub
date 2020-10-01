@@ -121,8 +121,8 @@ the shadow password database.
 ### Shadow group (Linux)
 
 **Note:** On Fedora based distributions there is no clear way to configure
-the PAM database to allow sufficient access for autenticating with the target user's password
-from jupyterhub.As a workaround we recommend use an alternative authentication method, e.g.
+the PAM database to allow sufficient access for authenticating with the target user's password
+from JupyterHub. As a workaround we recommend use an alternative authentication method, e.g.
 [sshauthenticator](https://github.com/andreas-h/sshauthenticator).
 
 ```bash
