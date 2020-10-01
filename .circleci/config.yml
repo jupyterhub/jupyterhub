@@ -19,6 +19,10 @@ jobs:
           name: smoke test jupyterhub
           command: |
             docker run --rm -it jupyterhub/jupyterhub jupyterhub --help
+      - run:
+          name: verify static files
+          command: |
+            docker run --rm -it -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
 
   docs:
     # This is the base environment that Circle will use

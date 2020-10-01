@@ -34,7 +34,23 @@ from .utils import url_path_join
 class UserDict(dict):
     """Like defaultdict, but for users
 
-    Getting by a user id OR an orm.User instance returns a User wrapper around the orm user.
+    Users can be retrieved by:
+
+    - integer database id
+    - orm.User object
+    - username str
+
+    A User wrapper object is always returned.
+
+    This dict contains at least all active users,
+    but not necessarily all users in the database.
+
+    Checking `key in userdict` returns whether
+    an item is already in the cache,
+    *not* whether it is in the database.
+
+    .. versionchanged:: 1.2
+        ``'username' in userdict`` pattern is now supported
     """
 
     def __init__(self, db_factory, settings):
@@ -57,11 +73,28 @@ class UserDict(dict):
         return self[orm_user.id]
 
     def __contains__(self, key):
+        """key in userdict checks presence in the cache
+
+        it does not check if the user is in the database
+        """
         if isinstance(key, (User, orm.User)):
             key = key.id
+        elif isinstance(key, str):
+            # username lookup, O(N)
+            for user in self.values():
+                if user.name == key:
+                    key = user.id
+                    break
         return dict.__contains__(self, key)
 
     def __getitem__(self, key):
+        """UserDict allows retrieval of user by any of:
+
+        - User object
+        - orm.User object
+        - username (str)
+        - orm.User.id int (actual key used in underlying dict)
+        """
         if isinstance(key, User):
             key = key.id
         elif isinstance(key, str):
@@ -69,7 +102,7 @@ class UserDict(dict):
             if orm_user is None:
                 raise KeyError("No such user: %s" % key)
             else:
-                key = orm_user
+                key = orm_user.id
         if isinstance(key, orm.User):
             # users[orm_user] returns User(orm_user)
             orm_user = key
@@ -91,6 +124,20 @@ class UserDict(dict):
             return user
         else:
             raise KeyError(repr(key))
+
+    def get(self, key, default=None):
+        """Retrieve a User object if it can be found, else default
+
+        Lookup can be by User object, id, or name
+
+        .. versionchanged:: 1.2
+            ``get()`` accesses the database instead of just the cache by integer id,
+            so is equivalent to catching KeyErrors on attempted lookup.
+        """
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
     def __delitem__(self, key):
         user = self[key]
@@ -566,7 +613,12 @@ class User:
                 else:
                     # >= 0.7 returns (ip, port)
                     proto = 'https' if self.settings['internal_ssl'] else 'http'
-                    url = '%s://%s:%i' % ((proto,) + url)
+
+                    # check if spawner returned an IPv6 address
+                    if ':' in url[0]:
+                        url = '%s://[%s]:%i' % ((proto,) + url)
+                    else:
+                        url = '%s://%s:%i' % ((proto,) + url)
                 urlinfo = urlparse(url)
                 server.proto = urlinfo.scheme
                 server.ip = urlinfo.hostname
@@ -743,8 +795,6 @@ class User:
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()
-            spawner.clear_state()
-            spawner.orm_spawner.state = spawner.get_state()
             self.last_activity = spawner.orm_spawner.last_activity = datetime.utcnow()
             # remove server entry from db
             spawner.server = None
@@ -774,7 +824,17 @@ class User:
             spawner.orm_spawner.started = None
             self.db.commit()
             # trigger post-stop hook
-            await maybe_future(spawner.run_post_stop_hook())
+            try:
+                await maybe_future(spawner.run_post_stop_hook())
+            except:
+                spawner.clear_state()
+                spawner.orm_spawner.state = spawner.get_state()
+                self.db.commit()
+                raise
+            spawner.clear_state()
+            spawner.orm_spawner.state = spawner.get_state()
+            self.db.commit()
+
             # trigger post-spawner hook on authenticator
             auth = spawner.authenticator
             try:

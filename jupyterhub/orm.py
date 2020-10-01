@@ -311,7 +311,46 @@ class Service(Base):
         return db.query(cls).filter(cls.name == name).first()
 
 
-class Hashed(object):
+class Expiring:
+    """Mixin for expiring entries
+
+    Subclass must define at least expires_at property,
+    which should be unix timestamp or datetime object
+    """
+
+    now = utcnow  # funciton, must return float timestamp or datetime
+    expires_at = None  # must be defined
+
+    @property
+    def expires_in(self):
+        """Property returning expiration in seconds from now
+
+        or None
+        """
+        if self.expires_at:
+            delta = self.expires_at - self.now()
+            if isinstance(delta, timedelta):
+                delta = delta.total_seconds()
+            return delta
+        else:
+            return None
+
+    @classmethod
+    def purge_expired(cls, db):
+        """Purge expired API Tokens from the database"""
+        now = cls.now()
+        deleted = False
+        for obj in (
+            db.query(cls).filter(cls.expires_at != None).filter(cls.expires_at < now)
+        ):
+            app_log.debug("Purging expired %s", obj)
+            deleted = True
+            db.delete(obj)
+        if deleted:
+            db.commit()
+
+
+class Hashed(Expiring):
     """Mixin for tables with hashed tokens"""
 
     prefix_length = 4
@@ -368,11 +407,21 @@ class Hashed(object):
         """Start the query for matching token.
 
         Returns an SQLAlchemy query already filtered by prefix-matches.
+
+        .. versionchanged:: 1.2
+
+            Excludes expired matches.
         """
         prefix = token[: cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
-        return db.query(cls).filter(bindparam('prefix', prefix).startswith(cls.prefix))
+        prefix_match = db.query(cls).filter(
+            bindparam('prefix', prefix).startswith(cls.prefix)
+        )
+        prefix_match = prefix_match.filter(
+            or_(cls.expires_at == None, cls.expires_at >= cls.now())
+        )
+        return prefix_match
 
     @classmethod
     def find(cls, db, token):
@@ -408,6 +457,7 @@ class APIToken(Hashed, Base):
         return 'a%i' % self.id
 
     # token metadata for bookkeeping
+    now = datetime.utcnow  # for expiry
     created = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, default=None, nullable=True)
     last_activity = Column(DateTime)
@@ -429,20 +479,6 @@ class APIToken(Hashed, Base):
         )
 
     @classmethod
-    def purge_expired(cls, db):
-        """Purge expired API Tokens from the database"""
-        now = utcnow()
-        deleted = False
-        for token in (
-            db.query(cls).filter(cls.expires_at != None).filter(cls.expires_at < now)
-        ):
-            app_log.debug("Purging expired %s", token)
-            deleted = True
-            db.delete(token)
-        if deleted:
-            db.commit()
-
-    @classmethod
     def find(cls, db, token, *, kind=None):
         """Find a token object by value.
 
@@ -452,9 +488,6 @@ class APIToken(Hashed, Base):
         `kind='service'` only returns API tokens for services
         """
         prefix_match = cls.find_prefix(db, token)
-        prefix_match = prefix_match.filter(
-            or_(cls.expires_at == None, cls.expires_at >= utcnow())
-        )
         if kind == 'user':
             prefix_match = prefix_match.filter(cls.user_id != None)
         elif kind == 'service':
@@ -497,7 +530,7 @@ class APIToken(Hashed, Base):
             assert service.id is not None
             orm_token.service = service
         if expires_in is not None:
-            orm_token.expires_at = utcnow() + timedelta(seconds=expires_in)
+            orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
         db.add(orm_token)
         db.commit()
         return token
@@ -520,6 +553,10 @@ class GrantType(enum.Enum):
 class OAuthAccessToken(Hashed, Base):
     __tablename__ = 'oauth_access_tokens'
     id = Column(Integer, primary_key=True, autoincrement=True)
+
+    @staticmethod
+    def now():
+        return datetime.utcnow().timestamp()
 
     @property
     def api_id(self):
@@ -547,11 +584,12 @@ class OAuthAccessToken(Hashed, Base):
     last_activity = Column(DateTime, nullable=True)
 
     def __repr__(self):
-        return "<{cls}('{prefix}...', client_id={client_id!r}, user={user!r}>".format(
+        return "<{cls}('{prefix}...', client_id={client_id!r}, user={user!r}, expires_in={expires_in}>".format(
             cls=self.__class__.__name__,
             client_id=self.client_id,
             user=self.user and self.user.name,
             prefix=self.prefix,
+            expires_in=self.expires_in,
         )
 
     @classmethod
@@ -568,8 +606,9 @@ class OAuthAccessToken(Hashed, Base):
         return orm_token
 
 
-class OAuthCode(Base):
+class OAuthCode(Expiring, Base):
     __tablename__ = 'oauth_codes'
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     client_id = Column(
         Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
@@ -580,6 +619,19 @@ class OAuthCode(Base):
     session_id = Column(Unicode(255))
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
+
+    @staticmethod
+    def now():
+        return datetime.utcnow().timestamp()
+
+    @classmethod
+    def find(cls, db, code):
+        return (
+            db.query(cls)
+            .filter(cls.code == code)
+            .filter(or_(cls.expires_at == None, cls.expires_at >= cls.now()))
+            .first()
+        )
 
 
 class OAuthClient(Base):

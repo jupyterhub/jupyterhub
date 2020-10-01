@@ -201,6 +201,10 @@ class Service(LoggingConfigurable):
         """
     ).tag(input=True)
 
+    display = Bool(
+        True, help="""Whether to list the service on the JupyterHub UI"""
+    ).tag(input=True)
+
     oauth_no_confirm = Bool(
         False,
         help="""Skip OAuth confirmation when users access this service.
@@ -342,7 +346,7 @@ class Service(LoggingConfigurable):
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
 
         hub = self.hub
-        if self.hub.ip in ('0.0.0.0', ''):
+        if self.hub.ip in ('', '0.0.0.0', '::'):
             # if the Hub is listening on all interfaces,
             # tell services to connect via localhost
             # since they are always local subprocesses

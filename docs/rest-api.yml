@@ -3,7 +3,7 @@ swagger: '2.0'
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
-  version: 0.9.0dev
+  version: 1.2.0dev
   license:
     name: BSD-3-Clause
 schemes:
@@ -283,7 +283,10 @@ paths:
           required: true
           type: string
         - name: server_name
-          description: name given to a named-server
+          description: |
+            name given to a named-server. 
+            
+            Note that depending on your JupyterHub infrastructure there are chracterter size limitation to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
           in: path
           required: true
           type: string

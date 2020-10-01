@@ -404,3 +404,15 @@ async def test_spawner_routing(app, name):
     assert r.url == url
     assert r.text == urlparse(url).path
     await user.stop()
+
+
+async def test_spawner_env(db):
+    env_overrides = {
+        "JUPYTERHUB_API_URL": "https://test.horse/hub/api",
+        "TEST_KEY": "value",
+    }
+    spawner = new_spawner(db, environment=env_overrides)
+    env = spawner.get_env()
+    for key, value in env_overrides.items():
+        assert key in env
+        assert env[key] == value

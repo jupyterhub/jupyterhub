@@ -2,8 +2,6 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
-from datetime import datetime
-
 from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer
@@ -247,7 +245,7 @@ class JupyterHubRequestValidator(RequestValidator):
             client=orm_client,
             code=code['code'],
             # oauth has 5 minutes to complete
-            expires_at=int(datetime.utcnow().timestamp() + 300),
+            expires_at=int(orm.OAuthCode.now() + 300),
             # TODO: persist oauth scopes
             # scopes=request.scopes,
             user=request.user.orm_user,
@@ -344,7 +342,7 @@ class JupyterHubRequestValidator(RequestValidator):
         orm_access_token = orm.OAuthAccessToken(
             client=client,
             grant_type=orm.GrantType.authorization_code,
-            expires_at=datetime.utcnow().timestamp() + token['expires_in'],
+            expires_at=orm.OAuthAccessToken.now() + token['expires_in'],
             refresh_token=token['refresh_token'],
             # TODO: save scopes,
             # scopes=scopes,
@@ -438,7 +436,7 @@ class JupyterHubRequestValidator(RequestValidator):
         Method is used by:
             - Authorization Code Grant
         """
-        orm_code = self.db.query(orm.OAuthCode).filter_by(code=code).first()
+        orm_code = orm.OAuthCode.find(self.db, code=code)
         if orm_code is None:
             app_log.debug("No such code: %s", code)
             return False

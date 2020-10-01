@@ -31,7 +31,11 @@ async def test_singleuser_auth(app):
     # with cookies, login successful
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert urlparse(r.url).path.rstrip('/').endswith('/user/nandy/tree')
+    assert (
+        urlparse(r.url)
+        .path.rstrip('/')
+        .endswith(url_path_join('/user/nandy', user.spawner.default_url or "/tree"))
+    )
     assert r.status_code == 200
 
     # logout
@@ -46,7 +50,11 @@ async def test_singleuser_auth(app):
     assert urlparse(r.url).path.endswith('/oauth2/authorize')
     # submit the oauth form to complete authorization
     r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
-    assert urlparse(r.url).path.rstrip('/').endswith('/user/nandy/tree')
+    assert (
+        urlparse(r.url)
+        .path.rstrip('/')
+        .endswith(url_path_join('/user/nandy', user.spawner.default_url or "/tree"))
+    )
     # user isn't authorized, should raise 403
     assert r.status_code == 403
     assert 'burgess' in r.text
@@ -74,7 +82,9 @@ async def test_disable_user_config(app):
     # with cookies, login successful
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert r.url.rstrip('/').endswith('/user/nandy/tree')
+    assert r.url.rstrip('/').endswith(
+        url_path_join('/user/nandy', user.spawner.default_url or "/tree")
+    )
     assert r.status_code == 200
 
 

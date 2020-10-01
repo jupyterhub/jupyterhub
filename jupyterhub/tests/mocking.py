@@ -173,6 +173,9 @@ class FormSpawner(MockSpawner):
             options['energy'] = form_data['energy'][0]
         if 'hello_file' in form_data:
             options['hello'] = form_data['hello_file'][0]
+
+        if 'illegal_argument' in form_data:
+            raise ValueError("You are not allowed to specify 'illegal_argument'")
         return options
 
 
@@ -390,6 +393,17 @@ class MockSingleUserServer(SingleUserNotebookApp):
 
 class StubSingleUserSpawner(MockSpawner):
     """Spawner that starts a MockSingleUserServer in a thread."""
+
+    @default("default_url")
+    def _default_url(self):
+        """Use a default_url that any jupyter server will provide
+
+        Should be:
+
+        - authenticated, so we are testing auth
+        - always available (i.e. in base ServerApp and NotebookApp
+        """
+        return "/api/spec.yaml"
 
     _thread = None
 

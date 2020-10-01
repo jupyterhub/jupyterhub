@@ -134,7 +134,7 @@ def test_token_expiry(db):
     assert orm_token.expires_at > now + timedelta(seconds=50)
     assert orm_token.expires_at < now + timedelta(seconds=70)
     the_future = mock.patch(
-        'jupyterhub.orm.utcnow', lambda: now + timedelta(seconds=70)
+        'jupyterhub.orm.APIToken.now', lambda: now + timedelta(seconds=70)
     )
     with the_future:
         found = orm.APIToken.find(db, token=token)
@@ -482,3 +482,78 @@ def test_group_delete_cascade(db):
     db.delete(user1)
     db.commit()
     assert user1 not in group1.users
+
+
+def test_expiring_api_token(app, user):
+    db = app.db
+    token = orm.APIToken.new(expires_in=30, user=user)
+    orm_token = orm.APIToken.find(db, token, kind='user')
+    assert orm_token
+
+    # purge_expired doesn't delete non-expired
+    orm.APIToken.purge_expired(db)
+    found = orm.APIToken.find(db, token)
+    assert found is orm_token
+
+    with mock.patch.object(
+        orm.APIToken, 'now', lambda: datetime.utcnow() + timedelta(seconds=60)
+    ):
+        found = orm.APIToken.find(db, token)
+        assert found is None
+        assert orm_token in db.query(orm.APIToken)
+        orm.APIToken.purge_expired(db)
+        assert orm_token not in db.query(orm.APIToken)
+
+
+def test_expiring_oauth_token(app, user):
+    db = app.db
+    token = "abc123"
+    now = orm.OAuthAccessToken.now
+    client = orm.OAuthClient(identifier="xxx", secret="yyy")
+    db.add(client)
+    orm_token = orm.OAuthAccessToken(
+        token=token,
+        grant_type=orm.GrantType.authorization_code,
+        client=client,
+        user=user,
+        expires_at=now() + 30,
+    )
+    db.add(orm_token)
+    db.commit()
+
+    found = orm.OAuthAccessToken.find(db, token)
+    assert found is orm_token
+    # purge_expired doesn't delete non-expired
+    orm.OAuthAccessToken.purge_expired(db)
+    found = orm.OAuthAccessToken.find(db, token)
+    assert found is orm_token
+
+    with mock.patch.object(orm.OAuthAccessToken, 'now', lambda: now() + 60):
+        found = orm.OAuthAccessToken.find(db, token)
+        assert found is None
+        assert orm_token in db.query(orm.OAuthAccessToken)
+        orm.OAuthAccessToken.purge_expired(db)
+        assert orm_token not in db.query(orm.OAuthAccessToken)
+
+
+def test_expiring_oauth_code(app, user):
+    db = app.db
+    code = "abc123"
+    now = orm.OAuthCode.now
+    orm_code = orm.OAuthCode(code=code, expires_at=now() + 30)
+    db.add(orm_code)
+    db.commit()
+
+    found = orm.OAuthCode.find(db, code)
+    assert found is orm_code
+    # purge_expired doesn't delete non-expired
+    orm.OAuthCode.purge_expired(db)
+    found = orm.OAuthCode.find(db, code)
+    assert found is orm_code
+
+    with mock.patch.object(orm.OAuthCode, 'now', lambda: now() + 60):
+        found = orm.OAuthCode.find(db, code)
+        assert found is None
+        assert orm_code in db.query(orm.OAuthCode)
+        orm.OAuthCode.purge_expired(db)
+        assert orm_code not in db.query(orm.OAuthCode)

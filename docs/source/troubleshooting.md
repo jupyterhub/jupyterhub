@@ -7,8 +7,8 @@ problem and how to resolve it.
 [*Behavior*](#behavior)
 - JupyterHub proxy fails to start
 - sudospawner fails to run
-- What is the default behavior when none of the lists (admin, whitelist,
-  group whitelist) are set?
+- What is the default behavior when none of the lists (admin, allowed,
+  allowed groups) are set?
 - JupyterHub Docker container not accessible at localhost
 
 [*Errors*](#errors)
@@ -55,14 +55,14 @@ or add:
 
 to the config file, `jupyterhub_config.py`.
 
-### What is the default behavior when none of the lists (admin, whitelist, group whitelist) are set?
+### What is the default behavior when none of the lists (admin, allowed, allowed groups) are set?
 
 When nothing is given for these lists, there will be no admins, and all users
 who can authenticate on the system (i.e. all the unix users on the server with
-a password) will be allowed to start a server. The whitelist lets you limit
-this to a particular set of users, and the admin_users lets you specify who
+a password) will be allowed to start a server. The allowed username set lets you limit
+this to a particular set of users, and admin_users lets you specify who
 among them may use the admin interface (not necessary, unless you need to do
-things like inspect other users' servers, or modify the userlist at runtime).
+things like inspect other users' servers, or modify the user list at runtime).
 
 ### JupyterHub Docker container not accessible at localhost
 
@@ -152,7 +152,7 @@ You should see a similar 200 message, as above, in the Hub log when you first
 visit your single-user notebook server. If you don't see this message in the log, it
 may mean that your single-user notebook server isn't connecting to your Hub.
 
-If you see 403 (forbidden) like this, it's a token problem:
+If you see 403 (forbidden) like this, it's likely a token problem:
 
 ```
 403 GET /hub/api/authorizations/cookie/jupyterhub-token-name/[secret] (@10.0.1.4) 4.14ms
@@ -195,6 +195,10 @@ issue (typically all containers created before a certain point in time):
 After this, when you start your server via JupyterHub, it will build a
 new container. If this was the underlying cause of the issue, you should see
 your server again.
+
+##### Proxy settings (403 GET)
+
+When your whole JupyterHub sits behind a organization proxy (*not* a reverse proxy like NGINX as part of your setup and *not* the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
@@ -328,8 +332,7 @@ notebook servers to default to JupyterLab:
 ### How do I set up JupyterHub for a workshop (when users are not known ahead of time)?
 
 1. Set up JupyterHub using OAuthenticator for GitHub authentication
-2. Configure whitelist to be an empty list in` jupyterhub_config.py`
-3. Configure admin list to have workshop leaders be listed with administrator privileges.
+2. Configure admin list to have workshop leaders be listed with administrator privileges.
 
 Users will need a GitHub account to login and be authenticated by the Hub.
 

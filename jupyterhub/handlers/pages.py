@@ -10,11 +10,13 @@ from http.client import responses
 from jinja2 import TemplateNotFound
 from tornado import web
 from tornado.httputil import url_concat
+from tornado.httputil import urlparse
 
 from .. import __version__
 from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
+from ..pagination import Pagination
 from ..utils import admin_only
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -170,11 +172,41 @@ class SpawnHandler(BaseHandler):
         auth_state = await user.get_auth_state()
         await spawner.run_auth_state_hook(auth_state)
 
+        # Try to start server directly when query arguments are passed.
+        error_message = ''
+        query_options = {}
+        for key, byte_list in self.request.query_arguments.items():
+            query_options[key] = [bs.decode('utf8') for bs in byte_list]
+
+        # 'next' is reserved argument for redirect after spawn
+        query_options.pop('next', None)
+
+        if len(query_options) > 0:
+            try:
+                self.log.debug(
+                    "Triggering spawn with supplied query arguments for %s",
+                    spawner._log_name,
+                )
+                options = await maybe_future(spawner.options_from_query(query_options))
+                pending_url = self._get_pending_url(user, server_name)
+                return await self._wrap_spawn_single_user(
+                    user, server_name, spawner, pending_url, options
+                )
+            except Exception as e:
+                self.log.error(
+                    "Failed to spawn single-user server with query arguments",
+                    exc_info=True,
+                )
+                error_message = str(e)
+                # fallback to behavior without failing query arguments
+
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
             form = await self._render_form(
-                for_user=user, spawner_options_form=spawner_options_form
+                for_user=user,
+                spawner_options_form=spawner_options_form,
+                message=error_message,
             )
             self.finish(form)
         else:
@@ -249,6 +281,8 @@ class SpawnHandler(BaseHandler):
         pending_url = url_path_join(
             self.hub.base_url, "spawn-pending", user.escaped_name, server_name
         )
+
+        pending_url = self.append_query_parameters(pending_url, exclude=['next'])
 
         if self.get_argument('next', None):
             # preserve `?next=...` through spawn-pending
@@ -419,12 +453,15 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
+        page, per_page, offset = Pagination.get_page_args(self)
+
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
         mapping = {'running': orm.Spawner.server_id}
         for name in available:
             if name not in mapping:
-                mapping[name] = getattr(orm.User, name)
+                table = orm.User if name != "last_activity" else orm.Spawner
+                mapping[name] = getattr(table, name)
 
         default_order = {
             'name': 'asc',
@@ -459,12 +496,23 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
-        users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered)
+        users = (
+            self.db.query(orm.User)
+            .outerjoin(orm.Spawner)
+            .order_by(*ordered)
+            .limit(per_page)
+            .offset(offset)
+        )
         users = [self._user_from_orm(u) for u in users]
 
         running = []
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
+
+        total = self.db.query(orm.User.id).count()
+        pagination = Pagination(
+            url=self.request.uri, total=total, page=page, per_page=per_page,
+        )
 
         auth_state = await self.current_user.get_auth_state()
         html = self.render_template(
@@ -478,6 +526,7 @@ class AdminHandler(BaseHandler):
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
             server_version='{} {}'.format(__version__, self.version_hash),
+            pagination=pagination,
         )
         self.finish(html)
 
@@ -601,10 +650,14 @@ class ProxyErrorHandler(BaseHandler):
 
 
 class HealthCheckHandler(BaseHandler):
-    """Answer to health check"""
+    """Serve health check probes as quickly as possible"""
 
-    def get(self, *args):
-        self.finish()
+    # There is nothing for us to do other than return a positive
+    # HTTP status code as quickly as possible for GET or HEAD requests
+    def get(self):
+        pass
+
+    head = get
 
 
 default_handlers = [

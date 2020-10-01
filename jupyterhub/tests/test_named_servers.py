@@ -368,3 +368,28 @@ async def test_user_redirect_hook_default_server_name(
     assert redirected_url.path == url_path_join(
         app.base_url, 'user', username, 'terminals/1'
     )
+
+
+async def test_named_server_stop_server(app, username, named_servers):
+    server_name = "myserver"
+    await app.login_user(username)
+    user = app.users[username]
+
+    r = await api_request(app, 'users', username, 'server', method='post')
+    assert r.status_code == 201
+    assert r.text == ''
+    assert user.spawners[''].server
+
+    with mock.patch.object(
+        app.proxy, 'add_user', side_effect=Exception('mock exception')
+    ):
+        r = await api_request(
+            app, 'users', username, 'servers', server_name, method='post'
+        )
+        r.raise_for_status()
+        assert r.status_code == 201
+        assert r.text == ''
+
+    assert user.spawners[server_name].server is None
+    assert user.spawners[''].server
+    assert user.running
