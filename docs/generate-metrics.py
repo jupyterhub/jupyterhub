@@ -45,6 +45,7 @@ class Generator:
         content = f"{title}\n{underline}\n{writer.dumps()}"
         with open(filename, 'w') as f:
             f.write(content)
+        print(f"Generated {filename}.")
 
 
 def main():
