@@ -30,7 +30,7 @@ class Generator:
         return table_rows
 
     def prometheus_metrics(self):
-        generated_directory = f"{HERE}/source/monitoring/_gen"
+        generated_directory = f"{HERE}/source/reference"
         if not os.path.exists(generated_directory):
             os.makedirs(generated_directory)
 

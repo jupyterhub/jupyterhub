@@ -84,14 +84,6 @@ Getting Started
 
    getting-started/index
 
-Monitoring
--------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   monitoring/index
-
 Technical Reference
 -------------------
 

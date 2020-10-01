@@ -1,5 +1,5 @@
 Monitoring
-===================
+==========
 
 This section covers details on monitoring the state of your JupyterHub installation.
 
@@ -17,4 +17,4 @@ tool like `Grafana <https://grafana.com/docs/grafana/latest/getting-started/what
 .. toctree::
    :maxdepth: 2
 
-   _gen/metrics
+   metrics

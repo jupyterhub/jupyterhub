@@ -61,9 +61,9 @@ rest-api: source/_static/rest-api/index.html
 source/_static/rest-api/index.html: rest-api.yml node_modules
 	npm run rest-api
 
-metrics: source/monitoring/_gen/metrics.rst
+metrics: source/reference/metrics.rst
 
-source/monitoring/_gen/metrics.rst: generate-metrics.py
+source/reference/metrics.rst: generate-metrics.py
 	python3 generate-metrics.py
 
 html: rest-api metrics

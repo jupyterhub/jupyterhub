@@ -16,6 +16,7 @@ what happens under-the-hood when you deploy and configure your JupyterHub.
    proxy
    separate-proxy
    rest
+   monitoring
    database
    templates
    ../events/index

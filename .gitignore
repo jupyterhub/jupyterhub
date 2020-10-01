@@ -27,4 +27,4 @@ htmlcov
 .vscode/
 .pytest_cache
 pip-wheel-metadata
-docs/source/monitoring/_gen/
+docs/source/reference/metrics.rst
