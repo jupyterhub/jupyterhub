@@ -58,7 +58,7 @@ class APIHandler(BaseHandler):
 
         - allow unspecified host/referer (e.g. scripts)
         """
-        host = self.request.headers.get("Host")
+        host = self.request.headers.get(self.app.forwarded_host_header or "Host")
         referer = self.request.headers.get("Referer")
 
         # If no header is provided, assume it comes from a script/curl.

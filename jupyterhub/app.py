@@ -791,6 +791,16 @@ class JupyterHub(Application):
             self.proxy_api_ip or '127.0.0.1', self.proxy_api_port or self.port + 1
         )
 
+    forwarded_host_header = Unicode(
+        '',
+        help="""Alternate header to use as the Host (e.g., X-Forwarded-Host)
+        when determining whether a request is cross-origin
+
+        This may be useful when JupyterHub is running behind a proxy that rewrites
+        the Host header.
+        """,
+    ).tag(config=True)
+
     hub_port = Integer(
         8081,
         help="""The internal port for the Hub process.
