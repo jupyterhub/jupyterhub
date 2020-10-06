@@ -14,7 +14,10 @@ import jsonschema
 import pytest
 from traitlets.config import Config
 
+from .. import orm
 from .mocking import MockHub
+from .utils import add_user
+from .utils import api_request
 
 
 # To test new schemas, add them to the `valid_events`
@@ -50,15 +53,17 @@ def eventlog_sink(app):
     with mock.patch.object(app.config, 'EventLog', cfg.EventLog):
         # recreate the eventlog object with our config
         app.init_eventlog()
+        app.tornado_settings['eventlog'] = app.eventlog
         # return the sink from the fixture
-        yield app.eventlog, sink
+        yield app, sink
     # reset eventlog with original config
     app.init_eventlog()
 
 
 @pytest.mark.parametrize('schema, version, event', valid_events)
 def test_valid_events(eventlog_sink, schema, version, event):
-    eventlog, sink = eventlog_sink
+    app, sink = eventlog_sink
+    eventlog = app.eventlog
     eventlog.allowed_schemas = [schema]
     # Record event
     eventlog.record_event(schema, version, event)
@@ -72,9 +77,46 @@ def test_valid_events(eventlog_sink, schema, version, event):
 
 @pytest.mark.parametrize('schema, version, event', invalid_events)
 def test_invalid_events(eventlog_sink, schema, version, event):
-    eventlog, sink = eventlog_sink
+    app, sink = eventlog_sink
+    eventlog = app.eventlog
     eventlog.allowed_schemas = [schema]
 
     # Make sure an error is thrown when bad events are recorded
     with pytest.raises(jsonschema.ValidationError):
         recorded_event = eventlog.record_event(schema, version, event)
+
+
+async def test_server_event(eventlog_sink):
+    schema, version = ('hub.jupyter.org/server-action', 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    db = app.db
+    name = 'user'
+    user = add_user(db, app=app, name=name)
+    before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
+    r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 201
+
+    output = sink.getvalue()
+    assert output
+    data = {
+        k: v
+        for k, v in json.loads(output).items()
+        if not (k.startswith('__') and k.endswith('__'))
+    }
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+
+    r = await api_request(app, 'users', name, 'server', method='delete')
+    assert r.status_code == 204
+
+    offset = len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = {
+        k: v
+        for k, v in json.loads(output).items()
+        if not (k.startswith('__') and k.endswith('__'))
+    }
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
