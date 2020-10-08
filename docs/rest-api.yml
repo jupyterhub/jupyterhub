@@ -16,34 +16,34 @@ securityDefinitions:
   oauth2:
     type: oauth2
     flow: accessCode
-    authorizationUrl: 'https://localhost:8000/hub/api/oauth2/authorize' # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
-    tokenUrl: 'https://localhost:8000/hub/api/oauth2/token'
+    authorizationUrl: '/hub/api/oauth2/authorize' # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
+    tokenUrl: '/hub/api/oauth2/token'
     scopes:
       all: Everything a user can do
       read:all: Read-only access to everything a user can read (also whoami handler)
       users: Grants access to managing users including reading users’ model, posting activity and starting/stoping users servers
       read:users: Read-only access to the above
-      read:users:username: Read-only access to a single user's model
+      read:users!user=username: Read-only access to a single user's model
       read:users:names: Read-only access to users' names
       read:users:groups: Read-only access to users' groups
       read:users:activity: Read-only access to users' activity
-      read:users:activity:groupname: Read-only access to specific group's users' activity
+      read:users:activity!group=groupname: Read-only access to specific group's users' activity
       read:users:servers: Read-only access to users' servers
-      users:activity:username: Update a user's activity
+      users:activity!user=username: Update a user's activity
       users:servers: Grants access to start/stop any server
-      users:servers:servername: Limits the above to a specific server
+      users:servers!server=servername: Limits the above to a specific server
       users:tokens: Grants access to users' token (includes create/revoke a token)
       read:users:tokens: Identify a user from a token
       admin:users: Grants access to creating/removing users
       admin:users:servers: Grants access to create/remove users' servers
       groups: Add/remove users from any group
-      groups:groupname: Add/remove users from a specific group only
+      groups!group=groupname: Add/remove users from a specific group only
       read:groups: Read-only access to groups
       admin:groups: Grants access to create/delete groups
       read:services: Read-only access to services
       proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
       shutdown: Grants access to shutdown the Hub
-security: # global security, do we want to keep the only the apiKey (token: []), change to only oauth2 (with scope all) or have both as changed here (either can be used)?
+security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope all) or have both (either can be used)?
   - token: []
   - oauth2:
     - all
@@ -157,7 +157,7 @@ paths:
         - oauth2:
           - users
           - read:users
-          - read:users:username
+          - read:users!user=username
       parameters:
         - name: name
           description: username
@@ -240,7 +240,7 @@ paths:
       security:
         - oauth2:
           - users
-          - users:activity:username
+          - users:activity!user=username
       parameters:
         - name: name
           description: username
@@ -345,7 +345,7 @@ paths:
         - oauth2:
           - users
           - users:servers
-          - users:servers:servername
+          - users:servers!server=servername
       parameters:
         - name: name
           description: username
@@ -381,7 +381,7 @@ paths:
         - oauth2:
           - users
           - users:servers
-          - users:servers:servername
+          - users:servers!server=servername
       parameters:
         - name: name
           description: username
@@ -519,7 +519,7 @@ paths:
       security:
         - oauth2:
           - groups
-          - groups:groupname
+          - groups!group=groupname
           - read:groups
       parameters:
         - name: name
@@ -568,7 +568,7 @@ paths:
       security:
         - oauth2:
           - groups
-          - groups:groupname
+          - groups!group=groupname
       parameters:
         - name: name
           description: group name
@@ -597,7 +597,7 @@ paths:
       security:
         - oauth2:
           - groups
-          - groups:groupname
+          - groups!group=groupname
       parameters:
         - name: name
           description: group name
@@ -886,6 +886,11 @@ definitions:
       admin:
         type: boolean
         description: Whether the user is an admin
+      roles:
+        type: array
+        description: The names of roles this user has
+        items:
+          type: string
       groups:
         type: array
         description: The names of groups where this user is a member
