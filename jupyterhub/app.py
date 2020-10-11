@@ -255,7 +255,8 @@ class JupyterHub(Application):
 
     generate default config file:
 
-        jupyterhub --generate-config /etc/jupyterhub/jupyterhub_config.py
+        touch /etc/jupyterhub/jupyterhub_config.py
+        jupyterhub --generate-config -f /etc/jupyterhub/jupyterhub_config.py
 
     spawn the server on 10.0.1.2:443 with https:
 
