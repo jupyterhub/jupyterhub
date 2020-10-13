@@ -702,7 +702,7 @@ class BaseHandler(RequestHandler):
             if auth_state:
                 auth_state['session_ids'] = session_ids
             else:
-                auth_state = { 'session_ids': session_ids }
+                auth_state = {'session_ids': session_ids}
         await user.save_auth_state(auth_state)
         return user
 

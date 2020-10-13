@@ -88,6 +88,7 @@ class TokenAPIHandler(APIHandler):
             )
         )
 
+
 class SessionIDAPIHandler(APIHandler):
     @token_authenticated
     async def get(self, username, session_id):
@@ -103,6 +104,7 @@ class SessionIDAPIHandler(APIHandler):
             self.write(json.dumps(model))
         else:
             raise web.HTTPError(404)
+
 
 class CookieAPIHandler(APIHandler):
     @token_authenticated

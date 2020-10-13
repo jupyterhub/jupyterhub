@@ -200,7 +200,7 @@ class HubAuth(SingletonConfigurable):
     ).tag(config=True)
 
     session_id_required = Bool(
-        os.getenv('JUPYTERHUB_SESSION_ID_REQUIRED', 'false').lower()=="true",
+        os.getenv('JUPYTERHUB_SESSION_ID_REQUIRED', 'false').lower() == "true",
         help="""
         Blocks any requests, if there's no jupyterhub-session-id cookie.
         """,
@@ -482,10 +482,15 @@ class HubAuth(SingletonConfigurable):
     def validate_session_id(self, username, session_id):
         if time.time() - self.last_session_id_validation > self.session_id_cache_time:
             self.last_session_id_validation = int(time.time())
-            url=url_path_join(
-                self.api_url, "authorizations/sessionid", quote(username, safe=''), quote(session_id, safe='')
+            url = url_path_join(
+                self.api_url,
+                "authorizations/sessionid",
+                quote(username, safe=''),
+                quote(session_id, safe=''),
             )
-            self.last_session_id_validation_result = self._api_request('GET', url, allow_404=True)
+            self.last_session_id_validation_result = self._api_request(
+                'GET', url, allow_404=True
+            )
             # self.log.info("{} - Request to {}. Result: {}".format(username, url, self.last_session_id_validation_result))
         return self.last_session_id_validation_result
 
@@ -513,7 +518,9 @@ class HubAuth(SingletonConfigurable):
         session_id = self.get_session_id(handler)
 
         if self.session_id_required and not session_id:
-            app_log.info("Unauthorized access. Only users with a session id are allowed.")
+            app_log.info(
+                "Unauthorized access. Only users with a session id are allowed."
+            )
             return {'name': '<session_id_required>', 'kind': 'User'}
         elif self.session_id_required:
             token = self.get_token(handler)
@@ -524,7 +531,9 @@ class HubAuth(SingletonConfigurable):
             if user_model is None:
                 user_model = self._get_user_cookie(handler)
             if user_model:
-                user_model = self.validate_session_id(user_model.get('name', ''), session_id)
+                user_model = self.validate_session_id(
+                    user_model.get('name', ''), session_id
+                )
         else:
             # check token first
             token = self.get_token(handler)
@@ -947,11 +956,12 @@ class HubAuthenticated(object):
             # This is not the best, but avoids problems that can be caused
             # when get_current_user is allowed to raise.
             if user_model.get('name', '') == '<session_id_required>':
+
                 def raise_on_redirect(*args, **kwargs):
-                    raise HTTPError(
-                        401, "Please login to proceed."
-                    )
+                    raise HTTPError(401, "Please login to proceed.")
+
             else:
+
                 def raise_on_redirect(*args, **kwargs):
                     raise HTTPError(
                         403, "{kind} {name} is not allowed.".format(**user_model)

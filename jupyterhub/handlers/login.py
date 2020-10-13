@@ -8,9 +8,9 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from ..orm import User
-from ..utils import maybe_future, new_token
+from ..utils import maybe_future
+from ..utils import new_token
 from .base import BaseHandler
-
 
 
 class LogoutHandler(BaseHandler):
@@ -58,9 +58,16 @@ class LogoutHandler(BaseHandler):
             if self.shutdown_on_logout:
                 await self._shutdown_servers(user)
 
-            logout_all_devices = str(self.get_argument(self.app.logout_on_all_devices_argname,
-                                                       self.app.logout_on_all_devices,
-                                                       True)).lower() == "true"
+            logout_all_devices = (
+                str(
+                    self.get_argument(
+                        self.app.logout_on_all_devices_argname,
+                        self.app.logout_on_all_devices,
+                        True,
+                    )
+                ).lower()
+                == "true"
+            )
             # self.log.info("{} - Logout on all devices: {}".format(user.name, logout_all_devices))
 
             if self.app.strict_session_ids and user.authenticator.enable_auth_state:
