@@ -93,6 +93,7 @@ class SessionIDAPIHandler(APIHandler):
     async def get(self, username, session_id):
         # Check if session_id is part of user's auth_state session_ids
         db_user = orm.User.find(self.db, username)
+        # self.log.info("{} - SessionID Check: {}".format(username, session_id))
         if db_user:
             if self.app.strict_session_ids:
                 session_ids = await self.app.load_session_ids(username)

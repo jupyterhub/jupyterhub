@@ -486,6 +486,7 @@ class HubAuth(SingletonConfigurable):
                 self.api_url, "authorizations/sessionid", quote(username, safe=''), quote(session_id, safe='')
             )
             self.last_session_id_validation_result = self._api_request('GET', url, allow_404=True)
+            # self.log.info("{} - Request to {}. Result: {}".format(username, url, self.last_session_id_validation_result))
         return self.last_session_id_validation_result
 
     def get_user(self, handler):
@@ -536,10 +537,10 @@ class HubAuth(SingletonConfigurable):
             if user_model is None:
                 user_model = self._get_user_cookie(handler)
 
-        # cache result
-        handler._cached_hub_user = user_model
-        if not user_model:
-            app_log.debug("No user identified")
+            # cache result
+            handler._cached_hub_user = user_model
+            if not user_model:
+                app_log.debug("No user identified")
         return user_model
 
 

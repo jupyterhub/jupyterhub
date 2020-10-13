@@ -7,8 +7,10 @@ from tornado import web
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
-from ..utils import maybe_future
+from ..orm import User
+from ..utils import maybe_future, new_token
 from .base import BaseHandler
+
 
 
 class LogoutHandler(BaseHandler):
@@ -55,14 +57,29 @@ class LogoutHandler(BaseHandler):
         if user:
             if self.shutdown_on_logout:
                 await self._shutdown_servers(user)
+
+            logout_all_devices = str(self.get_argument(self.app.logout_on_all_devices_argname,
+                                                       self.app.logout_on_all_devices,
+                                                       True)).lower() == "true"
+            # self.log.info("{} - Logout on all devices: {}".format(user.name, logout_all_devices))
+
             if self.app.strict_session_ids and user.authenticator.enable_auth_state:
                 auth_state = await user.get_auth_state()
                 if auth_state:
                     current_session_id = self.get_session_cookie()
                     if current_session_id in auth_state.get('session_ids', []):
                         auth_state['session_ids'].remove(current_session_id)
-                    # self.log.debug("{} - session_ids after logout: {}".format(user.name, auth_state['session_ids']))
+                    if logout_all_devices:
+                        # remove all session ids.
+                        auth_state['session_ids'] = []
+                    # self.log.info("{} - session_ids after logout: {}".format(user.name, auth_state['session_ids']))
                     await user.save_auth_state(auth_state)
+
+            if logout_all_devices:
+                db_user = User.find(self.db, name=user.name)
+                db_user.cookie_id = new_token()
+                self.db.commit()
+
             self._backend_logout_cleanup(user.name)
 
     async def handle_logout(self):

@@ -948,6 +948,27 @@ class JupyterHub(Application):
         else:
             return ""
 
+    logout_on_all_devices_argname = Unicode(
+        "onalldevices",
+        config=True,
+        help="""Default argument name for logout on all devices.
+        User can logout on all devices with a GET request to
+        /hub/logout?<logout_on_all_devices_argname>=true
+        Use c.JupyterHub.logout_on_all_devices to define a default
+        value for logout on all devices.
+        """,
+    )
+
+    logout_on_all_devices = Bool(
+        False,
+        config=True,
+        help="""Default value for logout on all devices.
+        This will create a new api_token for a user when he logs out.
+        Therefore all previous generated cookies, based on cookie_id,
+        are invalid.
+        """,
+    )
+
     strict_session_ids = Bool(
         False,
         config=True,
