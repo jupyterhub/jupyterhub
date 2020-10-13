@@ -174,7 +174,7 @@ async def exponential_backoff(
         # Except Overflow Error. Otherwise start_wait * scale will be too big at some point.
         try:
             if scale == 0:
-                dt = min(max_wait, remaining))
+                dt = min(max_wait, remaining)
             else:
                 dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
         except OverflowError:
