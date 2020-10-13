@@ -171,16 +171,9 @@ async def exponential_backoff(
         # add some random jitter to improve performance
         # this prevents overloading any single tornado loop iteration with
         # too many things
-        # Except Overflow Error. Otherwise start_wait * scale will be too big at some point.
-        try:
-            if scale == 0:
-                dt = min(max_wait, remaining)
-            else:
-                dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
-        except OverflowError:
-            scale = 0
-            dt = min(max_wait, remaining)
-        scale *= scale_factor
+        dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
+        if dt < max_wait:
+            scale *= scale_factor
         await gen.sleep(dt)
     raise TimeoutError(fail_message)
 
