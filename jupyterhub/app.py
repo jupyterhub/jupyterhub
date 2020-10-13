@@ -92,7 +92,7 @@ from .metrics import TOTAL_USERS
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
-from .crypto import CryptKeeper
+from .crypto import CryptKeeper, decrypt
 from .spawner import Spawner, LocalProcessSpawner
 from .objects import Hub, Server
 
@@ -947,6 +947,28 @@ class JupyterHub(Application):
             return self.default_server_name
         else:
             return ""
+
+    strict_session_ids = Bool(
+        False,
+        config=True,
+        help="""Saves session_ids in user's auth_state.
+        If the user logs out all stored session_ids will be removed.
+        Start services with JUPYTERHUB_REQUIRE_SESSION_ID="true", to
+        prevent logged out browsers to access these services.
+        """,
+    )
+
+    async def load_session_ids(self, username):
+        db_user = orm.User.find(self.db, username)
+        if db_user:
+            self.db.refresh(db_user)
+            encrypted = db_user.encrypted_auth_state
+            if encrypted is None:
+                return []
+            auth_state = await decrypt(encrypted)
+            if 'session_ids' in auth_state:
+                return auth_state['session_ids']
+        return []
 
     # class for spawning single-user servers
     spawner_class = EntryPointType(

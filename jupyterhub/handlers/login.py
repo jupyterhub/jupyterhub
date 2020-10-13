@@ -55,7 +55,13 @@ class LogoutHandler(BaseHandler):
         if user:
             if self.shutdown_on_logout:
                 await self._shutdown_servers(user)
-
+            if self.app.strict_session_ids and user.authenticator.enable_auth_state:
+                auth_state = await user.get_auth_state()
+                if auth_state:
+                    current_session_id = self.get_session_cookie()
+                    if current_session_id in auth_state.get('session_ids', []):
+                        auth_state['session_ids'].remove(current_session_id)
+                    await user.save_auth_state(auth_state)
             self._backend_logout_cleanup(user.name)
 
     async def handle_logout(self):

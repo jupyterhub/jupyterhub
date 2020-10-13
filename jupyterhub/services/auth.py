@@ -28,6 +28,7 @@ from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError
 from tornado.web import RequestHandler
+from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 from traitlets import Instance
@@ -188,6 +189,20 @@ class HubAuth(SingletonConfigurable):
         help="""API key for accessing Hub API.
 
         Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
+        """,
+    ).tag(config=True)
+
+    session_id_cache_time = Integer(
+        int(os.getenv('JUPYTERHUB_SESSION_ID_CACHE_TIME', 10)),
+        help="""
+        Cache time for session id checks to jupyterhub (in seconds). Default is 10.
+        """,
+    ).tag(config=True)
+
+    session_id_required = Bool(
+        os.getenv('JUPYTERHUB_SESSION_ID_REQUIRED', 'false').lower()=="true",
+        help="""
+        Blocks any requests, if there's no jupyterhub-session-id cookie.
         """,
     ).tag(config=True)
 
@@ -461,6 +476,18 @@ class HubAuth(SingletonConfigurable):
         """
         return handler.get_cookie('jupyterhub-session-id', '')
 
+    last_session_id_validation = 0
+    last_session_id_validation_result = None
+
+    def validate_session_id(self, username, session_id):
+        if time.time() - self.last_session_id_validation > self.session_id_cache_time:
+            self.last_session_id_validation = int(time.time())
+            url=url_path_join(
+                self.api_url, "authorizations/sessionid", quote(username, safe=''), quote(session_id, safe='')
+            )
+            self.last_session_id_validation_result = self._api_request('GET', url, allow_404=True)
+        return self.last_session_id_validation_result
+
     def get_user(self, handler):
         """Get the Hub user for a given tornado handler.
 
@@ -484,16 +511,30 @@ class HubAuth(SingletonConfigurable):
         handler._cached_hub_user = user_model = None
         session_id = self.get_session_id(handler)
 
-        # check token first
-        token = self.get_token(handler)
-        if token:
-            user_model = self.user_for_token(token, session_id=session_id)
+        if self.session_id_required and not session_id:
+            app_log.info("Unauthorized access. Only users with a session id are allowed.")
+            return {'name': '<session_id_required>', 'kind': 'User'}
+        elif self.session_id_required:
+            token = self.get_token(handler)
+            if token:
+                user_model = self.user_for_token(token)
+                if user_model:
+                    handler._token_authenticated = True
+            if user_model is None:
+                user_model = self._get_user_cookie(handler)
             if user_model:
-                handler._token_authenticated = True
+                user_model = self.validate_session_id(user_model.get('name', ''), session_id)
+        else:
+            # check token first
+            token = self.get_token(handler)
+            if token:
+                user_model = self.user_for_token(token, session_id=session_id)
+                if user_model:
+                    handler._token_authenticated = True
 
-        # no token, check cookie
-        if user_model is None:
-            user_model = self._get_user_cookie(handler)
+            # no token, check cookie
+            if user_model is None:
+                user_model = self._get_user_cookie(handler)
 
         # cache result
         handler._cached_hub_user = user_model
@@ -904,10 +945,16 @@ class HubAuthenticated(object):
             # tries to redirect to login URL, 403 will be raised instead.
             # This is not the best, but avoids problems that can be caused
             # when get_current_user is allowed to raise.
-            def raise_on_redirect(*args, **kwargs):
-                raise HTTPError(
-                    403, "{kind} {name} is not allowed.".format(**user_model)
-                )
+            if user_model.get('name', '') == '<session_id_required>':
+                def raise_on_redirect(*args, **kwargs):
+                    raise HTTPError(
+                        401, "Please login to proceed."
+                    )
+            else:
+                def raise_on_redirect(*args, **kwargs):
+                    raise HTTPError(
+                        403, "{kind} {name} is not allowed.".format(**user_model)
+                    )
 
             self.redirect = raise_on_redirect
             return
