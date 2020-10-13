@@ -696,9 +696,13 @@ class BaseHandler(RequestHandler):
             # ensure that session_ids added previously are not deleted
             prev_auth_state = await user.get_auth_state()
             if prev_auth_state:
-                auth_state['session_ids'] = prev_auth_state.get('session_ids', [])
+                session_ids = prev_auth_state.get('session_ids', [])
             else:
-                auth_state['session_ids'] = []
+                session_ids = []
+            if auth_state:
+                auth_state['session_ids'] = session_ids
+            else:
+                auth_state = { 'session_ids': session_ids }
         await user.save_auth_state(auth_state)
         return user
 
@@ -719,9 +723,10 @@ class BaseHandler(RequestHandler):
                 # append session_id to user's auth_state
                 auth_state = await user.get_auth_state()
                 if auth_state:
-                    if 'session_ids' not in auth_state.keys():
+                    if 'session_ids' not in auth_state:
                         auth_state['session_ids'] = []
                     auth_state['session_ids'].append(session_id)
+                    # self.log.debug("{} - Session_ids: {}".format(user.name, auth_state['session_ids']))
                     await user.save_auth_state(auth_state)
             return user
         else:

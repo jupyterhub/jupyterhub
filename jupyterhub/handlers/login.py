@@ -61,6 +61,7 @@ class LogoutHandler(BaseHandler):
                     current_session_id = self.get_session_cookie()
                     if current_session_id in auth_state.get('session_ids', []):
                         auth_state['session_ids'].remove(current_session_id)
+                    # self.log.debug("{} - session_ids after logout: {}".format(user.name, auth_state['session_ids']))
                     await user.save_auth_state(auth_state)
             self._backend_logout_cleanup(user.name)
 
