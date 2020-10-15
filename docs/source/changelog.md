@@ -9,7 +9,28 @@ command line for details.
 
 ## 1.2.0b1
 
-([full changelog](https://github.com/jupyterhub/jupyterhub/compare/3663d7c8fcba2118dd469a8a4cca540cc63a39cf...032ae2906610b81bfce700bbbfd4291014d81319))
+
+JupyterHub 1.2 is an incremental release with lots of small improvements.
+It is unlikely that users will have to change much to upgrade,
+but lots of new things are possible and/or better!
+
+There are no database schema changes requiring migration from 1.1 to 1.2.
+
+Highlights:
+
+- Deprecate black/whitelist configuration fields in favor of more inclusive blocked/allowed language
+- More configuration of page templates and service display
+- Pagination of the admin page improving performance with large numbers of users
+- Improved control of user redirect with
+- Support for [jupyter-server](https://jupyter-server.readthedocs.io/en/latest/)-based single-user servers, such as [Voilà](https://voila-gallery.org) and latest JupyterLab.
+- Lots more improvements to documentation, HTML pages, and customizations
+
+
+<!-- FIXME: update to this ref prior to release -->
+<!-- ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.1.0...1.2.0)) -->
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.1.0...53d496aff5715be9bb6a8701dbbee62772dd8f19))
+
 
 ### Enhancements made
 * Control service display [#3160](https://github.com/jupyterhub/jupyterhub/pull/3160) ([@rcthomas](https://github.com/rcthomas))
