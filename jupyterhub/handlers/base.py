@@ -574,7 +574,10 @@ class BaseHandler(RequestHandler):
         if self.db.query(orm.Service).filter(orm.Service.server != None).first():
             self.set_service_cookie(user)
 
-        session_id = self.set_session_cookie()
+        if not self.get_session_cookie():
+            session_id = self.set_session_cookie()
+        else:
+            session_id = self.get_session_cookie()
 
         # create and set a new cookie token for the hub
         if not self.get_current_user_cookie():
