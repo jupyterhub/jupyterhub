@@ -30,7 +30,7 @@ Highlights:
 <!-- FIXME: update to this ref prior to release -->
 <!-- ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.1.0...1.2.0)) -->
 
-([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.1.0...f8cbda9c3c8382c3331ba3c8bac07f0bd8bfb623))
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.1.0...1.2.0b1))
 
 
 #### Enhancements made
