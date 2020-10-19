@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import os
 import random
+import re
 import socket
 import ssl
 import sys
@@ -247,9 +248,10 @@ def auth_decorator(check_auth):
 
     def decorator(method):
         def decorated(self, *args, **kwargs):
-            check_auth(self)
+            check_auth(self, **kwargs)
             return method(self, *args, **kwargs)
 
+        # Perhaps replace with functools.wrap
         decorated.__name__ = method.__name__
         decorated.__doc__ = method.__doc__
         return decorated
@@ -294,6 +296,20 @@ def metrics_authentication(self):
     user = self.current_user
     if user is None and self.authenticate_prometheus:
         raise web.HTTPError(403)
+
+
+@auth_decorator
+def needs_scope(self, scope, **kwargs):
+    """Decorator to restrict access to users or services with the required scope"""
+    if scope not in self.current_scopes:
+        # Check if access is not restricted to user/server/group
+        match_string = re.compile("^" + re.escape(scope) + r"!.+=.+$")
+        subscopes = filter(lambda s: re.search(match_string, s), self.current_scopes)
+        subset = [subscope.split('=')[1] for subscope in subscopes]
+        if not subset:
+            raise web.HTTPError(403, "Action is not authorized with current scopes")
+        else:
+            kwargs['subset'] = subset
 
 
 # Token utilities

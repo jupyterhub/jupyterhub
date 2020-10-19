@@ -7,6 +7,7 @@ from tornado import web
 
 from .. import orm
 from ..utils import admin_only
+from ..utils import needs_scope
 from .base import APIHandler
 
 
@@ -34,13 +35,16 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @admin_only
-    def get(self):
+    @needs_scope('read:groups')
+    def get(self, subset=None):
         """List groups"""
-        data = [self.group_model(g) for g in self.db.query(orm.Group)]
+        groups = self.db.query(orm.Group)
+        if subset is not None:
+            groups = groups.filter(orm.Group.name.in_(subset))
+        data = [self.group_model(g) for g in groups]
         self.write(json.dumps(data))
 
-    @admin_only
+    @needs_scope('admin:groups')
     async def post(self):
         """POST creates Multiple groups """
         model = self.get_json_body()
@@ -73,12 +77,14 @@ class GroupListAPIHandler(_GroupAPIHandler):
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
 
-    @admin_only
-    def get(self, name):
+    @needs_scope('read:groups')
+    def get(self, name, subset=None):
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No read access to group {}".format(name))
         group = self.find_group(name)
         self.write(json.dumps(self.group_model(group)))
 
-    @admin_only
+    @needs_scope('admin:groups')
     async def post(self, name):
         """POST creates a group by name"""
         model = self.get_json_body()
@@ -104,9 +110,11 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
 
-    @admin_only
-    def delete(self, name):
+    @needs_scope('admin:groups')
+    def delete(self, name, subset=None):
         """Delete a group by name"""
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No write access to group {}".format(name))
         group = self.find_group(name)
         self.log.info("Deleting group %s", name)
         self.db.delete(group)
@@ -117,9 +125,11 @@ class GroupAPIHandler(_GroupAPIHandler):
 class GroupUsersAPIHandler(_GroupAPIHandler):
     """Modify a group's user list"""
 
-    @admin_only
-    def post(self, name):
+    @needs_scope('groups')
+    def post(self, name, subset=None):
         """POST adds users to a group"""
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No access to add users to group {}".format(name))
         group = self.find_group(name)
         data = self.get_json_body()
         self._check_group_model(data)
@@ -135,9 +145,11 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
 
-    @admin_only
-    async def delete(self, name):
+    @needs_scope('groups')
+    async def delete(self, name, subset=None):
         """DELETE removes users from a group"""
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No access to add users to group {}".format(name))
         group = self.find_group(name)
         data = self.get_json_body()
         self._check_group_model(data)
