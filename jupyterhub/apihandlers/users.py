@@ -15,6 +15,7 @@ from tornado.iostream import StreamClosedError
 from .. import orm
 from ..user import User
 from ..utils import admin_only
+from ..utils import eventlogging_schema_fqn
 from ..utils import isoformat
 from ..utils import iterate_until
 from ..utils import maybe_future
@@ -247,6 +248,15 @@ class UserTokenListAPIHandler(APIHandler):
                 self.db.commit()
                 continue
             oauth_tokens.append(self.token_model(token))
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('token-action'),
+            1,
+            {
+                'action': 'list',
+                'target_user': user.name,
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
     async def post(self, name):
@@ -307,6 +317,11 @@ class UserTokenListAPIHandler(APIHandler):
         # retrieve the model
         token_model = self.token_model(orm.APIToken.find(self.db, api_token))
         token_model['token'] = api_token
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('token-action'),
+            1,
+            {'action': 'create', 'target_user': user.name, 'requester': requester.name},
+        )
         self.write(json.dumps(token_model))
 
 
@@ -344,6 +359,16 @@ class UserTokenAPIHandler(APIHandler):
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
         token = self.find_token_by_id(user, token_id)
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('token-action'),
+            1,
+            {
+                'action': 'get',
+                'target_user': user.name,
+                'requester': self.current_user.name,
+                'token_id': token.id,
+            },
+        )
         self.write(json.dumps(self.token_model(token)))
 
     @admin_or_self
@@ -364,6 +389,17 @@ class UserTokenAPIHandler(APIHandler):
         for token in tokens:
             self.db.delete(token)
         self.db.commit()
+        for token in tokens:
+            self.eventlog.record_event(
+                eventlogging_schema_fqn('token-action'),
+                1,
+                {
+                    'action': 'delete',
+                    'target_user': user.name,
+                    'requester': self.current_user.name,
+                    'token_id': token.id,
+                },
+            )
         self.set_header('Content-Type', 'text/plain')
         self.set_status(204)
 

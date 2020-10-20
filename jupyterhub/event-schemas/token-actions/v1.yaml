@@ -1,0 +1,50 @@
+"$id": hub.jupyter.org/token-action
+version: 1
+title: JupyterHub token events
+description: |
+  Record actions on user tokens made via JupyterHub.
+
+  Limitations:
+
+  1. Events are only recorded when an action succeeds.
+type: object
+required:
+- action
+- target_user
+- requester
+properties:
+  action:
+    enum:
+    - list
+    - get
+    - create
+    - delete
+    description: |
+      Action performed by JupyterHub.
+
+      This is a required field.
+
+      Possible values:
+      1. list
+         List all tokens for the user
+
+      2. get
+         Get the model for a token by id
+
+      3. create
+         Create a new token
+
+      4. delete
+         Delete a token
+  target_user:
+    type: string
+    description: |
+      Username of the target user
+  requester:
+    type: string
+    description: |
+      Username of the user who requests the action
+  token_id:
+    type: string
+    description: |
+      Id of the token on which the operation was performed
