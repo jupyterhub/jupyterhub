@@ -1,0 +1,85 @@
+"$id": hub.jupyter.org/user-action
+version: 1
+title: JupyterHub user events
+description: |
+  Record actions on users made via JupyterHub.
+
+  Limitations:
+
+  1. Events are only recorded when an action succeeds.
+type: object
+required:
+- action
+- requester
+properties:
+  action:
+    enum:
+    - list
+    - get
+    - create
+    - modify
+    - delete
+    description: |
+      Action performed by JupyterHub.
+
+      This is a required field.
+
+      Possible values:
+        1. list
+           List all users
+
+        2. get
+           Get details of a user
+
+        3. create
+           Create a new user
+
+        4. modify
+           Modify a user
+
+        5. delete
+           Delete an existing user
+  target_user:
+    type: string
+    description: |
+      Username of the user on which the operation was performed
+  requester:
+    type: string
+    description: |
+      Username of the user who requested the action
+  prior_state:
+    type: object
+    properties:
+      username:
+        type: string
+        description: |
+          Username of the user
+      admin:
+        type: boolean
+        description: |
+          Boolean value indicating whether the user is an admin
+    description: |
+      Properties of the target user prior to the update.
+
+      Only relevant when action is modify.
+  updated_state:
+    type: object
+    properties:
+      username:
+        type: string
+        description: |
+          Username of the user
+      admin:
+        type: boolean
+        description: |
+          Boolean value indicating whether the user is an admin
+    description: |
+      Properties of the target user after the update.
+
+      Only relevant when action is modify.
+  auth_state_change:
+    type: boolean
+    description: |
+      Boolean value indicating whether the user's auth_state was updated.
+
+      Only relevant when action is modify.

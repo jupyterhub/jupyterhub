@@ -46,6 +46,11 @@ class UserListAPIHandler(APIHandler):
             self.user_model(u, include_servers=True, include_state=True)
             for u in self.db.query(orm.User)
         ]
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {'action': 'list', 'requester': self.current_user.name},
+        )
         self.write(json.dumps(data))
 
     @admin_only
@@ -99,6 +104,15 @@ class UserListAPIHandler(APIHandler):
                 )
             else:
                 created.append(user)
+                self.eventlog.record_event(
+                    eventlogging_schema_fqn('user-action'),
+                    1,
+                    {
+                        'action': 'create',
+                        'target_user': user.name,
+                        'requester': self.current_user.name,
+                    },
+                )
 
         self.write(json.dumps([self.user_model(u) for u in created]))
         self.set_status(201)
@@ -136,6 +150,15 @@ class UserAPIHandler(APIHandler):
         requester = self.current_user
         if requester.admin:
             model['auth_state'] = await user.get_auth_state()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'get',
+                'target_user': user.name,
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps(model))
 
     @admin_only
@@ -160,6 +183,15 @@ class UserAPIHandler(APIHandler):
             self.users.delete(user)
             raise web.HTTPError(400, "Failed to create user: %s" % name)
 
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'create',
+                'target_user': user.name,
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
 
@@ -185,6 +217,15 @@ class UserAPIHandler(APIHandler):
         await maybe_future(self.authenticator.delete_user(user))
         # remove from registry
         self.users.delete(user)
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'delete',
+                'target_user': user.name,
+                'requester': self.current_user.name,
+            },
+        )
 
         self.set_status(204)
 
@@ -193,6 +234,7 @@ class UserAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
+        prior_state = {'username': user.name, 'admin': user.admin}
         data = self.get_json_body()
         self._check_user_model(data)
         if 'name' in data and data['name'] != name:
@@ -210,6 +252,17 @@ class UserAPIHandler(APIHandler):
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'modify',
+                'target_user': user.name,
+                'prior_state': prior_state,
+                'updated_state': {'username': user.name, 'admin': user.admin},
+                'auth_state_change': 'auth_state' in data,
+            },
+        )
         self.write(json.dumps(user_))
 
 
