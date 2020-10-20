@@ -7,6 +7,7 @@ from tornado import web
 
 from .. import orm
 from ..utils import admin_only
+from ..utils import eventlogging_schema_fqn
 from .base import APIHandler
 
 
@@ -38,6 +39,11 @@ class GroupListAPIHandler(_GroupAPIHandler):
     def get(self):
         """List groups"""
         data = [self.group_model(g) for g in self.db.query(orm.Group)]
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('group-action'),
+            1,
+            {'action': 'list', 'requester': self.current_user.name},
+        )
         self.write(json.dumps(data))
 
     @admin_only
@@ -66,6 +72,15 @@ class GroupListAPIHandler(_GroupAPIHandler):
             self.db.add(group)
             self.db.commit()
             created.append(group)
+            self.eventlog.record_event(
+                eventlogging_schema_fqn('group-action'),
+                1,
+                {
+                    'action': 'create',
+                    'requester': self.current_user.name,
+                    'group': name,
+                },
+            )
         self.write(json.dumps([self.group_model(group) for group in created]))
         self.set_status(201)
 
@@ -76,6 +91,11 @@ class GroupAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self, name):
         group = self.find_group(name)
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('group-action'),
+            1,
+            {'action': 'get', 'requester': self.current_user.name, 'group': name},
+        )
         self.write(json.dumps(self.group_model(group)))
 
     @admin_only
@@ -101,6 +121,11 @@ class GroupAPIHandler(_GroupAPIHandler):
         group = orm.Group(name=name, users=users)
         self.db.add(group)
         self.db.commit()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('group-action'),
+            1,
+            {'action': 'create', 'requester': self.current_user.name, 'group': name},
+        )
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
 
@@ -111,6 +136,11 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.log.info("Deleting group %s", name)
         self.db.delete(group)
         self.db.commit()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('group-action'),
+            1,
+            {'action': 'delete', 'requester': self.current_user.name, 'group': name},
+        )
         self.set_status(204)
 
 

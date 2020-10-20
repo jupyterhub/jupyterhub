@@ -653,3 +653,11 @@ def get_accepted_mimetype(accept_header, choices=None):
         else:
             return mime
     return None
+
+
+def eventlogging_schema_fqn(name):
+    """
+    Return fully qualified event schema name
+    Matches convention for this particular repo
+    """
+    return 'hub.jupyter.org/{}'.format(name)
