@@ -13,40 +13,8 @@ securityDefinitions:
     type: apiKey
     name: Authorization
     in: header
-  oauth2:
-    type: oauth2
-    flow: accessCode
-    authorizationUrl: '/hub/api/oauth2/authorize' # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
-    tokenUrl: '/hub/api/oauth2/token'
-    scopes:
-      all: Everything a user can do
-      read:all: Read-only access to everything a user can read (also whoami handler)
-      users: Grants access to managing users including reading users’ model, posting activity and starting/stoping users servers
-      read:users: Read-only access to the above
-      read:users!user=username: Read-only access to a single user's model
-      read:users:names: Read-only access to users' names
-      read:users:groups: Read-only access to users' groups
-      read:users:activity: Read-only access to users' activity
-      read:users:activity!group=groupname: Read-only access to specific group's users' activity
-      read:users:servers: Read-only access to users' servers
-      users:activity!user=username: Update a user's activity
-      users:servers: Grants access to start/stop any server
-      users:servers!server=servername: Limits the above to a specific server
-      users:tokens: Grants access to users' token (includes create/revoke a token)
-      read:users:tokens: Identify a user from a token
-      admin:users: Grants access to creating/removing users
-      admin:users:servers: Grants access to create/remove users' servers
-      groups: Add/remove users from any group
-      groups!group=groupname: Add/remove users from a specific group only
-      read:groups: Read-only access to groups
-      admin:groups: Grants access to create/delete groups
-      read:services: Read-only access to services
-      proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
-      shutdown: Grants access to shutdown the Hub
-security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope all) or have both (either can be used)?
+security:
   - token: []
-  - oauth2:
-    - all
 basePath: /hub/api
 produces:
   - application/json
@@ -111,10 +79,6 @@ paths:
   /users:
     get:
       summary: List users
-      security:
-        - oauth2:
-          - users
-          - read:users
       responses:
         '200':
           description: The Hub's user list
@@ -124,9 +88,6 @@ paths:
               $ref: '#/definitions/User'
     post:
       summary: Create multiple users
-      security:
-        - oauth2:
-          - admin:users
       parameters:
         - name: body
           in: body
@@ -153,11 +114,6 @@ paths:
   /users/{name}:
     get:
       summary: Get a user by name
-      security:
-        - oauth2:
-          - users
-          - read:users
-          - read:users!user=username
       parameters:
         - name: name
           description: username
@@ -171,9 +127,6 @@ paths:
             $ref: '#/definitions/User'
     post:
       summary: Create a single user
-      security:
-        - oauth2:
-          - admin:users
       parameters:
         - name: name
           description: username
@@ -188,9 +141,6 @@ paths:
     patch:
       summary: Modify a user
       description: Change a user's name or admin status
-      security:
-        - oauth2:
-          - users
       parameters:
         - name: name
           description: username
@@ -217,9 +167,6 @@ paths:
             $ref: '#/definitions/User'
     delete:
       summary: Delete a user
-      security:
-        - oauth2:
-          - admin:users
       parameters:
         - name: name
           description: username
@@ -237,10 +184,6 @@ paths:
         Notify the Hub of activity by the user,
         e.g. accessing a service or (more likely)
         actively using a server.
-      security:
-        - oauth2:
-          - users
-          - users:activity!user=username
       parameters:
         - name: name
           description: username
@@ -293,10 +236,6 @@ paths:
   /users/{name}/server:
     post:
       summary: Start a user's single-user notebook server
-      security:
-        - oauth2:
-          - users
-          - users:servers
       parameters:
         - name: name
           description: username
@@ -323,10 +262,6 @@ paths:
           description: The user's notebook server has not yet started, but has been requested
     delete:
       summary: Stop a user's server
-      security:
-        - oauth2:
-          - users
-          - users:servers
       parameters:
         - name: name
           description: username
@@ -341,11 +276,6 @@ paths:
   /users/{name}/servers/{server_name}:
     post:
       summary: Start a user's single-user named-server notebook server
-      security:
-        - oauth2:
-          - users
-          - users:servers
-          - users:servers!server=servername
       parameters:
         - name: name
           description: username
@@ -377,11 +307,6 @@ paths:
           description: The user's notebook named-server has not yet started, but has been requested
     delete:
       summary: Stop a user's named-server
-      security:
-        - oauth2:
-          - users
-          - users:servers
-          - users:servers!server=servername
       parameters:
         - name: name
           description: username
@@ -419,9 +344,6 @@ paths:
         type: string
     get:
       summary: List tokens for the user
-      security:
-        - oauth2:
-          - users:tokens
       responses:
         '200':
           description: The list of tokens
@@ -435,9 +357,6 @@ paths:
           description: No such user
     post:
       summary: Create a new token for the user
-      security:
-        - oauth2:
-          - users:tokens
       parameters:
         - name: token_params
           in: body
@@ -471,9 +390,6 @@ paths:
         type: string
     get:
       summary: Get the model for a token by id
-      security:
-        - oauth2:
-          - users:tokens
       responses:
         '200':
           description: The info for the new token
@@ -481,19 +397,12 @@ paths:
             $ref: '#/definitions/Token'
     delete:
       summary: Delete (revoke) a token by id
-      security:
-        - oauth2:
-          - users:tokens
       responses:
         '204':
           description: The token has been deleted
   /user:
     get:
       summary: Return authenticated user's model
-      security:
-        - oauth2:
-          - all
-          - read:all
       responses:
         '200':
           description: The authenticated user's model is returned.
@@ -502,10 +411,6 @@ paths:
   /groups:
     get:
       summary: List groups
-      security:
-        - oauth2:
-          - groups
-          - read:groups
       responses:
         '200':
           description: The list of groups
@@ -516,11 +421,6 @@ paths:
   /groups/{name}:
     get:
       summary: Get a group by name
-      security:
-        - oauth2:
-          - groups
-          - groups!group=groupname
-          - read:groups
       parameters:
         - name: name
           description: group name
@@ -534,9 +434,6 @@ paths:
             $ref: '#/definitions/Group'
     post:
       summary: Create a group
-      security:
-        - oauth2:
-          - admin:groups
       parameters:
         - name: name
           description: group name
@@ -550,9 +447,6 @@ paths:
             $ref: '#/definitions/Group'
     delete:
       summary: Delete a group
-      security:
-        - oauth2:
-          - admin:groups
       parameters:
         - name: name
           description: group name
@@ -565,10 +459,6 @@ paths:
   /groups/{name}/users:
     post:
       summary: Add users to a group
-      security:
-        - oauth2:
-          - groups
-          - groups!group=groupname
       parameters:
         - name: name
           description: group name
@@ -594,10 +484,6 @@ paths:
             $ref: '#/definitions/Group'
     delete:
       summary: Remove users from a group
-      security:
-        - oauth2:
-          - groups
-          - groups!group=groupname
       parameters:
         - name: name
           description: group name
@@ -622,9 +508,6 @@ paths:
   /services:
     get:
       summary: List services
-      security:
-        - oauth2:
-          - read:services
       responses:
         '200':
           description: The service list
@@ -635,9 +518,6 @@ paths:
   /services/{name}:
     get:
       summary: Get a service by name
-      security:
-        - oauth2:
-          - read:services
       parameters:
         - name: name
           description: service name
@@ -653,9 +533,6 @@ paths:
     get:
       summary: Get the proxy's routing table
       description: A convenience alias for getting the routing table directly from the proxy
-      security:
-        - oauth2:
-          - proxy
       responses:
         '200':
           description: Routing table
@@ -664,18 +541,12 @@ paths:
             description: configurable-http-proxy routing table (see configurable-http-proxy docs for details)
     post:
       summary: Force the Hub to sync with the proxy
-      security:
-        - oauth2:
-          - proxy
       responses:
         '200':
           description: Success
     patch:
       summary: Notify the Hub about a new proxy
       description: Notifies the Hub of a new proxy to use.
-      security:
-        - oauth2:
-          - proxy
       parameters:
         - name: body
           in: body
@@ -708,9 +579,6 @@ paths:
         in the JSON request body.
         Logging in via this method is only available when the active Authenticator
         accepts passwords (e.g. not OAuth).
-      security:
-        - oauth2:
-          - users:tokens # minrk: this is a deprecated alias to POST /users/{name}/tokens, either remove it or use the same scope
       parameters:
         - name: credentials
           in: body
@@ -735,9 +603,6 @@ paths:
   /authorizations/token/{token}:
     get:
       summary: Identify a user or service from an API token
-      security:
-        - oauth2:
-          - read:users:tokens # minrk: is it really necessary to have a scope for this, or use self handler for token whoami?
       parameters:
         - name: token
           in: path
@@ -768,7 +633,6 @@ paths:
             $ref: '#/definitions/User'
         '404':
           description: A user is not found.
-      deprecated: true # minrk: let’s not add a scope for this, let’s remove it
   /oauth2/authorize:
     get:
       summary: 'OAuth 2.0 authorize endpoint'
@@ -850,9 +714,6 @@ paths:
   /shutdown:
     post:
       summary: Shutdown the Hub
-      security:
-        - oauth2:
-          - shutdown
       parameters:
         - name: body
           in: body
@@ -886,11 +747,6 @@ definitions:
       admin:
         type: boolean
         description: Whether the user is an admin
-      roles:
-        type: array
-        description: The names of roles this user has
-        items:
-          type: string
       groups:
         type: array
         description: The names of groups where this user is a member
