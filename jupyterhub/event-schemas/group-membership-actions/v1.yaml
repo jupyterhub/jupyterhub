@@ -1,0 +1,45 @@
+"$id": hub.jupyter.org/group-membership-action
+version: 1
+title: JupyterHub group events
+description: |
+  Record actions on group membership made via JupyterHub.
+
+  Limitations:
+
+  1. Events are only recorded when an action succeeds.
+type: object
+required:
+- action
+- group
+- usernames
+- requester
+properties:
+  action:
+    enum:
+    - add
+    - remove
+    description: |
+      Action performed by JupyterHub.
+
+      This is a required field.
+
+      Possible values:
+      1. add
+         Add users to the group
+
+      2. remove
+         Remove users from the group
+  group:
+    type: string
+    description: |
+      Name of the group on which the operation was performed
+  usernames:
+    type: array
+    items:
+      type: string
+    description: |
+      List of users affected by the operation
+  requester:
+    type: string
+    description: |
+      Username of the user who requested the action

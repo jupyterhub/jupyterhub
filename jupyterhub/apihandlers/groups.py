@@ -157,12 +157,24 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             raise web.HTTPError(400, "Must specify users to add")
         self.log.info("Adding %i users to group %s", len(data['users']), name)
         self.log.debug("Adding: %s", data['users'])
-        for user in self._usernames_to_users(data['users']):
+        users = self._usernames_to_users(data['users'])
+        for user in users:
             if user not in group.users:
                 group.users.append(user)
             else:
                 self.log.warning("User %s already in group %s", user.name, name)
         self.db.commit()
+        for user in users:
+            self.eventlog.record_event(
+                eventlogging_schema_fqn('group-membership-action'),
+                1,
+                {
+                    'action': 'add',
+                    'group': group.name,
+                    'usernames': user.name,
+                    'requester': self.current_user.name,
+                },
+            )
         self.write(json.dumps(self.group_model(group)))
 
     @admin_only
@@ -175,12 +187,24 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             raise web.HTTPError(400, "Must specify users to delete")
         self.log.info("Removing %i users from group %s", len(data['users']), name)
         self.log.debug("Removing: %s", data['users'])
-        for user in self._usernames_to_users(data['users']):
+        users = self._usernames_to_users(data['users'])
+        for user in users:
             if user in group.users:
                 group.users.remove(user)
             else:
                 self.log.warning("User %s already not in group %s", user.name, name)
         self.db.commit()
+        for user in users:
+            self.eventlog.record_event(
+                eventlogging_schema_fqn('group-membership-action'),
+                1,
+                {
+                    'action': 'remove',
+                    'group': group.name,
+                    'usernames': user.name,
+                    'requester': self.current_user.name,
+                },
+            )
         self.write(json.dumps(self.group_model(group)))
 
 
