@@ -43,6 +43,7 @@ from ..metrics import ServerStopStatus
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..user import User
+from ..utils import eventlogging_schema_fqn
 from ..utils import get_accepted_mimetype
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -898,7 +899,7 @@ class BaseHandler(RequestHandler):
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
             self.eventlog.record_event(
-                'hub.jupyter.org/server-action',
+                eventlogging_schema_fqn('server-action'),
                 1,
                 {'action': 'start', 'username': user.name, 'servername': server_name},
             )
@@ -1104,7 +1105,7 @@ class BaseHandler(RequestHandler):
                     status=ServerStopStatus.success
                 ).observe(toc - tic)
                 self.eventlog.record_event(
-                    'hub.jupyter.org/server-action',
+                    eventlogging_schema_fqn('server-action'),
                     1,
                     {
                         'action': 'stop',
