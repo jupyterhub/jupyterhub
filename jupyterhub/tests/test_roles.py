@@ -3,7 +3,7 @@
 from pytest import mark
 
 from .. import orm
-from ..roles import DefaultRoles
+from .. import roles
 from .mocking import MockHub
 
 
@@ -95,37 +95,41 @@ def test_role_delete_cascade(db):
 @mark.role
 async def test_load_roles(tmpdir, request):
     """Test loading default and predefined roles in app.py"""
-    to_load = [
+    roles_to_load = [
         {
             'name': 'teacher',
             'description': 'Access users information, servers and groups without create/delete privileges',
             'scopes': ['users', 'groups'],
             'users': ['cyclops', 'gandalf'],
-        }
+        },
+        {
+            'name': 'user',
+            'description': 'Only read access',
+            'scopes': ['read:all'],
+            'users': ['test_user'],
+        },
     ]
-    kwargs = {'load_roles': to_load}
+    kwargs = {'load_roles': roles_to_load}
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
     if ssl_enabled:
         kwargs['internal_certs_location'] = str(tmpdir)
-    # keep the users and groups from test_load_groups
-    hub = MockHub(test_clean_db=False, **kwargs)
+    hub = MockHub(**kwargs)
     hub.init_db()
+    db = hub.db
     await hub.init_users()
     await hub.init_roles()
-    db = hub.db
-    # test default roles loaded to database
-    assert DefaultRoles.get_user_role(db) is not None
-    assert DefaultRoles.get_admin_role(db) is not None
-    assert DefaultRoles.get_server_role(db) is not None
-    # test if every existing user has a correct default role
+    # test if the 'user' role has been overwritten
+    user_role = orm.Role.find(db, 'user')
+    assert user_role is not None
+    assert user_role.scopes == ['read:all']
+    # test other default roles loaded to database
+    assert orm.Role.find(db, 'user') is not None
+    assert orm.Role.find(db, 'admin') is not None
+    assert orm.Role.find(db, 'server') is not None
+    # test if every existing user has a role (and no duplicates)
     for user in db.query(orm.User):
+        assert len(user.roles) > 0
         assert len(user.roles) == len(set(user.roles))
-        if user.admin:
-            assert DefaultRoles.get_admin_role(db) in user.roles
-            assert DefaultRoles.get_user_role(db) not in user.roles
-        else:
-            assert DefaultRoles.get_user_role(db) in user.roles
-            assert DefaultRoles.get_admin_role(db) not in user.roles
     # test if predefined roles loaded and assigned
     teacher_role = orm.Role.find(db, name='teacher')
     assert teacher_role is not None

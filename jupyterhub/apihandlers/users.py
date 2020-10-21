@@ -88,7 +88,7 @@ class UserListAPIHandler(APIHandler):
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
-            roles.DefaultRoles.add_default_role(self.db, user)
+            roles.update_roles(self.db, user)
             self.db.commit()
             try:
                 await maybe_future(self.authenticator.add_user(user))
@@ -151,7 +151,7 @@ class UserAPIHandler(APIHandler):
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
-        roles.DefaultRoles.add_default_role(self.db, user)
+        roles.update_roles(self.db, user)
         self.db.commit()
 
         try:
@@ -208,9 +208,9 @@ class UserAPIHandler(APIHandler):
             if key == 'auth_state':
                 await user.save_auth_state(value)
             else:
-                if key == 'admin' and value != user.admin:
-                    roles.DefaultRoles.change_admin(self.db, user=user, admin=value)
                 setattr(user, key, value)
+                if key == 'admin':
+                    roles.update_roles(self.db, user=user)
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()

@@ -233,8 +233,8 @@ async def test_add_user(app):
     assert user.name == name
     assert not user.admin
     # assert newuser has default 'user' role
-    assert roles.DefaultRoles.get_user_role(db=db) in user.roles
-    assert roles.DefaultRoles.get_admin_role(db=db) not in user.roles
+    assert orm.Role.find(db, 'user') in user.roles
+    assert orm.Role.find(db, 'admin') not in user.roles
 
 
 @mark.user
@@ -291,8 +291,8 @@ async def test_add_multi_user(app):
         assert user.name == name
         assert not user.admin
         # assert default 'user' role added
-        assert roles.DefaultRoles.get_user_role(db=db) in user.roles
-        assert roles.DefaultRoles.get_admin_role(db=db) not in user.roles
+        assert orm.Role.find(db, 'user') in user.roles
+        assert orm.Role.find(db, 'admin') not in user.roles
 
     # try to create the same users again
     r = await api_request(
@@ -333,8 +333,8 @@ async def test_add_multi_user_admin(app):
         assert user is not None
         assert user.name == name
         assert user.admin
-        assert roles.DefaultRoles.get_user_role(db=db) not in user.roles
-        assert roles.DefaultRoles.get_admin_role(db=db) in user.roles
+        assert orm.Role.find(db, 'user') not in user.roles
+        assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -369,13 +369,12 @@ async def test_add_admin(app):
     )
     assert r.status_code == 201
     user = find_user(db, name)
-    user_role = orm.Role.find(db, 'user')
     assert user is not None
     assert user.name == name
     assert user.admin
     # assert newadmin has default 'admin' role
-    assert roles.DefaultRoles.get_user_role(db=db) not in user.roles
-    assert roles.DefaultRoles.get_admin_role(db=db) in user.roles
+    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -397,8 +396,8 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert not user.admin
-    assert roles.DefaultRoles.get_user_role(db=db) in user.roles
-    assert roles.DefaultRoles.get_admin_role(db=db) not in user.roles
+    assert orm.Role.find(db, 'user') in user.roles
+    assert orm.Role.find(db, 'admin') not in user.roles
 
     r = await api_request(
         app, 'users', name, method='patch', data=json.dumps({'admin': True})
@@ -409,8 +408,8 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
-    assert roles.DefaultRoles.get_user_role(db=db) not in user.roles
-    assert roles.DefaultRoles.get_admin_role(db=db) in user.roles
+    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user

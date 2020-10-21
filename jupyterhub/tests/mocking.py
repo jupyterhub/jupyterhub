@@ -336,7 +336,8 @@ class MockHub(JupyterHub):
         user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
         if user is None:
             user = orm.User(name='user')
-            roles.DefaultRoles.add_default_role(self.db, user=user)
+            user_role = orm.Role.find(self.db, 'user')
+            roles.add_user(self.db, user=user, role=user_role)
             self.db.add(user)
             self.db.commit()
 

@@ -1715,7 +1715,6 @@ class JupyterHub(Application):
 
         for name in admin_users:
             # ensure anyone specified as admin in config is admin in db
-            # and gets admin role
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
@@ -1825,11 +1824,15 @@ class JupyterHub(Application):
         """Load default and predefined roles into the database"""
         db = self.db
         # load default roles
-        roles.DefaultRoles.load_to_database(db)
+        default_roles = roles.get_default_roles()
+        for role in default_roles:
+            roles.add_role(db, role)
 
         # load predefined roles from config file
         for predef_role in self.load_roles:
-            role = roles.add_predef_role(db, predef_role)
+            roles.add_role(db, predef_role)
+            role = orm.Role.find(db, predef_role['name'])
+
             # handle users
             for username in predef_role['users']:
                 username = self.authenticator.normalize_username(username)
@@ -1847,9 +1850,11 @@ class JupyterHub(Application):
                     db.add(user)
                 roles.add_user(db, user=user, role=role)
 
-        # make sure every existing user has a default user or admin role
+        # make sure all users have at least one role (update with default)
         for user in db.query(orm.User):
-            roles.DefaultRoles.add_default_role(db, user)
+            if len(user.roles) < 1:
+                roles.update_roles(db, user)
+
         db.commit()
 
     async def _add_tokens(self, token_dict, kind):
