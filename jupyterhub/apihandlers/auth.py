@@ -274,9 +274,12 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         uri, http_method, body, headers = self.extract_oauth_params()
         referer = self.request.headers.get('Referer', 'no referer')
         full_url = self.request.full_url()
-        if referer != full_url:
+        stripped_referer = referer.strip('https:').strip('http:').strip('\n')
+        stripped_full_url = full_url.strip('https:').strip('http:').strip('\n')
+        if stripped_referer != stripped_full_url:
             # OAuth post must be made to the URL it came from
-            self.log.error("OAuth POST from %s != %s", referer, full_url)
+            self.log.error("Original OAuth POST from %s != %s", referer, full_url)
+            self.log.error("Stripped OAuth POST from %s != %s", stripped_referer, stripped_full_url)
             raise web.HTTPError(
                 403, "Authorization form must be sent from authorization page"
             )
