@@ -274,8 +274,18 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         uri, http_method, body, headers = self.extract_oauth_params()
         referer = self.request.headers.get('Referer', 'no referer')
         full_url = self.request.full_url()
-        stripped_referer = referer.strip('https:').strip('http:').strip('\n')
-        stripped_full_url = full_url.strip('https:').strip('http:').strip('\n')
+        # trim protocol, which cannot be trusted with multiple layers of proxies anyway
+        # Referer is set by browser, but full_url can be modified by proxy layers to appear as http
+        # when it is actually https
+        referer_proto, _, stripped_referer = referer.partition("://")[2]
+        referer_proto = referer_proto.lower()
+        req_proto, _, stripped_full_url = full_url.partition("://")[2]
+        req_proto = req_proto.lower()
+        if referer_proto != req_proto:
+            self.log.warning("Protocol mismatch: %s != %s", referer, full_url)
+            if req_proto == "https":
+                # insecure origin to secure target is not allowed
+                raise web.HTTPError(403, "Not allowing authorization form submitted from insecure page")
         if stripped_referer != stripped_full_url:
             # OAuth post must be made to the URL it came from
             self.log.error("Original OAuth POST from %s != %s", referer, full_url)
