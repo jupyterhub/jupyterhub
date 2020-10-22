@@ -21,6 +21,12 @@ from .utils import api_request
 from jupyterhub.utils import eventlogging_schema_fqn
 
 
+def remove_event_capsule(data):
+    return {
+        k: v for k, v in data.items() if not (k.startswith('__') and k.endswith('__'))
+    }
+
+
 # To test new schemas, add them to the `valid_events`
 # and `invalid_events` dictionary below.
 
@@ -87,12 +93,6 @@ def test_invalid_events(eventlog_sink, schema, version, event):
         recorded_event = eventlog.record_event(schema, version, event)
 
 
-def remove_event_capsule(data):
-    return {
-        k: v for k, v in data.items() if not (k.startswith('__') and k.endswith('__'))
-    }
-
-
 async def test_server_event(eventlog_sink):
     schema, version = (eventlogging_schema_fqn('server-action'), 1)
 
@@ -105,6 +105,7 @@ async def test_server_event(eventlog_sink):
 
     # test user server starting event
     r = await api_request(app, 'users', name, 'server', method='post')
+    assert r.status_code == 201
     output = sink.getvalue()
     assert output
     data = remove_event_capsule(json.loads(output))
@@ -114,10 +115,111 @@ async def test_server_event(eventlog_sink):
 
     # test user server stopping event
     r = await api_request(app, 'users', name, 'server', method='delete')
+    assert r.status_code == 204
     offset = len(output)
     output = sink.getvalue()[offset:]
     assert output
     data = remove_event_capsule(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {'action': 'stop', 'username': name, 'servername': ''}
+    assert expected.items() <= data.items()
+
+
+# users to test
+# (<username>, <admin>)
+users = [('a', True), ('b', False)]
+
+
+@pytest.mark.parametrize('username, admin', users)
+async def test_add_remove_user_event(eventlog_sink, username, admin):
+    schema, version = (eventlogging_schema_fqn('user-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    user = {'name': username, 'admin': admin}
+
+    r = await api_request(app, 'users', username, method='post', data=json.dumps(user))
+    assert r.status_code == 201
+    output = sink.getvalue()
+    assert output
+    data = remove_event_capsule(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'create',
+        'target_user': {'username': username, 'admin': admin},
+        'requester': 'admin',
+    }
+    assert expected.items() <= data.items()
+
+    r = await api_request(app, 'users', username, method='delete')
+    assert r.status_code == 204
+    offset = len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_capsule(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'delete',
+        'target_user': {'username': username, 'admin': admin},
+        'requester': 'admin',
+    }
+    assert expected.items() <= data.items()
+
+
+async def test_add_multi_user_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('user-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    usernames = [u for u, _ in users]
+
+    r = await api_request(
+        app, 'users', method='post', data=json.dumps({'usernames': usernames})
+    )
+    assert r.status_code == 201
+
+    events = [remove_event_capsule(json.loads(line)) for line in sink.readlines()]
+
+    for event in events:
+        jsonschema.validate(event, app.eventlog.schemas[(schema, version)])
+
+    sorted_data = sorted(events, key=lambda x: x['target_user']['username'])
+
+    for username, data in zip(sorted(usernames), sorted_data):
+        expected = {
+            'action': 'delete',
+            'target_user': {'username': username, 'admin': False},
+            'requester': 'admin',
+        }
+        assert expected.items() <= data.items()
+
+
+async def test_make_admin_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('user-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    username = 'admin2'
+    r = await api_request(app, 'users', username, method='post')
+    assert r.status_code == 201
+    offset = len(sink.getvalue())
+
+    r = await api_request(
+        app, 'users', username, method='patch', data=json.dumps({'admin': True})
+    )
+    assert r.status_code == 200
+
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_capsule(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'modify',
+        'requester': 'admin',
+        'target_user': {'username': username, 'admin': True},
+        'prior_state': {'username': username, 'admin': False},
+    }
     assert expected.items() <= data.items()

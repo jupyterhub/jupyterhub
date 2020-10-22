@@ -109,7 +109,7 @@ class UserListAPIHandler(APIHandler):
                     1,
                     {
                         'action': 'create',
-                        'target_user': user.name,
+                        'target_user': {'username': user.name, 'admin': False},
                         'requester': self.current_user.name,
                     },
                 )
@@ -155,7 +155,7 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'get',
-                'target_user': user.name,
+                'target_user': {'username': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -188,7 +188,7 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'create',
-                'target_user': user.name,
+                'target_user': {'username': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -222,7 +222,7 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'delete',
-                'target_user': user.name,
+                'target_user': {'username': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -257,9 +257,9 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'modify',
-                'target_user': user.name,
+                'requester': self.current_user.name,
+                'target_user': {'username': user.name, 'admin': user.admin},
                 'prior_state': prior_state,
-                'updated_state': {'username': user.name, 'admin': user.admin},
                 'auth_state_change': 'auth_state' in data,
             },
         )

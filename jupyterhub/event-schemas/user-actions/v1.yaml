@@ -39,14 +39,25 @@ properties:
 
         5. delete
            Delete an existing user
-  target_user:
-    type: string
-    description: |
-      Username of the user on which the operation was performed
   requester:
     type: string
     description: |
       Username of the user who requested the action
+  target_user:
+    type: object
+    properties:
+      username:
+        type: string
+        description: |
+          Username of the user
+      admin:
+        type: boolean
+        description: |
+          Boolean value indicating whether the user is an admin
+    description: |
+      Properties of the on which the operation was performed.
+
+      If action is modify, this reflects the state of the user after the update.
   prior_state:
     type: object
     properties:
@@ -60,21 +71,6 @@ properties:
           Boolean value indicating whether the user is an admin
     description: |
       Properties of the target user prior to the update.
-
-      Only relevant when action is modify.
-  updated_state:
-    type: object
-    properties:
-      username:
-        type: string
-        description: |
-          Username of the user
-      admin:
-        type: boolean
-        description: |
-          Boolean value indicating whether the user is an admin
-    description: |
-      Properties of the target user after the update.
 
       Only relevant when action is modify.
   auth_state_change:
