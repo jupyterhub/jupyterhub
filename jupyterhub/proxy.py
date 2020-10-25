@@ -39,10 +39,16 @@ from traitlets import observe
 from traitlets import Unicode
 from traitlets.config import LoggingConfigurable
 
+try:
+    from tornado.curl_httpclient import CurlError
+except ImportError:
+    CurlError = NotImplementedError
+
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
+from .utils import exponential_backoff
 from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
@@ -768,10 +774,25 @@ class ConfigurableHTTPProxy(Proxy):
             method=method,
             headers={'Authorization': 'token {}'.format(self.auth_token)},
             body=body,
+            connect_timeout=1,  # default: 20s
+            request_timeout=5,  # default: 20s
         )
-        async with self.semaphore:
-            result = await client.fetch(req)
-            return result
+
+        async def _wait_for_api_request():
+            try:
+                async with self.semaphore:
+                    return await client.fetch(req)
+            except (TimeoutError, CurlError) as error:
+                self.log.debug("api_request to proxy failed: {0}".format(error))
+                # A falsy return value triggers exponential_backoff to retry
+                return False
+
+        result = await exponential_backoff(
+            _wait_for_api_request,
+            "api_request to proxy failed to complete in 20 seconds",
+            timeout=20,
+        )
+        return result
 
     async def add_route(self, routespec, target, data):
         body = data or {}
