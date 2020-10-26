@@ -354,8 +354,9 @@ class Spawner(LoggingConfigurable):
 
         return options_form
 
-    def options_from_form(self, form_data):
-        """Interpret HTTP form data
+    options_from_form = Callable(
+        help="""
+        Interpret HTTP form data
 
         Form data will always arrive as a dict of lists of strings.
         Override this function to understand single-values, numbers, etc.
@@ -379,7 +380,14 @@ class Spawner(LoggingConfigurable):
             (with additional support for bytes in case of uploaded file data),
             and any non-bytes non-jsonable values will be replaced with None
             if the user_options are re-used.
-        """
+        """,
+    ).tag(config=True)
+
+    @default("options_from_form")
+    def _options_from_form(self):
+        return self._default_options_from_form
+
+    def _default_options_from_form(self, form_data):
         return form_data
 
     def options_from_query(self, query_data):
