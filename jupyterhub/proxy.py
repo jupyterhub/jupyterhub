@@ -39,11 +39,6 @@ from traitlets import observe
 from traitlets import Unicode
 from traitlets.config import LoggingConfigurable
 
-try:
-    from tornado.curl_httpclient import CurlError
-except ImportError:
-    CurlError = NotImplementedError
-
 from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
@@ -782,15 +777,21 @@ class ConfigurableHTTPProxy(Proxy):
             try:
                 async with self.semaphore:
                     return await client.fetch(req)
-            except (TimeoutError, CurlError) as error:
-                self.log.debug("api_request to proxy failed: {0}".format(error))
-                # A falsy return value triggers exponential_backoff to retry
-                return False
+            except HTTPError as e:
+                if e.code == 599:
+                    # Warn about 599 failures to communicate with the proxy
+                    self.log.warning("api_request to the proxy failed with status code 599, retrying...")
+                    # A falsy return value triggers exponential_backoff to retry
+                    return False
+                else:
+                    self.log.error("api_request to proxy failed: {0}".format(error))
+                    # An unhandled error here will help the hub invoke cleanup logic
+                    raise
 
         result = await exponential_backoff(
             _wait_for_api_request,
-            "api_request to proxy failed to complete in 20 seconds",
-            timeout=20,
+            "api_request to proxy failed over a 30 second duration of attempts for path: {}".format(path),
+            timeout=30,
         )
         return result
 
