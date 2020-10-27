@@ -773,13 +773,11 @@ class ConfigurableHTTPProxy(Proxy):
             request_timeout=10,  # default: 20s
         )
 
-        most_recent_error = None
         async def _wait_for_api_request():
             try:
                 async with self.semaphore:
                     return await client.fetch(req)
             except HTTPError as e:
-                most_recent_error = e
                 # Retry on potentially transient errors as for example also
                 # suggested for communication witht he k8s api-server
                 #
@@ -804,9 +802,7 @@ class ConfigurableHTTPProxy(Proxy):
 
         result = await exponential_backoff(
             _wait_for_api_request,
-            'Repeated api_request to proxy path "{}" failed, most recently with error "{}".'.format(
-                path, most_recent_error
-            ),
+            'Repeated api_request to proxy path "{}" failed.'.format(path),
             timeout=30,
         )
         return result
