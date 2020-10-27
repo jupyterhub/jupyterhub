@@ -773,8 +773,8 @@ class ConfigurableHTTPProxy(Proxy):
             request_timeout=5,  # default: 20s
         )
 
+        most_recent_error = None
         async def _wait_for_api_request():
-            most_recent_error = None
             try:
                 async with self.semaphore:
                     return await client.fetch(req)
