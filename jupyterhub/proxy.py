@@ -769,8 +769,8 @@ class ConfigurableHTTPProxy(Proxy):
             method=method,
             headers={'Authorization': 'token {}'.format(self.auth_token)},
             body=body,
-            connect_timeout=1,  # default: 20s
-            request_timeout=5,  # default: 20s
+            connect_timeout=3,  # default: 20s
+            request_timeout=10,  # default: 20s
         )
 
         most_recent_error = None
