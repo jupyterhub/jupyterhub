@@ -774,23 +774,39 @@ class ConfigurableHTTPProxy(Proxy):
         )
 
         async def _wait_for_api_request():
+            most_recent_error = None
             try:
                 async with self.semaphore:
                     return await client.fetch(req)
             except HTTPError as e:
-                if e.code == 599:
-                    # Warn about 599 failures to communicate with the proxy
-                    self.log.warning("api_request to the proxy failed with status code 599, retrying...")
-                    # A falsy return value triggers exponential_backoff to retry
-                    return False
+                most_recent_error = e
+                # Retry on potentially transient errors as for example also
+                # suggested for communication witht he k8s api-server
+                #
+                # ref: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#error-codes
+                if e.code in [
+                    429,  # Too many requests
+                    500,  # Internal server error
+                    503,  # Service unavailable
+                    504,  # Gateway timeout
+                    599,  # Network connect timeout error
+                ]:
+                    self.log.warning(
+                        "api_request to the proxy failed with status code {}, retrying...".format(
+                            e.code
+                        )
+                    )
+                    return False  # a falsy return value make exponential_backoff retry
                 else:
-                    self.log.error("api_request to proxy failed: {0}".format(error))
+                    self.log.error("api_request to proxy failed: {0}".format(e))
                     # An unhandled error here will help the hub invoke cleanup logic
                     raise
 
         result = await exponential_backoff(
             _wait_for_api_request,
-            "api_request to proxy failed over a 30 second duration of attempts for path: {}".format(path),
+            'Repeated api_request to proxy path "{}" failed, most recently with error "{}".'.format(
+                path, most_recent_error
+            ),
             timeout=30,
         )
         return result
