@@ -4,6 +4,7 @@
 import asyncio
 import concurrent.futures
 import errno
+import functools
 import hashlib
 import inspect
 import os
@@ -298,18 +299,31 @@ def metrics_authentication(self):
         raise web.HTTPError(403)
 
 
-@auth_decorator
-def needs_scope(self, scope, **kwargs):
+def needs_scope(scope):
     """Decorator to restrict access to users or services with the required scope"""
-    if scope not in self.current_scopes:
-        # Check if access is not restricted to user/server/group
-        match_string = re.compile("^" + re.escape(scope) + r"!.+=.+$")
-        subscopes = filter(lambda s: re.search(match_string, s), self.current_scopes)
-        subset = [subscope.split('=')[1] for subscope in subscopes]
-        if not subset:
-            raise web.HTTPError(403, "Action is not authorized with current scopes")
-        else:
-            kwargs['subset'] = subset
+
+    def scope_decorator(func):
+        @functools.wraps(func)
+        def _auth_func(self, *args, **kwargs):
+            if scope not in self.current_scopes:
+                # Check if access is not restricted to user/server/group
+                match_string = re.compile("^" + re.escape(scope) + r"!.+=.+$")
+                subscopes = filter(
+                    lambda s: re.search(match_string, s), self.current_scopes
+                )
+                subset = [subscope.split('=')[1] for subscope in subscopes]
+                if not subset:
+                    raise web.HTTPError(
+                        403, "Action is not authorized with current scopes"
+                    )
+                else:
+                    kwargs['subset'] = subset
+            result = func(self, *args, **kwargs)
+            return result
+
+        return _auth_func
+
+    return scope_decorator
 
 
 # Token utilities
