@@ -778,17 +778,10 @@ class ConfigurableHTTPProxy(Proxy):
                 async with self.semaphore:
                     return await client.fetch(req)
             except HTTPError as e:
-                # Retry on potentially transient errors as for example also
-                # suggested for communication witht he k8s api-server
-                #
-                # ref: https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#error-codes
-                if e.code in [
-                    429,  # Too many requests
-                    500,  # Internal server error
-                    503,  # Service unavailable
-                    504,  # Gateway timeout
-                    599,  # Network connect timeout error
-                ]:
+                # Retry on potentially transient errors in CHP, typically
+                # numbered 500 and up. Note that CHP isn't able to emit 429
+                # errors.
+                if e.code >= 500:
                     self.log.warning(
                         "api_request to the proxy failed with status code {}, retrying...".format(
                             e.code
