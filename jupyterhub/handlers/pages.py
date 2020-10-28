@@ -453,7 +453,7 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
-        page, per_page, offset = Pagination.get_page_args(self)
+        page, per_page, offset = Pagination(config=self.config).get_page_args(self)
 
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
@@ -511,7 +511,11 @@ class AdminHandler(BaseHandler):
 
         total = self.db.query(orm.User.id).count()
         pagination = Pagination(
-            url=self.request.uri, total=total, page=page, per_page=per_page,
+            url=self.request.uri,
+            total=total,
+            page=page,
+            per_page=per_page,
+            config=self.config,
         )
 
         auth_state = await self.current_user.get_auth_state()
