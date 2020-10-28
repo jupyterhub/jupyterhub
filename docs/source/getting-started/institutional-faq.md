@@ -21,7 +21,7 @@ Here is a quick breakdown of these three tools:
 * **The Jupyter Notebook** is a document specification (the `.ipynb`) file that interweaves
   narrative text with code cells and their outputs. It is also a graphical interface
   that allows users to edit these documents. There are also several other graphical interfaces
-  that allow users to edit the `.ipynb` format (nteract, Jupyer Lab, Google Colab, Kaggle, etc).
+  that allow users to edit the `.ipynb` format (nteract, Jupyter Lab, Google Colab, Kaggle, etc).
 * **JupyterLab** is a flexible and extendible user interface for interactive computing. It
   has several extensions that are tailored for using Jupyter Notebooks, as well as extensions
   for other parts of the data science stack.
