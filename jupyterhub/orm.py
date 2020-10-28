@@ -141,6 +141,16 @@ user_role_map = Table(
     Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
 )
 
+# service:role many:many mapping table
+service_role_map = Table(
+    'service_role_map',
+    Base.metadata,
+    Column(
+        'service_id', ForeignKey('services.id', ondelete='CASCADE'), primary_key=True
+    ),
+    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+)
+
 
 class Role(Base):
     """User Roles"""
@@ -151,6 +161,7 @@ class Role(Base):
     description = Column(Unicode(1023))
     scopes = Column(JSONList)
     users = relationship('User', secondary='user_role_map', backref='roles')
+    services = relationship('Service', secondary='service_role_map', backref='roles')
 
     def __repr__(self):
         return "<%s %s (%s) - scopes: %s>" % (

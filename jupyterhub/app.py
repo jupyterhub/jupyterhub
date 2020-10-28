@@ -1834,26 +1834,39 @@ class JupyterHub(Application):
             role = orm.Role.find(db, predef_role['name'])
 
             # handle users
-            for username in predef_role['users']:
-                username = self.authenticator.normalize_username(username)
-                if not (
-                    await maybe_future(self.authenticator.check_allowed(username, None))
-                ):
-                    raise ValueError(
-                        "Username %r is not in Authenticator.allowed_users" % username
-                    )
-                user = orm.User.find(db, name=username)
-                if user is None:
-                    if not self.authenticator.validate_username(username):
-                        raise ValueError("Role username %r is not valid" % username)
-                    user = orm.User(name=username)
-                    db.add(user)
-                roles.add_user(db, user=user, role=role)
+            if 'users' in predef_role.keys():
+                for username in predef_role['users']:
+                    username = self.authenticator.normalize_username(username)
+                    if not (
+                        await maybe_future(
+                            self.authenticator.check_allowed(username, None)
+                        )
+                    ):
+                        raise ValueError(
+                            "Username %r is not in Authenticator.allowed_users"
+                            % username
+                        )
+                    user = orm.User.find(db, name=username)
+                    if user is None:
+                        raise ValueError("%r does not exist" % username)
+                    else:
+                        roles.add_user(db, user=user, role=role)
 
-        # make sure all users have at least one role (update with default)
-        for user in db.query(orm.User):
-            if len(user.roles) < 1:
-                roles.update_roles(db, user)
+            # handle services
+            if 'services' in predef_role.keys():
+                for servicename in predef_role['services']:
+                    service = orm.Service.find(db, name=servicename)
+                    if service is None:
+                        raise ValueError("%r does not exist" % servicename)
+                    else:
+                        roles.add_user(db, user=service, role=role)
+
+        # make sure all users and services have at least one role (update with default)
+        Classes = [orm.User, orm.Service]
+        for ormClass in Classes:
+            for obj in db.query(ormClass):
+                if len(obj.roles) < 1:
+                    roles.update_roles(db, obj)
 
         db.commit()
 
@@ -1968,6 +1981,7 @@ class JupyterHub(Application):
                 base_url=self.base_url,
                 db=self.db,
                 orm=orm_service,
+                roles=orm_service.roles,
                 domain=domain,
                 host=host,
                 hub=self.hub,
@@ -2435,9 +2449,9 @@ class JupyterHub(Application):
         self.init_oauth()
         await self.init_users()
         await self.init_groups()
-        await self.init_roles()
         self.init_services()
         await self.init_api_tokens()
+        await self.init_roles()
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()

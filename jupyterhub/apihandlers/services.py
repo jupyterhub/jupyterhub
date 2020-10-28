@@ -18,6 +18,7 @@ def service_model(service):
     return {
         'name': service.name,
         'admin': service.admin,
+        'roles': [r.name for r in service.roles],
         'url': service.url,
         'prefix': service.server.base_url if service.server else '',
         'command': service.command,

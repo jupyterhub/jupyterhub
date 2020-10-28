@@ -222,7 +222,12 @@ class APIHandler(BaseHandler):
 
     def service_model(self, service):
         """Get the JSON model for a Service object"""
-        return {'kind': 'service', 'name': service.name, 'admin': service.admin}
+        return {
+            'kind': 'service',
+            'name': service.name,
+            'admin': service.admin,
+            'roles': [r.name for r in service.roles],
+        }
 
     _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
 

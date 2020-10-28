@@ -55,6 +55,8 @@ def add_role(db, role_dict):
     else:
         role.description = role_dict['description']
         role.scopes = role_dict['scopes']
+        role.users = []
+        role.services = []
     db.commit()
 
 

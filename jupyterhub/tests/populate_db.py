@@ -10,8 +10,7 @@ from datetime import datetime
 import jupyterhub
 from jupyterhub import orm
 
-# FIXME - for later versions of jupyterhub add code to test Roles
-# from jupyterhub.orm import Role
+# FIXME - for later versions of jupyterhub add code to test roles
 
 
 def populate_db(url):

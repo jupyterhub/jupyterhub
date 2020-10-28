@@ -295,7 +295,7 @@ async def test_hubauth_service_token(app, mockservice_url):
     )
     r.raise_for_status()
     reply = r.json()
-    assert reply == {'kind': 'service', 'name': name, 'admin': False}
+    assert reply == {'kind': 'service', 'name': name, 'admin': False, 'roles': []}
     assert not r.cookies
 
     # token in ?token parameter
@@ -304,7 +304,7 @@ async def test_hubauth_service_token(app, mockservice_url):
     )
     r.raise_for_status()
     reply = r.json()
-    assert reply == {'kind': 'service', 'name': name, 'admin': False}
+    assert reply == {'kind': 'service', 'name': name, 'admin': False, 'roles': []}
 
     r = await async_requests.get(
         public_url(app, mockservice_url) + '/whoami/?token=no-such-token',

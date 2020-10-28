@@ -1536,6 +1536,7 @@ async def test_get_services(app, mockservice_url):
         mockservice.name: {
             'name': mockservice.name,
             'admin': True,
+            'roles': [],
             'command': mockservice.command,
             'pid': mockservice.proc.pid,
             'prefix': mockservice.server.base_url,
@@ -1561,6 +1562,7 @@ async def test_get_service(app, mockservice_url):
     assert service == {
         'name': mockservice.name,
         'admin': True,
+        'roles': [],
         'command': mockservice.command,
         'pid': mockservice.proc.pid,
         'prefix': mockservice.server.base_url,
