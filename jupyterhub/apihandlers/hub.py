@@ -66,7 +66,6 @@ class RootAPIHandler(APIHandler):
 
 
 class InfoAPIHandler(APIHandler):
-    @needs_scope('admin')  # Todo: Probably too strict
     def get(self):
         """GET /api/info returns detailed info about the Hub and its API.
 

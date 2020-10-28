@@ -26,6 +26,7 @@ from .utils import api_request
 from .utils import async_requests
 from .utils import auth_header
 from .utils import find_user
+from .utils import get_scopes
 
 
 # --------------------
@@ -168,7 +169,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 @mark.user
 async def test_get_users(app):
     db = app.db
-    r = await api_request(app, 'users')
+    r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
@@ -178,7 +179,9 @@ async def test_get_users(app):
         fill_user({'name': 'user', 'admin': False, 'last_activity': None}),
     ]
 
-    r = await api_request(app, 'users', headers=auth_header(db, 'user'))
+    r = await api_request(
+        app, 'users', headers=auth_header(db, 'user'), scopes=get_scopes('user')
+    )
     assert r.status_code == 403
 
 
@@ -205,13 +208,24 @@ async def test_get_self(app):
     )
     db.add(oauth_token)
     db.commit()
-    r = await api_request(app, 'user', headers={'Authorization': 'token ' + token})
+    app.log.warn("Scopes:" + ", ".join(app.tornado_settings['mock_scopes']))
+    r = await api_request(
+        app,
+        'user',
+        headers={'Authorization': 'token ' + token},
+        scopes=get_scopes('user'),
+    )
     r.raise_for_status()
     model = r.json()
     assert model['name'] == u.name
 
     # invalid auth gets 403
-    r = await api_request(app, 'user', headers={'Authorization': 'token notvalid'})
+    r = await api_request(
+        app,
+        'user',
+        headers={'Authorization': 'token notvalid'},
+        scopes=get_scopes('user'),
+    )
     assert r.status_code == 403
 
 
@@ -420,6 +434,7 @@ async def test_user_set_auth_state(app, auth_state_enabled):
         method='patch',
         data=json.dumps({'auth_state': auth_state}),
         headers=auth_header(app.db, name),
+        scopes=get_scopes('user'),
     )
 
     assert r.status_code == 403

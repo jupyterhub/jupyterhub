@@ -118,7 +118,13 @@ def auth_header(db, name):
 
 @check_db_locks
 async def api_request(
-    app, *api_path, method='get', noauth=False, bypass_proxy=False, **kwargs
+    app,
+    *api_path,
+    method='get',
+    noauth=False,
+    bypass_proxy=False,
+    scopes=None,
+    **kwargs
 ):
     """Make an API request"""
     if bypass_proxy:
@@ -128,7 +134,12 @@ async def api_request(
     else:
         base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
-
+    old_scopes = ['Nothing here']
+    if scopes is not None:
+        old_scopes = app.tornado_settings[
+            'mock_scopes'
+        ]  # Store old scopes so request has no side effects
+        app.tornado_settings['mock_scopes'] = scopes
     if 'Authorization' not in headers and not noauth and 'cookies' not in kwargs:
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}
@@ -147,6 +158,8 @@ async def api_request(
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
         kwargs["verify"] = app.internal_ssl_ca
     resp = await f(url, **kwargs)
+    if scopes is not None:
+        app.tornado_settings['mock_scopes'] = old_scopes
     assert "frame-ancestors 'self'" in resp.headers['Content-Security-Policy']
     assert (
         ujoin(app.hub.base_url, "security/csp-report")
@@ -196,23 +209,33 @@ def public_url(app, user_or_service=None, path=''):
         return host + prefix
 
 
-def get_all_scopes():
-    scopes = [
-        'all',
-        'all',
-        'users',
-        'users:name',
-        'users:groups',
-        'users:activity',
-        'users:servers',
-        'users:tokens',
-        'admin:users',
-        'admin:users:servers',
-        'groups',
-        'admin:groups',
-        'read:services',
-        'proxy',
-        'shutdown',
-    ]
-    read_only = ["read:%s" % el for el in scopes]
+def get_scopes(role='admin'):
+    """Get all scopes for a role. Default role is admin, alternatives are user and service"""
+    all_scopes = {
+        'admin': [
+            'all',
+            'users',
+            'users:name',
+            'users:groups',
+            'users:activity',
+            'users:servers',
+            'users:tokens',
+            'admin:users',
+            'admin:users:servers',
+            'groups',
+            'admin:groups',
+            'services',
+            'proxy',
+            'shutdown',
+        ],
+        'user': ['all'],
+        'server': ['users:activity'],
+    }
+    scopes = all_scopes[role]
+    read_only = ["read:" + el for el in scopes]
     return scopes + read_only
+
+
+def limit_scopes(scopes, key, name):
+    new_scopes = ["{}!{}={}".format(scope, key, name) for scope in scopes]
+    return new_scopes

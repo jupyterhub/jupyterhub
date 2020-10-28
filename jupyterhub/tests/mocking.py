@@ -53,7 +53,7 @@ from ..spawner import SimpleLocalProcessSpawner
 from ..utils import random_port
 from ..utils import url_path_join
 from .utils import async_requests
-from .utils import get_all_scopes
+from .utils import get_scopes
 from .utils import public_host
 from .utils import public_url
 from .utils import ssl_setup
@@ -300,7 +300,7 @@ class MockHub(JupyterHub):
         super().init_tornado_application()
         # reconnect tornado_settings so that mocks can update the real thing
         self.tornado_settings = self.users.settings = self.tornado_application.settings
-        self.tornado_settings['mock_scopes'] = get_all_scopes()
+        self.tornado_settings['mock_scopes'] = get_scopes()
 
     def init_services(self):
         # explicitly expire services before reinitializing

@@ -28,7 +28,7 @@ class SelfAPIHandler(APIHandler):
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
 
-    @needs_scope('read:users')
+    @needs_scope('all')
     async def get(self):
         user = self.current_user
         if user is None:
@@ -382,7 +382,7 @@ class UserTokenAPIHandler(APIHandler):
 class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
-    @needs_scope('user:servers')
+    @needs_scope('users:servers')
     async def post(self, name, server_name='', subset=None):
         user = self.find_user(name)
         if server_name:
@@ -432,7 +432,7 @@ class UserServerAPIHandler(APIHandler):
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
 
-    @needs_scope('user:servers')
+    @needs_scope('users:servers')
     async def delete(self, name, server_name=''):
         user = self.find_user(name)
         options = self.get_json_body()
