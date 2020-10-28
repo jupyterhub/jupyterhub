@@ -305,12 +305,12 @@ def needs_scope(scope):
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):
-            if scope not in self.current_scopes:
+            self.log.warning("Scope needed: " + scope)
+            self.log.warning("Scope possessed: %s" % ", ".join(self.scopes))
+            if scope not in self.scopes:
                 # Check if access is not restricted to user/server/group
                 match_string = re.compile("^" + re.escape(scope) + r"!.+=.+$")
-                subscopes = filter(
-                    lambda s: re.search(match_string, s), self.current_scopes
-                )
+                subscopes = filter(lambda s: re.search(match_string, s), self.scopes)
                 subset = [subscope.split('=')[1] for subscope in subscopes]
                 if not subset:
                     raise web.HTTPError(

@@ -194,3 +194,25 @@ def public_url(app, user_or_service=None, path=''):
         return host + ujoin(prefix, path)
     else:
         return host + prefix
+
+
+def get_all_scopes():
+    scopes = [
+        'all',
+        'all',
+        'users',
+        'users:name',
+        'users:groups',
+        'users:activity',
+        'users:servers',
+        'users:tokens',
+        'admin:users',
+        'admin:users:servers',
+        'groups',
+        'admin:groups',
+        'read:services',
+        'proxy',
+        'shutdown',
+    ]
+    read_only = ["read:%s" % el for el in scopes]
+    return scopes + read_only

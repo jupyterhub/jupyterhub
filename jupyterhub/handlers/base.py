@@ -83,6 +83,7 @@ class BaseHandler(RequestHandler):
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
+            self.scopes = []
 
         return await maybe_future(super().prepare())
 
@@ -426,6 +427,10 @@ class BaseHandler(RequestHandler):
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
+        if self._jupyterhub_user is not None:
+            self.scopes = self.settings.get("mock_scopes", [])
+        else:
+            self.scopes = []
         return self._jupyterhub_user
 
     @property
