@@ -28,6 +28,8 @@ Highlights:
 
 
 #### Enhancements made
+* make pagination configurable [#3229](https://github.com/jupyterhub/jupyterhub/pull/3229) ([@minrk](https://github.com/minrk))
+* Make api_request to CHP's REST API more reliable [#3223](https://github.com/jupyterhub/jupyterhub/pull/3223) ([@consideRatio](https://github.com/consideRatio))
 * Control service display [#3160](https://github.com/jupyterhub/jupyterhub/pull/3160) ([@rcthomas](https://github.com/rcthomas))
 * Add a footer block + wrap the admin footer in this block [#3136](https://github.com/jupyterhub/jupyterhub/pull/3136) ([@pabepadu](https://github.com/pabepadu))
 * Allow JupyterHub.default_url to be a callable [#3133](https://github.com/jupyterhub/jupyterhub/pull/3133) ([@danlester](https://github.com/danlester))
@@ -48,10 +50,9 @@ Highlights:
 * Adding pagination in the admin panel [#2929](https://github.com/jupyterhub/jupyterhub/pull/2929) ([@cbjuan](https://github.com/cbjuan))
 * Generate prometheus metrics docs [#2891](https://github.com/jupyterhub/jupyterhub/pull/2891) ([@rajat404](https://github.com/rajat404))
 * Add support for Jupyter Server [#2601](https://github.com/jupyterhub/jupyterhub/pull/2601) ([@yuvipanda](https://github.com/yuvipanda))
-* make pagination configurable [#3229](https://github.com/jupyterhub/jupyterhub/pull/3229) ([@minrk](https://github.com/minrk))
-* Make api_request to CHP's REST API more reliable [#3223](https://github.com/jupyterhub/jupyterhub/pull/3223) ([@consideRatio](https://github.com/consideRatio))
 
 #### Bugs fixed
+* Fix #2284 must be sent from authorization page [#3219](https://github.com/jupyterhub/jupyterhub/pull/3219) ([@elgalu](https://github.com/elgalu))
 * avoid specifying default_value=None in Command traits [#3208](https://github.com/jupyterhub/jupyterhub/pull/3208) ([@minrk](https://github.com/minrk))
 * Prevent OverflowErrors in exponential_backoff() [#3204](https://github.com/jupyterhub/jupyterhub/pull/3204) ([@kreuzert](https://github.com/kreuzert))
 * update prometheus metrics for server spawn when it fails with exception [#3150](https://github.com/jupyterhub/jupyterhub/pull/3150) ([@yhal-nesi](https://github.com/yhal-nesi))
@@ -73,9 +74,9 @@ Highlights:
 * Fix user_row endblock in admin template [#3015](https://github.com/jupyterhub/jupyterhub/pull/3015) ([@jtpio](https://github.com/jtpio))
 * Fix --generate-config bug when specifying a filename [#2907](https://github.com/jupyterhub/jupyterhub/pull/2907) ([@consideRatio](https://github.com/consideRatio))
 * Handle the protocol when ssl is enabled and log the right URL [#2773](https://github.com/jupyterhub/jupyterhub/pull/2773) ([@kinow](https://github.com/kinow))
-* Fix #2284 must be sent from authorization page [#3219](https://github.com/jupyterhub/jupyterhub/pull/3219) ([@elgalu](https://github.com/elgalu))
 
 #### Maintenance and upkeep improvements
+* Update travis-ci badge in README.md [#3232](https://github.com/jupyterhub/jupyterhub/pull/3232) ([@consideRatio](https://github.com/consideRatio))
 * stop building docs on circleci [#3209](https://github.com/jupyterhub/jupyterhub/pull/3209) ([@minrk](https://github.com/minrk))
 * Upgraded Jquery dep [#3174](https://github.com/jupyterhub/jupyterhub/pull/3174) ([@AngelOnFira](https://github.com/AngelOnFira))
 * Don't allow 'python:3.8 + master dependencies' to fail [#3157](https://github.com/jupyterhub/jupyterhub/pull/3157) ([@manics](https://github.com/manics))
@@ -104,7 +105,6 @@ Highlights:
 * make spawner:server relationship explicitly one to one [#2944](https://github.com/jupyterhub/jupyterhub/pull/2944) ([@minrk](https://github.com/minrk))
 * Add what we need with some margin to Dockerfile's build stage [#2905](https://github.com/jupyterhub/jupyterhub/pull/2905) ([@consideRatio](https://github.com/consideRatio))
 * bump reorder-imports hook [#2899](https://github.com/jupyterhub/jupyterhub/pull/2899) ([@minrk](https://github.com/minrk))
-* Update travis-ci badge in README.md [#3232](https://github.com/jupyterhub/jupyterhub/pull/3232) ([@consideRatio](https://github.com/consideRatio))
 
 #### Documentation improvements
 * Fix typo in documentation [#3226](https://github.com/jupyterhub/jupyterhub/pull/3226) ([@xlotlu](https://github.com/xlotlu))
