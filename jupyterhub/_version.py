@@ -4,10 +4,10 @@
 
 version_info = (
     1,
-    2,
+    3,
     0,
-    # "b1",  # release (b1, rc1, or "" for final or dev)
-    # "dev",  # dev or nothing for beta/rc/stable releases
+    "",  # release (b1, rc1, or "" for final or dev)
+    "dev",  # dev or nothing for beta/rc/stable releases
 )
 
 # pep 440 version: no dot before beta/rc, but before .dev
