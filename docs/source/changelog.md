@@ -9,6 +9,8 @@ command line for details.
 
 ## 1.2
 
+### [1.2.0] 2020-10-29
+
 JupyterHub 1.2 is an incremental release with lots of small improvements.
 It is unlikely that users will have to change much to upgrade,
 but lots of new things are possible and/or better!
