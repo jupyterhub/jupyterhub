@@ -215,7 +215,8 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # it's the user's own server
             oauth_client.identifier in own_oauth_client_ids
             # or it's in the global no-confirm list
-            or oauth_client.identifier in self.settings.get('oauth_no_confirm', set())
+            or oauth_client.identifier
+            in self.settings.get('oauth_no_confirm_list', set())
         ):
             return False
         # default: require confirmation
