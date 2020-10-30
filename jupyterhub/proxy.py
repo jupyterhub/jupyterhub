@@ -492,12 +492,18 @@ class ConfigurableHTTPProxy(Proxy):
     )
 
     def _check_pid(self, pid):
-        if os.name == 'nt':
-            import psutil
+        import psutil
 
-            if not psutil.pid_exists(pid):
+        if not psutil.pid_exists(pid):
+            raise ProcessLookupError
+
+        process = psutil.Process(pid)
+        if self.command and self.command[0]:
+            process_cmd = process.cmdline()
+            if process_cmd and not any(self.command[0] in clause for clause in process_cmd):
                 raise ProcessLookupError
-        else:
+
+        if not os.name == 'nt':
             os.kill(pid, 0)
 
     def __init__(self, **kwargs):
@@ -692,8 +698,17 @@ class ConfigurableHTTPProxy(Proxy):
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
         for child in children:
-            child.kill()
-        psutil.wait_procs(children, timeout=5)
+            child.terminate()
+        gone, alive = psutil.wait_procs(children, timeout=5)
+        for p in alive:
+            p.kill()
+        # Clear the shell, too, if it still exists.
+        try:
+            parent.terminate()
+            parent.wait(timeout=5)
+            parent.kill()
+        except psutil.NoSuchProcess:
+            pass
 
     def _terminate(self):
         """Terminate our process"""
