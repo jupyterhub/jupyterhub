@@ -427,7 +427,7 @@ class BaseHandler(RequestHandler):
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
-        if self._jupyterhub_user is not None:
+        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
             self.scopes = self.settings.get("mock_scopes", [])
         else:
             self.scopes = []

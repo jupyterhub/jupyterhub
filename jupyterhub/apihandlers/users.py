@@ -28,7 +28,7 @@ class SelfAPIHandler(APIHandler):
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
 
-    @needs_scope('all')
+    # @needs_scope('read:users') # Should be read:users:user=username
     async def get(self):
         user = self.current_user
         if user is None:
@@ -41,12 +41,8 @@ class SelfAPIHandler(APIHandler):
 
 class UserListAPIHandler(APIHandler):
     @needs_scope('read:users')
-    def get(self, subset=None):
+    def get(self):
         users = self.db.query(orm.User)
-        if subset is not None:
-            users = users.filter(
-                User.name.in_(subset)
-            )  # Should result in only one db query
         data = [
             self.user_model(u, include_servers=True, include_state=True) for u in users
         ]
@@ -131,7 +127,7 @@ class UserAPIHandler(APIHandler):
     async def get(self, name, subset=None):
         user = self.find_user(name)
         if subset is not None:
-            if user not in subset:
+            if name not in subset:
                 raise web.HTTPError(403, "No access to users")
 
         model = self.user_model(
@@ -224,12 +220,14 @@ class UserAPIHandler(APIHandler):
 class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
 
-    @needs_scope('users:tokens')
-    def get(self, name):
+    @needs_scope('read:users:tokens')
+    def get(self, name, subset=None):
         """Get tokens for a given user"""
         user = self.find_user(name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No access to tokens")
 
         now = datetime.utcnow()
 
@@ -258,7 +256,6 @@ class UserTokenListAPIHandler(APIHandler):
             oauth_tokens.append(self.token_model(token))
         self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
-    @needs_scope('users:tokens')
     async def post(self, name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
@@ -323,7 +320,6 @@ class UserTokenListAPIHandler(APIHandler):
 class UserTokenAPIHandler(APIHandler):
     """API endpoint for retrieving/deleting individual tokens"""
 
-    @needs_scope('read:users:tokens')
     def find_token_by_id(self, user, token_id):
         """Find a token object by token-id key
 
@@ -349,20 +345,24 @@ class UserTokenAPIHandler(APIHandler):
         return orm_token
 
     @needs_scope('read:users:tokens')
-    def get(self, name, token_id):
+    def get(self, name, token_id, subset=None):
         """"""
         user = self.find_user(name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No token access allowed")
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
     @needs_scope('users:tokens')
-    def delete(self, name, token_id):
+    def delete(self, name, token_id, subset=None):
         """Delete a token"""
         user = self.find_user(name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
+        if subset is not None and name not in subset:
+            raise web.HTTPError(403, "No token access allowed")
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
         if isinstance(token, orm.OAuthAccessToken):

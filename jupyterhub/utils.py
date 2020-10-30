@@ -305,21 +305,18 @@ def needs_scope(scope):
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):
-            self.log.warning("Scope needed: " + scope)
-            self.log.warning("Scope possessed: %s" % ", ".join(self.scopes))
-            if scope not in self.scopes:
-                # Check if access is not restricted to user/server/group
+            allows_subset = 'subset' in func.__code__.co_varnames
+            if scope in self.scopes:
+                return func(self, *args, **kwargs)
+            elif allows_subset:
+                # Check if access is not restricted to user/server/service
                 match_string = re.compile("^" + re.escape(scope) + r"!.+=.+$")
                 subscopes = filter(lambda s: re.search(match_string, s), self.scopes)
                 subset = [subscope.split('=')[1] for subscope in subscopes]
-                if not subset:
-                    raise web.HTTPError(
-                        403, "Action is not authorized with current scopes"
-                    )
-                else:
+                if subset:
                     kwargs['subset'] = subset
-            result = func(self, *args, **kwargs)
-            return result
+                    return func(self, *args, **kwargs)
+            raise web.HTTPError(403, "Action is not authorized with current scopes")
 
         return _auth_func
 
