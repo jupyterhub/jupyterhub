@@ -18,6 +18,7 @@ from urllib.parse import urlencode
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
+import nest_asyncio
 from jinja2 import TemplateNotFound
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen
@@ -400,6 +401,15 @@ class BaseHandler(RequestHandler):
             # have cookie, but it's not valid. Clear it and start over.
             clear()
             return
+        if self.authenticator.enable_auth_state and self.app.strict_session_ids:
+            session_id = self.get_cookie(SESSION_COOKIE_NAME, '')
+            nest_asyncio.apply()
+            loop = asyncio.get_event_loop()
+            session_ids = loop.run_until_complete(
+                asyncio.gather(*(self.app.load_session_ids(user.name),))
+            )[0]
+            if session_id not in session_ids:
+                return None
         # update user activity
         if self._record_activity(user):
             self.db.commit()
