@@ -4,6 +4,7 @@ certipy>=0.1.2
 entrypoints
 jinja2
 jupyter_telemetry
+nest_asyncio==1.4.2
 oauthlib>=3.0
 pamela
 prometheus_client>=0.0.21
