@@ -2,15 +2,12 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import codecs
-import copy
 import time
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
 
 from jinja2 import TemplateNotFound
-from tornado import gen
 from tornado import web
 from tornado.httputil import url_concat
 from tornado.httputil import urlparse
@@ -456,7 +453,7 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
-        page, per_page, offset = Pagination.get_page_args(self)
+        page, per_page, offset = Pagination(config=self.config).get_page_args(self)
 
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
@@ -507,7 +504,6 @@ class AdminHandler(BaseHandler):
             .offset(offset)
         )
         users = [self._user_from_orm(u) for u in users]
-        from itertools import chain
 
         running = []
         for u in users:
@@ -515,7 +511,11 @@ class AdminHandler(BaseHandler):
 
         total = self.db.query(orm.User.id).count()
         pagination = Pagination(
-            url=self.request.uri, total=total, page=page, per_page=per_page,
+            url=self.request.uri,
+            total=total,
+            page=page,
+            per_page=per_page,
+            config=self.config,
         )
 
         auth_state = await self.current_user.get_auth_state()

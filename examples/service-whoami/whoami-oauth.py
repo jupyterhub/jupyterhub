@@ -6,7 +6,6 @@ showing the user their own info.
 """
 import json
 import os
-from getpass import getuser
 from urllib.parse import urlparse
 
 from tornado.httpserver import HTTPServer
@@ -25,6 +24,7 @@ class WhoAmIHandler(HubOAuthenticated, RequestHandler):
     # `getuser()` here would mean only the user who started the service
     # can access the service:
 
+    # from getpass import getuser
     # hub_users = {getuser()}
 
     @authenticated

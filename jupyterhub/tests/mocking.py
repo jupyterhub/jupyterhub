@@ -403,7 +403,7 @@ class StubSingleUserSpawner(MockSpawner):
         - authenticated, so we are testing auth
         - always available (i.e. in base ServerApp and NotebookApp
         """
-        return "/api/spec.yaml"
+        return "/api/status"
 
     _thread = None
 

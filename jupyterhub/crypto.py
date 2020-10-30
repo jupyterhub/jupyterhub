@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 
 from traitlets import Any
 from traitlets import default
-from traitlets import Dict
 from traitlets import Integer
 from traitlets import List
 from traitlets import observe

@@ -1,6 +1,3 @@
-import os
-import sys
-
 c.JupyterHub.services = [
     {
         'name': 'whoami',

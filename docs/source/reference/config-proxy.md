@@ -142,6 +142,20 @@ Now restart `nginx`, restart the JupyterHub, and enjoy accessing
 `https://HUB.DOMAIN.TLD` while serving other content securely on
 `https://NO_HUB.DOMAIN.TLD`.
 
+### SELinux permissions for nginx
+On distributions with SELinux enabled (e.g. Fedora), one may encounter permission errors
+when the nginx service is started.
+
+We need to allow nginx to perform network relay and connect to the jupyterhub port. The
+following commands do that:
+
+```bash
+semanage port -a -t http_port_t -p tcp 8000
+setsebool -P httpd_can_network_relay 1
+setsebool -P httpd_can_network_connect 1
+```
+Replace 8000 with the port the jupyterhub server is running from.
+
 
 ## Apache
 

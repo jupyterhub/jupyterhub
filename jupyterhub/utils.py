@@ -173,7 +173,8 @@ async def exponential_backoff(
         # this prevents overloading any single tornado loop iteration with
         # too many things
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
-        scale *= scale_factor
+        if dt < max_wait:
+            scale *= scale_factor
         await gen.sleep(dt)
     raise TimeoutError(fail_message)
 
@@ -445,7 +446,6 @@ def print_stacks(file=sys.stderr):
     # local imports because these will not be used often,
     # no need to add them to startup
     import asyncio
-    import resource
     import traceback
     from .log import coroutine_frames
 

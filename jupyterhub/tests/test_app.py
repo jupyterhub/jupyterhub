@@ -7,13 +7,11 @@ import time
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
-from subprocess import run
 from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
-from tornado import gen
 from traitlets.config import Config
 
 from .. import orm

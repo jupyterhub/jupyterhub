@@ -3,7 +3,6 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 
-from tornado import gen
 from tornado import web
 
 from .. import orm

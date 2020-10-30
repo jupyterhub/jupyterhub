@@ -9,6 +9,7 @@ from traitlets import List
 from traitlets import TraitError
 from traitlets import TraitType
 from traitlets import Type
+from traitlets import Undefined
 from traitlets import Unicode
 
 
@@ -27,11 +28,15 @@ class Command(List):
     but allows it to be specified as a single string.
     """
 
-    def __init__(self, default_value=None, **kwargs):
+    def __init__(self, default_value=Undefined, **kwargs):
         kwargs.setdefault('minlen', 1)
         if isinstance(default_value, str):
             default_value = [default_value]
-        super().__init__(Unicode(), default_value, **kwargs)
+        if default_value is not Undefined and (
+            not (default_value is None and not kwargs.get("allow_none", False))
+        ):
+            kwargs["default_value"] = default_value
+        super().__init__(Unicode(), **kwargs)
 
     def validate(self, obj, value):
         if isinstance(value, str):

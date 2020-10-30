@@ -1,5 +1,4 @@
 """Tests for the REST API."""
-import asyncio
 import json
 import re
 import sys

@@ -2,12 +2,9 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from urllib.parse import urlparse
 
-from tornado import gen
 from tornado import web
 
-from .. import orm
 from ..utils import admin_only
 from .base import APIHandler
 
