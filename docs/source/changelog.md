@@ -9,6 +9,20 @@ command line for details.
 
 ## 1.2
 
+### [1.2.1] 2020-10-30
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.2.0...1.2.1))
+
+## Bugs fixed
+
+- JupyterHub services' oauth_no_confirm configuration regression in 1.2.0 [#3234](https://github.com/jupyterhub/jupyterhub/pull/3234) ([@bitnik](https://github.com/bitnik))
+
+## Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2020-10-29&to=2020-10-30&type=c))
+
+[@bitnik](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abitnik+updated%3A2020-10-29..2020-10-30&type=Issues)
+
 ### [1.2.0] 2020-10-29
 
 JupyterHub 1.2 is an incremental release with lots of small improvements.
@@ -866,7 +880,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.2.0...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...HEAD
+[1.2.1]: https://github.com/jupyterhub/jupyterhub/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/jupyterhub/jupyterhub/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/jupyterhub/jupyterhub/compare/1.0.0...1.1.0
 [1.0.0]: https://github.com/jupyterhub/jupyterhub/compare/0.9.6...1.0.0
