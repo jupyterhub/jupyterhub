@@ -13,11 +13,11 @@ command line for details.
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.2.0...1.2.1))
 
-## Bugs fixed
+#### Bugs fixed
 
 - JupyterHub services' oauth_no_confirm configuration regression in 1.2.0 [#3234](https://github.com/jupyterhub/jupyterhub/pull/3234) ([@bitnik](https://github.com/bitnik))
 
-## Contributors to this release
+#### Contributors to this release
 
 ([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2020-10-29&to=2020-10-30&type=c))
 
