@@ -500,7 +500,9 @@ class ConfigurableHTTPProxy(Proxy):
         process = psutil.Process(pid)
         if self.command and self.command[0]:
             process_cmd = process.cmdline()
-            if process_cmd and not any(self.command[0] in clause for clause in process_cmd):
+            if process_cmd and not any(
+                self.command[0] in clause for clause in process_cmd
+            ):
                 raise ProcessLookupError
 
         if not os.name == 'nt':
