@@ -81,6 +81,17 @@ class GroupListAPIHandler(_GroupAPIHandler):
                     'group': name,
                 },
             )
+            if users:
+                self.eventlog.record_event(
+                    eventlogging_schema_fqn('group-membership-action'),
+                    1,
+                    {
+                        'action': 'add',
+                        'group': name,
+                        'requester': self.current_user.name,
+                        'usernames': sorted(user.name for user in users),
+                    },
+                )
         self.write(json.dumps([self.group_model(group) for group in created]))
         self.set_status(201)
 
@@ -126,6 +137,17 @@ class GroupAPIHandler(_GroupAPIHandler):
             1,
             {'action': 'create', 'requester': self.current_user.name, 'group': name},
         )
+        if users:
+            self.eventlog.record_event(
+                eventlogging_schema_fqn('group-membership-action'),
+                1,
+                {
+                    'action': 'add',
+                    'group': name,
+                    'requester': self.current_user.name,
+                    'usernames': sorted(user.name for user in users),
+                },
+            )
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
 
@@ -164,17 +186,16 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             else:
                 self.log.warning("User %s already in group %s", user.name, name)
         self.db.commit()
-        for user in users:
-            self.eventlog.record_event(
-                eventlogging_schema_fqn('group-membership-action'),
-                1,
-                {
-                    'action': 'add',
-                    'group': group.name,
-                    'usernames': user.name,
-                    'requester': self.current_user.name,
-                },
-            )
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('group-membership-action'),
+            1,
+            {
+                'action': 'add',
+                'group': group.name,
+                'usernames': sorted(user.name for user in users),
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps(self.group_model(group)))
 
     @admin_only
@@ -194,17 +215,16 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             else:
                 self.log.warning("User %s already not in group %s", user.name, name)
         self.db.commit()
-        for user in users:
-            self.eventlog.record_event(
-                eventlogging_schema_fqn('group-membership-action'),
-                1,
-                {
-                    'action': 'remove',
-                    'group': group.name,
-                    'usernames': user.name,
-                    'requester': self.current_user.name,
-                },
-            )
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('group-membership-action'),
+            1,
+            {
+                'action': 'remove',
+                'group': group.name,
+                'usernames': sorted(user.name for user in users),
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps(self.group_model(group)))
 
 
