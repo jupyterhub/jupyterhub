@@ -19,52 +19,11 @@ jobs:
           name: smoke test jupyterhub
           command: |
             docker run --rm -it jupyterhub/jupyterhub jupyterhub --help
-
-  docs:
-    # This is the base environment that Circle will use
-    docker:
-      - image: circleci/python:3.6-stretch
-    steps:
-      # Get our data and merge with upstream
-      - run: sudo apt-get update
-      - checkout
-      # Update our path
-      - run: echo "export PATH=~/.local/bin:$PATH" >> $BASH_ENV
-      # Restore cached files to speed things up
-      - restore_cache:
-          keys:
-            - cache-pip
-      # Install the packages needed to build our documentation
       - run:
-          name: Install NodeJS
+          name: verify static files
           command: |
-            # From https://github.com/nodesource/distributions/blob/master/README.md#debinstall
-            curl -sL https://deb.nodesource.com/setup_13.x | sudo -E bash -
-            sudo apt-get install -y nodejs
+            docker run --rm -it -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
 
-      - run:
-          name: Install dependencies
-          command: |
-            python3 -m pip install --user -r dev-requirements.txt
-            python3 -m pip install --user -r docs/requirements.txt
-            sudo npm install -g configurable-http-proxy
-            sudo python3 -m pip install --editable .
-
-      # Cache some files for a speedup in subsequent builds
-      - save_cache:
-          key: cache-pip
-          paths:
-            - ~/.cache/pip
-      # Build the docs
-      - run:
-          name: Build docs to store
-          command: |
-            cd docs
-            make html
-      # Tell Circle to store the documentation output in a folder that we can access later
-      - store_artifacts:
-          path: docs/build/html/
-          destination: html
 
 # Tell CircleCI to use this workflow when it builds the site
 workflows:
@@ -72,4 +31,3 @@ workflows:
   default:
     jobs:
       - build
-      - docs

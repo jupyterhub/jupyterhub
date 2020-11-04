@@ -11,7 +11,6 @@ from threading import Thread
 from unittest import mock
 from urllib.parse import urlparse
 
-import pytest
 import requests
 import requests_mock
 from pytest import raises
@@ -185,7 +184,7 @@ def test_hub_authenticated(request):
 
         m.get(good_url, text=json.dumps(mock_model))
 
-        # no whitelist
+        # no specific allowed user
         r = requests.get(
             'http://127.0.0.1:%i' % port,
             cookies={'jubal': 'early'},
@@ -194,7 +193,7 @@ def test_hub_authenticated(request):
         r.raise_for_status()
         assert r.status_code == 200
 
-        # pass whitelist
+        # pass allowed user
         TestHandler.hub_users = {'jubalearly'}
         r = requests.get(
             'http://127.0.0.1:%i' % port,
@@ -204,7 +203,7 @@ def test_hub_authenticated(request):
         r.raise_for_status()
         assert r.status_code == 200
 
-        # no pass whitelist
+        # no pass allowed ser
         TestHandler.hub_users = {'kaylee'}
         r = requests.get(
             'http://127.0.0.1:%i' % port,
@@ -213,7 +212,7 @@ def test_hub_authenticated(request):
         )
         assert r.status_code == 403
 
-        # pass group whitelist
+        # pass allowed group
         TestHandler.hub_groups = {'lions'}
         r = requests.get(
             'http://127.0.0.1:%i' % port,
@@ -223,7 +222,7 @@ def test_hub_authenticated(request):
         r.raise_for_status()
         assert r.status_code == 200
 
-        # no pass group whitelist
+        # no pass allowed group
         TestHandler.hub_groups = {'tigers'}
         r = requests.get(
             'http://127.0.0.1:%i' % port,

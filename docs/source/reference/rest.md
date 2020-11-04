@@ -57,6 +57,9 @@ generating an API token is available from the JupyterHub user interface:
 
 ## Add API tokens to the config file
 
+**This is deprecated. We are in no rush to remove this feature,
+but please consider if service tokens are right for you.**
+
 You may also add a dictionary of API tokens and usernames to the hub's
 configuration file, `jupyterhub_config.py` (note that
 the **key** is the 'secret-token' while the **value** is the 'username'):
@@ -66,6 +69,41 @@ c.JupyterHub.api_tokens = {
     'secret-token': 'username',
 }
 ```
+
+### Updating to admin services
+
+The `api_tokens` configuration has been softly deprecated since the introduction of services.
+We have no plans to remove it,
+but users are encouraged to use service configuration instead.
+
+If you have been using `api_tokens` to create an admin user
+and a token for that user to perform some automations,
+the services mechanism may be a better fit.
+If you have the following configuration:
+
+```python
+c.JupyterHub.admin_users = {"service-admin",}
+c.JupyterHub.api_tokens = {
+    "secret-token": "service-admin",
+}
+```
+
+This can be updated to create an admin service, with the following configuration:
+
+```python
+c.JupyterHub.services = [
+    {
+        "name": "service-token",
+        "admin": True,
+        "api_token": "secret-token",
+    },
+]
+```
+
+The token will have the same admin permissions,
+but there will no longer be a user account created to house it.
+The main noticeable difference is that there will be no notebook server associated with the account
+and the service will not show up in the various user list pages and APIs.
 
 ## Make an API request
 

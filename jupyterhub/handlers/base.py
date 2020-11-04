@@ -2,7 +2,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import copy
 import json
 import math
 import random
@@ -27,14 +26,12 @@ from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
 from tornado.web import addslash
-from tornado.web import MissingArgumentError
 from tornado.web import RequestHandler
 
 from .. import __version__
 from .. import orm
 from ..metrics import PROXY_ADD_DURATION_SECONDS
 from ..metrics import PROXY_DELETE_DURATION_SECONDS
-from ..metrics import ProxyAddStatus
 from ..metrics import ProxyDeleteStatus
 from ..metrics import RUNNING_SERVERS
 from ..metrics import SERVER_POLL_DURATION_SECONDS
@@ -638,8 +635,15 @@ class BaseHandler(RequestHandler):
             )
 
         if not next_url:
-            # custom default URL
-            next_url = default or self.default_url
+            # custom default URL, usually passed because user landed on that page but was not logged in
+            if default:
+                next_url = default
+            else:
+                # As set in jupyterhub_config.py
+                if callable(self.default_url):
+                    next_url = self.default_url(self)
+                else:
+                    next_url = self.default_url
 
         if not next_url:
             # default URL after login
@@ -654,7 +658,41 @@ class BaseHandler(RequestHandler):
                     next_url = url_path_join(self.hub.base_url, 'spawn')
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
+
+        next_url = self.append_query_parameters(next_url, exclude=['next'])
         return next_url
+
+    def append_query_parameters(self, url, exclude=None):
+        """Append the current request's query parameters to the given URL.
+
+        Supports an extra optional parameter ``exclude`` that when provided must
+        contain a list of parameters to be ignored, i.e. these parameters will
+        not be added to the URL.
+
+        This is important to avoid infinite loops with the next parameter being
+        added over and over, for instance.
+
+        The default value for ``exclude`` is an array with "next". This is useful
+        as most use cases in JupyterHub (all?) won't want to include the next
+        parameter twice (the next parameter is added elsewhere to the query
+        parameters).
+
+        :param str url: a URL
+        :param list exclude: optional list of parameters to be ignored, defaults to
+        a list with "next" (to avoid redirect-loops)
+        :rtype (str)
+        """
+        if exclude is None:
+            exclude = ['next']
+        if self.request.query:
+            query_string = [
+                param
+                for param in parse_qsl(self.request.query)
+                if param[0] not in exclude
+            ]
+            if query_string:
+                url = url_concat(url, query_string)
+        return url
 
     async def auth_to_user(self, authenticated, user=None):
         """Persist data from .authenticate() or .refresh_user() to the User database
@@ -676,9 +714,10 @@ class BaseHandler(RequestHandler):
             raise ValueError("Username doesn't match! %s != %s" % (username, user.name))
 
         if user is None:
-            new_user = username not in self.users
-            user = self.user_from_username(username)
+            user = self.find_user(username)
+            new_user = user is None
             if new_user:
+                user = self.user_from_username(username)
                 await maybe_future(self.authenticator.add_user(user))
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
@@ -877,7 +916,7 @@ class BaseHandler(RequestHandler):
                 self.log.error(
                     "Stopping %s to avoid inconsistent state", user_server_name
                 )
-                await user.stop()
+                await user.stop(server_name)
                 PROXY_ADD_DURATION_SECONDS.labels(status='failure').observe(
                     time.perf_counter() - proxy_add_start_time
                 )
@@ -910,6 +949,9 @@ class BaseHandler(RequestHandler):
                 self.settings['failure_count'] = 0
                 return
             # spawn failed, increment count and abort if limit reached
+            SERVER_SPAWN_DURATION_SECONDS.labels(
+                status=ServerSpawnStatus.failure
+            ).observe(time.perf_counter() - spawn_start_time)
             self.settings.setdefault('failure_count', 0)
             self.settings['failure_count'] += 1
             failure_count = self.settings['failure_count']
@@ -942,13 +984,16 @@ class BaseHandler(RequestHandler):
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
             if spawner._spawn_pending and not spawner._waiting_for_response:
-                # still in Spawner.start, which is taking a long time
-                # we shouldn't poll while spawn is incomplete.
-                self.log.warning(
-                    "User %s is slow to start (timeout=%s)",
-                    user_server_name,
-                    self.slow_spawn_timeout,
-                )
+                # If slow_spawn_timeout is intentionally disabled then we
+                # don't need to log a warning, just return.
+                if self.slow_spawn_timeout > 0:
+                    # still in Spawner.start, which is taking a long time
+                    # we shouldn't poll while spawn is incomplete.
+                    self.log.warning(
+                        "User %s is slow to start (timeout=%s)",
+                        user_server_name,
+                        self.slow_spawn_timeout,
+                    )
                 return
 
             # start has finished, but the server hasn't come up
@@ -1085,7 +1130,10 @@ class BaseHandler(RequestHandler):
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
             self.log.warning(
-                "User %s:%s server is slow to stop", user.name, server_name
+                "User %s:%s server is slow to stop (timeout=%s)",
+                user.name,
+                server_name,
+                self.slow_stop_timeout,
             )
 
         # return handle on the future for hooking up callbacks
@@ -1143,6 +1191,8 @@ class BaseHandler(RequestHandler):
             return accessible_services
         for service in self.services.values():
             if not service.url:
+                continue
+            if not service.display:
                 continue
             accessible_services.append(service)
         return accessible_services

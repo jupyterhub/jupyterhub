@@ -24,7 +24,6 @@ import time
 from functools import wraps
 from subprocess import Popen
 from urllib.parse import quote
-from urllib.parse import urlparse
 
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient
@@ -44,6 +43,7 @@ from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
+from .utils import exponential_backoff
 from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
@@ -769,10 +769,36 @@ class ConfigurableHTTPProxy(Proxy):
             method=method,
             headers={'Authorization': 'token {}'.format(self.auth_token)},
             body=body,
+            connect_timeout=3,  # default: 20s
+            request_timeout=10,  # default: 20s
         )
-        async with self.semaphore:
-            result = await client.fetch(req)
-            return result
+
+        async def _wait_for_api_request():
+            try:
+                async with self.semaphore:
+                    return await client.fetch(req)
+            except HTTPError as e:
+                # Retry on potentially transient errors in CHP, typically
+                # numbered 500 and up. Note that CHP isn't able to emit 429
+                # errors.
+                if e.code >= 500:
+                    self.log.warning(
+                        "api_request to the proxy failed with status code {}, retrying...".format(
+                            e.code
+                        )
+                    )
+                    return False  # a falsy return value make exponential_backoff retry
+                else:
+                    self.log.error("api_request to proxy failed: {0}".format(e))
+                    # An unhandled error here will help the hub invoke cleanup logic
+                    raise
+
+        result = await exponential_backoff(
+            _wait_for_api_request,
+            'Repeated api_request to proxy path "{}" failed.'.format(path),
+            timeout=30,
+        )
+        return result
 
     async def add_route(self, routespec, target, data):
         body = data or {}

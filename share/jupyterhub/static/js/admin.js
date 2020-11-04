@@ -1,9 +1,8 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "bootstrap", "moment", "jhapi", "utils"], function(
+require(["jquery", "moment", "jhapi", "utils"], function(
   $,
-  bs,
   moment,
   JHAPI,
   utils

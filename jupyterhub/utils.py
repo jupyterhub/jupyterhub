@@ -85,6 +85,7 @@ def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname
         return None
     purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
     ssl_context = ssl.create_default_context(purpose, cafile=cafile)
+    ssl_context.load_default_certs()
     ssl_context.load_cert_chain(certfile, keyfile)
     ssl_context.check_hostname = check_hostname
     return ssl_context
@@ -172,7 +173,8 @@ async def exponential_backoff(
         # this prevents overloading any single tornado loop iteration with
         # too many things
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
-        scale *= scale_factor
+        if dt < max_wait:
+            scale *= scale_factor
         await gen.sleep(dt)
     raise TimeoutError(fail_message)
 
@@ -444,7 +446,6 @@ def print_stacks(file=sys.stderr):
     # local imports because these will not be used often,
     # no need to add them to startup
     import asyncio
-    import resource
     import traceback
     from .log import coroutine_frames
 
@@ -580,7 +581,7 @@ def utcnow():
 def _parse_accept_header(accept):
     """
     Parse the Accept header *accept*
-    
+
     Return a list with 3-tuples of
     [(str(media_type), dict(params), float(q_value)),] ordered by q values.
     If the accept header includes vendor-specific types like::

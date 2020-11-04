@@ -151,6 +151,8 @@ c.JupyterHub.services = [
     {
         'name': 'my-web-service',
         'url': 'https://10.0.1.1:1984',
+        # any secret >8 characters, you'll use api_token to
+        # authenticate api requests to the hub from your service
         'api_token': 'super-secret',
     }
 ]
@@ -313,7 +315,7 @@ class MyHandler(HubAuthenticated, web.RequestHandler):
 The HubAuth will automatically load the desired configuration from the Service
 environment variables.
 
-If you want to limit user access, you can whitelist users through either the
+If you want to limit user access, you can specify allowed users through either the
 `.hub_users` attribute or `.hub_groups`. These are sets that check against the
 username and user group list, respectively. If a user matches neither the user
 list nor the group list, they will not be allowed access. If both are left
@@ -331,7 +333,9 @@ and taking note of the following process:
 1. retrieve the cookie `jupyterhub-services` from the request.
 2. Make an API request `GET /hub/api/authorizations/cookie/jupyterhub-services/cookie-value`,
     where cookie-value is the url-encoded value of the `jupyterhub-services` cookie.
-    This request must be authenticated with a Hub API token in the `Authorization` header.
+    This request must be authenticated with a Hub API token in the `Authorization` header,
+    for example using the `api_token` from your [external service's configuration](#externally-managed-services).
+
     For example, with [requests][]:
 
     ```python
