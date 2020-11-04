@@ -21,7 +21,7 @@ from .utils import api_request
 from jupyterhub.utils import eventlogging_schema_fqn
 
 
-def remove_event_capsule(data):
+def remove_event_metadata(data):
     return {
         k: v for k, v in data.items() if not (k.startswith('__') and k.endswith('__'))
     }
@@ -108,7 +108,7 @@ async def test_server_event(eventlog_sink):
     assert r.status_code == 201
     output = sink.getvalue()
     assert output
-    data = remove_event_capsule(json.loads(output))
+    data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {'action': 'start', 'username': name, 'servername': ''}
     assert expected.items() <= data.items()
@@ -119,7 +119,7 @@ async def test_server_event(eventlog_sink):
     offset = len(output)
     output = sink.getvalue()[offset:]
     assert output
-    data = remove_event_capsule(json.loads(output))
+    data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {'action': 'stop', 'username': name, 'servername': ''}
     assert expected.items() <= data.items()
@@ -128,6 +128,7 @@ async def test_server_event(eventlog_sink):
 # users to test
 # (<username>, <admin>)
 users = [('a', True), ('b', False)]
+usernames = [username for username, _ in users]
 
 
 @pytest.mark.parametrize('username, admin', users)
@@ -143,7 +144,7 @@ async def test_add_remove_user_event(eventlog_sink, username, admin):
     assert r.status_code == 201
     output = sink.getvalue()
     assert output
-    data = remove_event_capsule(json.loads(output))
+    data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'create',
@@ -157,7 +158,7 @@ async def test_add_remove_user_event(eventlog_sink, username, admin):
     offset = len(output)
     output = sink.getvalue()[offset:]
     assert output
-    data = remove_event_capsule(json.loads(output))
+    data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'delete',
@@ -173,14 +174,15 @@ async def test_add_multi_user_event(eventlog_sink):
     app, sink = eventlog_sink
     app.eventlog.allowed_schemas = [schema]
 
-    usernames = [u for u, _ in users]
-
     r = await api_request(
         app, 'users', method='post', data=json.dumps({'usernames': usernames})
     )
     assert r.status_code == 201
 
-    events = [remove_event_capsule(json.loads(line)) for line in sink.readlines()]
+    sink.seek(0)
+    events = [
+        remove_event_metadata(json.loads(line)) for line in sink.readlines() if line
+    ]
 
     for event in events:
         jsonschema.validate(event, app.eventlog.schemas[(schema, version)])
@@ -189,7 +191,7 @@ async def test_add_multi_user_event(eventlog_sink):
 
     for username, data in zip(sorted(usernames), sorted_data):
         expected = {
-            'action': 'delete',
+            'action': 'create',
             'target_user': {'username': username, 'admin': False},
             'requester': 'admin',
         }
@@ -214,7 +216,7 @@ async def test_make_admin_event(eventlog_sink):
 
     output = sink.getvalue()[offset:]
     assert output
-    data = remove_event_capsule(json.loads(output))
+    data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'modify',
@@ -223,3 +225,152 @@ async def test_make_admin_event(eventlog_sink):
         'prior_state': {'username': username, 'admin': False},
     }
     assert expected.items() <= data.items()
+
+
+async def test_group_create_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('group-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    group_name = 'group1'
+
+    r = await api_request(app, 'groups', group_name, method='post')
+    assert r.status_code == 201
+
+    output = sink.getvalue()
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'create', 'requester': 'admin', 'group': group_name}
+    assert expected.items() <= data.items()
+
+
+async def test_group_add_delete_users_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('group-membership-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    group_name = 'group1'
+
+    r = await api_request(
+        app,
+        'groups',
+        group_name,
+        'users',
+        method='post',
+        data=json.dumps({'users': usernames}),
+    )
+    r.raise_for_status()
+
+    output = sink.getvalue()
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'add',
+        'group': group_name,
+        'usernames': sorted(usernames),
+        'requester': 'admin',
+    }
+    assert expected.items() <= data.items()
+
+    r = await api_request(
+        app,
+        'groups',
+        group_name,
+        'users',
+        method='delete',
+        data=json.dumps({'users': usernames}),
+    )
+    r.status_code == 204
+
+    offset = len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'remove',
+        'group': group_name,
+        'usernames': sorted(usernames),
+        'requester': 'admin',
+    }
+    assert expected.items() <= data.items()
+
+
+async def test_group_create_with_users_event(eventlog_sink):
+    group_schema, group_version = (eventlogging_schema_fqn('group-action'), 1)
+    group_member_schema, group_member_version = (
+        eventlogging_schema_fqn('group-membership-action'),
+        1,
+    )
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [group_schema, group_member_schema]
+
+    group_name = 'group2'
+
+    r = await api_request(
+        app, 'groups', group_name, method='post', data=json.dumps({'users': usernames})
+    )
+    assert r.status_code == 201
+
+    sink.seek(0)
+    events = [json.loads(line) for line in sink.readlines() if line]
+    create_group_event = [
+        remove_event_metadata(e) for e in events if e['__schema__'] == group_schema
+    ][0]
+    jsonschema.validate(
+        create_group_event, app.eventlog.schemas[(group_schema, group_version)],
+    )
+    expected = {
+        'action': 'create',
+        'group': group_name,
+        'requester': 'admin',
+    }
+    assert expected.items() <= create_group_event.items()
+
+    add_user_event = [
+        remove_event_metadata(e)
+        for e in events
+        if e['__schema__'] == group_member_schema
+    ][0]
+    jsonschema.validate(
+        add_user_event,
+        app.eventlog.schemas[(group_member_schema, group_member_version)],
+    )
+    expected = {
+        'action': 'add',
+        'group': group_name,
+        'usernames': sorted(usernames),
+        'requester': 'admin',
+    }
+    assert expected.items() <= add_user_event.items()
+
+
+async def test_group_delete_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('group-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    group_names = ['group1', 'group2']
+
+    offset = 0
+    for group_name in group_names:
+        r = await api_request(app, 'groups', group_name, method='delete',)
+        assert r.status_code == 204
+
+        output = sink.getvalue()[offset:]
+        offset += len(output)
+        assert output
+        data = remove_event_metadata(json.loads(output))
+        jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+        expected = {
+            'action': 'delete',
+            'group': group_name,
+            'requester': 'admin',
+        }
+        assert expected.items() <= data.items()
