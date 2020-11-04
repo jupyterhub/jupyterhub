@@ -1,9 +1,9 @@
 """Tests for the REST API."""
+import asyncio
 import json
 import re
 import sys
 import uuid
-from concurrent.futures import Future
 from datetime import datetime
 from datetime import timedelta
 from unittest import mock
@@ -885,8 +885,8 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     # start two pending spawns
     names = ['ykka', 'hjarka']
     users = [add_user(db, app=app, name=name) for name in names]
-    users[0].spawner._start_future = Future()
-    users[1].spawner._start_future = Future()
+    users[0].spawner._start_future = asyncio.Future()
+    users[1].spawner._start_future = asyncio.Future()
     for name in names:
         await api_request(app, 'users', name, 'server', method='post')
     assert app.users.count_active_users()['pending'] == 2
@@ -894,7 +894,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     # ykka and hjarka's spawns are both pending. Essun should fail with 429
     name = 'essun'
     user = add_user(db, app=app, name=name)
-    user.spawner._start_future = Future()
+    user.spawner._start_future = asyncio.Future()
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 429
 

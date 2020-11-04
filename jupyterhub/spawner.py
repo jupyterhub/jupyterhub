@@ -1079,7 +1079,7 @@ class Spawner(LoggingConfigurable):
             Return ip, port instead of setting on self.user.server directly.
         """
         raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
+            "Override in subclass. Must be a coroutine."
         )
 
     async def stop(self, now=False):
@@ -1094,7 +1094,7 @@ class Spawner(LoggingConfigurable):
         Must be a coroutine.
         """
         raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
+            "Override in subclass. Must be a coroutine."
         )
 
     async def poll(self):
@@ -1122,7 +1122,7 @@ class Spawner(LoggingConfigurable):
 
         """
         raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
+            "Override in subclass. Must be a coroutine."
         )
 
     def add_poll_callback(self, callback, *args, **kwargs):
