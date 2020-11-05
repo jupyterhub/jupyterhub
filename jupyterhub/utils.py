@@ -299,13 +299,48 @@ def metrics_authentication(self):
         raise web.HTTPError(403)
 
 
+def check_scope(req_scope, scopes, **kwargs):
+    if len(kwargs) > 1:
+        raise AttributeError("Please specify exactly one filter")
+    base_scope = req_scope.split('!')[0]
+    if base_scope not in scopes:
+        return False
+    if scopes[base_scope] == True:  # is this pretty?
+        return True
+    # Apply filters
+    if not kwargs:
+        return False
+    filter_ = list(kwargs)[0]
+    if filter_ not in scopes[base_scope]:
+        return False
+    return kwargs[filter_] in scopes[req_scope][filter_]
+
+
+def parse_scopes(scope_list):
+    parsed_scopes = {}
+    for scope in scope_list:
+        scope_ = scope.split('!')
+        base_scope = scope_[0]
+        if len(scope_) > 1:
+            filter_ = scope_[1]
+            if base_scope not in parsed_scopes:
+                parsed_scopes[base_scope] = {}
+            key, val = filter_.split('=')
+            if key not in parsed_scopes[base_scope]:
+                parsed_scopes[base_scope][key] = []
+            parsed_scopes[base_scope][key].append(val)
+        else:
+            parsed_scopes[base_scope] = True
+    return parsed_scopes
+
+
 def needs_scope(scope):
     """Decorator to restrict access to users or services with the required scope"""
 
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):
-            allows_subset = 'subset' in func.__code__.co_varnames
+            allows_subset = 'subset' in inspect.signature(func).parameters
             if scope in self.scopes:
                 return func(self, *args, **kwargs)
             elif allows_subset:
