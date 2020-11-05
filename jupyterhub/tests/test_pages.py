@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 import pytest
 from bs4 import BeautifulSoup
-from tornado import gen
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 

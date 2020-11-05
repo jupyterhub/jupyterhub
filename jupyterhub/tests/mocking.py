@@ -36,7 +36,6 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from pamela import PAMError
-from tornado import gen
 from tornado.ioloop import IOLoop
 from traitlets import Bool
 from traitlets import default
@@ -114,11 +113,11 @@ class SlowSpawner(MockSpawner):
         if self._start_future is not None:
             await self._start_future
         else:
-            await gen.sleep(self.delay)
+            await asyncio.sleep(self.delay)
         return ip, port
 
     async def stop(self):
-        await gen.sleep(self.delay)
+        await asyncio.sleep(self.delay)
         await super().stop()
 
 

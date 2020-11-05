@@ -613,7 +613,7 @@ async def test_slow_spawn(app, no_patience, slow_spawn):
 
     async def wait_spawn():
         while not app_user.running:
-            await gen.sleep(0.1)
+            await asyncio.sleep(0.1)
 
     await wait_spawn()
     assert not app_user.spawner._spawn_pending
@@ -622,7 +622,7 @@ async def test_slow_spawn(app, no_patience, slow_spawn):
 
     async def wait_stop():
         while app_user.spawner._stop_pending:
-            await gen.sleep(0.1)
+            await asyncio.sleep(0.1)
 
     r = await api_request(app, 'users', name, 'server', method='delete')
     r.raise_for_status()
@@ -656,7 +656,7 @@ async def test_never_spawn(app, no_patience, never_spawn):
     assert app.users.count_active_users()['pending'] == 1
 
     while app_user.spawner.pending:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
         print(app_user.spawner.pending)
 
     assert not app_user.spawner._spawn_pending
@@ -682,7 +682,7 @@ async def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     while user.spawner.pending:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
     # spawn failed
     assert not user.running
     assert app.users.count_active_users()['pending'] == 0
@@ -824,7 +824,7 @@ async def progress_forever():
     for i in range(1, 10):
         await yield_({'progress': i, 'message': 'Stage %s' % i})
         # wait a long time before the next event
-        await gen.sleep(10)
+        await asyncio.sleep(10)
 
 
 if sys.version_info >= (3, 6):
@@ -840,7 +840,7 @@ async def progress_forever_native():
             'message': 'Stage %s' % i,
         }
         # wait a long time before the next event
-        await gen.sleep(10)
+        await asyncio.sleep(10)
 """,
         globals(),
     )
@@ -902,7 +902,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     users[0].spawner._start_future.set_result(None)
     # wait for ykka to finish
     while not users[0].running:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     assert app.users.count_active_users()['pending'] == 1
     r = await api_request(app, 'users', name, 'server', method='post')
@@ -913,7 +913,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     for user in users[1:]:
         user.spawner._start_future.set_result(None)
     while not all(u.running for u in users):
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     # everybody's running, pending count should be back to 0
     assert app.users.count_active_users()['pending'] == 0
@@ -922,7 +922,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
         r = await api_request(app, 'users', u.name, 'server', method='delete')
         r.raise_for_status()
     while any(u.spawner.active for u in users):
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
 
 @mark.slow
@@ -1000,7 +1000,7 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     r = await api_request(app, 'users', user.name, 'server', method='delete')
     assert r.status_code == 400
     while not spawner.ready:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     spawner.delay = 3
     # stop the spawner
@@ -1008,7 +1008,7 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     assert r.status_code == 202
     assert spawner.pending == 'stop'
     # make sure we get past deleting from the proxy
-    await gen.sleep(1)
+    await asyncio.sleep(1)
     # additional stops while stopping shouldn't trigger a new stop
     with mock.patch.object(spawner, 'stop') as m:
         r = await api_request(app, 'users', user.name, 'server', method='delete')
@@ -1020,7 +1020,7 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     assert r.status_code == 400
 
     while spawner.active:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
     # start after stop is okay
     r = await api_request(app, 'users', user.name, 'server', method='post')
     assert r.status_code == 202

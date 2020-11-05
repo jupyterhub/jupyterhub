@@ -24,7 +24,6 @@ from async_generator import aclosing
 from async_generator import async_generator
 from async_generator import asynccontextmanager
 from async_generator import yield_
-from tornado import gen
 from tornado import ioloop
 from tornado import web
 from tornado.httpclient import AsyncHTTPClient
@@ -175,7 +174,7 @@ async def exponential_backoff(
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
         if dt < max_wait:
             scale *= scale_factor
-        await gen.sleep(dt)
+        await asyncio.sleep(dt)
     raise TimeoutError(fail_message)
 
 
