@@ -23,14 +23,14 @@ class _GroupAPIHandler(APIHandler):
             users.append(user.orm_user)
         return users
 
-    def find_group(self, name):
+    def find_group(self, group_name):
         """Find and return a group by name.
 
         Raise 404 if not found.
         """
-        group = orm.Group.find(self.db, name=name)
+        group = orm.Group.find(self.db, name=group_name)
         if group is None:
-            raise web.HTTPError(404, "No such group: %s", name)
+            raise web.HTTPError(404, "No such group: %s", group_name)
         return group
 
 
@@ -78,14 +78,14 @@ class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
 
     @needs_scope('read:groups')
-    def get(self, name, subset=None):
-        if subset is not None and name not in subset:
-            raise web.HTTPError(403, "No read access to group {}".format(name))
-        group = self.find_group(name)
+    def get(self, group_name, subset=None):
+        if subset is not None and group_name not in subset:
+            raise web.HTTPError(403, "No read access to group {}".format(group_name))
+        group = self.find_group(group_name)
         self.write(json.dumps(self.group_model(group)))
 
     @needs_scope('admin:groups')
-    async def post(self, name):
+    async def post(self, group_name):
         """POST creates a group by name"""
         model = self.get_json_body()
         if model is None:
@@ -93,30 +93,30 @@ class GroupAPIHandler(_GroupAPIHandler):
         else:
             self._check_group_model(model)
 
-        existing = orm.Group.find(self.db, name=name)
+        existing = orm.Group.find(self.db, name=group_name)
         if existing is not None:
-            raise web.HTTPError(409, "Group %s already exists" % name)
+            raise web.HTTPError(409, "Group %s already exists" % group_name)
 
         usernames = model.get('users', [])
         # check that users exist
         users = self._usernames_to_users(usernames)
 
         # create the group
-        self.log.info("Creating new group %s with %i users", name, len(users))
+        self.log.info("Creating new group %s with %i users", group_name, len(users))
         self.log.debug("Users: %s", usernames)
-        group = orm.Group(name=name, users=users)
+        group = orm.Group(name=group_name, users=users)
         self.db.add(group)
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
 
     @needs_scope('admin:groups')
-    def delete(self, name, subset=None):
+    def delete(self, group_name, subset=None):
         """Delete a group by name"""
-        if subset is not None and name not in subset:
-            raise web.HTTPError(403, "No write access to group {}".format(name))
-        group = self.find_group(name)
-        self.log.info("Deleting group %s", name)
+        if subset is not None and group_name not in subset:
+            raise web.HTTPError(403, "No write access to group {}".format(group_name))
+        group = self.find_group(group_name)
+        self.log.info("Deleting group %s", group_name)
         self.db.delete(group)
         self.db.commit()
         self.set_status(204)
@@ -126,42 +126,48 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
     """Modify a group's user list"""
 
     @needs_scope('groups')
-    def post(self, name, subset=None):
+    def post(self, group_name, subset=None):
         """POST adds users to a group"""
-        if subset is not None and name not in subset:
-            raise web.HTTPError(403, "No access to add users to group {}".format(name))
-        group = self.find_group(name)
+        if subset is not None and group_name not in subset:
+            raise web.HTTPError(
+                403, "No access to add users to group {}".format(group_name)
+            )
+        group = self.find_group(group_name)
         data = self.get_json_body()
         self._check_group_model(data)
         if 'users' not in data:
             raise web.HTTPError(400, "Must specify users to add")
-        self.log.info("Adding %i users to group %s", len(data['users']), name)
+        self.log.info("Adding %i users to group %s", len(data['users']), group_name)
         self.log.debug("Adding: %s", data['users'])
         for user in self._usernames_to_users(data['users']):
             if user not in group.users:
                 group.users.append(user)
             else:
-                self.log.warning("User %s already in group %s", user.name, name)
+                self.log.warning("User %s already in group %s", user.name, group_name)
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
 
     @needs_scope('groups')
-    async def delete(self, name, subset=None):
+    async def delete(self, group_name, subset=None):
         """DELETE removes users from a group"""
-        if subset is not None and name not in subset:
-            raise web.HTTPError(403, "No access to add users to group {}".format(name))
-        group = self.find_group(name)
+        if subset is not None and group_name not in subset:
+            raise web.HTTPError(
+                403, "No access to add users to group {}".format(group_name)
+            )
+        group = self.find_group(group_name)
         data = self.get_json_body()
         self._check_group_model(data)
         if 'users' not in data:
             raise web.HTTPError(400, "Must specify users to delete")
-        self.log.info("Removing %i users from group %s", len(data['users']), name)
+        self.log.info("Removing %i users from group %s", len(data['users']), group_name)
         self.log.debug("Removing: %s", data['users'])
         for user in self._usernames_to_users(data['users']):
             if user in group.users:
                 group.users.remove(user)
             else:
-                self.log.warning("User %s already not in group %s", user.name, name)
+                self.log.warning(
+                    "User %s already not in group %s", user.name, group_name
+                )
         self.db.commit()
         self.write(json.dumps(self.group_model(group)))
 

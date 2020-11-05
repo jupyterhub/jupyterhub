@@ -58,8 +58,8 @@ def admin_or_self(method):
 
 class ServiceAPIHandler(APIHandler):
     @needs_scope('read:services')
-    def get(self, name):
-        service = self.services[name]
+    def get(self, service_name):
+        service = self.services[service_name]
         self.write(json.dumps(service_model(service)))
 
 
