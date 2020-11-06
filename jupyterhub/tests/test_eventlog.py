@@ -268,6 +268,7 @@ async def test_group_add_delete_users_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    data['usernames'].sort()
     expected = {
         'action': 'add',
         'group': group_name,
@@ -291,6 +292,7 @@ async def test_group_add_delete_users_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    data['usernames'].sort()
     expected = {
         'action': 'remove',
         'group': group_name,
@@ -341,6 +343,7 @@ async def test_group_create_with_users_event(eventlog_sink):
         add_user_event,
         app.eventlog.schemas[(group_member_schema, group_member_version)],
     )
+    add_user_event['usernames'].sort()
     expected = {
         'action': 'add',
         'group': group_name,

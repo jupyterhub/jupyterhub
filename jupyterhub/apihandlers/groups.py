@@ -89,7 +89,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
                         'action': 'add',
                         'group': name,
                         'requester': self.current_user.name,
-                        'usernames': sorted(user.name for user in users),
+                        'usernames': [user.name for user in users],
                     },
                 )
         self.write(json.dumps([self.group_model(group) for group in created]))
@@ -145,7 +145,7 @@ class GroupAPIHandler(_GroupAPIHandler):
                     'action': 'add',
                     'group': name,
                     'requester': self.current_user.name,
-                    'usernames': sorted(user.name for user in users),
+                    'usernames': [user.name for user in users],
                 },
             )
         self.write(json.dumps(self.group_model(group)))
@@ -192,7 +192,7 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             {
                 'action': 'add',
                 'group': group.name,
-                'usernames': sorted(user.name for user in users),
+                'usernames': [user.name for user in users],
                 'requester': self.current_user.name,
             },
         )
@@ -221,7 +221,7 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
             {
                 'action': 'remove',
                 'group': group.name,
-                'usernames': sorted(user.name for user in users),
+                'usernames': [user.name for user in users],
                 'requester': self.current_user.name,
             },
         )
