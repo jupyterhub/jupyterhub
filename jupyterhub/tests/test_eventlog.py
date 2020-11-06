@@ -93,6 +93,11 @@ def test_invalid_events(eventlog_sink, schema, version, event):
         recorded_event = eventlog.record_event(schema, version, event)
 
 
+# ----------------------
+# Server API event tests
+# ----------------------
+
+
 async def test_server_event(eventlog_sink):
     schema, version = (eventlogging_schema_fqn('server-action'), 1)
 
@@ -123,6 +128,11 @@ async def test_server_event(eventlog_sink):
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {'action': 'stop', 'username': name, 'servername': ''}
     assert expected.items() <= data.items()
+
+
+# --------------------
+# User API event tests
+# --------------------
 
 
 # users to test
@@ -225,6 +235,11 @@ async def test_make_admin_event(eventlog_sink):
         'prior_state': {'username': username, 'admin': False},
     }
     assert expected.items() <= data.items()
+
+
+# ---------------------
+# Group API event tests
+# ---------------------
 
 
 async def test_group_create_event(eventlog_sink):
