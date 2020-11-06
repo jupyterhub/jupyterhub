@@ -2120,7 +2120,7 @@ class JupyterHub(Application):
             self.log.debug(
                 "Awaiting checks for %i possibly-running spawners", len(check_futures)
             )
-            await gen.multi(check_futures)
+            await asyncio.gather(*check_futures)
         db.commit()
 
         # only perform this query if we are going to log it

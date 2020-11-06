@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 from async_generator import async_generator
 from async_generator import yield_
 from pytest import mark
-from tornado import gen
 
 import jupyterhub
 from .. import orm
