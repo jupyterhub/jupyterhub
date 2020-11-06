@@ -419,7 +419,7 @@ class UserTokenAPIHandler(APIHandler):
                 'action': 'get',
                 'target_user': user.name,
                 'requester': self.current_user.name,
-                'token_id': token.id,
+                'token_id': token_id,
             },
         )
         self.write(json.dumps(self.token_model(token)))
@@ -450,7 +450,7 @@ class UserTokenAPIHandler(APIHandler):
                     'action': 'delete',
                     'target_user': user.name,
                     'requester': self.current_user.name,
-                    'token_id': token.id,
+                    'token_id': token_id,
                 },
             )
         self.set_header('Content-Type', 'text/plain')

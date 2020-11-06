@@ -392,3 +392,71 @@ async def test_group_delete_event(eventlog_sink):
             'requester': 'admin',
         }
         assert expected.items() <= data.items()
+
+
+# ---------------------
+# Token API event tests
+# ---------------------
+
+
+async def test_token_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('token-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    username = 'admin'
+
+    r = await api_request(app, 'users', username, 'tokens', method='post')
+    assert r.status_code == 200
+
+    reply = r.json()
+    token_id = reply['id']
+
+    offset = 0
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'create', 'target_user': username, 'requester': username}
+    assert expected.items() <= data.items()
+
+    r = await api_request(app, 'users', username, 'tokens', method='get')
+    assert r.status_code == 200
+    offset += len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'list', 'target_user': username, 'requester': username}
+    assert expected.items() <= data.items()
+
+    r = await api_request(app, 'users', username, 'tokens', token_id, method='get')
+    assert r.status_code == 200
+    offset += len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'get',
+        'target_user': username,
+        'requester': username,
+        'token_id': token_id,
+    }
+    assert expected.items() <= data.items()
+
+    r = await api_request(app, 'users', username, 'tokens', token_id, method='delete')
+    assert r.status_code == 204
+    offset += len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {
+        'action': 'delete',
+        'target_user': username,
+        'requester': username,
+        'token_id': token_id,
+    }
+    assert expected.items() <= data.items()
