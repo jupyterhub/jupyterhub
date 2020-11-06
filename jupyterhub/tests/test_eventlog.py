@@ -18,6 +18,7 @@ from .. import orm
 from .mocking import MockHub
 from .utils import add_user
 from .utils import api_request
+from .utils import find_user
 from jupyterhub.utils import eventlogging_schema_fqn
 
 
@@ -178,6 +179,23 @@ async def test_add_remove_user_event(eventlog_sink, username, admin):
     assert expected.items() <= data.items()
 
 
+async def test_list_users_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('user-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    r = await api_request(app, 'users', method='get')
+    assert r.status_code == 200
+
+    output = sink.getvalue()
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'list', 'requester': 'admin'}
+    assert expected.items() <= data.items()
+
+
 async def test_add_multi_user_event(eventlog_sink):
     schema, version = (eventlogging_schema_fqn('user-action'), 1)
 
@@ -215,16 +233,14 @@ async def test_make_admin_event(eventlog_sink):
     app.eventlog.allowed_schemas = [schema]
 
     username = 'admin2'
-    r = await api_request(app, 'users', username, method='post')
-    assert r.status_code == 201
-    offset = len(sink.getvalue())
+    add_user(app.db, name=username)
 
     r = await api_request(
         app, 'users', username, method='patch', data=json.dumps({'admin': True})
     )
     assert r.status_code == 200
 
-    output = sink.getvalue()[offset:]
+    output = sink.getvalue()
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
@@ -258,6 +274,42 @@ async def test_group_create_event(eventlog_sink):
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {'action': 'create', 'requester': 'admin', 'group': group_name}
+    assert expected.items() <= data.items()
+
+
+async def test_group_list_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('group-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    r = await api_request(app, 'groups', method='get')
+    assert r.status_code == 200
+
+    output = sink.getvalue()
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'list', 'requester': 'admin'}
+    assert expected.items() <= data.items()
+
+
+async def test_group_get_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('group-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    group_name = 'group1'
+
+    r = await api_request(app, 'groups', group_name, method='get')
+    assert r.status_code == 200
+
+    output = sink.getvalue()
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'get', 'requester': 'admin', 'group': group_name}
     assert expected.items() <= data.items()
 
 
