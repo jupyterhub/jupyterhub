@@ -3,19 +3,16 @@ import asyncio
 
 import pytest
 from async_generator import aclosing
-from async_generator import async_generator
-from async_generator import yield_
 
 from ..utils import iterate_until
 
 
-@async_generator
 async def yield_n(n, delay=0.01):
     """Yield n items with a delay between each"""
     for i in range(n):
         if delay:
             await asyncio.sleep(delay)
-        await yield_(i)
+        yield i
 
 
 def schedule_future(io_loop, *, delay, result=None):
@@ -50,10 +47,9 @@ async def test_iterate_until(io_loop, deadline, n, delay, expected):
 async def test_iterate_until_ready_after_deadline(io_loop):
     f = schedule_future(io_loop, delay=0)
 
-    @async_generator
     async def gen():
         for i in range(5):
-            await yield_(i)
+            yield i
 
     yielded = []
     async with aclosing(iterate_until(f, gen())) as items:

@@ -10,8 +10,6 @@ from unittest import mock
 from urllib.parse import quote
 from urllib.parse import urlparse
 
-from async_generator import async_generator
-from async_generator import yield_
 from pytest import mark
 
 import jupyterhub
@@ -817,32 +815,12 @@ async def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
     }
 
 
-@async_generator
 async def progress_forever():
     """progress function that yields messages forever"""
     for i in range(1, 10):
-        await yield_({'progress': i, 'message': 'Stage %s' % i})
+        yield {'progress': i, 'message': 'Stage %s' % i}
         # wait a long time before the next event
         await asyncio.sleep(10)
-
-
-if sys.version_info >= (3, 6):
-    # additional progress_forever defined as native
-    # async generator
-    # to test for issues with async_generator wrappers
-    exec(
-        """
-async def progress_forever_native():
-    for i in range(1, 10):
-        yield {
-            'progress': i,
-            'message': 'Stage %s' % i,
-        }
-        # wait a long time before the next event
-        await asyncio.sleep(10)
-""",
-        globals(),
-    )
 
 
 async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
@@ -853,11 +831,7 @@ async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
     db = app.db
     name = 'geddy'
     app_user = add_user(db, app=app, name=name)
-    if sys.version_info >= (3, 6):
-        # Python >= 3.6, try native async generator
-        app_user.spawner.progress = globals()['progress_forever_native']
-    else:
-        app_user.spawner.progress = progress_forever
+    app_user.spawner.progress = progress_forever
     app_user.spawner.delay = 1
 
     r = await api_request(app, 'users', name, 'server', method='post')

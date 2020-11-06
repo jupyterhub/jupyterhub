@@ -21,9 +21,6 @@ from hmac import compare_digest
 from operator import itemgetter
 
 from async_generator import aclosing
-from async_generator import async_generator
-from async_generator import asynccontextmanager
-from async_generator import yield_
 from tornado import ioloop
 from tornado import web
 from tornado.httpclient import AsyncHTTPClient
@@ -512,22 +509,6 @@ def maybe_future(obj):
         return f
 
 
-@asynccontextmanager
-@async_generator
-async def not_aclosing(coro):
-    """An empty context manager for Python < 3.5.2
-    which lacks the `aclose` method on async iterators
-    """
-    await yield_(await coro)
-
-
-if sys.version_info < (3, 5, 2):
-    # Python 3.5.1 is missing the aclose method on async iterators,
-    # so we can't close them
-    aclosing = not_aclosing
-
-
-@async_generator
 async def iterate_until(deadline_future, generator):
     """An async generator that yields items from a generator
     until a deadline future resolves
@@ -552,7 +533,7 @@ async def iterate_until(deadline_future, generator):
             )
             if item_future.done():
                 try:
-                    await yield_(item_future.result())
+                    yield item_future.result()
                 except (StopAsyncIteration, asyncio.CancelledError):
                     break
             elif deadline_future.done():
