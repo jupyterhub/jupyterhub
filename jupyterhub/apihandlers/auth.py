@@ -15,6 +15,7 @@ from tornado import web
 from .. import orm
 from ..user import User
 from ..utils import compare_token
+from ..utils import eventlogging_schema_fqn
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -42,6 +43,11 @@ class TokenAPIHandler(APIHandler):
             self.db.commit()
             raise web.HTTPError(404)
         self.db.commit()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('auth-token-action'),
+            1,
+            {'action': 'get', 'requester': self.current_user.name, 'token_id': token},
+        )
         self.write(json.dumps(model))
 
     async def post(self):
@@ -82,6 +88,15 @@ class TokenAPIHandler(APIHandler):
                 note += " by %s %s" % (kind, requester.name)
 
         api_token = user.new_api_token(note=note)
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('auth-token-action'),
+            1,
+            {
+                'action': 'create',
+                'requester': self.current_user.name,
+                'token_id': api_token,
+            },
+        )
         self.write(
             json.dumps(
                 {'token': api_token, 'warning': warn_msg, 'user': self.user_model(user)}

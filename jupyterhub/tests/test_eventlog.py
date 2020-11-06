@@ -512,3 +512,38 @@ async def test_token_event(eventlog_sink):
         'token_id': token_id,
     }
     assert expected.items() <= data.items()
+
+
+# --------------------------
+# Auth token API event tests
+# --------------------------
+
+
+async def test_auth_token_event(eventlog_sink):
+    schema, version = (eventlogging_schema_fqn('auth-token-action'), 1)
+
+    app, sink = eventlog_sink
+    app.eventlog.allowed_schemas = [schema]
+
+    r = await api_request(app, 'authorizations/token', method='post')
+    r.raise_for_status()
+
+    token_id = r.json()['token']
+
+    offset = 0
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'create', 'requester': 'admin', 'token_id': token_id}
+    assert expected.items() <= data.items()
+
+    r = await api_request(app, 'authorizations/token', token_id, method='get')
+    assert r.status_code == 200
+    offset += len(output)
+    output = sink.getvalue()[offset:]
+    assert output
+    data = remove_event_metadata(json.loads(output))
+    jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
+    expected = {'action': 'get', 'requester': 'admin', 'token_id': token_id}
+    assert expected.items() <= data.items()
