@@ -54,6 +54,13 @@ from .utils import ssl_setup
 _db = None
 
 
+def pytest_collection_modifyitems(items):
+    """add asyncio marker to all async tests"""
+    for item in items:
+        if inspect.iscoroutinefunction(item.obj):
+            item.add_marker('asyncio')
+
+
 @fixture(scope='module')
 def ssl_tmpdir(tmpdir_factory):
     return tmpdir_factory.mktemp('ssl')
