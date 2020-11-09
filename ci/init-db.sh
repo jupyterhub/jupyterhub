@@ -3,7 +3,7 @@
 
 set -eu
 
-MYSQL="mysql --user root --host $MYSQL_HOST --port $MYSQL_TCP_PORT -e "
+MYSQL="mysql --user root --host ${MYSQL_HOST:-127.0.0.1} --port ${MYSQL_TCP_PORT:-13306} -e "
 PSQL="psql --user postgres -c "
 
 case "$DB" in

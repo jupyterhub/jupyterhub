@@ -4,9 +4,9 @@
 
 set -eu
 
-export MYSQL_HOST=127.0.0.1
+export MYSQL_HOST=${MYSQL_HOST:-127.0.0.1}
 export MYSQL_TCP_PORT=${MYSQL_TCP_PORT:-13306}
-export PGHOST=127.0.0.1
+export PGHOST=${PGHOST:-127.0.0.1}
 NAME="hub-test-$DB"
 DOCKER_RUN="docker run -d --name $NAME"
 
@@ -18,7 +18,7 @@ case "$DB" in
   CHECK="mysql --host $MYSQL_HOST --port $MYSQL_TCP_PORT --user root -e \q"
   ;;
 "postgres")
-  RUN_ARGS="-p 5432:5432 postgres:9.5"
+  RUN_ARGS="-e POSTGRES_HOST_AUTH_METHOD=trust -p 5432:5432 postgres:9.5"
   CHECK="psql --user postgres -c \q"
   ;;
 *)
