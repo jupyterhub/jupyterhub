@@ -1,15 +1,11 @@
-"""
-test scopes as used in rbac
-"""
-from unittest import mock
-
+"""Test scopes for API handlers"""
 import pytest
+from pytest import mark
 from tornado import web
 
 from ..utils import check_scope
 from ..utils import needs_scope
 from ..utils import parse_scopes
-from .utils import get_scopes
 
 
 def test_scope_constructor():
@@ -71,44 +67,84 @@ class Test:
         self.scopes = ['users']
 
     @needs_scope('users')
-    def foo(self, user_name):
+    def user_thing(self, user_name):
         return True
 
     @needs_scope('users:servers')
-    def bar(self, user_name, server_name):
+    def server_thing(self, user_name, server_name):
+        return True
+
+    @needs_scope('read:groups')
+    def group_thing(self, group_name):
+        return True
+
+    @needs_scope('services')
+    def service_thing(self, service_name):
+        return True
+
+    @needs_scope('users')
+    def other_thing(self, other_name):
         return True
 
 
-def test_scope_def():
+@mark.parametrize(
+    "scopes, method, arguments, is_allowed",
+    [
+        (['users'], 'user_thing', ('user',), True),
+        (['users'], 'user_thing', ('michael',), True),
+        ([''], 'user_thing', ('michael',), False),
+        (['read:users'], 'user_thing', ('gob',), False),
+        (['read:users'], 'user_thing', ('michael',), False),
+        (['users!user=george'], 'user_thing', ('george',), True),
+        (['users!user=george'], 'user_thing', ('oscar',), False),
+        (['users!user=george', 'users!user=oscar'], 'user_thing', ('oscar',), True),
+        (['users:servers'], 'server_thing', ('user1', 'server_1'), True),
+        (['users:servers'], 'server_thing', ('user1', ''), True),
+        (['users:servers'], 'server_thing', ('user1', None), True),
+        (
+            ['users:servers!server=maeby/bluth'],
+            'server_thing',
+            ('maeby', 'bluth'),
+            True,
+        ),
+        (['users:servers!server=maeby/bluth'], 'server_thing', ('gob', 'bluth'), False),
+        (
+            ['users:servers!server=maeby/bluth'],
+            'server_thing',
+            ('maybe', 'bluth2'),
+            False,
+        ),
+        (['services'], 'service_thing', ('service1',), True),
+        (
+            ['users!user=george', 'read:groups!group=bluths'],
+            'group_thing',
+            ('bluths',),
+            True,
+        ),
+        (
+            ['users!user=george', 'read:groups!group=bluths'],
+            'group_thing',
+            ('george',),
+            False,
+        ),
+        (
+            ['groups!group=george', 'read:groups!group=bluths'],
+            'group_thing',
+            ('george',),
+            False,
+        ),
+        (['users'], 'other_thing', ('gob',), True),
+        (['read:users'], 'other_thing', ('gob',), False),
+        (['users!user=gob'], 'other_thing', ('gob',), False),
+        (['users!user=gob'], 'other_thing', ('maeby',), False),
+    ],
+)
+def test_scope_method_access(scopes, method, arguments, is_allowed):
     obj = Test()
-    obj.scopes = ['users']
-    assert obj.foo('user')
-    assert obj.foo('user2')
-
-
-def test_scope_wrong():
-    obj = Test()
-    obj.scopes = []
-    with pytest.raises(web.HTTPError):
-        obj.foo('user1')
-
-
-def test_scope_filter():
-    obj = Test()
-    obj.scopes = ['users!user=gob', 'users!user=michael']
-    assert obj.foo('gob')
-    with pytest.raises(web.HTTPError):
-        obj.foo('buster')
-
-
-def test_scope_servername():
-    obj = Test()
-    obj.scopes = ['users:servers!server=gob/server1']
-    assert obj.bar(user_name='gob', server_name='server1')
-    assert obj.bar('gob', 'server1')
-    with pytest.raises(web.HTTPError):
-        obj.bar('gob', 'server3')
-    with pytest.raises(web.HTTPError):
-        obj.bar('maeby', 'server1')
-    with pytest.raises(web.HTTPError):
-        obj.bar('maeby', 'server2')
+    obj.scopes = scopes
+    api_call = getattr(obj, method)
+    if is_allowed:
+        assert api_call(*arguments)
+    else:
+        with pytest.raises(web.HTTPError):
+            api_call(*arguments)
