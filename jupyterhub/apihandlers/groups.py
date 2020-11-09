@@ -78,9 +78,7 @@ class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
 
     @needs_scope('read:groups')
-    def get(self, group_name, subset=None):
-        if subset is not None and group_name not in subset:
-            raise web.HTTPError(403, "No read access to group {}".format(group_name))
+    def get(self, group_name):
         group = self.find_group(group_name)
         self.write(json.dumps(self.group_model(group)))
 
@@ -111,10 +109,8 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.set_status(201)
 
     @needs_scope('admin:groups')
-    def delete(self, group_name, subset=None):
+    def delete(self, group_name):
         """Delete a group by name"""
-        if subset is not None and group_name not in subset:
-            raise web.HTTPError(403, "No write access to group {}".format(group_name))
         group = self.find_group(group_name)
         self.log.info("Deleting group %s", group_name)
         self.db.delete(group)
@@ -126,12 +122,8 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
     """Modify a group's user list"""
 
     @needs_scope('groups')
-    def post(self, group_name, subset=None):
+    def post(self, group_name):
         """POST adds users to a group"""
-        if subset is not None and group_name not in subset:
-            raise web.HTTPError(
-                403, "No access to add users to group {}".format(group_name)
-            )
         group = self.find_group(group_name)
         data = self.get_json_body()
         self._check_group_model(data)
@@ -148,12 +140,8 @@ class GroupUsersAPIHandler(_GroupAPIHandler):
         self.write(json.dumps(self.group_model(group)))
 
     @needs_scope('groups')
-    async def delete(self, group_name, subset=None):
+    async def delete(self, group_name):
         """DELETE removes users from a group"""
-        if subset is not None and group_name not in subset:
-            raise web.HTTPError(
-                403, "No access to add users to group {}".format(group_name)
-            )
         group = self.find_group(group_name)
         data = self.get_json_body()
         self._check_group_model(data)

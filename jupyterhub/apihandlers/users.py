@@ -124,12 +124,8 @@ def admin_or_self(method):
 
 class UserAPIHandler(APIHandler):
     @needs_scope('read:users')
-    async def get(self, user_name, subset=None):
+    async def get(self, user_name):
         user = self.find_user(user_name)
-        if subset is not None:
-            if user_name not in subset:
-                raise web.HTTPError(403, "No access to users")
-
         model = self.user_model(
             user, include_servers=True, include_state=self.current_user.admin
         )
@@ -223,16 +219,13 @@ class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
 
     @needs_scope('read:users:tokens')
-    def get(self, user_name, subset=None):
+    def get(self, user_name):
         """Get tokens for a given user"""
         user = self.find_user(user_name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % user_name)
-        if subset is not None and user_name not in subset:
-            raise web.HTTPError(403, "No access to tokens")
 
         now = datetime.utcnow()
-
         api_tokens = []
 
         def sort_key(token):
@@ -347,24 +340,20 @@ class UserTokenAPIHandler(APIHandler):
         return orm_token
 
     @needs_scope('read:users:tokens')
-    def get(self, user_name, token_id, subset=None):
+    def get(self, user_name, token_id):
         """"""
         user = self.find_user(user_name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % user_name)
-        if subset is not None and user_name not in subset:
-            raise web.HTTPError(403, "No token access allowed")
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
     @needs_scope('users:tokens')
-    def delete(self, user_name, token_id, subset=None):
+    def delete(self, user_name, token_id):
         """Delete a token"""
         user = self.find_user(user_name)
         if not user:
             raise web.HTTPError(404, "No such user: %s" % user_name)
-        if subset is not None and user_name not in subset:
-            raise web.HTTPError(403, "No token access allowed")
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
         if isinstance(token, orm.OAuthAccessToken):
@@ -385,16 +374,11 @@ class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
     @needs_scope('users:servers')
-    async def post(self, user_name, server_name='', subset=None):
+    async def post(self, user_name, server_name=''):
         user = self.find_user(user_name)
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
-            if subset is not None:
-                if server_name not in subset:
-                    raise web.HTTPError(
-                        403, "No access to create {}".format(server_name)
-                    )
             if (
                 self.named_server_limit_per_user > 0
                 and server_name not in user.orm_spawners
@@ -554,15 +538,10 @@ class SpawnProgressAPIHandler(APIHandler):
             await asyncio.wait([self._finish_future], timeout=self.keepalive_interval)
 
     @needs_scope('read:users:servers')
-    async def get(self, user_name, server_name='', subset=None):
+    async def get(self, user_name, server_name=''):
         self.set_header('Cache-Control', 'no-cache')
         if server_name is None:
             server_name = ''
-        if subset is not None:
-            if server_name not in subset:
-                raise web.HTTPError(
-                    403, "No read access to server {}".format(server_name)
-                )
         user = self.find_user(user_name)
         if user is None:
             # no such user

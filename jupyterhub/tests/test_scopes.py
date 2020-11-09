@@ -60,24 +60,55 @@ def test_scope_one_filter_only():
         check_scope('all', parse_scopes(['all']), user='george_michael', group='bluths')
 
 
+def test_scope_parse_server_name():
+    scope_list = ['users:servers!server=maeby/server1', 'read:users!user=maeby']
+    parsed_scopes = parse_scopes(scope_list)
+    assert check_scope('users:servers', parsed_scopes, user='maeby', server='server1')
+
+
 class Test:
     def __init__(self):
-        self.scopes = ['read:users']
+        self.scopes = ['users']
 
-    @needs_scope('read:users')
-    def foo(self, user):
+    @needs_scope('users')
+    def foo(self, user_name):
+        return True
+
+    @needs_scope('users:servers')
+    def bar(self, user_name, server_name):
         return True
 
 
 def test_scope_def():
     obj = Test()
-    obj.scopes = ['read:users']
+    obj.scopes = ['users']
     assert obj.foo('user')
     assert obj.foo('user2')
 
 
-def test_wrong_scope():
+def test_scope_wrong():
     obj = Test()
     obj.scopes = []
     with pytest.raises(web.HTTPError):
         obj.foo('user1')
+
+
+def test_scope_filter():
+    obj = Test()
+    obj.scopes = ['users!user=gob', 'users!user=michael']
+    assert obj.foo('gob')
+    with pytest.raises(web.HTTPError):
+        obj.foo('buster')
+
+
+def test_scope_servername():
+    obj = Test()
+    obj.scopes = ['users:servers!server=gob/server1']
+    assert obj.bar(user_name='gob', server_name='server1')
+    assert obj.bar('gob', 'server1')
+    with pytest.raises(web.HTTPError):
+        obj.bar('gob', 'server3')
+    with pytest.raises(web.HTTPError):
+        obj.bar('maeby', 'server1')
+    with pytest.raises(web.HTTPError):
+        obj.bar('maeby', 'server2')
