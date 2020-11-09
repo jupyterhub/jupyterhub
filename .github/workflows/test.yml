@@ -1,0 +1,148 @@
+# This is a GitHub workflow defining a set of jobs with a set of steps.
+# ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
+#
+name: Test
+
+on:
+  pull_request:
+    branches: ["**"]
+  push:
+    branches: [main, master, pr/migrate-to-gh-actions-from-travis]
+    tags: ["**"]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test_jupyterhub:
+    runs-on: ubuntu-18.04
+    timeout-minutes: 10
+
+    env:
+      # NOTE: UTF-8 content may be interpreted as ascii and causes errors
+      #       without this.
+      LANG: C.UTF-8
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.6"
+            pre_commit: true
+          - python: "3.7"
+            subdomain: true
+          - python: "3.8"
+            db: mysql
+          - python: "3.8"
+            db: postgres
+          - python: "3.8"
+            jupyter_server: true
+          - python: "3.9"
+            main_dependencies: true
+    steps:
+      # This is how you set an environment variable in a GitHub workflow that
+      # will be available in following steps as if you would used `export
+      # MY_ENV=my-value`.
+      - name: Configure environment variables from job flags
+        run: |
+          if [ "${{ matrix.subdomain }}" != "" ]; then
+              echo "JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.db }}" == "mysql" ]; then
+              echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
+              echo "MYSQL_TCP_PORT=13306" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:13306/jupyterhub" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.db }}" == "postgres" ]; then
+              echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
+              echo "PGUSER=jupyterhub" >> $GITHUB_ENV
+              echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
+          fi
+      - uses: actions/checkout@v2
+
+      # NOTE: actions/setup-node@v1 can make use of a cache within the GitHub
+      #       Action virtual environment and setup extremely fast.
+      - name: Install Node v14
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+      - name: Install Node dependencies
+        run: |
+          npm install
+          npm install -g configurable-http-proxy
+          npm list
+
+      # NOTE: actions/setup-python@v2 can make use of a cache within the GitHub
+      #       Action virtual environment and setup extremely fast. 3.9 isn't
+      #       available in this cache as of November 2020.
+      - name: Install Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --upgrade . -r dev-requirements.txt
+
+          if [ "${{ matrix.main_dependencies }}" != "" ]; then
+              pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
+          fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              pip uninstall notebook --yes
+              pip install jupyter_server
+          fi
+          if [ "${{ matrix.db }}" == "mysql" ]; then
+              pip install 'mysql-connector-python'
+          fi
+          if [ "${{ matrix.db }}" == "postgres" ]; then
+              # FIXME: mysql-connector-python 8.0.16 incorrectly decodes bytes to str
+              # ref: https://bugs.mysql.com/bug.php?id=94944
+              pip install 'mysql-connector-python==8.0.11
+          fi
+
+          pip freeze
+
+      - name: Run pre-commit
+        if: ${{ matrix.pre_commit }}
+        run: |
+          pre-commit run --all-files
+      - name: Help message if pre-commit run fail
+        if: ${{ matrix.pre_commit && failure() }}
+        run: |
+          echo "You can install pre-commit hooks to automatically run formatting"
+          echo "on each commit with:"
+          echo "    pre-commit install"
+          echo "or you can run by hand on staged files with"
+          echo "    pre-commit run"
+          echo "or after-the-fact on already committed files with"
+          echo "    pre-commit run --all-files"
+
+      - name: Start a database server (${{ matrix.db }})
+        if: ${{ matrix.db }}
+        run: |
+          if [ "${{ matrix.db }}" == "mysql" ]; then
+              sudo apt-get update
+              sudo apt-get install -y mysql-client
+              DB=mysql bash ci/docker-db.sh
+              DB=mysql bash ci/init-db.sh
+          fi
+          if [ "${{ matrix.db }}" == "postgres" ]; then
+              sudo apt-get update
+              sudo apt-get install -y postgresql-client
+              DB=postgres bash ci/docker-db.sh
+              DB=postgres bash ci/init-db.sh
+          fi
+
+      - name: Run pytest
+        # FIXME: --color=yes explicitly set because:
+        #        https://github.com/actions/runner/issues/241
+        run: |
+          pytest -v --maxfail=2 --color=yes --cov=jupyterhub jupyterhub/tests
+      - name: Submit codecov report
+        run: |
+          codecov
