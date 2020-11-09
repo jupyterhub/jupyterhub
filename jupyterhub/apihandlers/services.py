@@ -29,7 +29,7 @@ def service_model(service):
 
 
 class ServiceListAPIHandler(APIHandler):
-    @needs_scope('read:services')
+    @needs_scope('read:services')  # Todo: allow filter here?
     def get(self):
         data = {name: service_model(service) for name, service in self.services.items()}
         self.write(json.dumps(data))

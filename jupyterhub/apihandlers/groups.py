@@ -35,12 +35,10 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @needs_scope('read:groups')
-    def get(self, subset=None):
+    @needs_scope('read:groups')  # Todo: Filter allowed here?
+    def get(self):
         """List groups"""
         groups = self.db.query(orm.Group)
-        if subset is not None:
-            groups = groups.filter(orm.Group.name.in_(subset))
         data = [self.group_model(g) for g in groups]
         self.write(json.dumps(data))
 
