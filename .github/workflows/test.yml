@@ -14,6 +14,13 @@ on:
 
 defaults:
   run:
+    # Declare bash be used by default in this workflow's "run" steps.
+    #
+    # NOTE: bash will by default run with:
+    #   --noprofile: Ignore ~/.profile etc.
+    #   --norc:      Ignore ~/.bashrc etc.
+    #   -e:          Exit directly on errors
+    #   -o pipefail: Don't mask errors from a command piped into another command
     shell: bash
 
 env:
@@ -115,8 +122,8 @@ jobs:
           fi
       - uses: actions/checkout@v2
 
-      # NOTE: actions/setup-node@v1 can make use of a cache within the GitHub
-      #       Action virtual environment and setup extremely fast.
+      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
       - name: Install Node v14
         uses: actions/setup-node@v1
         with:
@@ -127,9 +134,8 @@ jobs:
           npm install -g configurable-http-proxy
           npm list
 
-      # NOTE: actions/setup-python@v2 can make use of a cache within the GitHub
-      #       Action virtual environment and setup extremely fast. 3.9 isn't
-      #       available in this cache as of November 2020.
+      # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
       - name: Install Python ${{ matrix.python }}
         uses: actions/setup-python@v2
         with:
