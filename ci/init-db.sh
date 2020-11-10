@@ -7,12 +7,12 @@
 
 set -eu
 
-# Prepare env vars CLIENT_COMMAND and EXTRA_CREATE_DATABASE_ARGS
+# Prepare env vars SQL_CLIENT and EXTRA_CREATE_DATABASE_ARGS
 if [[ "$DB" == "mysql" ]]; then
-    CLIENT_COMMAND="mysql --user root --execute "
+    SQL_CLIENT="mysql --user root --execute "
     EXTRA_CREATE_DATABASE_ARGS='CHARACTER SET utf8 COLLATE utf8_general_ci'
 elif [[ "$DB" == "postgres" ]]; then
-    CLIENT_COMMAND="psql --user postgres --command "
+    SQL_CLIENT="psql --user postgres --command "
 else
     echo '$DB must be mysql or postgres'
     exit 1
@@ -21,6 +21,6 @@ fi
 # Configure a set of databases in the database server for upgrade tests
 set -x
 for SUFFIX in '' _upgrade_072 _upgrade_081 _upgrade_094; do
-    $CLIENT_COMMAND "DROP DATABASE jupyterhub${SUFFIX};" 2>/dev/null || true
-    $CLIENT_COMMAND "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE_DATABASE_ARGS:-};"
+    $SQL_CLIENT "DROP DATABASE jupyterhub${SUFFIX};" 2>/dev/null || true
+    $SQL_CLIENT "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE_DATABASE_ARGS:-};"
 done
