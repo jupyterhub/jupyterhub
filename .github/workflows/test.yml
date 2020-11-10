@@ -45,6 +45,7 @@ jobs:
           echo "or after-the-fact on already committed files with"
           echo "    pre-commit run --all-files"
 
+
   # Run "pytest -vx jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04
@@ -53,17 +54,42 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # We run this job multiple times different parameterization specified
+        # below, these parameters have no meaning on their own and gain meaning
+        # on how job steps use them.
+        #
+        # subdomain:
+        #   Tests everything when JupyterHub is configured to add routes for
+        #   users with dedicated subdomains like user1.jupyter.example.com
+        #   rather than jupyter.example.com/user/user1.
+        #
+        # db: [mysql/postgres]
+        #   Tests everything when JupyterHub works against a dedicated mysql or
+        #   postgresql server.
+        #
+        # jupyter_server:
+        #   Tests everything when the user instances are started with
+        #   jupyter_server instead of notebook.
+        #
+        # main_dependencies:
+        #   Tests everything when the we use the latest available dependencies
+        #   from: ipytraitlets.
+        #
+        # NOTE: Since only the value of these parameters are presented in the
+        #       GitHub UI when the workflow run, we avoid using true/false as
+        #       values by instead duplicating the name to signal true.
         include:
           - python: "3.6"
-            subdomain: true
+            subdomain: subdomain
           - python: "3.7"
             db: mysql
           - python: "3.8"
             db: postgres
           - python: "3.8"
-            jupyter_server: true
+            jupyter_server: jupyter_server
           - python: "3.9"
-            main_dependencies: true
+            main_dependencies: main_dependencies
+
     steps:
       # This is how you set an environment variable in a GitHub workflow that
       # will be available in following steps as if you would used `export
