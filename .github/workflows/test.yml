@@ -1,38 +1,62 @@
 # This is a GitHub workflow defining a set of jobs with a set of steps.
 # ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
 #
-name: Test
+name: Run tests
 
+# Trigger the workflow's on all PRs but only on pushed tags or commits to
+# main/master branch to avoid PRs developed in a GitHub fork's dedicated branch
+# to trigger.
 on:
   pull_request:
-    branches: ["**"]
   push:
     branches: [main, master]
-    tags: ["**"]
+    tags:
 
 defaults:
   run:
     shell: bash
 
+env:
+  # UTF-8 content may be interpreted as ascii and causes errors without this.
+  LANG: C.UTF-8
+
 jobs:
-  test_jupyterhub:
+  # Run "pre-commit run --all-files"
+  pre-commit:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 2
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      # ref: https://github.com/pre-commit/action
+      - uses: pre-commit/action@v2.0.0
+      - name: Help message if pre-commit fail
+        if: ${{ failure() }}
+        run: |
+          echo "You can install pre-commit hooks to automatically run formatting"
+          echo "on each commit with:"
+          echo "    pre-commit install"
+          echo "or you can run by hand on staged files with"
+          echo "    pre-commit run"
+          echo "or after-the-fact on already committed files with"
+          echo "    pre-commit run --all-files"
+
+  # Run "pytest -vx jupyterhub/tests" in various configurations
+  pytest:
     runs-on: ubuntu-20.04
     timeout-minutes: 10
-
-    env:
-      # NOTE: UTF-8 content may be interpreted as ascii and causes errors
-      #       without this.
-      LANG: C.UTF-8
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - python: "3.6"
-            pre_commit: true
-          - python: "3.7"
             subdomain: true
-          - python: "3.8"
+          - python: "3.7"
             db: mysql
           - python: "3.8"
             db: postgres
@@ -104,21 +128,6 @@ jobs:
           fi
 
           pip freeze
-
-      - name: Run pre-commit
-        if: ${{ matrix.pre_commit }}
-        run: |
-          pre-commit run --all-files
-      - name: Help message if pre-commit run fail
-        if: ${{ matrix.pre_commit && failure() }}
-        run: |
-          echo "You can install pre-commit hooks to automatically run formatting"
-          echo "on each commit with:"
-          echo "    pre-commit install"
-          echo "or you can run by hand on staged files with"
-          echo "    pre-commit run"
-          echo "or after-the-fact on already committed files with"
-          echo "    pre-commit run --all-files"
 
       - name: Start a database server (${{ matrix.db }})
         if: ${{ matrix.db }}
