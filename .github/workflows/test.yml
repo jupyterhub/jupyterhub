@@ -59,11 +59,12 @@ jobs:
     timeout-minutes: 10
 
     strategy:
+      # Keep running even if one variation of the job fail
       fail-fast: false
       matrix:
-        # We run this job multiple times different parameterization specified
-        # below, these parameters have no meaning on their own and gain meaning
-        # on how job steps use them.
+        # We run this job multiple times with different parameterization
+        # specified below, these parameters have no meaning on their own and
+        # gain meaning on how job steps use them.
         #
         # subdomain:
         #   Tests everything when JupyterHub is configured to add routes for
