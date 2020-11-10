@@ -382,7 +382,7 @@ async def test_spawner_delete_server(app):
     assert spawner.server is None
 
 
-@pytest.mark.parametrize("name", ["has@x", "has%x", "has%40x"])
+@pytest.mark.parametrize("name", ["has@x", "has~x", "has%x", "has%40x"])
 async def test_spawner_routing(app, name):
     """Test routing of names with special characters"""
     db = app.db
