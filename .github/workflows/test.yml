@@ -99,21 +99,20 @@ jobs:
             main_dependencies: main_dependencies
 
     steps:
-      # This is how you set an environment variable in a GitHub workflow that
-      # will be available in following steps as if you would used `export
-      # MY_ENV=my-value`.
+      # NOTE: In GitHub workflows, environment variables are set by writing
+      #       assignment statements to a file. They will be set in the following
+      #       steps as if would used `export MY_ENV=my-value`.
       - name: Configure environment variables from job flags
         run: |
           if [ "${{ matrix.subdomain }}" != "" ]; then
               echo "JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
-              echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
-              echo "MYSQL_TCP_PORT=13306" >> $GITHUB_ENV
-              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:13306/jupyterhub" >> $GITHUB_ENV
+              # mysql env var ref: https://dev.mysql.com/doc/refman/5.7/en/setting-environment-variables.html
+              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
-              echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
+              # psql env var ref: https://www.postgresql.org/docs/9.5/libpq-envars.html
               echo "PGUSER=jupyterhub" >> $GITHUB_ENV
               echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
               echo "JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV

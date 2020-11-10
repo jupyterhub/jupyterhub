@@ -1,47 +1,39 @@
 #!/usr/bin/env bash
-# This scripts starts a postgres or mysql database server, waits for it, and
-# setup setups users to be used for local testing.
+# The goal of this script is to start a database server as a docker container.
+#
+# Required environment variables:
+# - DB: The database server to start, either "postgres" or "mysql".
+#
+# - PGUSER/PGPASSWORD: For the creation of a postgresql user with associated
+#   password.
 
 set -eu
 
-# These environment variables influence the mysql and psql clients
-export MYSQL_HOST=${MYSQL_HOST:-127.0.0.1}
-export MYSQL_TCP_PORT=${MYSQL_TCP_PORT:-13306}
-export PGHOST=${PGHOST:-127.0.0.1}
-export PGPORT=${PGPORT:-5432}
-
-# Define a name for a database container to start
-DOCKER_CONTAINER="hub-test-$DB"
-
 # Stop and remove any existing database container
+DOCKER_CONTAINER="hub-test-$DB"
 docker rm -f "$DOCKER_CONTAINER" 2>/dev/null || true
 
-# Prepare env vars DOCKER_RUN_ARGS and READINESS_CHECK
+# Prepare environment variables to startup and await readiness of either a mysql
+# or postgresql server.
 if [[ "$DB" == "mysql" ]]; then
-    # Environment variables are considered by the Docker image, and the mysql
-    # client respectively.
-    # ref, docker: https://hub.docker.com/_/mysql/
-    # ref, client: https://dev.mysql.com/doc/refman/5.7/en/setting-environment-variables.html
-    #
-    DOCKER_RUN_ARGS="-p $MYSQL_TCP_PORT:3306 --env MYSQL_ALLOW_EMPTY_PASSWORD=1 mysql:5.7"
+    # Environment variables can influence the Docker container
+    # ref: https://hub.docker.com/_/mysql/
+    DOCKER_RUN_ARGS="-p 3306 --env MYSQL_ALLOW_EMPTY_PASSWORD=1 mysql:5.7"
     READINESS_CHECK="mysql --user root --execute \q"
 elif [[ "$DB" == "postgres" ]]; then
-    # Environment variables are considered by the Docker image, and the psql
-    # client respectively.
-    # ref, docker: https://hub.docker.com/_/postgres/
-    # ref, client: https://www.postgresql.org/docs/9.5/libpq-envars.html
-    #
-    DOCKER_RUN_ARGS="-p $PGPORT:5432 postgres:9.5"
+    # Environment variables can influence the Docker container
+    # ref: https://hub.docker.com/_/postgres/
+    DOCKER_RUN_ARGS="-p 5432 postgres:9.5"
     READINESS_CHECK="psql --user postgres --command \q"
 else
     echo '$DB must be mysql or postgres'
     exit 1
 fi
 
-# Start a new container
+# Start the database server
 docker run --detach --name "$DOCKER_CONTAINER" $DOCKER_RUN_ARGS
 
-# Wait for the new container to start
+# Wait for the database server to start
 echo -n "waiting for $DB "
 for i in {1..60}; do
     if $READINESS_CHECK; then
@@ -54,23 +46,9 @@ for i in {1..60}; do
 done
 $READINESS_CHECK
 
-# Setup additional users to mysql's root and postgresql's postgres users
+# Setup an additional user to mysql's root or postgresql's postgres user
 if [[ "$DB" == "mysql" ]]; then
-    echo "A dedicated user for mysql isn't created."
+    echo "A dedicated user for the mysql server isn't created."
 elif [[ "$DB" == "postgres" ]]; then
     psql --user postgres --command "CREATE USER $PGUSER WITH PASSWORD '$PGPASSWORD';"
-fi
-
-# Print message for humans running the script
-if [[ "$DB" == "mysql" ]]; then
-    echo -e "
-Set these environment variables:
-    export MYSQL_HOST=$MYSQL_HOST
-    export MYSQL_TCP_PORT=$MYSQL_TCP_PORT
-"
-elif [[ "$DB" == "postgres" ]]; then
-    echo -e "
-Set these environment variables:
-    export PGHOST=$PGHOST
-"
 fi

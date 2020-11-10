@@ -1,15 +1,11 @@
 #!/usr/bin/env bash
-# This script initialize multiple databases for testing in a running database
-# server, using either the mysql client or psql client with the root or postgres
-# users.
+# The goal of this script is to initialize a running database server with clean
+# databases for use during tests.
+#
+# Required environment variables:
+# - DB: The database server to start, either "postgres" or "mysql".
 
 set -eu
-
-# These environment variables influence the mysql and psql clients
-export MYSQL_HOST=${MYSQL_HOST:-127.0.0.1}
-export MYSQL_TCP_PORT=${MYSQL_TCP_PORT:-13306}
-export PGHOST=${PGHOST:-127.0.0.1}
-export PGPORT=${PGPORT:-5432}
 
 # Prepare env vars CLIENT_COMMAND and EXTRA_CREATE_DATABASE_ARGS
 if [[ "$DB" == "mysql" ]]; then
