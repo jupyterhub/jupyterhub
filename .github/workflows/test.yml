@@ -9,7 +9,7 @@ name: Run tests
 on:
   pull_request:
   push:
-    branches: [main, master]
+    branches: [main, master, pr/migrate-to-gh-actions-from-travis]
     tags:
 
 defaults:
@@ -102,20 +102,20 @@ jobs:
       # NOTE: In GitHub workflows, environment variables are set by writing
       #       assignment statements to a file. They will be set in the following
       #       steps as if would used `export MY_ENV=my-value`.
-      - name: Configure environment variables from job flags
+      - name: Configure environment variables
         run: |
           if [ "${{ matrix.subdomain }}" != "" ]; then
               echo "JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
-              # mysql env var ref: https://dev.mysql.com/doc/refman/5.7/en/setting-environment-variables.html
+              echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
               echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
-              # psql env var ref: https://www.postgresql.org/docs/9.5/libpq-envars.html
-              echo "PGUSER=jupyterhub" >> $GITHUB_ENV
+              echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
+              echo "PGUSER=test_user" >> $GITHUB_ENV
               echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
-              echo "JUPYTERHUB_TEST_DB_URL=postgresql://jupyterhub:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=postgresql://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.jupyter_server }}" != "" ]; then
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
@@ -161,6 +161,27 @@ jobs:
 
           pip freeze
 
+      # NOTE: If you need to debug this DB setup step, consider the following.
+      #
+      # 1. mysql/postgressql are database servers we start as docker containers,
+      #    and we use clients named mysql/psql.
+      #
+      # 2. When we start a database server we need to pass environment variables
+      #    explicitly as part of the `docker run` command. These environment
+      #    variables are named differently from the similarly named environment
+      #    variables used by the clients.
+      #
+      #    - mysql    server ref: https://hub.docker.com/_/mysql/
+      #    - mysql    client ref: https://dev.mysql.com/doc/refman/5.7/en/environment-variables.html
+      #    - postgres server ref: https://hub.docker.com/_/postgres/
+      #    - psql     client ref: https://www.postgresql.org/docs/9.5/libpq-envars.html
+      #
+      # 3. When we connect, they should use 127.0.0.1 rather than the
+      #    default way of connecting which leads to errors like below both for
+      #    mysql and postgresql unless we set MYSQL_HOST/PGHOST to 127.0.0.1.
+      #
+      #    - ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/run/mysqld/mysqld.sock' (2)
+      #
       - name: Start a database server (${{ matrix.db }})
         if: ${{ matrix.db }}
         run: |

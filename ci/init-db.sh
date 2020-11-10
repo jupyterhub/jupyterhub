@@ -12,7 +12,7 @@ if [[ "$DB" == "mysql" ]]; then
     SQL_CLIENT="mysql --user root --execute "
     EXTRA_CREATE_DATABASE_ARGS='CHARACTER SET utf8 COLLATE utf8_general_ci'
 elif [[ "$DB" == "postgres" ]]; then
-    SQL_CLIENT="psql --user postgres --command "
+    SQL_CLIENT="psql --command "
 else
     echo '$DB must be mysql or postgres'
     exit 1
