@@ -140,7 +140,7 @@ jobs:
         # FIXME: --color=yes explicitly set because:
         #        https://github.com/actions/runner/issues/241
         run: |
-          pytest -v --color=yes --cov=jupyterhub jupyterhub/tests
+          pytest -vx --color=yes --cov=jupyterhub jupyterhub/tests
       - name: Submit codecov report
         run: |
           codecov
