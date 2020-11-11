@@ -9,8 +9,6 @@ name: Run tests
 on:
   pull_request:
   push:
-    branches: [main, master, pr/migrate-to-gh-actions-from-travis]
-    tags:
 
 defaults:
   run:
