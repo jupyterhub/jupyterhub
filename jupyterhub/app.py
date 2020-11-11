@@ -930,7 +930,7 @@ class JupyterHub(Application):
 
         with an :meth:`authenticate` method that:
 
-        - is a coroutine (asyncio)
+        - is a coroutine (asyncio or tornado)
         - returns username on success, None on failure
         - takes two arguments: (handler, data),
           where `handler` is the calling web.RequestHandler,
