@@ -659,7 +659,9 @@ class BaseHandler(RequestHandler):
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
 
-        next_url = self.append_query_parameters(next_url, exclude=['next'])
+        next_url = self.append_query_parameters(
+            next_url, exclude=['next', 'code', 'state']
+        )
         return next_url
 
     def append_query_parameters(self, url, exclude=None):
