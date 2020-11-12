@@ -46,7 +46,7 @@ class TokenAPIHandler(APIHandler):
         self.eventlog.record_event(
             eventlogging_schema_fqn('auth-token-action'),
             1,
-            {'action': 'get', 'requester': self.current_user.name, 'token_id': token},
+            {'action': 'get', 'token_id': token},
         )
         self.write(json.dumps(model))
 
@@ -91,11 +91,7 @@ class TokenAPIHandler(APIHandler):
         self.eventlog.record_event(
             eventlogging_schema_fqn('auth-token-action'),
             1,
-            {
-                'action': 'create',
-                'requester': self.current_user.name,
-                'token_id': api_token,
-            },
+            {'action': 'create', 'token_id': api_token,},
         )
         self.write(
             json.dumps(

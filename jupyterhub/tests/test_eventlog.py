@@ -535,7 +535,7 @@ async def test_auth_token_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
-    expected = {'action': 'create', 'requester': 'admin', 'token_id': token_id}
+    expected = {'action': 'create', 'token_id': token_id}
     assert expected.items() <= data.items()
 
     r = await api_request(app, 'authorizations/token', token_id, method='get')
@@ -545,5 +545,5 @@ async def test_auth_token_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
-    expected = {'action': 'get', 'requester': 'admin', 'token_id': token_id}
+    expected = {'action': 'get', 'token_id': token_id}
     assert expected.items() <= data.items()
