@@ -332,6 +332,12 @@ async def test_spawn_form_admin_access(app, admin_access):
             data={'bounds': ['-3', '3'], 'energy': '938MeV'},
         )
         r.raise_for_status()
+
+        while '/spawn-pending/' in r.url:
+            await asyncio.sleep(0.1)
+            r = await async_requests.get(r.url, cookies=cookies)
+            r.raise_for_status()
+
         assert r.history
         assert r.url.startswith(public_url(app, u))
         assert u.spawner.user_options == {
