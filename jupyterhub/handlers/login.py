@@ -89,8 +89,8 @@ class LogoutHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     """Render the login page."""
 
-    async def _render(self, login_error=None, username=None):
-        return await self.render_template(
+    def _render(self, login_error=None, username=None):
+        return self.render_template(
             'login.html',
             next=url_escape(self.get_argument('next', default='')),
             username=username,
