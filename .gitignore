@@ -28,3 +28,4 @@ htmlcov
 .pytest_cache
 pip-wheel-metadata
 docs/source/reference/metrics.rst
+oldest-requirements.txt
