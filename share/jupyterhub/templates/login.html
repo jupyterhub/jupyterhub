@@ -63,6 +63,18 @@
       value='Sign In'
       tabindex="3"
     />
+
+    {% block login_terms %}
+    {% if login_term_url %}
+    <div id="login_terms" class="login_terms">
+    <input type="checkbox" id="login_terms_checkbox" name="login_terms_checkbox"/>
+    {% block login_terms_text %} {# allow overriding the text #}
+    By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
+    </div>
+    {% endblock login_terms_text %}
+    {% endif %}
+    {% endblock login_terms %}
+
   </div>
 </form>
 {% endif %}
@@ -80,5 +92,22 @@ if (window.location.protocol === "http:") {
   warning.className = warning.className.replace(/\bhidden\b/, '');
 }
 </script>
+
+{% if login_term_url %}
+<script>
+// By default disable the login submit button, unless user check the terms and
+// conditions checkbox.
+var loginBtn = document.getElementById('login_submit');
+loginBtn.disabled = "disabled";
+
+document.getElementById('login_terms_checkbox').onclick = function() {
+    if ( this.checked ) {
+        loginBtn.disabled = "";
+    } else {
+        loginBtn.disabled = "disabled";
+    }
+};
+</script>
+{% endif %}
 
 {% endblock %}
