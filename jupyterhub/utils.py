@@ -503,7 +503,7 @@ def maybe_future(obj):
         return asyncio.wrap_future(obj)
     else:
         # could also check for tornado.concurrent.Future
-        # but with tornado >= 5 tornado.Future is asyncio.Future
+        # but with tornado >= 5.1 tornado.Future is asyncio.Future
         f = asyncio.Future()
         f.set_result(obj)
         return f
