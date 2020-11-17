@@ -79,7 +79,7 @@ class LogoutHandler(BaseHandler):
 
     async def get(self):
         """Log the user out, call the custom action, forward the user
-            to the logout page
+        to the logout page
         """
         await self.default_handle_logout()
         await self.handle_logout()
