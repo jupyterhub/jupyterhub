@@ -634,6 +634,12 @@ class BaseHandler(RequestHandler):
                 next_url,
             )
 
+        # this is where we know if next_url is coming from ?next= param or we are using a default url
+        if next_url:
+            next_url_from_param = True
+        else:
+            next_url_from_param = False
+
         if not next_url:
             # custom default URL, usually passed because user landed on that page but was not logged in
             if default:
@@ -659,7 +665,10 @@ class BaseHandler(RequestHandler):
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
 
-        next_url = self.append_query_parameters(next_url, exclude=['next'])
+        if not next_url_from_param:
+            # when a request made with ?next=... assume all the params have already been encoded
+            # otherwise, preserve params from the current request across the redirect
+            next_url = self.append_query_parameters(next_url, exclude=['next'])
         return next_url
 
     def append_query_parameters(self, url, exclude=None):
