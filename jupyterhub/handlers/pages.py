@@ -44,7 +44,7 @@ class RootHandler(BaseHandler):
         elif user:
             url = self.get_next_url(user)
         else:
-            url = self.settings['login_url']
+            url = url_concat(self.settings["login_url"], dict(next=self.request.uri))
         self.redirect(url)
 
 
