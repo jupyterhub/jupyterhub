@@ -497,13 +497,18 @@ class ConfigurableHTTPProxy(Proxy):
         if not psutil.pid_exists(pid):
             raise ProcessLookupError
 
-        process = psutil.Process(pid)
-        if self.command and self.command[0]:
-            process_cmd = process.cmdline()
-            if process_cmd and not any(
-                self.command[0] in clause for clause in process_cmd
-            ):
-                raise ProcessLookupError
+        try:
+            process = psutil.Process(pid)
+            if self.command and self.command[0]:
+                process_cmd = process.cmdline()
+                if process_cmd and not any(
+                    self.command[0] in clause for clause in process_cmd
+                ):
+                    raise ProcessLookupError
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            # If there is a process at the proxy's PID but we don't have permissions to see it,
+            # then it is unlikely to actually be the proxy.
+            raise ProcessLookupError
 
         if not os.name == 'nt':
             os.kill(pid, 0)
