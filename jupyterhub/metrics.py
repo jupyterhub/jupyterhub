@@ -42,7 +42,8 @@ RUNNING_SERVERS = Gauge(
 TOTAL_USERS = Gauge('jupyterhub_total_users', 'total number of users')
 
 CHECK_ROUTES_DURATION_SECONDS = Histogram(
-    'jupyterhub_check_routes_duration_seconds', 'Time taken to validate all routes in proxy'
+    'jupyterhub_check_routes_duration_seconds',
+    'Time taken to validate all routes in proxy',
 )
 
 HUB_STARTUP_DURATION_SECONDS = Histogram(
@@ -54,7 +55,8 @@ INIT_SPAWNERS_DURATION_SECONDS = Histogram(
 )
 
 PROXY_POLL_DURATION_SECONDS = Histogram(
-    'jupyterhub_proxy_poll_duration_seconds', 'duration for polling all routes from proxy'
+    'jupyterhub_proxy_poll_duration_seconds',
+    'duration for polling all routes from proxy',
 )
 
 
@@ -79,7 +81,9 @@ for s in ServerSpawnStatus:
 
 
 PROXY_ADD_DURATION_SECONDS = Histogram(
-    'jupyterhub_proxy_add_duration_seconds', 'duration for adding user routes to proxy', ['status']
+    'jupyterhub_proxy_add_duration_seconds',
+    'duration for adding user routes to proxy',
+    ['status'],
 )
 
 
@@ -127,7 +131,9 @@ for s in ServerPollStatus:
 
 
 SERVER_STOP_DURATION_SECONDS = Histogram(
-    'jupyterhub_server_stop_seconds', 'time taken for server stopping operation', ['status']
+    'jupyterhub_server_stop_seconds',
+    'time taken for server stopping operation',
+    ['status'],
 )
 
 
