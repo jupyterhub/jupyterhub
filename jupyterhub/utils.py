@@ -19,6 +19,7 @@ import warnings
 from binascii import b2a_hex
 from datetime import datetime
 from datetime import timezone
+from enum import Enum
 from hmac import compare_digest
 from operator import itemgetter
 
@@ -33,6 +34,8 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
 from tornado.log import app_log
 from tornado.platform.asyncio import to_asyncio_future
+
+from .. import orm
 
 
 def random_port():
@@ -299,6 +302,18 @@ def metrics_authentication(self):
         raise web.HTTPError(403)
 
 
+class Scope(Enum):
+    ALL = True
+
+
+def expand_groups_to_users(db, filter_scope):
+    """Update the group filters to account for the individual users"""
+    if 'group' in filter_scope:
+        groups = db.query(orm.Group)
+        user_set = orm.User.query.filter(orm.User.group.in_(groups))
+        return user_set.get_names()
+
+
 def check_scope(req_scope, scopes, **kwargs):
     # Parse user name and server name together
     if 'user' in kwargs and 'server' in kwargs:
@@ -306,18 +321,17 @@ def check_scope(req_scope, scopes, **kwargs):
         kwargs['server'] = "{}/{}".format(user_name, kwargs['server'])
     if len(kwargs) > 1:
         raise AttributeError("Please specify exactly one filter")
-    base_scope = req_scope.split('!')[0]
-    if base_scope not in scopes:
+    if req_scope not in scopes:
         return False
-    if scopes[base_scope] == True:  # is this pretty?
+    if scopes[req_scope] == Scope.ALL:
         return True
     # Apply filters
     if not kwargs:
         return False
-    filter_ = list(kwargs)[0]
-    if filter_ not in scopes[base_scope]:
+    filter_, filter_value = list(kwargs.items())[0]
+    if filter_ not in scopes[req_scope]:
         return False
-    return kwargs[filter_] in scopes[req_scope][filter_]
+    return filter_value in scopes[req_scope][filter_]
 
 
 def parse_scopes(scope_list):
@@ -343,19 +357,16 @@ def parse_scopes(scope_list):
     """
     parsed_scopes = {}
     for scope in scope_list:
-        scope_ = scope.split('!')
-        base_scope = scope_[0]
-        if len(scope_) > 1:
-            filter_ = scope_[1]
-            if base_scope not in parsed_scopes:
-                parsed_scopes[base_scope] = {}
-            if parsed_scopes[base_scope] != True:
-                key, val = filter_.split('=')
-                if key not in parsed_scopes[base_scope]:
-                    parsed_scopes[base_scope][key] = []
-                parsed_scopes[base_scope][key].append(val)
+        base_scope, _, filter_ = scope.partition('!')
+        if base_scope not in parsed_scopes:
+            parsed_scopes[base_scope] = {}
+        if parsed_scopes[base_scope] != Scope.ALL:
+            key, _, val = filter_.partition('=')
+            if key not in parsed_scopes[base_scope]:
+                parsed_scopes[base_scope][key] = []
+            parsed_scopes[base_scope][key].append(val)
         else:
-            parsed_scopes[base_scope] = True
+            parsed_scopes[base_scope] = Scope.ALL
     return parsed_scopes
 
 
