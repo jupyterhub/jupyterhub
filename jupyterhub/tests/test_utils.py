@@ -1,8 +1,12 @@
 """Tests for utilities"""
 import asyncio
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 from async_generator import aclosing
+from tornado import gen
+from tornado.concurrent import run_on_executor
 
 from ..utils import iterate_until
 
@@ -56,3 +60,31 @@ async def test_iterate_until_ready_after_deadline(io_loop):
         async for item in items:
             yielded.append(item)
     assert yielded == list(range(5))
+
+
+@gen.coroutine
+def tornado_coroutine():
+    yield gen.sleep(0.05)
+    return "ok"
+
+
+class TornadoCompat:
+    def __init__(self):
+        self.executor = ThreadPoolExecutor(1)
+
+    @run_on_executor
+    def on_executor(self):
+        time.sleep(0.05)
+        return "executor"
+
+    @gen.coroutine
+    def tornado_coroutine(self):
+        yield gen.sleep(0.05)
+        return "gen.coroutine"
+
+
+async def test_tornado_coroutines():
+    t = TornadoCompat()
+    # verify that tornado gen and executor methods return awaitables
+    assert (await t.on_executor()) == "executor"
+    assert (await t.tornado_coroutine()) == "gen.coroutine"
