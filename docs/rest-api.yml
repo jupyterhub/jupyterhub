@@ -1,13 +1,13 @@
-# see me at: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/master/docs/rest-api.yml#/default
+# see me at: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#/default
 swagger: '2.0'
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
-  version: 0.9.0dev
+  version: 1.2.0dev
   license:
     name: BSD-3-Clause
 schemes:
-  - [http, https]
+  [http, https]
 securityDefinitions:
   token:
     type: apiKey
@@ -190,7 +190,7 @@ paths:
           in: path
           required: true
           type: string
-        - body:
+        - name: body
           in: body
           schema:
             type: object
@@ -202,34 +202,37 @@ paths:
                   Timestamp of last-seen activity for this user.
                   Only needed if this is not activity associated
                   with using a given server.
-                required: false
               servers:
                 description: |
                   Register activity for specific servers by name.
                   The keys of this dict are the names of servers.
                   The default server has an empty name ('').
-                required: false
                 type: object
                 properties:
                   '<server name>':
                     description: |
                       Activity for a single server.
                     type: object
+                    required:
+                      - last_activity
                     properties:
                       last_activity:
-                        required: true
                         type: string
                         format: date-time
                         description: |
                           Timestamp of last-seen activity on this server.
-          example:
-            last_activity: '2019-02-06T12:54:14Z'
-            servers:
-              '':
-                last_activity: '2019-02-06T12:54:14Z'
-              gpu:
-                last_activity: '2019-02-06T12:54:14Z'
-
+            example:
+              last_activity: '2019-02-06T12:54:14Z'
+              servers:
+                '':
+                  last_activity: '2019-02-06T12:54:14Z'
+                gpu:
+                  last_activity: '2019-02-06T12:54:14Z'
+      responses:
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          description: No such user
   /users/{name}/server:
     post:
       summary: Start a user's single-user notebook server
@@ -239,15 +242,19 @@ paths:
           in: path
           required: true
           type: string
-        - options:
+        - name: options
           description: |
             Spawn options can be passed as a JSON body
             when spawning via the API instead of spawn form.
             The structure of the options
             will depend on the Spawner's configuration.
+            The body itself will be available as `user_options` for the
+            Spawner.
           in: body
           required: false
-          type: object
+          schema:
+            type: object
+
       responses:
         '201':
           description: The user's notebook server has started
@@ -276,11 +283,14 @@ paths:
           required: true
           type: string
         - name: server_name
-          description: name given to a named-server
+          description: |
+            name given to a named-server. 
+            
+            Note that depending on your JupyterHub infrastructure there are chracterter size limitation to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
           in: path
           required: true
           type: string
-        - options:
+        - name: options
           description: |
             Spawn options can be passed as a JSON body
             when spawning via the API instead of spawn form.
@@ -288,7 +298,8 @@ paths:
             will depend on the Spawner's configuration.
           in: body
           required: false
-          type: object
+          schema:
+            type: object
       responses:
         '201':
           description: The user's notebook named-server has started
@@ -307,19 +318,30 @@ paths:
           in: path
           required: true
           type: string
-        - name: remove
-          description: |
-            Whether to fully remove the server, rather than just stop it.
-            Removing a server deletes things like the state of the stopped server.
+        - name: body
           in: body
           required: false
-          type: boolean
+          schema:
+            type: object
+            properties:
+              remove:
+                type: boolean
+                description: |
+                  Whether to fully remove the server, rather than just stop it.
+                  Removing a server deletes things like the state of the stopped server.
+                  Default: false.
       responses:
         '204':
           description: The user's notebook named-server has stopped
         '202':
           description: The user's notebook named-server has not yet stopped as it is taking a while to stop
   /users/{name}/tokens:
+    parameters:
+      - name: name
+        description: username
+        in: path
+        required: true
+        type: string
     get:
       summary: List tokens for the user
       responses:
@@ -329,25 +351,43 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Token'
+        '401':
+          $ref: '#/responses/Unauthorized'
+        '404':
+          description: No such user
     post:
       summary: Create a new token for the user
       parameters:
-        - name: expires_in
-          type: number
-          required: false
+        - name: token_params
           in: body
-          description: lifetime (in seconds) after which the requested token will expire.
-        - name: note
-          type: string
           required: false
-          in: body
-          description: A note attached to the token for future bookkeeping
+          schema:
+            type: object
+            properties:
+              expires_in:
+                type: number
+                description: lifetime (in seconds) after which the requested token will expire.
+              note:
+                type: string
+                description: A note attached to the token for future bookkeeping
       responses:
         '201':
           description: The newly created token
           schema:
             $ref: '#/definitions/Token'
+        '400':
+          description: Body must be a JSON dict or empty
   /users/{name}/tokens/{token_id}:
+    parameters:
+      - name: name
+        description: username
+        in: path
+        required: true
+        type: string
+      - name: token_id
+        in: path
+        required: true
+        type: string
     get:
       summary: Get the model for a token by id
       responses:
@@ -361,12 +401,13 @@ paths:
         '204':
           description: The token has been deleted
   /user:
-    summary: Return authenticated user's model
-    description:
-    parameters:
-    responses:
-      '200':
-        description: The authenticated user's model is returned.
+    get:
+      summary: Return authenticated user's model
+      responses:
+        '200':
+          description: The authenticated user's model is returned.
+          schema:
+            $ref: '#/definitions/User'
   /groups:
     get:
       summary: List groups
@@ -539,14 +580,15 @@ paths:
         Logging in via this method is only available when the active Authenticator
         accepts passwords (e.g. not OAuth).
       parameters:
-        - name: username
+        - name: credentials
           in: body
-          required: false
-          type: string
-        - name: password
-          in: body
-          required: false
-          type: string
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+              password:
+                type: string
       responses:
         '200':
           description: The new API token
@@ -562,10 +604,10 @@ paths:
     get:
       summary: Identify a user or service from an API token
       parameters:
-      - name: token
-        in: path
-        required: true
-        type: string
+        - name: token
+          in: path
+          required: true
+          type: string
       responses:
         '200':
           description: The user or service identified by the API token
@@ -576,14 +618,14 @@ paths:
       summary: Identify a user from a cookie
       description: Used by single-user notebook servers to hand off cookie authentication to the Hub
       parameters:
-      - name: cookie_name
-        in: path
-        required: true
-        type: string
-      - name: cookie_value
-        in: path
-        required: true
-        type: string
+        - name: cookie_name
+          in: path
+          required: true
+          type: string
+        - name: cookie_value
+          in: path
+          required: true
+          type: string
       responses:
         '200':
           description: The user identified by the cookie
@@ -618,6 +660,11 @@ paths:
           in: query
           required: true
           type: string
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: OAuth2Error
   /oauth2/token:
     post:
       summary: Request an OAuth2 token
@@ -629,27 +676,27 @@ paths:
       parameters:
         - name: client_id
           description: The client id
-          in: form
+          in: formData
           required: true
           type: string
         - name: client_secret
           description: The client secret
-          in: form
+          in: formData
           required: true
           type: string
         - name: grant_type
           description: The grant type (always 'authorization_code')
-          in: form
+          in: formData
           required: true
           type: string
         - name: code
           description: The code provided by the authorization redirect
-          in: form
+          in: formData
           required: true
           type: string
         - name: redirect_uri
           description: The redirect url
-          in: form
+          in: formData
           required: true
           type: string
       responses:
@@ -668,14 +715,28 @@ paths:
     post:
       summary: Shutdown the Hub
       parameters:
-        - name: proxy
+        - name: body
           in: body
-          type: boolean
-          description: Whether the proxy should be shutdown as well (default from Hub config)
-        - name: servers
-          in: body
-          type: boolean
-          description: Whether users' notebook servers should be shutdown as well (default from Hub config)
+          schema:
+            type: object
+            properties:
+              proxy:
+                type: boolean
+                description: Whether the proxy should be shutdown as well (default from Hub config)
+              servers:
+                type: boolean
+                description: Whether users' notebook servers should be shutdown as well (default from Hub config)
+      responses:
+        '202':
+          description: Shutdown successful
+        '400':
+          description: Unexpeced value for proxy or servers
+# Descriptions of common responses
+responses:
+  NotFound:
+    description: The specified resource was not found
+  Unauthorized:
+    description: Authentication/Authorization error
 definitions:
   User:
     type: object
@@ -703,11 +764,10 @@ definitions:
         format: date-time
         description: Timestamp of last-seen activity from the user
       servers:
-        type: object
+        type: array
         description: The active servers for this user.
         items:
-          schema:
-            $ref: '#/definitions/Server'
+          $ref: '#/definitions/Server'
   Server:
     type: object
     properties:
@@ -745,6 +805,9 @@ definitions:
       state:
         type: object
         description: Arbitrary internal state from this server's spawner.  Only available on the hub's users list or get-user-by-name method, and only if a hub admin.  None otherwise.
+      user_options:
+        type: object
+        description: User specified options for the user's spawned instance of a single-user server.
   Group:
     type: object
     properties:

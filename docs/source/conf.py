@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 #
 import os
-import shlex
 import sys
 
 # Set paths
@@ -19,9 +18,9 @@ extensions = [
     'sphinx.ext.napoleon',
     'autodoc_traits',
     'sphinx_copybutton',
+    'sphinx-jsonschema',
+    'recommonmark',
 ]
-
-templates_path = ['_templates']
 
 # The master toctree document.
 master_doc = 'index'
@@ -37,7 +36,6 @@ from os.path import dirname
 docs = dirname(dirname(__file__))
 root = dirname(docs)
 sys.path.insert(0, root)
-sys.path.insert(0, os.path.join(docs, 'sphinxext'))
 
 import jupyterhub
 
@@ -59,14 +57,66 @@ default_role = 'literal'
 import recommonmark
 from recommonmark.transform import AutoStructify
 
+# -- Config -------------------------------------------------------------
+from jupyterhub.app import JupyterHub
+from docutils import nodes
+from sphinx.directives.other import SphinxDirective
+from contextlib import redirect_stdout
+from io import StringIO
+
+# create a temp instance of JupyterHub just to get the output of the generate-config
+# and help --all commands.
+jupyterhub_app = JupyterHub()
+
+
+class ConfigDirective(SphinxDirective):
+    """Generate the configuration file output for use in the documentation."""
+
+    has_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        # The generated configuration file for this version
+        generated_config = jupyterhub_app.generate_config_file()
+        # post-process output
+        home_dir = os.environ['HOME']
+        generated_config = generated_config.replace(home_dir, '$HOME', 1)
+        par = nodes.literal_block(text=generated_config)
+        return [par]
+
+
+class HelpAllDirective(SphinxDirective):
+    """Print the output of jupyterhub help --all for use in the documentation."""
+
+    has_content = False
+    required_arguments = 0
+    optional_arguments = 0
+    final_argument_whitespace = False
+    option_spec = {}
+
+    def run(self):
+        # The output of the help command for this version
+        buffer = StringIO()
+        with redirect_stdout(buffer):
+            jupyterhub_app.print_help('--help-all')
+        all_help = buffer.getvalue()
+        # post-process output
+        home_dir = os.environ['HOME']
+        all_help = all_help.replace(home_dir, '$HOME', 1)
+        par = nodes.literal_block(text=all_help)
+        return [par]
+
 
 def setup(app):
     app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
-    app.add_stylesheet('custom.css')
+    app.add_css_file('custom.css')
     app.add_transform(AutoStructify)
+    app.add_directive('jupyterhub-generate-config', ConfigDirective)
+    app.add_directive('jupyterhub-help-all', HelpAllDirective)
 
-
-source_parsers = {'.md': 'recommonmark.parser.CommonMarkParser'}
 
 source_suffix = ['.rst', '.md']
 # source_encoding = 'utf-8-sig'
@@ -74,41 +124,13 @@ source_suffix = ['.rst', '.md']
 # -- Options for HTML output ----------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.
-import alabaster_jupyterhub
-
-html_theme = 'alabaster_jupyterhub'
-html_theme_path = [alabaster_jupyterhub.get_html_theme_path()]
+html_theme = 'pydata_sphinx_theme'
 
 html_logo = '_static/images/logo/logo.png'
 html_favicon = '_static/images/logo/favicon.ico'
 
 # Paths that contain custom static files (such as style sheets)
 html_static_path = ['_static']
-
-html_theme_options = {
-    'show_related': True,
-    'description': 'Documentation for JupyterHub',
-    'github_user': 'jupyterhub',
-    'github_repo': 'jupyterhub',
-    'github_banner': False,
-    'github_button': True,
-    'github_type': 'star',
-    'show_powered_by': False,
-    'extra_nav_links': {
-        'GitHub Repo': 'http://github.com/jupyterhub/jupyterhub',
-        'Issue Tracker': 'http://github.com/jupyterhub/jupyterhub/issues',
-    },
-}
-
-html_sidebars = {
-    '**': [
-        'about.html',
-        'searchbox.html',
-        'navigation.html',
-        'relations.html',
-        'sourcelink.html',
-    ]
-}
 
 htmlhelp_basename = 'JupyterHubdoc'
 
@@ -192,14 +214,12 @@ intersphinx_mapping = {'https://docs.python.org/3/': None}
 # -- Read The Docs --------------------------------------------------------
 
 on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
-if not on_rtd:
-    html_theme = 'alabaster'
-else:
+if on_rtd:
     # readthedocs.org uses their theme by default, so no need to specify it
-    # build rest-api, since RTD doesn't run make
+    # build both metrics and rest-api, since RTD doesn't run make
     from subprocess import check_call as sh
 
-    sh(['make', 'rest-api'], cwd=docs)
+    sh(['make', 'metrics', 'rest-api'], cwd=docs)
 
 # -- Spell checking -------------------------------------------------------
 

@@ -1,0 +1,206 @@
+# This is a GitHub workflow defining a set of jobs with a set of steps.
+# ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
+#
+name: Run tests
+
+# Trigger the workflow's on all PRs but only on pushed tags or commits to
+# main/master branch to avoid PRs developed in a GitHub fork's dedicated branch
+# to trigger.
+on:
+  pull_request:
+  push:
+
+defaults:
+  run:
+    # Declare bash be used by default in this workflow's "run" steps.
+    #
+    # NOTE: bash will by default run with:
+    #   --noprofile: Ignore ~/.profile etc.
+    #   --norc:      Ignore ~/.bashrc etc.
+    #   -e:          Exit directly on errors
+    #   -o pipefail: Don't mask errors from a command piped into another command
+    shell: bash
+
+env:
+  # UTF-8 content may be interpreted as ascii and causes errors without this.
+  LANG: C.UTF-8
+
+jobs:
+  # Run "pre-commit run --all-files"
+  pre-commit:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 2
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      # ref: https://github.com/pre-commit/action
+      - uses: pre-commit/action@v2.0.0
+      - name: Help message if pre-commit fail
+        if: ${{ failure() }}
+        run: |
+          echo "You can install pre-commit hooks to automatically run formatting"
+          echo "on each commit with:"
+          echo "    pre-commit install"
+          echo "or you can run by hand on staged files with"
+          echo "    pre-commit run"
+          echo "or after-the-fact on already committed files with"
+          echo "    pre-commit run --all-files"
+
+
+  # Run "pytest jupyterhub/tests" in various configurations
+  pytest:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+
+    strategy:
+      # Keep running even if one variation of the job fail
+      fail-fast: false
+      matrix:
+        # We run this job multiple times with different parameterization
+        # specified below, these parameters have no meaning on their own and
+        # gain meaning on how job steps use them.
+        #
+        # subdomain:
+        #   Tests everything when JupyterHub is configured to add routes for
+        #   users with dedicated subdomains like user1.jupyter.example.com
+        #   rather than jupyter.example.com/user/user1.
+        #
+        # db: [mysql/postgres]
+        #   Tests everything when JupyterHub works against a dedicated mysql or
+        #   postgresql server.
+        #
+        # jupyter_server:
+        #   Tests everything when the user instances are started with
+        #   jupyter_server instead of notebook.
+        #
+        # main_dependencies:
+        #   Tests everything when the we use the latest available dependencies
+        #   from: ipytraitlets.
+        #
+        # NOTE: Since only the value of these parameters are presented in the
+        #       GitHub UI when the workflow run, we avoid using true/false as
+        #       values by instead duplicating the name to signal true.
+        include:
+          - python: "3.6"
+            subdomain: subdomain
+          - python: "3.7"
+            db: mysql
+          - python: "3.8"
+            db: postgres
+          - python: "3.8"
+            jupyter_server: jupyter_server
+          - python: "3.9"
+            main_dependencies: main_dependencies
+
+    steps:
+      # NOTE: In GitHub workflows, environment variables are set by writing
+      #       assignment statements to a file. They will be set in the following
+      #       steps as if would used `export MY_ENV=my-value`.
+      - name: Configure environment variables
+        run: |
+          if [ "${{ matrix.subdomain }}" != "" ]; then
+              echo "JUPYTERHUB_TEST_SUBDOMAIN_HOST=http://localhost.jovyan.org:8000" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.db }}" == "mysql" ]; then
+              echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.db }}" == "postgres" ]; then
+              echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
+              echo "PGUSER=test_user" >> $GITHUB_ENV
+              echo "PGPASSWORD=hub[test/:?" >> $GITHUB_ENV
+              echo "JUPYTERHUB_TEST_DB_URL=postgresql://test_user:hub%5Btest%2F%3A%3F@127.0.0.1:5432/jupyterhub" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
+          fi
+      - uses: actions/checkout@v2
+
+      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
+      - name: Install Node v14
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+      - name: Install Node dependencies
+        run: |
+          npm install
+          npm install -g configurable-http-proxy
+          npm list
+
+      # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
+      - name: Install Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --upgrade . -r dev-requirements.txt
+
+          if [ "${{ matrix.main_dependencies }}" != "" ]; then
+              pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
+          fi
+          if [ "${{ matrix.jupyter_server }}" != "" ]; then
+              pip uninstall notebook --yes
+              pip install jupyter_server
+          fi
+          if [ "${{ matrix.db }}" == "mysql" ]; then
+              pip install mysql-connector-python
+          fi
+          if [ "${{ matrix.db }}" == "postgres" ]; then
+              pip install psycopg2-binary
+          fi
+
+          pip freeze
+
+      # NOTE: If you need to debug this DB setup step, consider the following.
+      #
+      # 1. mysql/postgressql are database servers we start as docker containers,
+      #    and we use clients named mysql/psql.
+      #
+      # 2. When we start a database server we need to pass environment variables
+      #    explicitly as part of the `docker run` command. These environment
+      #    variables are named differently from the similarly named environment
+      #    variables used by the clients.
+      #
+      #    - mysql    server ref: https://hub.docker.com/_/mysql/
+      #    - mysql    client ref: https://dev.mysql.com/doc/refman/5.7/en/environment-variables.html
+      #    - postgres server ref: https://hub.docker.com/_/postgres/
+      #    - psql     client ref: https://www.postgresql.org/docs/9.5/libpq-envars.html
+      #
+      # 3. When we connect, they should use 127.0.0.1 rather than the
+      #    default way of connecting which leads to errors like below both for
+      #    mysql and postgresql unless we set MYSQL_HOST/PGHOST to 127.0.0.1.
+      #
+      #    - ERROR 2002 (HY000): Can't connect to local MySQL server through socket '/var/run/mysqld/mysqld.sock' (2)
+      #
+      - name: Start a database server (${{ matrix.db }})
+        if: ${{ matrix.db }}
+        run: |
+          if [ "${{ matrix.db }}" == "mysql" ]; then
+              sudo apt-get update
+              sudo apt-get install -y mysql-client
+              DB=mysql bash ci/docker-db.sh
+              DB=mysql bash ci/init-db.sh
+          fi
+          if [ "${{ matrix.db }}" == "postgres" ]; then
+              sudo apt-get update
+              sudo apt-get install -y postgresql-client
+              DB=postgres bash ci/docker-db.sh
+              DB=postgres bash ci/init-db.sh
+          fi
+
+      - name: Run pytest
+        # FIXME: --color=yes explicitly set because:
+        #        https://github.com/actions/runner/issues/241
+        run: |
+          pytest -v --maxfail=2 --color=yes --cov=jupyterhub jupyterhub/tests
+      - name: Submit codecov report
+        run: |
+          codecov

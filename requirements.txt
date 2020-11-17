@@ -3,9 +3,11 @@ async_generator>=1.8
 certipy>=0.1.2
 entrypoints
 jinja2
+jupyter_telemetry>=0.1.0
 oauthlib>=3.0
-pamela
+pamela; sys_platform != 'win32'
 prometheus_client>=0.0.21
+psutil>=5.6.5; sys_platform == 'win32'
 python-dateutil
 requests
 SQLAlchemy>=1.1

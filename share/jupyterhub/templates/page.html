@@ -34,9 +34,14 @@
     {% block stylesheet %}
     <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
     {% endblock %}
+    {% block favicon %}
+    <link rel="icon" href="{{ static_url("favicon.ico") }}" type="image/x-icon">
+    {% endblock %}
+    {% block scripts %}
     <script src="{{static_url("components/requirejs/require.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/jquery/dist/jquery.min.js") }}" type="text/javascript" charset="utf-8"></script>
     <script src="{{static_url("components/bootstrap/dist/js/bootstrap.min.js") }}" type="text/javascript" charset="utf-8"></script>
+    {% endblock %}
     <script>
       require.config({
           {% if version_hash %}
@@ -63,7 +68,7 @@
         base_url: "{{base_url}}",
         prefix: "{{prefix}}",
         {% if user %}
-        user: "{{user.name}}",
+        user: "{{user.json_escaped_name}}",
         {% endif %}
         {% if admin_access %}
         admin_access: true,
@@ -101,12 +106,14 @@
             <a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a>
         </span>
         {% endblock %}
+        {% if user %}
         <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#thenavbar" aria-expanded="false">
           <span class="sr-only">Toggle navigation</span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
         </button>
+        {% endif %}
       </div>
 
       <div class="collapse navbar-collapse" id="thenavbar">
@@ -118,6 +125,16 @@
             {% if user.admin %}
             <li><a href="{{base_url}}admin">Admin</a></li>
             {% endif %}
+            {% if services %}
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
+              <ul class="dropdown-menu">
+              {% for service in services %}
+                <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+              {% endfor %}
+              </ul>
+            </li>
+            {% endif %}
           {% endblock %}
         </ul>
         {% endif %}
@@ -127,7 +144,7 @@
               {% block login_widget %}
                 <span id="login_widget">
                   {% if user %}
-		    <p class="navbar-text">{{user.name}}</p>
+		            <p class="navbar-text">{{user.name}}</p>
                     <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                   {% else %}
                     <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
@@ -148,7 +165,7 @@
 
 {% block announcement %}
 {% if announcement %}
-<div class="container text-center announcement">
+<div class="container text-center announcement alert alert-warning">
   {{ announcement | safe }}
 </div>
 {% endif %}
@@ -156,6 +173,9 @@
 
 
 {% block main %}
+{% endblock %}
+
+{% block footer %}
 {% endblock %}
 
 {% call modal('Error', btn_label='OK') %}

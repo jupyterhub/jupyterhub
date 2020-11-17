@@ -2,7 +2,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import copy
 import json
 import math
 import random
@@ -26,13 +25,14 @@ from tornado.httputil import HTTPHeaders
 from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
-from tornado.web import MissingArgumentError
+from tornado.web import addslash
 from tornado.web import RequestHandler
 
 from .. import __version__
 from .. import orm
 from ..metrics import PROXY_ADD_DURATION_SECONDS
-from ..metrics import ProxyAddStatus
+from ..metrics import PROXY_DELETE_DURATION_SECONDS
+from ..metrics import ProxyDeleteStatus
 from ..metrics import RUNNING_SERVERS
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import SERVER_SPAWN_DURATION_SECONDS
@@ -140,6 +140,10 @@ class BaseHandler(RequestHandler):
         return self.settings['hub']
 
     @property
+    def app(self):
+        return self.settings['app']
+
+    @property
     def proxy(self):
         return self.settings['proxy']
 
@@ -154,6 +158,10 @@ class BaseHandler(RequestHandler):
     @property
     def oauth_provider(self):
         return self.settings['oauth_provider']
+
+    @property
+    def eventlog(self):
+        return self.settings['eventlog']
 
     def finish(self, *args, **kwargs):
         """Roll back any uncommitted transactions from the handler."""
@@ -248,9 +256,39 @@ class BaseHandler(RequestHandler):
         orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             return None
-        orm_token.last_activity = orm_token.user.last_activity = datetime.utcnow()
-        self.db.commit()
+
+        now = datetime.utcnow()
+        recorded = self._record_activity(orm_token, now)
+        if self._record_activity(orm_token.user, now) or recorded:
+            self.db.commit()
         return self._user_from_orm(orm_token.user)
+
+    def _record_activity(self, obj, timestamp=None):
+        """record activity on an ORM object
+
+        If last_activity was more recent than self.activity_resolution seconds ago,
+        do nothing to avoid unnecessarily frequent database commits.
+
+        Args:
+            obj: an ORM object with a last_activity attribute
+            timestamp (datetime, optional): the timestamp of activity to register.
+        Returns:
+            recorded (bool): True if activity was recorded, False if not.
+        """
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+        resolution = self.settings.get("activity_resolution", 0)
+        if not obj.last_activity or resolution == 0:
+            self.log.debug("Recording first activity for %s", obj)
+            obj.last_activity = timestamp
+            return True
+        if (timestamp - obj.last_activity).total_seconds() > resolution:
+            # this debug line will happen just too often
+            # uncomment to debug last_activity updates
+            # self.log.debug("Recording activity for %s", obj)
+            obj.last_activity = timestamp
+            return True
+        return False
 
     async def refresh_auth(self, user, force=False):
         """Refresh user authentication info
@@ -322,14 +360,15 @@ class BaseHandler(RequestHandler):
 
         # record token activity
         now = datetime.utcnow()
-        orm_token.last_activity = now
+        recorded = self._record_activity(orm_token, now)
         if orm_token.user:
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
             if not orm_token.note.startswith("Server at "):
-                orm_token.user.last_activity = now
-        self.db.commit()
+                recorded = self._record_activity(orm_token.user, now) or recorded
+        if recorded:
+            self.db.commit()
 
         if orm_token.service:
             return orm_token.service
@@ -359,8 +398,8 @@ class BaseHandler(RequestHandler):
             clear()
             return
         # update user activity
-        user.last_activity = datetime.utcnow()
-        self.db.commit()
+        if self._record_activity(user):
+            self.db.commit()
         return user
 
     def _user_from_orm(self, orm_user):
@@ -452,6 +491,8 @@ class BaseHandler(RequestHandler):
             path=url_path_join(self.base_url, 'services'),
             **kwargs
         )
+        # Reset _jupyterhub_user
+        self._jupyterhub_user = None
 
     def _set_cookie(self, key, value, encrypted=True, **overrides):
         """Setting any cookie should go through here
@@ -594,8 +635,15 @@ class BaseHandler(RequestHandler):
             )
 
         if not next_url:
-            # custom default URL
-            next_url = default or self.default_url
+            # custom default URL, usually passed because user landed on that page but was not logged in
+            if default:
+                next_url = default
+            else:
+                # As set in jupyterhub_config.py
+                if callable(self.default_url):
+                    next_url = self.default_url(self)
+                else:
+                    next_url = self.default_url
 
         if not next_url:
             # default URL after login
@@ -610,7 +658,41 @@ class BaseHandler(RequestHandler):
                     next_url = url_path_join(self.hub.base_url, 'spawn')
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
+
+        next_url = self.append_query_parameters(next_url, exclude=['next'])
         return next_url
+
+    def append_query_parameters(self, url, exclude=None):
+        """Append the current request's query parameters to the given URL.
+
+        Supports an extra optional parameter ``exclude`` that when provided must
+        contain a list of parameters to be ignored, i.e. these parameters will
+        not be added to the URL.
+
+        This is important to avoid infinite loops with the next parameter being
+        added over and over, for instance.
+
+        The default value for ``exclude`` is an array with "next". This is useful
+        as most use cases in JupyterHub (all?) won't want to include the next
+        parameter twice (the next parameter is added elsewhere to the query
+        parameters).
+
+        :param str url: a URL
+        :param list exclude: optional list of parameters to be ignored, defaults to
+        a list with "next" (to avoid redirect-loops)
+        :rtype (str)
+        """
+        if exclude is None:
+            exclude = ['next']
+        if self.request.query:
+            query_string = [
+                param
+                for param in parse_qsl(self.request.query)
+                if param[0] not in exclude
+            ]
+            if query_string:
+                url = url_concat(url, query_string)
+        return url
 
     async def auth_to_user(self, authenticated, user=None):
         """Persist data from .authenticate() or .refresh_user() to the User database
@@ -632,9 +714,10 @@ class BaseHandler(RequestHandler):
             raise ValueError("Username doesn't match! %s != %s" % (username, user.name))
 
         if user is None:
-            new_user = username not in self.users
-            user = self.user_from_username(username)
+            user = self.find_user(username)
+            new_user = user is None
             if new_user:
+                user = self.user_from_username(username)
                 await maybe_future(self.authenticator.add_user(user))
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
@@ -727,6 +810,7 @@ class BaseHandler(RequestHandler):
             active_counts['spawn_pending'] + active_counts['proxy_pending']
         )
         active_count = active_counts['active']
+        RUNNING_SERVERS.set(active_count)
 
         concurrent_spawn_limit = self.concurrent_spawn_limit
         active_server_limit = self.active_server_limit
@@ -810,10 +894,14 @@ class BaseHandler(RequestHandler):
                 "User %s took %.3f seconds to start", user_server_name, toc - tic
             )
             self.statsd.timing('spawner.success', (toc - tic) * 1000)
-            RUNNING_SERVERS.inc()
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.success
             ).observe(time.perf_counter() - spawn_start_time)
+            self.eventlog.record_event(
+                'hub.jupyter.org/server-action',
+                1,
+                {'action': 'start', 'username': user.name, 'servername': server_name},
+            )
             proxy_add_start_time = time.perf_counter()
             spawner._proxy_pending = True
             try:
@@ -822,12 +910,13 @@ class BaseHandler(RequestHandler):
                 PROXY_ADD_DURATION_SECONDS.labels(status='success').observe(
                     time.perf_counter() - proxy_add_start_time
                 )
+                RUNNING_SERVERS.inc()
             except Exception:
                 self.log.exception("Failed to add %s to proxy!", user_server_name)
                 self.log.error(
                     "Stopping %s to avoid inconsistent state", user_server_name
                 )
-                await user.stop()
+                await user.stop(server_name)
                 PROXY_ADD_DURATION_SECONDS.labels(status='failure').observe(
                     time.perf_counter() - proxy_add_start_time
                 )
@@ -844,7 +933,7 @@ class BaseHandler(RequestHandler):
             # clear spawner._spawn_future when it's done
             # keep an exception around, though, to prevent repeated implicit spawns
             # if spawn is failing
-            if f.exception() is None:
+            if f.cancelled() or f.exception() is None:
                 spawner._spawn_future = None
             # Now we're all done. clear _spawn_pending flag
             spawner._spawn_pending = False
@@ -855,11 +944,14 @@ class BaseHandler(RequestHandler):
         # update failure count and abort if consecutive failure limit
         # is reached
         def _track_failure_count(f):
-            if f.exception() is None:
+            if f.cancelled() or f.exception() is None:
                 # spawn succeeded, reset failure count
                 self.settings['failure_count'] = 0
                 return
             # spawn failed, increment count and abort if limit reached
+            SERVER_SPAWN_DURATION_SECONDS.labels(
+                status=ServerSpawnStatus.failure
+            ).observe(time.perf_counter() - spawn_start_time)
             self.settings.setdefault('failure_count', 0)
             self.settings['failure_count'] += 1
             failure_count = self.settings['failure_count']
@@ -892,13 +984,16 @@ class BaseHandler(RequestHandler):
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
             if spawner._spawn_pending and not spawner._waiting_for_response:
-                # still in Spawner.start, which is taking a long time
-                # we shouldn't poll while spawn is incomplete.
-                self.log.warning(
-                    "User %s is slow to start (timeout=%s)",
-                    user_server_name,
-                    self.slow_spawn_timeout,
-                )
+                # If slow_spawn_timeout is intentionally disabled then we
+                # don't need to log a warning, just return.
+                if self.slow_spawn_timeout > 0:
+                    # still in Spawner.start, which is taking a long time
+                    # we shouldn't poll while spawn is incomplete.
+                    self.log.warning(
+                        "User %s is slow to start (timeout=%s)",
+                        user_server_name,
+                        self.slow_spawn_timeout,
+                    )
                 return
 
             # start has finished, but the server hasn't come up
@@ -961,7 +1056,18 @@ class BaseHandler(RequestHandler):
         self.log.warning(
             "User %s server stopped, with exit code: %s", user.name, status
         )
-        await self.proxy.delete_user(user, server_name)
+        proxy_deletion_start_time = time.perf_counter()
+        try:
+            await self.proxy.delete_user(user, server_name)
+            PROXY_DELETE_DURATION_SECONDS.labels(
+                status=ProxyDeleteStatus.success
+            ).observe(time.perf_counter() - proxy_deletion_start_time)
+        except Exception:
+            PROXY_DELETE_DURATION_SECONDS.labels(
+                status=ProxyDeleteStatus.failure
+            ).observe(time.perf_counter() - proxy_deletion_start_time)
+            raise
+
         await user.stop(server_name)
 
     async def stop_single_user(self, user, server_name=''):
@@ -984,17 +1090,32 @@ class BaseHandler(RequestHandler):
             tic = time.perf_counter()
             try:
                 await self.proxy.delete_user(user, server_name)
+                PROXY_DELETE_DURATION_SECONDS.labels(
+                    status=ProxyDeleteStatus.success
+                ).observe(time.perf_counter() - tic)
+
                 await user.stop(server_name)
                 toc = time.perf_counter()
                 self.log.info(
                     "User %s server took %.3f seconds to stop", user.name, toc - tic
                 )
                 self.statsd.timing('spawner.stop', (toc - tic) * 1000)
-                RUNNING_SERVERS.dec()
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.success
                 ).observe(toc - tic)
+                self.eventlog.record_event(
+                    'hub.jupyter.org/server-action',
+                    1,
+                    {
+                        'action': 'stop',
+                        'username': user.name,
+                        'servername': server_name,
+                    },
+                )
             except:
+                PROXY_DELETE_DURATION_SECONDS.labels(
+                    status=ProxyDeleteStatus.failure
+                ).observe(time.perf_counter() - tic)
                 SERVER_STOP_DURATION_SECONDS.labels(
                     status=ServerStopStatus.failure
                 ).observe(time.perf_counter() - tic)
@@ -1009,7 +1130,10 @@ class BaseHandler(RequestHandler):
         except gen.TimeoutError:
             # hit timeout, but stop is still pending
             self.log.warning(
-                "User %s:%s server is slow to stop", user.name, server_name
+                "User %s:%s server is slow to stop (timeout=%s)",
+                user.name,
+                server_name,
+                self.slow_stop_timeout,
             )
 
         # return handle on the future for hooking up callbacks
@@ -1032,16 +1156,36 @@ class BaseHandler(RequestHandler):
             "<a href='{home}'>home page</a>.".format(home=home)
         )
 
-    def get_template(self, name):
-        """Return the jinja template object for a given name"""
-        return self.settings['jinja2_env'].get_template(name)
+    def get_template(self, name, sync=False):
+        """
+        Return the jinja template object for a given name
 
-    def render_template(self, name, **ns):
+        If sync is True, we return a Template that is compiled without async support.
+        Only those can be used in synchronous code.
+
+        If sync is False, we return a Template that is compiled with async support
+        """
+        if sync:
+            key = 'jinja2_env_sync'
+        else:
+            key = 'jinja2_env'
+        return self.settings[key].get_template(name)
+
+    def render_template(self, name, sync=False, **ns):
+        """
+        Render jinja2 template
+
+        If sync is set to True, we return an awaitable
+        If sync is set to False, we render the template & return a string
+        """
         template_ns = {}
         template_ns.update(self.template_namespace)
         template_ns.update(ns)
-        template = self.get_template(name)
-        return template.render(**template_ns)
+        template = self.get_template(name, sync)
+        if sync:
+            return template.render(**template_ns)
+        else:
+            return template.render_async(**template_ns)
 
     @property
     def template_namespace(self):
@@ -1055,10 +1199,23 @@ class BaseHandler(RequestHandler):
             logout_url=self.settings['logout_url'],
             static_url=self.static_url,
             version_hash=self.version_hash,
+            services=self.get_accessible_services(user),
         )
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])
         return ns
+
+    def get_accessible_services(self, user):
+        accessible_services = []
+        if user is None:
+            return accessible_services
+        for service in self.services.values():
+            if not service.url:
+                continue
+            if not service.display:
+                continue
+            accessible_services.append(service)
+        return accessible_services
 
     def write_error(self, status_code, **kwargs):
         """render custom error pages"""
@@ -1103,17 +1260,19 @@ class BaseHandler(RequestHandler):
             # Content-Length must be recalculated.
             self.clear_header('Content-Length')
 
-        # render the template
+        # render_template is async, but write_error can't be!
+        # so we run it sync here, instead of making a sync version of render_template
+
         try:
-            html = self.render_template('%s.html' % status_code, **ns)
+            html = self.render_template('%s.html' % status_code, sync=True, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
             try:
-                html = self.render_template('error.html', **ns)
+                html = self.render_template('error.html', sync=True, **ns)
             except:
                 # In this case, any side effect must be avoided.
                 ns['no_spawner_check'] = True
-                html = self.render_template('error.html', **ns)
+                html = self.render_template('error.html', sync=True, **ns)
 
         self.write(html)
 
@@ -1325,7 +1484,9 @@ class UserUrlHandler(BaseHandler):
             return
 
         pending_url = url_concat(
-            url_path_join(self.hub.base_url, 'spawn-pending', user.name, server_name),
+            url_path_join(
+                self.hub.base_url, 'spawn-pending', user.escaped_name, server_name
+            ),
             {'next': self.request.uri},
         )
         if spawner.pending or spawner._failed:
@@ -1337,13 +1498,20 @@ class UserUrlHandler(BaseHandler):
         # serve a page prompting for spawn and 503 error
         # visiting /user/:name no longer triggers implicit spawn
         # without explicit user action
-        self.set_status(503)
         spawn_url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.name, server_name),
+            url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
-        html = self.render_template(
-            "not_running.html", user=user, server_name=server_name, spawn_url=spawn_url
+        self.set_status(503)
+
+        auth_state = await user.get_auth_state()
+        html = await self.render_template(
+            "not_running.html",
+            user=user,
+            server_name=server_name,
+            spawn_url=spawn_url,
+            auth_state=auth_state,
+            implicit_spawn_seconds=self.settings.get("implicit_spawn_seconds", 0),
         )
         self.finish(html)
 
@@ -1416,19 +1584,51 @@ class UserRedirectHandler(BaseHandler):
 
     If the user is not logged in, send to login URL, redirecting back here.
 
+    If c.JupyterHub.user_redirect_hook is set, the return value of that
+    callable is used to generate the redirect URL.
+
     .. versionadded:: 0.7
     """
 
     @web.authenticated
-    def get(self, path):
-        user = self.current_user
-        user_url = url_path_join(user.url, path)
-        if self.request.query:
-            user_url = url_concat(user_url, parse_qsl(self.request.query))
+    async def get(self, path):
+        # If hook is present to generate URL to redirect to, use that instead
+        # of the default. The configurer is responsible for making sure this
+        # URL is right. If None is returned by the hook, we do our normal
+        # processing
+        url = None
+        if self.app.user_redirect_hook:
+            url = await maybe_future(
+                self.app.user_redirect_hook(
+                    path, self.request, self.current_user, self.base_url
+                )
+            )
+        if url is None:
+            user = self.current_user
+            user_url = user.url
 
-        url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.name), {"next": user_url}
-        )
+            if self.app.default_server_name:
+                user_url = url_path_join(user_url, self.app.default_server_name)
+
+            user_url = url_path_join(user_url, path)
+            if self.request.query:
+                user_url = url_concat(user_url, parse_qsl(self.request.query))
+
+            if self.app.default_server_name:
+                url = url_concat(
+                    url_path_join(
+                        self.hub.base_url,
+                        "spawn",
+                        user.escaped_name,
+                        self.app.default_server_name,
+                    ),
+                    {"next": user_url},
+                )
+            else:
+                url = url_concat(
+                    url_path_join(self.hub.base_url, "spawn", user.escaped_name),
+                    {"next": user_url},
+                )
 
         self.redirect(url)
 
@@ -1450,10 +1650,9 @@ class CSPReportHandler(BaseHandler):
 class AddSlashHandler(BaseHandler):
     """Handler for adding trailing slash to URLs that need them"""
 
-    def get(self, *args):
-        src = urlparse(self.request.uri)
-        dest = src._replace(path=src.path + '/')
-        self.redirect(urlunparse(dest))
+    @addslash
+    def get(self):
+        pass
 
 
 default_handlers = [

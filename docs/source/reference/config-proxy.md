@@ -17,9 +17,11 @@ satisfy the following:
 Let's start out with needed JupyterHub configuration in `jupyterhub_config.py`:
 
 ```python
-# Force the proxy to only listen to connections to 127.0.0.1
-c.JupyterHub.ip = '127.0.0.1'
+# Force the proxy to only listen to connections to 127.0.0.1 (on port 8000)
+c.JupyterHub.bind_url = 'http://127.0.0.1:8000'
 ```
+
+(For Jupyterhub < 0.9 use `c.JupyterHub.ip = '127.0.0.1'`.)
 
 For high-quality SSL configuration, we also generate Diffie-Helman parameters.
 This can take a few minutes:
@@ -81,8 +83,11 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
         # websocket headers
+        proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
+
+        proxy_buffering off;
     }
 
     # Managing requests to verify letsencrypt host
@@ -136,6 +141,20 @@ server {
 Now restart `nginx`, restart the JupyterHub, and enjoy accessing
 `https://HUB.DOMAIN.TLD` while serving other content securely on
 `https://NO_HUB.DOMAIN.TLD`.
+
+### SELinux permissions for nginx
+On distributions with SELinux enabled (e.g. Fedora), one may encounter permission errors
+when the nginx service is started.
+
+We need to allow nginx to perform network relay and connect to the jupyterhub port. The
+following commands do that:
+
+```bash
+semanage port -a -t http_port_t -p tcp 8000
+setsebool -P httpd_can_network_relay 1
+setsebool -P httpd_can_network_connect 1
+```
+Replace 8000 with the port the jupyterhub server is running from.
 
 
 ## Apache
@@ -197,8 +216,8 @@ In case of the need to run the jupyterhub under /jhub/ or other location please 
 
 httpd.conf amendments:
 ```bash
- RewriteRule /jhub/(.*) ws://127.0.0.1:8000/jhub/$1 [P,L]
- RewriteRule /jhub/(.*) http://127.0.0.1:8000/jhub/$1 [P,L]
+ RewriteRule /jhub/(.*) ws://127.0.0.1:8000/jhub/$1 [NE.P,L]
+ RewriteRule /jhub/(.*) http://127.0.0.1:8000/jhub/$1 [NE,P,L]
  
  ProxyPass /jhub/ http://127.0.0.1:8000/jhub/
  ProxyPassReverse /jhub/  http://127.0.0.1:8000/jhub/

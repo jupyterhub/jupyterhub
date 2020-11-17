@@ -1,4 +1,7 @@
 #!/bin/bash
 set -exuo pipefail
 
+# build jupyterhub-onbuild image
 docker build --build-arg BASE_IMAGE=$DOCKER_REPO:$DOCKER_TAG -t ${DOCKER_REPO}-onbuild:$DOCKER_TAG onbuild
+# build jupyterhub-demo image
+docker build --build-arg BASE_IMAGE=${DOCKER_REPO}-onbuild:$DOCKER_TAG -t ${DOCKER_REPO}-demo:$DOCKER_TAG demo-image

@@ -57,7 +57,7 @@ To do this we add to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
 For example:
 
 ```bash
-# comma-separated whitelist of users that can spawn single-user servers
+# comma-separated list of users that can spawn single-user servers
 # this should include all of your Hub users
 Runas_Alias JUPYTER_USERS = rhea, zoe, wash
 
@@ -119,6 +119,11 @@ is used by JupyterHub. To use PAM, the process may need to be able to read
 the shadow password database.
 
 ### Shadow group (Linux)
+
+**Note:** On Fedora based distributions there is no clear way to configure
+the PAM database to allow sufficient access for authenticating with the target user's password
+from JupyterHub. As a workaround we recommend use an
+[alternative authentication method](https://github.com/jupyterhub/jupyterhub/wiki/Authenticators).
 
 ```bash
 $ ls -l /etc/shadow

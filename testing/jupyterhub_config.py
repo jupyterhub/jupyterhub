@@ -13,6 +13,6 @@ c.JupyterHub.authenticator_class = DummyAuthenticator
 # Optionally set a global password that all users must use
 # c.DummyAuthenticator.password = "your_password"
 
-from jupyterhub.spawners import SimpleSpawner
+from jupyterhub.spawner import SimpleLocalProcessSpawner
 
-c.JupyterHub.spawner_class = SimpleSpawner
+c.JupyterHub.spawner_class = SimpleLocalProcessSpawner

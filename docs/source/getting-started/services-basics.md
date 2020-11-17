@@ -3,9 +3,9 @@
 When working with JupyterHub, a **Service** is defined as a process
 that interacts with the Hub's REST API. A Service may perform a specific
 or action or task. For example, shutting down individuals' single user
-notebook servers that have been is a good example of a task that could
-be automated by a Service. Let's look at how the [cull_idle_servers][]
-script can be used as a Service.
+notebook servers that have been idle for some time is a good example of
+a task that could be automated by a Service. Let's look at how the
+[jupyterhub_idle_culler][] script can be used as a Service.
 
 ## Real-world example to cull idle servers
 
@@ -15,11 +15,11 @@ document will:
 - explain some basic information about API tokens
 - clarify that API tokens can be used to authenticate to
   single-user servers as of [version 0.8.0](../changelog)
-- show how the [cull_idle_servers][] script can be:
+- show how the [jupyterhub_idle_culler][] script can be:
     - used in a Hub-managed service
     - run as a standalone script
 
-Both examples for `cull_idle_servers` will communicate tasks to the
+Both examples for `jupyterhub_idle_culler` will communicate tasks to the
 Hub via the REST API.
 
 ## API Token basics
@@ -78,17 +78,23 @@ single-user servers, and only cookies can be used for authentication.
 0.8 supports using JupyterHub API tokens to authenticate to single-user
 servers.
 
-## Configure `cull-idle` to run as a Hub-Managed Service
+## Configure the idle culler to run as a Hub-Managed Service
+
+Install the idle culler:
+
+```
+pip install jupyterhub-idle-culler
+```
 
 In `jupyterhub_config.py`, add the following dictionary for the
-`cull-idle` Service to the `c.JupyterHub.services` list:
+`idle-culler` Service to the `c.JupyterHub.services` list:
 
 ```python
 c.JupyterHub.services = [
     {
-        'name': 'cull-idle',
+        'name': 'idle-culler',
         'admin': True,
-        'command': [sys.executable, 'cull_idle_servers.py', '--timeout=3600'],
+        'command': [sys.executable, '-m', 'jupyterhub_idle_culler', '--timeout=3600'],
     }
 ]
 ```
@@ -101,21 +107,21 @@ where:
 
 ## Run `cull-idle` manually as a standalone script
 
-Now you can run your script, i.e. `cull_idle_servers`, by providing it
+Now you can run your script by providing it
 the API token and it will authenticate through the REST API to
 interact with it.
 
-This will run `cull-idle` manually. `cull-idle` can be run as a standalone
+This will run the idle culler service manually. It can be run as a standalone
 script anywhere with access to the Hub, and will periodically check for idle
 servers and shut them down via the Hub's REST API. In order to shutdown the
 servers, the token given to cull-idle must have admin privileges.
 
 Generate an API token and store it in the `JUPYTERHUB_API_TOKEN` environment
-variable. Run `cull_idle_servers.py` manually.
+variable. Run `jupyterhub_idle_culler` manually.
 
 ```bash
     export JUPYTERHUB_API_TOKEN='token'
-    python3 cull_idle_servers.py [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
+    python -m jupyterhub_idle_culler [--timeout=900] [--url=http://127.0.0.1:8081/hub/api]
 ```
 
-[cull_idle_servers]: https://github.com/jupyterhub/jupyterhub/blob/master/examples/cull-idle/cull_idle_servers.py
+[jupyterhub_idle_culler]: https://github.com/jupyterhub/jupyterhub-idle-culler

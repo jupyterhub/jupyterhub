@@ -19,7 +19,7 @@ In general, for a proxy to be usable by JupyterHub, it must:
 
 1. support websockets without prior knowledge of the URL where websockets may
    occur
-2. support trie-based routing (i.e. allow different routes on `/foo` and 
+2. support trie-based routing (i.e. allow different routes on `/foo` and
    `/foo/bar` and route based on specificity)
 3. adding or removing a route should not cause existing connections to drop
 
@@ -62,7 +62,7 @@ Hub should call these methods when the Hub itself starts and stops.
 ## Encryption
 
 When using `internal_ssl` to encrypt traffic behind the proxy, at minimum,
-your `Proxy` will need client ssl certificates which the `Hub` must be made 
+your `Proxy` will need client ssl certificates which the `Hub` must be made
 aware of. These can be generated with the command `jupyterhub --generate-certs`
 which will write them to the `internal_certs_location` in folders named
 `proxy_api` and `proxy_client`. Alternatively, these can be provided to the
@@ -102,7 +102,7 @@ route to be proxied, such as `/user/name/`. A routespec will:
 ### Adding a route
 
 When adding a route, JupyterHub may pass a JSON-serializable dict as a `data`
-argument that should be attacked to the proxy route. When that route is
+argument that should be attached to the proxy route. When that route is
 retrieved, the `data` argument should be returned as well. If your  proxy
 implementation doesn't support storing data attached to routes, then your
 Python wrapper may have to handle storing the `data` piece itself, e.g in a
@@ -204,7 +204,7 @@ setup(
 ```
 
 If you have added this metadata to your package,
-users can select your authenticator with the configuration:
+users can select your proxy with the configuration:
 
 ```python
 c.JupyterHub.proxy_class = 'mything'

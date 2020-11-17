@@ -216,7 +216,7 @@ class HubAuth(SingletonConfigurable):
         return self.hub_host + url_path_join(self.hub_prefix, 'login')
 
     keyfile = Unicode(
-        '',
+        os.getenv('JUPYTERHUB_SSL_KEYFILE', ''),
         help="""The ssl key to use for requests
 
         Use with certfile
@@ -224,7 +224,7 @@ class HubAuth(SingletonConfigurable):
     ).tag(config=True)
 
     certfile = Unicode(
-        '',
+        os.getenv('JUPYTERHUB_SSL_CERTFILE', ''),
         help="""The ssl cert to use for requests
 
         Use with keyfile
@@ -232,7 +232,7 @@ class HubAuth(SingletonConfigurable):
     ).tag(config=True)
 
     client_ca = Unicode(
-        '',
+        os.getenv('JUPYTERHUB_SSL_CLIENT_CA', ''),
         help="""The ssl certificate authority to use to verify requests
 
         Use with keyfile and certfile
@@ -371,9 +371,13 @@ class HubAuth(SingletonConfigurable):
             )
             app_log.warning(r.text)
             msg = "Failed to check authorization"
-            # pass on error_description from oauth failure
+            # pass on error from oauth failure
             try:
-                description = r.json().get("error_description")
+                response = r.json()
+                # prefer more specific 'error_description', fallback to 'error'
+                description = response.get(
+                    "error_description", response.get("error", "Unknown error")
+                )
             except Exception:
                 pass
             else:
@@ -428,7 +432,7 @@ class HubAuth(SingletonConfigurable):
         )
 
     auth_header_name = 'Authorization'
-    auth_header_pat = re.compile('token\s+(.+)', re.IGNORECASE)
+    auth_header_pat = re.compile(r'token\s+(.+)', re.IGNORECASE)
 
     def get_token(self, handler):
         """Get the user token from a request
@@ -860,15 +864,15 @@ class HubAuthenticated(object):
         if kind == 'service':
             # it's a service, check hub_services
             if self.hub_services and name in self.hub_services:
-                app_log.debug("Allowing whitelisted Hub service %s", name)
+                app_log.debug("Allowing Hub service %s", name)
                 return model
             else:
                 app_log.warning("Not allowing Hub service %s", name)
                 raise UserNotAllowed(model)
 
         if self.hub_users and name in self.hub_users:
-            # user in whitelist
-            app_log.debug("Allowing whitelisted Hub user %s", name)
+            # user in allowed list
+            app_log.debug("Allowing Hub user %s", name)
             return model
         elif self.hub_groups and set(model['groups']).intersection(self.hub_groups):
             allowed_groups = set(model['groups']).intersection(self.hub_groups)
@@ -877,7 +881,7 @@ class HubAuthenticated(object):
                 name,
                 ','.join(sorted(allowed_groups)),
             )
-            # group in whitelist
+            # group in allowed list
             return model
         else:
             app_log.warning("Not allowing Hub user %s", name)

@@ -589,11 +589,14 @@ class SpawnProgressAPIHandler(APIHandler):
         async with aclosing(
             iterate_until(spawn_future, spawner._generate_progress())
         ) as events:
-            async for event in events:
-                # don't allow events to sneakily set the 'ready' flag
-                if 'ready' in event:
-                    event.pop('ready', None)
-                await self.send_event(event)
+            try:
+                async for event in events:
+                    # don't allow events to sneakily set the 'ready' flag
+                    if 'ready' in event:
+                        event.pop('ready', None)
+                    await self.send_event(event)
+            except asyncio.CancelledError:
+                pass
 
         # progress finished, wait for spawn to actually resolve,
         # in case progress finished early
@@ -622,14 +625,14 @@ def _parse_timestamp(timestamp):
 
     - raise HTTPError(400) on parse error
     - handle and strip tz info for internal consistency
-      (we use naïve utc timestamps everywhere)
+      (we use naive utc timestamps everywhere)
     """
     try:
         dt = parse_date(timestamp)
     except Exception:
         raise web.HTTPError(400, "Not a valid timestamp: %r", timestamp)
     if dt.tzinfo:
-        # strip timezone info to naïve UTC datetime
+        # strip timezone info to naive UTC datetime
         dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
 
     now = datetime.utcnow()

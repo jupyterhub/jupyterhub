@@ -2,20 +2,21 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import copy
 import time
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
 
 from jinja2 import TemplateNotFound
-from tornado import gen
 from tornado import web
 from tornado.httputil import url_concat
+from tornado.httputil import urlparse
 
+from .. import __version__
 from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
+from ..pagination import Pagination
 from ..utils import admin_only
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -61,12 +62,14 @@ class HomeHandler(BaseHandler):
         # to establish that this is an explicit spawn request rather
         # than an implicit one, which can be caused by any link to `/user/:name(/:server_name)`
         if user.active:
-            url = url_path_join(self.base_url, 'user', user.name)
+            url = url_path_join(self.base_url, 'user', user.escaped_name)
         else:
-            url = url_path_join(self.hub.base_url, 'spawn', user.name)
+            url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
-        html = self.render_template(
+        auth_state = await user.get_auth_state()
+        html = await self.render_template(
             'home.html',
+            auth_state=auth_state,
             user=user,
             url=url,
             allow_named_servers=self.allow_named_servers,
@@ -89,10 +92,12 @@ class SpawnHandler(BaseHandler):
 
     default_url = None
 
-    def _render_form(self, for_user, spawner_options_form, message=''):
-        return self.render_template(
+    async def _render_form(self, for_user, spawner_options_form, message=''):
+        auth_state = await for_user.get_auth_state()
+        return await self.render_template(
             'spawn.html',
             for_user=for_user,
+            auth_state=auth_state,
             spawner_options_form=spawner_options_form,
             error_message=message,
             url=self.request.uri,
@@ -117,6 +122,23 @@ class SpawnHandler(BaseHandler):
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
+        if server_name:
+            if not self.allow_named_servers:
+                raise web.HTTPError(400, "Named servers are not enabled.")
+            if (
+                self.named_server_limit_per_user > 0
+                and server_name not in user.orm_spawners
+            ):
+                named_spawners = list(user.all_spawners(include_default=False))
+                if self.named_server_limit_per_user <= len(named_spawners):
+                    raise web.HTTPError(
+                        400,
+                        "User {} already has the maximum of {} named servers."
+                        "  One must be deleted before a new server can be created".format(
+                            user.name, self.named_server_limit_per_user
+                        ),
+                    )
+
         if not self.allow_named_servers and user.running:
             url = self.get_next_url(user, default=user.server_url(server_name))
             self.log.info("User is running: %s", user.name)
@@ -127,17 +149,8 @@ class SpawnHandler(BaseHandler):
             server_name = ''
 
         spawner = user.spawners[server_name]
-        # resolve `?next=...`, falling back on the spawn-pending url
-        # must not be /user/server for named servers,
-        # which may get handled by the default server if they aren't ready yet
 
-        pending_url = url_path_join(
-            self.hub.base_url, "spawn-pending", user.name, server_name
-        )
-
-        if self.get_argument('next', None):
-            # preserve `?next=...` through spawn-pending
-            pending_url = url_concat(pending_url, {'next': self.get_argument('next')})
+        pending_url = self._get_pending_url(user, server_name)
 
         # spawner is active, redirect back to get progress, etc.
         if spawner.ready:
@@ -153,26 +166,56 @@ class SpawnHandler(BaseHandler):
 
         # Add handler to spawner here so you can access query params in form rendering.
         spawner.handler = self
+
+        # auth_state may be an input to options form,
+        # so resolve the auth state hook here
+        auth_state = await user.get_auth_state()
+        await spawner.run_auth_state_hook(auth_state)
+
+        # Try to start server directly when query arguments are passed.
+        error_message = ''
+        query_options = {}
+        for key, byte_list in self.request.query_arguments.items():
+            query_options[key] = [bs.decode('utf8') for bs in byte_list]
+
+        # 'next' is reserved argument for redirect after spawn
+        query_options.pop('next', None)
+
+        if len(query_options) > 0:
+            try:
+                self.log.debug(
+                    "Triggering spawn with supplied query arguments for %s",
+                    spawner._log_name,
+                )
+                options = await maybe_future(spawner.options_from_query(query_options))
+                pending_url = self._get_pending_url(user, server_name)
+                return await self._wrap_spawn_single_user(
+                    user, server_name, spawner, pending_url, options
+                )
+            except Exception as e:
+                self.log.error(
+                    "Failed to spawn single-user server with query arguments",
+                    exc_info=True,
+                )
+                error_message = str(e)
+                # fallback to behavior without failing query arguments
+
         spawner_options_form = await spawner.get_options_form()
         if spawner_options_form:
             self.log.debug("Serving options form for %s", spawner._log_name)
-            form = self._render_form(
-                for_user=user, spawner_options_form=spawner_options_form
+            form = await self._render_form(
+                for_user=user,
+                spawner_options_form=spawner_options_form,
+                message=error_message,
             )
             self.finish(form)
         else:
             self.log.debug(
                 "Triggering spawn with default options for %s", spawner._log_name
             )
-            # Explicit spawn request: clear _spawn_future
-            # which may have been saved to prevent implicit spawns
-            # after a failure.
-            if spawner._spawn_future and spawner._spawn_future.done():
-                spawner._spawn_future = None
-            # not running, no form. Trigger spawn and redirect back to /user/:name
-            f = asyncio.ensure_future(self.spawn_single_user(user, server_name))
-            await asyncio.wait([f], timeout=1)
-            self.redirect(pending_url)
+            return await self._wrap_spawn_single_user(
+                user, server_name, spawner, pending_url
+            )
 
     @web.authenticated
     async def post(self, for_user=None, server_name=''):
@@ -202,14 +245,20 @@ class SpawnHandler(BaseHandler):
         for key, byte_list in self.request.files.items():
             form_options["%s_file" % key] = byte_list
         try:
+            self.log.debug(
+                "Triggering spawn with supplied form options for %s", spawner._log_name
+            )
             options = await maybe_future(spawner.options_from_form(form_options))
-            await self.spawn_single_user(user, server_name=server_name, options=options)
+            pending_url = self._get_pending_url(user, server_name)
+            return await self._wrap_spawn_single_user(
+                user, server_name, spawner, pending_url, options
+            )
         except Exception as e:
             self.log.error(
                 "Failed to spawn single-user server with form", exc_info=True
             )
             spawner_options_form = await user.spawner.get_options_form()
-            form = self._render_form(
+            form = await self._render_form(
                 for_user=user, spawner_options_form=spawner_options_form, message=str(e)
             )
             self.finish(form)
@@ -219,10 +268,51 @@ class SpawnHandler(BaseHandler):
         next_url = self.get_next_url(
             user,
             default=url_path_join(
-                self.hub.base_url, "spawn-pending", user.name, server_name
+                self.hub.base_url, "spawn-pending", user.escaped_name, server_name
             ),
         )
         self.redirect(next_url)
+
+    def _get_pending_url(self, user, server_name):
+        # resolve `?next=...`, falling back on the spawn-pending url
+        # must not be /user/server for named servers,
+        # which may get handled by the default server if they aren't ready yet
+
+        pending_url = url_path_join(
+            self.hub.base_url, "spawn-pending", user.escaped_name, server_name
+        )
+
+        pending_url = self.append_query_parameters(pending_url, exclude=['next'])
+
+        if self.get_argument('next', None):
+            # preserve `?next=...` through spawn-pending
+            pending_url = url_concat(pending_url, {'next': self.get_argument('next')})
+
+        return pending_url
+
+    async def _wrap_spawn_single_user(
+        self, user, server_name, spawner, pending_url, options=None
+    ):
+        # Explicit spawn request: clear _spawn_future
+        # which may have been saved to prevent implicit spawns
+        # after a failure.
+        if spawner._spawn_future and spawner._spawn_future.done():
+            spawner._spawn_future = None
+        # not running, no form. Trigger spawn and redirect back to /user/:name
+        f = asyncio.ensure_future(
+            self.spawn_single_user(user, server_name, options=options)
+        )
+        done, pending = await asyncio.wait([f], timeout=1)
+        # If spawn_single_user throws an exception, raise a 500 error
+        # otherwise it may cause a redirect loop
+        if f.done() and f.exception():
+            exc = f.exception()
+            raise web.HTTPError(
+                500,
+                "Error in Authenticator.pre_spawn_start: %s %s"
+                % (type(exc).__name__, str(exc)),
+            )
+        return self.redirect(pending_url)
 
 
 class SpawnPendingHandler(BaseHandler):
@@ -270,6 +360,8 @@ class SpawnPendingHandler(BaseHandler):
         # if spawning fails for any reason, point users to /hub/home to retry
         self.extra_error_html = self.spawn_home_error
 
+        auth_state = await user.get_auth_state()
+
         # First, check for previous failure.
         if (
             not spawner.active
@@ -282,11 +374,14 @@ class SpawnPendingHandler(BaseHandler):
             # We should point the user to Home if the most recent spawn failed.
             exc = spawner._spawn_future.exception()
             self.log.error("Previous spawn for %s failed: %s", spawner._log_name, exc)
-            spawn_url = url_path_join(self.hub.base_url, "spawn", user.escaped_name)
+            spawn_url = url_path_join(
+                self.hub.base_url, "spawn", user.escaped_name, server_name
+            )
             self.set_status(500)
-            html = self.render_template(
+            html = await self.render_template(
                 "not_running.html",
                 user=user,
+                auth_state=auth_state,
                 server_name=server_name,
                 spawn_url=spawn_url,
                 failed=True,
@@ -307,8 +402,12 @@ class SpawnPendingHandler(BaseHandler):
                 page = "stop_pending.html"
             else:
                 page = "spawn_pending.html"
-            html = self.render_template(
-                page, user=user, spawner=spawner, progress_url=spawner._progress_url
+            html = await self.render_template(
+                page,
+                user=user,
+                spawner=spawner,
+                progress_url=spawner._progress_url,
+                auth_state=auth_state,
             )
             self.finish(html)
             return
@@ -327,10 +426,13 @@ class SpawnPendingHandler(BaseHandler):
         # further, set status to 404 because this is not
         # serving the expected page
         if status is not None:
-            spawn_url = url_path_join(self.hub.base_url, "spawn", user.escaped_name)
-            html = self.render_template(
+            spawn_url = url_path_join(
+                self.hub.base_url, "spawn", user.escaped_name, server_name
+            )
+            html = await self.render_template(
                 "not_running.html",
                 user=user,
+                auth_state=auth_state,
                 server_name=server_name,
                 spawn_url=spawn_url,
             )
@@ -348,14 +450,18 @@ class SpawnPendingHandler(BaseHandler):
 class AdminHandler(BaseHandler):
     """Render the admin page."""
 
+    @web.authenticated
     @admin_only
-    def get(self):
+    async def get(self):
+        page, per_page, offset = Pagination(config=self.config).get_page_args(self)
+
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
         mapping = {'running': orm.Spawner.server_id}
         for name in available:
             if name not in mapping:
-                mapping[name] = getattr(orm.User, name)
+                table = orm.User if name != "last_activity" else orm.Spawner
+                mapping[name] = getattr(table, name)
 
         default_order = {
             'name': 'asc',
@@ -390,23 +496,41 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
-        users = self.db.query(orm.User).outerjoin(orm.Spawner).order_by(*ordered)
+        users = (
+            self.db.query(orm.User)
+            .outerjoin(orm.Spawner)
+            .order_by(*ordered)
+            .limit(per_page)
+            .offset(offset)
+        )
         users = [self._user_from_orm(u) for u in users]
-        from itertools import chain
 
         running = []
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
 
-        html = self.render_template(
+        total = self.db.query(orm.User.id).count()
+        pagination = Pagination(
+            url=self.request.uri,
+            total=total,
+            page=page,
+            per_page=per_page,
+            config=self.config,
+        )
+
+        auth_state = await self.current_user.get_auth_state()
+        html = await self.render_template(
             'admin.html',
             current_user=self.current_user,
+            auth_state=auth_state,
             admin_access=self.settings.get('admin_access', False),
             users=users,
             running=running,
             sort={s: o for s, o in zip(sorts, orders)},
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
+            server_version='{} {}'.format(__version__, self.version_hash),
+            pagination=pagination,
         )
         self.finish(html)
 
@@ -415,7 +539,7 @@ class TokenPageHandler(BaseHandler):
     """Handler for page requesting new API tokens"""
 
     @web.authenticated
-    def get(self):
+    async def get(self):
         never = datetime(1900, 1, 1)
 
         user = self.current_user
@@ -484,8 +608,12 @@ class TokenPageHandler(BaseHandler):
 
         oauth_clients = sorted(oauth_clients, key=sort_key, reverse=True)
 
-        html = self.render_template(
-            'token.html', api_tokens=api_tokens, oauth_clients=oauth_clients
+        auth_state = await self.current_user.get_auth_state()
+        html = await self.render_template(
+            'token.html',
+            api_tokens=api_tokens,
+            oauth_clients=oauth_clients,
+            auth_state=auth_state,
         )
         self.finish(html)
 
@@ -493,7 +621,7 @@ class TokenPageHandler(BaseHandler):
 class ProxyErrorHandler(BaseHandler):
     """Handler for rendering proxy error pages"""
 
-    def get(self, status_code_s):
+    async def get(self, status_code_s):
         status_code = int(status_code_s)
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         # build template namespace
@@ -517,19 +645,23 @@ class ProxyErrorHandler(BaseHandler):
         self.set_header('Content-Type', 'text/html')
         # render the template
         try:
-            html = self.render_template('%s.html' % status_code, **ns)
+            html = await self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
-            html = self.render_template('error.html', **ns)
+            html = await self.render_template('error.html', **ns)
 
         self.write(html)
 
 
 class HealthCheckHandler(BaseHandler):
-    """Answer to health check"""
+    """Serve health check probes as quickly as possible"""
 
-    def get(self, *args):
-        self.finish()
+    # There is nothing for us to do other than return a positive
+    # HTTP status code as quickly as possible for GET or HEAD requests
+    def get(self):
+        pass
+
+    head = get
 
 
 default_handlers = [

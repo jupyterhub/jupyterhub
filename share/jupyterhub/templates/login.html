@@ -56,13 +56,18 @@
       tabindex="2"
     />
 
-    <input
-      type="submit"
-      id="login_submit"
-      class='btn btn-jupyter'
-      value='Sign In'
-      tabindex="3"
-    />
+    <div class="feedback-container">
+      <input
+        id="login_submit"
+        type="submit"
+        class='btn btn-jupyter'
+        value='Sign in'
+        tabindex="3"
+        />
+      <div class="feedback-widget hidden">
+        <i class="fa fa-spinner"></i>
+      </div>
+    </div>
 
     {% block login_terms %}
     {% if login_term_url %}
@@ -91,6 +96,13 @@ if (window.location.protocol === "http:") {
   var warning = document.getElementById('insecure-login-warning');
   warning.className = warning.className.replace(/\bhidden\b/, '');
 }
+// setup onSubmit feedback
+$('form').submit((e) => {
+  var form = $(e.target);
+  form.find('.feedback-container>input').attr('disabled', true);
+  form.find('.feedback-container>*').toggleClass('hidden');
+  form.find('.feedback-widget>*').toggleClass('fa-pulse');
+});
 </script>
 
 {% if login_term_url %}

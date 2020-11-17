@@ -2,18 +2,13 @@
 import asyncio
 import os
 import sys
-import time
 from binascii import hexlify
 from contextlib import contextmanager
 from subprocess import Popen
-from threading import Event
 
-import pytest
-import requests
 from async_generator import async_generator
 from async_generator import asynccontextmanager
 from async_generator import yield_
-from tornado import gen
 from tornado.ioloop import IOLoop
 
 from ..utils import maybe_future

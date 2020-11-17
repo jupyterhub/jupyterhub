@@ -53,7 +53,7 @@ class Server(HasTraits):
         Never used in APIs, only logging,
         since it can be non-connectable value, such as '', meaning all interfaces.
         """
-        if self.ip in {'', '0.0.0.0'}:
+        if self.ip in {'', '0.0.0.0', '::'}:
             return self.url.replace(self._connect_ip, self.ip or '*', 1)
         return self.url
 
@@ -87,13 +87,13 @@ class Server(HasTraits):
         """The address to use when connecting to this server
 
         When `ip` is set to a real ip address, the same value is used.
-        When `ip` refers to 'all interfaces' (e.g. '0.0.0.0'),
+        When `ip` refers to 'all interfaces' (e.g. '0.0.0.0' or '::'),
         clients connect via hostname by default.
         Setting `connect_ip` explicitly overrides any default behavior.
         """
         if self.connect_ip:
             return self.connect_ip
-        elif self.ip in {'', '0.0.0.0'}:
+        elif self.ip in {'', '0.0.0.0', '::'}:
             # if listening on all interfaces, default to hostname for connect
             return socket.gethostname()
         else:
@@ -149,7 +149,12 @@ class Server(HasTraits):
         if self.connect_url:
             parsed = urlparse(self.connect_url)
             return "{proto}://{host}".format(proto=parsed.scheme, host=parsed.netloc)
-        return "{proto}://{ip}:{port}".format(
+
+        if ':' in self._connect_ip:
+            fmt = "{proto}://[{ip}]:{port}"
+        else:
+            fmt = "{proto}://{ip}:{port}"
+        return fmt.format(
             proto=self.proto, ip=self._connect_ip, port=self._connect_port
         )
 
@@ -213,8 +218,4 @@ class Hub(Server):
         return url_path_join(self.url, 'api')
 
     def __repr__(self):
-        return "<%s %s:%s>" % (
-            self.__class__.__name__,
-            self.server.ip,
-            self.server.port,
-        )
+        return "<%s %s:%s>" % (self.__class__.__name__, self.ip, self.port)
