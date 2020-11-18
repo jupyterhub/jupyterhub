@@ -34,8 +34,6 @@ from tornado.httpclient import HTTPError
 from tornado.log import app_log
 from tornado.platform.asyncio import to_asyncio_future
 
-from . import orm
-
 
 def random_port():
     """Get a single random port."""
@@ -322,12 +320,13 @@ def needs_scope_expansion(filter_, filter_value, sub_scope):
         return True
 
 
-def expand_groups_to_users(db, filter_scope):
-    """Update the group filters to account for the individual users"""
-    if 'group' in filter_scope:
-        groups = db.query(orm.Group)
-        user_set = orm.User.query.filter(orm.User.group.in_(groups))
-        return [user.name for user in user_set]
+# def expand_groups_to_users(db, filter_scope):
+#     """Update the group filters to account for the individual users"""
+#     if 'group' in filter_scope:
+#         groups = db.query(orm.Group)
+#         user_set = orm.User.query.filter(orm.User.group.in_(groups))
+#         return [user.name for user in user_set]
+#
 
 
 def check_user_in_expanded_scope(handler, user_name, scope_group_names):
