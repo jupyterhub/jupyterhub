@@ -6,6 +6,7 @@ from tornado import web
 from ..utils import check_scope
 from ..utils import needs_scope
 from ..utils import parse_scopes
+from ..utils import Scope
 
 
 def test_scope_constructor():
@@ -26,43 +27,54 @@ def test_scope_constructor():
 def test_scope_precendence():
     scope_list = ['read:users!user=maeby', 'read:users']
     parsed_scopes = parse_scopes(scope_list)
-    assert parsed_scopes['read:users'] == True
+    assert parsed_scopes['read:users'] == Scope.ALL
 
 
 def test_scope_check_present():
+    handler = None
     scope_list = ['read:users']
     parsed_scopes = parse_scopes(scope_list)
-    assert check_scope('read:users', parsed_scopes)
-    assert check_scope('read:users!user=maeby', parsed_scopes)
+    assert check_scope(handler, 'read:users', parsed_scopes)
+    assert check_scope(handler, 'read:users', parsed_scopes, user='maeby')
 
 
-def test_scope_check_not_present():  # What should this return when the broad scope is asked and a small one satisfied?
+def test_scope_check_not_present():
+    handler = None
     scope_list = ['read:users!user=maeby']
     parsed_scopes = parse_scopes(scope_list)
-    assert not check_scope('read:users', parsed_scopes)
-    assert not check_scope('read:users', parsed_scopes, user='gob')
-    assert not check_scope('read:users', parsed_scopes, server='gob/server')
+    assert not check_scope(handler, 'read:users', parsed_scopes)
+    assert not check_scope(handler, 'read:users', parsed_scopes, user='gob')
+    assert not check_scope(
+        handler, 'read:users', parsed_scopes, user='gob', server='server'
+    )
 
 
 def test_scope_filters():
+    handler = None
     scope_list = ['read:users', 'read:users!group=bluths', 'read:users!user=maeby']
     parsed_scopes = parse_scopes(scope_list)
-    assert check_scope('read:users!group=bluths', parsed_scopes)
-    assert check_scope('read:users!user=maeby', parsed_scopes)
+    assert check_scope(handler, 'read:users', parsed_scopes, group='bluth')
+    assert check_scope(handler, 'read:users', parsed_scopes, user='maeby')
 
 
 def test_scope_one_filter_only():
+    handler = None
     with pytest.raises(AttributeError):
-        check_scope('all', parse_scopes(['all']), user='george_michael', group='bluths')
+        check_scope(
+            handler, 'all', parse_scopes(['all']), user='george_michael', group='bluths'
+        )
 
 
 def test_scope_parse_server_name():
+    handler = None
     scope_list = ['users:servers!server=maeby/server1', 'read:users!user=maeby']
     parsed_scopes = parse_scopes(scope_list)
-    assert check_scope('users:servers', parsed_scopes, user='maeby', server='server1')
+    assert check_scope(
+        handler, 'users:servers', parsed_scopes, user='maeby', server='server1'
+    )
 
 
-class Test:
+class MockAPI:
     def __init__(self):
         self.scopes = ['users']
 
@@ -140,7 +152,7 @@ class Test:
     ],
 )
 def test_scope_method_access(scopes, method, arguments, is_allowed):
-    obj = Test()
+    obj = MockAPI()
     obj.scopes = scopes
     api_call = getattr(obj, method)
     if is_allowed:
