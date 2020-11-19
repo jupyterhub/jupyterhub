@@ -74,7 +74,11 @@ def ssl_tmpdir(tmpdir_factory):
 def app(request, io_loop, ssl_tmpdir):
     """Mock a jupyterhub app for testing"""
     mocked_app = None
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+    if 'SSL_ENABLED' in os.environ:
+        ssl_env_var = bool(os.environ['SSL_ENABLED'])
+    else:
+        ssl_env_var = False
+    ssl_enabled = getattr(request.module, "ssl_enabled", ssl_env_var)
     kwargs = dict()
     if ssl_enabled:
         kwargs.update(dict(internal_ssl=True, internal_certs_location=str(ssl_tmpdir)))
