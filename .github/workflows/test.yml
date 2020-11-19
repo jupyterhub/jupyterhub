@@ -94,7 +94,7 @@ jobs:
           - python: "3.7"
             db: mysql
           - python: "3.7"
-            ssl: ssl_enabled
+            ssl: ssl
           - python: "3.8"
             db: postgres
           - python: "3.8"
@@ -115,7 +115,7 @@ jobs:
               echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
               echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
           fi
-          if [ "${{ matrix.ssl }}" == "ssl_enabled" ]; then
+          if [ "${{ matrix.ssl }}" == "ssl" ]; then
               echo "SSL_ENABLED=1" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then

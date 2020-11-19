@@ -1,5 +1,6 @@
 """Tests for the REST API."""
 import json
+import os
 import re
 import sys
 import uuid
@@ -27,7 +28,7 @@ from .utils import async_requests
 from .utils import auth_header
 from .utils import find_user
 
-
+ssl_enabled = os.environ.get('SSL_ENABLED', False)
 # --------------------
 # Authentication tests
 # --------------------

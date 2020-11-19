@@ -20,6 +20,8 @@ from ..app import JupyterHub
 from .mocking import MockHub
 from .test_api import add_user
 
+ssl_enabled = os.environ.get('SSL_ENABLED', False)
+
 
 def test_help_all():
     out = check_output([sys.executable, '-m', 'jupyterhub', '--help-all']).decode(
