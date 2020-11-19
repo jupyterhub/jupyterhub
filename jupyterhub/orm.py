@@ -39,6 +39,9 @@ from sqlalchemy.types import Text
 from sqlalchemy.types import TypeDecorator
 from tornado.log import app_log
 
+from .roles import add_role
+from .roles import get_default_roles
+from .roles import update_roles
 from .utils import compare_token
 from .utils import hash_token
 from .utils import new_token
@@ -151,6 +154,18 @@ service_role_map = Table(
     Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
 )
 
+# token:role many:many mapping table
+api_token_role_map = Table(
+    'api_token_role_map',
+    Base.metadata,
+    Column(
+        'api_token_id',
+        ForeignKey('api_tokens.id', ondelete='CASCADE'),
+        primary_key=True,
+    ),
+    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+)
+
 
 class Role(Base):
     """User Roles"""
@@ -162,6 +177,7 @@ class Role(Base):
     scopes = Column(JSONList)
     users = relationship('User', secondary='user_role_map', backref='roles')
     services = relationship('Service', secondary='service_role_map', backref='roles')
+    tokens = relationship('APIToken', secondary='api_token_role_map', backref='roles')
 
     def __repr__(self):
         return "<%s %s (%s) - scopes: %s>" % (
@@ -570,6 +586,7 @@ class APIToken(Hashed, Base):
         token=None,
         user=None,
         service=None,
+        roles=None,
         note='',
         generated=True,
         expires_in=None,
@@ -598,6 +615,14 @@ class APIToken(Hashed, Base):
         if expires_in is not None:
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
         db.add(orm_token)
+        # load default roles if they haven't been initiated
+        # correct to have this here? otherwise some tests fail
+        user_role = Role.find(db, 'user')
+        if not user_role:
+            default_roles = get_default_roles()
+            for role in default_roles:
+                add_role(db, role)
+        update_roles(db, obj=orm_token, kind='tokens', roles=roles)
         db.commit()
         return token
 

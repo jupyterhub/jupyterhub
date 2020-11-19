@@ -560,4 +560,3 @@ def test_expiring_oauth_code(app, user):
         assert orm_code in db.query(orm.OAuthCode)
         orm.OAuthCode.purge_expired(db)
         assert orm_code not in db.query(orm.OAuthCode)
-

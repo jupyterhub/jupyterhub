@@ -150,10 +150,13 @@ class APIHandler(BaseHandler):
         expires_at = None
         if isinstance(token, orm.APIToken):
             kind = 'api_token'
+            roles = [r.name for r in token.roles]
             extra = {'note': token.note}
             expires_at = token.expires_at
         elif isinstance(token, orm.OAuthAccessToken):
             kind = 'oauth'
+            # oauth tokens do not bear roles
+            roles = []
             extra = {'oauth_client': token.client.description or token.client.client_id}
             if token.expires_at:
                 expires_at = datetime.fromtimestamp(token.expires_at)
@@ -174,6 +177,7 @@ class APIHandler(BaseHandler):
             owner_key: owner,
             'id': token.api_id,
             'kind': kind,
+            'roles': [role for role in roles],
             'created': isoformat(token.created),
             'last_activity': isoformat(token.last_activity),
             'expires_at': isoformat(expires_at),

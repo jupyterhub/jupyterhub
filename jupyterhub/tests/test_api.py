@@ -70,7 +70,7 @@ async def test_referer_check(app):
     # add admin user
     user = find_user(app.db, 'admin')
     if user is None:
-        user = add_user(app.db, name='admin', admin=True, roles=['admin'])
+        user = add_user(app.db, name='admin', admin=True)
     cookies = await app.login_user('admin')
 
     r = await api_request(
@@ -1159,7 +1159,7 @@ async def test_token_as_user_deprecated(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
-        add_user(app.db, app, name=for_user)
+        for_user_obj = add_user(app.db, app, name=for_user)
     data = {'username': for_user}
     headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(
@@ -1252,7 +1252,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
-        add_user(app.db, app, name=for_user)
+        for_user_obj = add_user(app.db, app, name=for_user)
     data = {'username': for_user}
     headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(
@@ -1269,6 +1269,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     if status != 200:
         return
     assert 'token' in reply
+
     token_id = reply['id']
     r = await api_request(app, 'users', for_user, 'tokens', token_id, headers=headers)
     r.raise_for_status()

@@ -318,18 +318,21 @@ class JupyterHub(Application):
 
         For instance::
 
-            roles = [
-                {
-                    'name': 'teacher',
-                    'description': 'Access users information, servers and groups without create/delete privileges',
-                    'scopes': ['users', 'groups'],
-                    'users': ['cyclops', 'wolverine']
-                }
-            ]
+            load_roles = [
+                            {
+                                'name': 'teacher',
+                                'description': 'Access users information, servers and groups without create/delete privileges',
+                                'scopes': ['users', 'groups'],
+                                'users': ['cyclops', 'gandalf'],
+                                'services': [],
+                                'tokens': []
+                            }
+                        ]
 
+        All keys apart from 'name' are optional.
         See all the available scopes in the JupyterHub REST API documentation.
 
-        The default roles are in roles.py.
+        Default roles are defined in roles.py.
 
         """,
     ).tag(config=True)
@@ -1823,6 +1826,8 @@ class JupyterHub(Application):
     async def init_roles(self):
         """Load default and predefined roles into the database"""
         db = self.db
+        role_bearers = ['users', 'services', 'tokens']
+
         # load default roles
         default_roles = roles.get_default_roles()
         for role in default_roles:
@@ -1831,43 +1836,31 @@ class JupyterHub(Application):
         # load predefined roles from config file
         for predef_role in self.load_roles:
             roles.add_role(db, predef_role)
-            role = orm.Role.find(db, predef_role['name'])
-
-            # handle users
-            if 'users' in predef_role.keys():
-                for username in predef_role['users']:
-                    username = self.authenticator.normalize_username(username)
-                    if not (
-                        await maybe_future(
-                            self.authenticator.check_allowed(username, None)
+            # add users, services and/or tokens
+            for bearer in role_bearers:
+                if bearer in predef_role.keys():
+                    for bname in predef_role[bearer]:
+                        if bearer == 'users':
+                            bname = self.authenticator.normalize_username(bname)
+                            if not (
+                                await maybe_future(
+                                    self.authenticator.check_allowed(bname, None)
+                                )
+                            ):
+                                raise ValueError(
+                                    "Username %r is not in Authenticator.allowed_users"
+                                    % bname
+                                )
+                        roles.add_obj(
+                            db, objname=bname, kind=bearer, rolename=predef_role['name']
                         )
-                    ):
-                        raise ValueError(
-                            "Username %r is not in Authenticator.allowed_users"
-                            % username
-                        )
-                    user = orm.User.find(db, name=username)
-                    if user is None:
-                        raise ValueError("%r does not exist" % username)
-                    else:
-                        roles.add_user(db, user=user, role=role)
 
-            # handle services
-            if 'services' in predef_role.keys():
-                for servicename in predef_role['services']:
-                    service = orm.Service.find(db, name=servicename)
-                    if service is None:
-                        raise ValueError("%r does not exist" % servicename)
-                    else:
-                        roles.add_user(db, user=service, role=role)
-
-        # make sure all users and services have at least one role (update with default)
-        Classes = [orm.User, orm.Service]
-        for ormClass in Classes:
-            for obj in db.query(ormClass):
+        # make sure all users, services and tokens have at least one role (update with default)
+        for bearer in role_bearers:
+            Class = roles.get_orm_class(bearer)
+            for obj in db.query(Class):
                 if len(obj.roles) < 1:
-                    roles.update_roles(db, obj)
-
+                    roles.update_roles(db, obj=obj, kind=bearer)
         db.commit()
 
     async def _add_tokens(self, token_dict, kind):

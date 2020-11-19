@@ -312,7 +312,7 @@ class MockHub(JupyterHub):
     test_clean_db = Bool(True)
 
     def init_db(self):
-        """Ensure we start with a clean user list"""
+        """Ensure we start with a clean user & role list"""
         super().init_db()
         if self.test_clean_db:
             for user in self.db.query(orm.User):
@@ -336,10 +336,10 @@ class MockHub(JupyterHub):
         user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
         if user is None:
             user = orm.User(name='user')
-            user_role = orm.Role.find(self.db, 'user')
-            roles.add_user(self.db, user=user, role=user_role)
             self.db.add(user)
             self.db.commit()
+        roles.update_roles(self.db, obj=user, kind='users')
+        self.db.commit()
 
     def stop(self):
         super().stop()
