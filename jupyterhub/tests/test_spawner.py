@@ -41,7 +41,6 @@ while True:
     except KeyboardInterrupt:
         print("interrupted")
 """
-import os
 
 ssl_enabled = os.environ.get('SSL_ENABLED', False)
 
