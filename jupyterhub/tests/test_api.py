@@ -27,7 +27,6 @@ from .utils import api_request
 from .utils import async_requests
 from .utils import auth_header
 from .utils import find_user
-from .utils import get_scopes
 
 
 # --------------------

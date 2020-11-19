@@ -307,7 +307,6 @@ def needs_scope_expansion(filter_, filter_value, sub_scope):
     """
     Check if there is a requirements to expand the `group` scope to individual `user` scopes.
     Assumptions:
-    req_scopes in scopes
     filter_ != Scope.ALL
 
     This can be made arbitrarily intelligent but that would make it more complex
@@ -334,7 +333,7 @@ def check_user_in_expanded_scope(handler, user_name, scope_group_names):
     if user is None:
         raise web.HTTPError(404, 'No such user found')
     group_names = {group.name for group in user.groups}
-    return bool(scope_group_names & group_names)
+    return bool(set(scope_group_names) & group_names)
 
 
 def check_scope(api_handler, req_scope, scopes, **kwargs):
@@ -354,12 +353,15 @@ def check_scope(api_handler, req_scope, scopes, **kwargs):
     filter_, filter_value = list(kwargs.items())[0]
     sub_scope = scopes[req_scope]
     if filter_ not in sub_scope:
-        if needs_scope_expansion(filter_, filter_value, sub_scope):
-            group_names = sub_scope['groups']
-            return check_user_in_expanded_scope(api_handler, filter_value, group_names)
-        else:
-            return False
-    return filter_value in sub_scope[filter_]
+        valid_scope = False
+    else:
+        valid_scope = filter_value in sub_scope[filter_]
+    if not valid_scope and needs_scope_expansion(filter_, filter_value, sub_scope):
+        group_names = sub_scope['group']
+        valid_scope |= check_user_in_expanded_scope(
+            api_handler, filter_value, group_names
+        )
+    return valid_scope
 
 
 def parse_scopes(scope_list):

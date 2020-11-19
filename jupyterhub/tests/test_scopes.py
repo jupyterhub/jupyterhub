@@ -3,10 +3,13 @@ import pytest
 from pytest import mark
 from tornado import web
 
+from .. import orm
 from ..utils import check_scope
 from ..utils import needs_scope
 from ..utils import parse_scopes
 from ..utils import Scope
+from .utils import api_request
+from .utils import auth_header
 
 
 def test_scope_constructor():
@@ -74,7 +77,7 @@ def test_scope_parse_server_name():
     )
 
 
-class MockAPI:
+class MockAPIHandler:
     def __init__(self):
         self.scopes = ['users']
 
@@ -152,7 +155,7 @@ class MockAPI:
     ],
 )
 def test_scope_method_access(scopes, method, arguments, is_allowed):
-    obj = MockAPI()
+    obj = MockAPIHandler()
     obj.scopes = scopes
     api_call = getattr(obj, method)
     if is_allowed:
@@ -160,3 +163,19 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
     else:
         with pytest.raises(web.HTTPError):
             api_call(*arguments)
+
+
+async def test_expand_groups(app):
+    db = app.db
+    user = orm.User(name='gob')
+    group = orm.Group(name='bluth')
+    db.add(group)
+    db.add(user)
+    group.users.append(user)
+    db.commit()
+    scopes = ['read:users!user=micheal', 'read:users!group=bluth', 'read:groups']
+    app.tornado_settings['mock_scopes'] = scopes
+    r = await api_request(app, 'users', 'micheal', headers=auth_header(db, 'micheal'))
+    assert r.status_code == 200
+    r = await api_request(app, 'users', 'gob', headers=auth_header(db, 'user'))
+    assert r.status_code == 200
