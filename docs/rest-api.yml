@@ -451,6 +451,9 @@ paths:
               note:
                 type: string
                 description: A note attached to the token for future bookkeeping
+              roles:
+                type: list
+                description: A list of role names that the token should have
       responses:
         '201':
           description: The newly created token
@@ -458,6 +461,8 @@ paths:
             $ref: '#/definitions/Token'
         '400':
           description: Body must be a JSON dict or empty
+        '403':
+          description: Requested role does not exist
   /users/{name}/tokens/{token_id}:
     parameters:
       - name: name
@@ -972,6 +977,11 @@ definitions:
       admin:
         type: boolean
         description: Whether the service is an admin
+      roles:
+        type: array
+        description: The names of roles this service has
+        items:
+          type: string
       url:
         type: string
         description: The internal url where the service is running
@@ -1006,6 +1016,11 @@ definitions:
       service:
         type: string
         description: The service that owns the token (undefined of owned by a user)
+      roles:
+        type: array
+        description: The names of roles this token has
+        items:
+          type: string
       note:
         type: string
         description: A note about the token, typically describing what it was created for.
