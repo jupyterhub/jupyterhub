@@ -165,17 +165,31 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
             api_call(*arguments)
 
 
-async def test_expand_groups(app):
-    db = app.db
-    user = orm.User(name='gob')
+@mark.parametrize(
+    "name, status_code",
+    [
+        ('martha', 200),
+        ('michael', 200),
+        ('gob', 200),
+        ('tobias', 403),
+        ('ann', 404),  # this leaks a bit of information, what do we think about that?
+    ],
+)
+async def test_expand_groups(app, name, status_code):
+    app.init_db()
     group = orm.Group(name='bluth')
-    db.add(group)
-    db.add(user)
-    group.users.append(user)
-    db.commit()
-    scopes = ['read:users!user=micheal', 'read:users!group=bluth', 'read:groups']
-    app.tornado_settings['mock_scopes'] = scopes
-    r = await api_request(app, 'users', 'micheal', headers=auth_header(db, 'micheal'))
-    assert r.status_code == 200
-    r = await api_request(app, 'users', 'gob', headers=auth_header(db, 'user'))
-    assert r.status_code == 200
+    app.db.add(group)
+    for user_name in ['gob', 'michael']:
+        user = orm.User(name=user_name)
+        app.db.add(user)
+        group.users.append(user)
+    app.db.add(orm.User(name='tobias'))
+    app.db.add(orm.User(name='martha'))
+    app.db.commit()
+    app.tornado_settings['mock_scopes'] = [
+        'read:users!user=martha',
+        'read:users!group=bluth',
+        'read:groups',
+    ]
+    r = await api_request(app, 'users', name)
+    assert r.status_code == status_code
