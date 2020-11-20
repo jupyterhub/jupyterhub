@@ -79,6 +79,21 @@ paths:
   /users:
     get:
       summary: List users
+      parameters:
+        - name: state
+          in: query
+          required: false
+          type: string
+          enum: ["inactive", "active", "ready"]
+          description: |
+            Return only users who have servers in the given state.
+            If unspecified, return all users.
+
+            active: all users with any active servers (ready OR pending)
+            ready: all users who have any ready servers (running, not pending)
+            inactive: all users who have *no* active servers (complement of active)
+
+            Added in JupyterHub 1.3
       responses:
         '200':
           description: The Hub's user list

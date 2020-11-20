@@ -9,6 +9,7 @@ from datetime import timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
+from sqlalchemy import func
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -39,11 +40,61 @@ class SelfAPIHandler(APIHandler):
 
 
 class UserListAPIHandler(APIHandler):
+    def _user_has_ready_spawner(self, orm_user):
+        """Return True if a user has *any* ready spawners
+
+        Used for filtering from active -> ready
+        """
+        user = self.users[orm_user]
+        return any(spawner.ready for spawner in user.spawners.values())
+
     @admin_only
     def get(self):
+        state_filter = self.get_argument("state", None)
+
+        # post_filter
+        post_filter = None
+
+        if state_filter in {"active", "ready"}:
+            # only get users with active servers
+            # an 'active' Spawner has a server record in the database
+            # which means Spawner.server != None
+            # it may still be in a pending start/stop state.
+            # join filters out users with no Spawners
+            query = (
+                self.db.query(orm.User)
+                # join filters out any Users with no Spawners
+                .join(orm.Spawner)
+                # this implicitly gets Users with *any* active server
+                .filter(orm.Spawner.server != None)
+            )
+            if state_filter == "ready":
+                # have to post-process query results because active vs ready
+                # can only be distinguished with in-memory Spawner properties
+                post_filter = self._user_has_ready_spawner
+
+        elif state_filter == "inactive":
+            # only get users with *no* active servers
+            # as opposed to users with *any inactive servers*
+            # this is the complement to the above query.
+            # how expensive is this with lots of servers?
+            query = (
+                self.db.query(orm.User)
+                .outerjoin(orm.Spawner)
+                .outerjoin(orm.Server)
+                .group_by(orm.User.id)
+                .having(func.count(orm.Server.id) == 0)
+            )
+        elif state_filter:
+            raise web.HTTPError(400, "Unrecognized state filter: %r" % state_filter)
+        else:
+            # no filter, return all users
+            query = self.db.query(orm.User)
+
         data = [
             self.user_model(u, include_servers=True, include_state=True)
-            for u in self.db.query(orm.User)
+            for u in query
+            if (post_filter is None or post_filter(u))
         ]
         self.write(json.dumps(data))
 

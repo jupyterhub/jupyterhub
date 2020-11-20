@@ -14,6 +14,7 @@ from pytest import mark
 
 import jupyterhub
 from .. import orm
+from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
 from .mocking import public_host
@@ -177,6 +178,70 @@ async def test_get_users(app):
 
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
     assert r.status_code == 403
+
+
+@mark.user
+@mark.parametrize(
+    "state", ("inactive", "active", "ready", "invalid"),
+)
+async def test_get_users_state_filter(app, state):
+    db = app.db
+
+    # has_one_active: one active, one inactive, zero ready
+    has_one_active = add_user(db, app=app, name='has_one_active')
+    # has_two_active: two active, ready servers
+    has_two_active = add_user(db, app=app, name='has_two_active')
+    # has_two_inactive: two spawners, neither active
+    has_two_inactive = add_user(db, app=app, name='has_two_inactive')
+    # has_zero: no Spawners registered at all
+    has_zero = add_user(db, app=app, name='has_zero')
+
+    test_usernames = set(
+        ("has_one_active", "has_two_active", "has_two_inactive", "has_zero")
+    )
+
+    user_states = {
+        "inactive": ["has_two_inactive", "has_zero"],
+        "ready": ["has_two_active"],
+        "active": ["has_one_active", "has_two_active"],
+        "invalid": [],
+    }
+    expected = user_states[state]
+
+    def add_spawner(user, name='', active=True, ready=True):
+        """Add a spawner in a requested state
+
+        If active, should turn up in an active query
+        If active and ready, should turn up in a ready query
+        If not active, should turn up in an inactive query
+        """
+        spawner = user.spawners[name]
+        db.commit()
+        if active:
+            orm_server = orm.Server()
+            db.add(orm_server)
+            db.commit()
+            spawner.server = Server(orm_server=orm_server)
+            db.commit()
+            if not ready:
+                spawner._spawn_pending = True
+        return spawner
+
+    for name in ("", "secondary"):
+        add_spawner(has_two_active, name, active=True)
+        add_spawner(has_two_inactive, name, active=False)
+
+    add_spawner(has_one_active, active=True, ready=False)
+    add_spawner(has_one_active, "inactive", active=False)
+
+    r = await api_request(app, 'users?state={}'.format(state))
+    if state == "invalid":
+        assert r.status_code == 400
+        return
+    assert r.status_code == 200
+
+    usernames = sorted(u["name"] for u in r.json() if u["name"] in test_usernames)
+    assert usernames == expected
 
 
 @mark.user
