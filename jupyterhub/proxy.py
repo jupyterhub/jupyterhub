@@ -496,6 +496,19 @@ class ConfigurableHTTPProxy(Proxy):
 
             if not psutil.pid_exists(pid):
                 raise ProcessLookupError
+
+            try:
+                process = psutil.Process(pid)
+                if self.command and self.command[0]:
+                    process_cmd = process.cmdline()
+                    if process_cmd and not any(
+                        self.command[0] in clause for clause in process_cmd
+                    ):
+                        raise ProcessLookupError
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                # If there is a process at the proxy's PID but we don't have permissions to see it,
+                # then it is unlikely to actually be the proxy.
+                raise ProcessLookupError
         else:
             os.kill(pid, 0)
 
@@ -691,8 +704,17 @@ class ConfigurableHTTPProxy(Proxy):
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
         for child in children:
-            child.kill()
-        psutil.wait_procs(children, timeout=5)
+            child.terminate()
+        gone, alive = psutil.wait_procs(children, timeout=5)
+        for p in alive:
+            p.kill()
+        # Clear the shell, too, if it still exists.
+        try:
+            parent.terminate()
+            parent.wait(timeout=5)
+            parent.kill()
+        except psutil.NoSuchProcess:
+            pass
 
     def _terminate(self):
         """Terminate our process"""
