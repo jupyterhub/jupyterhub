@@ -25,7 +25,6 @@ from functools import wraps
 from subprocess import Popen
 from urllib.parse import quote
 
-from tornado import gen
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
 from tornado.httpclient import HTTPRequest
@@ -292,7 +291,7 @@ class Proxy(LoggingConfigurable):
             if service.server:
                 futures.append(self.add_service(service))
         # wait after submitting them all
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
 
     async def add_all_users(self, user_dict):
         """Update the proxy table from the database.
@@ -305,7 +304,7 @@ class Proxy(LoggingConfigurable):
                 if spawner.ready:
                     futures.append(self.add_user(user, name))
         # wait after submitting them all
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
 
     @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
@@ -391,7 +390,7 @@ class Proxy(LoggingConfigurable):
                 self.log.warning("Deleting stale route %s", routespec)
                 futures.append(self.delete_route(routespec))
 
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
         stop = time.perf_counter()  # timer stops here when user is deleted
         CHECK_ROUTES_DURATION_SECONDS.observe(stop - start)  # histogram metric
 

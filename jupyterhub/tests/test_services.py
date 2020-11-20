@@ -6,9 +6,7 @@ from binascii import hexlify
 from contextlib import contextmanager
 from subprocess import Popen
 
-from async_generator import async_generator
 from async_generator import asynccontextmanager
-from async_generator import yield_
 from tornado.ioloop import IOLoop
 
 from ..utils import maybe_future
@@ -24,7 +22,6 @@ mockservice_cmd = [sys.executable, mockservice_py]
 
 
 @asynccontextmanager
-@async_generator
 async def external_service(app, name='mockservice'):
     env = {
         'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
@@ -35,7 +32,7 @@ async def external_service(app, name='mockservice'):
     proc = Popen(mockservice_cmd, env=env)
     try:
         await wait_for_http_server(env['JUPYTERHUB_SERVICE_URL'])
-        await yield_(env)
+        yield env
     finally:
         proc.terminate()
 

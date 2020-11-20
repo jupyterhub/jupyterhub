@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 import pytest
 from bs4 import BeautifulSoup
-from tornado import gen
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
@@ -592,8 +591,7 @@ async def test_login_strip(app):
     base_url = public_url(app)
     called_with = []
 
-    @gen.coroutine
-    def mock_authenticate(handler, data):
+    async def mock_authenticate(handler, data):
         called_with.append(data)
 
     with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
@@ -949,8 +947,7 @@ async def test_pre_spawn_start_exc_no_form(app):
     exc = "pre_spawn_start error"
 
     # throw exception from pre_spawn_start
-    @gen.coroutine
-    def mock_pre_spawn_start(user, spawner):
+    async def mock_pre_spawn_start(user, spawner):
         raise Exception(exc)
 
     with mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start):
@@ -965,8 +962,7 @@ async def test_pre_spawn_start_exc_options_form(app):
     exc = "pre_spawn_start error"
 
     # throw exception from pre_spawn_start
-    @gen.coroutine
-    def mock_pre_spawn_start(user, spawner):
+    async def mock_pre_spawn_start(user, spawner):
         raise Exception(exc)
 
     with mock.patch.dict(

@@ -16,8 +16,7 @@ from tempfile import mkdtemp
 
 if os.name == 'nt':
     import psutil
-from async_generator import async_generator
-from async_generator import yield_
+from async_generator import aclosing
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
 from traitlets import Any
@@ -1024,7 +1023,6 @@ class Spawner(LoggingConfigurable):
     def _progress_url(self):
         return self.user.progress_url(self.name)
 
-    @async_generator
     async def _generate_progress(self):
         """Private wrapper of progress generator
 
@@ -1036,20 +1034,16 @@ class Spawner(LoggingConfigurable):
             )
             return
 
-        await yield_({"progress": 0, "message": "Server requested"})
-        from async_generator import aclosing
+        yield {"progress": 0, "message": "Server requested"}
 
         async with aclosing(self.progress()) as progress:
             async for event in progress:
-                await yield_(event)
+                yield event
 
-    @async_generator
     async def progress(self):
         """Async generator for progress events
 
         Must be an async generator
-
-        For Python 3.5-compatibility, use the async_generator package
 
         Should yield messages of the form:
 
@@ -1067,7 +1061,7 @@ class Spawner(LoggingConfigurable):
 
         .. versionadded:: 0.9
         """
-        await yield_({"progress": 50, "message": "Spawning server..."})
+        yield {"progress": 50, "message": "Spawning server..."}
 
     async def start(self):
         """Start the single-user server
@@ -1078,9 +1072,7 @@ class Spawner(LoggingConfigurable):
         .. versionchanged:: 0.7
             Return ip, port instead of setting on self.user.server directly.
         """
-        raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
-        )
+        raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
     async def stop(self, now=False):
         """Stop the single-user server
@@ -1093,9 +1085,7 @@ class Spawner(LoggingConfigurable):
 
         Must be a coroutine.
         """
-        raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
-        )
+        raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
     async def poll(self):
         """Check if the single-user process is running
@@ -1121,9 +1111,7 @@ class Spawner(LoggingConfigurable):
           process has not yet completed.
 
         """
-        raise NotImplementedError(
-            "Override in subclass. Must be a Tornado gen.coroutine."
-        )
+        raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
     def add_poll_callback(self, callback, *args, **kwargs):
         """Add a callback to fire when the single-user server stops"""
