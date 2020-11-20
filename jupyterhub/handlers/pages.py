@@ -40,7 +40,11 @@ class RootHandler(BaseHandler):
     def get(self):
         user = self.current_user
         if self.default_url:
-            url = self.default_url
+            # As set in jupyterhub_config.py
+            if callable(self.default_url):
+                url = self.default_url(self)
+            else:
+                url = self.default_url
         elif user:
             url = self.get_next_url(user)
         else:
