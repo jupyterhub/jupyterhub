@@ -42,8 +42,6 @@ while True:
         print("interrupted")
 """
 
-ssl_enabled = os.environ.get('SSL_ENABLED', False)
-
 
 def setup():
     logging.basicConfig(level=logging.DEBUG)
