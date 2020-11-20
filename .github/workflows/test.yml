@@ -93,6 +93,7 @@ jobs:
             db: mysql
           - python: "3.8"
             db: postgres
+            subdomain: subdomain
           - python: "3.8"
             jupyter_server: jupyter_server
           - python: "3.9"

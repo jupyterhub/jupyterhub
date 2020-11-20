@@ -1,6 +1,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import string
 import warnings
 from collections import defaultdict
 from datetime import datetime
@@ -8,6 +9,7 @@ from datetime import timedelta
 from urllib.parse import quote
 from urllib.parse import urlparse
 
+import escapism
 from sqlalchemy import inspect
 from tornado import gen
 from tornado import web
@@ -414,10 +416,21 @@ class User:
     @property
     def domain(self):
         """Get the domain for my server."""
-        # use underscore as escape char for domains
-        return (
-            quote(self.name).replace('%', '_').lower() + '.' + self.settings['domain']
-        )
+        # use - as escape char for domains
+        # TODO: should we use IDNA for unicode?
+        # hard part: escape only non-IDNA-safe chars, then IDNA-encode
+        domain_safe_name = escapism.escape(
+            self.name,
+            safe_chars=string.ascii_letters + string.digits + ".",
+            escape_char="-",
+        ).lower()
+        # by using `-` as escape char, the sequence `--` can never occur,
+        # and the string can never end with `-`
+        # if resulting string starts with `-`, add leading `u-`, so it starts with `u--`
+        if domain_safe_name.startswith("-"):
+            domain_safe_name = "u-" + domain_safe_name
+
+        return domain_safe_name + '.' + self.settings['domain']
 
     @property
     def host(self):

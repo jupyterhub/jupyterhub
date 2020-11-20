@@ -2,6 +2,7 @@ alembic
 async_generator>=1.9
 certipy>=0.1.2
 entrypoints
+escapism
 jinja2
 jupyter_telemetry>=0.1.0
 oauthlib>=3.0
