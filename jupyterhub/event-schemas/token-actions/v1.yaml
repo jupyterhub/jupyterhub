@@ -37,9 +37,18 @@ properties:
       4. delete
          Delete a token
   target_user:
-    type: string
+    type: object
+    properties:
+      name:
+        type: string
+        description: |
+          Username of the target user
+      admin:
+        type: boolean
+        description: |
+          Boolean value indicating whether the user is an admin
     description: |
-      Username of the target user
+      Properties of the user on which the operation was performed.
   requester:
     type: string
     description: |

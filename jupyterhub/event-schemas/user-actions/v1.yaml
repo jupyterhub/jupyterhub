@@ -46,7 +46,7 @@ properties:
   target_user:
     type: object
     properties:
-      username:
+      name:
         type: string
         description: |
           Username of the user
@@ -55,13 +55,13 @@ properties:
         description: |
           Boolean value indicating whether the user is an admin
     description: |
-      Properties of the on which the operation was performed.
+      Properties of the user on which the operation was performed.
 
       If action is modify, this reflects the state of the user after the update.
   prior_state:
     type: object
     properties:
-      username:
+      name:
         type: string
         description: |
           Username of the user

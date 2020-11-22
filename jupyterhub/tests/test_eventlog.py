@@ -159,7 +159,7 @@ async def test_add_remove_user_event(eventlog_sink, username, admin):
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'create',
-        'target_user': {'username': username, 'admin': admin},
+        'target_user': {'name': username, 'admin': admin},
         'requester': 'admin',
     }
     assert expected.items() <= data.items()
@@ -173,7 +173,7 @@ async def test_add_remove_user_event(eventlog_sink, username, admin):
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'delete',
-        'target_user': {'username': username, 'admin': admin},
+        'target_user': {'name': username, 'admin': admin},
         'requester': 'admin',
     }
     assert expected.items() <= data.items()
@@ -215,12 +215,12 @@ async def test_add_multi_user_event(eventlog_sink):
     for event in events:
         jsonschema.validate(event, app.eventlog.schemas[(schema, version)])
 
-    sorted_data = sorted(events, key=lambda x: x['target_user']['username'])
+    sorted_data = sorted(events, key=lambda x: x['target_user']['name'])
 
     for username, data in zip(sorted(usernames), sorted_data):
         expected = {
             'action': 'create',
-            'target_user': {'username': username, 'admin': False},
+            'target_user': {'name': username, 'admin': False},
             'requester': 'admin',
         }
         assert expected.items() <= data.items()
@@ -247,8 +247,9 @@ async def test_make_admin_event(eventlog_sink):
     expected = {
         'action': 'modify',
         'requester': 'admin',
-        'target_user': {'username': username, 'admin': True},
-        'prior_state': {'username': username, 'admin': False},
+        'target_user': {'name': username, 'admin': True},
+        'prior_state': {'name': username, 'admin': False},
+        'auth_state_change': False,
     }
     assert expected.items() <= data.items()
 
@@ -470,7 +471,11 @@ async def test_token_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
-    expected = {'action': 'create', 'target_user': username, 'requester': username}
+    expected = {
+        'action': 'create',
+        'target_user': {'name': username, 'admin': True},
+        'requester': username,
+    }
     assert expected.items() <= data.items()
 
     r = await api_request(app, 'users', username, 'tokens', method='get')
@@ -480,7 +485,11 @@ async def test_token_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
-    expected = {'action': 'list', 'target_user': username, 'requester': username}
+    expected = {
+        'action': 'list',
+        'target_user': {'name': username, 'admin': True},
+        'requester': username,
+    }
     assert expected.items() <= data.items()
 
     r = await api_request(app, 'users', username, 'tokens', token_id, method='get')
@@ -492,7 +501,7 @@ async def test_token_event(eventlog_sink):
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'get',
-        'target_user': username,
+        'target_user': {'name': username, 'admin': True},
         'requester': username,
         'token_id': token_id,
     }
@@ -507,7 +516,7 @@ async def test_token_event(eventlog_sink):
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
     expected = {
         'action': 'delete',
-        'target_user': username,
+        'target_user': {'name': username, 'admin': True},
         'requester': username,
         'token_id': token_id,
     }

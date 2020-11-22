@@ -109,7 +109,7 @@ class UserListAPIHandler(APIHandler):
                     1,
                     {
                         'action': 'create',
-                        'target_user': {'username': user.name, 'admin': False},
+                        'target_user': {'name': user.name, 'admin': user.admin},
                         'requester': self.current_user.name,
                     },
                 )
@@ -155,7 +155,7 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'get',
-                'target_user': {'username': user.name, 'admin': user.admin},
+                'target_user': {'name': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -188,7 +188,7 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'create',
-                'target_user': {'username': user.name, 'admin': user.admin},
+                'target_user': {'name': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -222,7 +222,7 @@ class UserAPIHandler(APIHandler):
             1,
             {
                 'action': 'delete',
-                'target_user': {'username': user.name, 'admin': user.admin},
+                'target_user': {'name': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -234,7 +234,7 @@ class UserAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
-        prior_state = {'username': user.name, 'admin': user.admin}
+        prior_state = {'name': user.name, 'admin': user.admin}
         data = self.get_json_body()
         self._check_user_model(data)
         if 'name' in data and data['name'] != name:
@@ -258,7 +258,7 @@ class UserAPIHandler(APIHandler):
             {
                 'action': 'modify',
                 'requester': self.current_user.name,
-                'target_user': {'username': user.name, 'admin': user.admin},
+                'target_user': {'name': user.name, 'admin': user.admin},
                 'prior_state': prior_state,
                 'auth_state_change': 'auth_state' in data,
             },
@@ -306,7 +306,7 @@ class UserTokenListAPIHandler(APIHandler):
             1,
             {
                 'action': 'list',
-                'target_user': user.name,
+                'target_user': {'name': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
             },
         )
@@ -373,7 +373,11 @@ class UserTokenListAPIHandler(APIHandler):
         self.eventlog.record_event(
             eventlogging_schema_fqn('token-action'),
             1,
-            {'action': 'create', 'target_user': user.name, 'requester': requester.name},
+            {
+                'action': 'create',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': requester.name,
+            },
         )
         self.write(json.dumps(token_model))
 
@@ -417,7 +421,7 @@ class UserTokenAPIHandler(APIHandler):
             1,
             {
                 'action': 'get',
-                'target_user': user.name,
+                'target_user': {'name': user.name, 'admin': user.admin},
                 'requester': self.current_user.name,
                 'token_id': token_id,
             },
@@ -448,7 +452,7 @@ class UserTokenAPIHandler(APIHandler):
                 1,
                 {
                     'action': 'delete',
-                    'target_user': user.name,
+                    'target_user': {'name': user.name, 'admin': user.admin},
                     'requester': self.current_user.name,
                     'token_id': token_id,
                 },
