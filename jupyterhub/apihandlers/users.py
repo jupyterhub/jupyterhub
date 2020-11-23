@@ -28,7 +28,6 @@ class SelfAPIHandler(APIHandler):
     Based on the authentication info. Acts as a 'whoami' for auth tokens.
     """
 
-    # @needs_scope('read:users') # Should be read:users:user=username
     async def get(self):
         user = self.current_user
         if user is None:
@@ -36,6 +35,8 @@ class SelfAPIHandler(APIHandler):
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
+        # Later: filter based on scopes.
+        # Perhaps user
         self.write(json.dumps(self.user_model(user)))
 
 
@@ -48,7 +49,7 @@ class UserListAPIHandler(APIHandler):
         ]
         self.write(json.dumps(data))
 
-    @needs_scope('users')
+    @needs_scope('admin:users')
     async def post(self):
         data = self.get_json_body()
         if not data or not isinstance(data, dict) or not data.get('usernames'):

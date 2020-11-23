@@ -8,6 +8,7 @@ from ..utils import check_scope
 from ..utils import needs_scope
 from ..utils import parse_scopes
 from ..utils import Scope
+from .utils import add_user
 from .utils import api_request
 from .utils import auth_header
 
@@ -166,30 +167,29 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
 
 
 @mark.parametrize(
-    "name, status_code",
+    "user_name, in_group, status_code",
     [
-        ('martha', 200),
-        ('michael', 200),
-        ('gob', 200),
-        ('tobias', 403),
-        ('ann', 404),  # this leaks a bit of information, what do we think about that?
+        ('martha', False, 200),
+        ('michael', True, 200),
+        ('gob', True, 200),
+        ('tobias', False, 403),
+        ('ann', False, 403),
     ],
 )
-async def test_expand_groups(app, name, status_code):
-    app.init_db()
-    group = orm.Group(name='bluth')
-    app.db.add(group)
-    for user_name in ['gob', 'michael']:
-        user = orm.User(name=user_name)
-        app.db.add(user)
+async def test_expand_groups(app, user_name, in_group, status_code):
+    user = add_user(app.db, name=user_name)
+    group_name = 'bluth'
+    group = orm.Group.find(app.db, name=group_name)
+    if not group:
+        group = orm.Group(name=group_name)
+        app.db.add(group)
+    if in_group and user not in group.users:
         group.users.append(user)
-    app.db.add(orm.User(name='tobias'))
-    app.db.add(orm.User(name='martha'))
     app.db.commit()
     app.tornado_settings['mock_scopes'] = [
         'read:users!user=martha',
         'read:users!group=bluth',
         'read:groups',
     ]
-    r = await api_request(app, 'users', name)
+    r = await api_request(app, 'users', user_name)
     assert r.status_code == status_code

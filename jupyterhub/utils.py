@@ -319,15 +319,6 @@ def needs_scope_expansion(filter_, filter_value, sub_scope):
         return True
 
 
-# def expand_groups_to_users(db, filter_scope):
-#     """Update the group filters to account for the individual users"""
-#     if 'group' in filter_scope:
-#         groups = db.query(orm.Group)
-#         user_set = orm.User.query.filter(orm.User.group.in_(groups))
-#         return [user.name for user in user_set]
-#
-
-
 def check_user_in_expanded_scope(handler, user_name, scope_group_names):
     user = handler.find_user(user_name)
     if user is None:
@@ -419,7 +410,17 @@ def needs_scope(scope):
             if check_scope(self, scope, parsed_scopes, **s_kwargs):
                 return func(self, *args, **kwargs)
             else:
-                raise web.HTTPError(403, "Action is not authorized with current scopes")
+                self.log.warning(
+                    "Not authorizing access to {}. Requires scope {}, not derived from scopes {}".format(
+                        self.request.path, scope, ", ".join(self.scopes)
+                    )
+                )
+                raise web.HTTPError(
+                    403,
+                    "Action is not authorized with current scopes; requires {}".format(
+                        scope
+                    ),
+                )
 
         return _auth_func
 
