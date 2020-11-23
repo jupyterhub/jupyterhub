@@ -46,7 +46,7 @@ class TokenAPIHandler(APIHandler):
         self.eventlog.record_event(
             eventlogging_schema_fqn('auth-token-action'),
             1,
-            {'action': 'get', 'token_id': token},
+            {'action': 'get', 'token_id': orm_token.api_id},
         )
         self.write(json.dumps(model))
 
@@ -88,10 +88,11 @@ class TokenAPIHandler(APIHandler):
                 note += " by %s %s" % (kind, requester.name)
 
         api_token = user.new_api_token(note=note)
+        orm_token = orm.APIToken.find(self.db, api_token)
         self.eventlog.record_event(
             eventlogging_schema_fqn('auth-token-action'),
             1,
-            {'action': 'create', 'token_id': api_token,},
+            {'action': 'create', 'token_id': orm_token.api_id,},
         )
         self.write(
             json.dumps(

@@ -538,7 +538,11 @@ async def test_auth_token_event(eventlog_sink):
     r = await api_request(app, 'authorizations/token', method='post')
     r.raise_for_status()
 
-    token_id = r.json()['token']
+    reply = r.json()
+    token = reply['token']
+
+    orm_token = orm.APIToken.find(app.db, token)
+    token_id = orm_token.api_id
 
     offset = 0
     output = sink.getvalue()[offset:]
@@ -548,7 +552,7 @@ async def test_auth_token_event(eventlog_sink):
     expected = {'action': 'create', 'token_id': token_id}
     assert expected.items() <= data.items()
 
-    r = await api_request(app, 'authorizations/token', token_id, method='get')
+    r = await api_request(app, 'authorizations/token', token, method='get')
     assert r.status_code == 200
     offset += len(output)
     output = sink.getvalue()[offset:]
