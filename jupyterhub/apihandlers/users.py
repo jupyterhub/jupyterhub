@@ -377,6 +377,7 @@ class UserTokenListAPIHandler(APIHandler):
                 'action': 'create',
                 'target_user': {'name': user.name, 'admin': user.admin},
                 'requester': requester.name,
+                'token_id': token_model['id'],
             },
         )
         self.write(json.dumps(token_model))

@@ -475,6 +475,7 @@ async def test_token_event(eventlog_sink):
         'action': 'create',
         'target_user': {'name': username, 'admin': True},
         'requester': username,
+        'token_id': token_id,
     }
     assert expected.items() <= data.items()
 
