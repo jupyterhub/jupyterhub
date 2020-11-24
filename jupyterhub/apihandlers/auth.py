@@ -44,9 +44,14 @@ class TokenAPIHandler(APIHandler):
             raise web.HTTPError(404)
         self.db.commit()
         self.eventlog.record_event(
-            eventlogging_schema_fqn('auth-token-action'),
+            eventlogging_schema_fqn('token-action'),
             1,
-            {'action': 'get', 'token_id': orm_token.api_id},
+            {
+                'action': 'get',
+                'target_user': {'name': model['name'], 'admin': model['admin']},
+                'requester': model['name'],
+                'token_id': orm_token.api_id,
+            },
         )
         self.write(json.dumps(model))
 
@@ -90,9 +95,14 @@ class TokenAPIHandler(APIHandler):
         api_token = user.new_api_token(note=note)
         orm_token = orm.APIToken.find(self.db, api_token)
         self.eventlog.record_event(
-            eventlogging_schema_fqn('auth-token-action'),
+            eventlogging_schema_fqn('token-action'),
             1,
-            {'action': 'create', 'token_id': orm_token.api_id,},
+            {
+                'action': 'create',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': requester.name,
+                'token_id': orm_token.api_id,
+            },
         )
         self.write(
             json.dumps(

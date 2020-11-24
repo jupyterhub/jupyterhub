@@ -530,10 +530,12 @@ async def test_token_event(eventlog_sink):
 
 
 async def test_auth_token_event(eventlog_sink):
-    schema, version = (eventlogging_schema_fqn('auth-token-action'), 1)
+    schema, version = (eventlogging_schema_fqn('token-action'), 1)
 
     app, sink = eventlog_sink
     app.eventlog.allowed_schemas = [schema]
+
+    username = 'admin'
 
     r = await api_request(app, 'authorizations/token', method='post')
     r.raise_for_status()
@@ -544,12 +546,19 @@ async def test_auth_token_event(eventlog_sink):
     orm_token = orm.APIToken.find(app.db, token)
     token_id = orm_token.api_id
 
+    user = {'name': username, 'admin': True}
+
     offset = 0
     output = sink.getvalue()[offset:]
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
-    expected = {'action': 'create', 'token_id': token_id}
+    expected = {
+        'action': 'create',
+        'target_user': user,
+        'requester': username,
+        'token_id': token_id,
+    }
     assert expected.items() <= data.items()
 
     r = await api_request(app, 'authorizations/token', token, method='get')
@@ -559,5 +568,10 @@ async def test_auth_token_event(eventlog_sink):
     assert output
     data = remove_event_metadata(json.loads(output))
     jsonschema.validate(data, app.eventlog.schemas[(schema, version)])
-    expected = {'action': 'get', 'token_id': token_id}
+    expected = {
+        'action': 'get',
+        'target_user': user,
+        'requester': username,
+        'token_id': token_id,
+    }
     assert expected.items() <= data.items()
