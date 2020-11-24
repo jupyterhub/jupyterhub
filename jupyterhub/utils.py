@@ -410,7 +410,7 @@ def needs_scope(scope):
             if check_scope(self, scope, parsed_scopes, **s_kwargs):
                 return func(self, *args, **kwargs)
             else:
-                self.log.warning(
+                app_log.warning(
                     "Not authorizing access to {}. Requires scope {}, not derived from scopes {}".format(
                         self.request.path, scope, ", ".join(self.scopes)
                     )
