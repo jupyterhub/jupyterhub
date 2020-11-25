@@ -36,7 +36,6 @@ from unittest import mock
 
 from pytest import fixture
 from pytest import raises
-from tornado import gen
 from tornado import ioloop
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
@@ -56,13 +55,16 @@ _db = None
 
 
 def pytest_collection_modifyitems(items):
-    """add asyncio marker to all async tests"""
+    """This function is automatically run by pytest passing all collected test
+    functions.
+
+    We use it to add asyncio marker to all async tests and assert we don't use
+    test functions that are async generators which wouldn't make sense.
+    """
     for item in items:
         if inspect.iscoroutinefunction(item.obj):
             item.add_marker('asyncio')
-        if hasattr(inspect, 'isasyncgenfunction'):
-            # double-check that we aren't mixing yield and async def
-            assert not inspect.isasyncgenfunction(item.obj)
+        assert not inspect.isasyncgenfunction(item.obj)
 
 
 @fixture(scope='module')
@@ -244,17 +246,14 @@ def _mockservice(request, app, url=False):
         assert name in app._service_map
         service = app._service_map[name]
 
-        @gen.coroutine
-        def start():
+        async def start():
             # wait for proxy to be updated before starting the service
-            yield app.proxy.add_all_services(app._service_map)
+            await app.proxy.add_all_services(app._service_map)
             service.start()
 
         io_loop.run_sync(start)
 
         def cleanup():
-            import asyncio
-
             asyncio.get_event_loop().run_until_complete(service.stop())
             app.services[:] = []
             app._service_map.clear()

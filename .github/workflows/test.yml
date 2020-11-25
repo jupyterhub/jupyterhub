@@ -86,6 +86,8 @@ jobs:
         #       values by instead duplicating the name to signal true.
         include:
           - python: "3.6"
+            oldest_dependencies: oldest_dependencies
+          - python: "3.6"
             subdomain: subdomain
           - python: "3.7"
             db: mysql
@@ -142,6 +144,14 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install --upgrade . -r dev-requirements.txt
+
+          if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
+            # take any dependencies in requirements.txt such as tornado>=5.0
+            # and transform them to tornado==5.0 so we can run tests with
+            # the earliest-supported versions
+            cat requirements.txt | grep '>=' | sed -e 's@>=@==@g' > oldest-requirements.txt
+            pip install -r oldest-requirements.txt
+          fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force

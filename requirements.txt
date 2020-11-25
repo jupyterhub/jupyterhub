@@ -1,5 +1,5 @@
 alembic
-async_generator>=1.8
+async_generator>=1.9
 certipy>=0.1.2
 entrypoints
 jinja2
@@ -11,5 +11,5 @@ psutil>=5.6.5; sys_platform == 'win32'
 python-dateutil
 requests
 SQLAlchemy>=1.1
-tornado>=5.0
+tornado>=5.1
 traitlets>=4.3.2

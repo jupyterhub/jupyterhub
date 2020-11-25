@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 
 import pytest
 from bs4 import BeautifulSoup
-from tornado import gen
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
@@ -31,7 +30,7 @@ async def test_root_no_auth(app):
     url = ujoin(public_host(app), app.hub.base_url)
     r = await async_requests.get(url)
     r.raise_for_status()
-    assert r.url == ujoin(url, 'login')
+    assert r.url == url_concat(ujoin(url, 'login'), dict(next=app.hub.base_url))
 
 
 async def test_root_auth(app):
@@ -592,8 +591,7 @@ async def test_login_strip(app):
     base_url = public_url(app)
     called_with = []
 
-    @gen.coroutine
-    def mock_authenticate(handler, data):
+    async def mock_authenticate(handler, data):
         called_with.append(data)
 
     with mock.patch.object(app.authenticator, 'authenticate', mock_authenticate):
@@ -622,9 +620,16 @@ async def test_login_strip(app):
         (False, '//other.domain', '', None),
         (False, '///other.domain/triple', '', None),
         (False, '\\\\other.domain/backslashes', '', None),
-        # params are handled correctly
-        (True, '/hub/admin', 'hub/admin?left=1&right=2', [('left', 1), ('right', 2)]),
-        (False, '/hub/admin', 'hub/admin?left=1&right=2', [('left', 1), ('right', 2)]),
+        # params are handled correctly (ignored if ?next= specified)
+        (
+            True,
+            '/hub/admin?left=1&right=2',
+            'hub/admin?left=1&right=2',
+            {"left": "abc"},
+        ),
+        (False, '/hub/admin', 'hub/admin', [('left', 1), ('right', 2)]),
+        (True, '', '', {"keep": "yes"}),
+        (False, '', '', {"keep": "yes"}),
     ],
 )
 async def test_login_redirect(app, running, next_url, location, params):
@@ -633,10 +638,15 @@ async def test_login_redirect(app, running, next_url, location, params):
     if location:
         location = ujoin(app.base_url, location)
     elif running:
+        # location not specified,
         location = user.url
+        if params:
+            location = url_concat(location, params)
     else:
         # use default url
         location = ujoin(app.base_url, 'hub/spawn')
+        if params:
+            location = url_concat(location, params)
 
     url = 'login'
     if params:
@@ -655,7 +665,73 @@ async def test_login_redirect(app, running, next_url, location, params):
     r = await get_page(url, app, cookies=cookies, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 302
-    assert location == r.headers['Location']
+    assert r.headers["Location"] == location
+
+
+@pytest.mark.parametrize(
+    'location, next, extra_params',
+    [
+        (
+            "{base_url}hub/spawn?a=5",
+            None,
+            {"a": "5"},
+        ),  # no ?next= given, preserve params
+        ("/x", "/x", {"a": "5"}),  # ?next=given, params ignored
+        (
+            "/x?b=10",
+            "/x?b=10",
+            {"a": "5"},
+        ),  # ?next=given with params, additional params ignored
+    ],
+)
+async def test_next_url(app, user, location, next, extra_params):
+    params = {}
+    if extra_params:
+        params.update(extra_params)
+    if next:
+        params["next"] = next
+    url = url_concat("/", params)
+    cookies = await app.login_user("monster")
+
+    # location can be a string template
+    location = location.format(base_url=app.base_url)
+
+    r = await get_page(url, app, cookies=cookies, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 302
+    assert r.headers["Location"] == location
+
+
+async def test_next_url_params_sequence(app, user):
+    """Test each step of / -> login -> spawn
+
+    and whether they preserve url params
+    """
+    params = {"xyz": "5"}
+    # first request: root page, with params, not logged in
+    r = await get_page("/?xyz=5", app, allow_redirects=False)
+    r.raise_for_status()
+    location = r.headers["Location"]
+
+    # next page: login
+    cookies = await app.login_user(user.name)
+    assert location == url_concat(
+        ujoin(app.base_url, "/hub/login"), {"next": ujoin(app.base_url, "/hub/?xyz=5")}
+    )
+    r = await async_requests.get(
+        public_host(app) + location, cookies=cookies, allow_redirects=False
+    )
+    r.raise_for_status()
+    location = r.headers["Location"]
+
+    # after login, redirect back
+    assert location == ujoin(app.base_url, "/hub/?xyz=5")
+    r = await async_requests.get(
+        public_host(app) + location, cookies=cookies, allow_redirects=False
+    )
+    r.raise_for_status()
+    location = r.headers["Location"]
+    assert location == ujoin(app.base_url, "/hub/spawn?xyz=5")
 
 
 async def test_auto_login(app, request):
@@ -669,14 +745,18 @@ async def test_auto_login(app, request):
     )
     # no auto_login: end up at /hub/login
     r = await async_requests.get(base_url)
-    assert r.url == public_url(app, path='hub/login')
+    assert r.url == url_concat(
+        public_url(app, path="hub/login"), {"next": app.hub.base_url}
+    )
     # enable auto_login: redirect from /hub/login to /hub/dummy
     authenticator = Authenticator(auto_login=True)
     authenticator.login_url = lambda base_url: ujoin(base_url, 'dummy')
 
     with mock.patch.dict(app.tornado_settings, {'authenticator': authenticator}):
         r = await async_requests.get(base_url)
-    assert r.url == public_url(app, path='hub/dummy')
+    assert r.url == url_concat(
+        public_url(app, path="hub/dummy"), {"next": app.hub.base_url}
+    )
 
 
 async def test_auto_login_logout(app):
@@ -949,8 +1029,7 @@ async def test_pre_spawn_start_exc_no_form(app):
     exc = "pre_spawn_start error"
 
     # throw exception from pre_spawn_start
-    @gen.coroutine
-    def mock_pre_spawn_start(user, spawner):
+    async def mock_pre_spawn_start(user, spawner):
         raise Exception(exc)
 
     with mock.patch.object(app.authenticator, 'pre_spawn_start', mock_pre_spawn_start):
@@ -965,8 +1044,7 @@ async def test_pre_spawn_start_exc_options_form(app):
     exc = "pre_spawn_start error"
 
     # throw exception from pre_spawn_start
-    @gen.coroutine
-    def mock_pre_spawn_start(user, spawner):
+    async def mock_pre_spawn_start(user, spawner):
         raise Exception(exc)
 
     with mock.patch.dict(

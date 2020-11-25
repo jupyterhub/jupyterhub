@@ -23,7 +23,6 @@ from urllib.parse import quote
 from urllib.parse import urlencode
 
 import requests
-from tornado.gen import coroutine
 from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError
@@ -950,8 +949,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
     .. versionadded: 0.8
     """
 
-    @coroutine
-    def get(self):
+    async def get(self):
         error = self.get_argument("error", False)
         if error:
             msg = self.get_argument("error_description", error)

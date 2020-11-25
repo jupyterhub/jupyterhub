@@ -20,7 +20,6 @@ from urllib.parse import urlparse
 
 from jinja2 import ChoiceLoader
 from jinja2 import FunctionLoader
-from tornado import gen
 from tornado import ioloop
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
@@ -434,7 +433,7 @@ class SingleUserNotebookAppMixin(Configurable):
                     i,
                     RETRIES,
                 )
-                await gen.sleep(min(2 ** i, 16))
+                await asyncio.sleep(min(2 ** i, 16))
             else:
                 break
         else:
