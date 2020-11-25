@@ -72,7 +72,7 @@
     {% block login_terms %}
     {% if login_term_url %}
     <div id="login_terms" class="login_terms">
-    <input type="checkbox" id="login_terms_checkbox" name="login_terms_checkbox"/>
+    <input type="checkbox" id="login_terms_checkbox" name="login_terms_checkbox" required />
     {% block login_terms_text %} {# allow overriding the text #}
     By logging into the platform you accept the <a href="{{ login_term_url }}">terms and conditions</a>.
     {% endblock login_terms_text %}
@@ -104,24 +104,4 @@ $('form').submit((e) => {
   form.find('.feedback-widget>*').toggleClass('fa-pulse');
 });
 </script>
-
-{% block login_terms_script %} {# allow overriding the javascript #}
-{% if login_term_url %}
-<script>
-// By default disable the login submit button, unless user check the terms and
-// conditions checkbox.
-var loginBtn = document.getElementById('login_submit');
-loginBtn.disabled = "disabled";
-
-document.getElementById('login_terms_checkbox').onclick = function() {
-    if ( this.checked ) {
-        loginBtn.disabled = "";
-    } else {
-        loginBtn.disabled = "disabled";
-    }
-};
-</script>
-{% endif %}
-{% endblock login_terms_script %}
-
 {% endblock %}
