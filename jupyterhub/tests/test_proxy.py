@@ -27,7 +27,7 @@ def disable_check_routes(app):
         app.last_activity_callback.start()
 
 
-async def test_external_proxy(request):
+async def test_external_proxy(request, tmpdir_factory):
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
     proxy_port = 54321
@@ -35,8 +35,16 @@ async def test_external_proxy(request):
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
     cfg.ConfigurableHTTPProxy.api_url = 'http://%s:%i' % (proxy_ip, proxy_port)
     cfg.ConfigurableHTTPProxy.should_start = False
-
-    app = MockHub.instance(config=cfg)
+    internal_ssl = os.environ.get('SSL_ENABLED', False)
+    kwargs = {'config': cfg}
+    if internal_ssl:
+        kwargs.update(
+            dict(
+                internal_ssl=True,
+                internal_certs_location=str(tmpdir_factory.mktemp('ssl')),
+            )
+        )
+    app = MockHub.instance(**kwargs)
     # disable last_activity polling to avoid check_routes being called during the test,
     # which races with some of our test conditions
     app.last_activity_interval = 0
@@ -62,6 +70,10 @@ async def test_external_proxy(request):
         str(proxy_port),
         '--log-level=debug',
     ]
+    if app.internal_ssl:
+        cfg.ConfigurableHTTPProxy._append_ssl_options(cmd)
+        app.log.warn("Doing stuff here")
+        app.log.warn(cmd)
     if app.subdomain_host:
         cmd.append('--host-routing')
     proxy = Popen(cmd, env=env)
