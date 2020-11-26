@@ -38,13 +38,11 @@ async def test_external_proxy(request, tmpdir_factory):
     internal_ssl = os.environ.get('SSL_ENABLED', False)
     kwargs = {'config': cfg}
     if internal_ssl:
-        kwargs.update(
-            dict(
-                internal_ssl=True,
-                internal_certs_location=str(tmpdir_factory.mktemp('ssl')),
-            )
-        )
+        kwargs['internal_ssl'] = True
+        kwargs['internal_certs_location'] = str(tmpdir_factory.mktemp('ssl'))
+
     app = MockHub.instance(**kwargs)
+    app.proxy = app.proxy_class(app=app)
     # disable last_activity polling to avoid check_routes being called during the test,
     # which races with some of our test conditions
     app.last_activity_interval = 0
@@ -71,12 +69,12 @@ async def test_external_proxy(request, tmpdir_factory):
         '--log-level=debug',
     ]
     if app.internal_ssl:
-        cfg.ConfigurableHTTPProxy._append_ssl_options(cmd)
+        app.proxy._append_ssl_options(cmd)
         app.log.warn("Doing stuff here")
         app.log.warn(cmd)
     if app.subdomain_host:
         cmd.append('--host-routing')
-    proxy = Popen(cmd, env=env)
+    proxy = Popen(cmd, env=env)  # Todo: Update test to use proxy instance
 
     def _cleanup_proxy():
         if proxy.poll() is None:
