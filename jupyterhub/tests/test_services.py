@@ -11,6 +11,7 @@ from async_generator import asynccontextmanager
 from async_generator import yield_
 from tornado.ioloop import IOLoop
 
+from ..utils import make_ssl_context
 from ..utils import maybe_future
 from ..utils import random_port
 from ..utils import url_path_join
@@ -33,8 +34,18 @@ async def external_service(app, name='mockservice'):
         'JUPYTERHUB_SERVICE_URL': 'http://127.0.0.1:%i' % random_port(),
     }
     proc = Popen(mockservice_cmd, env=env)
+    ssl_context = None
+    if app.internal_ssl:
+        ssl_context = make_ssl_context(
+            app.internal_ssl_key,
+            app.internal_ssl_cert,
+            cafile=app.internal_ssl_ca,
+            check_hostname=False,
+        )
     try:
-        await wait_for_http_server(env['JUPYTERHUB_SERVICE_URL'])
+        await wait_for_http_server(
+            env['JUPYTERHUB_SERVICE_URL'], ssl_context=ssl_context
+        )
         await yield_(env)
     finally:
         proc.terminate()

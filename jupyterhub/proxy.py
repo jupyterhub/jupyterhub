@@ -44,6 +44,7 @@ from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
 from .utils import exponential_backoff
+from .utils import get_ssl_options
 from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
@@ -557,34 +558,6 @@ class ConfigurableHTTPProxy(Proxy):
         else:
             raise RuntimeError("Failed to stop proxy at pid=%s", pid)
 
-    def _append_ssl_options(self, cmd):
-        if self.ssl_key:
-            cmd.extend(['--ssl-key', self.ssl_key])
-        if self.ssl_cert:
-            cmd.extend(['--ssl-cert', self.ssl_cert])
-        if self.app.internal_ssl:
-            proxy_api = 'proxy-api'
-            proxy_client = 'proxy-client'
-            api_key = self.app.internal_proxy_certs[proxy_api]['keyfile']
-            api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
-            api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
-
-            client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
-            client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
-            client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
-
-            cmd.extend(['--api-ssl-key', api_key])
-            cmd.extend(['--api-ssl-cert', api_cert])
-            cmd.extend(['--api-ssl-ca', api_ca])
-            cmd.extend(['--api-ssl-request-cert'])
-            cmd.extend(['--api-ssl-reject-unauthorized'])
-
-            cmd.extend(['--client-ssl-key', client_key])
-            cmd.extend(['--client-ssl-cert', client_cert])
-            cmd.extend(['--client-ssl-ca', client_ca])
-            cmd.extend(['--client-ssl-request-cert'])
-            cmd.extend(['--client-ssl-reject-unauthorized'])
-
     def _write_pid_file(self):
         """write pid for proxy to a file"""
         self.log.debug("Writing proxy pid file: %s", self.pid_file)
@@ -628,7 +601,11 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.append('--host-routing')
         if self.debug:
             cmd.extend(['--log-level', 'debug'])
-        self._append_ssl_options(cmd)
+        if self.ssl_key:
+            cmd.extend(['--ssl-key', self.ssl_key])
+        if self.ssl_cert:
+            cmd.extend(['--ssl-cert', self.ssl_cert])
+        cmd += get_ssl_options(self.app)
         if self.app.statsd_host:
             cmd.extend(
                 [
