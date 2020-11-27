@@ -54,7 +54,9 @@ def ssl_setup(cert_dir, authority_name):
     return external_certs
 
 
-skip_if_ssl = pytest.mark.skipif(os.environ.get('SSL_ENABLED', False))
+skip_if_ssl = pytest.mark.skipif(
+    os.environ.get('SSL_ENABLED', False), reason="Does not use internal SSL"
+)
 
 
 def check_db_locks(func):
