@@ -1,6 +1,8 @@
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 import requests
 from certipy import Certipy
 
@@ -50,6 +52,9 @@ def ssl_setup(cert_dir, authority_name):
         "external", authority_name, overwrite=True, alt_names=alt_names
     )
     return external_certs
+
+
+skip_if_ssl = pytest.mark.skipif(os.environ.get('SSL_ENABLED', False))
 
 
 def check_db_locks(func):
