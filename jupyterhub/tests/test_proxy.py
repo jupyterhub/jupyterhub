@@ -9,13 +9,12 @@ from urllib.parse import urlparse
 import pytest
 from traitlets.config import Config
 
-from .. import orm
-from ..utils import get_ssl_options
 from ..utils import url_path_join as ujoin
 from ..utils import wait_for_http_server
 from .mocking import MockHub
 from .test_api import add_user
 from .test_api import api_request
+from .utils import skip_if_ssl
 
 
 @pytest.fixture
@@ -28,33 +27,26 @@ def disable_check_routes(app):
         app.last_activity_callback.start()
 
 
-async def test_external_proxy(request, tmpdir_factory):
+@skip_if_ssl
+async def test_external_proxy(request):
     auth_token = 'secret!'
     proxy_ip = '127.0.0.1'
     proxy_port = 54321
     cfg = Config()
     cfg.ConfigurableHTTPProxy.auth_token = auth_token
-    internal_ssl = os.environ.get('SSL_ENABLED', False)
-    protocol = 'http'
-    kwargs = {'config': cfg}
-    if internal_ssl:
-        kwargs['internal_ssl'] = True
-        kwargs['internal_certs_location'] = str(tmpdir_factory.mktemp('ssl'))
-        protocol = 'https'
-    cfg.ConfigurableHTTPProxy.api_url = '%s://%s:%i' % (protocol, proxy_ip, proxy_port)
+    cfg.ConfigurableHTTPProxy.api_url = 'http://%s:%i' % (proxy_ip, proxy_port)
     cfg.ConfigurableHTTPProxy.should_start = False
-    app = MockHub.instance(**kwargs)
+
+    app = MockHub.instance(config=cfg)
     # disable last_activity polling to avoid check_routes being called during the test,
     # which races with some of our test conditions
     app.last_activity_interval = 0
 
     def fin():
         MockHub.clear_instance()
-        app.log.warn("Calling finalizer")
         app.http_server.stop()
 
     request.addfinalizer(fin)
-    await app.initialize([])
 
     # configures and starts proxy process
     env = os.environ.copy()
@@ -71,18 +63,9 @@ async def test_external_proxy(request, tmpdir_factory):
         str(proxy_port),
         '--log-level=debug',
     ]
-    if app.internal_ssl:
-        # app.internal_proxy_certs
-        cmd += get_ssl_options(app)
-        app.log.warn("Doing stuff here")
-        app.log.warn(cmd)
     if app.subdomain_host:
         cmd.append('--host-routing')
-    app.log.warn("Finished setting up command")
-
-    proxy = Popen(cmd, env=env)  # Todo: Update test to use proxy instance
-    app.log.warn(proxy.communicate())
-    app.log.warn("Defined proxy")
+    proxy = Popen(cmd, env=env)
 
     def _cleanup_proxy():
         if proxy.poll() is None:
@@ -92,13 +75,12 @@ async def test_external_proxy(request, tmpdir_factory):
     request.addfinalizer(_cleanup_proxy)
 
     def wait_for_proxy():
-        return wait_for_http_server('%s://%s:%i' % (protocol, proxy_ip, proxy_port))
-
-    app.log.warn("Starting to wait for proxy")
+        return wait_for_http_server('http://%s:%i' % (proxy_ip, proxy_port))
 
     await wait_for_proxy()
+
+    await app.initialize([])
     await app.start()
-    app.log.warn("Have started app")
     assert app.proxy.proxy_process is None
 
     # test if api service has a root route '/'
@@ -158,7 +140,7 @@ async def test_external_proxy(request, tmpdir_factory):
         '--api-port',
         str(proxy_port),
         '--default-target',
-        '%s://%s:%i' % (protocol, app.hub_ip, app.hub_port),
+        'http://%s:%i' % (app.hub_ip, app.hub_port),
     ]
     if app.subdomain_host:
         cmd.append('--host-routing')
@@ -166,7 +148,7 @@ async def test_external_proxy(request, tmpdir_factory):
     await wait_for_proxy()
 
     # tell the hub where the new proxy is
-    new_api_url = '{}://{}:{}'.format(protocol, proxy_ip, proxy_port)
+    new_api_url = 'http://{}:{}'.format(proxy_ip, proxy_port)
     r = await api_request(
         app,
         'proxy',
