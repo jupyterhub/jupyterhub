@@ -25,16 +25,13 @@ command line for details.
 
 #### Maintenance and upkeep improvements
 
+* Environment marker on pamela [#3255](https://github.com/jupyterhub/jupyterhub/pull/3255) ([@fcollonval](https://github.com/fcollonval))
 * remove push-branch conditions for CI [#3250](https://github.com/jupyterhub/jupyterhub/pull/3250) ([@minrk](https://github.com/minrk))
 * Migrate from travis to GitHub actions [#3246](https://github.com/jupyterhub/jupyterhub/pull/3246) ([@consideRatio](https://github.com/consideRatio))
 
 #### Documentation improvements
 
 * Update services-basics.md to use jupyterhub_idle_culler [#3257](https://github.com/jupyterhub/jupyterhub/pull/3257) ([@manics](https://github.com/manics))
-
-#### Other merged PRs
-
-* Environment marker on pamela [#3255](https://github.com/jupyterhub/jupyterhub/pull/3255) ([@fcollonval](https://github.com/fcollonval))
 
 #### Contributors to this release
 
