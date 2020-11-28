@@ -27,7 +27,7 @@ that environment variable is set or `/` if it is not.
 Admin users can set the announcement text with an API token:
 
     $ curl -X POST -H "Authorization: token <token>"                        \
-        -d "{'announcement':'JupyterHub will be upgraded on August 14!'}"   \
+        -d '{"announcement":"JupyterHub will be upgraded on August 14!"}'   \
         https://.../services/announcement
 
 Anyone can read the announcement:
