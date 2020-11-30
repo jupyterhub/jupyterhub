@@ -7,7 +7,7 @@ from tornado.web import StaticFileHandler
 
 class CacheControlStaticFilesHandler(StaticFileHandler):
     """StaticFileHandler subclass that sets Cache-Control: no-cache without `?v=`
-    
+
     rather than relying on default browser cache behavior.
     """
 

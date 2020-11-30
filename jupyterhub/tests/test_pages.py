@@ -265,7 +265,8 @@ async def test_spawn_with_query_arguments(app):
         next_url = ujoin(app.base_url, 'user/jones/tree')
         r = await async_requests.get(
             url_concat(
-                ujoin(base_url, 'spawn'), {'next': next_url, 'energy': '510keV'},
+                ujoin(base_url, 'spawn'),
+                {'next': next_url, 'energy': '510keV'},
             ),
             cookies=cookies,
         )

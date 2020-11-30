@@ -107,14 +107,14 @@ class Pagination(Configurable):
 
     def calculate_pages_window(self):
         """Calculates the set of pages to render later in links() method.
-           It returns the list of pages to render via links for the pagination
-           By default, as we've observed in other applications, we're going to render
-           only a finite and predefined number of pages, avoiding visual fatigue related
-           to a long list of pages. By default, we render 7 pages plus some inactive links with the characters '...'
-           to point out that there are other pages that aren't explicitly rendered.
-           The primary way of work is to provide current webpage and 5 next pages, the last 2 ones
-           (in case the current page + 5 does not overflow the total lenght of pages) and the first one for reference.
-           """
+        It returns the list of pages to render via links for the pagination
+        By default, as we've observed in other applications, we're going to render
+        only a finite and predefined number of pages, avoiding visual fatigue related
+        to a long list of pages. By default, we render 7 pages plus some inactive links with the characters '...'
+        to point out that there are other pages that aren't explicitly rendered.
+        The primary way of work is to provide current webpage and 5 next pages, the last 2 ones
+        (in case the current page + 5 does not overflow the total lenght of pages) and the first one for reference.
+        """
 
         before_page = 2
         after_page = 2
@@ -158,9 +158,9 @@ class Pagination(Configurable):
     @property
     def links(self):
         """Get the links for the pagination.
-           Getting the input from calculate_pages_window(), generates the HTML code
-           for the pages to render, plus the arrows to go onwards and backwards (if needed).
-           """
+        Getting the input from calculate_pages_window(), generates the HTML code
+        for the pages to render, plus the arrows to go onwards and backwards (if needed).
+        """
         if self.total_pages == 1:
             return []
 

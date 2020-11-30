@@ -258,8 +258,7 @@ async def test_shell_cmd(db, tmpdir, request):
 
 
 def test_inherit_overwrite():
-    """On 3.6+ we check things are overwritten at import time
-    """
+    """On 3.6+ we check things are overwritten at import time"""
     if sys.version_info >= (3, 6):
         with pytest.raises(NotImplementedError):
 

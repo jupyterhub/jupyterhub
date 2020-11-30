@@ -256,7 +256,7 @@ class JupyterHubRequestValidator(RequestValidator):
         self.db.commit()
 
     def get_authorization_code_scopes(self, client_id, code, redirect_uri, request):
-        """ Extracts scopes from saved authorization code.
+        """Extracts scopes from saved authorization code.
         The scopes returned by this method is used to route token requests
         based on scopes passed to Authorization Code requests.
         With that the token endpoint knows when to include OpenIDConnect

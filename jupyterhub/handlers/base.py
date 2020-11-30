@@ -489,7 +489,7 @@ class BaseHandler(RequestHandler):
         self.clear_cookie(
             'jupyterhub-services',
             path=url_path_join(self.base_url, 'services'),
-            **kwargs
+            **kwargs,
         )
         # Reset _jupyterhub_user
         self._jupyterhub_user = None
@@ -1485,10 +1485,14 @@ class UserUrlHandler(BaseHandler):
 
         # if request is expecting JSON, assume it's an API request and fail with 503
         # because it won't like the redirect to the pending page
-        if get_accepted_mimetype(
-            self.request.headers.get('Accept', ''),
-            choices=['application/json', 'text/html'],
-        ) == 'application/json' or 'api' in user_path.split('/'):
+        if (
+            get_accepted_mimetype(
+                self.request.headers.get('Accept', ''),
+                choices=['application/json', 'text/html'],
+            )
+            == 'application/json'
+            or 'api' in user_path.split('/')
+        ):
             self._fail_api_request(user_name, server_name)
             return
 
