@@ -216,7 +216,7 @@ def admin_user(app, username):
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):
     """mock services for testing.
 
-       Shorter intervals, etc.
+    Shorter intervals, etc.
     """
 
     poll_interval = 1

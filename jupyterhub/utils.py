@@ -75,8 +75,7 @@ def can_connect(ip, port):
 
 
 def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname=True):
-    """Setup context for starting an https server or making requests over ssl.
-    """
+    """Setup context for starting an https server or making requests over ssl."""
     if not keyfile or not certfile:
         return None
     purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
@@ -96,7 +95,7 @@ async def exponential_backoff(
     timeout=10,
     timeout_tolerance=0.1,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Exponentially backoff until `pass_func` is true.

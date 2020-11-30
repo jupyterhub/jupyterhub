@@ -101,7 +101,10 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    whitelist = Set(help="Deprecated, use `Authenticator.allowed_users`", config=True,)
+    whitelist = Set(
+        help="Deprecated, use `Authenticator.allowed_users`",
+        config=True,
+    )
 
     allowed_users = Set(
         help="""
@@ -715,7 +718,9 @@ for _old_name, _new_name, _version in [
     ("check_blacklist", "check_blocked_users", "1.2"),
 ]:
     setattr(
-        Authenticator, _old_name, _deprecated_method(_old_name, _new_name, _version),
+        Authenticator,
+        _old_name,
+        _deprecated_method(_old_name, _new_name, _version),
     )
 
 
@@ -778,7 +783,9 @@ class LocalAuthenticator(Authenticator):
         """
     ).tag(config=True)
 
-    group_whitelist = Set(help="""DEPRECATED: use allowed_groups""",).tag(config=True)
+    group_whitelist = Set(
+        help="""DEPRECATED: use allowed_groups""",
+    ).tag(config=True)
 
     allowed_groups = Set(
         help="""

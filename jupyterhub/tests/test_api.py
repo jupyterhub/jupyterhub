@@ -182,7 +182,8 @@ async def test_get_users(app):
 
 @mark.user
 @mark.parametrize(
-    "state", ("inactive", "active", "ready", "invalid"),
+    "state",
+    ("inactive", "active", "ready", "invalid"),
 )
 async def test_get_users_state_filter(app, state):
     db = app.db

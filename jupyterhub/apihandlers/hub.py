@@ -16,9 +16,9 @@ class ShutdownAPIHandler(APIHandler):
     @admin_only
     def post(self):
         """POST /api/shutdown triggers a clean shutdown
-        
+
         POST (JSON) parameters:
-        
+
         - servers: specify whether single-user servers should be terminated
         - proxy: specify whether the proxy should be terminated
         """
@@ -57,7 +57,7 @@ class RootAPIHandler(APIHandler):
         """GET /api/ returns info about the Hub and its API.
 
         It is not an authenticated endpoint.
-        
+
         For now, it just returns the version of JupyterHub itself.
         """
         data = {'version': __version__}
@@ -70,7 +70,7 @@ class InfoAPIHandler(APIHandler):
         """GET /api/info returns detailed info about the Hub and its API.
 
         It is not an authenticated endpoint.
-        
+
         For now, it just returns the version of JupyterHub itself.
         """
 
