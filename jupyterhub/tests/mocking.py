@@ -41,6 +41,7 @@ from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 
+from .. import metrics
 from .. import orm
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
@@ -327,6 +328,7 @@ class MockHub(JupyterHub):
             user = orm.User(name='user')
             self.db.add(user)
             self.db.commit()
+            metrics.TOTAL_USERS.inc()
 
     def stop(self):
         super().stop()

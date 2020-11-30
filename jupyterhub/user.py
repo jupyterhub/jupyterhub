@@ -69,7 +69,6 @@ class UserDict(dict):
         """Add a user to the UserDict"""
         if orm_user.id not in self:
             self[orm_user.id] = self.from_orm(orm_user)
-            TOTAL_USERS.inc()
         return self[orm_user.id]
 
     def __contains__(self, key):

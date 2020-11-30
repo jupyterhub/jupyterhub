@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 from certipy import Certipy
 
+from jupyterhub import metrics
 from jupyterhub import orm
 from jupyterhub.objects import Server
 from jupyterhub.utils import url_path_join as ujoin
@@ -97,6 +98,7 @@ def add_user(db, app=None, **kwargs):
     if orm_user is None:
         orm_user = orm.User(**kwargs)
         db.add(orm_user)
+        metrics.TOTAL_USERS.inc()
     else:
         for attr, value in kwargs.items():
             setattr(orm_user, attr, value)
