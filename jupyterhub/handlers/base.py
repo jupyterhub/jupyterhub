@@ -40,6 +40,7 @@ from ..metrics import SERVER_STOP_DURATION_SECONDS
 from ..metrics import ServerPollStatus
 from ..metrics import ServerSpawnStatus
 from ..metrics import ServerStopStatus
+from ..metrics import TOTAL_USERS
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..user import User
@@ -453,6 +454,7 @@ class BaseHandler(RequestHandler):
             # not found, create and register user
             u = orm.User(name=username)
             self.db.add(u)
+            TOTAL_USERS.inc()
             self.db.commit()
             user = self._user_from_orm(u)
         return user
