@@ -1,7 +1,11 @@
 """Test scopes for API handlers"""
+from unittest import mock
+
 import pytest
+import tornado
 from pytest import mark
 from tornado import web
+from tornado.httputil import HTTPServerRequest
 
 from .. import orm
 from ..utils import check_scope
@@ -10,7 +14,6 @@ from ..utils import parse_scopes
 from ..utils import Scope
 from .utils import add_user
 from .utils import api_request
-from .utils import auth_header
 
 
 def test_scope_constructor():
@@ -157,6 +160,7 @@ class MockAPIHandler:
 )
 def test_scope_method_access(scopes, method, arguments, is_allowed):
     obj = MockAPIHandler()
+    obj.request = mock.Mock(spec=HTTPServerRequest)
     obj.scopes = scopes
     api_call = getattr(obj, method)
     if is_allowed:
