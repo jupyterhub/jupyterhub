@@ -100,6 +100,9 @@ class UserListAPIHandler(APIHandler):
 
     @admin_only
     async def post(self):
+        if self.authenticator.strict_config:
+            raise web.HTTPError(403, "User creation via API is not allowed.")
+
         data = self.get_json_body()
         if not data or not isinstance(data, dict) or not data.get('usernames'):
             raise web.HTTPError(400, "Must specify at least one user to create")
@@ -190,6 +193,8 @@ class UserAPIHandler(APIHandler):
 
     @admin_only
     async def post(self, name):
+        if self.authenticator.strict_config:
+            raise web.HTTPError(403, "User modification via API is not allowed.")
         data = self.get_json_body()
         user = self.find_user(name)
         if user is not None:
@@ -215,6 +220,8 @@ class UserAPIHandler(APIHandler):
 
     @admin_only
     async def delete(self, name):
+        if self.authenticator.strict_config:
+            raise web.HTTPError(403, "User modification via API is not allowed.")
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
@@ -240,6 +247,9 @@ class UserAPIHandler(APIHandler):
 
     @admin_only
     async def patch(self, name):
+        if self.authenticator.strict_config:
+            raise web.HTTPError(403, "User modification via API is not allowed.")
+
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)

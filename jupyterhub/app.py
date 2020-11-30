@@ -1678,7 +1678,9 @@ class JupyterHub(Application):
             self.authenticator.normalize_username(name)
             for name in self.authenticator.admin_users
         ]
-        self.authenticator.admin_users = set(admin_users)  # force normalization
+        self.authenticator.admin_users = admin_users = set(
+            admin_users
+        )  # force normalization
         for username in admin_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
@@ -1701,6 +1703,15 @@ class JupyterHub(Application):
             else:
                 user.admin = True
 
+        if self.authenticator.strict_config:
+            for user in db.query(orm.User).filter_by(admin=True):
+                if user.name not in admin_users:
+                    self.log.warning(
+                        f"Stripping admin permissions from {user.name} due to Authenticator.strict_config"
+                    )
+                    user.admin = False
+            db.commit()
+
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
@@ -1709,6 +1720,7 @@ class JupyterHub(Application):
             for name in self.authenticator.allowed_users
         ]
         self.authenticator.allowed_users = set(allowed_users)  # force normalization
+
         for username in allowed_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)

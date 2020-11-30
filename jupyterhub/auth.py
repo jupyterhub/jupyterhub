@@ -86,7 +86,10 @@ class Authenticator(LoggingConfigurable):
 
     admin_users = Set(
         help="""
-        Set of users that will have admin rights on this JupyterHub.
+        Set of users to grant admin rights for this JupyterHub.
+
+        Users can be granted admin rights via the API.
+        Removing users from this list *does not* remove their admin rights.
 
         Admin users have extra privileges:
          - Use the admin panel to see list of users logged in
@@ -97,8 +100,27 @@ class Authenticator(LoggingConfigurable):
 
         Admin access should be treated the same way root access is.
 
-        Defaults to an empty set, in which case no user has admin access.
+        Defaults to an empty set, in which case no user is granted admin access.
+        Users previously granted admin rights will still be admins
+        unless ``Authenticator.strict_config`` is set.
         """
+    ).tag(config=True)
+
+    strict_config = Bool(
+        False,
+        help="""
+        Strict application of Authenticator configuration.
+
+        If True, only the configuration is considered a valid source of allowed_users, admin_users,
+        not pre-existing database state.
+
+        If True, Users cannot be granted access via the API or added via the admin panel.
+
+        If False (default), changing admin_users and allowed_users configuration can only grant users access;
+        removing users from these sets does not revoke access previously granted.
+
+        .. versionadded:: 1.3
+    """,
     ).tag(config=True)
 
     whitelist = Set(
@@ -108,11 +130,15 @@ class Authenticator(LoggingConfigurable):
 
     allowed_users = Set(
         help="""
-        Set of usernames that are allowed to log in.
+        Allow these users to access JupyterHub.
 
-        Use this with supported authenticators to restrict which users can log in. This is an
-        additional list that further restricts users, beyond whatever restrictions the
-        authenticator has in place.
+        Use this with supported authenticators to specify which users can log in.
+
+        Users created in the database (e.g. via Admin panel or API) are added to this set.
+        Removing a user from this set does not delete the user;
+        user deletion must be done via the API or admin panel,
+        or users disabled via ``blocked_users``,
+        or by setting ``Authenticator.strict_config = True``.
 
         If empty, does not perform any additional restriction.
 
@@ -593,7 +619,7 @@ class Authenticator(LoggingConfigurable):
 
         This is called:
          - When a user first authenticates
-         - When the hub restarts, for all users.
+         - When the hub restarts, for all users
 
         This method may be a coroutine.
 
@@ -605,11 +631,21 @@ class Authenticator(LoggingConfigurable):
         Note that this should be idempotent, since it is called whenever the hub restarts
         for all users.
 
+        If `add_user` raises an Exception, a user is considered invalid.
+        In combination with `Authenticator.delete_invalid_users = True`,
+        this can be used to *delete* users that were created
+
         Args:
             user (User): The User wrapper object
         """
         if not self.validate_username(user.name):
             raise ValueError("Invalid username: %s" % user.name)
+        if (
+            self.strict_config
+            and user.name not in self.allowed_users
+            and user.name not in self.admin_users
+        ):
+            raise ValueError(f"Refusing to add user {user.name} due to strict_config")
         if self.allowed_users:
             self.allowed_users.add(user.name)
 

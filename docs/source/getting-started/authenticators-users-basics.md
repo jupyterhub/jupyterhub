@@ -60,8 +60,15 @@ as the users will be loaded from the database.
 After starting the Hub once, it is not sufficient to **remove** a user
 from the allowed users set in your config file. You must also remove the user
 from the Hub's database, either by deleting the user from JupyterHub's
-admin page, or you can clear the `jupyterhub.sqlite` database and start
-fresh.
+admin page, or you can clear the `jupyterhub.sqlite` database and start fresh.
+The same is true of `Authenticator.admin_users`.
+
+JupyterHub 1.3 adds `c.Authenticator.strict_config` which, if True,
+makes the `allowed_users` and `admin_users` configuration the *only* way to add/remove users and admin permissions.
+If enabled, users removed from `allowed_users` and `admin_users` sets will have their permissions revoked,
+however this also means that users cannot be created or modified via the admin panel or API
+because users created in this way would necessarily be deleted upon every Hub restart.
+
 
 ## Use LocalAuthenticator to create system users
 
