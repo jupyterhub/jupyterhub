@@ -44,7 +44,6 @@ from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
 from .utils import exponential_backoff
-from .utils import get_ssl_options
 from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
@@ -575,6 +574,34 @@ class ConfigurableHTTPProxy(Proxy):
             self.log.debug("PID file %s already removed", self.pid_file)
             pass
 
+    def _get_ssl_options(self):
+        """List of cmd proxy options to use internal SSL"""
+        cmd = []
+        proxy_api = 'proxy-api'
+        proxy_client = 'proxy-client'
+        api_key = self.app.internal_proxy_certs[proxy_api][
+            'keyfile'
+        ]  # Check content in next test and just patch manulaly or in the config of the file
+        api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
+        api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
+
+        client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
+        client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
+        client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
+
+        cmd.extend(['--api-ssl-key', api_key])
+        cmd.extend(['--api-ssl-cert', api_cert])
+        cmd.extend(['--api-ssl-ca', api_ca])
+        cmd.extend(['--api-ssl-request-cert'])
+        cmd.extend(['--api-ssl-reject-unauthorized'])
+
+        cmd.extend(['--client-ssl-key', client_key])
+        cmd.extend(['--client-ssl-cert', client_cert])
+        cmd.extend(['--client-ssl-ca', client_ca])
+        cmd.extend(['--client-ssl-request-cert'])
+        cmd.extend(['--client-ssl-reject-unauthorized'])
+        return cmd
+
     async def start(self):
         """Start the proxy process"""
         # check if there is a previous instance still around
@@ -605,7 +632,8 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.extend(['--ssl-key', self.ssl_key])
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
-        cmd += get_ssl_options(self.app)
+        if self.app.internal_ssl:
+            cmd.extend(self._get_ssl_options())
         if self.app.statsd_host:
             cmd.extend(
                 [

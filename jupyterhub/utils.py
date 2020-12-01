@@ -345,35 +345,6 @@ def compare_token(compare, token):
     return False
 
 
-def get_ssl_options(app):
-    cmd = []
-    if app.internal_ssl:
-        proxy_api = 'proxy-api'
-        proxy_client = 'proxy-client'
-        api_key = app.internal_proxy_certs[proxy_api][
-            'keyfile'
-        ]  # Check content in next test and just patch manulaly or in the config of the file
-        api_cert = app.internal_proxy_certs[proxy_api]['certfile']
-        api_ca = app.internal_trust_bundles[proxy_api + '-ca']
-
-        client_key = app.internal_proxy_certs[proxy_client]['keyfile']
-        client_cert = app.internal_proxy_certs[proxy_client]['certfile']
-        client_ca = app.internal_trust_bundles[proxy_client + '-ca']
-
-        cmd.extend(['--api-ssl-key', api_key])
-        cmd.extend(['--api-ssl-cert', api_cert])
-        cmd.extend(['--api-ssl-ca', api_ca])
-        cmd.extend(['--api-ssl-request-cert'])
-        cmd.extend(['--api-ssl-reject-unauthorized'])
-
-        cmd.extend(['--client-ssl-key', client_key])
-        cmd.extend(['--client-ssl-cert', client_cert])
-        cmd.extend(['--client-ssl-ca', client_ca])
-        cmd.extend(['--client-ssl-request-cert'])
-        cmd.extend(['--client-ssl-reject-unauthorized'])
-    return cmd
-
-
 def url_path_join(*pieces):
     """Join components of url into a relative url.
 
