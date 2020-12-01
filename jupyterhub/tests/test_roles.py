@@ -18,11 +18,11 @@ def test_orm_roles(db):
     """Test orm roles setup"""
     user_role = orm.Role.find(db, name='user')
     if not user_role:
-        user_role = orm.Role(name='user')
+        user_role = orm.Role(name='user', scopes=['all', 'read:all'])
         db.add(user_role)
         db.commit()
 
-    service_role = orm.Role(name='service')
+    service_role = orm.Role(name='service', scopes=['users:servers'])
     db.add(service_role)
     db.commit()
 
@@ -331,13 +331,13 @@ async def test_load_roles_tokens(tmpdir, request):
         ({}, None, 200),
         ({}, ['reader'], 200),
         ({}, ['non-existing'], 404),
-        # FIXME - add requesting token with 'not allowed' role
-        # granting more permission than the token owner has
+        ({}, ['user_creator'], 403),
     ],
 )
 async def test_get_new_token_via_api(app, headers, role_list, status):
     user = add_user(app.db, app, name='user')
     roles.add_role(app.db, {'name': 'reader', 'scopes': ['read:all']})
+    roles.add_role(app.db, {'name': 'user_creator', 'scopes': ['admin:users']})
     if role_list:
         body = json.dumps({'roles': role_list})
     else:

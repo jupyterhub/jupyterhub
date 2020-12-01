@@ -302,8 +302,14 @@ class UserTokenListAPIHandler(APIHandler):
             api_token = user.new_api_token(
                 note=note, expires_in=body.get('expires_in', None), roles=token_roles
             )
-        except ValueError:
+        except NameError:
             raise web.HTTPError(404, "Requested roles %r not found" % token_roles)
+        except ValueError:
+            raise web.HTTPError(
+                403,
+                "Requested token roles %r have higher permissions than the token owner"
+                % token_roles,
+            )
         if requester is not user:
             self.log.info(
                 "%s %s requested API token for %s",

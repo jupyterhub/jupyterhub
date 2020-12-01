@@ -1,6 +1,8 @@
 """Roles utils"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+from itertools import chain
+
 from . import orm
 
 
@@ -37,6 +39,86 @@ def get_default_roles():
         },
     ]
     return default_roles
+
+
+def get_scopes():
+
+    """
+    Returns a dictionary of scopes:
+    scopes.keys() = scopes of highest level and scopes that have their own subscopes
+    scopes.values() = a list of first level subscopes or None
+    """
+
+    scopes = {
+        'all': ['read:all'],
+        'users': ['read:users', 'users:activity!user=username', 'users:servers'],
+        'read:users': [
+            'read:users!user=username',
+            'read:users:name',
+            'read:users:groups',
+            'read:users:activity',
+            'read:users:servers',
+        ],
+        'read:users:activity': ['read:users:activity!group=groupname'],
+        'users:servers': ['users:servers!server=servername'],
+        'users:tokens': ['read:users:tokens'],
+        'admin:users': None,
+        'admin:users:servers': None,
+        'groups': ['groups!group=groupname', 'read:groups'],
+        'admin:groups': None,
+        'read:services': None,
+        'proxy': None,
+        'shutdown': None,
+    }
+
+    return scopes
+
+
+def expand_scope(scopename):
+
+    """Returns a set of all subscopes"""
+
+    scopes = get_scopes()
+    subscopes = [scopename]
+
+    def expand_subscopes(index):
+
+        more_subscopes = list(
+            filter(lambda scope: scope in scopes.keys(), subscopes[index:])
+        )
+        for scope in more_subscopes:
+            subscopes.extend(scopes[scope])
+
+    if scopename in scopes.keys() and scopes[scopename] is not None:
+        subscopes.extend(scopes[scopename])
+        # record the index from where it should check for "subscopes of sub-subscopes"
+        index_for_sssc = len(subscopes)
+        # check for "subscopes of subscopes"
+        expand_subscopes(index=1)
+        # check for "subscopes of sub-subscopes"
+        expand_subscopes(index=index_for_sssc)
+
+    expanded_scope = set(subscopes)
+
+    return expanded_scope
+
+
+def get_subscopes(role=None, roles=None):
+
+    """Returns a set of all available subscopes for a specified role or list of roles"""
+
+    scope_list = []
+    if role:
+        scope_list = role.scopes
+    elif roles:
+        for role in roles:
+            scope_list.extend(role.scopes)
+    else:
+        raise ValueError('Function get_subscopes is missing an argument')
+
+    scopes = list(chain.from_iterable(list(map(expand_scope, scope_list))))
+
+    return set(scopes)
 
 
 def add_role(db, role_dict):
@@ -148,13 +230,28 @@ def update_roles(db, obj, kind, roles=None):
     if roles:
         for rolename in roles:
             if Class == orm.APIToken:
-                # FIXME - check if specified roles do not add permissions
-                # on top of the token owner's scopes
+
                 role = orm.Role.find(db, rolename)
                 if role:
-                    role.tokens.append(obj)
+                    # compare the requested role permissions with the owner's permissions (scopes)
+                    token_scopes = get_subscopes(role=role)
+                    # find the owner and their roles
+                    owner = None
+                    if obj.user_id:
+                        owner = db.query(orm.User).get(obj.user_id)
+                    elif obj.service_id:
+                        owner = db.query(orm.Service).get(obj.service_id)
+                    if owner:
+                        owner_scopes = get_subscopes(roles=owner.roles)
+                        if token_scopes.issubset(owner_scopes):
+                            role.tokens.append(obj)
+                        else:
+                            raise ValueError(
+                                'Requested token role %r has higher permissions than the token owner'
+                                % rolename
+                            )
                 else:
-                    raise ValueError('Role %r does not exist' % rolename)
+                    raise NameError('Role %r does not exist' % rolename)
             else:
                 add_obj(db, objname=obj.name, kind=kind, rolename=rolename)
     else:
