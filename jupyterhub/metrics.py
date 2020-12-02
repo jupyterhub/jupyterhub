@@ -3,9 +3,9 @@ Prometheus metrics exported by JupyterHub
 
 Read https://prometheus.io/docs/practices/naming/ for naming
 conventions for metrics & labels. We generally prefer naming them
-`<noun>_<verb>_<type_suffix>`. So a histogram that's tracking
+`jupyterhub_<noun>_<verb>_<type_suffix>`. So a histogram that's tracking
 the duration (in seconds) of servers spawning would be called
-SERVER_SPAWN_DURATION_SECONDS.
+jupyterhub_server_spawn_duration_seconds.
 
 We also create an Enum for each 'status' type label in every metric
 we collect. This is to make sure that the metrics exist regardless
@@ -14,6 +14,10 @@ create them, the metric spawn_duration_seconds{status="failure"}
 will not actually exist until the first failure. This makes dashboarding
 and alerting difficult, so we explicitly list statuses and create
 them manually here.
+
+.. versionchanged:: 1.3
+
+    added ``jupyterhub_`` prefix to metric names.
 """
 from enum import Enum
 
@@ -21,13 +25,13 @@ from prometheus_client import Gauge
 from prometheus_client import Histogram
 
 REQUEST_DURATION_SECONDS = Histogram(
-    'request_duration_seconds',
+    'jupyterhub_request_duration_seconds',
     'request duration for all HTTP requests',
     ['method', 'handler', 'code'],
 )
 
 SERVER_SPAWN_DURATION_SECONDS = Histogram(
-    'server_spawn_duration_seconds',
+    'jupyterhub_server_spawn_duration_seconds',
     'time taken for server spawning operation',
     ['status'],
     # Use custom bucket sizes, since the default bucket ranges
@@ -36,25 +40,27 @@ SERVER_SPAWN_DURATION_SECONDS = Histogram(
 )
 
 RUNNING_SERVERS = Gauge(
-    'running_servers', 'the number of user servers currently running'
+    'jupyterhub_running_servers', 'the number of user servers currently running'
 )
 
-TOTAL_USERS = Gauge('total_users', 'total number of users')
+TOTAL_USERS = Gauge('jupyterhub_total_users', 'total number of users')
 
 CHECK_ROUTES_DURATION_SECONDS = Histogram(
-    'check_routes_duration_seconds', 'Time taken to validate all routes in proxy'
+    'jupyterhub_check_routes_duration_seconds',
+    'Time taken to validate all routes in proxy',
 )
 
 HUB_STARTUP_DURATION_SECONDS = Histogram(
-    'hub_startup_duration_seconds', 'Time taken for Hub to start'
+    'jupyterhub_hub_startup_duration_seconds', 'Time taken for Hub to start'
 )
 
 INIT_SPAWNERS_DURATION_SECONDS = Histogram(
-    'init_spawners_duration_seconds', 'Time taken for spawners to initialize'
+    'jupyterhub_init_spawners_duration_seconds', 'Time taken for spawners to initialize'
 )
 
 PROXY_POLL_DURATION_SECONDS = Histogram(
-    'proxy_poll_duration_seconds', 'duration for polling all routes from proxy'
+    'jupyterhub_proxy_poll_duration_seconds',
+    'duration for polling all routes from proxy',
 )
 
 
@@ -79,7 +85,9 @@ for s in ServerSpawnStatus:
 
 
 PROXY_ADD_DURATION_SECONDS = Histogram(
-    'proxy_add_duration_seconds', 'duration for adding user routes to proxy', ['status']
+    'jupyterhub_proxy_add_duration_seconds',
+    'duration for adding user routes to proxy',
+    ['status'],
 )
 
 
@@ -100,7 +108,7 @@ for s in ProxyAddStatus:
 
 
 SERVER_POLL_DURATION_SECONDS = Histogram(
-    'server_poll_duration_seconds',
+    'jupyterhub_server_poll_duration_seconds',
     'time taken to poll if server is running',
     ['status'],
 )
@@ -127,7 +135,9 @@ for s in ServerPollStatus:
 
 
 SERVER_STOP_DURATION_SECONDS = Histogram(
-    'server_stop_seconds', 'time taken for server stopping operation', ['status']
+    'jupyterhub_server_stop_seconds',
+    'time taken for server stopping operation',
+    ['status'],
 )
 
 
@@ -148,7 +158,7 @@ for s in ServerStopStatus:
 
 
 PROXY_DELETE_DURATION_SECONDS = Histogram(
-    'proxy_delete_duration_seconds',
+    'jupyterhub_proxy_delete_duration_seconds',
     'duration for deleting user routes from proxy',
     ['status'],
 )
