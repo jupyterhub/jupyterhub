@@ -14,10 +14,10 @@ from tornado.iostream import StreamClosedError
 
 from .. import orm
 from ..user import User
-from ..utils import admin_only
 from ..utils import isoformat
 from ..utils import iterate_until
 from ..utils import maybe_future
+from ..utils import needs_scope
 from ..utils import url_path_join
 from .base import APIHandler
 
@@ -35,19 +35,21 @@ class SelfAPIHandler(APIHandler):
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
+        # Later: filter based on scopes.
+        # Perhaps user
         self.write(json.dumps(self.user_model(user)))
 
 
 class UserListAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('read:users')
     def get(self):
+        users = self.db.query(orm.User)
         data = [
-            self.user_model(u, include_servers=True, include_state=True)
-            for u in self.db.query(orm.User)
+            self.user_model(u, include_servers=True, include_state=True) for u in users
         ]
         self.write(json.dumps(data))
 
-    @admin_only
+    @needs_scope('admin:users')
     async def post(self):
         data = self.get_json_body()
         if not data or not isinstance(data, dict) or not data.get('usernames'):
@@ -122,9 +124,9 @@ def admin_or_self(method):
 
 
 class UserAPIHandler(APIHandler):
-    @admin_or_self
-    async def get(self, name):
-        user = self.find_user(name)
+    @needs_scope('read:users')
+    async def get(self, user_name):
+        user = self.find_user(user_name)
         model = self.user_model(
             user, include_servers=True, include_state=self.current_user.admin
         )
@@ -137,14 +139,14 @@ class UserAPIHandler(APIHandler):
             model['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(model))
 
-    @admin_only
-    async def post(self, name):
+    @needs_scope('admin:users')
+    async def post(self, user_name):
         data = self.get_json_body()
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if user is not None:
-            raise web.HTTPError(409, "User %s already exists" % name)
+            raise web.HTTPError(409, "User %s already exists" % user_name)
 
-        user = self.user_from_username(name)
+        user = self.user_from_username(user_name)
         if data:
             self._check_user_model(data)
             if 'admin' in data:
@@ -154,31 +156,33 @@ class UserAPIHandler(APIHandler):
         try:
             await maybe_future(self.authenticator.add_user(user))
         except Exception:
-            self.log.error("Failed to create user: %s" % name, exc_info=True)
+            self.log.error("Failed to create user: %s" % user_name, exc_info=True)
             # remove from registry
             self.users.delete(user)
-            raise web.HTTPError(400, "Failed to create user: %s" % name)
+            raise web.HTTPError(400, "Failed to create user: %s" % user_name)
 
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
 
-    @admin_only
-    async def delete(self, name):
-        user = self.find_user(name)
+    @needs_scope('admin:users')
+    async def delete(self, user_name):
+        user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404)
         if user.name == self.current_user.name:
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.spawner._stop_pending:
             raise web.HTTPError(
-                400, "%s's server is in the process of stopping, please wait." % name
+                400,
+                "%s's server is in the process of stopping, please wait." % user_name,
             )
         if user.running:
             await self.stop_single_user(user)
             if user.spawner._stop_pending:
                 raise web.HTTPError(
                     400,
-                    "%s's server is in the process of stopping, please wait." % name,
+                    "%s's server is in the process of stopping, please wait."
+                    % user_name,
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
@@ -187,14 +191,14 @@ class UserAPIHandler(APIHandler):
 
         self.set_status(204)
 
-    @admin_only
-    async def patch(self, name):
-        user = self.find_user(name)
+    @needs_scope('admin:users')
+    async def patch(self, user_name):
+        user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404)
         data = self.get_json_body()
         self._check_user_model(data)
-        if 'name' in data and data['name'] != name:
+        if 'name' in data and data['name'] != user_name:
             # check if the new name is already taken inside db
             if self.find_user(data['name']):
                 raise web.HTTPError(
@@ -215,15 +219,14 @@ class UserAPIHandler(APIHandler):
 class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
 
-    @admin_or_self
-    def get(self, name):
+    @needs_scope('read:users:tokens')
+    def get(self, user_name):
         """Get tokens for a given user"""
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
 
         now = datetime.utcnow()
-
         api_tokens = []
 
         def sort_key(token):
@@ -249,7 +252,7 @@ class UserTokenListAPIHandler(APIHandler):
             oauth_tokens.append(self.token_model(token))
         self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
-    async def post(self, name):
+    async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
             raise web.HTTPError(400, "Body must be a JSON dict or empty")
@@ -277,11 +280,11 @@ class UserTokenListAPIHandler(APIHandler):
         if requester is None:
             # couldn't identify requester
             raise web.HTTPError(403)
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if requester is not user and not requester.admin:
             raise web.HTTPError(403, "Only admins can request tokens for other users")
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
         if requester is not user:
             kind = 'user' if isinstance(requester, User) else 'service'
 
@@ -320,7 +323,7 @@ class UserTokenAPIHandler(APIHandler):
         (e.g. wrong owner, invalid key format, etc.)
         """
         not_found = "No such token %s for user %s" % (token_id, user.name)
-        prefix, id = token_id[0], token_id[1:]
+        prefix, id_ = token_id[0], token_id[1:]
         if prefix == 'a':
             Token = orm.APIToken
         elif prefix == 'o':
@@ -328,30 +331,30 @@ class UserTokenAPIHandler(APIHandler):
         else:
             raise web.HTTPError(404, not_found)
         try:
-            id = int(id)
+            id_ = int(id_)
         except ValueError:
             raise web.HTTPError(404, not_found)
 
-        orm_token = self.db.query(Token).filter(Token.id == id).first()
+        orm_token = self.db.query(Token).filter(Token.id == id_).first()
         if orm_token is None or orm_token.user is not user.orm_user:
             raise web.HTTPError(404, "Token not found %s", orm_token)
         return orm_token
 
-    @admin_or_self
-    def get(self, name, token_id):
+    @needs_scope('read:users:tokens')
+    def get(self, user_name, token_id):
         """"""
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
-    @admin_or_self
-    def delete(self, name, token_id):
+    @needs_scope('users:tokens')
+    def delete(self, user_name, token_id):
         """Delete a token"""
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
         if isinstance(token, orm.OAuthAccessToken):
@@ -371,9 +374,9 @@ class UserTokenAPIHandler(APIHandler):
 class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
-    @admin_or_self
-    async def post(self, name, server_name=''):
-        user = self.find_user(name)
+    @needs_scope('users:servers')
+    async def post(self, user_name, server_name=''):
+        user = self.find_user(user_name)
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
@@ -387,7 +390,7 @@ class UserServerAPIHandler(APIHandler):
                         400,
                         "User {} already has the maximum of {} named servers."
                         "  One must be deleted before a new server can be created".format(
-                            name, self.named_server_limit_per_user
+                            user_name, self.named_server_limit_per_user
                         ),
                     )
         spawner = user.spawners[server_name]
@@ -416,9 +419,9 @@ class UserServerAPIHandler(APIHandler):
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
 
-    @admin_or_self
-    async def delete(self, name, server_name=''):
-        user = self.find_user(name)
+    @needs_scope('users:servers')
+    async def delete(self, user_name, server_name=''):
+        user = self.find_user(user_name)
         options = self.get_json_body()
         remove = (options or {}).get('remove', False)
 
@@ -435,7 +438,7 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(400, "Named servers are not enabled.")
             if server_name not in user.orm_spawners:
                 raise web.HTTPError(
-                    404, "%s has no server named '%s'" % (name, server_name)
+                    404, "%s has no server named '%s'" % (user_name, server_name)
                 )
         elif remove:
             raise web.HTTPError(400, "Cannot delete the default server")
@@ -479,19 +482,19 @@ class UserAdminAccessAPIHandler(APIHandler):
     This handler sets the necessary cookie for an admin to login to a single-user server.
     """
 
-    @admin_only
-    def post(self, name):
+    @needs_scope('users:servers')
+    def post(self, user_name):
         self.log.warning(
             "Deprecated in JupyterHub 0.8."
             " Admin access API is not needed now that we use OAuth."
         )
         current = self.current_user
         self.log.warning(
-            "Admin user %s has requested access to %s's server", current.name, name
+            "Admin user %s has requested access to %s's server", current.name, user_name
         )
         if not self.settings.get('admin_access', False):
             raise web.HTTPError(403, "admin access to user servers disabled")
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404)
 
@@ -535,12 +538,12 @@ class SpawnProgressAPIHandler(APIHandler):
 
             await asyncio.wait([self._finish_future], timeout=self.keepalive_interval)
 
-    @admin_or_self
-    async def get(self, username, server_name=''):
+    @needs_scope('read:users:servers')
+    async def get(self, user_name, server_name=''):
         self.set_header('Cache-Control', 'no-cache')
         if server_name is None:
             server_name = ''
-        user = self.find_user(username)
+        user = self.find_user(user_name)
         if user is None:
             # no such user
             raise web.HTTPError(404)
@@ -678,12 +681,12 @@ class ActivityAPIHandler(APIHandler):
             )
         return servers
 
-    @admin_or_self
-    def post(self, username):
-        user = self.find_user(username)
+    @needs_scope('users')
+    def post(self, user_name):
+        user = self.find_user(user_name)
         if user is None:
             # no such user
-            raise web.HTTPError(404, "No such user: %r", username)
+            raise web.HTTPError(404, "No such user: %r", user_name)
 
         body = self.get_json_body()
         if not isinstance(body, dict):

@@ -19,6 +19,7 @@ import jupyterhub
 from .. import orm
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
+from .mocking import mock_role
 from .mocking import public_host
 from .mocking import public_url
 from .utils import add_user
@@ -168,7 +169,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 @mark.user
 async def test_get_users(app):
     db = app.db
-    r = await api_request(app, 'users')
+    r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
@@ -177,8 +178,8 @@ async def test_get_users(app):
         fill_user({'name': 'admin', 'admin': True}),
         fill_user({'name': 'user', 'admin': False, 'last_activity': None}),
     ]
-
-    r = await api_request(app, 'users', headers=auth_header(db, 'user'))
+    with mock_role(app, 'user'):
+        r = await api_request(app, 'users', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
 
@@ -205,13 +206,14 @@ async def test_get_self(app):
     )
     db.add(oauth_token)
     db.commit()
-    r = await api_request(app, 'user', headers={'Authorization': 'token ' + token})
+    r = await api_request(app, 'user', headers={'Authorization': 'token ' + token},)
     r.raise_for_status()
     model = r.json()
     assert model['name'] == u.name
 
     # invalid auth gets 403
-    r = await api_request(app, 'user', headers={'Authorization': 'token notvalid'})
+    with mock_role(app, 'user'):
+        r = await api_request(app, 'user', headers={'Authorization': 'token notvalid'},)
     assert r.status_code == 403
 
 
@@ -230,7 +232,9 @@ async def test_add_user(app):
 @mark.user
 async def test_get_user(app):
     name = 'user'
-    r = await api_request(app, 'users', name)
+    _ = await api_request(app, 'users', name, headers=auth_header(app.db, name))
+    with mock_role(app, role=name, name=name):
+        r = await api_request(app, 'users', name,)
     assert r.status_code == 200
 
     user = normalize_user(r.json())
@@ -412,16 +416,15 @@ async def test_user_set_auth_state(app, auth_state_enabled):
     assert user.name == name
     user_auth_state = await user.get_auth_state()
     assert user_auth_state is None
-
-    r = await api_request(
-        app,
-        'users',
-        name,
-        method='patch',
-        data=json.dumps({'auth_state': auth_state}),
-        headers=auth_header(app.db, name),
-    )
-
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            'users',
+            name,
+            method='patch',
+            data=json.dumps({'auth_state': auth_state}),
+            headers=auth_header(app.db, name),
+        )
     assert r.status_code == 403
     user_auth_state = await user.get_auth_state()
     assert user_auth_state is None
@@ -1266,15 +1269,16 @@ async def test_token_authenticator_noauth(app):
     """Create a token for a user relying on Authenticator.authenticate and no auth header"""
     name = 'user'
     data = {'auth': {'username': name, 'password': name}}
-    r = await api_request(
-        app,
-        'users',
-        name,
-        'tokens',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
+    with mock_role(app, 'admin'):
+        r = await api_request(
+            app,
+            'users',
+            name,
+            'tokens',
+            method='post',
+            data=json.dumps(data) if data else None,
+            noauth=True,
+        )
     assert r.status_code == 200
     reply = r.json()
     assert 'token' in reply
@@ -1289,15 +1293,16 @@ async def test_token_authenticator_dict_noauth(app):
     app.authenticator.auth_state = {'who': 'cares'}
     name = 'user'
     data = {'auth': {'username': name, 'password': name}}
-    r = await api_request(
-        app,
-        'users',
-        name,
-        'tokens',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            'users',
+            name,
+            'tokens',
+            method='post',
+            data=json.dumps(data) if data else None,
+            noauth=True,
+        )
     assert r.status_code == 200
     reply = r.json()
     assert 'token' in reply
@@ -1321,7 +1326,8 @@ async def test_token_list(app, as_user, for_user, status):
     if for_user != 'missing':
         for_user_obj = add_user(app.db, app, name=for_user)
     headers = {'Authorization': 'token %s' % u.new_api_token()}
-    r = await api_request(app, 'users', for_user, 'tokens', headers=headers)
+    with mock_role(app, role=as_user, name=as_user):
+        r = await api_request(app, 'users', for_user, 'tokens', headers=headers)
     assert r.status_code == status
     if status != 200:
         return
@@ -1332,9 +1338,10 @@ async def test_token_list(app, as_user, for_user, status):
     assert all(token['user'] == for_user for token in reply['oauth_tokens'])
     # validate individual token ids
     for token in reply['api_tokens'] + reply['oauth_tokens']:
-        r = await api_request(
-            app, 'users', for_user, 'tokens', token['id'], headers=headers
-        )
+        with mock_role(app, role=as_user, name=as_user):
+            r = await api_request(
+                app, 'users', for_user, 'tokens', token['id'], headers=headers
+            )
         r.raise_for_status()
         reply = r.json()
         assert normalize_token(reply) == normalize_token(token)
@@ -1516,8 +1523,8 @@ async def test_get_services(app, mockservice_url):
             'display': True,
         }
     }
-
-    r = await api_request(app, 'services', headers=auth_header(db, 'user'))
+    with mock_role(app, 'user'):
+        r = await api_request(app, 'services', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
 
@@ -1540,16 +1547,17 @@ async def test_get_service(app, mockservice_url):
         'info': {},
         'display': True,
     }
-
-    r = await api_request(
-        app,
-        'services/%s' % mockservice.name,
-        headers={'Authorization': 'token %s' % mockservice.api_token},
-    )
-    r.raise_for_status()
-    r = await api_request(
-        app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
-    )
+    with mock_role(app, 'service'):
+        r = await api_request(
+            app,
+            'services/%s' % mockservice.name,
+            headers={'Authorization': 'token %s' % mockservice.api_token},
+        )
+        r.raise_for_status()
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
+        )
     assert r.status_code == 403
 
 
@@ -1597,13 +1605,14 @@ async def test_info(app):
 
 async def test_update_activity_403(app, user, admin_user):
     token = user.new_api_token()
-    r = await api_request(
-        app,
-        "users/{}/activity".format(admin_user.name),
-        headers={"Authorization": "token {}".format(token)},
-        data="{}",
-        method="post",
-    )
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            "users/{}/activity".format(admin_user.name),
+            headers={"Authorization": "token {}".format(token)},
+            data="{}",
+            method="post",
+        )
     assert r.status_code == 403
 
 

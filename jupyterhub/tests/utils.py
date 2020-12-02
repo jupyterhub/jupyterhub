@@ -128,7 +128,6 @@ async def api_request(
     else:
         base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
-
     if 'Authorization' not in headers and not noauth and 'cookies' not in kwargs:
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}
@@ -194,3 +193,36 @@ def public_url(app, user_or_service=None, path=''):
         return host + ujoin(prefix, path)
     else:
         return host + prefix
+
+
+def get_scopes(role='admin'):
+    """Get all scopes for a role. Default role is admin, alternatives are user and service"""
+    all_scopes = {
+        'admin': [
+            'all',
+            'users',
+            'users:name',
+            'users:groups',
+            'users:activity',
+            'users:servers',
+            'users:tokens',
+            'admin:users',
+            'admin:users:servers',
+            'groups',
+            'admin:groups',
+            'services',
+            'proxy',
+            'shutdown',
+        ],
+        'user': [
+            'all',
+            'users!user={username}',
+            'users:activity!user={username}',
+            'users:tokens!user={username}',
+        ],
+        'server': ['users:activity'],
+        'service': ['services'],
+    }
+    scopes = all_scopes[role]
+    read_only = ["read:" + el for el in scopes]
+    return scopes + read_only

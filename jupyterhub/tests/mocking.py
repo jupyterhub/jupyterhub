@@ -53,6 +53,7 @@ from ..spawner import SimpleLocalProcessSpawner
 from ..utils import random_port
 from ..utils import url_path_join
 from .utils import async_requests
+from .utils import get_scopes
 from .utils import public_host
 from .utils import public_url
 from .utils import ssl_setup
@@ -75,6 +76,13 @@ def mock_check_account(username, service, encoding):
 
 def mock_open_session(username, service, encoding):
     pass
+
+
+def mock_role(app, role='admin', name=None):
+    scopes = get_scopes(role)
+    if name is not None:
+        scopes = [scope.format(username=name) for scope in scopes]
+    return mock.patch.dict(app.tornado_settings, {'mock_scopes': scopes})
 
 
 class MockSpawner(SimpleLocalProcessSpawner):
@@ -299,6 +307,7 @@ class MockHub(JupyterHub):
         super().init_tornado_application()
         # reconnect tornado_settings so that mocks can update the real thing
         self.tornado_settings = self.users.settings = self.tornado_application.settings
+        self.tornado_settings['mock_scopes'] = get_scopes()
 
     def init_services(self):
         # explicitly expire services before reinitializing
