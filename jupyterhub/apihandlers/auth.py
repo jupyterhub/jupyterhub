@@ -253,7 +253,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # Render oauth 'Authorize application...' page
             auth_state = await self.current_user.get_auth_state()
             self.write(
-                self.render_template(
+                await self.render_template(
                     "oauth.html",
                     auth_state=auth_state,
                     scopes=scopes,

@@ -142,7 +142,7 @@ def untag(vs, push=False):
 
 def make_env(*packages):
     """Make a virtualenv
-    
+
     Assumes `which python` has the `virtualenv` package
     """
     if not os.path.exists(env_root):
@@ -167,7 +167,7 @@ def make_env(*packages):
 
 def build_sdist(py):
     """Build sdists
-    
+
     Returns the path to the tarball
     """
     with cd(repo_root):

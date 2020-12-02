@@ -20,8 +20,7 @@ ssl_enabled = True
 SSL_ERROR = (SSLError, ConnectionError)
 
 
-@gen.coroutine
-def wait_for_spawner(spawner, timeout=10):
+async def wait_for_spawner(spawner, timeout=10):
     """Wait for an http server to show up
 
     polling at shorter intervals for early termination
@@ -32,15 +31,15 @@ def wait_for_spawner(spawner, timeout=10):
         return spawner.server.wait_up(timeout=1, http=True)
 
     while time.monotonic() < deadline:
-        status = yield spawner.poll()
+        status = await spawner.poll()
         assert status is None
         try:
-            yield wait()
+            await wait()
         except TimeoutError:
             continue
         else:
             break
-    yield wait()
+    await wait()
 
 
 async def test_connection_hub_wrong_certs(app):

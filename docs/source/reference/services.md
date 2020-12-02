@@ -50,7 +50,7 @@ A Service may have the following properties:
 
 If a service is also to be managed by the Hub, it has a few extra options:
 
-- `command: (str/Popen list`) - Command for JupyterHub to spawn the service.
+- `command: (str/Popen list)` - Command for JupyterHub to spawn the service.
       - Only use this if the service should be a subprocess.
       - If command is not specified, the Service is assumed to be managed
         externally.

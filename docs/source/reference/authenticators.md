@@ -235,10 +235,9 @@ to Spawner environment:
 
 ```python
 class MyAuthenticator(Authenticator):
-    @gen.coroutine
-    def authenticate(self, handler, data=None):
-        username = yield identify_user(handler, data)
-        upstream_token = yield token_for_user(username)
+    async def authenticate(self, handler, data=None):
+        username = await identify_user(handler, data)
+        upstream_token = await token_for_user(username)
         return {
             'name': username,
             'auth_state': {
@@ -246,10 +245,9 @@ class MyAuthenticator(Authenticator):
             },
         }
 
-    @gen.coroutine
-    def pre_spawn_start(self, user, spawner):
+    async def pre_spawn_start(self, user, spawner):
         """Pass upstream_token to spawner via environment variable"""
-        auth_state = yield user.get_auth_state()
+        auth_state = await user.get_auth_state()
         if not auth_state:
             # auth_state not enabled
             return

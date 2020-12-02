@@ -36,13 +36,12 @@ from unittest import mock
 from urllib.parse import urlparse
 
 from pamela import PAMError
-from tornado import gen
-from tornado.concurrent import Future
 from tornado.ioloop import IOLoop
 from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 
+from .. import metrics
 from .. import orm
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
@@ -118,19 +117,17 @@ class SlowSpawner(MockSpawner):
     delay = 2
     _start_future = None
 
-    @gen.coroutine
-    def start(self):
-        (ip, port) = yield super().start()
+    async def start(self):
+        (ip, port) = await super().start()
         if self._start_future is not None:
-            yield self._start_future
+            await self._start_future
         else:
-            yield gen.sleep(self.delay)
+            await asyncio.sleep(self.delay)
         return ip, port
 
-    @gen.coroutine
-    def stop(self):
-        yield gen.sleep(self.delay)
-        yield super().stop()
+    async def stop(self):
+        await asyncio.sleep(self.delay)
+        await super().stop()
 
 
 class NeverSpawner(MockSpawner):
@@ -142,14 +139,12 @@ class NeverSpawner(MockSpawner):
 
     def start(self):
         """Return a Future that will never finish"""
-        return Future()
+        return asyncio.Future()
 
-    @gen.coroutine
-    def stop(self):
+    async def stop(self):
         pass
 
-    @gen.coroutine
-    def poll(self):
+    async def poll(self):
         return 0
 
 
@@ -223,8 +218,7 @@ class MockPAMAuthenticator(PAMAuthenticator):
         # skip the add-system-user bit
         return not user.name.startswith('dne')
 
-    @gen.coroutine
-    def authenticate(self, *args, **kwargs):
+    async def authenticate(self, *args, **kwargs):
         with mock.patch.multiple(
             'pamela',
             authenticate=mock_authenticate,
@@ -232,7 +226,7 @@ class MockPAMAuthenticator(PAMAuthenticator):
             close_session=mock_open_session,
             check_account=mock_check_account,
         ):
-            username = yield super(MockPAMAuthenticator, self).authenticate(
+            username = await super(MockPAMAuthenticator, self).authenticate(
                 *args, **kwargs
             )
         if username is None:
@@ -329,14 +323,13 @@ class MockHub(JupyterHub):
                 self.db.delete(group)
             self.db.commit()
 
-    @gen.coroutine
-    def initialize(self, argv=None):
+    async def initialize(self, argv=None):
         self.pid_file = NamedTemporaryFile(delete=False).name
         self.db_file = NamedTemporaryFile()
         self.db_url = os.getenv('JUPYTERHUB_TEST_DB_URL') or self.db_file.name
         if 'mysql' in self.db_url:
             self.db_kwargs['connect_args'] = {'auth_plugin': 'mysql_native_password'}
-        yield super().initialize([])
+        await super().initialize([])
 
         # add an initial user
         user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
@@ -344,6 +337,7 @@ class MockHub(JupyterHub):
             user = orm.User(name='user')
             self.db.add(user)
             self.db.commit()
+            metrics.TOTAL_USERS.inc()
 
     def stop(self):
         super().stop()
@@ -367,14 +361,13 @@ class MockHub(JupyterHub):
         self.cleanup = lambda: None
         self.db_file.close()
 
-    @gen.coroutine
-    def login_user(self, name):
+    async def login_user(self, name):
         """Login a user by name, returning her cookies."""
         base_url = public_url(self)
         external_ca = None
         if self.internal_ssl:
             external_ca = self.external_certs['files']['ca']
-        r = yield async_requests.post(
+        r = await async_requests.post(
             base_url + 'hub/login',
             data={'username': name, 'password': name},
             allow_redirects=False,
@@ -416,8 +409,7 @@ class StubSingleUserSpawner(MockSpawner):
 
     _thread = None
 
-    @gen.coroutine
-    def start(self):
+    async def start(self):
         ip = self.ip = '127.0.0.1'
         port = self.port = random_port()
         env = self.get_env()
@@ -444,14 +436,12 @@ class StubSingleUserSpawner(MockSpawner):
         assert ready
         return (ip, port)
 
-    @gen.coroutine
-    def stop(self):
+    async def stop(self):
         self._app.stop()
         self._thread.join(timeout=30)
         assert not self._thread.is_alive()
 
-    @gen.coroutine
-    def poll(self):
+    async def poll(self):
         if self._thread is None:
             return 0
         if self._thread.is_alive():

@@ -1,9 +1,12 @@
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 import requests
 from certipy import Certipy
 
+from jupyterhub import metrics
 from jupyterhub import orm
 from jupyterhub.objects import Server
 from jupyterhub.utils import url_path_join as ujoin
@@ -52,6 +55,12 @@ def ssl_setup(cert_dir, authority_name):
     return external_certs
 
 
+"""Skip tests that don't work under internal-ssl when testing under internal-ssl"""
+skip_if_ssl = pytest.mark.skipif(
+    os.environ.get('SSL_ENABLED', False), reason="Does not use internal SSL"
+)
+
+
 def check_db_locks(func):
     """Decorator that verifies no locks are held on database upon exit.
 
@@ -97,6 +106,7 @@ def add_user(db, app=None, **kwargs):
     if orm_user is None:
         orm_user = orm.User(**kwargs)
         db.add(orm_user)
+        metrics.TOTAL_USERS.inc()
     else:
         for attr, value in kwargs.items():
             setattr(orm_user, attr, value)

@@ -9,8 +9,6 @@ name: Run tests
 on:
   pull_request:
   push:
-    branches: [main, master, pr/migrate-to-gh-actions-from-travis]
-    tags:
 
 defaults:
   run:
@@ -79,6 +77,10 @@ jobs:
         #   Tests everything when the user instances are started with
         #   jupyter_server instead of notebook.
         #
+        # ssl:
+        #   Tests everything using internal SSL connections instead of
+        #   unencrypted HTTP
+        #
         # main_dependencies:
         #   Tests everything when the we use the latest available dependencies
         #   from: ipytraitlets.
@@ -88,9 +90,13 @@ jobs:
         #       values by instead duplicating the name to signal true.
         include:
           - python: "3.6"
+            oldest_dependencies: oldest_dependencies
+          - python: "3.6"
             subdomain: subdomain
           - python: "3.7"
             db: mysql
+          - python: "3.7"
+            ssl: ssl
           - python: "3.8"
             db: postgres
           - python: "3.8"
@@ -110,6 +116,9 @@ jobs:
           if [ "${{ matrix.db }}" == "mysql" ]; then
               echo "MYSQL_HOST=127.0.0.1" >> $GITHUB_ENV
               echo "JUPYTERHUB_TEST_DB_URL=mysql+mysqlconnector://root@127.0.0.1:3306/jupyterhub" >> $GITHUB_ENV
+          fi
+          if [ "${{ matrix.ssl }}" == "ssl" ]; then
+              echo "SSL_ENABLED=1" >> $GITHUB_ENV
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
               echo "PGHOST=127.0.0.1" >> $GITHUB_ENV
@@ -144,6 +153,14 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install --upgrade . -r dev-requirements.txt
+
+          if [ "${{ matrix.oldest_dependencies }}" != "" ]; then
+            # take any dependencies in requirements.txt such as tornado>=5.0
+            # and transform them to tornado==5.0 so we can run tests with
+            # the earliest-supported versions
+            cat requirements.txt | grep '>=' | sed -e 's@>=@==@g' > oldest-requirements.txt
+            pip install -r oldest-requirements.txt
+          fi
 
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force

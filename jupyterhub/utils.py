@@ -23,10 +23,6 @@ from hmac import compare_digest
 from operator import itemgetter
 
 from async_generator import aclosing
-from async_generator import async_generator
-from async_generator import asynccontextmanager
-from async_generator import yield_
-from tornado import gen
 from tornado import ioloop
 from tornado import web
 from tornado.httpclient import AsyncHTTPClient
@@ -81,8 +77,7 @@ def can_connect(ip, port):
 
 
 def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname=True):
-    """Setup context for starting an https server or making requests over ssl.
-    """
+    """Setup context for starting an https server or making requests over ssl."""
     if not keyfile or not certfile:
         return None
     purpose = ssl.Purpose.SERVER_AUTH if verify else ssl.Purpose.CLIENT_AUTH
@@ -102,7 +97,7 @@ async def exponential_backoff(
     timeout=10,
     timeout_tolerance=0.1,
     *args,
-    **kwargs
+    **kwargs,
 ):
     """
     Exponentially backoff until `pass_func` is true.
@@ -177,7 +172,7 @@ async def exponential_backoff(
         dt = min(max_wait, remaining, random.uniform(0, start_wait * scale))
         if dt < max_wait:
             scale *= scale_factor
-        await gen.sleep(dt)
+        await asyncio.sleep(dt)
     raise TimeoutError(fail_message)
 
 
@@ -638,28 +633,12 @@ def maybe_future(obj):
         return asyncio.wrap_future(obj)
     else:
         # could also check for tornado.concurrent.Future
-        # but with tornado >= 5 tornado.Future is asyncio.Future
+        # but with tornado >= 5.1 tornado.Future is asyncio.Future
         f = asyncio.Future()
         f.set_result(obj)
         return f
 
 
-@asynccontextmanager
-@async_generator
-async def not_aclosing(coro):
-    """An empty context manager for Python < 3.5.2
-    which lacks the `aclose` method on async iterators
-    """
-    await yield_(await coro)
-
-
-if sys.version_info < (3, 5, 2):
-    # Python 3.5.1 is missing the aclose method on async iterators,
-    # so we can't close them
-    aclosing = not_aclosing
-
-
-@async_generator
 async def iterate_until(deadline_future, generator):
     """An async generator that yields items from a generator
     until a deadline future resolves
@@ -684,7 +663,7 @@ async def iterate_until(deadline_future, generator):
             )
             if item_future.done():
                 try:
-                    await yield_(item_future.result())
+                    yield item_future.result()
                 except (StopAsyncIteration, asyncio.CancelledError):
                     break
             elif deadline_future.done():

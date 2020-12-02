@@ -60,7 +60,7 @@ class APIHandler(web.RequestHandler):
 
 class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
     """Reply with the name of the user who made the request.
-    
+
     Uses "deprecated" cookie login
     """
 
@@ -71,7 +71,7 @@ class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
 
 class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
     """Reply with the name of the user who made the request.
-    
+
     Uses OAuth login flow
     """
 

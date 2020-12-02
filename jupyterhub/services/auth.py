@@ -23,7 +23,6 @@ from urllib.parse import quote
 from urllib.parse import urlencode
 
 import requests
-from tornado.gen import coroutine
 from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError
@@ -288,7 +287,7 @@ class HubAuth(SingletonConfigurable):
 
     def _check_hub_authorization(self, url, cache_key=None, use_cache=True):
         """Identify a user with the Hub
-        
+
         Args:
             url (str): The API URL to check the Hub for authorization
                        (e.g. http://127.0.0.1:8081/hub/api/authorizations/token/abc-def)
@@ -604,10 +603,10 @@ class HubOAuth(HubAuth):
 
     def token_for_code(self, code):
         """Get token for OAuth temporary code
-        
+
         This is the last step of OAuth login.
         Should be called in OAuth Callback handler.
-        
+
         Args:
             code (str): oauth code for finishing OAuth login
         Returns:
@@ -950,8 +949,7 @@ class HubOAuthCallbackHandler(HubOAuthenticated, RequestHandler):
     .. versionadded: 0.8
     """
 
-    @coroutine
-    def get(self):
+    async def get(self):
         error = self.get_argument("error", False)
         if error:
             msg = self.get_argument("error_description", error)

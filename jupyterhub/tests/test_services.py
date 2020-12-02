@@ -6,9 +6,7 @@ from binascii import hexlify
 from contextlib import contextmanager
 from subprocess import Popen
 
-from async_generator import async_generator
 from async_generator import asynccontextmanager
-from async_generator import yield_
 from tornado.ioloop import IOLoop
 
 from ..utils import maybe_future
@@ -17,6 +15,7 @@ from ..utils import url_path_join
 from ..utils import wait_for_http_server
 from .mocking import public_url
 from .utils import async_requests
+from .utils import skip_if_ssl
 
 mockservice_path = os.path.dirname(os.path.abspath(__file__))
 mockservice_py = os.path.join(mockservice_path, 'mockservice.py')
@@ -24,7 +23,6 @@ mockservice_cmd = [sys.executable, mockservice_py]
 
 
 @asynccontextmanager
-@async_generator
 async def external_service(app, name='mockservice'):
     env = {
         'JUPYTERHUB_API_TOKEN': hexlify(os.urandom(5)),
@@ -35,7 +33,7 @@ async def external_service(app, name='mockservice'):
     proc = Popen(mockservice_cmd, env=env)
     try:
         await wait_for_http_server(env['JUPYTERHUB_SERVICE_URL'])
-        await yield_(env)
+        yield env
     finally:
         proc.terminate()
 
@@ -63,6 +61,7 @@ async def test_managed_service(mockservice):
     assert service.proc.poll() is None
 
 
+@skip_if_ssl
 async def test_proxy_service(app, mockservice_url):
     service = mockservice_url
     name = service.name
@@ -76,6 +75,7 @@ async def test_proxy_service(app, mockservice_url):
     assert r.text.endswith(path)
 
 
+@skip_if_ssl
 async def test_external_service(app):
     name = 'external'
     async with external_service(app, name=name) as env:
