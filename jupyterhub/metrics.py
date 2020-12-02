@@ -5,7 +5,7 @@ Read https://prometheus.io/docs/practices/naming/ for naming
 conventions for metrics & labels. We generally prefer naming them
 `jupyterhub_<noun>_<verb>_<type_suffix>`. So a histogram that's tracking
 the duration (in seconds) of servers spawning would be called
-jupyterhub_SERVER_SPAWN_DURATION_SECONDS.
+jupyterhub_server_spawn_duration_seconds.
 
 We also create an Enum for each 'status' type label in every metric
 we collect. This is to make sure that the metrics exist regardless
@@ -14,6 +14,10 @@ create them, the metric spawn_duration_seconds{status="failure"}
 will not actually exist until the first failure. This makes dashboarding
 and alerting difficult, so we explicitly list statuses and create
 them manually here.
+
+.. versionchanged:: 1.3
+
+    added ``jupyterhub_`` prefix to metric names.
 """
 from enum import Enum
 
