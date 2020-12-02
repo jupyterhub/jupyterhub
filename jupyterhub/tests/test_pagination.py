@@ -6,11 +6,20 @@ from traitlets.config import Config
 from jupyterhub.pagination import Pagination
 
 
-def test_per_page_bounds():
+@mark.parametrize(
+    "per_page, max_per_page, expected",
+    [
+        (20, 10, 10),
+        (1000, 1000, 1000),
+    ],
+)
+def test_per_page_bounds(per_page, max_per_page, expected):
     cfg = Config()
-    cfg.Pagination.max_per_page = 10
-    p = Pagination(config=cfg, per_page=20, total=100)
-    assert p.per_page == 10
+    cfg.Pagination.max_per_page = max_per_page
+    p = Pagination(config=cfg)
+    p.per_page = per_page
+    p.total = 99999
+    assert p.per_page == expected
     with raises(Exception):
         p.per_page = 0
 
@@ -39,7 +48,5 @@ def test_per_page_bounds():
     ],
 )
 def test_window(page, per_page, total, expected):
-    cfg = Config()
-    cfg.Pagination
     pagination = Pagination(page=page, per_page=per_page, total=total)
     assert pagination.calculate_pages_window() == expected
