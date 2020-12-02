@@ -1,6 +1,8 @@
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 import requests
 from certipy import Certipy
 
@@ -51,6 +53,12 @@ def ssl_setup(cert_dir, authority_name):
         "external", authority_name, overwrite=True, alt_names=alt_names
     )
     return external_certs
+
+
+"""Skip tests that don't work under internal-ssl when testing under internal-ssl"""
+skip_if_ssl = pytest.mark.skipif(
+    os.environ.get('SSL_ENABLED', False), reason="Does not use internal SSL"
+)
 
 
 def check_db_locks(func):
