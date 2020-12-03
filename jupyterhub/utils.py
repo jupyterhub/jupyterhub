@@ -28,6 +28,15 @@ from tornado.httpclient import HTTPError
 from tornado.log import app_log
 from tornado.platform.asyncio import to_asyncio_future
 
+# For compatibility with python versions 3.6 or earlier.
+# asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
+try:
+    asyncio_all_tasks = asyncio.all_tasks
+    asyncio_current_task = asyncio.current_task
+except AttributeError as e:
+    asyncio_all_tasks = asyncio.Task.all_tasks
+    asyncio_current_task = asyncio.Task.current_task
+
 
 def random_port():
     """Get a single random port."""
@@ -474,7 +483,7 @@ def print_stacks(file=sys.stderr):
     # also show asyncio tasks, if any
     # this will increase over time as we transition from tornado
     # coroutines to native `async def`
-    tasks = asyncio.Task.all_tasks()
+    tasks = asyncio_all_tasks()
     if tasks:
         print("AsyncIO tasks: %i" % len(tasks))
         for task in tasks:

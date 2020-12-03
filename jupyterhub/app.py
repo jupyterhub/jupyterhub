@@ -29,6 +29,14 @@ from urllib.parse import urlunparse
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
+# For compatibility with python versions 3.6 or earlier.
+# asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
+try:
+    asyncio_all_tasks = asyncio.all_tasks
+    asyncio_current_task = asyncio.current_task
+except AttributeError as e:
+    asyncio_all_tasks = asyncio.Task.all_tasks
+    asyncio_current_task = asyncio.Task.current_task
 
 from dateutil.parser import parse as parse_date
 from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
@@ -2817,9 +2825,7 @@ class JupyterHub(Application):
     async def shutdown_cancel_tasks(self, sig):
         """Cancel all other tasks of the event loop and initiate cleanup"""
         self.log.critical("Received signal %s, initiating shutdown...", sig.name)
-        tasks = [
-            t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()
-        ]
+        tasks = [t for t in asyncio_all_tasks() if t is not asyncio_current_task()]
 
         if tasks:
             self.log.debug("Cancelling pending tasks")
@@ -2832,7 +2838,7 @@ class JupyterHub(Application):
             except StopAsyncIteration as e:
                 self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
 
-            tasks = [t for t in asyncio.Task.all_tasks()]
+            tasks = [t for t in asyncio_all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
         await self.cleanup()
