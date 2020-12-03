@@ -51,20 +51,17 @@ def get_scopes():
 
     scopes = {
         'all': ['read:all'],
-        'users': ['read:users', 'users:activity!user=username', 'users:servers'],
+        'users': ['read:users', 'users:activity', 'users:servers'],
         'read:users': [
-            'read:users!user=username',
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
             'read:users:servers',
         ],
-        'read:users:activity': ['read:users:activity!group=groupname'],
-        'users:servers': ['users:servers!server=servername'],
         'users:tokens': ['read:users:tokens'],
         'admin:users': None,
         'admin:users:servers': None,
-        'groups': ['groups!group=groupname', 'read:groups'],
+        'groups': ['read:groups'],
         'admin:groups': None,
         'read:services': None,
         'proxy': None,

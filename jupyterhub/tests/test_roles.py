@@ -144,6 +144,45 @@ def test_orm_roles_delete_cascade(db):
 
 
 @mark.role
+@mark.parametrize(
+    "scopes, subscopes",
+    [
+        (
+            ['users'],
+            {
+                'users',
+                'read:users',
+                'users:activity',
+                'users:servers',
+                'read:users:name',
+                'read:users:groups',
+                'read:users:activity',
+                'read:users:servers',
+            },
+        ),
+        (
+            ['read:users'],
+            {
+                'read:users',
+                'read:users:name',
+                'read:users:groups',
+                'read:users:activity',
+                'read:users:servers',
+            },
+        ),
+        (['read:users:servers'], {'read:users:servers'}),
+        (['admin:groups'], {'admin:groups'}),
+    ],
+)
+def test_get_subscopes(db, scopes, subscopes):
+    """Test role scopes expansion into their subscopes"""
+    roles.add_role(db, {'name': 'testing_scopes', 'scopes': scopes})
+    role = orm.Role.find(db, name='testing_scopes')
+    response = roles.get_subscopes(role)
+    assert response == subscopes
+    db.delete(role)
+
+
 async def test_load_default_roles(tmpdir, request):
     """Test loading default roles in app.py"""
     kwargs = {}
