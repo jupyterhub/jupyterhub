@@ -91,9 +91,9 @@ This example would be configured as follows in `jupyterhub_config.py`:
 ```python
 c.JupyterHub.services = [
     {
-        'name': 'cull-idle',
+        'name': 'idle-culler',
         'admin': True,
-        'command': [sys.executable, '/path/to/cull-idle.py', '--timeout']
+        'command': [sys.executable, '-m', 'jupyterhub_idle_culler', '--timeout=3600']
     }
 ]
 ```
@@ -123,15 +123,14 @@ For the previous 'cull idle' Service example, these environment variables
 would be passed to the Service when the Hub starts the 'cull idle' Service:
 
 ```bash
-JUPYTERHUB_SERVICE_NAME: 'cull-idle'
+JUPYTERHUB_SERVICE_NAME: 'idle-culler'
 JUPYTERHUB_API_TOKEN: API token assigned to the service
 JUPYTERHUB_API_URL: http://127.0.0.1:8080/hub/api
 JUPYTERHUB_BASE_URL: https://mydomain[:port]
-JUPYTERHUB_SERVICE_PREFIX: /services/cull-idle/
+JUPYTERHUB_SERVICE_PREFIX: /services/idle-culler/
 ```
 
-See the JupyterHub GitHub repo for additional information about the
-[`cull-idle` example](https://github.com/jupyterhub/jupyterhub/tree/master/examples/cull-idle).
+See the GitHub repo for additional information about the [jupyterhub_idle_culler][].
 
 ## Externally-Managed Services
 
@@ -376,3 +375,4 @@ section on securing the notebook viewer.
 [HubAuth.user_for_token]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_token
 [HubAuthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
+[jupyterhub_idle_culler]: https://github.com/jupyterhub/jupyterhub-idle-culler
