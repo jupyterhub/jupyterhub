@@ -1618,14 +1618,16 @@ async def test_root_api(app):
     if app.internal_ssl:
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
         kwargs["verify"] = app.internal_ssl_ca
-    r = await async_requests.get(url, **kwargs)
+    with mock_role(app):
+        r = await api_request(app, bypass_proxy=True)
     r.raise_for_status()
     expected = {'version': jupyterhub.__version__}
     assert r.json() == expected
 
 
 async def test_info(app):
-    r = await api_request(app, 'info')
+    with mock_role(app):
+        r = await api_request(app, 'info')
     r.raise_for_status()
     data = r.json()
     assert data['version'] == jupyterhub.__version__

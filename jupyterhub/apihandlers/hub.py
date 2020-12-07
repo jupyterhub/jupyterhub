@@ -57,8 +57,6 @@ class RootAPIHandler(APIHandler):
     def get(self):
         """GET /api/ returns info about the Hub and its API.
 
-        It is not an authenticated endpoint.
-
         For now, it just returns the version of JupyterHub itself.
         """
         data = {'version': __version__}
@@ -66,12 +64,11 @@ class RootAPIHandler(APIHandler):
 
 
 class InfoAPIHandler(APIHandler):
+    @needs_scope('read:hub')
     def get(self):
         """GET /api/info returns detailed info about the Hub and its API.
 
-        It is not an authenticated endpoint.
-
-        For now, it just returns the version of JupyterHub itself.
+        Currently, it returns information on the python version, spawner and authenticator
         """
 
         def _class_info(typ):

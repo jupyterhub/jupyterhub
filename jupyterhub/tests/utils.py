@@ -223,6 +223,7 @@ def get_scopes(role='admin'):
             'services',
             'proxy',
             'shutdown',
+            'read:hub',
         ],
         'user': [
             'all',

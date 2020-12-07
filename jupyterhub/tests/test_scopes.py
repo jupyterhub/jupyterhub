@@ -97,7 +97,7 @@ class MockAPIHandler:
     def group_thing(self, group_name):
         return True
 
-    @needs_scope('services')
+    @needs_scope('read:services')
     def service_thing(self, service_name):
         return True
 
@@ -133,7 +133,7 @@ class MockAPIHandler:
             ('maybe', 'bluth2'),
             False,
         ),
-        (['services'], 'service_thing', ('service1',), True),
+        (['read:services'], 'service_thing', ('service1',), True),
         (
             ['users!user=george', 'read:groups!group=bluths'],
             'group_thing',
