@@ -457,7 +457,8 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
-        page, per_page, offset = Pagination(config=self.config).get_page_args(self)
+        pagination = Pagination(url=self.request.uri, config=self.config)
+        page, per_page, offset = pagination.get_page_args(self)
 
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
@@ -513,14 +514,7 @@ class AdminHandler(BaseHandler):
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
 
-        total = self.db.query(orm.User.id).count()
-        pagination = Pagination(
-            url=self.request.uri,
-            total=total,
-            page=page,
-            per_page=per_page,
-            config=self.config,
-        )
+        pagination.total = self.db.query(orm.User.id).count()
 
         auth_state = await self.current_user.get_auth_state()
         html = await self.render_template(
