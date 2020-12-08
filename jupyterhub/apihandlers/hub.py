@@ -9,16 +9,17 @@ from tornado.ioloop import IOLoop
 
 from .._version import __version__
 from ..utils import admin_only
+from ..utils import needs_scope
 from .base import APIHandler
 
 
 class ShutdownAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('shutdown')
     def post(self):
         """POST /api/shutdown triggers a clean shutdown
-        
+
         POST (JSON) parameters:
-        
+
         - servers: specify whether single-user servers should be terminated
         - proxy: specify whether the proxy should be terminated
         """
@@ -57,7 +58,7 @@ class RootAPIHandler(APIHandler):
         """GET /api/ returns info about the Hub and its API.
 
         It is not an authenticated endpoint.
-        
+
         For now, it just returns the version of JupyterHub itself.
         """
         data = {'version': __version__}
@@ -65,12 +66,11 @@ class RootAPIHandler(APIHandler):
 
 
 class InfoAPIHandler(APIHandler):
-    @admin_only
     def get(self):
         """GET /api/info returns detailed info about the Hub and its API.
 
         It is not an authenticated endpoint.
-        
+
         For now, it just returns the version of JupyterHub itself.
         """
 

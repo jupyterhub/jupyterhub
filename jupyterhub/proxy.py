@@ -25,7 +25,6 @@ from functools import wraps
 from subprocess import Popen
 from urllib.parse import quote
 
-from tornado import gen
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
 from tornado.httpclient import HTTPRequest
@@ -43,6 +42,7 @@ from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
+from .utils import exponential_backoff
 from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
@@ -291,7 +291,7 @@ class Proxy(LoggingConfigurable):
             if service.server:
                 futures.append(self.add_service(service))
         # wait after submitting them all
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
 
     async def add_all_users(self, user_dict):
         """Update the proxy table from the database.
@@ -304,7 +304,7 @@ class Proxy(LoggingConfigurable):
                 if spawner.ready:
                     futures.append(self.add_user(user, name))
         # wait after submitting them all
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
 
     @_one_at_a_time
     async def check_routes(self, user_dict, service_dict, routes=None):
@@ -390,7 +390,7 @@ class Proxy(LoggingConfigurable):
                 self.log.warning("Deleting stale route %s", routespec)
                 futures.append(self.delete_route(routespec))
 
-        await gen.multi(futures)
+        await asyncio.gather(*futures)
         stop = time.perf_counter()  # timer stops here when user is deleted
         CHECK_ROUTES_DURATION_SECONDS.observe(stop - start)  # histogram metric
 
@@ -496,6 +496,19 @@ class ConfigurableHTTPProxy(Proxy):
 
             if not psutil.pid_exists(pid):
                 raise ProcessLookupError
+
+            try:
+                process = psutil.Process(pid)
+                if self.command and self.command[0]:
+                    process_cmd = process.cmdline()
+                    if process_cmd and not any(
+                        self.command[0] in clause for clause in process_cmd
+                    ):
+                        raise ProcessLookupError
+            except (psutil.AccessDenied, psutil.NoSuchProcess):
+                # If there is a process at the proxy's PID but we don't have permissions to see it,
+                # then it is unlikely to actually be the proxy.
+                raise ProcessLookupError
         else:
             os.kill(pid, 0)
 
@@ -573,6 +586,34 @@ class ConfigurableHTTPProxy(Proxy):
             self.log.debug("PID file %s already removed", self.pid_file)
             pass
 
+    def _get_ssl_options(self):
+        """List of cmd proxy options to use internal SSL"""
+        cmd = []
+        proxy_api = 'proxy-api'
+        proxy_client = 'proxy-client'
+        api_key = self.app.internal_proxy_certs[proxy_api][
+            'keyfile'
+        ]  # Check content in next test and just patch manulaly or in the config of the file
+        api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
+        api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
+
+        client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
+        client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
+        client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
+
+        cmd.extend(['--api-ssl-key', api_key])
+        cmd.extend(['--api-ssl-cert', api_cert])
+        cmd.extend(['--api-ssl-ca', api_ca])
+        cmd.extend(['--api-ssl-request-cert'])
+        cmd.extend(['--api-ssl-reject-unauthorized'])
+
+        cmd.extend(['--client-ssl-key', client_key])
+        cmd.extend(['--client-ssl-cert', client_cert])
+        cmd.extend(['--client-ssl-ca', client_ca])
+        cmd.extend(['--client-ssl-request-cert'])
+        cmd.extend(['--client-ssl-reject-unauthorized'])
+        return cmd
+
     async def start(self):
         """Start the proxy process"""
         # check if there is a previous instance still around
@@ -604,27 +645,7 @@ class ConfigurableHTTPProxy(Proxy):
         if self.ssl_cert:
             cmd.extend(['--ssl-cert', self.ssl_cert])
         if self.app.internal_ssl:
-            proxy_api = 'proxy-api'
-            proxy_client = 'proxy-client'
-            api_key = self.app.internal_proxy_certs[proxy_api]['keyfile']
-            api_cert = self.app.internal_proxy_certs[proxy_api]['certfile']
-            api_ca = self.app.internal_trust_bundles[proxy_api + '-ca']
-
-            client_key = self.app.internal_proxy_certs[proxy_client]['keyfile']
-            client_cert = self.app.internal_proxy_certs[proxy_client]['certfile']
-            client_ca = self.app.internal_trust_bundles[proxy_client + '-ca']
-
-            cmd.extend(['--api-ssl-key', api_key])
-            cmd.extend(['--api-ssl-cert', api_cert])
-            cmd.extend(['--api-ssl-ca', api_ca])
-            cmd.extend(['--api-ssl-request-cert'])
-            cmd.extend(['--api-ssl-reject-unauthorized'])
-
-            cmd.extend(['--client-ssl-key', client_key])
-            cmd.extend(['--client-ssl-cert', client_cert])
-            cmd.extend(['--client-ssl-ca', client_ca])
-            cmd.extend(['--client-ssl-request-cert'])
-            cmd.extend(['--client-ssl-reject-unauthorized'])
+            cmd.extend(self._get_ssl_options())
         if self.app.statsd_host:
             cmd.extend(
                 [
@@ -691,8 +712,17 @@ class ConfigurableHTTPProxy(Proxy):
         parent = psutil.Process(pid)
         children = parent.children(recursive=True)
         for child in children:
-            child.kill()
-        psutil.wait_procs(children, timeout=5)
+            child.terminate()
+        gone, alive = psutil.wait_procs(children, timeout=5)
+        for p in alive:
+            p.kill()
+        # Clear the shell, too, if it still exists.
+        try:
+            parent.terminate()
+            parent.wait(timeout=5)
+            parent.kill()
+        except psutil.NoSuchProcess:
+            pass
 
     def _terminate(self):
         """Terminate our process"""
@@ -768,10 +798,36 @@ class ConfigurableHTTPProxy(Proxy):
             method=method,
             headers={'Authorization': 'token {}'.format(self.auth_token)},
             body=body,
+            connect_timeout=3,  # default: 20s
+            request_timeout=10,  # default: 20s
         )
-        async with self.semaphore:
-            result = await client.fetch(req)
-            return result
+
+        async def _wait_for_api_request():
+            try:
+                async with self.semaphore:
+                    return await client.fetch(req)
+            except HTTPError as e:
+                # Retry on potentially transient errors in CHP, typically
+                # numbered 500 and up. Note that CHP isn't able to emit 429
+                # errors.
+                if e.code >= 500:
+                    self.log.warning(
+                        "api_request to the proxy failed with status code {}, retrying...".format(
+                            e.code
+                        )
+                    )
+                    return False  # a falsy return value make exponential_backoff retry
+                else:
+                    self.log.error("api_request to proxy failed: {0}".format(e))
+                    # An unhandled error here will help the hub invoke cleanup logic
+                    raise
+
+        result = await exponential_backoff(
+            _wait_for_api_request,
+            'Repeated api_request to proxy path "{}" failed.'.format(path),
+            timeout=30,
+        )
+        return result
 
     async def add_route(self, routespec, target, data):
         body = data or {}

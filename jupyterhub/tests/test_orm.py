@@ -222,8 +222,7 @@ async def test_spawn_fails(db):
     db.commit()
 
     class BadSpawner(MockSpawner):
-        @gen.coroutine
-        def start(self):
+        async def start(self):
             raise RuntimeError("Split the party")
 
     user = User(

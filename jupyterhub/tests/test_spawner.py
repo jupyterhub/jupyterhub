@@ -1,6 +1,7 @@
 """Tests for process spawning"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import logging
 import os
 import signal
@@ -12,7 +13,6 @@ from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
-from tornado import gen
 
 from .. import orm
 from .. import spawner as spawnermod
@@ -123,7 +123,7 @@ async def test_stop_spawner_sigint_fails(db):
     await spawner.start()
 
     # wait for the process to get to the while True: loop
-    await gen.sleep(1)
+    await asyncio.sleep(1)
 
     status = await spawner.poll()
     assert status is None
@@ -138,7 +138,7 @@ async def test_stop_spawner_stop_now(db):
     await spawner.start()
 
     # wait for the process to get to the while True: loop
-    await gen.sleep(1)
+    await asyncio.sleep(1)
 
     status = await spawner.poll()
     assert status is None
@@ -165,7 +165,7 @@ async def test_spawner_poll(db):
     spawner.start_polling()
 
     # wait for the process to get to the while True: loop
-    await gen.sleep(1)
+    await asyncio.sleep(1)
     status = await spawner.poll()
     assert status is None
 
@@ -173,12 +173,12 @@ async def test_spawner_poll(db):
     proc.terminate()
     for i in range(10):
         if proc.poll() is None:
-            await gen.sleep(1)
+            await asyncio.sleep(1)
         else:
             break
     assert proc.poll() is not None
 
-    await gen.sleep(2)
+    await asyncio.sleep(2)
     status = await spawner.poll()
     assert status is not None
 
@@ -258,8 +258,7 @@ async def test_shell_cmd(db, tmpdir, request):
 
 
 def test_inherit_overwrite():
-    """On 3.6+ we check things are overwritten at import time
-    """
+    """On 3.6+ we check things are overwritten at import time"""
     if sys.version_info >= (3, 6):
         with pytest.raises(NotImplementedError):
 

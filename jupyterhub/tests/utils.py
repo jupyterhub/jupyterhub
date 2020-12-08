@@ -1,9 +1,12 @@
 import asyncio
+import os
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
 import requests
 from certipy import Certipy
 
+from jupyterhub import metrics
 from jupyterhub import orm
 from jupyterhub.objects import Server
 from jupyterhub.roles import update_roles
@@ -53,6 +56,12 @@ def ssl_setup(cert_dir, authority_name):
     return external_certs
 
 
+"""Skip tests that don't work under internal-ssl when testing under internal-ssl"""
+skip_if_ssl = pytest.mark.skipif(
+    os.environ.get('SSL_ENABLED', False), reason="Does not use internal SSL"
+)
+
+
 def check_db_locks(func):
     """Decorator that verifies no locks are held on database upon exit.
 
@@ -98,6 +107,7 @@ def add_user(db, app=None, **kwargs):
     if orm_user is None:
         orm_user = orm.User(**kwargs)
         db.add(orm_user)
+        metrics.TOTAL_USERS.inc()
     else:
         for attr, value in kwargs.items():
             setattr(orm_user, attr, value)
@@ -131,7 +141,6 @@ async def api_request(
     else:
         base_url = public_url(app, path='hub')
     headers = kwargs.setdefault('headers', {})
-
     if 'Authorization' not in headers and not noauth and 'cookies' not in kwargs:
         # make a copy to avoid modifying arg in-place
         kwargs['headers'] = h = {}
@@ -197,3 +206,36 @@ def public_url(app, user_or_service=None, path=''):
         return host + ujoin(prefix, path)
     else:
         return host + prefix
+
+
+def get_scopes(role='admin'):
+    """Get all scopes for a role. Default role is admin, alternatives are user and service"""
+    all_scopes = {
+        'admin': [
+            'all',
+            'users',
+            'users:name',
+            'users:groups',
+            'users:activity',
+            'users:servers',
+            'users:tokens',
+            'admin:users',
+            'admin:users:servers',
+            'groups',
+            'admin:groups',
+            'services',
+            'proxy',
+            'shutdown',
+        ],
+        'user': [
+            'all',
+            'users!user={username}',
+            'users:activity!user={username}',
+            'users:tokens!user={username}',
+        ],
+        'server': ['users:activity'],
+        'service': ['services'],
+    }
+    scopes = all_scopes[role]
+    read_only = ["read:" + el for el in scopes]
+    return scopes + read_only

@@ -35,6 +35,7 @@ from .utils import AsyncSession
 
 # mock for sending monotonic counter way into the future
 monotonic_future = mock.patch('time.monotonic', lambda: sys.maxsize)
+ssl_enabled = False
 
 
 def test_expiring_dict():

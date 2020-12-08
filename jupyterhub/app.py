@@ -78,6 +78,7 @@ from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
+from .pagination import Pagination
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
@@ -280,7 +281,7 @@ class JupyterHub(Application):
 
     @default('classes')
     def _load_classes(self):
-        classes = [Spawner, Authenticator, CryptKeeper]
+        classes = [Spawner, Authenticator, CryptKeeper, Pagination]
         for name, trait in self.traits(config=True).items():
             # load entry point groups into configurable class list
             # so that they show up in config files, etc.
@@ -2185,7 +2186,7 @@ class JupyterHub(Application):
             self.log.debug(
                 "Awaiting checks for %i possibly-running spawners", len(check_futures)
             )
-            await gen.multi(check_futures)
+            await asyncio.gather(*check_futures)
         db.commit()
 
         # only perform this query if we are going to log it
@@ -2252,7 +2253,7 @@ class JupyterHub(Application):
     def init_tornado_settings(self):
         """Set up the tornado settings dict."""
         base_url = self.hub.base_url
-        jinja_options = dict(autoescape=True)
+        jinja_options = dict(autoescape=True, enable_async=True)
         jinja_options.update(self.jinja_environment_options)
         base_path = self._template_paths_default()[0]
         if base_path not in self.template_paths:
@@ -2264,6 +2265,14 @@ class JupyterHub(Application):
             ]
         )
         jinja_env = Environment(loader=loader, **jinja_options)
+        # We need a sync jinja environment too, for the times we *must* use sync
+        # code - particularly in RequestHandler.write_error. Since *that*
+        # is called from inside the asyncio event loop, we can't actulaly just
+        # schedule it on the loop - without starting another thread with its
+        # own loop, which seems not worth the trouble. Instead, we create another
+        # environment, exactly like this one, but sync
+        del jinja_options['enable_async']
+        jinja_env_sync = Environment(loader=loader, **jinja_options)
 
         login_url = url_path_join(base_url, 'login')
         logout_url = self.authenticator.logout_url(base_url)
@@ -2310,6 +2319,7 @@ class JupyterHub(Application):
             template_path=self.template_paths,
             template_vars=self.template_vars,
             jinja2_env=jinja_env,
+            jinja2_env_sync=jinja_env_sync,
             version_hash=version_hash,
             subdomain_host=self.subdomain_host,
             domain=self.domain,

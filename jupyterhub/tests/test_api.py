@@ -1,25 +1,24 @@
 """Tests for the REST API."""
+import asyncio
 import json
 import re
 import sys
 import uuid
-from concurrent.futures import Future
 from datetime import datetime
 from datetime import timedelta
 from unittest import mock
 from urllib.parse import quote
 from urllib.parse import urlparse
 
-from async_generator import async_generator
-from async_generator import yield_
 from pytest import mark
-from tornado import gen
 
 import jupyterhub
 from .. import orm
 from .. import roles
+from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
+from .mocking import mock_role
 from .mocking import public_host
 from .mocking import public_url
 from .utils import add_user
@@ -27,7 +26,6 @@ from .utils import api_request
 from .utils import async_requests
 from .utils import auth_header
 from .utils import find_user
-
 
 # --------------------
 # Authentication tests
@@ -172,7 +170,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 @mark.role
 async def test_get_users(app):
     db = app.db
-    r = await api_request(app, 'users')
+    r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
@@ -183,9 +181,74 @@ async def test_get_users(app):
             {'name': 'user', 'admin': False, 'roles': ['user'], 'last_activity': None}
         ),
     ]
-
-    r = await api_request(app, 'users', headers=auth_header(db, 'user'))
+    with mock_role(app, 'user'):
+        r = await api_request(app, 'users', headers=auth_header(db, 'user'))
     assert r.status_code == 403
+
+
+@mark.user
+@mark.parametrize(
+    "state",
+    ("inactive", "active", "ready", "invalid"),
+)
+async def test_get_users_state_filter(app, state):
+    db = app.db
+
+    # has_one_active: one active, one inactive, zero ready
+    has_one_active = add_user(db, app=app, name='has_one_active')
+    # has_two_active: two active, ready servers
+    has_two_active = add_user(db, app=app, name='has_two_active')
+    # has_two_inactive: two spawners, neither active
+    has_two_inactive = add_user(db, app=app, name='has_two_inactive')
+    # has_zero: no Spawners registered at all
+    has_zero = add_user(db, app=app, name='has_zero')
+
+    test_usernames = set(
+        ("has_one_active", "has_two_active", "has_two_inactive", "has_zero")
+    )
+
+    user_states = {
+        "inactive": ["has_two_inactive", "has_zero"],
+        "ready": ["has_two_active"],
+        "active": ["has_one_active", "has_two_active"],
+        "invalid": [],
+    }
+    expected = user_states[state]
+
+    def add_spawner(user, name='', active=True, ready=True):
+        """Add a spawner in a requested state
+
+        If active, should turn up in an active query
+        If active and ready, should turn up in a ready query
+        If not active, should turn up in an inactive query
+        """
+        spawner = user.spawners[name]
+        db.commit()
+        if active:
+            orm_server = orm.Server()
+            db.add(orm_server)
+            db.commit()
+            spawner.server = Server(orm_server=orm_server)
+            db.commit()
+            if not ready:
+                spawner._spawn_pending = True
+        return spawner
+
+    for name in ("", "secondary"):
+        add_spawner(has_two_active, name, active=True)
+        add_spawner(has_two_inactive, name, active=False)
+
+    add_spawner(has_one_active, active=True, ready=False)
+    add_spawner(has_one_active, "inactive", active=False)
+
+    r = await api_request(app, 'users?state={}'.format(state))
+    if state == "invalid":
+        assert r.status_code == 400
+        return
+    assert r.status_code == 200
+
+    usernames = sorted(u["name"] for u in r.json() if u["name"] in test_usernames)
+    assert usernames == expected
 
 
 @mark.user
@@ -211,13 +274,22 @@ async def test_get_self(app):
     )
     db.add(oauth_token)
     db.commit()
-    r = await api_request(app, 'user', headers={'Authorization': 'token ' + token})
+    r = await api_request(
+        app,
+        'user',
+        headers={'Authorization': 'token ' + token},
+    )
     r.raise_for_status()
     model = r.json()
     assert model['name'] == u.name
 
     # invalid auth gets 403
-    r = await api_request(app, 'user', headers={'Authorization': 'token notvalid'})
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            'user',
+            headers={'Authorization': 'token notvalid'},
+        )
     assert r.status_code == 403
 
 
@@ -241,7 +313,13 @@ async def test_add_user(app):
 @mark.role
 async def test_get_user(app):
     name = 'user'
-    r = await api_request(app, 'users', name)
+    _ = await api_request(app, 'users', name, headers=auth_header(app.db, name))
+    with mock_role(app, role=name, name=name):
+        r = await api_request(
+            app,
+            'users',
+            name,
+        )
     assert r.status_code == 200
 
     user = normalize_user(r.json())
@@ -440,16 +518,15 @@ async def test_user_set_auth_state(app, auth_state_enabled):
     assert user.name == name
     user_auth_state = await user.get_auth_state()
     assert user_auth_state is None
-
-    r = await api_request(
-        app,
-        'users',
-        name,
-        method='patch',
-        data=json.dumps({'auth_state': auth_state}),
-        headers=auth_header(app.db, name),
-    )
-
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            'users',
+            name,
+            method='patch',
+            data=json.dumps({'auth_state': auth_state}),
+            headers=auth_header(app.db, name),
+        )
     assert r.status_code == 403
     user_auth_state = await user.get_auth_state()
     assert user_auth_state is None
@@ -641,7 +718,7 @@ async def test_slow_spawn(app, no_patience, slow_spawn):
 
     async def wait_spawn():
         while not app_user.running:
-            await gen.sleep(0.1)
+            await asyncio.sleep(0.1)
 
     await wait_spawn()
     assert not app_user.spawner._spawn_pending
@@ -650,7 +727,7 @@ async def test_slow_spawn(app, no_patience, slow_spawn):
 
     async def wait_stop():
         while app_user.spawner._stop_pending:
-            await gen.sleep(0.1)
+            await asyncio.sleep(0.1)
 
     r = await api_request(app, 'users', name, 'server', method='delete')
     r.raise_for_status()
@@ -684,7 +761,7 @@ async def test_never_spawn(app, no_patience, never_spawn):
     assert app.users.count_active_users()['pending'] == 1
 
     while app_user.spawner.pending:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
         print(app_user.spawner.pending)
 
     assert not app_user.spawner._spawn_pending
@@ -710,7 +787,7 @@ async def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     while user.spawner.pending:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
     # spawn failed
     assert not user.running
     assert app.users.count_active_users()['pending'] == 0
@@ -846,32 +923,12 @@ async def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
     }
 
 
-@async_generator
 async def progress_forever():
     """progress function that yields messages forever"""
     for i in range(1, 10):
-        await yield_({'progress': i, 'message': 'Stage %s' % i})
+        yield {'progress': i, 'message': 'Stage %s' % i}
         # wait a long time before the next event
-        await gen.sleep(10)
-
-
-if sys.version_info >= (3, 6):
-    # additional progress_forever defined as native
-    # async generator
-    # to test for issues with async_generator wrappers
-    exec(
-        """
-async def progress_forever_native():
-    for i in range(1, 10):
-        yield {
-            'progress': i,
-            'message': 'Stage %s' % i,
-        }
-        # wait a long time before the next event
-        await gen.sleep(10)
-""",
-        globals(),
-    )
+        await asyncio.sleep(10)
 
 
 async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
@@ -882,11 +939,7 @@ async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
     db = app.db
     name = 'geddy'
     app_user = add_user(db, app=app, name=name)
-    if sys.version_info >= (3, 6):
-        # Python >= 3.6, try native async generator
-        app_user.spawner.progress = globals()['progress_forever_native']
-    else:
-        app_user.spawner.progress = progress_forever
+    app_user.spawner.progress = progress_forever
     app_user.spawner.delay = 1
 
     r = await api_request(app, 'users', name, 'server', method='post')
@@ -913,8 +966,8 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     # start two pending spawns
     names = ['ykka', 'hjarka']
     users = [add_user(db, app=app, name=name) for name in names]
-    users[0].spawner._start_future = Future()
-    users[1].spawner._start_future = Future()
+    users[0].spawner._start_future = asyncio.Future()
+    users[1].spawner._start_future = asyncio.Future()
     for name in names:
         await api_request(app, 'users', name, 'server', method='post')
     assert app.users.count_active_users()['pending'] == 2
@@ -922,7 +975,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     # ykka and hjarka's spawns are both pending. Essun should fail with 429
     name = 'essun'
     user = add_user(db, app=app, name=name)
-    user.spawner._start_future = Future()
+    user.spawner._start_future = asyncio.Future()
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 429
 
@@ -930,7 +983,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     users[0].spawner._start_future.set_result(None)
     # wait for ykka to finish
     while not users[0].running:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     assert app.users.count_active_users()['pending'] == 1
     r = await api_request(app, 'users', name, 'server', method='post')
@@ -941,7 +994,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     for user in users[1:]:
         user.spawner._start_future.set_result(None)
     while not all(u.running for u in users):
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     # everybody's running, pending count should be back to 0
     assert app.users.count_active_users()['pending'] == 0
@@ -950,7 +1003,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
         r = await api_request(app, 'users', u.name, 'server', method='delete')
         r.raise_for_status()
     while any(u.spawner.active for u in users):
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
 
 @mark.slow
@@ -1028,7 +1081,7 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     r = await api_request(app, 'users', user.name, 'server', method='delete')
     assert r.status_code == 400
     while not spawner.ready:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
 
     spawner.delay = 3
     # stop the spawner
@@ -1036,7 +1089,7 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     assert r.status_code == 202
     assert spawner.pending == 'stop'
     # make sure we get past deleting from the proxy
-    await gen.sleep(1)
+    await asyncio.sleep(1)
     # additional stops while stopping shouldn't trigger a new stop
     with mock.patch.object(spawner, 'stop') as m:
         r = await api_request(app, 'users', user.name, 'server', method='delete')
@@ -1048,7 +1101,7 @@ async def test_start_stop_race(app, no_patience, slow_spawn):
     assert r.status_code == 400
 
     while spawner.active:
-        await gen.sleep(0.1)
+        await asyncio.sleep(0.1)
     # start after stop is okay
     r = await api_request(app, 'users', user.name, 'server', method='post')
     assert r.status_code == 202
@@ -1295,15 +1348,16 @@ async def test_token_authenticator_noauth(app):
     """Create a token for a user relying on Authenticator.authenticate and no auth header"""
     name = 'user'
     data = {'auth': {'username': name, 'password': name}}
-    r = await api_request(
-        app,
-        'users',
-        name,
-        'tokens',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
+    with mock_role(app, 'admin'):
+        r = await api_request(
+            app,
+            'users',
+            name,
+            'tokens',
+            method='post',
+            data=json.dumps(data) if data else None,
+            noauth=True,
+        )
     assert r.status_code == 200
     reply = r.json()
     assert 'token' in reply
@@ -1318,15 +1372,16 @@ async def test_token_authenticator_dict_noauth(app):
     app.authenticator.auth_state = {'who': 'cares'}
     name = 'user'
     data = {'auth': {'username': name, 'password': name}}
-    r = await api_request(
-        app,
-        'users',
-        name,
-        'tokens',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            'users',
+            name,
+            'tokens',
+            method='post',
+            data=json.dumps(data) if data else None,
+            noauth=True,
+        )
     assert r.status_code == 200
     reply = r.json()
     assert 'token' in reply
@@ -1350,7 +1405,8 @@ async def test_token_list(app, as_user, for_user, status):
     if for_user != 'missing':
         for_user_obj = add_user(app.db, app, name=for_user)
     headers = {'Authorization': 'token %s' % u.new_api_token()}
-    r = await api_request(app, 'users', for_user, 'tokens', headers=headers)
+    with mock_role(app, role=as_user, name=as_user):
+        r = await api_request(app, 'users', for_user, 'tokens', headers=headers)
     assert r.status_code == status
     if status != 200:
         return
@@ -1361,9 +1417,10 @@ async def test_token_list(app, as_user, for_user, status):
     assert all(token['user'] == for_user for token in reply['oauth_tokens'])
     # validate individual token ids
     for token in reply['api_tokens'] + reply['oauth_tokens']:
-        r = await api_request(
-            app, 'users', for_user, 'tokens', token['id'], headers=headers
-        )
+        with mock_role(app, role=as_user, name=as_user):
+            r = await api_request(
+                app, 'users', for_user, 'tokens', token['id'], headers=headers
+            )
         r.raise_for_status()
         reply = r.json()
         assert normalize_token(reply) == normalize_token(token)
@@ -1546,8 +1603,8 @@ async def test_get_services(app, mockservice_url):
             'display': True,
         }
     }
-
-    r = await api_request(app, 'services', headers=auth_header(db, 'user'))
+    with mock_role(app, 'user'):
+        r = await api_request(app, 'services', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
 
@@ -1571,16 +1628,17 @@ async def test_get_service(app, mockservice_url):
         'info': {},
         'display': True,
     }
-
-    r = await api_request(
-        app,
-        'services/%s' % mockservice.name,
-        headers={'Authorization': 'token %s' % mockservice.api_token},
-    )
-    r.raise_for_status()
-    r = await api_request(
-        app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
-    )
+    with mock_role(app, 'service'):
+        r = await api_request(
+            app,
+            'services/%s' % mockservice.name,
+            headers={'Authorization': 'token %s' % mockservice.api_token},
+        )
+        r.raise_for_status()
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
+        )
     assert r.status_code == 403
 
 
@@ -1628,13 +1686,14 @@ async def test_info(app):
 
 async def test_update_activity_403(app, user, admin_user):
     token = user.new_api_token()
-    r = await api_request(
-        app,
-        "users/{}/activity".format(admin_user.name),
-        headers={"Authorization": "token {}".format(token)},
-        data="{}",
-        method="post",
-    )
+    with mock_role(app, 'user'):
+        r = await api_request(
+            app,
+            "users/{}/activity".format(admin_user.name),
+            headers={"Authorization": "token {}".format(token)},
+            data="{}",
+            method="post",
+        )
     assert r.status_code == 403
 
 

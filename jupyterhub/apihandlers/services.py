@@ -10,6 +10,7 @@ from tornado import web
 
 from .. import orm
 from ..utils import admin_only
+from ..utils import needs_scope
 from .base import APIHandler
 
 
@@ -29,7 +30,7 @@ def service_model(service):
 
 
 class ServiceListAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('read:services')
     def get(self):
         data = {name: service_model(service) for name, service in self.services.items()}
         self.write(json.dumps(data))
@@ -57,9 +58,9 @@ def admin_or_self(method):
 
 
 class ServiceAPIHandler(APIHandler):
-    @admin_or_self
-    def get(self, name):
-        service = self.services[name]
+    @needs_scope('read:services')
+    def get(self, service_name):
+        service = self.services[service_name]
         self.write(json.dumps(service_model(service)))
 
 

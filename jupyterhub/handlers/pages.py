@@ -40,11 +40,15 @@ class RootHandler(BaseHandler):
     def get(self):
         user = self.current_user
         if self.default_url:
-            url = self.default_url
+            # As set in jupyterhub_config.py
+            if callable(self.default_url):
+                url = self.default_url(self)
+            else:
+                url = self.default_url
         elif user:
             url = self.get_next_url(user)
         else:
-            url = self.settings['login_url']
+            url = url_concat(self.settings["login_url"], dict(next=self.request.uri))
         self.redirect(url)
 
 
@@ -67,7 +71,7 @@ class HomeHandler(BaseHandler):
             url = url_path_join(self.hub.base_url, 'spawn', user.escaped_name)
 
         auth_state = await user.get_auth_state()
-        html = self.render_template(
+        html = await self.render_template(
             'home.html',
             auth_state=auth_state,
             user=user,
@@ -94,7 +98,7 @@ class SpawnHandler(BaseHandler):
 
     async def _render_form(self, for_user, spawner_options_form, message=''):
         auth_state = await for_user.get_auth_state()
-        return self.render_template(
+        return await self.render_template(
             'spawn.html',
             for_user=for_user,
             auth_state=auth_state,
@@ -378,7 +382,7 @@ class SpawnPendingHandler(BaseHandler):
                 self.hub.base_url, "spawn", user.escaped_name, server_name
             )
             self.set_status(500)
-            html = self.render_template(
+            html = await self.render_template(
                 "not_running.html",
                 user=user,
                 auth_state=auth_state,
@@ -402,7 +406,7 @@ class SpawnPendingHandler(BaseHandler):
                 page = "stop_pending.html"
             else:
                 page = "spawn_pending.html"
-            html = self.render_template(
+            html = await self.render_template(
                 page,
                 user=user,
                 spawner=spawner,
@@ -429,7 +433,7 @@ class SpawnPendingHandler(BaseHandler):
             spawn_url = url_path_join(
                 self.hub.base_url, "spawn", user.escaped_name, server_name
             )
-            html = self.render_template(
+            html = await self.render_template(
                 "not_running.html",
                 user=user,
                 auth_state=auth_state,
@@ -453,7 +457,7 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @admin_only
     async def get(self):
-        page, per_page, offset = Pagination.get_page_args(self)
+        page, per_page, offset = Pagination(config=self.config).get_page_args(self)
 
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
@@ -511,11 +515,15 @@ class AdminHandler(BaseHandler):
 
         total = self.db.query(orm.User.id).count()
         pagination = Pagination(
-            url=self.request.uri, total=total, page=page, per_page=per_page,
+            url=self.request.uri,
+            total=total,
+            page=page,
+            per_page=per_page,
+            config=self.config,
         )
 
         auth_state = await self.current_user.get_auth_state()
-        html = self.render_template(
+        html = await self.render_template(
             'admin.html',
             current_user=self.current_user,
             auth_state=auth_state,
@@ -605,7 +613,7 @@ class TokenPageHandler(BaseHandler):
         oauth_clients = sorted(oauth_clients, key=sort_key, reverse=True)
 
         auth_state = await self.current_user.get_auth_state()
-        html = self.render_template(
+        html = await self.render_template(
             'token.html',
             api_tokens=api_tokens,
             oauth_clients=oauth_clients,
@@ -617,7 +625,7 @@ class TokenPageHandler(BaseHandler):
 class ProxyErrorHandler(BaseHandler):
     """Handler for rendering proxy error pages"""
 
-    def get(self, status_code_s):
+    async def get(self, status_code_s):
         status_code = int(status_code_s)
         status_message = responses.get(status_code, 'Unknown HTTP Error')
         # build template namespace
@@ -641,10 +649,10 @@ class ProxyErrorHandler(BaseHandler):
         self.set_header('Content-Type', 'text/html')
         # render the template
         try:
-            html = self.render_template('%s.html' % status_code, **ns)
+            html = await self.render_template('%s.html' % status_code, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
-            html = self.render_template('error.html', **ns)
+            html = await self.render_template('error.html', **ns)
 
         self.write(html)
 

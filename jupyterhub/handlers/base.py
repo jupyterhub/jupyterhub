@@ -41,6 +41,7 @@ from ..metrics import SERVER_STOP_DURATION_SECONDS
 from ..metrics import ServerPollStatus
 from ..metrics import ServerSpawnStatus
 from ..metrics import ServerStopStatus
+from ..metrics import TOTAL_USERS
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..user import User
@@ -79,6 +80,7 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
+        self.scopes = []
         try:
             await self.get_current_user()
         except Exception:
@@ -427,6 +429,8 @@ class BaseHandler(RequestHandler):
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
+        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
+            self.scopes = self.settings.get("mock_scopes", [])
         return self._jupyterhub_user
 
     @property
@@ -455,6 +459,7 @@ class BaseHandler(RequestHandler):
             u = orm.User(name=username)
             self.db.add(u)
             roles.update_roles(self.db, obj=u, kind='users')
+            TOTAL_USERS.inc()
             self.db.commit()
             user = self._user_from_orm(u)
         return user
@@ -491,7 +496,7 @@ class BaseHandler(RequestHandler):
         self.clear_cookie(
             'jupyterhub-services',
             path=url_path_join(self.base_url, 'services'),
-            **kwargs
+            **kwargs,
         )
         # Reset _jupyterhub_user
         self._jupyterhub_user = None
@@ -636,6 +641,12 @@ class BaseHandler(RequestHandler):
                 next_url,
             )
 
+        # this is where we know if next_url is coming from ?next= param or we are using a default url
+        if next_url:
+            next_url_from_param = True
+        else:
+            next_url_from_param = False
+
         if not next_url:
             # custom default URL, usually passed because user landed on that page but was not logged in
             if default:
@@ -661,7 +672,10 @@ class BaseHandler(RequestHandler):
             else:
                 next_url = url_path_join(self.hub.base_url, 'home')
 
-        next_url = self.append_query_parameters(next_url, exclude=['next'])
+        if not next_url_from_param:
+            # when a request made with ?next=... assume all the params have already been encoded
+            # otherwise, preserve params from the current request across the redirect
+            next_url = self.append_query_parameters(next_url, exclude=['next'])
         return next_url
 
     def append_query_parameters(self, url, exclude=None):
@@ -1159,16 +1173,36 @@ class BaseHandler(RequestHandler):
             "<a href='{home}'>home page</a>.".format(home=home)
         )
 
-    def get_template(self, name):
-        """Return the jinja template object for a given name"""
-        return self.settings['jinja2_env'].get_template(name)
+    def get_template(self, name, sync=False):
+        """
+        Return the jinja template object for a given name
 
-    def render_template(self, name, **ns):
+        If sync is True, we return a Template that is compiled without async support.
+        Only those can be used in synchronous code.
+
+        If sync is False, we return a Template that is compiled with async support
+        """
+        if sync:
+            key = 'jinja2_env_sync'
+        else:
+            key = 'jinja2_env'
+        return self.settings[key].get_template(name)
+
+    def render_template(self, name, sync=False, **ns):
+        """
+        Render jinja2 template
+
+        If sync is set to True, we return an awaitable
+        If sync is set to False, we render the template & return a string
+        """
         template_ns = {}
         template_ns.update(self.template_namespace)
         template_ns.update(ns)
-        template = self.get_template(name)
-        return template.render(**template_ns)
+        template = self.get_template(name, sync)
+        if sync:
+            return template.render(**template_ns)
+        else:
+            return template.render_async(**template_ns)
 
     @property
     def template_namespace(self):
@@ -1243,17 +1277,19 @@ class BaseHandler(RequestHandler):
             # Content-Length must be recalculated.
             self.clear_header('Content-Length')
 
-        # render the template
+        # render_template is async, but write_error can't be!
+        # so we run it sync here, instead of making a sync version of render_template
+
         try:
-            html = self.render_template('%s.html' % status_code, **ns)
+            html = self.render_template('%s.html' % status_code, sync=True, **ns)
         except TemplateNotFound:
             self.log.debug("No template for %d", status_code)
             try:
-                html = self.render_template('error.html', **ns)
+                html = self.render_template('error.html', sync=True, **ns)
             except:
                 # In this case, any side effect must be avoided.
                 ns['no_spawner_check'] = True
-                html = self.render_template('error.html', **ns)
+                html = self.render_template('error.html', sync=True, **ns)
 
         self.write(html)
 
@@ -1457,10 +1493,14 @@ class UserUrlHandler(BaseHandler):
 
         # if request is expecting JSON, assume it's an API request and fail with 503
         # because it won't like the redirect to the pending page
-        if get_accepted_mimetype(
-            self.request.headers.get('Accept', ''),
-            choices=['application/json', 'text/html'],
-        ) == 'application/json' or 'api' in user_path.split('/'):
+        if (
+            get_accepted_mimetype(
+                self.request.headers.get('Accept', ''),
+                choices=['application/json', 'text/html'],
+            )
+            == 'application/json'
+            or 'api' in user_path.split('/')
+        ):
             self._fail_api_request(user_name, server_name)
             return
 
@@ -1486,7 +1526,7 @@ class UserUrlHandler(BaseHandler):
         self.set_status(503)
 
         auth_state = await user.get_auth_state()
-        html = self.render_template(
+        html = await self.render_template(
             "not_running.html",
             user=user,
             server_name=server_name,
@@ -1541,7 +1581,7 @@ class UserUrlHandler(BaseHandler):
         if redirects:
             self.log.warning("Redirect loop detected on %s", self.request.uri)
             # add capped exponential backoff where cap is 10s
-            await gen.sleep(min(1 * (2 ** redirects), 10))
+            await asyncio.sleep(min(1 * (2 ** redirects), 10))
             # rewrite target url with new `redirects` query value
             url_parts = urlparse(target)
             query_parts = parse_qs(url_parts.query)
