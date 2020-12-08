@@ -28,6 +28,7 @@ def get_default_roles():
                 'groups',
                 'admin:groups',
                 'read:services',
+                'read:hub',
                 'proxy',
                 'shutdown',
             ],
@@ -64,6 +65,7 @@ def get_scopes():
         'groups': ['read:groups'],
         'admin:groups': None,
         'read:services': None,
+        'read:hub': None,
         'proxy': None,
         'shutdown': None,
     }
@@ -100,22 +102,18 @@ def expand_scope(scopename):
     return expanded_scope
 
 
-def get_subscopes(role=None, roles=None):
+def get_subscopes(*args):
 
     """Returns a set of all available subscopes for a specified role or list of roles"""
 
     scope_list = []
-    if role:
-        scope_list = role.scopes
-    elif roles:
-        for role in roles:
-            scope_list.extend(role.scopes)
-    else:
-        raise ValueError('Function get_subscopes is missing an argument')
 
-    scopes = list(chain.from_iterable(list(map(expand_scope, scope_list))))
+    for role in args:
+        scope_list.extend(role.scopes)
 
-    return set(scopes)
+    scopes = set(chain.from_iterable(list(map(expand_scope, scope_list))))
+
+    return scopes
 
 
 def add_role(db, role_dict):
@@ -132,7 +130,7 @@ def add_role(db, role_dict):
     scopes = role_dict.get('scopes')
 
     if role is None:
-        role = orm.Role(name=name, description=description, scopes=scopes,)
+        role = orm.Role(name=name, description=description, scopes=scopes)
         db.add(role)
     else:
         if description:
@@ -231,7 +229,7 @@ def update_roles(db, obj, kind, roles=None):
                 role = orm.Role.find(db, rolename)
                 if role:
                     # compare the requested role permissions with the owner's permissions (scopes)
-                    token_scopes = get_subscopes(role=role)
+                    token_scopes = get_subscopes(role)
                     # find the owner and their roles
                     owner = None
                     if obj.user_id:
@@ -239,7 +237,7 @@ def update_roles(db, obj, kind, roles=None):
                     elif obj.service_id:
                         owner = db.query(orm.Service).get(obj.service_id)
                     if owner:
-                        owner_scopes = get_subscopes(roles=owner.roles)
+                        owner_scopes = get_subscopes(*owner.roles)
                         if token_scopes.issubset(owner_scopes):
                             role.tokens.append(obj)
                         else:
