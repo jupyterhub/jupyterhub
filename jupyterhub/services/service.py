@@ -267,6 +267,7 @@ class Service(LoggingConfigurable):
     base_url = Unicode()
     db = Any()
     orm = Any()
+    roles = Any()
     cookie_options = Dict()
 
     oauth_provider = Any()

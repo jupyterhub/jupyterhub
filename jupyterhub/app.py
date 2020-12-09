@@ -73,6 +73,7 @@ from .services.service import Service
 
 from . import crypto
 from . import dbutil, orm
+from . import roles
 from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
@@ -309,6 +310,31 @@ class JupyterHub(Application):
         Loading one set of groups, then starting JupyterHub again with a different
         set will not remove users or groups from previous launches.
         That must be done through the API.
+        """,
+    ).tag(config=True)
+
+    load_roles = List(
+        Dict(),
+        help="""List of predefined role dictionaries to load at startup.
+
+        For instance::
+
+            load_roles = [
+                            {
+                                'name': 'teacher',
+                                'description': 'Access users information, servers and groups without create/delete privileges',
+                                'scopes': ['users', 'groups'],
+                                'users': ['cyclops', 'gandalf'],
+                                'services': [],
+                                'tokens': []
+                            }
+                        ]
+
+        All keys apart from 'name' are optional.
+        See all the available scopes in the JupyterHub REST API documentation.
+
+        Default roles are defined in roles.py.
+
         """,
     ).tag(config=True)
 
@@ -1700,7 +1726,6 @@ class JupyterHub(Application):
                 db.add(user)
             else:
                 user.admin = True
-
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
@@ -1797,6 +1822,46 @@ class JupyterHub(Application):
                     user = orm.User(name=username)
                     db.add(user)
                 group.users.append(user)
+        db.commit()
+
+    async def init_roles(self):
+        """Load default and predefined roles into the database"""
+        db = self.db
+        role_bearers = ['users', 'services', 'tokens']
+
+        # load default roles
+        default_roles = roles.get_default_roles()
+        for role in default_roles:
+            roles.add_role(db, role)
+
+        # load predefined roles from config file
+        for predef_role in self.load_roles:
+            roles.add_role(db, predef_role)
+            # add users, services and/or tokens
+            for bearer in role_bearers:
+                if bearer in predef_role.keys():
+                    for bname in predef_role[bearer]:
+                        if bearer == 'users':
+                            bname = self.authenticator.normalize_username(bname)
+                            if not (
+                                await maybe_future(
+                                    self.authenticator.check_allowed(bname, None)
+                                )
+                            ):
+                                raise ValueError(
+                                    "Username %r is not in Authenticator.allowed_users"
+                                    % bname
+                                )
+                        roles.add_obj(
+                            db, objname=bname, kind=bearer, rolename=predef_role['name']
+                        )
+
+        # make sure all users, services and tokens have at least one role (update with default)
+        for bearer in role_bearers:
+            Class = roles.get_orm_class(bearer)
+            for obj in db.query(Class):
+                if len(obj.roles) < 1:
+                    roles.update_roles(db, obj=obj, kind=bearer)
         db.commit()
 
     async def _add_tokens(self, token_dict, kind):
@@ -1910,6 +1975,7 @@ class JupyterHub(Application):
                 base_url=self.base_url,
                 db=self.db,
                 orm=orm_service,
+                roles=orm_service.roles,
                 domain=domain,
                 host=host,
                 hub=self.hub,
@@ -2388,6 +2454,7 @@ class JupyterHub(Application):
         await self.init_groups()
         self.init_services()
         await self.init_api_tokens()
+        await self.init_roles()
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()

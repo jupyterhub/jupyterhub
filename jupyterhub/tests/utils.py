@@ -9,6 +9,7 @@ from certipy import Certipy
 from jupyterhub import metrics
 from jupyterhub import orm
 from jupyterhub.objects import Server
+from jupyterhub.roles import update_roles
 from jupyterhub.utils import url_path_join as ujoin
 
 
@@ -111,6 +112,8 @@ def add_user(db, app=None, **kwargs):
         for attr, value in kwargs.items():
             setattr(orm_user, attr, value)
     db.commit()
+    requested_roles = kwargs.get('roles')
+    update_roles(db, obj=orm_user, kind='users', roles=requested_roles)
     if app:
         return app.users[orm_user.id]
     else:

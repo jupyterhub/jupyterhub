@@ -39,6 +39,9 @@ from sqlalchemy.types import Text
 from sqlalchemy.types import TypeDecorator
 from tornado.log import app_log
 
+from .roles import add_role
+from .roles import get_default_roles
+from .roles import update_roles
 from .utils import compare_token
 from .utils import hash_token
 from .utils import new_token
@@ -90,6 +93,26 @@ class JSONDict(TypeDecorator):
         return value
 
 
+class JSONList(JSONDict):
+    """Represents an immutable structure as a json-encoded string (to be used for list type columns).
+
+    Usage::
+
+        JSONList(JSONDict)
+
+    """
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, list) and value is not None:
+            value = json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
+
+
 Base = declarative_base()
 Base.log = app_log
 
@@ -111,6 +134,65 @@ class Server(Base):
 
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)
+
+
+# user:role many:many mapping table
+user_role_map = Table(
+    'user_role_map',
+    Base.metadata,
+    Column('user_id', ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+)
+
+# service:role many:many mapping table
+service_role_map = Table(
+    'service_role_map',
+    Base.metadata,
+    Column(
+        'service_id', ForeignKey('services.id', ondelete='CASCADE'), primary_key=True
+    ),
+    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+)
+
+# token:role many:many mapping table
+api_token_role_map = Table(
+    'api_token_role_map',
+    Base.metadata,
+    Column(
+        'api_token_id',
+        ForeignKey('api_tokens.id', ondelete='CASCADE'),
+        primary_key=True,
+    ),
+    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+)
+
+
+class Role(Base):
+    """User Roles"""
+
+    __tablename__ = 'roles'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(Unicode(255), unique=True)
+    description = Column(Unicode(1023))
+    scopes = Column(JSONList)
+    users = relationship('User', secondary='user_role_map', backref='roles')
+    services = relationship('Service', secondary='service_role_map', backref='roles')
+    tokens = relationship('APIToken', secondary='api_token_role_map', backref='roles')
+
+    def __repr__(self):
+        return "<%s %s (%s) - scopes: %s>" % (
+            self.__class__.__name__,
+            self.name,
+            self.description,
+            self.scopes,
+        )
+
+    @classmethod
+    def find(cls, db, name):
+        """Find a role by name.
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name == name).first()
 
 
 # user:group many:many mapping table
@@ -504,6 +586,7 @@ class APIToken(Hashed, Base):
         token=None,
         user=None,
         service=None,
+        roles=None,
         note='',
         generated=True,
         expires_in=None,
@@ -532,6 +615,14 @@ class APIToken(Hashed, Base):
         if expires_in is not None:
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
         db.add(orm_token)
+        # load default roles if they haven't been initiated
+        # correct to have this here? otherwise some tests fail
+        user_role = Role.find(db, 'user')
+        if not user_role:
+            default_roles = get_default_roles()
+            for role in default_roles:
+                add_role(db, role)
+        update_roles(db, obj=orm_token, kind='tokens', roles=roles)
         db.commit()
         return token
 

@@ -14,6 +14,7 @@ from pytest import mark
 
 import jupyterhub
 from .. import orm
+from .. import roles
 from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
@@ -64,6 +65,7 @@ async def test_auth_api(app):
 async def test_referer_check(app):
     url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
+    # add admin user
     user = find_user(app.db, 'admin')
     if user is None:
         user = add_user(app.db, name='admin', admin=True)
@@ -150,6 +152,7 @@ def fill_user(model):
     """
     model.setdefault('server', None)
     model.setdefault('kind', 'user')
+    model.setdefault('roles', [])
     model.setdefault('groups', [])
     model.setdefault('admin', False)
     model.setdefault('server', None)
@@ -164,6 +167,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 
 
 @mark.user
+@mark.role
 async def test_get_users(app):
     db = app.db
     r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
@@ -172,8 +176,10 @@ async def test_get_users(app):
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
     assert users == [
-        fill_user({'name': 'admin', 'admin': True}),
-        fill_user({'name': 'user', 'admin': False, 'last_activity': None}),
+        fill_user({'name': 'admin', 'admin': True, 'roles': ['admin']}),
+        fill_user(
+            {'name': 'user', 'admin': False, 'roles': ['user'], 'last_activity': None}
+        ),
     ]
     with mock_role(app, 'user'):
         r = await api_request(app, 'users', headers=auth_header(db, 'user'))
@@ -288,6 +294,7 @@ async def test_get_self(app):
 
 
 @mark.user
+@mark.role
 async def test_add_user(app):
     db = app.db
     name = 'newuser'
@@ -297,9 +304,13 @@ async def test_add_user(app):
     assert user is not None
     assert user.name == name
     assert not user.admin
+    # assert newuser has default 'user' role
+    assert orm.Role.find(db, 'user') in user.roles
+    assert orm.Role.find(db, 'admin') not in user.roles
 
 
 @mark.user
+@mark.role
 async def test_get_user(app):
     name = 'user'
     _ = await api_request(app, 'users', name, headers=auth_header(app.db, name))
@@ -312,7 +323,7 @@ async def test_get_user(app):
     assert r.status_code == 200
 
     user = normalize_user(r.json())
-    assert user == fill_user({'name': name, 'auth_state': None})
+    assert user == fill_user({'name': name, 'roles': ['user'], 'auth_state': None})
 
 
 @mark.user
@@ -340,6 +351,7 @@ async def test_add_multi_user_invalid(app):
 
 
 @mark.user
+@mark.role
 async def test_add_multi_user(app):
     db = app.db
     names = ['a', 'b']
@@ -356,6 +368,9 @@ async def test_add_multi_user(app):
         assert user is not None
         assert user.name == name
         assert not user.admin
+        # assert default 'user' role added
+        assert orm.Role.find(db, 'user') in user.roles
+        assert orm.Role.find(db, 'admin') not in user.roles
 
     # try to create the same users again
     r = await api_request(
@@ -376,6 +391,7 @@ async def test_add_multi_user(app):
 
 
 @mark.user
+@mark.role
 async def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
@@ -395,6 +411,8 @@ async def test_add_multi_user_admin(app):
         assert user is not None
         assert user.name == name
         assert user.admin
+        assert orm.Role.find(db, 'user') not in user.roles
+        assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -420,6 +438,7 @@ async def test_add_user_duplicate(app):
 
 
 @mark.user
+@mark.role
 async def test_add_admin(app):
     db = app.db
     name = 'newadmin'
@@ -431,6 +450,9 @@ async def test_add_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
+    # assert newadmin has default 'admin' role
+    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -442,6 +464,7 @@ async def test_delete_user(app):
 
 
 @mark.user
+@mark.role
 async def test_make_admin(app):
     db = app.db
     name = 'admin2'
@@ -451,15 +474,20 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert not user.admin
+    assert orm.Role.find(db, 'user') in user.roles
+    assert orm.Role.find(db, 'admin') not in user.roles
 
     r = await api_request(
         app, 'users', name, method='patch', data=json.dumps({'admin': True})
     )
+
     assert r.status_code == 200
     user = find_user(db, name)
     assert user is not None
     assert user.name == name
     assert user.admin
+    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -1184,7 +1212,7 @@ async def test_token_as_user_deprecated(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
-        add_user(app.db, app, name=for_user)
+        for_user_obj = add_user(app.db, app, name=for_user)
     data = {'username': for_user}
     headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(
@@ -1277,7 +1305,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
-        add_user(app.db, app, name=for_user)
+        for_user_obj = add_user(app.db, app, name=for_user)
     data = {'username': for_user}
     headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(
@@ -1294,6 +1322,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     if status != 200:
         return
     assert 'token' in reply
+
     token_id = reply['id']
     r = await api_request(app, 'users', for_user, 'tokens', token_id, headers=headers)
     r.raise_for_status()
@@ -1565,6 +1594,7 @@ async def test_get_services(app, mockservice_url):
         mockservice.name: {
             'name': mockservice.name,
             'admin': True,
+            'roles': [],
             'command': mockservice.command,
             'pid': mockservice.proc.pid,
             'prefix': mockservice.server.base_url,
@@ -1590,6 +1620,7 @@ async def test_get_service(app, mockservice_url):
     assert service == {
         'name': mockservice.name,
         'admin': True,
+        'roles': [],
         'command': mockservice.command,
         'pid': mockservice.proc.pid,
         'prefix': mockservice.server.base_url,
