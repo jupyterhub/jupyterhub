@@ -35,7 +35,7 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @needs_scope('read:groups')  # Todo: Filter allowed here?
+    @needs_scope('read:groups')  # Todo: Apply filter on results
     def get(self):
         """List groups"""
         groups = self.db.query(orm.Group)

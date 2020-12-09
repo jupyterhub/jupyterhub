@@ -304,8 +304,6 @@ def needs_scope_expansion(filter_, filter_value, sub_scope):
     Check if there is a requirements to expand the `group` scope to individual `user` scopes.
     Assumptions:
     filter_ != Scope.ALL
-
-    This can be made arbitrarily intelligent but that would make it more complex
     """
     if not (filter_ == 'user' and 'group' in sub_scope):
         return False

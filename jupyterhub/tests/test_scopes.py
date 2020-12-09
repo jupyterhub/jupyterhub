@@ -8,12 +8,14 @@ from tornado import web
 from tornado.httputil import HTTPServerRequest
 
 from .. import orm
+from .. import roles
 from ..utils import check_scope
 from ..utils import needs_scope
 from ..utils import parse_scopes
 from ..utils import Scope
 from .utils import add_user
 from .utils import api_request
+from .utils import auth_header
 
 
 def test_scope_constructor():
@@ -181,6 +183,17 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
     ],
 )
 async def test_expand_groups(app, user_name, in_group, status_code):
+    test_role = {
+        'name': 'test',
+        'description': '',
+        'users': [user_name],
+        'scopes': [
+            'read:users!user=martha',
+            'read:users!group=bluth',
+            'read:groups',
+        ],
+    }
+    roles.add_role(app.db, test_role)
     user = add_user(app.db, name=user_name)
     group_name = 'bluth'
     group = orm.Group.find(app.db, name=group_name)
@@ -189,11 +202,11 @@ async def test_expand_groups(app, user_name, in_group, status_code):
         app.db.add(group)
     if in_group and user not in group.users:
         group.users.append(user)
+    kind = 'users'
+    roles.update_roles(app.db, user, kind, roles=['test'])
+    roles.remove_obj(app.db, user_name, kind, 'user')
     app.db.commit()
-    app.tornado_settings['mock_scopes'] = [
-        'read:users!user=martha',
-        'read:users!group=bluth',
-        'read:groups',
-    ]
-    r = await api_request(app, 'users', user_name)
+    r = await api_request(
+        app, 'users', user_name, headers=auth_header(app.db, user_name)
+    )
     assert r.status_code == status_code
