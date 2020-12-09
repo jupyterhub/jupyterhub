@@ -406,9 +406,15 @@ def needs_scope(scope):
             if check_scope(self, scope, parsed_scopes, **s_kwargs):
                 return func(self, *args, **kwargs)
             else:
+                # catching attr error occurring for older_requirements test
+                # could be done more ellegantly?
+                try:
+                    request_path = self.request.path
+                except AttributeError:
+                    request_path = 'the requested API'
                 app_log.warning(
                     "Not authorizing access to {}. Requires scope {}, not derived from scopes {}".format(
-                        self.request.path, scope, ", ".join(self.scopes)
+                        request_path, scope, ", ".join(self.scopes)
                     )
                 )
                 raise web.HTTPError(

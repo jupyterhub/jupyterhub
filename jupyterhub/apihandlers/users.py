@@ -14,6 +14,8 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
+from .. import roles
+from ..roles import update_roles
 from ..user import User
 from ..utils import isoformat
 from ..utils import iterate_until
@@ -140,7 +142,8 @@ class UserListAPIHandler(APIHandler):
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
-                self.db.commit()
+            update_roles(self.db, obj=user, kind='users')
+            self.db.commit()
             try:
                 await maybe_future(self.authenticator.add_user(user))
             except Exception as e:
@@ -202,7 +205,8 @@ class UserAPIHandler(APIHandler):
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
-                self.db.commit()
+                update_roles(self.db, obj=user, kind='users')
+        self.db.commit()
 
         try:
             await maybe_future(self.authenticator.add_user(user))
@@ -261,6 +265,8 @@ class UserAPIHandler(APIHandler):
                 await user.save_auth_state(value)
             else:
                 setattr(user, key, value)
+                if key == 'admin':
+                    update_roles(self.db, obj=user, kind='users')
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
@@ -345,9 +351,19 @@ class UserTokenListAPIHandler(APIHandler):
             if requester is not user:
                 note += " by %s %s" % (kind, requester.name)
 
-        api_token = user.new_api_token(
-            note=note, expires_in=body.get('expires_in', None)
-        )
+        token_roles = body.get('roles')
+        try:
+            api_token = user.new_api_token(
+                note=note, expires_in=body.get('expires_in', None), roles=token_roles
+            )
+        except NameError:
+            raise web.HTTPError(404, "Requested roles %r not found" % token_roles)
+        except ValueError:
+            raise web.HTTPError(
+                403,
+                "Requested token roles %r have higher permissions than the token owner"
+                % token_roles,
+            )
         if requester is not user:
             self.log.info(
                 "%s %s requested API token for %s",
