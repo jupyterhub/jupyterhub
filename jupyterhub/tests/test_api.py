@@ -277,6 +277,17 @@ async def test_get_self(app):
     assert r.status_code == 403
 
 
+async def test_get_self_service(app, mockservice):
+    r = await api_request(
+        app, "user", headers={"Authorization": f"token {mockservice.api_token}"}
+    )
+    r.raise_for_status()
+    service_info = r.json()
+
+    assert service_info['kind'] == 'service'
+    assert service_info['name'] == mockservice.name
+
+
 @mark.user
 async def test_add_user(app):
     db = app.db
