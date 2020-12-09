@@ -217,7 +217,7 @@ def switch_default_role(db, obj, kind, admin):
 def update_roles(db, obj, kind, roles=None):
 
     """Updates object's roles if specified,
-       assigns default if no roles specified"""
+    assigns default if no roles specified"""
 
     Class = get_orm_class(kind)
     user_role = orm.Role.find(db, 'user')
