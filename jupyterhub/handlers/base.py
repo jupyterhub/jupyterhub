@@ -430,7 +430,7 @@ class BaseHandler(RequestHandler):
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
         if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
-            self.scopes = self.settings.get("mock_scopes", [])
+            self.scopes = roles.get_subscopes(*self._jupyterhub_user.roles)
         return self._jupyterhub_user
 
     @property
