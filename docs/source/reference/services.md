@@ -346,7 +346,7 @@ and taking note of the following process:
         headers = {
             'Authorization' : 'token %s' % api_token,
         },
-    )
+    ))
     r.raise_for_status()
     user = r.json()
     ```
