@@ -339,7 +339,7 @@ and taking note of the following process:
 
     ```python
     r = requests.get(
-        '/'.join((["http://127.0.0.1:8081/hub/api",
+        '/'.join(["http://127.0.0.1:8081/hub/api",
                    "authorizations/cookie/jupyterhub-services",
                    quote(encrypted_cookie, safe=''),
         ]),
