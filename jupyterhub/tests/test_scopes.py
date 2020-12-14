@@ -66,12 +66,15 @@ def test_scope_filters():
     assert check_scope(handler, 'read:users', parsed_scopes, user='maeby')
 
 
-def test_scope_one_filter_only():
+def test_scope_multiple_filters():
     handler = None
-    with pytest.raises(AttributeError):
-        check_scope(
-            handler, 'all', parse_scopes(['all']), user='george_michael', group='bluths'
-        )
+    assert check_scope(
+        handler,
+        'read:users',
+        parse_scopes(['read:users!user=george_michael']),
+        user='george_michael',
+        group='bluths',
+    )
 
 
 def test_scope_parse_server_name():
@@ -85,7 +88,7 @@ def test_scope_parse_server_name():
 
 class MockAPIHandler:
     def __init__(self):
-        self.scopes = ['users']
+        self.scopes = {'users'}
 
     @needs_scope('users')
     def user_thing(self, user_name):
@@ -162,8 +165,9 @@ class MockAPIHandler:
 )
 def test_scope_method_access(scopes, method, arguments, is_allowed):
     obj = MockAPIHandler()
+    obj.current_user = mock.Mock(name=arguments[0])
     obj.request = mock.Mock(spec=HTTPServerRequest)
-    obj.scopes = scopes
+    obj.scopes = set(scopes)
     api_call = getattr(obj, method)
     if is_allowed:
         assert api_call(*arguments)

@@ -295,8 +295,35 @@ def metrics_authentication(self):
         raise web.HTTPError(403)
 
 
+# Todo: Move all scope-related methods to scope module
 class Scope(Enum):
     ALL = True
+
+
+def get_user_scopes(name):
+    """
+    Scopes have a metascope 'all' that should be expanded to everything a user can do.
+    At the moment that is a user-filtered version (optional read) access to
+    users
+    users:name
+    users:groups
+    users:activity
+    users:servers
+    users:tokens
+
+    """
+    scope_list = [
+        'users',
+        'users:name',
+        'users:groups',
+        'users:activity',
+        'users:servers',
+        'users:tokens',
+    ]
+    scope_list.extend(
+        ['read:' + scope for scope in scope_list]
+    )  # Todo: Put this in closure
+    return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
 def needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -324,29 +351,24 @@ def check_user_in_expanded_scope(handler, user_name, scope_group_names):
 def check_scope(api_handler, req_scope, scopes, **kwargs):
     # Parse user name and server name together
     if 'user' in kwargs and 'server' in kwargs:
-        user_name = kwargs.pop('user')
-        kwargs['server'] = "{}/{}".format(user_name, kwargs['server'])
-    if len(kwargs) > 1:
-        raise AttributeError("Please specify exactly one filter")
+        kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
     if req_scope not in scopes:
         return False
     if scopes[req_scope] == Scope.ALL:
         return True
     # Apply filters
-    if not kwargs:
-        return False
-    filter_, filter_value = list(kwargs.items())[0]
     sub_scope = scopes[req_scope]
-    if filter_ not in sub_scope:
-        valid_scope = False
-    else:
-        valid_scope = filter_value in sub_scope[filter_]
-    if not valid_scope and needs_scope_expansion(filter_, filter_value, sub_scope):
-        group_names = sub_scope['group']
-        valid_scope |= check_user_in_expanded_scope(
-            api_handler, filter_value, group_names
-        )
-    return valid_scope
+    for (
+        filter_,
+        filter_value,
+    ) in kwargs.items():  # Interface change: Now can have multiple filters
+        if filter_ in sub_scope and filter_value in sub_scope[filter_]:
+            return True
+        if needs_scope_expansion(filter_, filter_value, sub_scope):
+            group_names = sub_scope['group']
+            if check_user_in_expanded_scope(api_handler, filter_value, group_names):
+                return True
+    return False
 
 
 def parse_scopes(scope_list):
@@ -400,6 +422,9 @@ def needs_scope(scope):
                 if resource_name in bound_sig.arguments:
                     resource_value = bound_sig.arguments[resource_name]
                     s_kwargs[resource] = resource_value
+            if 'all' in self.scopes and self.current_user:
+                # todo: What if no user is found? See test_api/test_referer_check
+                self.scopes |= get_user_scopes(self.current_user.name)
             parsed_scopes = parse_scopes(self.scopes)
             if check_scope(self, scope, parsed_scopes, **s_kwargs):
                 return func(self, *args, **kwargs)

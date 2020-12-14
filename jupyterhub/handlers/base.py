@@ -80,7 +80,7 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
-        self.scopes = []
+        self.scopes = set()
         try:
             await self.get_current_user()
         except Exception:

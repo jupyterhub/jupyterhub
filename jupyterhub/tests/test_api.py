@@ -1628,17 +1628,15 @@ async def test_get_service(app, mockservice_url):
         'info': {},
         'display': True,
     }
-    with mock_role(app, 'service'):
-        r = await api_request(
-            app,
-            'services/%s' % mockservice.name,
-            headers={'Authorization': 'token %s' % mockservice.api_token},
-        )
-        r.raise_for_status()
-    with mock_role(app, 'user'):
-        r = await api_request(
-            app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
-        )
+    r = await api_request(
+        app,
+        'services/%s' % mockservice.name,
+        headers={'Authorization': 'token %s' % mockservice.api_token},
+    )
+    r.raise_for_status()
+    r = await api_request(
+        app, 'services/%s' % mockservice.name, headers=auth_header(db, 'user')
+    )
     assert r.status_code == 403
 
 
