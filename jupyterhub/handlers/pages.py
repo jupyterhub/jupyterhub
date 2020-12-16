@@ -509,6 +509,7 @@ class AdminHandler(BaseHandler):
             .offset(offset)
         )
         users = [self._user_from_orm(u) for u in users]
+        groups = self.db.query(orm.Group)
 
         running = []
         for u in users:
@@ -523,6 +524,7 @@ class AdminHandler(BaseHandler):
             auth_state=auth_state,
             admin_access=self.settings.get('admin_access', False),
             users=users,
+            groups=groups,
             running=running,
             sort={s: o for s, o in zip(sorts, orders)},
             allow_named_servers=self.allow_named_servers,

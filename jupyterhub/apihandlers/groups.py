@@ -69,6 +69,28 @@ class GroupListAPIHandler(_GroupAPIHandler):
         self.write(json.dumps([self.group_model(group) for group in created]))
         self.set_status(201)
 
+    @admin_only
+    async def delete(self):
+        """DELETE deletes Multiple groups """
+        model = self.get_json_body()
+        if not model or not isinstance(model, dict) or not model.get('groups'):
+            raise web.HTTPError(400, "Must specify at least one group to delete")
+
+        groupnames = model.pop("groups", [])
+        self._check_group_model(model)
+
+        deleted = []
+        for name in groupnames:
+            group = orm.Group.find(self.db, name=name)
+            if group is None:
+                raise web.HTTPError(409, "Group %s does not exist" % name)
+            # delete the group
+            self.log.info("Delete group %s", name)
+            self.db.delete(group)
+            self.db.commit()
+            deleted.append(group)
+        self.write(json.dumps([self.group_model(group) for group in deleted]))
+        self.set_status(201)
 
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""

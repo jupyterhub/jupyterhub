@@ -113,6 +113,7 @@ class UserListAPIHandler(APIHandler):
         # admin is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
+        groups = data.get('groups')
 
         to_create = []
         invalid_names = []
@@ -142,6 +143,13 @@ class UserListAPIHandler(APIHandler):
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
+                self.db.commit()
+            if groups:
+                for groupname in groups:
+                    group = orm.Group.find(self.db, name=groupname)
+                    if group is None:
+                        raise web.HTTPError(409, "Group %s does not exist" % name)
+                    user.groups.append(group)
                 self.db.commit()
             try:
                 await maybe_future(self.authenticator.add_user(user))
@@ -195,7 +203,7 @@ class UserAPIHandler(APIHandler):
     @admin_only
     async def post(self, name):
         data = self.get_json_body()
-        user = self.find_user(name)
+        user = orm.User.find(self.db, name=name)
         if user is not None:
             raise web.HTTPError(409, "User %s already exists" % name)
 
@@ -204,6 +212,13 @@ class UserAPIHandler(APIHandler):
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
+                self.db.commit()
+            if 'groups' in data:
+                for name in data.groups:
+                    group = orm.Group.find(self.db, name=name)
+                    if group is None:
+                        raise web.HTTPError(409, "Group %s does not exist" % name)
+                    user.groups.append(group)
                 self.db.commit()
 
         try:
@@ -244,7 +259,7 @@ class UserAPIHandler(APIHandler):
 
     @admin_only
     async def patch(self, name):
-        user = self.find_user(name)
+        user = orm.User.find(db=self.db, name=name)
         if user is None:
             raise web.HTTPError(404)
         data = self.get_json_body()
@@ -259,11 +274,24 @@ class UserAPIHandler(APIHandler):
         for key, value in data.items():
             if key == 'auth_state':
                 await user.save_auth_state(value)
+            elif key == 'groups':
+                groups = value
+                # add user to new groups
+                for name in groups:
+                    group = orm.Group.find(self.db, name=name)
+                    if group is None:
+                        raise web.HTTPError(409, "Group %s does not exist" % name)
+                    if group not in user.groups:
+                        user.groups.append(group)
+                # delete user from groups not in new groups
+                for group in user.groups:
+                    if group.name not in groups:
+                        user.groups.remove(group)
             else:
                 setattr(user, key, value)
         self.db.commit()
         user_ = self.user_model(user)
-        user_['auth_state'] = await user.get_auth_state()
+        user_['auth_state'] = await self._user_from_orm(user).get_auth_state()
         self.write(json.dumps(user_))
 
 

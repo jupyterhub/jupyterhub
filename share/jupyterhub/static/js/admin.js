@@ -163,9 +163,11 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     var row = getRow(el);
     var user = row.data("user");
     var admin = row.data("admin");
+    var groups = row.data("groups").split(/[\s,]+/).map(name => name.trim()).filter(name => name.length);;
     var dialog = $("#edit-user-dialog");
     dialog.data("user", user);
     dialog.find(".username-input").val(user);
+    dialog.find(".groups-input").val(groups);
     dialog.find(".admin-checkbox").attr("checked", admin === "True");
     dialog.modal();
   });
@@ -176,12 +178,14 @@ require(["jquery", "moment", "jhapi", "utils"], function(
       var dialog = $("#edit-user-dialog");
       var user = dialog.data("user");
       var name = dialog.find(".username-input").val();
+      var groups = dialog.find(".groups-input").val()
       var admin = dialog.find(".admin-checkbox").prop("checked");
       api.edit_user(
         user,
         {
           admin: admin,
           name: name,
+          groups: groups,
         },
         {
           success: function() {
@@ -216,6 +220,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
   $("#add-users").click(function() {
     var dialog = $("#add-users-dialog");
     dialog.find(".username-input").val("");
+    dialog.find(".groups-input").val("");
     dialog.find(".admin-checkbox").prop("checked", false);
     dialog.modal();
   });
@@ -224,22 +229,18 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     .find(".save-button")
     .click(function() {
       var dialog = $("#add-users-dialog");
-      var lines = dialog
-        .find(".username-input")
-        .val()
-        .split("\n");
+      var usernames = dialog.find(".username-input").val();
+      usernames = usernames.split(/[\s,]+/).map(name => name.trim()).filter(name => name.length);
+      var groups = dialog.find(".groups-input").val();
+      // groups = groups.split(/[\s,]+/).map(name => name.trim()).filter(name => name.length);
       var admin = dialog.find(".admin-checkbox").prop("checked");
-      var usernames = [];
-      lines.map(function(line) {
-        var username = line.trim();
-        if (username.length) {
-          usernames.push(username);
-        }
-      });
 
       api.add_users(
         usernames,
-        { admin: admin },
+        {
+          admin: admin,
+          groups: groups,
+        },
         {
           success: function() {
             window.location.reload();
@@ -247,6 +248,52 @@ require(["jquery", "moment", "jhapi", "utils"], function(
         }
       );
     });
+
+    $("#add-groups").click(function() {
+      var dialog = $("#add-groups-dialog");
+      dialog.find(".groups-input").val("");
+      dialog.modal();
+    });
+
+    $("#add-groups-dialog")
+      .find(".save-button")
+      .click(function() {
+        var dialog = $("#add-groups-dialog");
+        var groups = dialog.find(".groups-input").val();
+        groups = groups.split(/[\s,]+/).map(group => group.trim()).filter(group => group.length);
+
+        api.add_groups(
+          groups,
+          {},
+          {
+            success: function() {
+              window.location.reload();
+            },
+          }
+        );
+      });
+
+      $("#delete-groups").click(function() {
+        var dialog = $("#delete-groups-dialog");
+        dialog.find(".groups-input").val([]);
+        dialog.modal();
+      });
+
+      $("#delete-groups-dialog")
+        .find(".delete-button")
+        .click(function() {
+          var dialog = $("#delete-groups-dialog");
+          var groups = dialog.find(".groups-input").val();
+          api.delete_groups(
+            groups,
+            {},
+            {
+              success: function() {
+                window.location.reload();
+              },
+            }
+          );
+        });
 
   $("#stop-all-servers").click(function() {
     $("#stop-all-servers-dialog").modal();

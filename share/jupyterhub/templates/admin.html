@@ -24,6 +24,7 @@
         {% block thead %}
         {{ th("User", 'name') }}
         {{ th("Admin", 'admin') }}
+        {{ th("Groups") }}
         {{ th("Last Activity", 'last_activity') }}
         {{ th("Running (%i)" % running|length, 'running', colspan=2) }}
         {% endblock thead %}
@@ -32,17 +33,21 @@
     <tbody>
       <tr class="user-row add-user-row">
         <td colspan="12">
-          <a id="add-users" role="button" class="col-xs-2 btn btn-default">Add Users</a>
-          <span class="col-xs-offset-4 col-xs-3">
-            <a id="start-all-servers" role="button" class="btn btn-primary col-xs-5 col-xs-offset-1">Start All</a>
-            <a id="stop-all-servers" role="button" class="btn btn-danger col-xs-5 col-xs-offset-1">Stop All</a>
-          </span>
-          <a id="shutdown-hub" role="button" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
-        </td>
-      </tr>
+        <span class="col-xs-5">
+          <a id="add-users" role="button" class="col-xs-3 btn btn-default">Add Users</a>
+          <a id="add-groups" role="button" class="col-xs-3 col-xs-offset-1 btn btn-default">Add Groups</a>
+          <a id="delete-groups" role="button" class="col-xs-4 col-xs-offset-1 btn btn-danger">Delete Groups</a>
+        </span>
+        <span class="col-xs-offset-1 col-xs-3">
+          <a id="start-all-servers" role="button" class="btn btn-primary col-xs-5 col-xs-offset-1">Start All</a>
+          <a id="stop-all-servers" role="button" class="btn btn-danger col-xs-5 col-xs-offset-1">Stop All</a>
+        </span>
+        <a id="shutdown-hub" role="button" class="col-xs-2 col-xs-offset-1 btn btn-danger">Shutdown Hub</a>
+      </td>
+    </tr>
       {% for user in users %}
       {% for spawner in user.all_spawners() %}
-      <tr class="user-row server-row" id="user-{{user.name}}" data-user="{{ user.name }}" data-server-name="{{spawner.name}}" data-admin="{{user.admin}}">
+      <tr class="user-row server-row" id="user-{{user.name}}" data-user="{{ user.name }}" data-server-name="{{spawner.name}}" data-admin="{{user.admin}}" data-groups="{{ user.groups | map(attribute='name') | join(', ') }}">
       {% block user_row scoped %}
 
       <td class="name-col col-sm-2">{{user.name}}
@@ -54,6 +59,12 @@
       <td class="admin-col col-sm-2">
         {%- if spawner.name == '' -%}
         {% if user.admin %}admin{% endif %}
+        {%- endif -%}
+      </td>
+
+      <td class="groups-col col-sm-2">
+        {%- if user.groups -%}
+        {{ user.groups | map(attribute='name') | join(', ') }}
         {%- endif -%}
       </td>
 
@@ -147,6 +158,7 @@
 {% macro user_modal(name, multi=False) %}
 {% call modal(name, btn_class='btn-primary save-button') %}
 <div class="form-group">
+  <label>Username{% if multi %}s{% endif %}</label>
   <{%- if multi -%}
     textarea
     {%- else -%}
@@ -155,6 +167,14 @@
     class="form-control username-input"
     placeholder="{%- if multi -%} usernames separated by lines{%- else -%} username {%-endif-%}">
   {%- if multi -%}</textarea>{%- endif -%}
+</div>
+<div class="form-group">
+  <label>Groups</label>
+  <select multiple class="form-control groups-input">
+  {% for group in groups %}
+    <option>{{ group.name }}</option>
+  {% endfor %}
+  </select>
 </div>
 <div class="checkbox">
   <label>
@@ -167,6 +187,25 @@
 {{ user_modal('Edit User') }}
 
 {{ user_modal('Add Users', multi=True) }}
+
+{% call modal('Add Groups', btn_class='btn-primary save-button') %}
+<div class="form-group">
+  <label>Groups</label>
+  <textarea class="form-control groups-input" placeholder="groupnames separated by lines">
+  </textarea>
+</div>
+{% endcall %}
+
+{% call modal('Delete Groups', btn_class='btn-danger delete-button') %}
+<div class="form-group">
+  <label>Groups</label>
+  <select multiple class="form-control groups-input">
+    {% for group in groups %}
+      <option>{{ group.name }}</option>
+    {% endfor %}
+    </select>
+</div>
+{% endcall %}
 
 {% endblock %}
 

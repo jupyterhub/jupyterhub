@@ -719,6 +719,7 @@ class BaseHandler(RequestHandler):
         username = authenticated['name']
         auth_state = authenticated.get('auth_state')
         admin = authenticated.get('admin')
+        groups = authenticated.get('groups')
         refreshing = user is not None
 
         if user and username != user.name:
@@ -733,6 +734,15 @@ class BaseHandler(RequestHandler):
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
             user.admin = admin
+            self.db.commit()
+        # add user to the given groups
+        if groups is not None:
+            for name in groups:
+                group = orm.Group.find(self.db, name)
+                if group is None:
+                    group = orm.Group(name=name)
+                    self.db.add(group)
+                group.users.append(user)
             self.db.commit()
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values
