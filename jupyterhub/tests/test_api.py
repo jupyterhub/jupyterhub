@@ -1446,7 +1446,7 @@ async def test_groups_list(app):
     r = await api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': []}]
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
 
 @mark.group
@@ -1481,7 +1481,12 @@ async def test_group_get(app):
     r = await api_request(app, 'groups/alphaflight')
     r.raise_for_status()
     reply = r.json()
-    assert reply == {'kind': 'group', 'name': 'alphaflight', 'users': ['sasquatch']}
+    assert reply == {
+        'kind': 'group',
+        'name': 'alphaflight',
+        'users': ['sasquatch'],
+        'roles': [],
+    }
 
 
 @mark.group
@@ -1594,7 +1599,7 @@ async def test_get_services(app, mockservice_url):
         mockservice.name: {
             'name': mockservice.name,
             'admin': True,
-            'roles': [],
+            'roles': ['admin'],
             'command': mockservice.command,
             'pid': mockservice.proc.pid,
             'prefix': mockservice.server.base_url,
@@ -1620,7 +1625,7 @@ async def test_get_service(app, mockservice_url):
     assert service == {
         'name': mockservice.name,
         'admin': True,
-        'roles': [],
+        'roles': ['admin'],
         'command': mockservice.command,
         'pid': mockservice.proc.pid,
         'prefix': mockservice.server.base_url,

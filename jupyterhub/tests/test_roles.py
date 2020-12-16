@@ -26,6 +26,18 @@ def test_orm_roles(db):
     db.add(service_role)
     db.commit()
 
+    group_role = orm.Role(name='group', scopes=['read:users'])
+    db.add(group_role)
+    db.commit()
+
+    group_role = orm.Role(name='group', scopes=['read:users'])
+    db.add(group_role)
+    db.commit()
+
+    group_role = orm.Role(name='group', scopes=['read:users'])
+    db.add(group_role)
+    db.commit()
+
     user = orm.User(name='falafel')
     db.add(user)
     db.commit()
@@ -34,20 +46,30 @@ def test_orm_roles(db):
     db.add(service)
     db.commit()
 
+    group = orm.Group(name='fast-food')
+    db.add(group)
+    db.commit()
+
     assert user_role.users == []
     assert user_role.services == []
+    assert user_role.groups == []
     assert service_role.users == []
     assert service_role.services == []
+    assert service_role.groups == []
     assert user.roles == []
     assert service.roles == []
+    assert group.roles == []
 
     user_role.users.append(user)
     service_role.services.append(service)
+    group_role.groups.append(group)
     db.commit()
     assert user_role.users == [user]
     assert user.roles == [user_role]
     assert service_role.services == [service]
     assert service.roles == [service_role]
+    assert group_role.groups == [group]
+    assert group.roles == [group_role]
 
     # check token creation without specifying its role
     # assigns it the default 'user' role
@@ -67,16 +89,22 @@ def test_orm_roles(db):
     db.commit()
     assert user_role.users == []
     assert user_token not in user_role.tokens
-    # check deleting the service token removes it from 'service' role
+    # check deleting the service token removes it from service_role
     db.delete(service_token)
     db.commit()
     assert service_token not in service_role.tokens
-    # check deleting the 'service' role removes it from service roles
+    # check deleting the service_role removes it from service.roles
     db.delete(service_role)
     db.commit()
     assert service.roles == []
+    # check deleting the group removes it from group_roles
+    db.delete(group)
+    db.commit()
+    assert group_role.groups == []
 
+    # clean up db
     db.delete(service)
+    db.delete(group_role)
     db.commit()
 
 
@@ -308,6 +336,76 @@ async def test_load_roles_services(tmpdir, request):
     for service in db.query(orm.Service):
         db.delete(service)
     db.commit()
+
+
+@mark.role
+async def test_load_roles_groups(tmpdir, request):
+    """Test loading predefined roles for groups in app.py"""
+    groups_to_load = {
+        'group1': ['gandalf'],
+        'group2': ['bilbo', 'gargamel'],
+        'group3': ['cyclops'],
+    }
+    roles_to_load = [
+        {
+            'name': 'assistant',
+            'description': 'Access users information only',
+            'scopes': ['read:users'],
+            'groups': ['group2'],
+        },
+        {
+            'name': 'head',
+            'description': 'Whole user access',
+            'scopes': ['users', 'admin:users'],
+            'groups': ['group3'],
+        },
+    ]
+    kwargs = {'load_groups': groups_to_load, 'load_roles': roles_to_load}
+    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+    if ssl_enabled:
+        kwargs['internal_certs_location'] = str(tmpdir)
+    hub = MockHub(**kwargs)
+    hub.init_db()
+    db = hub.db
+    hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
+    await hub.init_users()
+    await hub.init_groups()
+    await hub.init_roles()
+
+    assist_role = orm.Role.find(db, name='assistant')
+    head_role = orm.Role.find(db, name='head')
+    user_role = orm.Role.find(db, name='user')
+
+    group1 = orm.Group.find(db, name='group1')
+    group2 = orm.Group.find(db, name='group2')
+    group3 = orm.Group.find(db, name='group3')
+
+    gandalf = orm.User.find(db, name='gandalf')
+    bilbo = orm.User.find(db, name='bilbo')
+    gargamel = orm.User.find(db, name='gargamel')
+    cyclops = orm.User.find(db, name='cyclops')
+
+    # test group roles
+    assert group1.roles == []
+    assert group2 in assist_role.groups
+    assert group3 in head_role.groups
+
+    # test group members' roles
+    assert assist_role in bilbo.roles
+    assert assist_role in gargamel.roles
+    assert head_role in cyclops.roles
+
+    # check the default user_role assignment
+    # FIXME - should users with group roles still have default?
+    assert user_role in gandalf.roles
+    assert user_role not in bilbo.roles
+    assert user_role not in gargamel.roles
+    assert user_role not in cyclops.roles
+
+
+# FIXME
+# @mark.role
+# async def test_group_roles_delete_cascade(tmpdir, request):
 
 
 @mark.role

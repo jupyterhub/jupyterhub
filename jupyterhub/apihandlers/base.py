@@ -222,6 +222,7 @@ class APIHandler(BaseHandler):
             'kind': 'group',
             'name': group.name,
             'users': [u.name for u in group.users],
+            'roles': [r.name for r in group.roles],
         }
 
     def service_model(self, service):
@@ -233,9 +234,15 @@ class APIHandler(BaseHandler):
             'roles': [r.name for r in service.roles],
         }
 
-    _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
+    _user_model_types = {
+        'name': str,
+        'admin': bool,
+        'groups': list,
+        'roles': list,
+        'auth_state': dict,
+    }
 
-    _group_model_types = {'name': str, 'users': list}
+    _group_model_types = {'name': str, 'users': list, 'roles': list}
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request

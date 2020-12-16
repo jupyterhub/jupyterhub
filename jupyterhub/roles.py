@@ -147,10 +147,24 @@ def get_orm_class(kind):
         Class = orm.Service
     elif kind == 'tokens':
         Class = orm.APIToken
+    elif kind == 'groups':
+        Class = orm.Group
     else:
-        raise ValueError("kind must be users, services or tokens, not %r" % kind)
+        raise ValueError(
+            "kind must be users, services, tokens or groups, not %r" % kind
+        )
 
     return Class
+
+
+def get_rolenames(role_list):
+
+    """Return a list of rolenames from a list of roles"""
+
+    rolenames = []
+    for role in role_list:
+        rolenames.append(role.name)
+    return rolenames
 
 
 def existing_only(func):
@@ -176,7 +190,7 @@ def existing_only(func):
 @existing_only
 def add_obj(db, objname, kind, rolename):
 
-    """Adds a role for users, services or tokens"""
+    """Adds a role for users, services, tokens or groups"""
 
     if rolename not in objname.roles:
         objname.roles.append(rolename)
@@ -250,12 +264,28 @@ def update_roles(db, obj, kind, roles=None):
             else:
                 add_obj(db, objname=obj.name, kind=kind, rolename=rolename)
     else:
+        # groups can be without a role
+        if Class == orm.Group:
+            pass
         # tokens can have only 'user' role as default
         # assign the default only for user tokens
-        if Class == orm.APIToken:
+        elif Class == orm.APIToken:
             if len(obj.roles) < 1 and obj.user is not None:
                 user_role.tokens.append(obj)
             db.commit()
         # users and services can have 'user' or 'admin' roles as default
         else:
             switch_default_role(db, obj, kind, obj.admin)
+
+
+def mock_roles(app, name, kind):
+
+    """Loads and assigns default roles for mocked objects"""
+
+    Class = get_orm_class(kind)
+
+    obj = Class.find(app.db, name=name)
+    default_roles = get_default_roles()
+    for role in default_roles:
+        add_role(app.db, role)
+    update_roles(db=app.db, obj=obj, kind=kind)

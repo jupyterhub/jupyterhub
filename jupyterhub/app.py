@@ -326,7 +326,8 @@ class JupyterHub(Application):
                                 'scopes': ['users', 'groups'],
                                 'users': ['cyclops', 'gandalf'],
                                 'services': [],
-                                'tokens': []
+                                'tokens': [],
+                                'groups': []
                             }
                         ]
 
@@ -1827,7 +1828,7 @@ class JupyterHub(Application):
     async def init_roles(self):
         """Load default and predefined roles into the database"""
         db = self.db
-        role_bearers = ['users', 'services', 'tokens']
+        role_bearers = ['groups', 'users', 'services', 'tokens']
 
         # load default roles
         default_roles = roles.get_default_roles()
@@ -1857,11 +1858,18 @@ class JupyterHub(Application):
                         )
 
         # make sure all users, services and tokens have at least one role (update with default)
+        # groups can be without a role but all group members should have the same role(s) as the group
         for bearer in role_bearers:
             Class = roles.get_orm_class(bearer)
-            for obj in db.query(Class):
-                if len(obj.roles) < 1:
-                    roles.update_roles(db, obj=obj, kind=bearer)
+            if bearer == 'groups':
+                for group in db.query(Class):
+                    for user in group.users:
+                        rolenames = roles.get_rolenames(group.roles)
+                        roles.update_roles(db, obj=user, kind='users', roles=rolenames)
+            else:
+                for obj in db.query(Class):
+                    if len(obj.roles) < 1:
+                        roles.update_roles(db, obj=obj, kind=bearer)
         db.commit()
 
     async def _add_tokens(self, token_dict, kind):
