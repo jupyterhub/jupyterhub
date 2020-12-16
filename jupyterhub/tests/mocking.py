@@ -78,13 +78,6 @@ def mock_open_session(username, service, encoding):
     pass
 
 
-def mock_role(app, role='admin', name=None):
-    scopes = get_scopes(role)
-    if name is not None:
-        scopes = [scope.format(username=name) for scope in scopes]
-    return mock.patch.dict(app.tornado_settings, {'mock_scopes': scopes})
-
-
 class MockSpawner(SimpleLocalProcessSpawner):
     """Base mock spawner
 
