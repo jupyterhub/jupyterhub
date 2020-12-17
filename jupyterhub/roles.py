@@ -249,3 +249,16 @@ def update_roles(db, obj, kind, roles=None):
         # users and services can have 'user' or 'admin' roles as default
         else:
             switch_default_role(db, obj, kind, obj.admin)
+
+
+def mock_roles(app, name, kind):
+
+    """Loads and assigns default roles for mocked objects"""
+
+    Class = get_orm_class(kind)
+
+    obj = Class.find(app.db, name=name)
+    default_roles = get_default_roles()
+    for role in default_roles:
+        add_role(app.db, role)
+    update_roles(db=app.db, obj=obj, kind=kind)
