@@ -75,7 +75,7 @@ from jupyter_telemetry.eventlog import EventLog
 here = os.path.dirname(__file__)
 
 import jupyterhub
-from . import handlers, apihandlers
+from . import handlers, apihandlers, metricshandler
 from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .services.service import Service
 
@@ -886,6 +886,12 @@ class JupyterHub(Application):
         True, help="Authentication for prometheus metrics"
     ).tag(config=True)
 
+    metrics_port = Integer(
+        None,
+        allow_none=True,
+        help="Port on which to serve Prometheus metrics separately."
+    ).tag(config=True)
+
     @observe('api_tokens')
     def _deprecate_api_tokens(self, change):
         self.log.warning(
@@ -1199,6 +1205,7 @@ class JupyterHub(Application):
 
     _log_formatter_cls = CoroutineLogFormatter
     http_server = None
+    metrics_server = None
     proxy_process = None
     io_loop = None
 
@@ -2668,6 +2675,24 @@ class JupyterHub(Application):
             self.log.error("Failed to bind hub to %s", self.hub.bind_url)
             raise
 
+        # start the metrics server
+        if self.metrics_port is not None:
+            metrics_tornado_application = web.Application(
+                metricshandler.default_handlers, **self.tornado_settings
+            )
+            self.metrics_server = tornado.httpserver.HTTPServer(
+                metrics_tornado_application,
+                ssl_options=ssl_context,
+                xheaders=True,
+                trusted_downstream=self.trusted_downstream_ips,
+            )
+            try:
+                self.metrics_server.listen(self.metrics_port, address="::")
+                self.log.info("Metrics API listening on %s", self.metrics_port)
+            except Exception:
+                self.log.error("Failed to bind metrics to %s", self.metrics_port)
+                raise
+
         # start the service(s)
         for service_name, service in self._service_map.items():
             msg = (
@@ -2849,6 +2874,8 @@ class JupyterHub(Application):
             return
         if self.http_server:
             self.http_server.stop()
+        if self.metrics_server:
+            self.metrics_server.stop()
         self.io_loop.add_callback(self.io_loop.stop)
 
     async def launch_instance_async(self, argv=None):
