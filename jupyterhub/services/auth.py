@@ -485,9 +485,9 @@ class HubAuth(SingletonConfigurable):
             url = url_path_join(
                 self.api_url, "authorizations/sessionid", quote(username, safe=''),
             )
-            url = "{}?session_id={}".format(url, quote(session_id, safe=''))
+            headers = {"sessionid": session_id}
             self.last_session_id_validation_result = self._api_request(
-                'GET', url, allow_404=True
+                'GET', url, allow_404=True, headers=headers
             )
             # self.log.info("{} - Request to {}. Result: {}".format(username, url, self.last_session_id_validation_result))
         return self.last_session_id_validation_result

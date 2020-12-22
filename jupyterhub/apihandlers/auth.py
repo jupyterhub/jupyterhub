@@ -98,9 +98,8 @@ class SessionIDAPIHandler(APIHandler):
         if db_user:
             if self.app.strict_session_ids:
                 session_ids = await self.app.load_session_ids(username)
-                _session_id = self.request.query_arguments.get('session_id', [b''])
-                session_id = [v.decode("utf-8") for v in _session_id]
-                if len(session_id) == 0 or session_id[0] not in session_ids:
+                session_id = self.request.headers.get("sessionid", "")
+                if (not session_id) or (session_id not in session_ids):
                     raise web.HTTPError(404)
             model = self.user_model(self.users[db_user])
             self.write(json.dumps(model))
