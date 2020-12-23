@@ -1101,6 +1101,9 @@ class PAMAuthenticator(LocalAuthenticator):
         else:
             return super().normalize_username(username)
 
+    def get_custom_html(self, base_url):
+        return self.custom_html
+
 
 for _old_name, _new_name, _version in [
     ("check_group_whitelist", "check_group_allowed", "1.2"),

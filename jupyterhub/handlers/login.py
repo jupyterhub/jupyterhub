@@ -101,7 +101,7 @@ class LoginHandler(BaseHandler):
                     {'next': self.get_argument('next', '')},
                 ),
         }
-        custom_html = Template(self.authenticator.custom_html).render(**context)
+        custom_html = Template(self.authenticator.get_custom_html(self.hub.base_url)).render(**context)
         return self.render_template(
             'login.html',
             **context,
