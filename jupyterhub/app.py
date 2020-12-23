@@ -889,7 +889,7 @@ class JupyterHub(Application):
     metrics_port = Integer(
         None,
         allow_none=True,
-        help="Port on which to serve Prometheus metrics separately."
+        help="Port on which to serve Prometheus metrics separately.",
     ).tag(config=True)
 
     @observe('api_tokens')
