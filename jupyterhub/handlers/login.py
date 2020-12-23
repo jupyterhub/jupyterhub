@@ -92,16 +92,18 @@ class LoginHandler(BaseHandler):
 
     def _render(self, login_error=None, username=None):
         context = {
-                "next": url_escape(self.get_argument('next', default='')),
-                "username": username,
-                "login_error": login_error,
-                "login_url": self.settings['login_url'],
-                "authenticator_login_url": url_concat(
-                    self.authenticator.login_url(self.hub.base_url),
-                    {'next': self.get_argument('next', '')},
-                ),
+            "next": url_escape(self.get_argument('next', default='')),
+            "username": username,
+            "login_error": login_error,
+            "login_url": self.settings['login_url'],
+            "authenticator_login_url": url_concat(
+                self.authenticator.login_url(self.hub.base_url),
+                {'next': self.get_argument('next', '')},
+            ),
         }
-        custom_html = Template(self.authenticator.get_custom_html(self.hub.base_url)).render(**context)
+        custom_html = Template(
+            self.authenticator.get_custom_html(self.hub.base_url)
+        ).render(**context)
         return self.render_template(
             'login.html',
             **context,
