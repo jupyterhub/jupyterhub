@@ -415,7 +415,9 @@ class User:
         """Get the domain for my server."""
         # use underscore as escape char for domains
         return (
-            quote(self.name).replace('%', '_').lower() + '.' + self.settings['domain']
+            quote(self.name).replace('%', '_').replace('.', '_').lower()
+            + '.'
+            + self.settings['domain']
         )
 
     @property
