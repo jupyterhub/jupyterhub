@@ -318,7 +318,7 @@ class Expiring:
     which should be unix timestamp or datetime object
     """
 
-    now = utcnow  # funciton, must return float timestamp or datetime
+    now = utcnow  # function, must return float timestamp or datetime
     expires_at = None  # must be defined
 
     @property
