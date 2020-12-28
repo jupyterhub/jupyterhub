@@ -1004,6 +1004,7 @@ class Spawner(LoggingConfigurable):
         if self.disable_user_config:
             args.append('--disable-user-config')
         args.extend(self.args)
+        args.append('--allow-root')
         return args
 
     def run_pre_spawn_hook(self):
