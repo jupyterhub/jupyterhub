@@ -78,7 +78,7 @@ with open('README.md', encoding="utf8") as f:
 
 
 setup_args = dict(
-    name='jupyterhub',
+    name='quartic_jupyterhub',
     packages=packages,
     # dummy, so that install_data doesn't get skipped
     # this will be overridden when bower is run anyway

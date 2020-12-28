@@ -2,21 +2,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-version_info = (
-    1,
-    4,
-    0,
-    "",  # release (b1, rc1, or "" for final or dev)
-    "dev",  # dev or nothing for beta/rc/stable releases
-)
-
 # pep 440 version: no dot before beta/rc, but before .dev
 # 0.1.0rc1
 # 0.1.0a1
 # 0.1.0b1.dev
 # 0.1.0.dev
 
-__version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:])
+__version__ = 'plt.3948.0'
 
 # Singleton flag to only log the major/minor mismatch warning once per mismatch combo.
 _version_mismatch_warning_logged = {}
