@@ -1,6 +1,6 @@
 @import "../components/bootstrap/less/variables.less";
 
-@logo-height: 28px;
+@logo-height: 24px;
 
 #jupyterhub-logo {
   @media (max-width: @grid-float-breakpoint) {
@@ -9,7 +9,6 @@
   }
   .jpy-logo {
     height: @logo-height;
-    margin-top: (@navbar-height - @logo-height) / 2;
   }
 }
 
@@ -24,6 +23,257 @@
         padding: 10px 15px;
       }
     }
+  }
+}
+
+.navbar-default {
+  background-color: #222;
+  border: none;
+  border-radius: unset;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  position: relative;
+}
+
+.sidebar-custom-label {
+  cursor: pointer;
+  padding: 10px 20px;
+  background-color: transparent;
+  transition: background-color 0.8s;
+  margin: 0 1.6rem 0 0;
+  width: 54px;
+  z-index: 2;
+}
+
+.checkbox-sidebar {
+  display: none;
+}
+
+.sidebar-custom-label:hover {
+  background-color: #303030;
+}
+
+.sidebar-open, .sidebar-close {
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  font-weight: 300;
+}
+
+.sidebar-close {
+  display: none;
+}
+
+.sidebar-custom-label:hover .sidebar-open, .sidebar-custom-label:hover .sidebar-close {
+  color: #f15a29;
+}
+
+.checkbox-sidebar:checked + .sidebar-custom-label .sidebar-open {
+  display: none;
+}
+
+.checkbox-sidebar:checked + .sidebar-custom-label .sidebar-close {
+  display: block;
+}
+
+.sidebar-menu-container {
+  position: fixed;
+  width: 240px;
+  top: 40px;
+  left: -240px;
+  z-index: 2;
+  overflow-x: hidden;
+  height: calc(~"100vh - 40px");
+  transition: 0.3s;
+  background-color: #fff;
+  box-shadow: 0 0 30px -8px rgba(0, 0, 0, 0.17);
+  padding: 15px 20px;
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.checkbox-sidebar:checked ~ .sidebar-menu-container {
+  left: 0px;
+}
+
+.sidebar-menu-heading {
+  color: #ff6634;
+  font-weight: bold;
+  margin: 5px 0 0.8rem 0;
+  padding-top: 15px;
+  border-top: 1px solid rgba(0,0,0,.1);
+}
+
+.sidebar-menu-heading:first-child {
+  margin: 0px 0px 0.8rem 0px;
+  padding-top: 0px;
+  border: none;
+}
+
+.sidebar-menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-menu-list-link {
+  color: #222;
+  padding-bottom: .8rem;
+  text-decoration: none !important;
+  transition: 0.3s;
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-menu-list-link:hover {
+  color: #f15a29;
+}
+
+.sidebar-menu-list-icon {
+  width: 24px;
+  margin-right: 0.4rem;
+}
+
+.dropdown-overlay {
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  top: 0;
+  right: 0;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+.checkbox-sidebar:checked ~ .sidebar-overlay {
+  display: block;
+}
+
+.navbar-header {
+  margin-right: auto;
+}
+
+.navbar-right {
+  position: relative;
+
+  .login-checkbox {
+    display: none;
+  }
+  
+  .login-checkbox-label {
+    cursor: pointer;
+    padding: 10px 20px;
+    background-color: transparent;
+    transition: background-color 0.8s;
+    margin: 0;
+    z-index: 99;
+  }
+  
+  .login-checkbox-label:hover {
+    background-color: #303030;
+  }
+  
+  .login_user {
+    color: #fff;
+    background-color: #222;
+    font-size: 16px;
+    border-radius: 50%;
+  }
+  
+  .login-checkbox-label:hover > .login_user {
+    color: #f15a29;
+  }
+  
+  .dropdown-container {
+    box-shadow: 0px 2px 5px 2px rgba(0,0,0,0.14);
+    border: 1px solid #efefef;
+    border-radius: .25rem;
+    background-color: #fff;
+    background-clip: padding-box;
+    color: #212529;
+    position: absolute;
+    top: 105%;
+    right: 7%;
+    opacity: 0;
+    visibility: hidden;
+    min-width: 10rem;
+    cursor: default;
+    z-index: -1;
+  }
+  
+  .login-checkbox:checked ~ .dropdown-container {
+    opacity: 1;
+    visibility: visible;
+    z-index: 2;
+  }
+  
+  .user-info-container {
+    display: flex;
+    border-bottom: 1px solid #efefef;
+    padding: 10px;
+    align-items: center;
+  }
+  
+  .user-info, .dropdown-container {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .profile-image {
+    height: 60px;
+    width: 60px;
+    margin-right: 1.6rem;
+    border-radius: 50%;
+  }
+  
+  .user-info-name {
+    font-weight: bold;
+    font-size: 16px;
+    line-height: 20px;
+    white-space: nowrap
+  }
+  
+  .user-info-email {
+    font-size: 14px;
+    line-height: 20px;
+    white-space: nowrap
+  }
+  
+  .dropdown-links {
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    color: #222;
+    padding: 10px;
+    font-size: 14px;
+    line-height: 20px;
+    border: none;
+    border-bottom: 1px solid #efefef;
+    margin: 0;
+  }
+  
+  .dropdown-links:hover {
+    color: #f15a29;
+    background-color: inherit;
+    border-color: inherit;
+  }
+  
+  .dropdown-links-icon {
+    width: 24px;
+    margin-right: .4rem;
+  }
+
+  .login-overlay {
+    display: none;
+  }
+  
+  .login-checkbox:checked ~ .login-overlay {
+    display: block;
   }
 }
 

@@ -21,6 +21,7 @@ from jinja2 import TemplateNotFound
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import gen
 from tornado import web
+from tornado import httpclient
 from tornado.httputil import HTTPHeaders
 from tornado.httputil import url_concat
 from tornado.ioloop import IOLoop
@@ -47,6 +48,8 @@ from ..user import User
 from ..utils import get_accepted_mimetype
 from ..utils import maybe_future
 from ..utils import url_path_join
+
+import nest_asyncio
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)
@@ -513,11 +516,7 @@ class BaseHandler(RequestHandler):
         kwargs.update(self.settings.get('cookie_options', {}))
         kwargs.update(overrides)
 
-        if encrypted:
-            set_cookie = self.set_secure_cookie
-        else:
-            set_cookie = self.set_cookie
-
+        set_cookie = self.set_secure_cookie if encrypted else self.set_cookie
         self.log.debug("Setting cookie %s: %s", key, kwargs)
         set_cookie(key, value, **kwargs)
 
@@ -637,11 +636,7 @@ class BaseHandler(RequestHandler):
             )
 
         # this is where we know if next_url is coming from ?next= param or we are using a default url
-        if next_url:
-            next_url_from_param = True
-        else:
-            next_url_from_param = False
-
+        next_url_from_param = bool(next_url)
         if not next_url:
             # custom default URL, usually passed because user landed on that page but was not logged in
             if default:
@@ -1176,10 +1171,7 @@ class BaseHandler(RequestHandler):
 
         If sync is False, we return a Template that is compiled with async support
         """
-        if sync:
-            key = 'jinja2_env_sync'
-        else:
-            key = 'jinja2_env'
+        key = 'jinja2_env_sync' if sync else 'jinja2_env'
         return self.settings[key].get_template(name)
 
     def render_template(self, name, sync=False, **ns):
@@ -1199,6 +1191,34 @@ class BaseHandler(RequestHandler):
             return template.render_async(**template_ns)
 
     @property
+    async def get_user_data(self):
+        """Use torando to request Quartic's API to get user data."""
+        http_client = httpclient.AsyncHTTPClient()
+        template_vars = self.settings.get('template_vars', {})
+        site_url = template_vars["site_url"] if(template_vars and "site_url" in template_vars) else 'http://localhost:8000'
+        cookie = {
+            "Cookie" : self.request.headers['Cookie']
+        }
+        try:
+            user_detail_response = await http_client.fetch(site_url + '/user_detail', headers=cookie)
+            features_response = await http_client.fetch(site_url + '/accounts/users/features/', headers=cookie)
+
+            return {
+                "user_data": {
+                    **json.loads(user_detail_response.body.decode('utf-8'))
+                    },
+                "features": {
+                    **json.loads(features_response.body.decode('utf-8'))
+                    },
+                "site_url": site_url
+            }
+        except Exception as e:
+            print("Error: %s" % e)
+            return {
+                "site_url": site_url
+            }
+
+    @property
     def template_namespace(self):
         user = self.current_user
         ns = dict(
@@ -1214,6 +1234,12 @@ class BaseHandler(RequestHandler):
         )
         if self.settings['template_vars']:
             ns.update(self.settings['template_vars'])
+        
+        nest_asyncio.apply()
+        loop = asyncio.get_event_loop()
+        result = loop.run_until_complete(self.get_user_data)
+        ns.update(result)
+
         return ns
 
     def get_accessible_services(self, user):

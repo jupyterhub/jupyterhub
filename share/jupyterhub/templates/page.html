@@ -32,6 +32,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     {% block stylesheet %}
+    <link rel="stylesheet" href="{{static_url("icon-fonts/css/all.css") }}" type="text/css" />
     <link rel="stylesheet" href="{{ static_url("css/style.min.css") }}" type="text/css"/>
     {% endblock %}
     {% block favicon %}
@@ -99,66 +100,88 @@
 
 {% block nav_bar %}
   <nav class="navbar navbar-default">
-    <div class="container-fluid">
+    {% if user %}
+      <input id="checkbox-sidebar" class="checkbox-sidebar" name="checkbox-sidebar" type="checkbox">
+      <label for="checkbox-sidebar" class="sidebar-custom-label" id="sidebar-label">
+        <i class="fal fa-bars sidebar-open"></i>
+        <i class="fal fa-times sidebar-close"></i>
+      </label>
+      <div class="sidebar-menu-container">
+      {% for parentFeature in FEATURES_DATA_MAP %}
+        {% if parentFeature["value"] in features and features[parentFeature["value"]] %}
+          <span class="sidebar-menu-heading">{{ parentFeature["name"] }}</span>
+          <ul class="sidebar-menu-list">
+            {% for subFeature in parentFeature["subFeatures"] %}
+              {% if (subFeature["feature"] == "POV") %}
+                {% if (subFeature["value"] in features and features[subFeature["value"]]) or (OTHER_FEATURES["META_TRAINER"] in features and features[OTHER_FEATURES["META_TRAINER"]]) %}
+                  <li class="sidebar-menu-list-item">
+                    <a class="sidebar-menu-list-link" href="{{ site_url + subFeature['url'] }}">
+                      <i class="{{ subFeature['icon'] + ' sidebar-menu-list-icon'}}"></i>
+                      {{ subFeature["name"] }}
+                    </a>
+                  </li>
+                {% endif %}
+              {% elif subFeature["value"] in features and features[subFeature["value"]] %}
+                <li class="sidebar-menu-list-item">
+                  <a class="sidebar-menu-list-link" href="{{ site_url + subFeature['url'] }}">
+                    <i class="{{ subFeature['icon'] + ' sidebar-menu-list-icon'}}"></i>
+                    {{ subFeature["name"] }}
+                  </a>
+                </li>
+              {% endif %}
+            {% endfor %}
+          </ul>
+        {% endif %}
+      {% endfor %}
+      </div>
+      <div class="dropdown-overlay sidebar-overlay" id="sidebar-overlay"></div>
+    {% endif %}
       <div class="navbar-header">
         {% block logo %}
         <span id="jupyterhub-logo" class="pull-left">
             <a href="{{logo_url or base_url}}"><img src='{{base_url}}logo' alt='JupyterHub' class='jpy-logo' title='Home'/></a>
         </span>
         {% endblock %}
-        {% if user %}
-        <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#thenavbar" aria-expanded="false">
-          <span class="sr-only">Toggle navigation</span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-        </button>
-        {% endif %}
       </div>
 
       <div class="collapse navbar-collapse" id="thenavbar">
-        {% if user %}
-        <ul class="nav navbar-nav">
-          {% block nav_bar_left_items %}
-            <li><a href="{{base_url}}home">Home</a></li>
-            <li><a href="{{base_url}}token">Token</a></li>
-            {% if user.admin %}
-            <li><a href="{{base_url}}admin">Admin</a></li>
-            {% endif %}
-            {% if services %}
-            <li class="dropdown">
-              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
-              <ul class="dropdown-menu">
-              {% for service in services %}
-                <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
-              {% endfor %}
-              </ul>
-            </li>
-            {% endif %}
-          {% endblock %}
-        </ul>
-        {% endif %}
-        <ul class="nav navbar-nav navbar-right">
+        <div class="nav navbar-nav navbar-right">
           {% block nav_bar_right_items %}
-            <li>
-              {% block login_widget %}
-                <span id="login_widget">
-                  {% if user %}
-		            <p class="navbar-text">{{user.name}}</p>
-                    <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
-                  {% else %}
-                    <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
-                  {% endif %}
-                </span>
-              {% endblock %}
-            </li>
+            {% if user %}
+            <input id="login-checkbox" class="login-checkbox" name="login-checkbox" type="checkbox">
+            <label for="login-checkbox" class="login-checkbox-label" id="login-checkbox-label">
+              <i class="fas fa-user-circle login_user"></i>
+            </label>
+            <div class="dropdown-container" id="user-info-dropdown">
+              <div class="user-info-container">
+                <img alt="profile" data-testid="user-pic" src="{{static_url("images/profile.png") }}" class="profile-image">
+                <div class="user-info">
+                  <span data-testid="user-name" class="user-info-name">{{user_data.name}}</span>
+                  <span data-testid="user-email" class="user-info-email">{{user_data.email}}</span>
+                </div>
+              </div>
+              <a data-testid="account-link" href="{{site_url+'/administration/profile/'}}" class="dropdown-links">
+                <i class="far fa-user dropdown-links-icon"></i>View Account
+              </a>
+              {% if (OTHER_FEATURES["SETTINGS"] in features and features[OTHER_FEATURES["SETTINGS"]]) or (OTHER_FEATURES["SOFTWARE_UPDATES"] in features and features[OTHER_FEATURES["SOFTWARE_UPDATES"]]) %}
+              <a href="{{site_url+'/administration/settings'}}" data-testid="sign-out-link" class="dropdown-links">
+                <i class="far fa-cog dropdown-links-icon"></i>Settings
+              </a>
+              {% endif %}
+              <a class="dropdown-links" id="logout" href="{{logout_url}}">
+                <i class="far fa-unlock dropdown-links-icon"></i>Sign Out
+              </a>
+            </div>
+            <div class="dropdown-overlay login-overlay" id="login-dropdown-overlay"></div>
+            {% else %}
+            <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
+            {% endif %}
           {% endblock %}
-        </ul>
+        </div>
       </div>
 
       {% block header %}
       {% endblock %}
-    </div>
   </nav>
 {% endblock %}
 
@@ -188,5 +211,21 @@
 {% endblock %}
 
 </body>
+<script type="text/javascript">
+    var dropdown_radio_btn = document.getElementById('login-checkbox')
+    var sidebar_btn = document.getElementById('checkbox-sidebar')
+    var sidebar_overlay = document.getElementById('sidebar-overlay')
+    var dropdown_overlay = document.getElementById('login-dropdown-overlay')
+
+    dropdown_overlay.addEventListener('click', function(event){
+        event.stopPropagation()
+        dropdown_radio_btn.checked = !dropdown_radio_btn.checked
+    })
+
+    sidebar_overlay.addEventListener('click', function(event){
+        event.stopPropagation()
+        sidebar_btn.checked = !sidebar_btn.checked
+    })
+</script>
 
 </html>
