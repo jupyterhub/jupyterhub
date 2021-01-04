@@ -1,4 +1,5 @@
 """Test scopes for API handlers"""
+import json
 from unittest import mock
 
 import pytest
@@ -214,3 +215,100 @@ async def test_expand_groups(app, user_name, in_group, status_code):
         app, 'users', user_name, headers=auth_header(app.db, user_name)
     )
     assert r.status_code == status_code
+
+
+async def test_user_filter(app):
+    user_name = 'rollerblade'
+    test_role = {
+        'name': 'test',
+        'description': '',
+        'users': [user_name],
+        'scopes': [
+            'read:users!user=lindsay',
+            'read:users!user=gob',
+            'read:users!user=oscar',
+        ],
+    }
+    roles.add_role(app.db, test_role)
+    name_in_scope = {'lindsay', 'oscar', 'gob'}
+    outside_scope = {'maeby', 'marta'}
+    group_name = 'bluth'
+    group = orm.Group.find(app.db, name=group_name)
+    if not group:
+        group = orm.Group(name=group_name)
+        app.db.add(group)
+    for name in name_in_scope | outside_scope:
+        user = add_user(app.db, name=name)
+        if name not in group.users:
+            group.users.append(user)
+    kind = 'users'
+    user = add_user(app.db, name=user_name)
+    roles.update_roles(app.db, user, kind, roles=['test'])
+    roles.remove_obj(app.db, user_name, kind, 'user')
+    app.db.commit()
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    data = json.loads(r.content)
+    result_names = {user['name'] for user in data}
+    assert result_names == name_in_scope
+
+
+async def test_user_filter_with_group(app):  # todo: Move role setup to setup method
+    user_name = 'sally'
+    test_role = {
+        'name': 'test',
+        'description': '',
+        'users': [user_name],
+        'scopes': ['read:users!group=sitwell'],
+    }
+    roles.add_role(app.db, test_role)
+    user = add_user(app.db, name=user_name)
+    name_set = {'sally', 'stan'}
+    group_name = 'sitwell'
+    group = orm.Group.find(app.db, name=group_name)
+    if not group:
+        group = orm.Group(name=group_name)
+        app.db.add(group)
+    for name in name_set:
+        user = add_user(app.db, name=name)
+        if name not in group.users:
+            group.users.append(user)
+    kind = 'users'
+    roles.update_roles(app.db, user, kind, roles=['test'])
+    roles.remove_obj(app.db, user_name, kind, 'user')
+    app.db.commit()
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    data = json.loads(r.content)
+    result_names = {user['name'] for user in data}
+    assert result_names == name_set
+
+
+async def test_group_scope_filter(app):
+    user_name = 'rollerblade'
+    test_role = {
+        'name': 'test',
+        'description': '',
+        'users': [user_name],
+        'scopes': [
+            'read:groups!group=sitwell',
+            'read:groups!group=bluths',
+        ],
+    }
+    roles.add_role(app.db, test_role)
+    user = add_user(app.db, name=user_name)
+    group_set = {'sitwell', 'bluths', 'austero'}
+    for group_name in group_set:
+        group = orm.Group.find(app.db, name=group_name)
+        if not group:
+            group = orm.Group(name=group_name)
+            app.db.add(group)
+    kind = 'users'
+    roles.update_roles(app.db, user, kind, roles=['test'])
+    roles.remove_obj(app.db, user_name, kind, 'user')
+    app.db.commit()
+    r = await api_request(app, 'groups', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    data = json.loads(r.content)
+    result_names = {user['name'] for user in data}
+    assert result_names == {'sitwell', 'bluths'}

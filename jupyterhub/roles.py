@@ -135,7 +135,7 @@ def add_role(db, role_dict):
     db.commit()
 
 
-def get_orm_class(kind):
+def get_orm_class(kind):  # Todo: merge and move to orm.py
     if kind == 'users':
         Class = orm.User
     elif kind == 'services':

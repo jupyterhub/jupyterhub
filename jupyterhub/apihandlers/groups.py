@@ -40,7 +40,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
         """List groups"""
         groups = self.db.query(orm.Group)
         if scope_filter is not None:
-            groups.filter(orm.Group.name._in(scope_filter))
+            groups = groups.filter(orm.Group.name.in_(scope_filter))
         data = [self.group_model(g) for g in groups]
         self.write(json.dumps(data))
 

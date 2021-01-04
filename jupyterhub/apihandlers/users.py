@@ -93,7 +93,7 @@ class UserListAPIHandler(APIHandler):
             # no filter, return all users
             query = self.db.query(orm.User)
         if scope_filter is not None:
-            query.filter(orm.User.name.in_(scope_filter))
+            query = query.filter(orm.User.name.in_(scope_filter))
 
         data = [
             self.user_model(u, include_servers=True, include_state=True)
