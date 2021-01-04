@@ -35,10 +35,12 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @needs_scope('read:groups')  # Todo: Apply filter on results
-    def get(self):
+    @needs_scope('read:groups')
+    def get(self, scope_filter=None):
         """List groups"""
         groups = self.db.query(orm.Group)
+        if scope_filter is not None:
+            groups.filter(orm.Group.name._in(scope_filter))
         data = [self.group_model(g) for g in groups]
         self.write(json.dumps(data))
 

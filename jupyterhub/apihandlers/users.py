@@ -38,8 +38,6 @@ class SelfAPIHandler(APIHandler):
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
-        # Later: filter based on scopes.
-        # Perhaps user
         self.write(json.dumps(self.user_model(user)))
 
 
@@ -53,7 +51,7 @@ class UserListAPIHandler(APIHandler):
         return any(spawner.ready for spawner in user.spawners.values())
 
     @needs_scope('read:users')
-    def get(self):
+    def get(self, scope_filter=None):
         state_filter = self.get_argument("state", None)
 
         # post_filter
@@ -94,6 +92,8 @@ class UserListAPIHandler(APIHandler):
         else:
             # no filter, return all users
             query = self.db.query(orm.User)
+        if scope_filter is not None:
+            query.filter(orm.User.name.in_(scope_filter))
 
         data = [
             self.user_model(u, include_servers=True, include_state=True)

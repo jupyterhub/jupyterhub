@@ -320,9 +320,7 @@ def get_user_scopes(name):
         'users:servers',
         'users:tokens',
     ]
-    scope_list.extend(
-        ['read:' + scope for scope in scope_list]
-    )  # Todo: Put this in closure
+    scope_list.extend(['read:' + scope for scope in scope_list])
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
@@ -348,6 +346,29 @@ def check_user_in_expanded_scope(handler, user_name, scope_group_names):
     return bool(set(scope_group_names) & group_names)
 
 
+def _flatten_groups(groups):
+    user_set = {}
+    for group in groups:
+        user_set |= group.users
+    return user_set
+
+
+def _get_scope_filter(req_scope, sub_scope):
+    # Rough draft
+    scope_translator = {
+        'read:users': 'users',
+        'users': 'users',
+        'read:groups': 'groups',
+    }
+    if req_scope not in scope_translator:
+        raise AttributeError("Scope not found")
+    kind = scope_translator[req_scope]
+    scope_filter = None  # todo: orm.Class(kind).find
+    if 'group' in sub_scope and kind == 'user':
+        scope_filter += _flatten_groups(sub_scope['group'])
+    return set(scope_filter)
+
+
 def check_scope(api_handler, req_scope, scopes, **kwargs):
     # Parse user name and server name together
     if 'user' in kwargs and 'server' in kwargs:
@@ -358,17 +379,23 @@ def check_scope(api_handler, req_scope, scopes, **kwargs):
         return True
     # Apply filters
     sub_scope = scopes[req_scope]
-    for (
-        filter_,
-        filter_value,
-    ) in kwargs.items():  # Interface change: Now can have multiple filters
-        if filter_ in sub_scope and filter_value in sub_scope[filter_]:
-            return True
-        if needs_scope_expansion(filter_, filter_value, sub_scope):
-            group_names = sub_scope['group']
-            if check_user_in_expanded_scope(api_handler, filter_value, group_names):
+    if 'scope_filter' in kwargs:
+        scope_filter = _get_scope_filter(req_scope, sub_scope)
+        kwargs['scope_filter'] = scope_filter
+        return True
+    else:
+        # Interface change: Now can have multiple filters
+        for (filter_, filter_value) in kwargs.items():
+            if filter_ in sub_scope and filter_value in sub_scope[filter_]:
                 return True
-    return False
+            if needs_scope_expansion(filter_, filter_value, sub_scope):
+                group_names = sub_scope['group']
+                if check_user_in_expanded_scope(api_handler, filter_value, group_names):
+                    return True
+        return False
+
+
+# Todo: make some methods private
 
 
 def parse_scopes(scope_list):

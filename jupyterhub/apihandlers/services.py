@@ -31,8 +31,10 @@ def service_model(service):
 
 class ServiceListAPIHandler(APIHandler):
     @needs_scope('read:services')
-    def get(self):
+    def get(self, scope_filter=None):
         data = {name: service_model(service) for name, service in self.services.items()}
+        if scope_filter is not None:
+            data = dict(filter(lambda tup: tup[0] in scope_filter))
         self.write(json.dumps(data))
 
 
