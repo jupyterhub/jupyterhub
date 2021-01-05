@@ -8,8 +8,7 @@ from tornado import web
 from tornado.ioloop import IOLoop
 
 from .._version import __version__
-from ..utils import admin_only
-from ..utils import needs_scope
+from ..scopes import needs_scope
 from .base import APIHandler
 
 

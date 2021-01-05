@@ -5,8 +5,7 @@ import json
 
 from tornado import web
 
-from ..utils import admin_only
-from ..utils import needs_scope
+from ..scopes import needs_scope
 from .base import APIHandler
 
 

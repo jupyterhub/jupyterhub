@@ -3,17 +3,16 @@ import json
 from unittest import mock
 
 import pytest
-import tornado
 from pytest import mark
 from tornado import web
 from tornado.httputil import HTTPServerRequest
 
 from .. import orm
 from .. import roles
-from ..utils import check_scope
-from ..utils import needs_scope
-from ..utils import parse_scopes
-from ..utils import Scope
+from ..scopes import _check_scope
+from ..scopes import _parse_scopes
+from ..scopes import needs_scope
+from ..scopes import Scope
 from .utils import add_user
 from .utils import api_request
 from .utils import auth_header
@@ -27,7 +26,7 @@ def test_scope_constructor():
         'read:users!user={}'.format(user1),
         'read:users!user={}'.format(user2),
     ]
-    parsed_scopes = parse_scopes(scope_list)
+    parsed_scopes = _parse_scopes(scope_list)
 
     assert 'read:users' in parsed_scopes
     assert parsed_scopes['users']
@@ -36,25 +35,25 @@ def test_scope_constructor():
 
 def test_scope_precendence():
     scope_list = ['read:users!user=maeby', 'read:users']
-    parsed_scopes = parse_scopes(scope_list)
+    parsed_scopes = _parse_scopes(scope_list)
     assert parsed_scopes['read:users'] == Scope.ALL
 
 
 def test_scope_check_present():
     handler = None
     scope_list = ['read:users']
-    parsed_scopes = parse_scopes(scope_list)
-    assert check_scope(handler, 'read:users', parsed_scopes)
-    assert check_scope(handler, 'read:users', parsed_scopes, user='maeby')
+    parsed_scopes = _parse_scopes(scope_list)
+    assert _check_scope(handler, 'read:users', parsed_scopes)
+    assert _check_scope(handler, 'read:users', parsed_scopes, user='maeby')
 
 
 def test_scope_check_not_present():
     handler = None
     scope_list = ['read:users!user=maeby']
-    parsed_scopes = parse_scopes(scope_list)
-    assert not check_scope(handler, 'read:users', parsed_scopes)
-    assert not check_scope(handler, 'read:users', parsed_scopes, user='gob')
-    assert not check_scope(
+    parsed_scopes = _parse_scopes(scope_list)
+    assert not _check_scope(handler, 'read:users', parsed_scopes)
+    assert not _check_scope(handler, 'read:users', parsed_scopes, user='gob')
+    assert not _check_scope(
         handler, 'read:users', parsed_scopes, user='gob', server='server'
     )
 
@@ -62,17 +61,17 @@ def test_scope_check_not_present():
 def test_scope_filters():
     handler = None
     scope_list = ['read:users', 'read:users!group=bluths', 'read:users!user=maeby']
-    parsed_scopes = parse_scopes(scope_list)
-    assert check_scope(handler, 'read:users', parsed_scopes, group='bluth')
-    assert check_scope(handler, 'read:users', parsed_scopes, user='maeby')
+    parsed_scopes = _parse_scopes(scope_list)
+    assert _check_scope(handler, 'read:users', parsed_scopes, group='bluth')
+    assert _check_scope(handler, 'read:users', parsed_scopes, user='maeby')
 
 
 def test_scope_multiple_filters():
     handler = None
-    assert check_scope(
+    assert _check_scope(
         handler,
         'read:users',
-        parse_scopes(['read:users!user=george_michael']),
+        _parse_scopes(['read:users!user=george_michael']),
         user='george_michael',
         group='bluths',
     )
@@ -81,8 +80,8 @@ def test_scope_multiple_filters():
 def test_scope_parse_server_name():
     handler = None
     scope_list = ['users:servers!server=maeby/server1', 'read:users!user=maeby']
-    parsed_scopes = parse_scopes(scope_list)
-    assert check_scope(
+    parsed_scopes = _parse_scopes(scope_list)
+    assert _check_scope(
         handler, 'users:servers', parsed_scopes, user='maeby', server='server1'
     )
 

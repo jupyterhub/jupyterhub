@@ -14,7 +14,6 @@ from pytest import mark
 
 import jupyterhub
 from .. import orm
-from .. import roles
 from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
@@ -167,21 +166,27 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 
 @mark.user
 @mark.role
-async def test_get_users(app):
+async def test_get_users(app):  # todo: Sync with scope tests
     db = app.db
     r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
+    user_model = {
+        'name': 'user',
+        'admin': False,
+        'roles': ['user'],
+        'last_activity': None,
+    }
     assert users == [
         fill_user({'name': 'admin', 'admin': True, 'roles': ['admin']}),
-        fill_user(
-            {'name': 'user', 'admin': False, 'roles': ['user'], 'last_activity': None}
-        ),
+        fill_user(user_model),
     ]
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
-    assert r.status_code == 403
+    assert r.status_code == 200
+    r_user_model = json.loads(r.text)[0]
+    assert r_user_model['name'] == user_model['name']
 
 
 @mark.user

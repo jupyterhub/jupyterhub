@@ -14,13 +14,12 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
-from .. import roles
 from ..roles import update_roles
+from ..scopes import needs_scope
 from ..user import User
 from ..utils import isoformat
 from ..utils import iterate_until
 from ..utils import maybe_future
-from ..utils import needs_scope
 from ..utils import url_path_join
 from .base import APIHandler
 
