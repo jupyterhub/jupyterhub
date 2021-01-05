@@ -22,7 +22,6 @@ def get_user_scopes(name):
     users:activity
     users:servers
     users:tokens
-
     """
     scope_list = [
         'users',
@@ -51,29 +50,16 @@ def _needs_scope_expansion(filter_, filter_value, sub_scope):
 
 
 def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
+    """Check if username is present in set of allowed groups"""
     user = handler.find_user(user_name)
     if user is None:
         raise web.HTTPError(404, 'No such user found')
-    group_names = {group.name for group in user.groups}
+    group_names = {group.name for group in user.groups}  # Todo: Replace with SQL query
     return bool(set(scope_group_names) & group_names)
 
 
-def get_orm_class(kind):
-    class_dict = {
-        'users': orm.User,
-        'services': orm.Service,
-        'tokens': orm.APIToken,
-        'groups': orm.Group,
-    }
-    if kind not in class_dict:
-        raise ValueError(
-            "Kind must be one of %s, not %s" % (", ".join(class_dict), kind)
-        )
-    return class_dict[kind]
-
-
 def _get_scope_filter(db, req_scope, sub_scope):
-    # Rough draft
+    """Produce a filter for `*ListAPIHandlers* so that get method knows which models to return"""
     scope_translator = {
         'read:users': 'users',
         'read:services': 'services',
@@ -82,7 +68,7 @@ def _get_scope_filter(db, req_scope, sub_scope):
     if req_scope not in scope_translator:
         raise AttributeError("Scope not found; scope filter not constructed")
     kind = scope_translator[req_scope]
-    Class = get_orm_class(kind)
+    Class = orm.get_class(kind)
     sub_scope_values = next(iter(sub_scope.values()))
     query = db.query(Class).filter(Class.name.in_(sub_scope_values))
     scope_filter = {entry.name for entry in query.all()}
@@ -94,6 +80,10 @@ def _get_scope_filter(db, req_scope, sub_scope):
 
 
 def _check_scope(api_handler, req_scope, scopes, **kwargs):
+    """Check if scopes satisfy requirements
+    Returns either Scope.ALL for unrestricted access, Scope.NONE for refused access or
+    an iterable with a filter
+    """
     # Parse user name and server name together
     if 'user' in kwargs and 'server' in kwargs:
         kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
@@ -178,10 +168,10 @@ def needs_scope(scope):
                 self.scopes |= get_user_scopes(self.current_user.name)
             parsed_scopes = _parse_scopes(self.scopes)
             scope_filter = _check_scope(self, scope, parsed_scopes, **s_kwargs)
-            # todo: This checks if True or set of resource names. Not very nice yet
+            # todo: This checks if True/False or set of resource names. Can be improved
+            if isinstance(scope_filter, set):
+                kwargs['scope_filter'] = scope_filter
             if scope_filter:
-                if isinstance(scope_filter, set):
-                    kwargs['scope_filter'] = scope_filter
                 return func(self, *args, **kwargs)
             else:
                 # catching attr error occurring for older_requirements test

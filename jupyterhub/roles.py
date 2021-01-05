@@ -135,25 +135,12 @@ def add_role(db, role_dict):
     db.commit()
 
 
-def get_orm_class(kind):  # Todo: merge and move to orm.py
-    if kind == 'users':
-        Class = orm.User
-    elif kind == 'services':
-        Class = orm.Service
-    elif kind == 'tokens':
-        Class = orm.APIToken
-    else:
-        raise ValueError("kind must be users, services or tokens, not %r" % kind)
-
-    return Class
-
-
 def existing_only(func):
     """Decorator for checking if objects and roles exist"""
 
     def check_existence(db, objname, kind, rolename):
 
-        Class = get_orm_class(kind)
+        Class = orm.get_class(kind)
         obj = Class.find(db, objname)
         role = orm.Role.find(db, rolename)
 
@@ -209,7 +196,7 @@ def update_roles(db, obj, kind, roles=None):
     """Updates object's roles if specified,
     assigns default if no roles specified"""
 
-    Class = get_orm_class(kind)
+    Class = orm.get_class(kind)
     user_role = orm.Role.find(db, 'user')
 
     if roles:
@@ -252,11 +239,8 @@ def update_roles(db, obj, kind, roles=None):
 
 
 def mock_roles(app, name, kind):
-
     """Loads and assigns default roles for mocked objects"""
-
-    Class = get_orm_class(kind)
-
+    Class = orm.get_class(kind)
     obj = Class.find(app.db, name=name)
     default_roles = get_default_roles()
     for role in default_roles:

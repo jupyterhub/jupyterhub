@@ -25,6 +25,7 @@ from .utils import async_requests
 from .utils import auth_header
 from .utils import find_user
 
+
 # --------------------
 # Authentication tests
 # --------------------
@@ -166,7 +167,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 
 @mark.user
 @mark.role
-async def test_get_users(app):  # todo: Sync with scope tests
+async def test_get_users(app):
     db = app.db
     r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
@@ -185,7 +186,7 @@ async def test_get_users(app):  # todo: Sync with scope tests
     ]
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
     assert r.status_code == 200
-    r_user_model = json.loads(r.text)[0]
+    r_user_model = r.json()[0]
     assert r_user_model['name'] == user_model['name']
 
 

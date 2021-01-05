@@ -1858,7 +1858,7 @@ class JupyterHub(Application):
 
         # make sure all users, services and tokens have at least one role (update with default)
         for bearer in role_bearers:
-            Class = roles.get_orm_class(bearer)
+            Class = orm.get_class(bearer)
             for obj in db.query(Class):
                 if len(obj.roles) < 1:
                     roles.update_roles(db, obj=obj, kind=bearer)

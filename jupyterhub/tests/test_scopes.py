@@ -217,7 +217,7 @@ async def test_expand_groups(app, user_name, in_group, status_code):
 
 
 async def test_user_filter(app):
-    user_name = 'rollerblade'
+    user_name = 'rita'
     test_role = {
         'name': 'test',
         'description': '',
@@ -247,8 +247,7 @@ async def test_user_filter(app):
     app.db.commit()
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
-    data = json.loads(r.content)
-    result_names = {user['name'] for user in data}
+    result_names = {user['name'] for user in r.json()}
     assert result_names == name_in_scope
 
 
@@ -278,8 +277,7 @@ async def test_user_filter_with_group(app):  # todo: Move role setup to setup me
     app.db.commit()
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
-    data = json.loads(r.content)
-    result_names = {user['name'] for user in data}
+    result_names = {user['name'] for user in r.json()}
     assert result_names == name_set
 
 
@@ -308,6 +306,5 @@ async def test_group_scope_filter(app):
     app.db.commit()
     r = await api_request(app, 'groups', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
-    data = json.loads(r.content)
-    result_names = {user['name'] for user in data}
+    result_names = {user['name'] for user in r.json()}
     assert result_names == {'sitwell', 'bluths'}
