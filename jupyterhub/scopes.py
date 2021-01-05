@@ -58,15 +58,6 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     return bool(set(scope_group_names) & group_names)
 
 
-def _flatten_groups(groups):
-    user_set = set()
-    for group in groups:
-        user_set |= {
-            user.name for user in group.users
-        }  # todo: I think this could be one query, no for loop
-    return user_set
-
-
 def get_orm_class(kind):
     class_dict = {
         'users': orm.User,
@@ -94,11 +85,12 @@ def _get_scope_filter(db, req_scope, sub_scope):
     Class = get_orm_class(kind)
     sub_scope_values = next(iter(sub_scope.values()))
     query = db.query(Class).filter(Class.name.in_(sub_scope_values))
-    scope_filter = [entry.name for entry in query.all()]
+    scope_filter = {entry.name for entry in query.all()}
     if 'group' in sub_scope and kind == 'users':
-        groups = db.query(orm.Group).filter(orm.Group.name.in_(sub_scope['group']))
-        scope_filter += _flatten_groups(groups)
-    return set(scope_filter)
+        groups = orm.Group.name.in_(sub_scope['group'])
+        users_in_groups = db.query(orm.User).join(orm.Group.users).filter(groups)
+        scope_filter |= {user.name for user in users_in_groups}
+    return scope_filter
 
 
 def _check_scope(api_handler, req_scope, scopes, **kwargs):
@@ -186,9 +178,8 @@ def needs_scope(scope):
                 self.scopes |= get_user_scopes(self.current_user.name)
             parsed_scopes = _parse_scopes(self.scopes)
             scope_filter = _check_scope(self, scope, parsed_scopes, **s_kwargs)
-            if (
-                scope_filter
-            ):  # Todo: This checks if True or set of resource names. Not very nice yet
+            # todo: This checks if True or set of resource names. Not very nice yet
+            if scope_filter:
                 if isinstance(scope_filter, set):
                     kwargs['scope_filter'] = scope_filter
                 return func(self, *args, **kwargs)
@@ -200,7 +191,7 @@ def needs_scope(scope):
                 except AttributeError:
                     request_path = 'the requested API'
                 app_log.warning(
-                    "Not authorizing access to {}. Requires scope {}, not derived from scopes {}".format(
+                    "Not authorizing access to {}. Requires scope {}, not derived from scopes [{}]".format(
                         request_path, scope, ", ".join(self.scopes)
                     )
                 )
