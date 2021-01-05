@@ -30,14 +30,6 @@ def test_orm_roles(db):
     db.add(group_role)
     db.commit()
 
-    group_role = orm.Role(name='group', scopes=['read:users'])
-    db.add(group_role)
-    db.commit()
-
-    group_role = orm.Role(name='group', scopes=['read:users'])
-    db.add(group_role)
-    db.commit()
-
     user = orm.User(name='falafel')
     db.add(user)
     db.commit()
@@ -367,45 +359,20 @@ async def test_load_roles_groups(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
-    hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
-    await hub.init_users()
     await hub.init_groups()
     await hub.init_roles()
 
     assist_role = orm.Role.find(db, name='assistant')
     head_role = orm.Role.find(db, name='head')
-    user_role = orm.Role.find(db, name='user')
 
     group1 = orm.Group.find(db, name='group1')
     group2 = orm.Group.find(db, name='group2')
     group3 = orm.Group.find(db, name='group3')
 
-    gandalf = orm.User.find(db, name='gandalf')
-    bilbo = orm.User.find(db, name='bilbo')
-    gargamel = orm.User.find(db, name='gargamel')
-    cyclops = orm.User.find(db, name='cyclops')
-
     # test group roles
     assert group1.roles == []
     assert group2 in assist_role.groups
     assert group3 in head_role.groups
-
-    # test group members' roles
-    assert assist_role in bilbo.roles
-    assert assist_role in gargamel.roles
-    assert head_role in cyclops.roles
-
-    # check the default user_role assignment
-    # FIXME - should users with group roles still have default?
-    assert user_role in gandalf.roles
-    assert user_role not in bilbo.roles
-    assert user_role not in gargamel.roles
-    assert user_role not in cyclops.roles
-
-
-# FIXME
-# @mark.role
-# async def test_group_roles_delete_cascade(tmpdir, request):
 
 
 @mark.role
@@ -465,16 +432,37 @@ async def test_load_roles_tokens(tmpdir, request):
 @mark.parametrize(
     "headers, role_list, status",
     [
+        # no role requested - gets default 'user' role
         ({}, None, 200),
-        ({}, ['reader'], 200),
+        # role scopes within the user's default 'user' role
+        ({}, ['self-reader'], 200),
+        # role scopes outside of the user's role but within the group's role scopes of which the user is a member
+        ({}, ['users-reader'], 200),
+        # non-existing role request
         ({}, ['non-existing'], 404),
-        ({}, ['user_creator'], 403),
+        # role scopes outside of both user's role and group's role scopes
+        ({}, ['users-creator'], 403),
     ],
 )
 async def test_get_new_token_via_api(app, headers, role_list, status):
     user = add_user(app.db, app, name='user')
-    roles.add_role(app.db, {'name': 'reader', 'scopes': ['read:all']})
-    roles.add_role(app.db, {'name': 'user_creator', 'scopes': ['admin:users']})
+
+    roles.add_role(app.db, {'name': 'self-reader', 'scopes': ['read:all']})
+    roles.add_role(app.db, {'name': 'users-reader', 'scopes': ['read:users']})
+    roles.add_role(app.db, {'name': 'users-creator', 'scopes': ['admin:users']})
+    # add role for a group
+    roles.add_role(app.db, {'name': 'group_role', 'scopes': ['read:users']})
+
+    # create a group and add the user and group_role
+    group = orm.Group.find(app.db, 'test_group')
+    if not group:
+        group = orm.Group(name='test_group')
+        app.db.add(group)
+        group.users.append(user)
+        group_role = orm.Role.find(app.db, 'group_role')
+        group.roles.append(group_role)
+        app.db.commit()
+
     if role_list:
         body = json.dumps({'roles': role_list})
     else:
@@ -493,7 +481,7 @@ async def test_get_new_token_via_api(app, headers, role_list, status):
     if not role_list:
         assert reply['roles'] == ['user']
     else:
-        assert reply['roles'] == ['reader']
+        assert reply['roles'] == role_list
     token_id = reply['id']
 
     # delete the token

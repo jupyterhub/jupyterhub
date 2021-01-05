@@ -41,6 +41,7 @@ securityDefinitions:
       read:groups: Read-only access to groups
       admin:groups: Grants access to create/delete groups
       read:services: Read-only access to services
+      read:hub: Read-only access to detailed information about JupyterHub
       proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
       shutdown: Grants access to shutdown the Hub
 security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope all) or have both (either can be used)?
@@ -71,6 +72,9 @@ paths:
   /info:
     get:
       summary: Get detailed info about JupyterHub
+      security:
+        - oauth2:
+          - read:hub
       description: |
         Detailed JupyterHub information, including Python version,
         JupyterHub's version and executable path,
@@ -981,6 +985,11 @@ definitions:
       users:
         type: array
         description: The names of users who are members of this group
+        items:
+          type: string
+      roles:
+        type: array
+        description: The names of roles this group has
         items:
           type: string
   Service:

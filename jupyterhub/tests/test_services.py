@@ -90,6 +90,7 @@ async def test_external_service(app):
         await maybe_future(app.init_services())
         await app.init_api_tokens()
         await app.proxy.add_all_services(app._service_map)
+        await app.init_roles()
 
         service = app._service_map[name]
         url = public_url(app, service) + '/api/users'

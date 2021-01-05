@@ -3,6 +3,8 @@
 # Distributed under the terms of the Modified BSD License.
 from itertools import chain
 
+from sqlalchemy import func
+
 from . import orm
 
 
@@ -36,7 +38,7 @@ def get_default_roles():
         {
             'name': 'server',
             'description': 'Post activity only',
-            'scopes': ['users:activity!user=username'],
+            'scopes': ['users:activity'],
         },
     ]
     return default_roles
@@ -157,16 +159,6 @@ def get_orm_class(kind):
     return Class
 
 
-def get_rolenames(role_list):
-
-    """Return a list of rolenames from a list of roles"""
-
-    rolenames = []
-    for role in role_list:
-        rolenames.append(role.name)
-    return rolenames
-
-
 def existing_only(func):
 
     """Decorator for checking if objects and roles exist"""
@@ -228,6 +220,32 @@ def switch_default_role(db, obj, kind, admin):
         add_and_remove(db, obj, kind, admin_role, user_role)
 
 
+def check_token_roles(db, token, role):
+
+    """Returns a set of token scopes from its roles and a set of
+    token's owner scopes from their roles and their group roles"""
+
+    token_scopes = get_subscopes(role)
+    owner = None
+    roles_to_check = []
+
+    # find the owner and their roles
+    if token.user_id:
+        owner = db.query(orm.User).get(token.user_id)
+        roles_to_check.extend(owner.roles)
+        # if user is a member of any groups, include the groups' roles as well
+        for group in owner.groups:
+            roles_to_check.extend(group.roles)
+
+    elif token.service_id:
+        owner = db.query(orm.Service).get(token.service_id)
+        roles_to_check = owner.roles
+
+    owner_scopes = get_subscopes(*roles_to_check)
+
+    return token_scopes, owner_scopes
+
+
 def update_roles(db, obj, kind, roles=None):
 
     """Updates object's roles if specified,
@@ -235,30 +253,21 @@ def update_roles(db, obj, kind, roles=None):
 
     Class = get_orm_class(kind)
     user_role = orm.Role.find(db, 'user')
+    admin_role = orm.Role.find(db, 'admin')
 
     if roles:
         for rolename in roles:
             if Class == orm.APIToken:
-
                 role = orm.Role.find(db, rolename)
                 if role:
-                    # compare the requested role permissions with the owner's permissions (scopes)
-                    token_scopes = get_subscopes(role)
-                    # find the owner and their roles
-                    owner = None
-                    if obj.user_id:
-                        owner = db.query(orm.User).get(obj.user_id)
-                    elif obj.service_id:
-                        owner = db.query(orm.Service).get(obj.service_id)
-                    if owner:
-                        owner_scopes = get_subscopes(*owner.roles)
-                        if token_scopes.issubset(owner_scopes):
-                            role.tokens.append(obj)
-                        else:
-                            raise ValueError(
-                                'Requested token role %r has higher permissions than the token owner'
-                                % rolename
-                            )
+                    token_scopes, owner_scopes = check_token_roles(db, obj, role)
+                    if token_scopes.issubset(owner_scopes):
+                        role.tokens.append(obj)
+                    else:
+                        raise ValueError(
+                            'Requested token role %r has higher permissions than the token owner'
+                            % rolename
+                        )
                 else:
                     raise NameError('Role %r does not exist' % rolename)
             else:
@@ -272,10 +281,29 @@ def update_roles(db, obj, kind, roles=None):
         elif Class == orm.APIToken:
             if len(obj.roles) < 1 and obj.user is not None:
                 user_role.tokens.append(obj)
-            db.commit()
+                db.commit()
         # users and services can have 'user' or 'admin' roles as default
         else:
             switch_default_role(db, obj, kind, obj.admin)
+
+
+def check_for_default_roles(db, bearer):
+
+    """Checks that all role bearers have at least one role (default if none).
+    Groups can be without a role"""
+
+    Class = get_orm_class(bearer)
+    if Class == orm.Group:
+        pass
+    else:
+        for obj in (
+            db.query(Class)
+            .outerjoin(orm.Role, Class.roles)
+            .group_by(Class.id)
+            .having(func.count(orm.Role.id) == 0)
+        ):
+            update_roles(db, obj=obj, kind=bearer)
+    db.commit()
 
 
 def mock_roles(app, name, kind):
