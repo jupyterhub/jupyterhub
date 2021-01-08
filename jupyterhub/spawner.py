@@ -690,6 +690,18 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    hub_connect_url = Unicode(
+        help="""
+        The URL the single-user server should connect to the Hub.
+
+        - The default value is the hub_connect_url of JupyterHub config.
+        """
+    ).tag(config=True)
+
+    @default("hub_connect_url")
+    def _hub_connect_url(self):
+        return self.hub.api_url
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -768,9 +780,9 @@ class Spawner(LoggingConfigurable):
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
-        env['JUPYTERHUB_API_URL'] = self.hub.api_url
+        env['JUPYTERHUB_API_URL'] = self.hub_connect_url
         env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
-            self.hub.api_url,
+            self.hub_connect_url,
             'users',
             # tolerate mocks defining only user.name
             getattr(self.user, 'escaped_name', self.user.name),
