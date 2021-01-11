@@ -110,6 +110,11 @@ class MockAPIHandler:
     def other_thing(self, other_name):
         return True
 
+    @needs_scope('users')
+    @needs_scope('read:services')
+    def secret_thing(self):
+        return True
+
 
 @mark.parametrize(
     "scopes, method, arguments, is_allowed",
@@ -174,6 +179,23 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
     else:
         with pytest.raises(web.HTTPError):
             api_call(*arguments)
+
+
+def test_double_scoped_method_succeeds():
+    obj = MockAPIHandler()
+    obj.current_user = mock.Mock(name='lucille')
+    obj.request = mock.Mock(spec=HTTPServerRequest)
+    obj.scopes = {'users', 'read:services'}
+    assert obj.secret_thing()
+
+
+def test_double_scoped_method_denials():
+    obj = MockAPIHandler()
+    obj.current_user = mock.Mock(name='lucille2')
+    obj.request = mock.Mock(spec=HTTPServerRequest)
+    obj.scopes = {'users', 'read:groups'}
+    with pytest.raises(web.HTTPError):
+        obj.secret_thing()
 
 
 @mark.parametrize(
@@ -252,7 +274,7 @@ async def test_user_filter(app):
 
 
 async def test_user_filter_with_group(app):  # todo: Move role setup to setup method
-    user_name = 'sally'
+    user_name = 'sally'  # Fixme: fails randomly? scopes not always loaded?
     test_role = {
         'name': 'test',
         'description': '',

@@ -455,7 +455,9 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
+    @needs_scope('users')
     @needs_scope('admin:users')
+    @needs_scope('admin:users:servers')
     async def get(self):
         page, per_page, offset = Pagination(config=self.config).get_page_args(self)
 
