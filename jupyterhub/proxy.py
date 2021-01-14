@@ -453,7 +453,7 @@ class ConfigurableHTTPProxy(Proxy):
     check_running_interval = Integer(
         5,
         help="Interval (in seconds) at which to check if the proxy is running.",
-        config=True
+        config=True,
     )
 
     @default('auth_token')

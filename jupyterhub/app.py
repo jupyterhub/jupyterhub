@@ -374,7 +374,8 @@ class JupyterHub(Application):
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
     proxy_check_interval = Integer(
-        5, help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval"
+        5,
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval",
     ).tag(config=True)
     service_check_interval = Integer(
         60,
