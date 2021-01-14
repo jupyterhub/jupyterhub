@@ -274,7 +274,7 @@ async def test_user_filter(app):
 
 
 async def test_user_filter_with_group(app):  # todo: Move role setup to setup method
-    user_name = 'sally'  # Fixme: fails randomly? scopes not always loaded?
+    user_name = 'sally'
     test_role = {
         'name': 'test',
         'description': '',
@@ -290,9 +290,9 @@ async def test_user_filter_with_group(app):  # todo: Move role setup to setup me
         group = orm.Group(name=group_name)
         app.db.add(group)
     for name in name_set:
-        user = add_user(app.db, name=name)
+        new_user = add_user(app.db, name=name)
         if name not in group.users:
-            group.users.append(user)
+            group.users.append(new_user)
     kind = 'users'
     roles.update_roles(app.db, user, kind, roles=['test'])
     roles.remove_obj(app.db, user_name, kind, 'user')
