@@ -1828,17 +1828,20 @@ class JupyterHub(Application):
     async def init_roles(self):
         """Load default and predefined roles into the database"""
         db = self.db
-        role_bearers = ['users', 'services', 'tokens', 'groups']
+        role_bearers = ['users', 'services', 'groups']
 
         # load default roles
+        self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
         for role in default_roles:
             roles.add_role(db, role)
 
         # load predefined roles from config file
+        self.log.debug('Loading predefined roles from config file to database')
         for predef_role in self.load_roles:
             roles.add_role(db, predef_role)
-            # add users, services, tokens and/or groups
+            # add users, services, and/or groups,
+            # tokens need to be checked for permissions
             for bearer in role_bearers:
                 if bearer in predef_role.keys():
                     for bname in predef_role[bearer]:
@@ -1860,6 +1863,12 @@ class JupyterHub(Application):
         # make sure role bearers have at least a default role
         for bearer in role_bearers:
             roles.check_for_default_roles(db, bearer)
+
+        # now add roles to tokens if their owner's permissions allow
+        roles.add_predef_roles_tokens(db, self.load_roles)
+
+        # check tokens for default roles
+        roles.check_for_default_roles(db, bearer='tokens')
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""

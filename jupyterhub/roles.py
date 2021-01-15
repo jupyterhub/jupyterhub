@@ -4,6 +4,7 @@
 from itertools import chain
 
 from sqlalchemy import func
+from tornado.log import app_log
 
 from . import orm
 
@@ -122,8 +123,10 @@ def add_role(db, role_dict):
 
     """Adds a new role to database or modifies an existing one"""
 
+    default_roles = get_default_roles()
+
     if 'name' not in role_dict.keys():
-        raise ValueError('Role must have a name')
+        raise ValueError('Role definition in config file must have a name!')
     else:
         name = role_dict['name']
         role = orm.Role.find(db, name)
@@ -134,11 +137,17 @@ def add_role(db, role_dict):
     if role is None:
         role = orm.Role(name=name, description=description, scopes=scopes)
         db.add(role)
+        if role_dict not in default_roles:
+            app_log.info('Adding role %s to database', name)
     else:
         if description:
-            role.description = description
+            if role.description != description:
+                app_log.info('Changing role %s description to %s', name, description)
+                role.description = description
         if scopes:
-            role.scopes = scopes
+            if role.scopes != scopes:
+                app_log.info('Changing role %s scopes to %s', name, scopes)
+                role.scopes = scopes
     db.commit()
 
 
@@ -184,9 +193,15 @@ def add_obj(db, objname, kind, rolename):
 
     """Adds a role for users, services, tokens or groups"""
 
+    if kind == 'tokens':
+        log_objname = objname
+    else:
+        log_objname = objname.name
+
     if rolename not in objname.roles:
         objname.roles.append(rolename)
         db.commit()
+        app_log.info('Adding role %s for %s: %s', rolename.name, kind[:-1], log_objname)
 
 
 @existing_only
@@ -194,9 +209,17 @@ def remove_obj(db, objname, kind, rolename):
 
     """Removes a role for users, services or tokens"""
 
+    if kind == 'tokens':
+        log_objname = objname
+    else:
+        log_objname = objname.name
+
     if rolename in objname.roles:
         objname.roles.remove(rolename)
         db.commit()
+        app_log.info(
+            'Removing role %s for %s: %s', rolename.name, kind[:-1], log_objname
+        )
 
 
 def switch_default_role(db, obj, kind, admin):
@@ -260,36 +283,67 @@ def update_roles(db, obj, kind, roles=None):
             if Class == orm.APIToken:
                 role = orm.Role.find(db, rolename)
                 if role:
+                    app_log.debug(
+                        'Checking token permissions against requested role %s', rolename
+                    )
                     token_scopes, owner_scopes = check_token_roles(db, obj, role)
                     if token_scopes.issubset(owner_scopes):
                         role.tokens.append(obj)
+                        app_log.info(
+                            'Adding role %s for %s: %s', role.name, kind[:-1], obj
+                        )
                     else:
                         raise ValueError(
-                            'Requested token role %r has higher permissions than the token owner'
-                            % rolename
+                            'Requested token role %r of %r with scopes %r has higher permissions than the owner scopes %r'
+                            % (rolename, obj, token_scopes, owner_scopes)
                         )
                 else:
                     raise NameError('Role %r does not exist' % rolename)
             else:
                 add_obj(db, objname=obj.name, kind=kind, rolename=rolename)
     else:
+        # CHECK ME - Does the default role assignment here make sense?
+
         # groups can be without a role
         if Class == orm.Group:
             pass
         # tokens can have only 'user' role as default
         # assign the default only for user tokens
+        # service tokens with no specified role remain without any role (no default)
         elif Class == orm.APIToken:
+            app_log.debug('Assigning default roles to tokens')
             if len(obj.roles) < 1 and obj.user is not None:
                 user_role.tokens.append(obj)
                 db.commit()
+                app_log.info('Adding role %s to token %s', 'user', obj)
         # users and services can have 'user' or 'admin' roles as default
         else:
+            app_log.debug('Assigning default roles to %s', kind)
             switch_default_role(db, obj, kind, obj.admin)
+
+
+def add_predef_roles_tokens(db, predef_roles):
+
+    """Adds tokens to predefined roles in config file
+    if their permissions allow"""
+
+    for predef_role in predef_roles:
+        if 'tokens' in predef_role.keys():
+            token_role = orm.Role.find(db, name=predef_role['name'])
+            for token_name in predef_role['tokens']:
+                token = orm.APIToken.find(db, token_name)
+                if token is None:
+                    raise ValueError(
+                        "Token %r does not exist and cannot assign it to role %r"
+                        % (token_name, token_role.name)
+                    )
+                else:
+                    update_roles(db, obj=token, kind='tokens', roles=[token_role.name])
 
 
 def check_for_default_roles(db, bearer):
 
-    """Checks that all role bearers have at least one role (default if none).
+    """Checks that role bearers have at least one role (default if none).
     Groups can be without a role"""
 
     Class = get_orm_class(bearer)
@@ -306,14 +360,15 @@ def check_for_default_roles(db, bearer):
     db.commit()
 
 
-def mock_roles(app, name, kind):
+def mock_roles(db, name, kind):
 
     """Loads and assigns default roles for mocked objects"""
 
     Class = get_orm_class(kind)
 
-    obj = Class.find(app.db, name=name)
+    obj = Class.find(db, name=name)
     default_roles = get_default_roles()
     for role in default_roles:
-        add_role(app.db, role)
-    update_roles(db=app.db, obj=obj, kind=kind)
+        add_role(db, role)
+    app_log.info('Assigning default roles to mocked %s: %s', kind[:-1], name)
+    update_roles(db=db, obj=obj, kind=kind)
