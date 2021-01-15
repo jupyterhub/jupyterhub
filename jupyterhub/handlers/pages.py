@@ -501,20 +501,16 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
-        users = (
-            self.db.query(orm.User)
-            .outerjoin(orm.Spawner)
-            .order_by(*ordered)
-            .limit(per_page)
-            .offset(offset)
-        )
+        query = self.db.query(orm.User).outerjoin(orm.Spawner).distinct(orm.User.id)
+
+        users = query.order_by(*ordered).limit(per_page).offset(offset)
         users = [self._user_from_orm(u) for u in users]
 
         running = []
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
 
-        pagination.total = self.db.query(orm.User.id).count()
+        pagination.total = query.count()
 
         auth_state = await self.current_user.get_auth_state()
         html = await self.render_template(
