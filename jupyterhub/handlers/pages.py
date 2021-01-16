@@ -506,6 +506,7 @@ class AdminHandler(BaseHandler):
         users = (
             self.db.query(orm.User)
             .select_entity_from(subquery)
+            .outerjoin(orm.Spawner)
             .order_by(*ordered)
             .limit(per_page)
             .offset(offset)
