@@ -502,8 +502,15 @@ class AdminHandler(BaseHandler):
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
         query = self.db.query(orm.User).outerjoin(orm.Spawner).distinct(orm.User.id)
+        subquery = query.subquery("users")
+        users = (
+            self.db.query(orm.User)
+            .select_entity_from(subquery)
+            .order_by(*ordered)
+            .limit(per_page)
+            .offset(offset)
+        )
 
-        users = query.order_by(*ordered).limit(per_page).offset(offset)
         users = [self._user_from_orm(u) for u in users]
 
         running = []
