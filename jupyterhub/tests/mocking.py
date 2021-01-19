@@ -274,6 +274,10 @@ class MockHub(JupyterHub):
                 return port
         return random_port()
 
+    @default('delete_namespaced_persistent_volume_claim')
+    def _pvc_default(self):
+        return 'fakePVC'
+
     @default('authenticator_class')
     def _authenticator_class_default(self):
         return MockPAMAuthenticator
