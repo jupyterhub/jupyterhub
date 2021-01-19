@@ -237,6 +237,10 @@ class UserAPIHandler(APIHandler):
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
+
+        # delete the user's PVC
+        await user.spawner.delete_namespaced_persistent_volume_claim(user.spawner.pvc_name, user.spawner.namespace)
+
         # remove from registry
         self.users.delete(user)
 
