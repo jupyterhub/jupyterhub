@@ -241,7 +241,7 @@ class UserAPIHandler(APIHandler):
         # Delete the user's storage, if it exists.
         # In kubespawner spawner.py, we have delete_forever
         # method to delete the user's PVC.
-        await user.spawner.delete_forever()
+        user.spawner.delete_forever()
 
         # remove from registry
         self.users.delete(user)
