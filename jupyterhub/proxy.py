@@ -450,7 +450,11 @@ class ConfigurableHTTPProxy(Proxy):
         Loaded from the CONFIGPROXY_AUTH_TOKEN env variable by default.
         """
     ).tag(config=True)
-    check_running_interval = Integer(5, config=True)
+    check_running_interval = Integer(
+        5,
+        help="Interval (in seconds) at which to check if the proxy is running.",
+        config=True,
+    )
 
     @default('auth_token')
     def _auth_token_default(self):

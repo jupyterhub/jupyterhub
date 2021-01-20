@@ -374,7 +374,8 @@ class JupyterHub(Application):
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
     proxy_check_interval = Integer(
-        30, help="Interval (in seconds) at which to check if the proxy is running."
+        5,
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval",
     ).tag(config=True)
     service_check_interval = Integer(
         60,
@@ -688,6 +689,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     _proxy_config_map = {
+        'proxy_check_interval': 'check_running_interval',
         'proxy_cmd': 'command',
         'debug_proxy': 'debug',
         'proxy_auth_token': 'auth_token',
