@@ -93,6 +93,9 @@ class MockSpawner(SimpleLocalProcessSpawner):
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
+    def delete_forever(self):
+        return "mocking_this_method"
+
     use_this_api_token = None
 
     def start(self):
@@ -273,10 +276,6 @@ class MockHub(JupyterHub):
             if port:
                 return port
         return random_port()
-
-    @default('delete_namespaced_persistent_volume_claim')
-    def _pvc_default(self):
-        return 'fakePVC'
 
     @default('authenticator_class')
     def _authenticator_class_default(self):

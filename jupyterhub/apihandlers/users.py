@@ -238,10 +238,10 @@ class UserAPIHandler(APIHandler):
 
         await maybe_future(self.authenticator.delete_user(user))
 
-        # delete the user's PVC
-        await user.spawner.delete_namespaced_persistent_volume_claim(
-            user.spawner.pvc_name, user.spawner.namespace
-        )
+        # Delete the user's storage, if it exists.
+        # In kubespawner spawner.py, we have delete_forever
+        # method to delete the user's PVC.
+        await user.spawner.delete_forever()
 
         # remove from registry
         self.users.delete(user)
