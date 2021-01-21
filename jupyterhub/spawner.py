@@ -694,6 +694,9 @@ class Spawner(LoggingConfigurable):
         help="""
         The URL the single-user server should connect to the Hub.
 
+        If the Hub URL set in your JupyterHub config is not reachable
+        from spawned notebooks, you can set differnt URL by this config.
+
         - The default value is the hub_connect_url of JupyterHub config.
         """
     ).tag(config=True)
