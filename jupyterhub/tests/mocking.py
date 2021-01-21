@@ -93,8 +93,8 @@ class MockSpawner(SimpleLocalProcessSpawner):
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
-    def delete_forever(self):
-        return "mocking_this_method"
+    async def delete_forever(self):
+        pass
 
     use_this_api_token = None
 
