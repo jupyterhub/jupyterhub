@@ -94,6 +94,13 @@ class MockSpawner(SimpleLocalProcessSpawner):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
     async def delete_forever(self):
+        """Called when a user is deleted.
+
+        This can do things like request removal of resources such as persistent storage.
+        Only called on stopped spawners, and is likely the last action ever taken for the user.
+
+        Will only be called once on the user's default Spawner.
+        """
         pass
 
     use_this_api_token = None
