@@ -483,7 +483,11 @@ class BaseHandler(RequestHandler):
                     count += 1
                 if count:
                     self.log.debug("Deleted %s access tokens for %s", count, user.name)
-                    self.db.commit()
+
+                # clear cookie from DB
+                user.set_new_cookie_id()
+                self.db.add(user)
+                self.db.commit()
 
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)

@@ -221,6 +221,9 @@ class User(Base):
         """
         return db.query(cls).filter(cls.name == name).first()
 
+    def set_new_cookie_id(self):
+        self.cookie_id = new_token()
+
 
 class Spawner(Base):
     """"State about a Spawner"""
