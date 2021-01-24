@@ -779,6 +779,7 @@ async def test_auto_login_logout(app):
 async def test_logout(app):
     name = 'wash'
     cookies = await app.login_user(name)
+    old_cookie_id = app.users[name].cookie_id
     r = await async_requests.get(
         public_host(app) + app.tornado_settings['logout_url'], cookies=cookies
     )
@@ -786,7 +787,8 @@ async def test_logout(app):
     login_url = public_host(app) + app.tornado_settings['login_url']
     assert r.url == login_url
     assert r.cookies == {}
-
+    new_cookie_id = app.users[name].cookie_id
+    assert old_cookie_id != new_cookie_id
 
 @pytest.mark.parametrize('shutdown_on_logout', [True, False])
 async def test_shutdown_on_logout(app, shutdown_on_logout):
