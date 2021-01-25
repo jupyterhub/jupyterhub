@@ -68,9 +68,9 @@ def _get_scope_filter(db, req_scope, sub_scope):
     if req_scope not in scope_translator:
         raise AttributeError("Scope not found; scope filter not constructed")
     kind = scope_translator[req_scope]
-    Class = orm.get_class(kind)
+    Resource = orm.get_class(kind)
     sub_scope_values = next(iter(sub_scope.values()))
-    query = db.query(Class).filter(Class.name.in_(sub_scope_values))
+    query = db.query(Resource).filter(Resource.name.in_(sub_scope_values))
     scope_filter = {entry.name for entry in query.all()}
     if 'group' in sub_scope and kind == 'users':
         groups = orm.Group.name.in_(sub_scope['group'])
@@ -164,7 +164,6 @@ def needs_scope(scope):
             if 'scope_filter' in bound_sig.arguments:
                 s_kwargs['scope_filter'] = None
             if 'all' in self.scopes and self.current_user:
-                # todo: What if no user is found? See test_api/test_referer_check
                 self.scopes |= get_user_scopes(self.current_user.name)
             parsed_scopes = _parse_scopes(self.scopes)
             scope_filter = _check_scope(self, scope, parsed_scopes, **s_kwargs)

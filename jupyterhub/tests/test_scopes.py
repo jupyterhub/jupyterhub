@@ -13,9 +13,11 @@ from ..scopes import _check_scope
 from ..scopes import _parse_scopes
 from ..scopes import needs_scope
 from ..scopes import Scope
+from .mocking import MockHub
 from .utils import add_user
 from .utils import api_request
 from .utils import auth_header
+from .utils import public_url
 
 
 def test_scope_constructor():
@@ -125,6 +127,7 @@ class MockAPIHandler:
         (['read:users'], 'user_thing', ('gob',), False),
         (['read:users'], 'user_thing', ('michael',), False),
         (['users!user=george'], 'user_thing', ('george',), True),
+        (['users!user=george'], 'user_thing', ('fake_user',), False),
         (['users!user=george'], 'user_thing', ('oscar',), False),
         (['users!user=george', 'users!user=oscar'], 'user_thing', ('oscar',), True),
         (['users:servers'], 'server_thing', ('user1', 'server_1'), True),
@@ -198,6 +201,16 @@ def test_double_scoped_method_denials():
         obj.secret_thing()
 
 
+def generate_test_role(user_name, scopes, role_name='test'):
+    role = {
+        'name': role_name,
+        'description': '',
+        'users': [user_name],
+        'scopes': scopes,
+    }
+    return role
+
+
 @mark.parametrize(
     "user_name, in_group, status_code",
     [
@@ -238,19 +251,28 @@ async def test_expand_groups(app, user_name, in_group, status_code):
     assert r.status_code == status_code
 
 
+async def test_non_existing_user(app):
+    user_name = 'shade'
+    user = add_user(app.db, name=user_name)
+    app.db.commit()
+    app.db.delete(user)
+    app.db.commit()
+    print(app.db.query(orm.User).all())  # no shade
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    print(r.json())  # shade
+    # Fixme: no shade in db, user models still throw shade
+    assert r.status_code == 404
+
+
 async def test_user_filter(app):
     user_name = 'rita'
-    test_role = {
-        'name': 'test',
-        'description': '',
-        'users': [user_name],
-        'scopes': [
-            'read:users!user=lindsay',
-            'read:users!user=gob',
-            'read:users!user=oscar',
-        ],
-    }
+    user = add_user(app.db, name=user_name)
+    app.db.commit()
+    scopes = ['read:users!user=lindsay', 'read:users!user=gob', 'read:users!user=oscar']
+    test_role = generate_test_role(user, scopes)
     roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
     name_in_scope = {'lindsay', 'oscar', 'gob'}
     outside_scope = {'maeby', 'marta'}
     group_name = 'bluth'
@@ -262,10 +284,6 @@ async def test_user_filter(app):
         user = add_user(app.db, name=name)
         if name not in group.users:
             group.users.append(user)
-    kind = 'users'
-    user = add_user(app.db, name=user_name)
-    roles.update_roles(app.db, user, kind, roles=['test'])
-    roles.remove_obj(app.db, user_name, kind, 'user')
     app.db.commit()
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
@@ -273,16 +291,44 @@ async def test_user_filter(app):
     assert result_names == name_in_scope
 
 
-async def test_user_filter_with_group(app):  # todo: Move role setup to setup method
-    user_name = 'sally'  # Fixme: fails randomly? scopes not always loaded?
-    test_role = {
-        'name': 'test',
-        'description': '',
-        'users': [user_name],
-        'scopes': ['read:users!group=sitwell'],
-    }
-    roles.add_role(app.db, test_role)
+async def test_service_filter(app):
+    services = [
+        {'name': 'cull_idle', 'api_token': 'some-token'},
+        {'name': 'user_service', 'api_token': 'some-other-token'},
+    ]
+    for service in app.db.query(orm.Service):
+        app.db.delete(service)
+    for service in services:
+        orm_service = orm.Service.find(app.db, name=service['name'])
+        if orm_service is None:
+            # not found, create a new one
+            orm_service = orm.Service(name=service['name'])
+            app.db.add(orm_service)
+    app.db.commit()
+    app.init_services()
+    user_name = 'buster'
     user = add_user(app.db, name=user_name)
+    app.db.commit()
+    test_role = generate_test_role(user, ['read:services!service=cull_idle'])
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    r = await api_request(app, 'services', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    result_names = {service['name'] for service in r.json()}
+    # Fixme: Again DB/API sync issue
+    assert result_names == {'culler'}
+
+
+async def test_user_filter_with_group(app):
+    # Move role setup to setup method?
+    user_name = 'sally'
+    add_user(app.db, name=user_name)
+    external_user_name = 'britta'
+    add_user(app.db, name=external_user_name)
+    test_role = generate_test_role(user_name, ['read:users!group=sitwell'])
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+
     name_set = {'sally', 'stan'}
     group_name = 'sitwell'
     group = orm.Group.find(app.db, name=group_name)
@@ -293,40 +339,31 @@ async def test_user_filter_with_group(app):  # todo: Move role setup to setup me
         user = add_user(app.db, name=name)
         if name not in group.users:
             group.users.append(user)
-    kind = 'users'
-    roles.update_roles(app.db, user, kind, roles=['test'])
-    roles.remove_obj(app.db, user_name, kind, 'user')
     app.db.commit()
+
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
     result_names = {user['name'] for user in r.json()}
     assert result_names == name_set
+    assert external_user_name not in result_names
 
 
 async def test_group_scope_filter(app):
     user_name = 'rollerblade'
-    test_role = {
-        'name': 'test',
-        'description': '',
-        'users': [user_name],
-        'scopes': [
-            'read:groups!group=sitwell',
-            'read:groups!group=bluths',
-        ],
-    }
+    add_user(app.db, name=user_name)
+    scopes = ['read:groups!group=sitwell', 'read:groups!group=bluth']
+    test_role = generate_test_role(user_name, scopes)
     roles.add_role(app.db, test_role)
-    user = add_user(app.db, name=user_name)
-    group_set = {'sitwell', 'bluths', 'austero'}
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+
+    group_set = {'sitwell', 'bluth', 'austero'}
     for group_name in group_set:
         group = orm.Group.find(app.db, name=group_name)
         if not group:
             group = orm.Group(name=group_name)
             app.db.add(group)
-    kind = 'users'
-    roles.update_roles(app.db, user, kind, roles=['test'])
-    roles.remove_obj(app.db, user_name, kind, 'user')
     app.db.commit()
     r = await api_request(app, 'groups', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
     result_names = {user['name'] for user in r.json()}
-    assert result_names == {'sitwell', 'bluths'}
+    assert result_names == {'sitwell', 'bluth'}
