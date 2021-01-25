@@ -422,4 +422,7 @@ async def test_hub_connect_url(db):
     name = spawner.user.name
     env = spawner.get_env()
     assert env["JUPYTERHUB_API_URL"] == "https://example.com/hub/api"
-    assert env["JUPYTERHUB_ACTIVITY_URL"] == "https://example.com/hub/api/users/%s/activity" % name
+    assert (
+        env["JUPYTERHUB_ACTIVITY_URL"]
+        == "https://example.com/hub/api/users/%s/activity" % name
+    )
