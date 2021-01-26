@@ -130,7 +130,9 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
               <ul class="dropdown-menu">
               {% for service in services %}
+              {% block service scoped %}
                 <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+              {% endblock %}
               {% endfor %}
               </ul>
             </li>
