@@ -254,14 +254,11 @@ async def test_expand_groups(app, user_name, in_group, status_code):
 async def test_non_existing_user(app):
     user_name = 'shade'
     user = add_user(app.db, name=user_name)
+    auth_ = auth_header(app.db, user_name)
+    app.users.delete(user)
     app.db.commit()
-    app.db.delete(user)
-    app.db.commit()
-    print(app.db.query(orm.User).all())  # no shade
-    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
-    print(r.json())  # shade
-    # Fixme: no shade in db, user models still throw shade
-    assert r.status_code == 404
+    r = await api_request(app, 'users', headers=auth_)
+    assert r.status_code == 403
 
 
 async def test_user_filter(app):
@@ -296,15 +293,8 @@ async def test_service_filter(app):
         {'name': 'cull_idle', 'api_token': 'some-token'},
         {'name': 'user_service', 'api_token': 'some-other-token'},
     ]
-    for service in app.db.query(orm.Service):
-        app.db.delete(service)
     for service in services:
-        orm_service = orm.Service.find(app.db, name=service['name'])
-        if orm_service is None:
-            # not found, create a new one
-            orm_service = orm.Service(name=service['name'])
-            app.db.add(orm_service)
-    app.db.commit()
+        app.services.append(service)
     app.init_services()
     user_name = 'buster'
     user = add_user(app.db, name=user_name)
@@ -314,9 +304,8 @@ async def test_service_filter(app):
     roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
     r = await api_request(app, 'services', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
-    result_names = {service['name'] for service in r.json()}
-    # Fixme: Again DB/API sync issue
-    assert result_names == {'culler'}
+    service_names = set(r.json().keys())
+    assert service_names == {'cull_idle'}
 
 
 async def test_user_filter_with_group(app):
