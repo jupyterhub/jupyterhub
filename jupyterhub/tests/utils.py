@@ -121,7 +121,7 @@ def auth_header(db, name):
     """Return header with user's API authorization token."""
     user = find_user(db, name)
     if user is None:
-        user = add_user(db, name=name)
+        raise KeyError(f"No such user: {name}")
     token = user.new_api_token()
     return {'Authorization': 'token %s' % token}
 
