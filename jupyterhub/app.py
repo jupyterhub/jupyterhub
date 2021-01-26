@@ -848,14 +848,29 @@ class JupyterHub(Application):
         to reduce the cost of checking authentication tokens.
         """,
     ).tag(config=True)
-    cookie_secret = Bytes(
+    cookie_secret = Union(
+        [Bytes(), Unicode()],
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
 
         Should be exactly 256 bits (32 bytes).
-        """
+        """,
     ).tag(config=True, env='JPY_COOKIE_SECRET')
+
+    @validate('cookie_secret')
+    def _validate_secret_key(self, proposal):
+        """Coerces strings with even number of hexadecimal characters to bytes."""
+        r = proposal['value']
+        if isinstance(r, str):
+            try:
+                return bytes.fromhex(r)
+            except ValueError:
+                raise ValueError(
+                    "cookie_secret set as a string must contain an even amount of hexadecimal characters."
+                )
+        else:
+            return r
 
     @observe('cookie_secret')
     def _cookie_secret_check(self, change):
