@@ -39,6 +39,7 @@ class ServiceListAPIHandler(APIHandler):
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target service or admin"""
+    """***Deprecated in favor of RBAC, use scope-based decorator***"""
 
     def decorated_method(self, name):
         current = self.current_user

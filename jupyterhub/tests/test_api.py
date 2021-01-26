@@ -1395,7 +1395,7 @@ async def test_token_authenticator_dict_noauth(app):
     [
         ('admin', 'other', 200),
         ('admin', 'missing', 404),
-        ('user', 'other', 403),
+        ('user', 'other', 404),
         ('user', 'user', 200),
     ],
 )
@@ -1687,7 +1687,7 @@ async def test_update_activity_403(app, user, admin_user):
         data="{}",
         method="post",
     )
-    assert r.status_code == 403
+    assert r.status_code == 404
 
 
 async def test_update_activity_admin(app, user, admin_user):

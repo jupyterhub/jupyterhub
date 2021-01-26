@@ -53,7 +53,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     """Check if username is present in set of allowed groups"""
     user = handler.find_user(user_name)
     if user is None:
-        raise web.HTTPError(404, 'No such user found')
+        raise web.HTTPError(404, "No access to resources or resources not found")
     group_names = {group.name for group in user.groups}  # Todo: Replace with SQL query
     return bool(set(scope_group_names) & group_names)
 
@@ -66,7 +66,7 @@ def _get_scope_filter(db, req_scope, sub_scope):
         'read:groups': 'groups',
     }
     if req_scope not in scope_translator:
-        raise AttributeError("Scope not found; scope filter not constructed")
+        raise AttributeError("Internal error: inconsistent scope situation")
     kind = scope_translator[req_scope]
     Resource = orm.get_class(kind)
     sub_scope_values = next(iter(sub_scope.values()))
@@ -97,6 +97,8 @@ def _check_scope(api_handler, req_scope, scopes, **kwargs):
         scope_filter = _get_scope_filter(api_handler.db, req_scope, sub_scope)
         return scope_filter
     else:
+        if not kwargs:
+            return False  # Separated from 404 error below because in this case we don't leak information
         # Interface change: Now can have multiple filters
         for (filter_, filter_value) in kwargs.items():
             if filter_ in sub_scope and filter_value in sub_scope[filter_]:
@@ -107,7 +109,7 @@ def _check_scope(api_handler, req_scope, scopes, **kwargs):
                     api_handler, filter_value, group_names
                 ):
                     return True
-        return False
+        raise web.HTTPError(404, "No access to resources or resources not found")
 
 
 def _parse_scopes(scope_list):

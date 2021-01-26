@@ -54,10 +54,10 @@ def test_scope_check_not_present():
     scope_list = ['read:users!user=maeby']
     parsed_scopes = _parse_scopes(scope_list)
     assert not _check_scope(handler, 'read:users', parsed_scopes)
-    assert not _check_scope(handler, 'read:users', parsed_scopes, user='gob')
-    assert not _check_scope(
-        handler, 'read:users', parsed_scopes, user='gob', server='server'
-    )
+    with pytest.raises(web.HTTPError):
+        _check_scope(handler, 'read:users', parsed_scopes, user='gob')
+    with pytest.raises(web.HTTPError):
+        _check_scope(handler, 'read:users', parsed_scopes, user='gob', server='server')
 
 
 def test_scope_filters():
@@ -217,8 +217,8 @@ def generate_test_role(user_name, scopes, role_name='test'):
         ('martha', False, 200),
         ('michael', True, 200),
         ('gob', True, 200),
-        ('tobias', False, 403),
-        ('ann', False, 403),
+        ('tobias', False, 404),
+        ('ann', False, 404),
     ],
 )
 async def test_expand_groups(app, user_name, in_group, status_code):
@@ -251,7 +251,7 @@ async def test_expand_groups(app, user_name, in_group, status_code):
     assert r.status_code == status_code
 
 
-async def test_non_existing_user(app):
+async def test_by_fake_user(app):
     user_name = 'shade'
     user = add_user(app.db, name=user_name)
     auth_ = auth_header(app.db, user_name)
@@ -259,6 +259,44 @@ async def test_non_existing_user(app):
     app.db.commit()
     r = await api_request(app, 'users', headers=auth_)
     assert r.status_code == 403
+
+
+err_message = "No access to resources or resources not found"
+
+
+async def test_request_fake_user(app):
+    user_name = 'buster'
+    fake_user = 'annyong'
+    add_user(app.db, name=user_name)
+    test_role = generate_test_role(user_name, ['read:users!group=stuff'])
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    app.db.commit()
+    r = await api_request(
+        app, 'users', fake_user, headers=auth_header(app.db, user_name)
+    )
+    assert r.status_code == 404
+    # Consistency between no user and user not accessible
+    assert r.json()['message'] == err_message
+
+
+async def test_request_user_outside_group(app):
+    user_name = 'buster'
+    fake_user = 'hello'
+    add_user(app.db, name=user_name)
+    add_user(app.db, name=fake_user)
+    test_role = generate_test_role(user_name, ['read:users!group=stuff'])
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    app.db.commit()
+    print(orm.User.find(db=app.db, name=user_name).roles)
+    r = await api_request(
+        app, 'users', fake_user, headers=auth_header(app.db, user_name)
+    )
+    assert r.status_code == 404
+    # Consistency between no user and user not accessible
+    assert r.json()['message'] == err_message
 
 
 async def test_user_filter(app):
