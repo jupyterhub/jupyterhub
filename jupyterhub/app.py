@@ -862,7 +862,7 @@ class JupyterHub(Application):
     def _validate_secret_key(self, proposal):
         """Coerces strings with even number of hexadecimal characters to bytes."""
         r = proposal['value']
-        if type(r) == str:
+        if isinstance(r, str):
             try:
                 return bytes.fromhex(r)
             except ValueError:
