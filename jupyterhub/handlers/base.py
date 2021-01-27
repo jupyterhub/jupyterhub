@@ -498,6 +498,11 @@ class BaseHandler(RequestHandler):
             path=url_path_join(self.base_url, 'services'),
             **kwargs,
         )
+        # clear tornado cookie
+        self.clear_cookie(
+            '_xsrf',
+            **self.settings.get('xsrf_cookie_kwargs', {}),
+        )
         # Reset _jupyterhub_user
         self._jupyterhub_user = None
 
@@ -1192,8 +1197,8 @@ class BaseHandler(RequestHandler):
         """
         Render jinja2 template
 
-        If sync is set to True, we return an awaitable
-        If sync is set to False, we render the template & return a string
+        If sync is set to True, we render the template & return a string
+        If sync is set to False, we return an awaitable
         """
         template_ns = {}
         template_ns.update(self.template_namespace)

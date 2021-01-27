@@ -1,8 +1,8 @@
-alembic
+alembic>=1.4
 async_generator>=1.9
 certipy>=0.1.2
 entrypoints
-jinja2
+jinja2>=2.11.0
 jupyter_telemetry>=0.1.0
 oauthlib>=3.0
 pamela; sys_platform != 'win32'

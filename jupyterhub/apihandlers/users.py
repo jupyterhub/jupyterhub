@@ -37,7 +37,11 @@ class SelfAPIHandler(APIHandler):
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
-        self.write(json.dumps(self.user_model(user)))
+        if isinstance(user, orm.Service):
+            model = self.service_model(user)
+        else:
+            model = self.user_model(user)
+        self.write(json.dumps(model))
 
 
 class UserListAPIHandler(APIHandler):
@@ -240,6 +244,13 @@ class UserAPIHandler(APIHandler):
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
+
+        # allow the spawner to cleanup any persistent resources associated with the user
+        try:
+            await user.spawner.delete_forever()
+        except Exception as e:
+            self.log.error("Error cleaning up persistent resources: %s" % e)
+
         # remove from registry
         self.users.delete(user)
 

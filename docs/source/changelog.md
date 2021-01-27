@@ -7,6 +7,62 @@ command line for details.
 
 ## [Unreleased]
 
+### 1.3
+
+JupyterHub 1.3 is a small feature release. Highlights include:
+
+- Require Python >=3.6 (jupyterhub 1.2 is the last release to support 3.5)
+- Add a `?state=` filter for getting user list, allowing much quicker responses
+  when retrieving a small fraction of users.
+  `state` can be `active`, `inactive`, or `ready`.
+- prometheus metrics now include a `jupyterhub_` prefix,
+  so deployments may need to update their grafana charts to match.
+- page templates can now be [async](https://jinja.palletsprojects.com/en/2.11.x/api/#async-support)!
+
+### [1.3.0]
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.2.1...1.3.0))
+
+#### Enhancements made
+
+* allow services to call /api/user to identify themselves [#3293](https://github.com/jupyterhub/jupyterhub/pull/3293) ([@minrk](https://github.com/minrk))
+* Add optional user agreement to login screen [#3264](https://github.com/jupyterhub/jupyterhub/pull/3264) ([@tlvu](https://github.com/tlvu))
+* [Metrics] Add prefix to prometheus metrics to group all jupyterhub metrics  [#3243](https://github.com/jupyterhub/jupyterhub/pull/3243) ([@agp8x](https://github.com/agp8x))
+* Allow options_from_form to be configurable [#3225](https://github.com/jupyterhub/jupyterhub/pull/3225) ([@cbanek](https://github.com/cbanek))
+* add ?state= filter for GET /users [#3177](https://github.com/jupyterhub/jupyterhub/pull/3177) ([@minrk](https://github.com/minrk))
+* Enable async support in jinja2 templates [#3176](https://github.com/jupyterhub/jupyterhub/pull/3176) ([@yuvipanda](https://github.com/yuvipanda))
+
+#### Bugs fixed
+
+* fix increasing pagination limits [#3294](https://github.com/jupyterhub/jupyterhub/pull/3294) ([@minrk](https://github.com/minrk))
+* fix and test TOTAL_USERS count [#3289](https://github.com/jupyterhub/jupyterhub/pull/3289) ([@minrk](https://github.com/minrk))
+* Fix asyncio deprecation asyncio.Task.all_tasks [#3298](https://github.com/jupyterhub/jupyterhub/pull/3298) ([@coffeebenzene](https://github.com/coffeebenzene))
+
+#### Maintenance and upkeep improvements
+
+* bump oldest-required prometheus-client [#3292](https://github.com/jupyterhub/jupyterhub/pull/3292) ([@minrk](https://github.com/minrk))
+* bump black pre-commit hook to 20.8 [#3287](https://github.com/jupyterhub/jupyterhub/pull/3287) ([@minrk](https://github.com/minrk))
+* Test internal_ssl separately [#3266](https://github.com/jupyterhub/jupyterhub/pull/3266) ([@0mar](https://github.com/0mar))
+* wait for pending spawns in spawn_form_admin_access [#3253](https://github.com/jupyterhub/jupyterhub/pull/3253) ([@minrk](https://github.com/minrk))
+* Assume py36 and remove @gen.coroutine etc. [#3242](https://github.com/jupyterhub/jupyterhub/pull/3242) ([@consideRatio](https://github.com/consideRatio))
+
+#### Documentation improvements
+
+* Fix curl in jupyter announcements [#3286](https://github.com/jupyterhub/jupyterhub/pull/3286) ([@Sangarshanan](https://github.com/Sangarshanan))
+* CONTRIBUTING: Fix contributor guide URL [#3281](https://github.com/jupyterhub/jupyterhub/pull/3281) ([@olifre](https://github.com/olifre))
+* Update services.md [#3267](https://github.com/jupyterhub/jupyterhub/pull/3267) ([@slemonide](https://github.com/slemonide))
+* [Docs] Fix https reverse proxy redirect issues [#3244](https://github.com/jupyterhub/jupyterhub/pull/3244) ([@mhwasil](https://github.com/mhwasil))
+* Fixed idle-culler references. [#3300](https://github.com/jupyterhub/jupyterhub/pull/3300) ([@mxjeff](https://github.com/mxjeff))
+* Remove the extra parenthesis in service.md [#3303](https://github.com/jupyterhub/jupyterhub/pull/3303) ([@Sangarshanan](https://github.com/Sangarshanan))
+
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2020-10-30&to=2020-12-11&type=c))
+
+[@0mar](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3A0mar+updated%3A2020-10-30..2020-12-11&type=Issues) | [@agp8x](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aagp8x+updated%3A2020-10-30..2020-12-11&type=Issues) | [@alexweav](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aalexweav+updated%3A2020-10-30..2020-12-11&type=Issues) | [@belfhi](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abelfhi+updated%3A2020-10-30..2020-12-11&type=Issues) | [@betatim](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2020-10-30..2020-12-11&type=Issues) | [@cbanek](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acbanek+updated%3A2020-10-30..2020-12-11&type=Issues) | [@cmd-ntrf](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acmd-ntrf+updated%3A2020-10-30..2020-12-11&type=Issues) | [@coffeebenzene](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acoffeebenzene+updated%3A2020-10-30..2020-12-11&type=Issues) | [@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2020-10-30..2020-12-11&type=Issues) | [@danlester](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adanlester+updated%3A2020-10-30..2020-12-11&type=Issues) | [@fcollonval](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Afcollonval+updated%3A2020-10-30..2020-12-11&type=Issues) | [@GeorgianaElena](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AGeorgianaElena+updated%3A2020-10-30..2020-12-11&type=Issues) | [@ianabc](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aianabc+updated%3A2020-10-30..2020-12-11&type=Issues) | [@IvanaH8](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AIvanaH8+updated%3A2020-10-30..2020-12-11&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2020-10-30..2020-12-11&type=Issues) | [@meeseeksmachine](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ameeseeksmachine+updated%3A2020-10-30..2020-12-11&type=Issues) | [@mhwasil](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amhwasil+updated%3A2020-10-30..2020-12-11&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2020-10-30..2020-12-11&type=Issues) | [@mriedem](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amriedem+updated%3A2020-10-30..2020-12-11&type=Issues) | [@mxjeff](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amxjeff+updated%3A2020-10-30..2020-12-11&type=Issues) | [@olifre](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aolifre+updated%3A2020-10-30..2020-12-11&type=Issues) | [@rcthomas](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arcthomas+updated%3A2020-10-30..2020-12-11&type=Issues) | [@rgbkrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Argbkrk+updated%3A2020-10-30..2020-12-11&type=Issues) | [@rkdarst](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Arkdarst+updated%3A2020-10-30..2020-12-11&type=Issues) | [@Sangarshanan](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ASangarshanan+updated%3A2020-10-30..2020-12-11&type=Issues) | [@slemonide](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aslemonide+updated%3A2020-10-30..2020-12-11&type=Issues) | [@support](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asupport+updated%3A2020-10-30..2020-12-11&type=Issues) | [@tlvu](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atlvu+updated%3A2020-10-30..2020-12-11&type=Issues) | [@welcome](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awelcome+updated%3A2020-10-30..2020-12-11&type=Issues) | [@yuvipanda](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2020-10-30..2020-12-11&type=Issues)
+
+
 ## 1.2
 
 ### [1.2.2] 2020-11-27
@@ -911,7 +967,9 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 
-[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...HEAD
+[Unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.3.0...HEAD
+[1.3.0]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...1.3.0
+[1.2.2]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/jupyterhub/jupyterhub/compare/1.2.0...1.2.1
 [1.2.0]: https://github.com/jupyterhub/jupyterhub/compare/1.1.0...1.2.0
 [1.1.0]: https://github.com/jupyterhub/jupyterhub/compare/1.0.0...1.1.0

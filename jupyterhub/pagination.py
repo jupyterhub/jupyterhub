@@ -1,7 +1,6 @@
 """Basic class to manage pagination utils."""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-from traitlets import Bool
 from traitlets import default
 from traitlets import Integer
 from traitlets import observe
@@ -81,13 +80,13 @@ class Pagination(Configurable):
         try:
             self.per_page = int(per_page)
         except Exception:
-            self.per_page = self._default_per_page
+            self.per_page = self.default_per_page
 
         try:
             self.page = int(page)
             if self.page < 1:
                 self.page = 1
-        except:
+        except Exception:
             self.page = 1
 
         return self.page, self.per_page, self.per_page * (self.page - 1)
