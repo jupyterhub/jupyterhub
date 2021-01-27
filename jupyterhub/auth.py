@@ -1102,7 +1102,10 @@ class PAMAuthenticator(LocalAuthenticator):
             return super().normalize_username(username)
 
     def get_custom_html(self, base_url):
-        """Get custom HTML for the authenticator."""
+        """Get custom HTML for the authenticator.
+
+        .. versionadded: 1.4
+        """
         return self.custom_html
 
 
