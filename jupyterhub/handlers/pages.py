@@ -17,7 +17,7 @@ from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
 from ..pagination import Pagination
-from ..utils import admin_only
+from ..scopes import needs_scope
 from ..utils import maybe_future
 from ..utils import url_path_join
 from .base import BaseHandler
@@ -455,7 +455,9 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
-    @admin_only
+    @needs_scope('users')
+    @needs_scope('admin:users')
+    @needs_scope('admin:users:servers')
     async def get(self):
         page, per_page, offset = Pagination(config=self.config).get_page_args(self)
 

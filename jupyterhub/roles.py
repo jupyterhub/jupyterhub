@@ -7,7 +7,6 @@ from . import orm
 
 
 def get_default_roles():
-
     """Returns a list of default role dictionaries"""
 
     default_roles = [
@@ -43,7 +42,6 @@ def get_default_roles():
 
 
 def get_scopes():
-
     """
     Returns a dictionary of scopes:
     scopes.keys() = scopes of highest level and scopes that have their own subscopes
@@ -74,7 +72,6 @@ def get_scopes():
 
 
 def expand_scope(scopename):
-
     """Returns a set of all subscopes"""
 
     scopes = get_scopes()
@@ -103,7 +100,6 @@ def expand_scope(scopename):
 
 
 def get_subscopes(*args):
-
     """Returns a set of all available subscopes for a specified role or list of roles"""
 
     scope_list = []
@@ -117,7 +113,6 @@ def get_subscopes(*args):
 
 
 def add_role(db, role_dict):
-
     """Adds a new role to database or modifies an existing one"""
 
     if 'name' not in role_dict.keys():
@@ -140,26 +135,12 @@ def add_role(db, role_dict):
     db.commit()
 
 
-def get_orm_class(kind):
-    if kind == 'users':
-        Class = orm.User
-    elif kind == 'services':
-        Class = orm.Service
-    elif kind == 'tokens':
-        Class = orm.APIToken
-    else:
-        raise ValueError("kind must be users, services or tokens, not %r" % kind)
-
-    return Class
-
-
 def existing_only(func):
-
     """Decorator for checking if objects and roles exist"""
 
     def check_existence(db, objname, kind, rolename):
 
-        Class = get_orm_class(kind)
+        Class = orm.get_class(kind)
         obj = Class.find(db, objname)
         role = orm.Role.find(db, rolename)
 
@@ -175,7 +156,6 @@ def existing_only(func):
 
 @existing_only
 def add_obj(db, objname, kind, rolename):
-
     """Adds a role for users, services or tokens"""
 
     if rolename not in objname.roles:
@@ -185,7 +165,6 @@ def add_obj(db, objname, kind, rolename):
 
 @existing_only
 def remove_obj(db, objname, kind, rolename):
-
     """Removes a role for users, services or tokens"""
 
     if rolename in objname.roles:
@@ -194,7 +173,6 @@ def remove_obj(db, objname, kind, rolename):
 
 
 def switch_default_role(db, obj, kind, admin):
-
     """Switch between default user and admin roles for users/services"""
 
     user_role = orm.Role.find(db, 'user')
@@ -215,11 +193,10 @@ def switch_default_role(db, obj, kind, admin):
 
 
 def update_roles(db, obj, kind, roles=None):
-
     """Updates object's roles if specified,
     assigns default if no roles specified"""
 
-    Class = get_orm_class(kind)
+    Class = orm.get_class(kind)
     user_role = orm.Role.find(db, 'user')
 
     if roles:
@@ -262,11 +239,8 @@ def update_roles(db, obj, kind, roles=None):
 
 
 def mock_roles(app, name, kind):
-
     """Loads and assigns default roles for mocked objects"""
-
-    Class = get_orm_class(kind)
-
+    Class = orm.get_class(kind)
     obj = Class.find(app.db, name=name)
     default_roles = get_default_roles()
     for role in default_roles:

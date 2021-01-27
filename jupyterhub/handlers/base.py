@@ -80,7 +80,7 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
-        self.scopes = []
+        self.scopes = set()
         try:
             await self.get_current_user()
         except Exception:
@@ -430,7 +430,7 @@ class BaseHandler(RequestHandler):
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
         if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
-            self.scopes = self.settings.get("mock_scopes", [])
+            self.scopes = roles.get_subscopes(*self._jupyterhub_user.roles)
         return self._jupyterhub_user
 
     @property

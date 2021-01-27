@@ -9,8 +9,7 @@ import json
 from tornado import web
 
 from .. import orm
-from ..utils import admin_only
-from ..utils import needs_scope
+from ..scopes import needs_scope
 from .base import APIHandler
 
 
@@ -31,13 +30,16 @@ def service_model(service):
 
 class ServiceListAPIHandler(APIHandler):
     @needs_scope('read:services')
-    def get(self):
+    def get(self, scope_filter=None):
         data = {name: service_model(service) for name, service in self.services.items()}
+        if scope_filter is not None:
+            data = dict(filter(lambda tup: tup[0] in scope_filter, data.items()))
         self.write(json.dumps(data))
 
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target service or admin"""
+    """***Deprecated in favor of RBAC, use scope-based decorator***"""
 
     def decorated_method(self, name):
         current = self.current_user

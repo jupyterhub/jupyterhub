@@ -8,8 +8,7 @@ from tornado import web
 from tornado.ioloop import IOLoop
 
 from .._version import __version__
-from ..utils import admin_only
-from ..utils import needs_scope
+from ..scopes import needs_scope
 from .base import APIHandler
 
 
@@ -57,8 +56,7 @@ class RootAPIHandler(APIHandler):
     def get(self):
         """GET /api/ returns info about the Hub and its API.
 
-        It is not an authenticated endpoint.
-
+        It is not an authenticated endpoint
         For now, it just returns the version of JupyterHub itself.
         """
         data = {'version': __version__}
@@ -66,12 +64,12 @@ class RootAPIHandler(APIHandler):
 
 
 class InfoAPIHandler(APIHandler):
+    @needs_scope('read:hub')
     def get(self):
         """GET /api/info returns detailed info about the Hub and its API.
 
-        It is not an authenticated endpoint.
-
-        For now, it just returns the version of JupyterHub itself.
+        Currently, it returns information on the python version, spawner and authenticator.
+        Since this information might be sensitive, it is an authenticated endpoint
         """
 
         def _class_info(typ):
