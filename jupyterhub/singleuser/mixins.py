@@ -9,11 +9,10 @@ with JupyterHub authentication mixins enabled.
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
-import importlib
 import json
 import os
 import random
-from datetime import datetime
+import warnings
 from datetime import timezone
 from textwrap import dedent
 from urllib.parse import urlparse
@@ -23,7 +22,6 @@ from jinja2 import FunctionLoader
 from tornado import ioloop
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPRequest
-from tornado.web import HTTPError
 from tornado.web import RequestHandler
 from traitlets import Any
 from traitlets import Bool
@@ -94,9 +92,18 @@ class JupyterHubLoginHandlerMixin:
 
     @staticmethod
     def get_user(handler):
-        """alternative get_current_user to query the Hub"""
+        """alternative get_current_user to query the Hub
+
+        Thus shouldn't be called anymore because HubAuthenticatedHandler
+        should have already overridden get_current_user()
+        """
         # patch in HubAuthenticated class for querying the Hub for cookie authentication
-        if HubAuthenticatedHandler not in handler.__class__.__bases__:
+        if HubAuthenticatedHandler not in handler.__class__.mro():
+            warnings.warn(
+                f"Expected to see HubAuthenticatedHandler in {handler.__class__}.mro()",
+                RuntimeWarning,
+                stacklevel=2,
+            )
             handler.__class__ = type(
                 handler.__class__.__name__,
                 (HubAuthenticatedHandler, handler.__class__),
@@ -691,6 +698,7 @@ def make_singleuser_app(App):
     """
 
     empty_parent_app = App()
+    log = empty_parent_app.log
 
     # detect base classes
     LoginHandler = empty_parent_app.login_handler_class
@@ -706,6 +714,26 @@ def make_singleuser_app(App):
             raise ValueError(
                 "{}.base_handler_class must be defined".format(App.__name__)
             )
+
+    # patch-in hub HubOAuthCallbackHandler to BaseHandler,
+    # so anything inheriting from BaseHandler uses Hub authentication
+    if HubAuthenticatedHandler not in BaseHandler.__bases__:
+        log.debug(f"Patching {HubAuthenticatedHandler} into {BaseHandler}")
+        BaseHandler.__bases__ = (HubAuthenticatedHandler,) + BaseHandler.__bases__
+        # adding it to bases isn't enough to override methods defined on BaseHandler, though.
+        # we still need to override any methods defined on BaseHandler *itself* that we should override
+        # since bases come immediately *after* the class itself
+        # as of writing, there are no collisions on the default classes
+        # so this block has no effect for ServerApp or NotebookApp
+        seen = set()
+        for cls in HubAuthenticatedHandler.mro():
+            for name, method in cls.__dict__.items():
+                if name in seen or name.startswith("__"):
+                    continue
+                seen.add(name)
+                if name in BaseHandler.__dict__:
+                    log.debug(f"Overriding {BaseHandler}.{name} with {cls}.{name}")
+                    setattr(BaseHandler, name, method)
 
     # create Handler classes from mixins + bases
     class JupyterHubLoginHandler(JupyterHubLoginHandlerMixin, LoginHandler):
