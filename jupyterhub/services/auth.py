@@ -833,7 +833,7 @@ class HubAuthenticated(object):
             # add state argument to OAuth url
             state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
             login_url = url_concat(login_url, {'state': state})
-        # override at setting level,
+        # temporary override at setting level,
         # to allow any subclass overrides of get_login_url to preserve their effect
         # for example, APIHandler raises 403 to prevent redirects
         with mock.patch.dict(self.application.settings, {"login_url": login_url}):
