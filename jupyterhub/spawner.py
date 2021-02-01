@@ -13,6 +13,7 @@ import sys
 import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
+from urllib.parse import urlparse
 
 if os.name == 'nt':
     import psutil
@@ -782,7 +783,8 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
         if self.hub_connect_url is not None:
-            hub_api_url = url_path_join(self.hub_connect_url, 'hub', 'api')
+            hub_api_url = urlparse(self.hub.api_url)
+            hub_api_url = url_path_join(self.hub_connect_url, hub_api_url.path)
         else:
             hub_api_url = self.hub.api_url
         env['JUPYTERHUB_API_URL'] = hub_api_url
