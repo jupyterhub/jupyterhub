@@ -783,7 +783,9 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
         if self.hub_connect_url is not None:
-            hub_api_url = url_path_join(self.hub_connect_url, urlparse(self.hub.api_url).path)
+            hub_api_url = url_path_join(
+                self.hub_connect_url, urlparse(self.hub.api_url).path
+            )
         else:
             hub_api_url = self.hub.api_url
         env['JUPYTERHUB_API_URL'] = hub_api_url
