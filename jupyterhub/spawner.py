@@ -703,7 +703,7 @@ class Spawner(LoggingConfigurable):
 
     @default("hub_connect_url")
     def _hub_connect_url(self):
-        return self.hub.api_url
+        return self.hub.connect_url
 
     def load_state(self, state):
         """Restore state of spawner from database.
@@ -783,9 +783,10 @@ class Spawner(LoggingConfigurable):
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
-        env['JUPYTERHUB_API_URL'] = self.hub_connect_url
+        hub_api_url = url_path_join(self.hub_connect_url, 'hub', 'api')
+        env['JUPYTERHUB_API_URL'] = hub_api_url
         env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
-            self.hub_connect_url,
+            hub_api_url,
             'users',
             # tolerate mocks defining only user.name
             getattr(self.user, 'escaped_name', self.user.name),
