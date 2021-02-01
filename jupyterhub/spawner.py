@@ -699,8 +699,8 @@ class Spawner(LoggingConfigurable):
         If the Hub URL set in your JupyterHub config is not reachable
         from spawned notebooks, you can set differnt URL by this config.
 
-        Is None if you want to use the same API URL.
-        """
+        Is None if you don't need to change the URL.
+        """,
     ).tag(config=True)
 
     def load_state(self, state):
