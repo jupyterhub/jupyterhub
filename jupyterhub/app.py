@@ -374,7 +374,8 @@ class JupyterHub(Application):
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
     proxy_check_interval = Integer(
-        30, help="Interval (in seconds) at which to check if the proxy is running."
+        5,
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval",
     ).tag(config=True)
     service_check_interval = Integer(
         60,
@@ -688,6 +689,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     _proxy_config_map = {
+        'proxy_check_interval': 'check_running_interval',
         'proxy_cmd': 'command',
         'debug_proxy': 'debug',
         'proxy_auth_token': 'auth_token',
@@ -846,14 +848,29 @@ class JupyterHub(Application):
         to reduce the cost of checking authentication tokens.
         """,
     ).tag(config=True)
-    cookie_secret = Bytes(
+    cookie_secret = Union(
+        [Bytes(), Unicode()],
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
 
         Should be exactly 256 bits (32 bytes).
-        """
+        """,
     ).tag(config=True, env='JPY_COOKIE_SECRET')
+
+    @validate('cookie_secret')
+    def _validate_secret_key(self, proposal):
+        """Coerces strings with even number of hexadecimal characters to bytes."""
+        r = proposal['value']
+        if isinstance(r, str):
+            try:
+                return bytes.fromhex(r)
+            except ValueError:
+                raise ValueError(
+                    "cookie_secret set as a string must contain an even amount of hexadecimal characters."
+                )
+        else:
+            return r
 
     @observe('cookie_secret')
     def _cookie_secret_check(self, change):

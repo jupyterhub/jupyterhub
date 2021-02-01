@@ -237,6 +237,13 @@ class UserAPIHandler(APIHandler):
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
+
+        # allow the spawner to cleanup any persistent resources associated with the user
+        try:
+            await user.spawner.delete_forever()
+        except Exception as e:
+            self.log.error("Error cleaning up persistent resources: %s" % e)
+
         # remove from registry
         self.users.delete(user)
 

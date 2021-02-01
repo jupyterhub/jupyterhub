@@ -1,4 +1,4 @@
-alembic
+alembic>=1.4
 async_generator>=1.9
 certipy>=0.1.2
 entrypoints
