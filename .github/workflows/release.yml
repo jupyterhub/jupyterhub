@@ -51,6 +51,7 @@ jobs:
           print("OK")
           EOF
 
+      # ref: https://github.com/actions/upload-artifact#readme
       - uses: actions/upload-artifact@v2
         with:
           name: jupyterhub-${{ github.sha }}
