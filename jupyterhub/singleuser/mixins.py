@@ -95,9 +95,10 @@ class JupyterHubLoginHandlerMixin:
         """alternative get_current_user to query the Hub
 
         Thus shouldn't be called anymore because HubAuthenticatedHandler
-        should have already overridden get_current_user()
+        should have already overridden get_current_user().
+
+        Keep here to prevent unlikely circumstance from losing auth.
         """
-        # patch in HubAuthenticated class for querying the Hub for cookie authentication
         if HubAuthenticatedHandler not in handler.__class__.mro():
             warnings.warn(
                 f"Expected to see HubAuthenticatedHandler in {handler.__class__}.mro()",
@@ -715,25 +716,25 @@ def make_singleuser_app(App):
                 "{}.base_handler_class must be defined".format(App.__name__)
             )
 
-    # patch-in hub HubOAuthCallbackHandler to BaseHandler,
+    # patch-in HubAuthenticatedHandler to BaseHandler,
     # so anything inheriting from BaseHandler uses Hub authentication
     if HubAuthenticatedHandler not in BaseHandler.__bases__:
-        log.debug(f"Patching {HubAuthenticatedHandler} into {BaseHandler}")
-        BaseHandler.__bases__ = (HubAuthenticatedHandler,) + BaseHandler.__bases__
-        # adding it to bases isn't enough to override methods defined on BaseHandler, though.
-        # we still need to override any methods defined on BaseHandler *itself* that we should override
-        # since bases come immediately *after* the class itself
-        # as of writing, there are no collisions on the default classes
-        # so this block has no effect for ServerApp or NotebookApp
-        seen = set()
-        for cls in HubAuthenticatedHandler.mro():
-            for name, method in cls.__dict__.items():
-                if name in seen or name.startswith("__"):
-                    continue
-                seen.add(name)
-                if name in BaseHandler.__dict__:
-                    log.debug(f"Overriding {BaseHandler}.{name} with {cls}.{name}")
-                    setattr(BaseHandler, name, method)
+        new_bases = (HubAuthenticatedHandler,) + BaseHandler.__bases__
+        log.debug(
+            f"Patching {BaseHandler}{BaseHandler.__bases__} -> {BaseHandler}{new_bases}"
+        )
+        BaseHandler.__bases__ = new_bases
+        # We've now inserted our class as a parent of BaseHandler,
+        # but we also need to ensure BaseHandler *itself* doesn't
+        # override the public tornado API methods we have inserted.
+        # If they are defined in BaseHandler, explicitly replace them with our methods.
+        for name in ("get_current_user", "get_login_url"):
+            if name in BaseHandler.__dict__:
+                log.debug(
+                    f"Overriding {BaseHandler}.{name} with HubAuthenticatedHandler.{name}"
+                )
+                method = getattr(HubAuthenticatedHandler, name)
+                setattr(BaseHandler, name, method)
 
     # create Handler classes from mixins + bases
     class JupyterHubLoginHandler(JupyterHubLoginHandlerMixin, LoginHandler):
