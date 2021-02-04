@@ -404,9 +404,10 @@ class StubSingleUserSpawner(MockSpawner):
         Should be:
 
         - authenticated, so we are testing auth
-        - always available (i.e. in base ServerApp and NotebookApp
+        - always available (i.e. in mocked ServerApp and NotebookApp)
+        - *not* an API handler that raises 403 instead of redirecting
         """
-        return "/api/status"
+        return "/tree"
 
     _thread = None
 
