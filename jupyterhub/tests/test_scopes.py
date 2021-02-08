@@ -9,15 +9,20 @@ from tornado.httputil import HTTPServerRequest
 
 from .. import orm
 from .. import roles
+from ..handlers import BaseHandler
 from ..scopes import _check_scope
-from ..scopes import _parse_scopes
 from ..scopes import needs_scope
+from ..scopes import parse_scopes
 from ..scopes import Scope
-from .mocking import MockHub
 from .utils import add_user
 from .utils import api_request
 from .utils import auth_header
-from .utils import public_url
+
+
+def get_handler_with_scopes(scopes):
+    handler = mock.Mock(spec=BaseHandler)
+    handler.parsed_scopes = parse_scopes(scopes)
+    return handler
 
 
 def test_scope_constructor():
@@ -28,7 +33,7 @@ def test_scope_constructor():
         'read:users!user={}'.format(user1),
         'read:users!user={}'.format(user2),
     ]
-    parsed_scopes = _parse_scopes(scope_list)
+    parsed_scopes = parse_scopes(scope_list)
 
     assert 'read:users' in parsed_scopes
     assert parsed_scopes['users']
@@ -37,60 +42,49 @@ def test_scope_constructor():
 
 def test_scope_precendence():
     scope_list = ['read:users!user=maeby', 'read:users']
-    parsed_scopes = _parse_scopes(scope_list)
+    parsed_scopes = parse_scopes(scope_list)
     assert parsed_scopes['read:users'] == Scope.ALL
 
 
 def test_scope_check_present():
-    handler = None
-    scope_list = ['read:users']
-    parsed_scopes = _parse_scopes(scope_list)
-    assert _check_scope(handler, 'read:users', parsed_scopes)
-    assert _check_scope(handler, 'read:users', parsed_scopes, user='maeby')
+    handler = get_handler_with_scopes(['read:users'])
+    assert _check_scope(handler, 'read:users')
+    assert _check_scope(handler, 'read:users', user='maeby')
 
 
 def test_scope_check_not_present():
-    handler = None
-    scope_list = ['read:users!user=maeby']
-    parsed_scopes = _parse_scopes(scope_list)
-    assert not _check_scope(handler, 'read:users', parsed_scopes)
+    handler = get_handler_with_scopes(['read:users!user=maeby'])
+    assert not _check_scope(handler, 'read:users')
     with pytest.raises(web.HTTPError):
-        _check_scope(handler, 'read:users', parsed_scopes, user='gob')
+        _check_scope(handler, 'read:users', user='gob')
     with pytest.raises(web.HTTPError):
-        _check_scope(handler, 'read:users', parsed_scopes, user='gob', server='server')
+        _check_scope(handler, 'read:users', user='gob', server='server')
 
 
 def test_scope_filters():
-    handler = None
-    scope_list = ['read:users', 'read:users!group=bluths', 'read:users!user=maeby']
-    parsed_scopes = _parse_scopes(scope_list)
-    assert _check_scope(handler, 'read:users', parsed_scopes, group='bluth')
-    assert _check_scope(handler, 'read:users', parsed_scopes, user='maeby')
+    handler = get_handler_with_scopes(
+        ['read:users', 'read:users!group=bluths', 'read:users!user=maeby']
+    )
+    assert _check_scope(handler, 'read:users', group='bluth')
+    assert _check_scope(handler, 'read:users', user='maeby')
 
 
 def test_scope_multiple_filters():
-    handler = None
-    assert _check_scope(
-        handler,
-        'read:users',
-        _parse_scopes(['read:users!user=george_michael']),
-        user='george_michael',
-        group='bluths',
-    )
+    handler = get_handler_with_scopes(['read:users!user=george_michael'])
+    assert _check_scope(handler, 'read:users', user='george_michael', group='bluths')
 
 
 def test_scope_parse_server_name():
-    handler = None
-    scope_list = ['users:servers!server=maeby/server1', 'read:users!user=maeby']
-    parsed_scopes = _parse_scopes(scope_list)
-    assert _check_scope(
-        handler, 'users:servers', parsed_scopes, user='maeby', server='server1'
+    handler = get_handler_with_scopes(
+        ['users:servers!server=maeby/server1', 'read:users!user=maeby']
     )
+    assert _check_scope(handler, 'users:servers', user='maeby', server='server1')
 
 
 class MockAPIHandler:
     def __init__(self):
-        self.scopes = {'users'}
+        self.raw_scopes = {'users'}
+        self.parsed_scopes = {}
 
     @needs_scope('users')
     def user_thing(self, user_name):
@@ -175,7 +169,8 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
     obj = MockAPIHandler()
     obj.current_user = mock.Mock(name=arguments[0])
     obj.request = mock.Mock(spec=HTTPServerRequest)
-    obj.scopes = set(scopes)
+    obj.raw_scopes = set(scopes)
+    obj.parsed_scopes = parse_scopes(obj.raw_scopes)
     api_call = getattr(obj, method)
     if is_allowed:
         assert api_call(*arguments)
@@ -188,7 +183,8 @@ def test_double_scoped_method_succeeds():
     obj = MockAPIHandler()
     obj.current_user = mock.Mock(name='lucille')
     obj.request = mock.Mock(spec=HTTPServerRequest)
-    obj.scopes = {'users', 'read:services'}
+    obj.raw_scopes = {'users', 'read:services'}
+    obj.parsed_scopes = parse_scopes(obj.raw_scopes)
     assert obj.secret_thing()
 
 
@@ -196,7 +192,8 @@ def test_double_scoped_method_denials():
     obj = MockAPIHandler()
     obj.current_user = mock.Mock(name='lucille2')
     obj.request = mock.Mock(spec=HTTPServerRequest)
-    obj.scopes = {'users', 'read:groups'}
+    obj.raw_scopes = {'users', 'read:groups'}
+    obj.parsed_scopes = parse_scopes(obj.raw_scopes)
     with pytest.raises(web.HTTPError):
         obj.secret_thing()
 
@@ -290,7 +287,6 @@ async def test_request_user_outside_group(app):
     roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
     roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
     app.db.commit()
-    print(orm.User.find(db=app.db, name=user_name).roles)
     r = await api_request(
         app, 'users', fake_user, headers=auth_header(app.db, user_name)
     )
@@ -394,3 +390,25 @@ async def test_group_scope_filter(app):
     assert r.status_code == 200
     result_names = {user['name'] for user in r.json()}
     assert result_names == {'sitwell', 'bluth'}
+
+
+async def test_vertical_filter(app):
+    user_name = 'lindsey'
+    add_user(app.db, name=user_name)
+    test_role = generate_test_role(user_name, ['read:users:names'])
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    app.db.commit()
+
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    assert set(r.json().keys()) == {'names'}
+
+
+async def test_stacked_vertical_filter(app):
+    pass
+
+
+async def test_cross_filter(app):
+    pass

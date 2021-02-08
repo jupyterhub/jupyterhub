@@ -189,22 +189,37 @@ class APIHandler(BaseHandler):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
+        model = {'kind': 'user'}
+        # Todo: Should 'name' be included in all access?
+        self.log.debug(
+            "Asking for models with scopes [%s]" % ", ".join(self.parsed_scopes)
+        )  # debug
+        if 'read:users' in self.parsed_scopes:
+            model.update(
+                {
+                    'name': user.name,
+                    'admin': user.admin,
+                    'roles': [r.name for r in user.roles],
+                    'groups': [g.name for g in user.groups],
+                    'server': user.url if user.running else None,
+                    'pending': None,
+                    'created': isoformat(user.created),
+                    'last_activity': isoformat(user.last_activity),
+                }
+            )
+            server_permission = True
+        else:
+            if 'read:users:name' in self.parsed_scopes:
+                model['name'] = user.name
+            if 'read:users:groups' in self.parsed_scopes:
+                model['groups'] = [g.name for g in user.groups]
+            if 'read:users:activity' in self.parsed_scopes:
+                model['last_activity'] = isoformat(user.last_activity)
+            server_permission = 'read:users:servers' in self.parsed_scopes
 
-        model = {
-            'kind': 'user',
-            'name': user.name,
-            'admin': user.admin,
-            'roles': [r.name for r in user.roles],
-            'groups': [g.name for g in user.groups],
-            'server': user.url if user.running else None,
-            'pending': None,
-            'created': isoformat(user.created),
-            'last_activity': isoformat(user.last_activity),
-        }
         if '' in user.spawners:
             model['pending'] = user.spawners[''].pending
-
-        if not include_servers:
+        if not (include_servers and server_permission):
             model['servers'] = None
             return model
 

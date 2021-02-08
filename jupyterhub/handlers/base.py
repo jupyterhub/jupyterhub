@@ -31,6 +31,7 @@ from tornado.web import RequestHandler
 from .. import __version__
 from .. import orm
 from .. import roles
+from .. import scopes
 from ..metrics import PROXY_ADD_DURATION_SECONDS
 from ..metrics import PROXY_DELETE_DURATION_SECONDS
 from ..metrics import ProxyDeleteStatus
@@ -80,7 +81,8 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
-        self.scopes = set()
+        self.raw_scopes = set()
+        self.parsed_scopes = set()
         try:
             await self.get_current_user()
         except Exception:
@@ -429,9 +431,15 @@ class BaseHandler(RequestHandler):
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
-        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
-            self.scopes = roles.get_subscopes(*self._jupyterhub_user.roles)
+        self._parse_scopes()
         return self._jupyterhub_user
+
+    def _parse_scopes(self):
+        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
+            self.raw_scopes = roles.get_subscopes(*self._jupyterhub_user.roles)
+            if 'all' in self.raw_scopes:
+                self.raw_scopes |= scopes.get_user_scopes(self.current_user.name)
+            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
     def current_user(self):
@@ -989,6 +997,7 @@ class BaseHandler(RequestHandler):
                 self.log.critical(
                     "Aborting due to %i consecutive spawn failures", failure_count
                 )
+
                 # abort in 2 seconds to allow pending handlers to resolve
                 # mostly propagating errors for the current failures
                 def abort():

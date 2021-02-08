@@ -54,7 +54,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     user = handler.find_user(user_name)
     if user is None:
         raise web.HTTPError(404, "No access to resources or resources not found")
-    group_names = {group.name for group in user.groups}  # Todo: Replace with SQL query
+    group_names = {group.name for group in user.groups}  # SQL query faster?
     return bool(set(scope_group_names) & group_names)
 
 
@@ -79,7 +79,7 @@ def _get_scope_filter(db, req_scope, sub_scope):
     return scope_filter
 
 
-def _check_scope(api_handler, req_scope, scopes, **kwargs):
+def _check_scope(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
     Returns either Scope.ALL for unrestricted access, Scope.NONE for refused access or
     an iterable with a filter
@@ -87,12 +87,12 @@ def _check_scope(api_handler, req_scope, scopes, **kwargs):
     # Parse user name and server name together
     if 'user' in kwargs and 'server' in kwargs:
         kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
-    if req_scope not in scopes:
+    if req_scope not in api_handler.parsed_scopes:
         return False
-    if scopes[req_scope] == Scope.ALL:
+    if api_handler.parsed_scopes[req_scope] == Scope.ALL:
         return True
     # Apply filters
-    sub_scope = scopes[req_scope]
+    sub_scope = api_handler.parsed_scopes[req_scope]
     if 'scope_filter' in kwargs:
         scope_filter = _get_scope_filter(api_handler.db, req_scope, sub_scope)
         return scope_filter
@@ -112,7 +112,7 @@ def _check_scope(api_handler, req_scope, scopes, **kwargs):
         raise web.HTTPError(404, "No access to resources or resources not found")
 
 
-def _parse_scopes(scope_list):
+def parse_scopes(scope_list):
     """
     Parses scopes and filters in something akin to JSON style
 
@@ -165,10 +165,7 @@ def needs_scope(scope):
                     s_kwargs[resource] = resource_value
             if 'scope_filter' in bound_sig.arguments:
                 s_kwargs['scope_filter'] = None
-            if 'all' in self.scopes and self.current_user:
-                self.scopes |= get_user_scopes(self.current_user.name)
-            parsed_scopes = _parse_scopes(self.scopes)
-            scope_filter = _check_scope(self, scope, parsed_scopes, **s_kwargs)
+            scope_filter = _check_scope(self, scope, **s_kwargs)
             # todo: This checks if True/False or set of resource names. Can be improved
             if isinstance(scope_filter, set):
                 kwargs['scope_filter'] = scope_filter
@@ -176,14 +173,14 @@ def needs_scope(scope):
                 return func(self, *args, **kwargs)
             else:
                 # catching attr error occurring for older_requirements test
-                # could be done more ellegantly?
+                # could be done more elegantly?
                 try:
                     request_path = self.request.path
                 except AttributeError:
                     request_path = 'the requested API'
                 app_log.warning(
                     "Not authorizing access to {}. Requires scope {}, not derived from scopes [{}]".format(
-                        request_path, scope, ", ".join(self.scopes)
+                        request_path, scope, ", ".join(self.raw_scopes)
                     )
                 )
                 raise web.HTTPError(
