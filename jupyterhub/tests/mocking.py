@@ -184,10 +184,36 @@ class FormSpawner(MockSpawner):
         return options
 
 
+class CallableFormSpawner(FormSpawner):
+    """A spawner that has an options form defined and it is callable"""
+
+    options_form = lambda self: "IMAFORM"
+
+
+class AsyncCallableFormSpawner(FormSpawner):
+    """A spawner that has an options form defined and it is async callable"""
+
+    async def options_form(self):
+        return "IMAFORM"
+
+
+class FalsyFormSpawner(FormSpawner):
+    """A spawner that has an options form property defined returning a falsy value"""
+
+    options_form = ""
+
+
 class FalsyCallableFormSpawner(FormSpawner):
     """A spawner that has a callable options form defined returning a falsy value"""
 
-    options_form = lambda a, b: ""
+    options_form = lambda self: ""
+
+
+class FalsyAsyncCallableFormSpawner(FormSpawner):
+    """A spawner that has a callable options form defined returning a falsy value asynchronously"""
+
+    async def options_form(self):
+        return ""
 
 
 class MockStructGroup:

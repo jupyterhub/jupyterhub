@@ -347,7 +347,7 @@ class Spawner(LoggingConfigurable):
         .. versionadded:: 0.9
         """
         if callable(self.options_form):
-            options_form = await maybe_future(self.options_form(self))
+            options_form = await maybe_future(self.options_form())
         else:
             options_form = self.options_form
 

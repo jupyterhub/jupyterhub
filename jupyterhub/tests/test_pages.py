@@ -15,7 +15,11 @@ from .. import orm
 from ..auth import Authenticator
 from ..handlers import BaseHandler
 from ..utils import url_path_join as ujoin
+from .mocking import AsyncCallableFormSpawner
+from .mocking import CallableFormSpawner
+from .mocking import FalsyAsyncCallableFormSpawner
 from .mocking import FalsyCallableFormSpawner
+from .mocking import FalsyFormSpawner
 from .mocking import FormSpawner
 from .test_api import next_event
 from .utils import add_user
@@ -234,10 +238,38 @@ async def test_spawn_page(app):
         assert FormSpawner.options_form in r.text
 
 
-async def test_spawn_page_falsy_callable(app):
+async def test_spawn_page_callable(app):
+    with mock.patch.dict(app.users.settings, {'spawner_class': CallableFormSpawner}):
+        cookies = await app.login_user('jones')
+        r = await get_page('spawn', app, cookies=cookies)
+        assert r.url.endswith('/spawn')
+        assert CallableFormSpawner().options_form() in r.text
+
+        r = await get_page('spawn?next=foo', app, cookies=cookies)
+        assert r.url.endswith('/spawn?next=foo')
+        assert CallableFormSpawner().options_form() in r.text
+
+
+async def test_spawn_page_async_callable(app):
     with mock.patch.dict(
-        app.users.settings, {'spawner_class': FalsyCallableFormSpawner}
+        app.users.settings, {'spawner_class': AsyncCallableFormSpawner}
     ):
+        cookies = await app.login_user('jones')
+        r = await get_page('spawn', app, cookies=cookies)
+        assert r.url.endswith('/spawn')
+        assert await AsyncCallableFormSpawner().options_form() in r.text
+
+        r = await get_page('spawn?next=foo', app, cookies=cookies)
+        assert r.url.endswith('/spawn?next=foo')
+        assert await AsyncCallableFormSpawner().options_form() in r.text
+
+
+@pytest.mark.parametrize(
+    'spawner_class',
+    [FalsyFormSpawner, FalsyCallableFormSpawner, FalsyAsyncCallableFormSpawner],
+)
+async def test_spawn_page_falsy_callable(app, spawner_class):
+    with mock.patch.dict(app.users.settings, {'spawner_class': spawner_class}):
         cookies = await app.login_user('erik')
         r = await get_page('spawn', app, cookies=cookies)
     history = [_.url for _ in r.history] + [r.url]
