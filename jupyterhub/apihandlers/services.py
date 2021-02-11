@@ -30,7 +30,8 @@ def service_model(service):
 
 class ServiceListAPIHandler(APIHandler):
     @needs_scope('read:services')
-    def get(self, scope_filter=None):
+    def get(self):
+        scope_filter = self.get_scope_filter('read:services')
         if scope_filter is None:
             data = {
                 name: service_model(service) for name, service in self.services.items()
@@ -46,7 +47,7 @@ class ServiceListAPIHandler(APIHandler):
 
 def admin_or_self(method):
     """Decorator for restricting access to either the target service or admin"""
-    """***Deprecated in favor of RBAC, use scope-based decorator***"""
+    """***Deprecated in favor of RBAC. Use scope-based decorator***"""
 
     def decorated_method(self, name):
         current = self.current_user

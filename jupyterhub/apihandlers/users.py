@@ -53,8 +53,14 @@ class UserListAPIHandler(APIHandler):
         user = self.users[orm_user]
         return any(spawner.ready for spawner in user.spawners.values())
 
-    @needs_scope('read:users')
-    def get(self, scope_filter=None):
+    @needs_scope(
+        'read:users',
+        'read:users:names',
+        'reda:users:servers',
+        'read:users:groups',
+        'read:users:activity',
+    )
+    def get(self):
         state_filter = self.get_argument("state", None)
 
         # post_filter
@@ -95,14 +101,14 @@ class UserListAPIHandler(APIHandler):
         else:
             # no filter, return all users
             query = self.db.query(orm.User)
-        if scope_filter is not None:
-            query = query.filter(orm.User.name.in_(scope_filter))
-
-        data = [
-            self.user_model(u, include_servers=True, include_state=True)
-            for u in query
-            if (post_filter is None or post_filter(u))
-        ]
+        data = []
+        for u in query:
+            if post_filter is None or post_filter(u):
+                user_model = self.user_model(
+                    u, include_servers=True, include_state=True
+                )
+                if user_model:
+                    data.append(user_model)
         self.write(json.dumps(data))
 
     @needs_scope('admin:users')

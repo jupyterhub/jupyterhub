@@ -10,6 +10,7 @@ from tornado import web
 
 from .. import orm
 from ..handlers import BaseHandler
+from ..handlers import scopes
 from ..utils import isoformat
 from ..utils import url_path_join
 
@@ -61,6 +62,38 @@ class APIHandler(BaseHandler):
             )
             return False
         return True
+
+    def get_scope_filter(self, req_scope):
+        """Produce a filter for `*ListAPIHandlers* so that GET method knows which models to return"""
+        scope_translator = {
+            'read:users': 'users',
+            'read:services': 'services',
+            'read:groups': 'groups',
+        }
+        if req_scope not in scope_translator:
+            raise AttributeError("Internal error: inconsistent scope situation")
+        kind = scope_translator[req_scope]
+        Resource = orm.get_class(kind)
+        try:
+            sub_scope = self.parsed_scopes[req_scope]
+        except AttributeError:
+            raise web.HTTPError(
+                403,
+                "Resource scope %s (that was just accessed) not found in scopes anymore"
+                % req_scope,
+            )
+        if sub_scope == scopes.Scope.ALL:
+            return None  # Full access
+        sub_scope_values = next(iter(sub_scope.values()))
+        query = self.db.query(Resource).filter(Resource.name.in_(sub_scope_values))
+        scope_filter = {entry.name for entry in query.all()}
+        if 'group' in sub_scope and kind == 'users':
+            groups = orm.Group.name.in_(sub_scope['group'])
+            users_in_groups = (
+                self.db.query(orm.User).join(orm.Group.users).filter(groups)
+            )
+            scope_filter |= {user.name for user in users_in_groups}
+        return scope_filter
 
     def get_current_user_cookie(self):
         """Override get_user_cookie to check Referer header"""
@@ -189,46 +222,61 @@ class APIHandler(BaseHandler):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
-        model = {'kind': 'user'}
+        model = {
+            'kind': 'user',
+            'name': user.name,
+            'admin': user.admin,
+            'roles': [r.name for r in user.roles],
+            'groups': [g.name for g in user.groups],
+            'server': user.url if user.running else None,
+            'pending': None,
+            'created': isoformat(user.created),
+            'last_activity': isoformat(user.last_activity),
+        }
+        access_map = {
+            'read:users': {
+                'kind',
+                'name',
+                'admin',
+                'roles',
+                'groups',
+                'server',
+                'servers',
+                'pending',
+                'created',
+                'last_activity',
+            },
+            'read:users:name': {'kind', 'name'},
+            'read:users:groups': {'kind', 'name', 'groups'},
+            'read:users:activity': {'kind', 'name', 'last_activity'},
+            'read:users:servers': {'kind', 'name', 'servers'},
+        }
         # Todo: Should 'name' be included in all access?
         self.log.debug(
-            "Asking for models with scopes [%s]" % ", ".join(self.parsed_scopes)
-        )  # debug
-        if 'read:users' in self.parsed_scopes:
-            model.update(
-                {
-                    'name': user.name,
-                    'admin': user.admin,
-                    'roles': [r.name for r in user.roles],
-                    'groups': [g.name for g in user.groups],
-                    'server': user.url if user.running else None,
-                    'pending': None,
-                    'created': isoformat(user.created),
-                    'last_activity': isoformat(user.last_activity),
-                }
-            )
-            server_permission = True
-        else:
-            if 'read:users:name' in self.parsed_scopes:
-                model['name'] = user.name
-            if 'read:users:groups' in self.parsed_scopes:
-                model['groups'] = [g.name for g in user.groups]
-            if 'read:users:activity' in self.parsed_scopes:
-                model['last_activity'] = isoformat(user.last_activity)
-            server_permission = 'read:users:servers' in self.parsed_scopes
-
-        if '' in user.spawners:
+            "Asking for user models with scopes [%s]" % ", ".join(self.raw_scopes)
+        )
+        allowed_keys = set()
+        for scope in access_map:
+            if scope in self.parsed_scopes:
+                scope_filter = self.get_scope_filter(scope)
+                if scope_filter is None or user.name in scope_filter:
+                    allowed_keys |= access_map[scope]
+        model = {key: model[key] for key in allowed_keys if key in model}
+        if not model:
+            return model  # No access to this user
+        if '' in user.spawners and 'pending' in allowed_keys:
             model['pending'] = user.spawners[''].pending
-        if not (include_servers and server_permission):
+        if not (include_servers and 'servers' in allowed_keys):
             model['servers'] = None
-            return model
-
-        servers = model['servers'] = {}
-        for name, spawner in user.spawners.items():
-            # include 'active' servers, not just ready
-            # (this includes pending events)
-            if spawner.active:
-                servers[name] = self.server_model(spawner, include_state=include_state)
+        else:
+            servers = model['servers'] = {}
+            for name, spawner in user.spawners.items():
+                # include 'active' servers, not just ready
+                # (this includes pending events)
+                if spawner.active:
+                    servers[name] = self.server_model(
+                        spawner, include_state=include_state
+                    )
         return model
 
     def group_model(self, group):
