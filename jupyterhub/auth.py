@@ -185,6 +185,13 @@ class Authenticator(LoggingConfigurable):
         """
     )
 
+    def get_custom_html(self, base_url):
+        """Get custom HTML for the authenticator.
+
+        .. versionadded: 1.4
+        """
+        return self.custom_html
+
     login_service = Unicode(
         help="""
         Name of the login service that this authenticator is providing using to authenticate users.
@@ -1100,13 +1107,6 @@ class PAMAuthenticator(LocalAuthenticator):
             return username
         else:
             return super().normalize_username(username)
-
-    def get_custom_html(self, base_url):
-        """Get custom HTML for the authenticator.
-
-        .. versionadded: 1.4
-        """
-        return self.custom_html
 
 
 for _old_name, _new_name, _version in [
