@@ -12,17 +12,17 @@ works.
 
 ## Semi-trusted and untrusted users
 
-JupyterHub is designed to be a *simple multi-user server for modestly sized
-groups* of **semi-trusted** users. While the design reflects serving semi-trusted
+JupyterHub is designed to be a _simple multi-user server for modestly sized
+groups_ of **semi-trusted** users. While the design reflects serving semi-trusted
 users, JupyterHub is not necessarily unsuitable for serving **untrusted** users.
 
 Using JupyterHub with **untrusted** users does mean more work by the
 administrator. Much care is required to secure a Hub, with extra caution on
 protecting users from each other as the Hub is serving untrusted users.
 
-One aspect of JupyterHub's *design simplicity* for **semi-trusted** users is that
-the Hub and single-user servers are placed in a *single domain*, behind a
-[*proxy*][configurable-http-proxy]. If the Hub is serving untrusted
+One aspect of JupyterHub's _design simplicity_ for **semi-trusted** users is that
+the Hub and single-user servers are placed in a _single domain_, behind a
+[_proxy_][configurable-http-proxy]. If the Hub is serving untrusted
 users, many of the web's cross-site protections are not applied between
 single-user servers and the Hub, or between single-user servers and each
 other, since browsers see the whole thing (proxy, Hub, and single user
@@ -40,7 +40,7 @@ server.
 To protect all users from each other, JupyterHub administrators must
 ensure that:
 
-* A user **does not have permission** to modify their single-user notebook server,
+- A user **does not have permission** to modify their single-user notebook server,
   including:
   - A user **may not** install new packages in the Python environment that runs
     their single-user server.
@@ -49,11 +49,11 @@ ensure that:
     directory that precedes the directory containing `jupyterhub-singleuser`.
   - A user may not modify environment variables (e.g. PATH, PYTHONPATH) for
     their single-user server.
-* A user **may not** modify the configuration of the notebook server
+- A user **may not** modify the configuration of the notebook server
   (the `~/.jupyter` or `JUPYTER_CONFIG_DIR` directory).
 
 If any additional services are run on the same domain as the Hub, the services
-**must never** display user-authored HTML that is neither *sanitized* nor *sandboxed*
+**must never** display user-authored HTML that is neither _sanitized_ nor _sandboxed_
 (e.g. IFramed) to any user that lacks authentication as the author of a file.
 
 ## Mitigate security issues
@@ -85,7 +85,7 @@ admin must enforce.
 ### Prevent spawners from evaluating shell configuration files
 
 For most Spawners, `PATH` is not something users can influence, but care should
-be taken to ensure that the Spawner does *not* evaluate shell configuration
+be taken to ensure that the Spawner does _not_ evaluate shell configuration
 files prior to launching the server.
 
 ### Isolate packages using virtualenv
@@ -124,7 +124,6 @@ versions up to date.
 
 A handy website for testing your deployment is
 [Qualsys' SSL analyzer tool](https://www.ssllabs.com/ssltest/analyze.html).
-
 
 [configurable-http-proxy]: https://github.com/jupyterhub/configurable-http-proxy
 

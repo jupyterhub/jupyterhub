@@ -15,9 +15,10 @@ This should only be used for demo or testing purposes!
 It shouldn't be used as a base image to build on.
 
 ### Try it
+
 1. `cd` to the root of your jupyterhub repo.
 
-2. Build the demo image with `docker build -t jupyterhub-demo demo-image`. 
+2. Build the demo image with `docker build -t jupyterhub-demo demo-image`.
 
 3. Run the demo image with `docker run -d -p 8000:8000 jupyterhub-demo`.
 

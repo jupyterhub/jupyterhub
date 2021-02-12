@@ -9,7 +9,7 @@ Only do this if you are very sure you must.
 There are many Authenticators and Spawners available for JupyterHub. Some, such
 as DockerSpawner or OAuthenticator, do not need any elevated permissions. This
 document describes how to get the full default behavior of JupyterHub while
-running notebook servers as real system users on a shared system without 
+running notebook servers as real system users on a shared system without
 running the Hub itself as root.
 
 Since JupyterHub needs to spawn processes as other users, the simplest way
@@ -50,9 +50,8 @@ To do this we add to `/etc/sudoers` (use `visudo` for safe editing of sudoers):
 
 - specify the list of users `JUPYTER_USERS` for whom `rhea` can spawn servers
 - set the command `JUPYTER_CMD` that `rhea` can execute on behalf of users
-- give `rhea` permission to run `JUPYTER_CMD` on behalf of `JUPYTER_USERS` 
+- give `rhea` permission to run `JUPYTER_CMD` on behalf of `JUPYTER_USERS`
   without entering a password
-
 
 For example:
 
@@ -91,16 +90,16 @@ $ adduser -G jupyterhub newuser
 Test that the new user doesn't need to enter a password to run the sudospawner
 command.
 
-This should prompt for your password to switch to rhea, but *not* prompt for
+This should prompt for your password to switch to rhea, but _not_ prompt for
 any password for the second switch. It should show some help output about
 logging options:
 
 ```bash
 $ sudo -u rhea sudo -n -u $USER /usr/local/bin/sudospawner --help
 Usage: /usr/local/bin/sudospawner [OPTIONS]
-    
+
 Options:
-    
+
 --help          show this help information
 ...
 ```
@@ -151,12 +150,13 @@ We want our new user to be able to read the shadow passwords, so add it to the s
     $ sudo usermod -a -G shadow rhea
 ```
 
-If you want jupyterhub to serve pages on a restricted port (such as port 80 for http), 
+If you want jupyterhub to serve pages on a restricted port (such as port 80 for http),
 then you will need to give `node` permission to do so:
 
 ```bash
 sudo setcap 'cap_net_bind_service=+ep' /usr/bin/node
 ```
+
 However, you may want to further understand the consequences of this.
 
 You may also be interested in limiting the amount of CPU any process can use
@@ -164,7 +164,6 @@ on your server. `cpulimit` is a useful tool that is available for many Linux
 distributions' packaging system. This can be used to keep any user's process
 from using too much CPU cycles. You can configure it accoring to [these
 instructions](http://ubuntuforums.org/showthread.php?t=992706).
-
 
 ### Shadow group (FreeBSD)
 
@@ -186,7 +185,7 @@ $ sudo chgrp shadow /etc/master.passwd
 $ sudo chmod g+r /etc/master.passwd
 ```
 
-We want our new user to be able to read the shadow passwords, so add it to the 
+We want our new user to be able to read the shadow passwords, so add it to the
 shadow group:
 
 ```bash
@@ -220,7 +219,7 @@ Finally, start the server as our newly configured user, `rhea`:
 ```bash
 $ cd /etc/jupyterhub
 $ sudo -u rhea jupyterhub --JupyterHub.spawner_class=sudospawner.SudoSpawner
-```                                                                             
+```
 
 And try logging in.
 
@@ -228,7 +227,7 @@ And try logging in.
 
 If you still get a generic `Permission denied` `PermissionError`, it's possible SELinux is blocking you.  
 Here's how you can make a module to allow this.
-First, put this in a file  named `sudo_exec_selinux.te`:
+First, put this in a file named `sudo_exec_selinux.te`:
 
 ```bash
 module sudo_exec_selinux 1.1;

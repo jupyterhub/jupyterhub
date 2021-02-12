@@ -13,7 +13,6 @@ python:
       path: .
     - requirements: docs/requirements.txt
 
-
 formats:
   - htmlzip
   - epub

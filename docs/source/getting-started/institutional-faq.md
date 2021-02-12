@@ -18,14 +18,14 @@ to the use-cases of large organizations.
 
 Here is a quick breakdown of these three tools:
 
-* **The Jupyter Notebook** is a document specification (the `.ipynb`) file that interweaves
+- **The Jupyter Notebook** is a document specification (the `.ipynb`) file that interweaves
   narrative text with code cells and their outputs. It is also a graphical interface
   that allows users to edit these documents. There are also several other graphical interfaces
   that allow users to edit the `.ipynb` format (nteract, Jupyter Lab, Google Colab, Kaggle, etc).
-* **JupyterLab** is a flexible and extendible user interface for interactive computing. It
+- **JupyterLab** is a flexible and extendible user interface for interactive computing. It
   has several extensions that are tailored for using Jupyter Notebooks, as well as extensions
   for other parts of the data science stack.
-* **JupyterHub** is an application that manages interactive computing sessions for **multiple users**.
+- **JupyterHub** is an application that manages interactive computing sessions for **multiple users**.
   It also connects them with infrastructure those users wish to access. It can provide
   remote access to Jupyter Notebooks and Jupyter Lab for many people.
 
@@ -50,20 +50,20 @@ scalable infrastructure, large datasets, and high-performance computing.
 JupyterHub is used at a variety of institutions in academia,
 industry, and government research labs. It is most-commonly used by two kinds of groups:
 
-* Small teams (e.g., data science teams, research labs, or collaborative projects) to provide a
+- Small teams (e.g., data science teams, research labs, or collaborative projects) to provide a
   shared resource for interactive computing, collaboration, and analytics.
-* Large teams (e.g., a department, a large class, or a large group of remote users) to provide
+- Large teams (e.g., a department, a large class, or a large group of remote users) to provide
   access to organizational hardware, data, and analytics environments at scale.
 
 Here are a sample of organizations that use JupyterHub:
 
-* **Universities and colleges**: UC Berkeley, UC San Diego, Cal Poly SLO, Harvard University, University of Chicago,
+- **Universities and colleges**: UC Berkeley, UC San Diego, Cal Poly SLO, Harvard University, University of Chicago,
   University of Oslo, University of Sheffield, Université Paris Sud, University of Versailles
-* **Research laboratories**: NASA, NCAR, NOAA, the Large Synoptic Survey Telescope, Brookhaven National Lab,
+- **Research laboratories**: NASA, NCAR, NOAA, the Large Synoptic Survey Telescope, Brookhaven National Lab,
   Minnesota Supercomputing Institute, ALCF, CERN, Lawrence Livermore National Laboratory
-* **Online communities**: Pangeo, Quantopian, mybinder.org, MathHub, Open Humans
-* **Computing infrastructure providers**: NERSC, San Diego Supercomputing Center, Compute Canada
-* **Companies**: Capital One, SANDVIK code, Globus
+- **Online communities**: Pangeo, Quantopian, mybinder.org, MathHub, Open Humans
+- **Computing infrastructure providers**: NERSC, San Diego Supercomputing Center, Compute Canada
+- **Companies**: Capital One, SANDVIK code, Globus
 
 See the [Gallery of JupyterHub deployments](../gallery-jhub-deployments.md) for
 a more complete list of JupyterHub deployments at institutions.
@@ -95,13 +95,12 @@ The most common way to set up a JupyterHub is to use a JupyterHub distribution, 
 and opinionated ways to set up a JupyterHub on particular kinds of infrastructure. The two distributions
 that we currently suggest are:
 
-* [Zero to JupyterHub for Kubernetes](https://z2jh.jupyter.org) is a scalable JupyterHub deployment and
+- [Zero to JupyterHub for Kubernetes](https://z2jh.jupyter.org) is a scalable JupyterHub deployment and
   guide that runs on Kubernetes. Better for larger or dynamic user groups (50-10,000) or more complex
   compute/data needs.
-* [The Littlest JupyterHub](https://tljh.jupyter.org) is a lightweight JupyterHub that runs on a single
+- [The Littlest JupyterHub](https://tljh.jupyter.org) is a lightweight JupyterHub that runs on a single
   single machine (in the cloud or under your desk). Better for smaller usergroups (4-80) or more
   lightweight computational resources.
-
 
 ### Does JupyterHub run well in the cloud?
 
@@ -123,9 +122,9 @@ The short answer: yes. JupyterHub as a standalone application has been battle-te
 level for several years, and makes a number of "default" security decisions that are reasonable for most
 users.
 
-* For security considerations in the base JupyterHub application,
+- For security considerations in the base JupyterHub application,
   [see the JupyterHub security page](https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html)
-* For security considerations when deploying JupyterHub on Kubernetes, see the
+- For security considerations when deploying JupyterHub on Kubernetes, see the
   [JupyterHub on Kubernetes security page](https://zero-to-jupyterhub.readthedocs.io/en/latest/security.html).
 
 The longer answer: it depends on your deployment. Because JupyterHub is very flexible, it can be used
@@ -137,14 +136,12 @@ If you are worried about security, don't hesitate to reach out to the JupyterHub
 [Jupyter Community Forum](https://discourse.jupyter.org/c/jupyterhub). This community of practice has many
 individuals with experience running secure JupyterHub deployments.
 
-
 ### Does JupyterHub provide computing or data infrastructure?
 
-No - JupyterHub manages user sessions and can *control* computing infrastructure, but it does not provide these
+No - JupyterHub manages user sessions and can _control_ computing infrastructure, but it does not provide these
 things itself. You are expected to run JupyterHub on your own infrastructure (local or in the cloud). Moreover,
 JupyterHub has no internal concept of "data", but is designed to be able to communicate with data repositories
 (again, either locally or remotely) for use within interactive computing sessions.
-
 
 ### How do I manage users?
 
@@ -154,7 +151,7 @@ email address, or choose a username / password when they first log-in, or offloa
 another service such as an organization's OAuth.
 
 The users of a JupyterHub are stored locally, and can be modified manually by an administrator of the JupyterHub.
-Moreover, the *active* users on a JupyterHub can be found on the administrator's page. This page
+Moreover, the _active_ users on a JupyterHub can be found on the administrator's page. This page
 gives you the abiltiy to stop or restart kernels, inspect user filesystems, and even take over user
 sessions to assist them with debugging.
 
@@ -181,7 +178,6 @@ For more sophisticated computational resources (like distributed computing), Jup
 connect with other infrastructure tools (like Dask or Spark). This allows users to control
 scalable or high-performance resources from within their JupyterHub sessions. The logic of
 how those resources are controlled is taken care of by the non-JupyterHub application.
-
 
 ### Can JupyterHub be used with my high-performance computing resources?
 
@@ -218,7 +214,6 @@ the technologies your JupyterHub will use (e.g., dev-ops knowledge with cloud co
 In general, the base JupyterHub deployment is not the bottleneck for setup, it is connecting
 your JupyterHub with the various services and tools that you wish to provide to your users.
 
-
 ### How well does JupyterHub scale? What are JupyterHub's limitations?
 
 JupyterHub works well at both a small scale (e.g., a single VM or machine) as well as a
@@ -226,7 +221,6 @@ high scale (e.g., a scalable Kubernetes cluster). It can be used for teams as sm
 for user bases as large as 10,000. The scalability of JupyterHub largely depends on the
 infrastructure on which it is deployed. JupyterHub has been designed to be lightweight and
 flexible, so you can tailor your JupyterHub deployment to your needs.
-
 
 ### Is JupyterHub resilient? What happens when a machine goes down?
 
