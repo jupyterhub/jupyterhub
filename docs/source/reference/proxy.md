@@ -54,7 +54,7 @@ class MyProxy(Proxy):
         """Stop the proxy"""
 ```
 
-These methods **may** be  coroutines.
+These methods **may** be coroutines.
 
 `c.Proxy.should_start` is a configurable flag that determines whether the
 Hub should call these methods when the Hub itself starts and stops.
@@ -103,7 +103,7 @@ route to be proxied, such as `/user/name/`. A routespec will:
 
 When adding a route, JupyterHub may pass a JSON-serializable dict as a `data`
 argument that should be attached to the proxy route. When that route is
-retrieved, the `data` argument should be returned as well. If your  proxy
+retrieved, the `data` argument should be returned as well. If your proxy
 implementation doesn't support storing data attached to routes, then your
 Python wrapper may have to handle storing the `data` piece itself, e.g in a
 simple file or database.
@@ -136,7 +136,7 @@ async def delete_route(self, routespec):
 
 ### Retrieving routes
 
-For retrieval, you only *need* to implement a single method that retrieves all
+For retrieval, you only _need_ to implement a single method that retrieves all
 routes. The return value for this function should be a dictionary, keyed by
 `routespect`, of dicts whose keys are the same three arguments passed to
 `add_route` (`routespec`, `target`, `data`)

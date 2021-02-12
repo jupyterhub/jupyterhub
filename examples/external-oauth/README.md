@@ -16,63 +16,62 @@ implementations in other web servers or languages.
 
 ## Run the example
 
-1. generate an API token:
+1.  generate an API token:
 
         export JUPYTERHUB_API_TOKEN=$(openssl rand -hex 32)
 
-2. launch a version of the the whoami service.
-   For `whoami-oauth`:
+2.  launch a version of the the whoami service.
+    For `whoami-oauth`:
 
-        bash launch-service.sh &
+         bash launch-service.sh &
 
     or for `whoami-oauth-basic`:
 
-        bash launch-service-basic.sh &
+         bash launch-service-basic.sh &
 
-3. Launch JupyterHub:
+3.  Launch JupyterHub:
 
         jupyterhub
 
-4. Visit http://127.0.0.1:5555/
+4.  Visit http://127.0.0.1:5555/
 
 After logging in with your local-system credentials, you should see a JSON dump of your user info:
 
 ```json
 {
- "admin": false,
- "last_activity": "2016-05-27T14:05:18.016372",
- "name": "queequeg",
- "pending": null,
- "server": "/user/queequeg"
+  "admin": false,
+  "last_activity": "2016-05-27T14:05:18.016372",
+  "name": "queequeg",
+  "pending": null,
+  "server": "/user/queequeg"
 }
 ```
-
 
 The essential pieces for using JupyterHub as an OAuth provider are:
 
 1. registering your service with jupyterhub:
 
-    ```python
-    c.JupyterHub.services = [
-        {
-            # the name of your service
-            # should be simple and unique.
-            # mostly used to identify your service in logging
-            "name": "my-service",
-            # the oauth client id of your service
-            # must be unique but isn't private
-            # can be randomly generated or hand-written
-            "oauth_client_id": "abc123",
-            # the API token and client secret of the service
-            # should be generated securely,
-            # e.g. via `openssl rand -hex 32`
-            "api_token": "abc123...",
-            # the redirect target for jupyterhub to send users
-            # after successful authentication
-            "oauth_redirect_uri": "https://service-host/oauth_callback"
-        }
-    ]
-    ```
+   ```python
+   c.JupyterHub.services = [
+       {
+           # the name of your service
+           # should be simple and unique.
+           # mostly used to identify your service in logging
+           "name": "my-service",
+           # the oauth client id of your service
+           # must be unique but isn't private
+           # can be randomly generated or hand-written
+           "oauth_client_id": "abc123",
+           # the API token and client secret of the service
+           # should be generated securely,
+           # e.g. via `openssl rand -hex 32`
+           "api_token": "abc123...",
+           # the redirect target for jupyterhub to send users
+           # after successful authentication
+           "oauth_redirect_uri": "https://service-host/oauth_callback"
+       }
+   ]
+   ```
 
 2. Telling your service how to authenticate with JupyterHub.
 

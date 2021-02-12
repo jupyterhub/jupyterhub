@@ -12,7 +12,6 @@ script. However, instead of bundling all these step for you into one installer, 
 This makes it easy to customize any part (e.g. if you want to run other services on the same system and need to make them
 work together), as well as giving you full control and understanding of your setup.
 
-
 ## Prerequisites
 
 Your own server with administrator (root) access. This could be a local machine, a remotely hosted one, or a cloud instance
@@ -21,7 +20,6 @@ through the command line - useful if you log into your machine remotely using SS
 
 This tutorial was tested on **Ubuntu 18.04**. No other Linux distributions have been tested, but the instructions
 should be reasonably straightforward to adapt.
-
 
 ## Goals
 
@@ -38,7 +36,6 @@ JupyterHub+JupyterLab as a 'app' or webservice, which will connect to the kernel
 - We will create a shared conda environment which can be used (but not modified) by all users.
 
 - We will show how users can create their own private conda environments, where they can install whatever they like.
-
 
 The default JupyterHub Authenticator uses PAM to authenticate system users with their username and password. One can
 [choose the authenticator](https://jupyterhub.readthedocs.io/en/stable/reference/authenticators.html#authenticators)
@@ -103,11 +100,13 @@ First create the folder for the JupyterHub configuration and navigate to it:
 sudo mkdir -p /opt/jupyterhub/etc/jupyterhub/
 cd /opt/jupyterhub/etc/jupyterhub/
 ```
+
 Then generate the default configuration file
 
 ```sh
 sudo /opt/jupyterhub/bin/jupyterhub --generate-config
 ```
+
 This will produce the default configuration file `/opt/jupyterhub/etc/jupyterhub/jupyterhub_config.py`
 
 You will need to edit the configuration file to make the JupyterLab interface by the default.
@@ -130,6 +129,7 @@ sudo mkdir -p /opt/jupyterhub/etc/systemd
 ```
 
 Then create the following text file using your [favourite editor](https://micro-editor.github.io/) at
+
 ```sh
 /opt/jupyterhub/etc/systemd/jupyterhub.service
 ```
@@ -198,6 +198,7 @@ this means they will get automatic updates with the rest of the system. Setup re
 instructions are copied from [here](https://docs.conda.io/projects/conda/en/latest/user-guide/install/rpm-debian.html):
 
 Install Anacononda public gpg key to trusted store
+
 ```sh
 curl https://repo.anaconda.com/pkgs/misc/gpgkeys/anaconda.asc | gpg --dearmor > conda.gpg
 sudo install -o root -g root -m 644 conda.gpg /etc/apt/trusted.gpg.d/
@@ -228,6 +229,7 @@ sudo ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 ### Install a default conda environment for all users
 
 First create a folder for conda envs (might exist already):
+
 ```sh
 sudo mkdir /opt/conda/envs/
 ```
@@ -254,12 +256,12 @@ might be used by other services, or if you want to modify the JupyterHub install
 
 ```sh
 sudo /opt/conda/envs/python/bin/python -m ipykernel install --prefix /usr/local/ --name 'python' --display-name "Python (default)"
-````
+```
 
 ### Setting up users' own conda environments
 
 There is relatively little for the administrator to do here, as users will have to set up their own environments using the shell.
-On login they should run `conda init` or  `/opt/conda/bin/conda`. The can then use conda to set up their environment,
+On login they should run `conda init` or `/opt/conda/bin/conda`. The can then use conda to set up their environment,
 although they must also install `ipykernel`. Once done, they can enable their kernel using:
 
 ```sh
@@ -267,7 +269,6 @@ although they must also install `ipykernel`. Once done, they can enable their ke
 ```
 
 This will place the kernel spec into their home folder, where Jupyter will look for it on startup.
-
 
 ## Setting up a reverse proxy
 
@@ -281,6 +282,7 @@ this way - instead, use a reverse proxy running on standard HTTP/HTTPS ports.
 > Firewalls may be set up using `ufw` or `firewalld` and combined with `fail2ban`.
 
 ### Using Nginx
+
 Nginx is a mature and established web server and reverse proxy and is easy to install using `sudo apt install nginx`.
 Details on using Nginx as a reverse proxy can be found elsewhere. Here, we will only outline the additional steps needed
 to setup JupyterHub with Nginx and host it at a given URL e.g. `<your-server-ip-or-url>/jupyter`.
@@ -316,7 +318,7 @@ Add the following snippet to your nginx configuration file (e.g. `/etc/nginx/sit
   }
 ```
 
-Also add this snippet before the *server* block:
+Also add this snippet before the _server_ block:
 
 ```
 map $http_upgrade $connection_upgrade {
@@ -336,7 +338,6 @@ If there are no errors, you can restart the Nginx service for the new configurat
 ```sh
 sudo systemctl restart nginx.service
 ```
-
 
 ## Getting started using your new JupyterHub
 
