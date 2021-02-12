@@ -19,7 +19,8 @@ extensions = [
     'autodoc_traits',
     'sphinx_copybutton',
     'sphinx-jsonschema',
-    'recommonmark',
+    #'recommonmark',
+    'myst_parser',
 ]
 
 # The master toctree document.
@@ -111,9 +112,9 @@ class HelpAllDirective(SphinxDirective):
 
 
 def setup(app):
-    app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
+    # app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
     app.add_css_file('custom.css')
-    app.add_transform(AutoStructify)
+    # app.add_transform(AutoStructify)
     app.add_directive('jupyterhub-generate-config', ConfigDirective)
     app.add_directive('jupyterhub-help-all', HelpAllDirective)
 
