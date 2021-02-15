@@ -238,19 +238,9 @@ class APIHandler(BaseHandler):
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
         }
+
         access_map = {
-            'read:users': {
-                'kind',
-                'name',
-                'admin',
-                'roles',
-                'groups',
-                'server',
-                'servers',
-                'pending',
-                'created',
-                'last_activity',
-            },
+            'read:users': set(model.keys()),  # All available components
             'read:users:names': {'kind', 'name'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
@@ -264,8 +254,6 @@ class APIHandler(BaseHandler):
             "Current requests have db loaded scopes [%s]" % self.current_user
         )
         allowed_keys = set()
-        # if not self.parsed_scopes:
-        #     self.parse_scopes()
         for scope in access_map:
             if scope in self.parsed_scopes:
                 scope_filter = self.get_scope_filter(scope)

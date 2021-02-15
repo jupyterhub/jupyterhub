@@ -435,12 +435,14 @@ class BaseHandler(RequestHandler):
         return self._jupyterhub_user
 
     def _parse_scopes(self):
-        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
-            if self.current_user:  # Todo: Deal with oauth tokens
-                self.raw_scopes = roles.get_subscopes(*self.current_user.roles)
-            if 'all' in self.raw_scopes:
-                self.raw_scopes |= scopes.get_user_scopes(self.current_user.name)
-            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+        if self._jupyterhub_user is not None:
+            self.raw_scopes = roles.get_subscopes(*self.current_user.roles)
+        oauth_token = self.get_current_user_oauth_token()
+        if oauth_token:
+            self.raw_scopes |= scopes.get_user_scopes(oauth_token.name)
+        if 'all' in self.raw_scopes:
+            self.raw_scopes |= scopes.get_user_scopes(self.current_user.name)
+        self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
     def current_user(self):

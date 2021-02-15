@@ -409,7 +409,17 @@ async def test_vertical_filter(app):
 
 
 async def test_stacked_vertical_filter(app):
-    pass
+    user_name = 'user'
+    test_role = generate_test_role(user_name, ['read:users:names'])
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    app.db.commit()
+
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    allowed_keys = {'name', 'kind'}
+    assert set([key for user in r.json() for key in user.keys()]) == allowed_keys
 
 
 async def test_cross_filter(app):
