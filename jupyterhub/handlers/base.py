@@ -435,6 +435,7 @@ class BaseHandler(RequestHandler):
         return self._jupyterhub_user
 
     def _parse_scopes(self):
+        """Parse raw scope collection into a dict with filters that can be used to resolve API access"""
         if self._jupyterhub_user is not None:
             self.raw_scopes = roles.get_subscopes(*self.current_user.roles)
         oauth_token = self.get_current_user_oauth_token()

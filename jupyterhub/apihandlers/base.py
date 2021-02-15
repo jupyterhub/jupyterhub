@@ -246,7 +246,6 @@ class APIHandler(BaseHandler):
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},
         }
-        # Todo: Should 'name' be included in all access?
         self.log.debug(
             "Asking for user models with scopes [%s]" % ", ".join(self.raw_scopes)
         )
@@ -263,9 +262,7 @@ class APIHandler(BaseHandler):
         if model:
             if '' in user.spawners and 'pending' in allowed_keys:
                 model['pending'] = user.spawners[''].pending
-            if (
-                include_servers and 'servers' in allowed_keys
-            ):  # Todo: Log breaking change: now no server component in user model if no access
+            if include_servers and 'servers' in allowed_keys:
                 servers = model['servers'] = {}
                 for name, spawner in user.spawners.items():
                     # include 'active' servers, not just ready
