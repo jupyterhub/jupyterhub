@@ -114,7 +114,7 @@ RBAC Reference
 .. toctree::
    :maxdepth: 2
 
-   rbac
+   rbac/index
 
 Contributing
 ------------

@@ -53,11 +53,6 @@ todo_include_todos = False
 # Set the default role so we can use `foo` instead of ``foo``
 default_role = 'literal'
 
-# -- Source -------------------------------------------------------------
-
-import recommonmark
-from recommonmark.transform import AutoStructify
-
 # -- Config -------------------------------------------------------------
 from jupyterhub.app import JupyterHub
 from docutils import nodes
@@ -112,9 +107,7 @@ class HelpAllDirective(SphinxDirective):
 
 
 def setup(app):
-    # app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
     app.add_css_file('custom.css')
-    # app.add_transform(AutoStructify)
     app.add_directive('jupyterhub-generate-config', ConfigDirective)
     app.add_directive('jupyterhub-help-all', HelpAllDirective)
 
