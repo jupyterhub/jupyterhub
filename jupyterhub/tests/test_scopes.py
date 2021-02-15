@@ -54,7 +54,7 @@ def test_scope_check_present():
 
 def test_scope_check_not_present():
     handler = get_handler_with_scopes(['read:users!user=maeby'])
-    assert not _check_scope(handler, 'read:users')
+    assert _check_scope(handler, 'read:users')
     with pytest.raises(web.HTTPError):
         _check_scope(handler, 'read:users', user='gob')
     with pytest.raises(web.HTTPError):
@@ -103,7 +103,8 @@ class MockAPIHandler:
         return True
 
     @needs_scope('users')
-    def other_thing(self, other_name):
+    def other_thing(self, non_filter_argument):
+        # Rely on inner vertical filtering
         return True
 
     @needs_scope('users')
@@ -161,8 +162,8 @@ class MockAPIHandler:
         ),
         (['users'], 'other_thing', ('gob',), True),
         (['read:users'], 'other_thing', ('gob',), False),
-        (['users!user=gob'], 'other_thing', ('gob',), False),
-        (['users!user=gob'], 'other_thing', ('maeby',), False),
+        (['users!user=gob'], 'other_thing', ('gob',), True),
+        (['users!user=gob'], 'other_thing', ('maeby',), True),
     ],
 )
 def test_scope_method_access(scopes, method, arguments, is_allowed):
@@ -403,7 +404,8 @@ async def test_vertical_filter(app):
 
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
-    assert set(r.json().keys()) == {'names'}
+    allowed_keys = {'name', 'kind'}
+    assert set([key for user in r.json() for key in user.keys()]) == allowed_keys
 
 
 async def test_stacked_vertical_filter(app):

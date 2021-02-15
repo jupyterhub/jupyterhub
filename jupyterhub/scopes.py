@@ -143,6 +143,7 @@ def needs_scope(*scopes):
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):
+            self.parse_scopes()  # Todo: Check most practical locations for parsing scopes
             sig = inspect.signature(func)
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()

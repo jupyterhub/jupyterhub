@@ -38,7 +38,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
     def get(self):
         """List groups"""
         groups = self.db.query(orm.Group)
-        scope_filter = self.get_scope_filter(self.db)
+        scope_filter = self.get_scope_filter('read:groups')
         if scope_filter is not None:
             groups = groups.filter(orm.Group.name.in_(scope_filter))
         data = [self.group_model(g) for g in groups]

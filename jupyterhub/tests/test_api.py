@@ -260,7 +260,9 @@ async def test_get_self(app):
     db = app.db
 
     # basic get self
-    r = await api_request(app, 'user')
+    r = await api_request(
+        app, 'user', headers=auth_header(db, 'user')
+    )  # Todo: check after dealing with oauth
     r.raise_for_status()
     assert r.json()['kind'] == 'user'
 
