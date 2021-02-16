@@ -16,10 +16,10 @@ jobs:
           name: install
           command: |
            sudo -H pip install jupyter
-           sudo jupyter notebook
       - run:
           name: smoke test jupyterhub
           command: |
+            sudo jupyter notebook
             curl -s http://whatismyip.akamai.com/
             sudo jupyter notebook --allow-root
       - run:
