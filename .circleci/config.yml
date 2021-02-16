@@ -11,7 +11,7 @@ jobs:
       - run:
           name: update
           command: |
-          
+          pip install jupyter        
       - run:
           name: install
           command: |
