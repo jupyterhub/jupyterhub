@@ -11,6 +11,7 @@ jobs:
       - run:
           name: build images
           command: |
+            pip install --upgrade pip
             pip install jupyterlab
       - run:
           name: smoke test jupyterhub
