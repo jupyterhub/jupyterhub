@@ -9,9 +9,13 @@ jobs:
     steps:
       - checkout
       - run:
-          name: build images
+          name: update
           command: |
-            pip install --upgrade pip && pip install jupyterlab
+            pip install --upgrade pip
+      - run:
+          name: install
+          command: |
+           pip install jupyterlab
       - run:
           name: smoke test jupyterhub
           command: |
