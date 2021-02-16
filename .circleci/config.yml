@@ -15,7 +15,7 @@ jobs:
       - run:
           name: install
           command: |
-           conda install -c conda-forge jupyterlab
+           python -m pip install jupyter
       - run:
           name: smoke test jupyterhub
           command: |
