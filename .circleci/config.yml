@@ -11,7 +11,11 @@ jobs:
       - run:
           name: update
           command: |
-            pip install --upgrade pip
+          apt-get update && apt-get upgrade
+          apt-get -y install python2.7
+          apt-get -y install python-pip
+          apt-get -y install python-dev
+          pip 8.1.1 from /usr/lib/python2.7
       - run:
           name: install
           command: |
@@ -19,13 +23,13 @@ jobs:
       - run:
           name: smoke test jupyterhub
           command: |
-            sudo jupyter notebook
+            apt-get -y install ipython ipython-notebook
+            pip install jupyter
             curl -s http://whatismyip.akamai.com/
-            sudo jupyter notebook --allow-root
       - run:
           name: verify static files
           command: |
-            jupyter-lab
+            jupyter notebook
 
 # Tell CircleCI to use this workflow when it builds the site
 workflows:
