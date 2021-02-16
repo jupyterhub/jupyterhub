@@ -12,7 +12,6 @@ jobs:
           name: update
           command: |
           apt-get update && apt-get upgrade
-          apt-get -y install python2.7
           apt-get -y install python-pip
           apt-get -y install python-dev
           pip 8.1.1 from /usr/lib/python2.7
