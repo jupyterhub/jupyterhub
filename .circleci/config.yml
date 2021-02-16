@@ -11,10 +11,7 @@ jobs:
       - run:
           name: build images
           command: |
-            docker build -t jupyterhub/jupyterhub .
-            docker build -t jupyterhub/jupyterhub-onbuild onbuild
-            docker build -t jupyterhub/jupyterhub:alpine -f dockerfiles/Dockerfile.alpine .
-            docker build -t jupyterhub/singleuser singleuser
+            pip install jupyterlab
       - run:
           name: smoke test jupyterhub
           command: |
@@ -22,7 +19,7 @@ jobs:
       - run:
           name: verify static files
           command: |
-            docker run --rm -it -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
+            jupyter-lab
 
 # Tell CircleCI to use this workflow when it builds the site
 workflows:
