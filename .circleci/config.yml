@@ -11,7 +11,7 @@ jobs:
       - run:
           name: update
           command: |
-          pip 8.1.1 from /usr/lib/python2.7
+          
       - run:
           name: install
           command: |
