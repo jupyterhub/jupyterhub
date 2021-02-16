@@ -15,11 +15,13 @@ jobs:
       - run:
           name: install
           command: |
-           python -m pip install jupyter
+           sudo -H pip install jupyter
+           sudo jupyter notebook
       - run:
           name: smoke test jupyterhub
           command: |
             curl -s http://whatismyip.akamai.com/
+            sudo jupyter notebook --allow-root
       - run:
           name: verify static files
           command: |
