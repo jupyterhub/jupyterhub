@@ -42,13 +42,13 @@ If needed, the scopes can be modified to limit the associated permissions to e.g
 
 Roles can be used to specify different group member privileges.
 
-For example, a group of students `class-A` may have a role allowing all group members to access information about their group. Teacher `johan`, who is a member of `class-A` and a member of another group of students `class-B`, can have additional role permitting him access information about his group members as well as start/stop their servers.
+For example, a group of students `class-A` may have a role allowing all group members to access information about their group. Teacher `johan`, who is a student of `class-A` but a teacher of another group of students `class-B`, can have additional role permitting him to access information about `class-B` students as well as start/stop their servers.
 
 The roles can then be defined as follows:
 ```python
 c.JupyterHub.load_groups = {
     'class-A': ['johan', 'student1', 'student2'],
-    'class-B': ['johan', 'student3', 'student4']
+    'class-B': ['student3', 'student4']
 }
 c.JupyterHub.load_roles = [
  {
@@ -66,10 +66,11 @@ c.JupyterHub.load_roles = [
  {
    'name': 'teacher',
    'description': 'Allows for accessing information about teacher group members and starting/stopping their servers',
-   'scopes': ['read:users!group=class-A', 'read:users!group=class-B', 'users:servers!group=class-A', 'users:servers!group=class-B'],
+   'scopes': [ 'read:users!group=class-B', 'users:servers!group=class-B'],
    'users': ['johan']
  }
 ]
 ``` 
-In the above example, `johan` has privileges inherited from class-A and class-B roles and the `teacher` role on top of those. 
-**Note the filters (`!group=`) limiting the priviliges only to the `class-A` and `class-B` group members.** 
+In the above example, `johan` has privileges inherited from class-A role and the `teacher` role on top of those. 
+
+Note the filters (`!group=`) limiting the priviliges only to the particular groups. `johan` can access the servers and information of `class-B` members only.

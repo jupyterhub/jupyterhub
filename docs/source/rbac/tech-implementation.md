@@ -1,6 +1,6 @@
 # Technical Implementation
 
-Roles are stored in the database similarly as users, services, etc. and can be added or modified as explained in {ref}`define_role_target`. Objects can gain, change and lose roles. For example, one can change a token's role, and as such its permissions, without the need to initiate new token (currently through `add_obj` and `remove_obj` functions in `roles.py`, this will be eventually available through APIs). Roles' and scopes' utilities can be found in `roles.py` and `scopes.py` modules.
+Roles are stored in the database similarly as users, services, etc., and can be added or modified as explained in {ref}`define_role_target`. Objects can gain, change and lose roles. For example, one can change a token's role, and as such its permissions, without the need to initiate new token (currently through `add_obj` and `remove_obj` functions in `roles.py`, this will be eventually available through APIs). Roles' and scopes' utilities can be found in `roles.py` and `scopes.py` modules.
 
 ## Resolving roles and scopes
 Roles and scopes are resolved on several occasions as shown in the {ref}`diagram below <checkpoint-fig>`.
