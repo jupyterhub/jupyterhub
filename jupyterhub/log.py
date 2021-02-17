@@ -2,7 +2,9 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import logging
 import traceback
+from functools import partial
 from http.cookies import SimpleCookie
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
@@ -132,18 +134,24 @@ def log_request(handler):
         status < 300 and isinstance(handler, (StaticFileHandler, HealthCheckHandler))
     ):
         # static-file success and 304 Found are debug-level
-        log_method = access_log.debug
+        log_level = logging.DEBUG
     elif status < 400:
-        log_method = access_log.info
+        log_level = logging.INFO
     elif status < 500:
-        log_method = access_log.warning
+        log_level = logging.WARNING
     else:
-        log_method = access_log.error
+        log_level = logging.ERROR
 
     uri = _scrub_uri(request.uri)
     headers = _scrub_headers(request.headers)
 
     request_time = 1000.0 * handler.request.request_time()
+
+    # always log slow responses (longer than 1s) at least info-level
+    if request_time >= 1000 and log_level < logging.INFO:
+        log_level = logging.INFO
+
+    log_method = partial(access_log.log, log_level)
 
     try:
         user = handler.current_user

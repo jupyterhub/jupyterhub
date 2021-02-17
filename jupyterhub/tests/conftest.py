@@ -246,7 +246,7 @@ def _mockservice(request, app, url=False):
     ):
         app.services = [spec]
         app.init_services()
-        mock_roles(app.db, name, 'services')
+        mock_roles(app, name, 'services')
         assert name in app._service_map
         service = app._service_map[name]
 

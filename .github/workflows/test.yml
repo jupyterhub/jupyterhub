@@ -1,7 +1,7 @@
 # This is a GitHub workflow defining a set of jobs with a set of steps.
 # ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
 #
-name: Run tests
+name: Test
 
 # Trigger the workflow's on all PRs but only on pushed tags or commits to
 # main/master branch to avoid PRs developed in a GitHub fork's dedicated branch
@@ -9,6 +9,7 @@ name: Run tests
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 defaults:
   run:

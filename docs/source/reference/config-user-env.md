@@ -179,3 +179,13 @@ The number of named servers per user can be limited by setting
 ```python
 c.JupyterHub.named_server_limit_per_user = 5
 ```
+
+## Switching to Jupyter Server
+
+[Jupyter Server](https://jupyter-server.readthedocs.io/en/latest/) is a new Tornado Server backend for Jupyter web applications (e.g. JupyterLab 3.0 uses this package as its default backend).
+
+By default, the single-user notebook server uses the (old) `NotebookApp` from the [notebook](https://github.com/jupyter/notebook) package. You can switch to using Jupyter Server's `ServerApp` backend (this will likely become the default in future releases) by setting the `JUPYTERHUB_SINGLEUSER_APP` environment variable to:
+
+```bash
+export JUPYTERHUB_SINGLEUSER_APP='jupyter_server.serverapp.ServerApp'
+```

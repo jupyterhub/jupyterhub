@@ -1,0 +1,61 @@
+# Build releases and (on tags) publish to PyPI
+name: Release
+
+# always build releases (to make sure wheel-building works)
+# but only publish to PyPI on tags
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+
+      - name: install build package
+        run: |
+          pip install --upgrade pip
+          pip install build
+          pip freeze
+
+      - name: build release
+        run: |
+          python -m build --sdist --wheel .
+          ls -l dist
+
+      - name: verify wheel
+        run: |
+          cd dist
+          pip install ./*.whl
+          # verify data-files are installed where they are found
+          cat <<EOF | python
+          import os
+          from jupyterhub._data import DATA_FILES_PATH
+          print(f"DATA_FILES_PATH={DATA_FILES_PATH}")
+          assert os.path.exists(DATA_FILES_PATH), DATA_FILES_PATH
+          for subpath in (
+              "templates/page.html",
+              "static/css/style.min.css",
+              "static/components/jquery/dist/jquery.js",
+          ):
+              path = os.path.join(DATA_FILES_PATH, subpath)
+              assert os.path.exists(path), path
+          print("OK")
+          EOF
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          pip install twine
+          twine upload --skip-existing dist/*

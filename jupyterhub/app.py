@@ -29,6 +29,14 @@ from urllib.parse import urlunparse
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
 
+# For compatibility with python versions 3.6 or earlier.
+# asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
+try:
+    asyncio_all_tasks = asyncio.all_tasks
+    asyncio_current_task = asyncio.current_task
+except AttributeError as e:
+    asyncio_all_tasks = asyncio.Task.all_tasks
+    asyncio_current_task = asyncio.Task.current_task
 
 from dateutil.parser import parse as parse_date
 from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
@@ -393,7 +401,8 @@ class JupyterHub(Application):
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
     proxy_check_interval = Integer(
-        30, help="Interval (in seconds) at which to check if the proxy is running."
+        5,
+        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval",
     ).tag(config=True)
     service_check_interval = Integer(
         60,
@@ -707,6 +716,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     _proxy_config_map = {
+        'proxy_check_interval': 'check_running_interval',
         'proxy_cmd': 'command',
         'debug_proxy': 'debug',
         'proxy_auth_token': 'auth_token',
@@ -865,14 +875,29 @@ class JupyterHub(Application):
         to reduce the cost of checking authentication tokens.
         """,
     ).tag(config=True)
-    cookie_secret = Bytes(
+    cookie_secret = Union(
+        [Bytes(), Unicode()],
         help="""The cookie secret to use to encrypt cookies.
 
         Loaded from the JPY_COOKIE_SECRET env variable by default.
 
         Should be exactly 256 bits (32 bytes).
-        """
+        """,
     ).tag(config=True, env='JPY_COOKIE_SECRET')
+
+    @validate('cookie_secret')
+    def _validate_secret_key(self, proposal):
+        """Coerces strings with even number of hexadecimal characters to bytes."""
+        r = proposal['value']
+        if isinstance(r, str):
+            try:
+                return bytes.fromhex(r)
+            except ValueError:
+                raise ValueError(
+                    "cookie_secret set as a string must contain an even amount of hexadecimal characters."
+                )
+        else:
+            return r
 
     @observe('cookie_secret')
     def _cookie_secret_check(self, change):
@@ -1828,6 +1853,7 @@ class JupyterHub(Application):
     async def init_roles(self):
         """Load default and predefined roles into the database"""
         db = self.db
+        # tokens are added separately
         role_bearers = ['users', 'services', 'groups']
 
         # load default roles
@@ -2890,9 +2916,7 @@ class JupyterHub(Application):
     async def shutdown_cancel_tasks(self, sig):
         """Cancel all other tasks of the event loop and initiate cleanup"""
         self.log.critical("Received signal %s, initiating shutdown...", sig.name)
-        tasks = [
-            t for t in asyncio.Task.all_tasks() if t is not asyncio.Task.current_task()
-        ]
+        tasks = [t for t in asyncio_all_tasks() if t is not asyncio_current_task()]
 
         if tasks:
             self.log.debug("Cancelling pending tasks")
@@ -2905,7 +2929,7 @@ class JupyterHub(Application):
             except StopAsyncIteration as e:
                 self.log.error("Caught StopAsyncIteration Exception", exc_info=True)
 
-            tasks = [t for t in asyncio.Task.all_tasks()]
+            tasks = [t for t in asyncio_all_tasks()]
             for t in tasks:
                 self.log.debug("Task status: %s", t)
         await self.cleanup()

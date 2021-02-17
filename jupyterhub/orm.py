@@ -409,7 +409,7 @@ class Expiring:
     which should be unix timestamp or datetime object
     """
 
-    now = utcnow  # funciton, must return float timestamp or datetime
+    now = utcnow  # function, must return float timestamp or datetime
     expires_at = None  # must be defined
 
     @property
@@ -987,3 +987,18 @@ def new_session_factory(
     # this off gives us a major performance boost
     session_factory = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
     return session_factory
+
+
+def get_class(resource_name):
+    """Translates resource string names to ORM classes"""
+    class_dict = {
+        'users': User,
+        'services': Service,
+        'tokens': APIToken,
+        'groups': Group,
+    }
+    if resource_name not in class_dict:
+        raise ValueError(
+            "Kind must be one of %s, not %s" % (", ".join(class_dict), resource_name)
+        )
+    return class_dict[resource_name]

@@ -4,7 +4,6 @@
 import asyncio
 import concurrent.futures
 import errno
-import functools
 import hashlib
 import inspect
 import os
@@ -18,7 +17,6 @@ import warnings
 from binascii import b2a_hex
 from datetime import datetime
 from datetime import timezone
-from enum import Enum
 from hmac import compare_digest
 from operator import itemgetter
 
@@ -29,6 +27,15 @@ from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
 from tornado.log import app_log
 from tornado.platform.asyncio import to_asyncio_future
+
+# For compatibility with python versions 3.6 or earlier.
+# asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
+try:
+    asyncio_all_tasks = asyncio.all_tasks
+    asyncio_current_task = asyncio.current_task
+except AttributeError as e:
+    asyncio_all_tasks = asyncio.Task.all_tasks
+    asyncio_current_task = asyncio.Task.current_task
 
 
 def random_port():
@@ -281,8 +288,13 @@ def authenticated_403(self):
 
 @auth_decorator
 def admin_only(self):
-    """Decorator for restricting access to admin users"""
+    """Decorator for restricting access to admin users
+    Deprecated in favor of scopes.need_scope()
+    """
     user = self.current_user
+    app_log.warning(
+        "Admin decorator is deprecated and will be removed soon. Use scope-based decorator instead"
+    )
     if user is None or not user.admin:
         raise web.HTTPError(403)
 
@@ -293,140 +305,6 @@ def metrics_authentication(self):
     user = self.current_user
     if user is None and self.authenticate_prometheus:
         raise web.HTTPError(403)
-
-
-class Scope(Enum):
-    ALL = True
-
-
-def needs_scope_expansion(filter_, filter_value, sub_scope):
-    """
-    Check if there is a requirements to expand the `group` scope to individual `user` scopes.
-    Assumptions:
-    filter_ != Scope.ALL
-
-    This can be made arbitrarily intelligent but that would make it more complex
-    """
-    if not (filter_ == 'user' and 'group' in sub_scope):
-        return False
-    if 'user' in sub_scope:
-        return filter_value not in sub_scope['user']
-    else:
-        return True
-
-
-def check_user_in_expanded_scope(handler, user_name, scope_group_names):
-    user = handler.find_user(user_name)
-    if user is None:
-        raise web.HTTPError(404, 'No such user found')
-    group_names = {group.name for group in user.groups}
-    return bool(set(scope_group_names) & group_names)
-
-
-def check_scope(api_handler, req_scope, scopes, **kwargs):
-    # Parse user name and server name together
-    if 'user' in kwargs and 'server' in kwargs:
-        user_name = kwargs.pop('user')
-        kwargs['server'] = "{}/{}".format(user_name, kwargs['server'])
-    if len(kwargs) > 1:
-        raise AttributeError("Please specify exactly one filter")
-    if req_scope not in scopes:
-        return False
-    if scopes[req_scope] == Scope.ALL:
-        return True
-    # Apply filters
-    if not kwargs:
-        return False
-    filter_, filter_value = list(kwargs.items())[0]
-    sub_scope = scopes[req_scope]
-    if filter_ not in sub_scope:
-        valid_scope = False
-    else:
-        valid_scope = filter_value in sub_scope[filter_]
-    if not valid_scope and needs_scope_expansion(filter_, filter_value, sub_scope):
-        group_names = sub_scope['group']
-        valid_scope |= check_user_in_expanded_scope(
-            api_handler, filter_value, group_names
-        )
-    return valid_scope
-
-
-def parse_scopes(scope_list):
-    """
-    Parses scopes and filters in something akin to JSON style
-
-    For instance, scope list ["users", "groups!group=foo", "users:servers!server=bar", "users:servers!server=baz"]
-    would lead to scope model
-    {
-       "users":scope.ALL,
-       "users:admin":{
-          "user":[
-             "alice"
-          ]
-       },
-       "users:servers":{
-          "server":[
-             "bar",
-             "baz"
-          ]
-       }
-    }
-    """
-    parsed_scopes = {}
-    for scope in scope_list:
-        base_scope, _, filter_ = scope.partition('!')
-        if not filter_:
-            parsed_scopes[base_scope] = Scope.ALL
-        elif base_scope not in parsed_scopes:
-            parsed_scopes[base_scope] = {}
-        if parsed_scopes[base_scope] != Scope.ALL:
-            key, _, val = filter_.partition('=')
-            if key not in parsed_scopes[base_scope]:
-                parsed_scopes[base_scope][key] = []
-            parsed_scopes[base_scope][key].append(val)
-    return parsed_scopes
-
-
-def needs_scope(scope):
-    """Decorator to restrict access to users or services with the required scope"""
-
-    def scope_decorator(func):
-        @functools.wraps(func)
-        def _auth_func(self, *args, **kwargs):
-            sig = inspect.signature(func)
-            bound_sig = sig.bind(self, *args, **kwargs)
-            bound_sig.apply_defaults()
-            s_kwargs = {}
-            for resource in {'user', 'server', 'group', 'service'}:
-                resource_name = resource + '_name'
-                if resource_name in bound_sig.arguments:
-                    resource_value = bound_sig.arguments[resource_name]
-                    s_kwargs[resource] = resource_value
-            parsed_scopes = parse_scopes(self.scopes)
-            if check_scope(self, scope, parsed_scopes, **s_kwargs):
-                return func(self, *args, **kwargs)
-            else:
-                # catching attr error occurring for older_requirements test
-                # could be done more ellegantly?
-                try:
-                    request_path = self.request.path
-                except AttributeError:
-                    request_path = 'the requested API'
-                app_log.warning(
-                    "Not authorizing access to {}. Requires scope {}, not derived from scopes {}".format(
-                        request_path, scope, ", ".join(self.scopes)
-                    )
-                )
-                raise web.HTTPError(
-                    403,
-                    "Action is not authorized with current scopes; requires {}".format(
-                        scope
-                    ),
-                )
-
-        return _auth_func
-
-    return scope_decorator
 
 
 # Token utilities
@@ -611,7 +489,7 @@ def print_stacks(file=sys.stderr):
     # also show asyncio tasks, if any
     # this will increase over time as we transition from tornado
     # coroutines to native `async def`
-    tasks = asyncio.Task.all_tasks()
+    tasks = asyncio_all_tasks()
     if tasks:
         print("AsyncIO tasks: %i" % len(tasks))
         for task in tasks:

@@ -17,7 +17,7 @@ from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
 from ..pagination import Pagination
-from ..utils import admin_only
+from ..scopes import needs_scope
 from ..utils import maybe_future
 from ..utils import url_path_join
 from .base import BaseHandler
@@ -455,9 +455,12 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
-    @admin_only
+    @needs_scope('users')
+    @needs_scope('admin:users')
+    @needs_scope('admin:users:servers')
     async def get(self):
-        page, per_page, offset = Pagination(config=self.config).get_page_args(self)
+        pagination = Pagination(url=self.request.uri, config=self.config)
+        page, per_page, offset = pagination.get_page_args(self)
 
         available = {'name', 'admin', 'running', 'last_activity'}
         default_sort = ['admin', 'name']
@@ -500,27 +503,24 @@ class AdminHandler(BaseHandler):
         # get User.col.desc() order objects
         ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
 
+        query = self.db.query(orm.User).outerjoin(orm.Spawner).distinct(orm.User.id)
+        subquery = query.subquery("users")
         users = (
             self.db.query(orm.User)
+            .select_entity_from(subquery)
             .outerjoin(orm.Spawner)
             .order_by(*ordered)
             .limit(per_page)
             .offset(offset)
         )
+
         users = [self._user_from_orm(u) for u in users]
 
         running = []
         for u in users:
             running.extend(s for s in u.spawners.values() if s.active)
 
-        total = self.db.query(orm.User.id).count()
-        pagination = Pagination(
-            url=self.request.uri,
-            total=total,
-            page=page,
-            per_page=per_page,
-            config=self.config,
-        )
+        pagination.total = query.count()
 
         auth_state = await self.current_user.get_auth_state()
         html = await self.render_template(

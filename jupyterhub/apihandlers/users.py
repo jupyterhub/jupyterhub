@@ -14,13 +14,12 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
-from .. import roles
 from ..roles import update_roles
+from ..scopes import needs_scope
 from ..user import User
 from ..utils import isoformat
 from ..utils import iterate_until
 from ..utils import maybe_future
-from ..utils import needs_scope
 from ..utils import url_path_join
 from .base import APIHandler
 
@@ -38,9 +37,11 @@ class SelfAPIHandler(APIHandler):
             user = self.get_current_user_oauth_token()
         if user is None:
             raise web.HTTPError(403)
-        # Later: filter based on scopes.
-        # Perhaps user
-        self.write(json.dumps(self.user_model(user)))
+        if isinstance(user, orm.Service):
+            model = self.service_model(user)
+        else:
+            model = self.user_model(user)
+        self.write(json.dumps(model))
 
 
 class UserListAPIHandler(APIHandler):
@@ -53,7 +54,7 @@ class UserListAPIHandler(APIHandler):
         return any(spawner.ready for spawner in user.spawners.values())
 
     @needs_scope('read:users')
-    def get(self):
+    def get(self, scope_filter=None):
         state_filter = self.get_argument("state", None)
 
         # post_filter
@@ -94,6 +95,8 @@ class UserListAPIHandler(APIHandler):
         else:
             # no filter, return all users
             query = self.db.query(orm.User)
+        if scope_filter is not None:
+            query = query.filter(orm.User.name.in_(scope_filter))
 
         data = [
             self.user_model(u, include_servers=True, include_state=True)
@@ -241,6 +244,13 @@ class UserAPIHandler(APIHandler):
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
+
+        # allow the spawner to cleanup any persistent resources associated with the user
+        try:
+            await user.spawner.delete_forever()
+        except Exception as e:
+            self.log.error("Error cleaning up persistent resources: %s" % e)
+
         # remove from registry
         self.users.delete(user)
 
