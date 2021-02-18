@@ -427,6 +427,7 @@ class BaseHandler(RequestHandler):
                 if user and isinstance(user, User):
                     user = await self.refresh_auth(user)
                 self._jupyterhub_user = user
+                self._parse_scopes()
             except Exception:
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
@@ -444,11 +445,15 @@ class BaseHandler(RequestHandler):
             setattr(self, "%s_names" % kind, resources_names)
 
     def _parse_scopes(self):
-        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
-            self.raw_scopes = roles.get_subscopes(*self._jupyterhub_user.roles)
-            if 'all' in self.raw_scopes:
-                self.raw_scopes |= scopes.get_user_scopes(self.current_user.name)
-            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+        """Parse raw scope collection into a dict with filters that can be used to resolve API access"""
+        if self._jupyterhub_user is not None:
+            self.raw_scopes = roles.get_subscopes(*self.current_user.roles)
+        oauth_token = self.get_current_user_oauth_token()
+        if oauth_token:
+            self.raw_scopes |= scopes.get_user_scopes(oauth_token.name)
+        if 'all' in self.raw_scopes:
+            self.raw_scopes |= scopes.get_user_scopes(self.current_user.name)
+        self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
     def current_user(self):

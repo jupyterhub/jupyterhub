@@ -54,7 +54,7 @@ def test_scope_check_present():
 
 def test_scope_check_not_present():
     handler = get_handler_with_scopes(['read:users!user=maeby'])
-    assert not _check_scope(handler, 'read:users')
+    assert _check_scope(handler, 'read:users')
     with pytest.raises(web.HTTPError):
         _check_scope(handler, 'read:users', user='gob')
     with pytest.raises(web.HTTPError):
@@ -103,7 +103,8 @@ class MockAPIHandler:
         return True
 
     @needs_scope('users')
-    def other_thing(self, other_name):
+    def other_thing(self, non_filter_argument):
+        # Rely on inner vertical filtering
         return True
 
     @needs_scope('users')
@@ -161,8 +162,8 @@ class MockAPIHandler:
         ),
         (['users'], 'other_thing', ('gob',), True),
         (['read:users'], 'other_thing', ('gob',), False),
-        (['users!user=gob'], 'other_thing', ('gob',), False),
-        (['users!user=gob'], 'other_thing', ('maeby',), False),
+        (['users!user=gob'], 'other_thing', ('gob',), True),
+        (['users!user=gob'], 'other_thing', ('maeby',), True),
     ],
 )
 def test_scope_method_access(scopes, method, arguments, is_allowed):
@@ -403,12 +404,47 @@ async def test_vertical_filter(app):
 
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
-    assert set(r.json().keys()) == {'names'}
+    allowed_keys = {'name', 'kind'}
+    assert set([key for user in r.json() for key in user.keys()]) == allowed_keys
 
 
 async def test_stacked_vertical_filter(app):
-    pass
+    user_name = 'user'
+    test_role = generate_test_role(
+        user_name, ['read:users:activity', 'read:users:servers']
+    )
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    app.db.commit()
+
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    allowed_keys = {'name', 'kind', 'servers', 'last_activity'}
+    result_model = set([key for user in r.json() for key in user.keys()])
+    assert result_model == allowed_keys
 
 
 async def test_cross_filter(app):
-    pass
+    user_name = 'abed'
+    add_user(app.db, name=user_name)
+    test_role = generate_test_role(
+        user_name, ['read:users:activity', 'read:users!user=abed']
+    )
+    roles.add_role(app.db, test_role)
+    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    app.db.commit()
+    new_users = {'britta', 'jeff', 'annie'}
+    for new_user_name in new_users:
+        add_user(app.db, name=new_user_name)
+    app.db.commit()
+    r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
+    assert r.status_code == 200
+    restricted_keys = {'name', 'kind', 'last_activity'}
+    key_in_full_model = 'created'
+    for user in r.json():
+        if user['name'] == user_name:
+            assert key_in_full_model in user
+        else:
+            assert set(user.keys()) == restricted_keys

@@ -13,7 +13,7 @@ class Scope(Enum):
     ALL = True
 
 
-def get_user_scopes(name):
+def get_user_scopes(name, read_only=False):
     """
     Scopes have a metascope 'all' that should be expanded to everything a user can do.
     At the moment that is a user-filtered version (optional read) access to
@@ -32,7 +32,11 @@ def get_user_scopes(name):
         'users:servers',
         'users:tokens',
     ]
-    scope_list.extend(['read:' + scope for scope in scope_list])
+    read_scope_list = ['read:' + scope for scope in scope_list]
+    if read_only:
+        scope_list = read_scope_list
+    else:
+        scope_list.extend(read_scope_list)
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
