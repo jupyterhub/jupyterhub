@@ -432,7 +432,16 @@ class BaseHandler(RequestHandler):
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
         self._parse_scopes()
+        self._cache_db()
         return self._jupyterhub_user
+
+    def _cache_db(self):
+        for kind in {'users', 'groups', 'services'}:
+            Resource = orm.get_class(kind)
+            resources_names = {
+                resource.name for resource in self.db.query(Resource).all()
+            }
+            setattr(self, "%s_names" % kind, resources_names)
 
     def _parse_scopes(self):
         if self._jupyterhub_user is not None or self.get_current_user_oauth_token():

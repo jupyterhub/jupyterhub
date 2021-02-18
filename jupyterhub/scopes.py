@@ -55,7 +55,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     user = handler.find_user(user_name)
     if user is None:
         raise web.HTTPError(404, "No access to resources or resources not found")
-    group_names = {group.name for group in user.groups}  # SQL query faster?
+    group_names = {group.name for group in user.groups}
     return bool(set(scope_group_names) & group_names)
 
 

@@ -73,7 +73,6 @@ class APIHandler(BaseHandler):
         if req_scope not in scope_translator:
             raise AttributeError("Internal error: inconsistent scope situation")
         kind = scope_translator[req_scope]
-        Resource = orm.get_class(kind)
         try:
             sub_scope = self.parsed_scopes[req_scope]
         except AttributeError:
@@ -85,8 +84,11 @@ class APIHandler(BaseHandler):
         if sub_scope == scopes.Scope.ALL:
             return None  # Full access
         sub_scope_values = next(iter(sub_scope.values()))
-        query = self.db.query(Resource).filter(Resource.name.in_(sub_scope_values))
-        scope_filter = {entry.name for entry in query.all()}
+        scope_filter = {
+            resource
+            for resource in getattr(self, "%s_names" % kind)
+            if resource in sub_scope_values
+        }
         if 'group' in sub_scope and kind == 'users':
             groups = orm.Group.name.in_(sub_scope['group'])
             users_in_groups = (
