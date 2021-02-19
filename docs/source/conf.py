@@ -19,7 +19,6 @@ extensions = [
     'autodoc_traits',
     'sphinx_copybutton',
     'sphinx-jsonschema',
-    #'recommonmark',
     'myst_parser',
 ]
 
