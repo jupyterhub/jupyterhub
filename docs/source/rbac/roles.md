@@ -16,7 +16,6 @@ Roles can also be customly defined and assigned to users, services, groups and t
 **_Groups_** do not require any role and are not assigned any roles by default. Once group roles are defined and assigned, the privileges of each group member are extended with the group roles in the background during the API request permission check. This is useful for requesting the same permissions for several users.
 
 (define_role_target)=
-
 ## Defining Roles
 
 ### In `jupyterhub_config.py`

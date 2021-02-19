@@ -4,7 +4,8 @@ To determine which scopes a role should have it is best to follow these steps:
 1. Determine what actions the role holder should have/have not access to
 2. Match the actions against the JupyterHub's REST APIs
 3. Check which scopes are required to access the APIs
-4. Define the role with required scopes and assign to users/services/groups/tokens
+4. Customize the scopes with filters if needed
+5. Define the role with required scopes and assign to users/services/groups/tokens
 
 Below, different use cases are presented on how to use the RBAC framework.
 
@@ -15,14 +16,35 @@ A regular user should be able to view and manage all of their own resources. Thi
 ## Service to cull idle servers
 
 Finding and shutting down idle servers can save a lot of computational resources.
-Below follows a short tutorial on how one can add a cull-idle service to JupyterHub.
+We can make use of [jupyterhub-idle-culler](https://github.com/jupyterhub/jupyterhub-idle-culler) to manage this for us.
+Below follows a short tutorial on how to add a cull-idle service in the RBAC system.
 
-1. Request an API token
-2. Define the service (`idle-culler`)
-3. Define the role (scopes `users:servers`, `admin:users:servers`)
-4. Install cull-idle servers (`pip install jupyterhub-idle-culler`)
-5. Add the service to `jupyterhub_config.py`
-6. (Restart JupyterHub)
+1. Install the cull-idle server script with `pip install jupyterhub-idle-culler`.
+2. Define a new service `idle-culler` and a new role for this service:
+```python
+c.JupyterHub.roles.append(
+    {
+        "name": "idle-culler",
+        "description": "Culls idle servers",
+        "scopes": ["read:users:servers", "admin:users:servers"],
+        "services": ["idle-culler"],
+    }
+)
+
+
+c.JupyterHub.services.append(
+    {
+        "name": "idle-culler",
+        "command": [
+            sys.executable, "-m",
+            "jupyterhub_idle_culler", 
+            "--timeout=3600"
+        ],
+    }
+)
+
+```
+3. Restart JupyterHub to complete the process.
 
 
 ## API launcher

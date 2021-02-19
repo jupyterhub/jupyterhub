@@ -19,10 +19,7 @@ The standard user scope `all` provides access to the user's own resources and su
 - `users!user=gerard` where the `users` scope includes access to the full user model, activity and starting/stopping servers. The filter restricts this access to the user's own resources
 - `users:tokens!user=gerard` allows the user to access, request and delete his own tokens only.
 
-*Note: I'm hoping that horizontal and vertical filtering are somehow intuitive concepts, but maybe I am making up words for things that are already pretty well defined?*
-
 (filtering-target)=
-
 ## Horizontal filtering
 
 Horizontal filtering, also called *resource filtering*, is the concept of reducing the payload of an API call to cover only the subset of the *resources* that the scopes of the client provides them access to.

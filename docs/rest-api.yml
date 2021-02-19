@@ -477,7 +477,9 @@ paths:
         '400':
           description: Body must be a JSON dict or empty
         '403':
-          description: Requested role does not exist
+          description: Requested roles cannot have higher permissions than the token owner
+        '404':
+          description: Requested roles not found
   /users/{name}/tokens/{token_id}:
     parameters:
       - name: name

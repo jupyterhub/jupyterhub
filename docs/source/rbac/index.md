@@ -24,6 +24,6 @@ Within the RBAC framework, this is achieved by assigning a role to the administr
 
 roles
 scopes
-tech-implementation
 use-cases
+tech-implementation
 ```

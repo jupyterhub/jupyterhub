@@ -223,7 +223,7 @@ def update_roles(db, obj, kind, roles=None):
                                 % rolename
                             )
                 else:
-                    raise NameError('Role %r does not exist' % rolename)
+                    raise NameError('Requested role %r does not exist' % rolename)
             else:
                 add_obj(db, objname=obj.name, kind=kind, rolename=rolename)
     else:
