@@ -91,9 +91,7 @@ class APIHandler(BaseHandler):
             return None  # Full access
         sub_scope_values = next(iter(sub_scope.values()))
         scope_filter = {
-            resource
-            for resource in getattr(self, "%s_names" % kind)
-            if resource in sub_scope_values
+            resource for resource in self.db_cache[kind] if resource in sub_scope_values
         }
         if 'group' in sub_scope and kind == 'users':
             groups = orm.Group.name.in_(sub_scope['group'])

@@ -437,12 +437,13 @@ class BaseHandler(RequestHandler):
         return self._jupyterhub_user
 
     def _cache_db(self):
+        self.db_cache = {}
         for kind in {'users', 'groups', 'services'}:
             Resource = orm.get_class(kind)
             resources_names = {
                 resource.name for resource in self.db.query(Resource).all()
             }
-            setattr(self, "%s_names" % kind, resources_names)
+            self.db_cache[kind] = resources_names
 
     def _parse_scopes(self):
         """Parse raw scope collection into a dict with filters that can be used to resolve API access"""
