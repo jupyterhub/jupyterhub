@@ -93,6 +93,6 @@ c.JupyterHub.load_roles = [
  }
 ]
 ``` 
-In the above example, `johan` has privileges inherited from class-A role and the `teacher` role on top of those. 
+In the above example, `johan` has privileges inherited from `class-A role` and the `teacher` role on top of those. 
 
-Note the filters (`!group=`) limiting the priviliges only to the particular groups. `johan` can access the servers and information of `class-B` members only.
+Note the filters (`!group=`) limiting the privileges only to the particular groups. `johan` can access the servers and information of `class-B` members only.

@@ -9,7 +9,7 @@ JupyterHub provides three **default roles** which are automatically loaded to th
 
 Roles can also be customly defined and assigned to users, services, groups and tokens. 
 
-**_Users_** and **_services_** are assigned a default role if no custom role is requested based on their admin status.
+**_Users_** and **_services_** are assigned a default role ( **_user_** or **_admin_**)  if no custom role is requested based on their admin status.
 
 **_Tokens_**’ roles cannot grant the token higher permissions than their owner’s roles. If no specific role is requested, tokens are assigned the default _user_ role. 
 
@@ -24,7 +24,7 @@ Roles can be defined or modified in the configuration file as a list of dictiona
 ```python
 c.JupyterHub.load_roles = [
  {
-   'name': 'Server rights',
+   'name': 'server-rights',
    'description': 'Allows parties to start and stop user servers',
    'scopes': ['users:servers', 'read:users:servers'],
    'users': ['alice', 'bob'],
@@ -34,7 +34,11 @@ c.JupyterHub.load_roles = [
  }
 ]
 ```
-The role `server-rights` now allows the starting and stopping of servers by users `alice` and `bob` and the service `idle-culler`, and any member of the `admin-group` or requests using the tokens `foo-6f6e65`/`bar-74776f` (providing the tokens owner has at least the same permissions).
+The role `server-rights` now allows the starting and stopping of servers by any of the following:
+- users `alice` and `bob`
+- the service `idle-culler`
+- any member of the `admin-group`
+- requests using the tokens `foo-6f6e65` or `bar-74776f` (providing the tokens owner has at least the same permissions).
 
 Another example:
 ```python
