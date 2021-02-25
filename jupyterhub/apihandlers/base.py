@@ -34,6 +34,7 @@ class APIHandler(BaseHandler):
         self.raw_scopes = set()
         self.parsed_scopes = {}
         self._parse_scopes()
+        # todo: Check if okay
 
     def _parse_scopes(self):
         """Parse raw scope collection into a dict with filters that can be used to resolve API access"""

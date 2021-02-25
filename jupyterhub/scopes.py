@@ -150,14 +150,6 @@ def needs_scope(*scopes):
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
             s_kwargs = {}
-            # current_user = self.current_user()
-            # if current_user is not None or self.get_current_user_oauth_token():
-            #     self.raw_scopes = roles.get_subscopes(*current_user.roles)
-            #     if 'all' in self.raw_scopes:
-            #         self.raw_scopes |= get_user_scopes(self.current_user.name)
-            #     self.parsed_scopes = parse_scopes(self.raw_scopes)
-            # else:
-            #     app_log.warning("No user found in access checking, so no scopes loaded")
             for resource in {'user', 'server', 'group', 'service'}:
                 resource_name = resource + '_name'
                 if resource_name in bound_sig.arguments:
