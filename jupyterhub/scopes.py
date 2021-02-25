@@ -1,19 +1,18 @@
 import functools
 import inspect
-import re
 from enum import Enum
 
 from tornado import web
 from tornado.log import app_log
 
-from . import orm
+from . import roles
 
 
 class Scope(Enum):
     ALL = True
 
 
-def get_user_scopes(name):
+def get_user_scopes(name, read_only=False):
     """
     Scopes have a metascope 'all' that should be expanded to everything a user can do.
     At the moment that is a user-filtered version (optional read) access to
@@ -32,7 +31,11 @@ def get_user_scopes(name):
         'users:servers',
         'users:tokens',
     ]
-    scope_list.extend(['read:' + scope for scope in scope_list])
+    read_scope_list = ['read:' + scope for scope in scope_list]
+    if read_only:
+        scope_list = read_scope_list
+    else:
+        scope_list.extend(read_scope_list)
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
@@ -55,7 +58,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     user = handler.find_user(user_name)
     if user is None:
         raise web.HTTPError(404, "No access to resources or resources not found")
-    group_names = {group.name for group in user.groups}  # SQL query faster?
+    group_names = {group.name for group in user.groups}
     return bool(set(scope_group_names) & group_names)
 
 
@@ -67,7 +70,7 @@ def _check_scope(api_handler, req_scope, **kwargs):
     # Parse user name and server name together
     try:
         api_name = api_handler.request.path
-    except:
+    except AttributeError:
         api_name = type(api_handler).__name__
     if 'user' in kwargs and 'server' in kwargs:
         kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
@@ -147,6 +150,14 @@ def needs_scope(*scopes):
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
             s_kwargs = {}
+            # current_user = self.current_user()
+            # if current_user is not None or self.get_current_user_oauth_token():
+            #     self.raw_scopes = roles.get_subscopes(*current_user.roles)
+            #     if 'all' in self.raw_scopes:
+            #         self.raw_scopes |= get_user_scopes(self.current_user.name)
+            #     self.parsed_scopes = parse_scopes(self.raw_scopes)
+            # else:
+            #     app_log.warning("No user found in access checking, so no scopes loaded")
             for resource in {'user', 'server', 'group', 'service'}:
                 resource_name = resource + '_name'
                 if resource_name in bound_sig.arguments:
