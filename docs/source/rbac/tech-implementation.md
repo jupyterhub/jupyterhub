@@ -2,12 +2,18 @@
 
 Roles are stored in the database similarly as users, services, etc., and can be added or modified as explained in {ref}`define_role_target`. Objects can gain, change and lose roles. For example, one can change a token's role, and as such its permissions, without the need to initiate new token (currently through `update_roles` and `remove_obj` functions in `roles.py`, this will be eventually available through APIs). Roles' and scopes' utilities can be found in `roles.py` and `scopes.py` modules.
 
+(resolving-roles-scopes-target)=
 ## Resolving roles and scopes
+
+**Resolving roles** refers to determining which roles a user, service, token or group has, extracting the list of scopes from each role and combining them into a single set of scopes.
+
+**Resolving scopes** involves comparing two sets of scopes taking into account the scope hierarchy. This includes {ref}`vertical <vertical-filtering-target>` and {ref}`horizontal filtering <horizontal-filtering-target>` and limiting or elevated permissions (`read:<resource>` or `admin:<resource>`, respectively).
+
 Roles and scopes are resolved on several occasions, for example when requesting an API token with specific roles or making an API request. The following sections provide more details.  
 
 ### Requesting API token with specific roles
 API tokens grant access to JupyterHub's APIs. The RBAC framework allows for requesting tokens with specific existing roles. To date, it is only possible to add roles to a token in two ways: 
-1. through the `config.py` file as described in the {ref}`define_role_target` section 
+1. through the `jupyterhub_config.py` file as described in the {ref}`define_role_target` section 
 2. through the POST /users/{name}/tokens API where the roles can be specified in the token parameters body (see [](../reference/rest-api.rst)).
 
 The RBAC framework adds several steps into the token issue flow.
@@ -35,7 +41,7 @@ With the RBAC framework each authenticated JupyterHub API request is guarded by 
 When an API request is performed, the passed API token's roles are again resolved into a set of scopes and compared to the scopes required to access the API as follows:
 - if the API scopes are present within the set of token's scopes, the access is granted and the API returns its "full" response
 - if that is not the case, another check is utilized to determine if sub-scopes of the required API scopes can be found in the token's scope set:
-    - if the subscopes are present, the RBAC framework employs the {ref}`filtering <filtering-target>` procedures to refine the API response to provide access to only resource attributes specified by the token provided scopes
+    - if the subscopes are present, the RBAC framework employs the {ref}`filtering <horizontal-filtering-target>` procedures to refine the API response to provide access to only resource attributes specified by the token provided scopes
         - for example, providing a scope `read:users:activity!group=class-C` for the _GET /users_ API will return a list of user models from group `class-C` containing only the `last_activity` attribute for each user model
     - if the subscopes are not present, the access to API is denied    
 

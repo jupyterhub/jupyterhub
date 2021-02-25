@@ -1,11 +1,11 @@
 # JupyterHub RBAC
 
-Role Based Access Control (RBAC) in JupyterHub serves to provide finer grained access to perform actions by users or services.
+Role Based Access Control (RBAC) in JupyterHub serves to provide fine grained control of access to Jupyterhub's API resources.
 
 ## Motivation
-The JupyterHub API requires authentication before allowing changes to the administration system. For instance, currently the default behaviour is that creating or deleting users requires *admin rights*. This ensures that an arbitrary user, or even an unauthenticated third party, cannot disrupt the status of the Hub.
+The JupyterHub API requires authorization before allowing changes to the backend. For instance, currently the default behaviour is that creating or deleting users requires *admin rights*. This ensures that an arbitrary user, or even an unauthenticated third party, are not allowed to perform such actions.
 
-This system is functional, but lacks flexibility. If your Hub serves a number of users in different groups, you might want to delegate permissions to other users or automate certain processes. Appointing a 'group-only admin', or a bot that culls idle servers, requires granting full rights to all actions. This can be error-prone and violates the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
+This system is functional, but lacks flexibility. If your Hub serves a number of users in different groups, you might want to delegate permissions to other users or automate certain processes. Appointing a 'group-only admin', or a bot that culls idle servers, requires granting full rights to all actions. This poses a risk of the user or service intentionally or unintentionally accessing and modifying any data within the Hub and violates the [principle of least privilege](https://en.wikipedia.org/wiki/Principle_of_least_privilege).
 
 To remedy situations like this, we implement an RBAC system. By equipping users, groups and services with *roles* that supply them with a collection of permissions (*scopes*), administrators are able to fine-tune which parties are able to access which resources.
 
