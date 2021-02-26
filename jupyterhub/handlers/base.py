@@ -81,8 +81,11 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
+        self.raw_scopes = set()
+        self.parsed_scopes = {}
         try:
             await self.get_current_user()
+            scopes.build_scope_schema(self)
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None

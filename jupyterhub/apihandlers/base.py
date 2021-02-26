@@ -1,6 +1,7 @@
 """Base API handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import functools
 import json
 import re
 from datetime import datetime
@@ -10,9 +11,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
 
 from .. import orm
-from .. import roles
+from .. import scopes
 from ..handlers import BaseHandler
-from ..handlers import scopes
 from ..utils import isoformat
 from ..utils import url_path_join
 
@@ -26,27 +26,7 @@ class APIHandler(BaseHandler):
     - strict referer checking for Cookie-authenticated requests
     - strict content-security-policy
     - methods for REST API models
-    - scope loading
     """
-
-    async def prepare(self):
-        await super().prepare()
-        self.raw_scopes = set()
-        self.parsed_scopes = {}
-        self._parse_scopes()
-        # todo: Check if okay
-
-    def _parse_scopes(self):
-        """Parse raw scope collection into a dict with filters that can be used to resolve API access"""
-        self.log.debug("Parsing scopes")
-        if self.current_user is not None:
-            self.raw_scopes = roles.get_subscopes(*self.current_user.roles)
-        oauth_token = self.get_current_user_oauth_token()
-        if oauth_token:
-            self.raw_scopes |= scopes.get_user_scopes(oauth_token.name)
-        if 'all' in self.raw_scopes:
-            self.raw_scopes |= scopes.get_user_scopes(self.current_user.name)
-        self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
     def content_security_policy(self):
@@ -85,12 +65,13 @@ class APIHandler(BaseHandler):
             return False
         return True
 
+    @functools.lru_cache
     def get_scope_filter(self, req_scope):
         """Produce a filter for `*ListAPIHandlers* so that GET method knows which models to return.
         Filter is a callable that takes a resource name and outputs true or false"""
-        kind_regex = re.compile(r':?(user|service|group)s:?')
+
         try:
-            kind = re.search(kind_regex, req_scope).group(1)
+            kind = re.search(scopes.kind_regex, req_scope).group(1)
         except AttributeError:
             self.log.warning(
                 "Regex error while processing scope %s, throwing 500", req_scope
@@ -107,17 +88,15 @@ class APIHandler(BaseHandler):
                 % req_scope,
             )
 
-        def has_access(resource_name):
+        def has_access(orm_resource):
             if sub_scope == scopes.Scope.ALL:
                 found_resource = True
             else:
-                found_resource = resource_name in sub_scope[kind]
+                found_resource = orm_resource.name in sub_scope[kind]
             if not found_resource:  # Try group-based access
                 if 'groups' in sub_scope and kind == 'users':
-                    user = self.current_user()
-                    if user:
-                        user_in_group = bool(user.groups & sub_scope['groups'])
-                        found_resource |= user_in_group
+                    user_in_group = bool(orm_resource.groups & sub_scope['groups'])
+                    found_resource |= user_in_group
             return found_resource
 
         return has_access
@@ -274,7 +253,7 @@ class APIHandler(BaseHandler):
         for scope in access_map:
             if scope in self.parsed_scopes:
                 scope_filter = self.get_scope_filter(scope)
-                if scope_filter(user.name):
+                if scope_filter(user):
                     allowed_keys |= access_map[scope]
         model = {key: model[key] for key in allowed_keys if key in model}
         if model:
@@ -283,6 +262,7 @@ class APIHandler(BaseHandler):
             if not (include_servers and 'servers' in allowed_keys):
                 model['servers'] = None
             else:
+                # Todo: Replace include_state with scope (read|admin):users:auth_state
                 servers = model['servers'] = {}
                 for name, spawner in user.spawners.items():
                     # include 'active' servers, not just ready

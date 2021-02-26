@@ -1,5 +1,6 @@
 import functools
 import inspect
+import re
 from enum import Enum
 
 from tornado import web
@@ -10,6 +11,23 @@ from . import roles
 
 class Scope(Enum):
     ALL = True
+
+
+# Used to identify scope filters
+kind_regex = re.compile(r':?(user|service|group)s:?')
+
+
+def build_scope_schema(handler):
+    """Parse raw scope collection into a dict with filters that can be used to resolve API access"""
+    app_log.debug("Parsing scopes")
+    if handler.current_user is not None:
+        handler.raw_scopes = roles.get_subscopes(*handler.current_user.roles)
+    oauth_token = handler.get_current_user_oauth_token()
+    if oauth_token:
+        handler.raw_scopes |= get_user_scopes(oauth_token.name)
+    if 'all' in handler.raw_scopes:
+        handler.raw_scopes |= get_user_scopes(handler.current_user.name)
+    handler.parsed_scopes = parse_scopes(handler.raw_scopes)
 
 
 def get_user_scopes(name, read_only=False):
@@ -149,6 +167,11 @@ def needs_scope(*scopes):
             sig = inspect.signature(func)
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
+            # Load scopes in case they haven't been loaded yet
+            if not hasattr(self, 'raw_scopes'):
+                self.raw_scopes = {}
+                self.parsed_scopes = {}
+
             s_kwargs = {}
             for resource in {'user', 'server', 'group', 'service'}:
                 resource_name = resource + '_name'
