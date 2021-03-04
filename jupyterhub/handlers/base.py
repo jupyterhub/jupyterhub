@@ -82,14 +82,12 @@ class BaseHandler(RequestHandler):
         via the `self.current_user` property during the handling of any request.
         """
         self.raw_scopes = set()
-        self.parsed_scopes = {}
         try:
             await self.get_current_user()
-            scopes.build_scope_schema(self)
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
-
+        self._resolve_scopes()
         return await maybe_future(super().prepare())
 
     @property
@@ -433,6 +431,20 @@ class BaseHandler(RequestHandler):
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
         return self._jupyterhub_user
+
+    def _resolve_scopes(self):
+        self.raw_scopes = set()
+        app_log.debug("Loading and parsing scopes")
+        api_token = self.get_current_user_token()
+        if api_token:
+            self.raw_scopes = scopes.get_scopes_for(api_token)
+        elif self.current_user:
+            self.raw_scopes = scopes.get_scopes_for(self.current_user)
+        else:  # deprecated oauth tokens
+            oauth_token = self.get_current_user_oauth_token()
+            if oauth_token:
+                self.raw_scopes = scopes.get_scopes_for(oauth_token)
+        self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
     def current_user(self):

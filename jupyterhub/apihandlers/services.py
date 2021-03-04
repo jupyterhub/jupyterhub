@@ -35,7 +35,7 @@ class ServiceListAPIHandler(APIHandler):
         data = {
             name: service_model(service)
             for name, service in self.services.items()
-            if scope_filter(service)
+            if scope_filter(service, kind='service')
         }
         self.write(json.dumps(data))
 

@@ -1,11 +1,11 @@
 import functools
 import inspect
-import re
 from enum import Enum
 
 from tornado import web
 from tornado.log import app_log
 
+from . import orm
 from . import roles
 
 
@@ -13,21 +13,32 @@ class Scope(Enum):
     ALL = True
 
 
-# Used to identify scope filters
-kind_regex = re.compile(r':?(user|service|group)s:?')
-
-
-def build_scope_schema(handler):
-    """Parse raw scope collection into a dict with filters that can be used to resolve API access"""
-    app_log.debug("Parsing scopes")
-    if handler.current_user is not None:
-        handler.raw_scopes = roles.get_subscopes(*handler.current_user.roles)
-    oauth_token = handler.get_current_user_oauth_token()
-    if oauth_token:
-        handler.raw_scopes |= get_user_scopes(oauth_token.name)
-    if 'all' in handler.raw_scopes:
-        handler.raw_scopes |= get_user_scopes(handler.current_user.name)
-    handler.parsed_scopes = parse_scopes(handler.raw_scopes)
+def get_scopes_for(user_or_token):
+    """Find scopes for a given user or token"""
+    scopes = set()
+    if user_or_token is None:
+        return scopes
+    elif isinstance(user_or_token, orm.APIToken) or isinstance(
+        user_or_token, orm.OAuthAccessToken
+    ):
+        user = user_or_token.user
+        user_name = user.name  # fixme: Find the right attr
+        token_scopes = roles.get_subscopes(*user_or_token.roles)
+        user_scopes = roles.get_subscopes(user.roles)
+        scopes = token_scopes & user_scopes
+        discarded_token_scopes = token_scopes - scopes
+        # Not taking symmetric difference here because owner can easily have more scopes than users
+        if discarded_token_scopes:
+            app_log.warn(
+                "Token-based access, discarding scopes [%s]"
+                % ", ".join(discarded_token_scopes)
+            )
+    else:
+        user_name = user_or_token.name
+        scopes = roles.get_subscopes(*user_or_token.roles)
+    if 'all' in scopes:
+        scopes |= get_user_scopes(user_name)
+    return scopes
 
 
 def get_user_scopes(name, read_only=False):
@@ -102,7 +113,8 @@ def _check_scope(api_handler, req_scope, **kwargs):
     sub_scope = api_handler.parsed_scopes[req_scope]
     if not kwargs:
         app_log.debug(
-            "Client has restricted access to %s. In-method filtering" % api_name
+            "Client has restricted access to %s. Internal filtering may apply"
+            % api_name
         )
         return True
     for (filter_, filter_value) in kwargs.items():

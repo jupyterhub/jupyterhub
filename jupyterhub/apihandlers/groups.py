@@ -39,7 +39,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
         """List groups"""
         groups = self.db.query(orm.Group)
         scope_filter = self.get_scope_filter('read:groups')
-        data = [self.group_model(g) for g in groups if scope_filter(g)]
+        data = [self.group_model(g) for g in groups if scope_filter(g, kind='group')]
         self.write(json.dumps(data))
 
     @needs_scope('admin:groups')

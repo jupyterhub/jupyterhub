@@ -71,15 +71,6 @@ class APIHandler(BaseHandler):
         Filter is a callable that takes a resource name and outputs true or false"""
 
         try:
-            kind = re.search(scopes.kind_regex, req_scope).group(1)
-        except AttributeError:
-            self.log.warning(
-                "Regex error while processing scope %s, throwing 500", req_scope
-            )
-            raise web.HTTPError(
-                log_message="Unrecognized scope guard on method: %s" % req_scope
-            )
-        try:
             sub_scope = self.parsed_scopes[req_scope]
         except AttributeError:
             raise web.HTTPError(
@@ -88,14 +79,19 @@ class APIHandler(BaseHandler):
                 % req_scope,
             )
 
-        def has_access(orm_resource):
+        def has_access(orm_resource, kind):
+            """
+            param orm_resource: User or Service or Group
+            param kind: 'users' or 'services' or 'groups'
+            """
             if sub_scope == scopes.Scope.ALL:
                 found_resource = True
             else:
                 found_resource = orm_resource.name in sub_scope[kind]
             if not found_resource:  # Try group-based access
-                if 'groups' in sub_scope and kind == 'users':
-                    user_in_group = bool(orm_resource.groups & sub_scope['groups'])
+                if 'group' in sub_scope and kind == 'user':
+                    group_names = {group.name for group in orm_resource.groups}
+                    user_in_group = bool(group_names & set(sub_scope['group']))
                     found_resource |= user_in_group
             return found_resource
 
@@ -247,21 +243,21 @@ class APIHandler(BaseHandler):
             'read:users:servers': {'kind', 'name', 'servers'},
         }
         self.log.debug(
-            "Asking for user models with scopes [%s]" % ", ".join(self.raw_scopes)
+            "Asking for user model of %s with scopes [%s]",
+            user.name,
+            ", ".join(self.raw_scopes),
         )
         allowed_keys = set()
         for scope in access_map:
             if scope in self.parsed_scopes:
                 scope_filter = self.get_scope_filter(scope)
-                if scope_filter(user):
+                if scope_filter(user, kind='user'):
                     allowed_keys |= access_map[scope]
         model = {key: model[key] for key in allowed_keys if key in model}
         if model:
             if '' in user.spawners and 'pending' in allowed_keys:
                 model['pending'] = user.spawners[''].pending
-            if not (include_servers and 'servers' in allowed_keys):
-                model['servers'] = None
-            else:
+            if include_servers and 'servers' in allowed_keys:
                 # Todo: Replace include_state with scope (read|admin):users:auth_state
                 servers = model['servers'] = {}
                 for name, spawner in user.spawners.items():
@@ -273,7 +269,7 @@ class APIHandler(BaseHandler):
                         )
         return model
 
-    def group_model(self, group):
+    def group_model(self, group):  # Todo: make consistent to do scope checking here
         """Get the JSON model for a Group object"""
         return {
             'kind': 'group',
@@ -281,7 +277,7 @@ class APIHandler(BaseHandler):
             'users': [u.name for u in group.users],
         }
 
-    def service_model(self, service):
+    def service_model(self, service):  # Todo: make consistent to do scope checking here
         """Get the JSON model for a Service object"""
         return {
             'kind': 'service',
