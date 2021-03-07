@@ -13,31 +13,29 @@ class Scope(Enum):
     ALL = True
 
 
-def get_scopes_for(user_or_token):
+def get_scopes_for(orm_object):
     """Find scopes for a given user or token"""
     scopes = set()
-    if user_or_token is None:
+    if orm_object is None:
         return scopes
-    elif isinstance(user_or_token, orm.APIToken) or isinstance(
-        user_or_token, orm.OAuthAccessToken
-    ):
-        user = user_or_token.user
-        user_name = user.name  # fixme: Find the right attr
-        token_scopes = roles.get_subscopes(*user_or_token.roles)
-        user_scopes = roles.get_subscopes(user.roles)
+    elif isinstance(orm_object, orm.APIToken):
+        owner = orm_object.user or orm_object.service
+        owner_name = owner.name
+        token_scopes = roles.get_subscopes(*orm_object.roles)
+        user_scopes = roles.get_subscopes(*owner.roles)
         scopes = token_scopes & user_scopes
         discarded_token_scopes = token_scopes - scopes
-        # Not taking symmetric difference here because owner can easily have more scopes than users
+        # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
-            app_log.warn(
+            app_log.warning(
                 "Token-based access, discarding scopes [%s]"
                 % ", ".join(discarded_token_scopes)
             )
     else:
-        user_name = user_or_token.name
-        scopes = roles.get_subscopes(*user_or_token.roles)
+        owner_name = orm_object.name
+        scopes = roles.get_subscopes(*orm_object.roles)
     if 'all' in scopes:
-        scopes |= get_user_scopes(user_name)
+        scopes |= get_user_scopes(owner_name)
     return scopes
 
 

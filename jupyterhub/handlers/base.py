@@ -353,16 +353,20 @@ class BaseHandler(RequestHandler):
             auth_info['auth_state'] = await user.get_auth_state()
         return await self.auth_to_user(auth_info, user)
 
-    def get_current_user_token(self):
-        """get_current_user from Authorization header token"""
+    def get_token(self):
+        """get token from authorization header"""
         token = self.get_auth_token()
         if token is None:
             return None
         orm_token = orm.APIToken.find(self.db, token)
+        return orm_token
+
+    def get_current_user_token(self):
+        """get_current_user from Authorization header token"""
+        # record token activity
+        orm_token = self.get_token()
         if orm_token is None:
             return None
-
-        # record token activity
         now = datetime.utcnow()
         recorded = self._record_activity(orm_token, now)
         if orm_token.user:
@@ -435,15 +439,14 @@ class BaseHandler(RequestHandler):
     def _resolve_scopes(self):
         self.raw_scopes = set()
         app_log.debug("Loading and parsing scopes")
-        api_token = self.get_current_user_token()
+        api_token = self.get_token()
         if api_token:
             self.raw_scopes = scopes.get_scopes_for(api_token)
         elif self.current_user:
             self.raw_scopes = scopes.get_scopes_for(self.current_user)
         else:  # deprecated oauth tokens
-            oauth_token = self.get_current_user_oauth_token()
-            if oauth_token:
-                self.raw_scopes = scopes.get_scopes_for(oauth_token)
+            user_from_oauth = self.get_current_user_oauth_token()
+            self.raw_scopes = scopes.get_scopes_for(user_from_oauth)
         self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
