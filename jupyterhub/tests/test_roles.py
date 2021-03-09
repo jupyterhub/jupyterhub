@@ -3,7 +3,9 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 
+import pytest
 from pytest import mark
+from tornado.log import app_log
 
 from .. import orm
 from .. import roles
@@ -183,6 +185,7 @@ def test_get_subscopes(db, scopes, subscopes):
     db.delete(role)
 
 
+@mark.role
 async def test_load_default_roles(tmpdir, request):
     """Test loading default roles in app.py"""
     kwargs = {}
@@ -197,6 +200,44 @@ async def test_load_default_roles(tmpdir, request):
     assert orm.Role.find(db, 'user') is not None
     assert orm.Role.find(db, 'admin') is not None
     assert orm.Role.find(db, 'server') is not None
+
+
+@mark.role
+@mark.parametrize(
+    "role, role_def, response_type, response",
+    [
+        ('no_name', {'scopes': ['users']}, 'error', KeyError),
+        (
+            'no_scopes',
+            {'name': 'no-permissions'},
+            'warning',
+            app_log.warning('Warning: New defined role no-permissions has no scopes'),
+        ),
+        (
+            'admin',
+            {'name': 'admin', 'scopes': ['admin:users']},
+            'error',
+            AttributeError,
+        ),
+    ],
+)
+async def test_adding_new_roles_raise_errors(
+    tmpdir, request, role, role_def, response_type, response
+):
+    """Test raising errors and warnings when creating new roles"""
+    kwargs = {'load_roles': [role_def]}
+    ssl_enabled = getattr(request.module, "ssl_enabled", False)
+    if ssl_enabled:
+        kwargs['internal_certs_location'] = str(tmpdir)
+    hub = MockHub(**kwargs)
+    hub.init_db()
+    db = hub.db
+    if response_type == 'error':
+        with pytest.raises(response):
+            await hub.init_roles()
+    elif response_type == 'warning':
+        with pytest.warns(response):
+            await hub.init_roles()
 
 
 @mark.role

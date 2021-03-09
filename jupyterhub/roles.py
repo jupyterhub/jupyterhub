@@ -3,6 +3,8 @@
 # Distributed under the terms of the Modified BSD License.
 from itertools import chain
 
+from tornado.log import app_log
+
 from . import orm
 
 
@@ -35,7 +37,7 @@ def get_default_roles():
         {
             'name': 'server',
             'description': 'Post activity only',
-            'scopes': ['users:activity!user=username'],
+            'scopes': ['users:activity'],
         },
     ]
     return default_roles
@@ -114,9 +116,8 @@ def get_subscopes(*args):
 
 def add_role(db, role_dict):
     """Adds a new role to database or modifies an existing one"""
-
     if 'name' not in role_dict.keys():
-        raise ValueError('Role must have a name')
+        raise KeyError('Role definition must have a name')
     else:
         name = role_dict['name']
         role = orm.Role.find(db, name)
@@ -126,13 +127,32 @@ def add_role(db, role_dict):
 
     if role is None:
         role = orm.Role(name=name, description=description, scopes=scopes)
+        if not scopes:
+            app_log.warning('Warning: New defined role %s has no scopes', name)
         db.add(role)
     else:
         if description:
-            role.description = description
+            if role.name == 'admin' and description != role.description:
+                raise AttributeError('admin role description cannot be overwritten')
+            else:
+                role.description = description
         if scopes:
-            role.scopes = scopes
+            if role.name == 'admin' and scopes != role.scopes:
+                raise AttributeError('admin role scopes cannot be overwritten')
+            else:
+                role.scopes = scopes
     db.commit()
+
+
+def remove_role(db, rolename):
+    """Removes a role from database"""
+
+    role = orm.Role.find(db, rolename)
+    if role:
+        db.delete(role)
+        db.commit()
+    else:
+        raise NameError('Cannot remove role %r that does not exist', rolename)
 
 
 def existing_only(func):
