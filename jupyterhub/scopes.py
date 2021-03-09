@@ -20,14 +20,11 @@ def get_scopes_for(orm_object):
         return scopes
     elif isinstance(orm_object, orm.APIToken):
         owner = orm_object.user or orm_object.service
-        owner_name = owner.name
-        token_scopes = roles.get_subscopes(*orm_object.roles)
+        token_scopes = roles.get_scopes_for(orm_object)
+        owner_scopes = roles.get_scopes_for(owner)
         if 'all' in token_scopes:
-            token_scopes |= get_user_scopes(owner_name)
-        user_scopes = roles.get_subscopes(*owner.roles)
-        if 'all' in user_scopes:
-            user_scopes |= get_user_scopes(owner_name)
-        scopes = token_scopes & user_scopes
+            token_scopes |= owner_scopes
+        scopes = token_scopes & owner_scopes
         discarded_token_scopes = token_scopes - scopes
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
@@ -36,40 +33,8 @@ def get_scopes_for(orm_object):
                 % ", ".join(discarded_token_scopes)
             )
     else:
-        owner_name = orm_object.name
-        scopes = roles.get_subscopes(*orm_object.roles)
-        if 'all' in scopes:
-            scopes |= get_user_scopes(
-                owner_name
-            )  # Todo: Expand scopes in separate method
+        scopes = roles.get_scopes_for(orm_object)
     return scopes
-
-
-def get_user_scopes(name, read_only=False):
-    """
-    Scopes have a metascope 'all' that should be expanded to everything a user can do.
-    At the moment that is a user-filtered version (optional read) access to
-    users
-    users:name
-    users:groups
-    users:activity
-    users:servers
-    users:tokens
-    """
-    scope_list = [
-        'users',
-        'users:name',
-        'users:groups',
-        'users:activity',
-        'users:servers',
-        'users:tokens',
-    ]
-    read_scope_list = ['read:' + scope for scope in scope_list]
-    if read_only:
-        scope_list = read_scope_list
-    else:
-        scope_list.extend(read_scope_list)
-    return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -97,8 +62,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
 
 def _check_scope(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
-    Returns either True for unrestricted access, False for refused access or
-    an iterable with a filter
+    Returns True for (restricted) access, False for refused access
     """
     # Parse user name and server name together
     try:

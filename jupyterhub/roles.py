@@ -12,8 +12,8 @@ def get_default_roles():
     default_roles = [
         {
             'name': 'user',
-            'description': 'Everything the user can do',
-            'scopes': ['all'],
+            'description': 'Standard user privileges',
+            'scopes': ['self'],
         },
         {
             'name': 'admin',
@@ -37,11 +37,41 @@ def get_default_roles():
             'description': 'Post activity only',
             'scopes': ['users:activity!user=username'],
         },
+        # {'name': 'token',
+        #  'description': 'Token with same rights as token owner',
+        #  'scopes': ['all']}
     ]
     return default_roles
 
 
-def get_scopes():
+def expand_self_scope(name, read_only=False):
+    """
+    Users have a metascope 'self' that should be expanded to standard user privileges.
+    At the moment that is a user-filtered version (optional read) access to
+    users
+    users:name
+    users:groups
+    users:activity
+    users:servers
+    users:tokens
+    """
+    scope_list = [
+        'users',
+        'users:name',
+        'users:groups',
+        'users:activity',
+        'users:servers',
+        'users:tokens',
+    ]
+    read_scope_list = ['read:' + scope for scope in scope_list]
+    if read_only:
+        scope_list = read_scope_list
+    else:
+        scope_list.extend(read_scope_list)
+    return {"{}!user={}".format(scope, name) for scope in scope_list}
+
+
+def get_scope_hierarchy():
     """
     Returns a dictionary of scopes:
     scopes.keys() = scopes of highest level and scopes that have their own subscopes
@@ -49,7 +79,7 @@ def get_scopes():
     """
 
     scopes = {
-        'all': ['read:all'],
+        'all': ['read:all'],  # Todo: optional
         'users': ['read:users', 'users:activity', 'users:servers'],
         'read:users': [
             'read:users:name',
@@ -74,7 +104,7 @@ def get_scopes():
 def expand_scope(scopename):
     """Returns a set of all subscopes"""
 
-    scopes = get_scopes()
+    scopes = get_scope_hierarchy()
     subscopes = [scopename]
 
     def expand_subscopes(index):
@@ -97,6 +127,15 @@ def expand_scope(scopename):
     expanded_scope = set(subscopes)
 
     return expanded_scope
+
+
+def get_scopes_for(orm_object):
+    """Get the scopes for User/Service/Group/Token"""
+    scopes = get_subscopes(*orm_object.roles)
+    if 'self' in scopes:
+        scopes.remove('self')
+        scopes += expand_self_scope(orm_object.name)
+    return scopes
 
 
 def get_subscopes(*args):
