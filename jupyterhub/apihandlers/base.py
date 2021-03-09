@@ -237,7 +237,7 @@ class APIHandler(BaseHandler):
         }
         access_map = {
             'read:users': set(model.keys()),  # All available components
-            'read:users:names': {'kind', 'name'},
+            'read:users:name': {'kind', 'name'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},

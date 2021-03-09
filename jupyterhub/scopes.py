@@ -22,7 +22,11 @@ def get_scopes_for(orm_object):
         owner = orm_object.user or orm_object.service
         owner_name = owner.name
         token_scopes = roles.get_subscopes(*orm_object.roles)
+        if 'all' in token_scopes:
+            token_scopes |= get_user_scopes(owner_name)
         user_scopes = roles.get_subscopes(*owner.roles)
+        if 'all' in user_scopes:
+            user_scopes |= get_user_scopes(owner_name)
         scopes = token_scopes & user_scopes
         discarded_token_scopes = token_scopes - scopes
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
@@ -34,8 +38,10 @@ def get_scopes_for(orm_object):
     else:
         owner_name = orm_object.name
         scopes = roles.get_subscopes(*orm_object.roles)
-    if 'all' in scopes:
-        scopes |= get_user_scopes(owner_name)
+        if 'all' in scopes:
+            scopes |= get_user_scopes(
+                owner_name
+            )  # Todo: Expand scopes in separate method
     return scopes
 
 

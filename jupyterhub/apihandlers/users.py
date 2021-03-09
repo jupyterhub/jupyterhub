@@ -55,7 +55,7 @@ class UserListAPIHandler(APIHandler):
 
     @needs_scope(
         'read:users',
-        'read:users:names',
+        'read:users:name',
         'reda:users:servers',
         'read:users:groups',
         'read:users:activity',

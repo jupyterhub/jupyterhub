@@ -396,7 +396,7 @@ async def test_group_scope_filter(app):
 async def test_vertical_filter(app):
     user_name = 'lindsey'
     add_user(app.db, name=user_name)
-    test_role = generate_test_role(user_name, ['read:users:names'])
+    test_role = generate_test_role(user_name, ['read:users:name'])
     roles.add_role(app.db, test_role)
     roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
     roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
