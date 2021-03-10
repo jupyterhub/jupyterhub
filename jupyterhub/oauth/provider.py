@@ -2,18 +2,18 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
+from datetime import timedelta
+
 from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code
 from oauthlib.oauth2.rfc6749.grant_types import base
-from tornado.escape import url_escape
 from tornado.log import app_log
 
 from .. import orm
 from ..utils import compare_token
 from ..utils import hash_token
-from ..utils import url_path_join
 
 # patch absolute-uri check
 # because we want to allow relative uri oauth
@@ -59,6 +59,9 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if oauth_client is None:
+            return False
+        if not client_secret or not oauth_client.secret:
+            # disallow authentication with no secret
             return False
         if not compare_token(oauth_client.secret, client_secret):
             app_log.warning("Client secret mismatch for %s", client_id)
@@ -339,10 +342,10 @@ class JupyterHubRequestValidator(RequestValidator):
             .filter_by(identifier=request.client.client_id)
             .first()
         )
-        orm_access_token = orm.OAuthAccessToken(
-            client=client,
+        orm_access_token = orm.APIToken.new(
+            client_id=client.identifier,
             grant_type=orm.GrantType.authorization_code,
-            expires_at=orm.OAuthAccessToken.now() + token['expires_in'],
+            expires_at=orm.APIToken.now() + timedelta(seconds=token['expires_in']),
             refresh_token=token['refresh_token'],
             # TODO: save scopes,
             # scopes=scopes,
@@ -411,6 +414,8 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
+            return False
+        if not orm_client.secret:
             return False
         request.client = orm_client
         return True
@@ -574,14 +579,16 @@ class JupyterHubOAuthServer(WebApplicationServer):
             app_log.info(f'Creating oauth client {client_id}')
         else:
             app_log.info(f'Updating oauth client {client_id}')
-        orm_client.secret = hash_token(client_secret)
+        orm_client.secret = hash_token(client_secret) if client_secret else ""
         orm_client.redirect_uri = redirect_uri
         orm_client.description = description
         self.db.commit()
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
-        return self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        client = self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        if client and client.secret:
+            return client
 
 
 def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):

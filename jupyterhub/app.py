@@ -2014,12 +2014,13 @@ class JupyterHub(Application):
         run periodically
         """
         # this should be all the subclasses of Expiring
-        for cls in (orm.APIToken, orm.OAuthAccessToken, orm.OAuthCode):
+        for cls in (orm.APIToken, orm.OAuthCode):
             self.log.debug("Purging expired {name}s".format(name=cls.__name__))
             cls.purge_expired(self.db)
 
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
+
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
 
@@ -2292,13 +2293,30 @@ class JupyterHub(Application):
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
         )
+        # ensure the default oauth client exists
+        if (
+            not self.db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .first()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            self.oauth_provider.add_client(
+                client_id="jupyterhub",
+                client_secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
 
     def cleanup_oauth_clients(self):
         """Cleanup any OAuth clients that shouldn't be in the database.
 
         This should mainly be services that have been removed from configuration or renamed.
         """
-        oauth_client_ids = set()
+        oauth_client_ids = {"jupyterhub"}
         for service in self._service_map.values():
             if service.oauth_available:
                 oauth_client_ids.add(service.oauth_client_id)

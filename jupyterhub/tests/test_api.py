@@ -273,7 +273,7 @@ async def test_get_self(app):
     oauth_client = orm.OAuthClient(identifier='eurydice')
     db.add(oauth_client)
     db.commit()
-    oauth_token = orm.OAuthAccessToken(
+    oauth_token = orm.APIToken(
         user=u.orm_user,
         client=oauth_client,
         token=token,
@@ -1423,12 +1423,11 @@ async def test_token_list(app, as_user, for_user, status):
     if status != 200:
         return
     reply = r.json()
-    assert sorted(reply) == ['api_tokens', 'oauth_tokens']
+    assert sorted(reply) == ['api_tokens']
     assert len(reply['api_tokens']) == len(for_user_obj.api_tokens)
     assert all(token['user'] == for_user for token in reply['api_tokens'])
-    assert all(token['user'] == for_user for token in reply['oauth_tokens'])
     # validate individual token ids
-    for token in reply['api_tokens'] + reply['oauth_tokens']:
+    for token in reply['api_tokens']:
         r = await api_request(
             app, 'users', for_user, 'tokens', token['id'], headers=headers
         )

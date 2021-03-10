@@ -247,26 +247,6 @@ class BaseHandler(RequestHandler):
             return None
         return match.group(1)
 
-    def get_current_user_oauth_token(self):
-        """Get the current user identified by OAuth access token
-
-        Separate from API token because OAuth access tokens
-        can only be used for identifying users,
-        not using the API.
-        """
-        token = self.get_auth_token()
-        if token is None:
-            return None
-        orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None:
-            return None
-
-        now = datetime.utcnow()
-        recorded = self._record_activity(orm_token, now)
-        if self._record_activity(orm_token.user, now) or recorded:
-            self.db.commit()
-        return self._user_from_orm(orm_token.user)
-
     def _record_activity(self, obj, timestamp=None):
         """record activity on an ORM object
 
@@ -373,7 +353,7 @@ class BaseHandler(RequestHandler):
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
-            if not orm_token.note.startswith("Server at "):
+            if not orm_token.note or not orm_token.note.startswith("Server at "):
                 recorded = self._record_activity(orm_token.user, now) or recorded
         if recorded:
             self.db.commit()
@@ -501,10 +481,8 @@ class BaseHandler(RequestHandler):
                 # don't clear session tokens if not logged in,
                 # because that could be a malicious logout request!
                 count = 0
-                for access_token in (
-                    self.db.query(orm.OAuthAccessToken)
-                    .filter(orm.OAuthAccessToken.user_id == user.id)
-                    .filter(orm.OAuthAccessToken.session_id == session_id)
+                for access_token in self.db.query(orm.APIToken).filter_by(
+                    user_id=user.id, session_id=session_id
                 ):
                     self.db.delete(access_token)
                     count += 1

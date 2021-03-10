@@ -33,9 +33,6 @@ class SelfAPIHandler(APIHandler):
     async def get(self):
         user = self.current_user
         if user is None:
-            # whoami can be accessed via oauth token
-            user = self.get_current_user_oauth_token()
-        if user is None:
             raise web.HTTPError(403)
         if isinstance(user, orm.Service):
             model = self.service_model(user)
@@ -316,17 +313,7 @@ class UserTokenListAPIHandler(APIHandler):
                 continue
             api_tokens.append(self.token_model(token))
 
-        oauth_tokens = []
-        # OAuth tokens use integer timestamps
-        now_timestamp = now.timestamp()
-        for token in sorted(user.oauth_tokens, key=sort_key):
-            if token.expires_at and token.expires_at < now_timestamp:
-                # exclude expired tokens
-                self.db.delete(token)
-                self.db.commit()
-                continue
-            oauth_tokens.append(self.token_model(token))
-        self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
+        self.write(json.dumps({'api_tokens': api_tokens}))
 
     # Todo: Set to @needs_scope('users:tokens')
     async def post(self, user_name):
@@ -410,19 +397,15 @@ class UserTokenAPIHandler(APIHandler):
         (e.g. wrong owner, invalid key format, etc.)
         """
         not_found = "No such token %s for user %s" % (token_id, user.name)
-        prefix, id_ = token_id[0], token_id[1:]
-        if prefix == 'a':
-            Token = orm.APIToken
-        elif prefix == 'o':
-            Token = orm.OAuthAccessToken
-        else:
+        prefix, id_ = token_id[:1], token_id[1:]
+        if prefix != 'a':
             raise web.HTTPError(404, not_found)
         try:
             id_ = int(id_)
         except ValueError:
             raise web.HTTPError(404, not_found)
 
-        orm_token = self.db.query(Token).filter(Token.id == id_).first()
+        orm_token = self.db.query(orm.APIToken).filter_by(id=id_).first()
         if orm_token is None or orm_token.user is not user.orm_user:
             raise web.HTTPError(404, "Token not found %s", orm_token)
         return orm_token
@@ -444,10 +427,10 @@ class UserTokenAPIHandler(APIHandler):
             raise web.HTTPError(404, "No such user: %s" % user_name)
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
-        if isinstance(token, orm.OAuthAccessToken):
-            client_id = token.client_id
+        client_id = token.client_id
+        if token.client_id != "jupyterhub":
             tokens = [
-                token for token in user.oauth_tokens if token.client_id == client_id
+                token for token in user.api_tokens if token.client_id == client_id
             ]
         else:
             tokens = [token]

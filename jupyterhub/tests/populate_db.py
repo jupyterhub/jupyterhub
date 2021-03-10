@@ -70,7 +70,11 @@ def populate_db(url):
         code = orm.OAuthCode(client_id=client.identifier)
         db.add(code)
         db.commit()
-        access_token = orm.OAuthAccessToken(
+        if jupyterhub.version_info < (2, 0):
+            Token = orm.OAuthAccessToken
+        else:
+            Token = orm.APIToken
+        access_token = Token(
             client_id=client.identifier,
             user_id=user.id,
             grant_type=orm.GrantType.authorization_code,
