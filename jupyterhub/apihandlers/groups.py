@@ -71,7 +71,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
 
     @admin_only
     async def delete(self):
-        """DELETE deletes Multiple groups """
+        """DELETE deletes multiple groups """
         model = self.get_json_body()
         if not model or not isinstance(model, dict) or not model.get('groups'):
             raise web.HTTPError(400, "Must specify at least one group to delete")
@@ -90,7 +90,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
             self.db.commit()
             deleted.append(group)
         self.write(json.dumps([self.group_model(group) for group in deleted]))
-        self.set_status(201)
+        self.set_status(204)
 
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
