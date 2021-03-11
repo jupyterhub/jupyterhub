@@ -214,6 +214,8 @@ class NewToken(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         hub.init_db()
+        hub.init_hub()
+        hub.init_oauth()
 
         def init_users():
             loop = asyncio.new_event_loop()
