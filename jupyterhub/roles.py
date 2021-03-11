@@ -114,8 +114,48 @@ def get_subscopes(*args):
     return scopes
 
 
+def check_scopes(*args):
+    """Check if provided scopes exist"""
+
+    allowed_scopes = get_scopes()
+    allowed_filters = ['!user=', '!group=', '!server=']
+    subscopes = set(
+        chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
+    )
+
+    for scope in args:
+        # check the ! filters
+        if '!' in scope:
+            if any(filter in scope for filter in allowed_filters):
+                scope = scope.split('!', 1)[0]
+            else:
+                raise NameError(
+                    'Scope filter %r in scope %r does not exist',
+                    scope.split('!', 1)[1],
+                    scope,
+                )
+        # check if the actual scope syntax exists
+        if scope not in allowed_scopes.keys() and scope not in subscopes:
+            raise NameError('Scope %r does not exist', scope)
+
+
+def overwrite_role(role, role_dict):
+    """Overwrites role's description and/or scopes with role_dict if role not 'admin'"""
+
+    for attr in role_dict.keys():
+        if attr == 'description' or attr == 'scopes':
+            if role.name == 'admin' and role_dict[attr] != getattr(role, attr):
+                raise ValueError(
+                    'admin role description or scopes cannot be overwritten'
+                )
+            else:
+                setattr(role, attr, role_dict[attr])
+                app_log.info('Role %r %r attribute has been changed', role.name, attr)
+
+
 def add_role(db, role_dict):
     """Adds a new role to database or modifies an existing one"""
+
     if 'name' not in role_dict.keys():
         raise KeyError('Role definition must have a name')
     else:
@@ -125,22 +165,19 @@ def add_role(db, role_dict):
     description = role_dict.get('description')
     scopes = role_dict.get('scopes')
 
+    # check if the provided scopes exist
+    if scopes:
+        check_scopes(*scopes)
+
     if role is None:
-        role = orm.Role(name=name, description=description, scopes=scopes)
         if not scopes:
             app_log.warning('Warning: New defined role %s has no scopes', name)
+
+        role = orm.Role(name=name, description=description, scopes=scopes)
         db.add(role)
     else:
-        if description:
-            if role.name == 'admin' and description != role.description:
-                raise AttributeError('admin role description cannot be overwritten')
-            else:
-                role.description = description
-        if scopes:
-            if role.name == 'admin' and scopes != role.scopes:
-                raise AttributeError('admin role scopes cannot be overwritten')
-            else:
-                role.scopes = scopes
+        overwrite_role(role, role_dict)
+
     db.commit()
 
 
