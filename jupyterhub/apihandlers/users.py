@@ -203,7 +203,7 @@ class UserAPIHandler(APIHandler):
     @admin_only
     async def post(self, name):
         data = self.get_json_body()
-        user = orm.User.find(self.db, name=name)
+        user = self.find_user(name)
         if user is not None:
             raise web.HTTPError(409, "User %s already exists" % name)
 
@@ -259,7 +259,7 @@ class UserAPIHandler(APIHandler):
 
     @admin_only
     async def patch(self, name):
-        user = orm.User.find(db=self.db, name=name)
+        user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
         data = self.get_json_body()
@@ -291,7 +291,7 @@ class UserAPIHandler(APIHandler):
                 setattr(user, key, value)
         self.db.commit()
         user_ = self.user_model(user)
-        user_['auth_state'] = await self._user_from_orm(user).get_auth_state()
+        user_['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(user_))
 
 
