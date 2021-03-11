@@ -999,17 +999,6 @@ class Spawner(LoggingConfigurable):
         """
         args = []
 
-        if self.ip:
-            args.append('--ip=%s' % _quote_safe(self.ip))
-
-        if self.port:
-            args.append('--port=%i' % self.port)
-        elif self.server and self.server.port:
-            self.log.warning(
-                "Setting port from user.server is deprecated as of JupyterHub 0.7."
-            )
-            args.append('--port=%i' % self.server.port)
-
         if self.notebook_dir:
             notebook_dir = self.format_string(self.notebook_dir)
             args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
