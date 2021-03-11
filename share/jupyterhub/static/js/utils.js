@@ -5,10 +5,10 @@
 // Modifications Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-define(["jquery"], function($) {
+define(["jquery"], function ($) {
   "use strict";
 
-  var url_path_join = function() {
+  var url_path_join = function () {
     // join a sequence of url components with '/'
     var url = "";
     for (var i = 0; i < arguments.length; i++) {
@@ -25,7 +25,7 @@ define(["jquery"], function($) {
     return url;
   };
 
-  var parse_url = function(url) {
+  var parse_url = function (url) {
     // an `a` element with an href allows attr-access to the parsed segments of a URL
     // a = parse_url("http://localhost:8888/path/name#hash")
     // a.protocol = "http:"
@@ -39,29 +39,24 @@ define(["jquery"], function($) {
     return a;
   };
 
-  var encode_uri_components = function(uri) {
+  var encode_uri_components = function (uri) {
     // encode just the components of a multi-segment uri,
     // leaving '/' separators
-    return uri
-      .split("/")
-      .map(encodeURIComponent)
-      .join("/");
+    return uri.split("/").map(encodeURIComponent).join("/");
   };
 
-  var url_join_encode = function() {
+  var url_join_encode = function () {
     // join a sequence of url components with '/',
     // encoding each component with encodeURIComponent
     return encode_uri_components(url_path_join.apply(null, arguments));
   };
 
-  var escape_html = function(text) {
+  var escape_html = function (text) {
     // escape text to HTML
-    return $("<div/>")
-      .text(text)
-      .html();
+    return $("<div/>").text(text).html();
   };
 
-  var get_body_data = function(key) {
+  var get_body_data = function (key) {
     // get a url-encoded item from body.data and decode it
     // we should never have any encoded URLs anywhere else in code
     // until we are building an actual request
@@ -69,7 +64,7 @@ define(["jquery"], function($) {
   };
 
   // http://stackoverflow.com/questions/2400935/browser-detection-in-javascript
-  var browser = (function() {
+  var browser = (function () {
     if (typeof navigator === "undefined") {
       // navigator undefined in node
       return "None";
@@ -86,7 +81,7 @@ define(["jquery"], function($) {
   })();
 
   // http://stackoverflow.com/questions/11219582/how-to-detect-my-browser-version-and-operating-system-using-javascript
-  var platform = (function() {
+  var platform = (function () {
     if (typeof navigator === "undefined") {
       // navigator undefined in node
       return "None";
@@ -99,7 +94,7 @@ define(["jquery"], function($) {
     return OSName;
   })();
 
-  var ajax_error_msg = function(jqXHR) {
+  var ajax_error_msg = function (jqXHR) {
     // Return a JSON error message if there is one,
     // otherwise the basic HTTP status text.
     if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
@@ -109,7 +104,7 @@ define(["jquery"], function($) {
     }
   };
 
-  var log_ajax_error = function(jqXHR, status, error) {
+  var log_ajax_error = function (jqXHR, status, error) {
     // log ajax failures with informative messages
     var msg = "API request failed (" + jqXHR.status + "): ";
     console.log(jqXHR);
@@ -118,7 +113,7 @@ define(["jquery"], function($) {
     return msg;
   };
 
-  var ajax_error_dialog = function(jqXHR, status, error) {
+  var ajax_error_dialog = function (jqXHR, status, error) {
     console.log("ajax dialog", arguments);
     var msg = log_ajax_error(jqXHR, status, error);
     var dialog = $("#error-dialog");

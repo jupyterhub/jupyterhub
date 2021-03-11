@@ -17,8 +17,8 @@ and the name of the shared-notebook service.
 
 In the external example, some extra steps are required to set up supervisor:
 
-1. select a system user to run the service. This is  a user on the system, and does not need to be a Hub user. Add this to the user field in `shared-notebook.conf`, replacing `someuser`.
+1. select a system user to run the service. This is a user on the system, and does not need to be a Hub user. Add this to the user field in `shared-notebook.conf`, replacing `someuser`.
 2. generate a secret token for authentication, and replace the `super-secret` fields in `shared-notebook-service` and `jupyterhub_config.py`
 3. install `shared-notebook-service` somewhere on your system, and update `/path/to/shared-notebook-service` to the absolute path of this destination
-3. copy `shared-notebook.conf` to `/etc/supervisor/conf.d/`
-4. `supervisorctl reload`
+4. copy `shared-notebook.conf` to `/etc/supervisor/conf.d/`
+5. `supervisorctl reload`

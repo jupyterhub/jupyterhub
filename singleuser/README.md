@@ -31,6 +31,6 @@ This particular image runs as the `jovyan` user, with home directory at `/home/j
 
 ## Note on persistence
 
-This home directory, `/home/jovyan`, is *not* persistent by default,
+This home directory, `/home/jovyan`, is _not_ persistent by default,
 so some configuration is required unless the directory is to be used
 with temporary or demonstration JupyterHub deployments.

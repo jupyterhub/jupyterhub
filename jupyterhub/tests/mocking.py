@@ -93,6 +93,16 @@ class MockSpawner(SimpleLocalProcessSpawner):
     def _cmd_default(self):
         return [sys.executable, '-m', 'jupyterhub.tests.mocksu']
 
+    async def delete_forever(self):
+        """Called when a user is deleted.
+
+        This can do things like request removal of resources such as persistent storage.
+        Only called on stopped spawners, and is likely the last action ever taken for the user.
+
+        Will only be called once on the user's default Spawner.
+        """
+        pass
+
     use_this_api_token = None
 
     def start(self):
@@ -394,9 +404,10 @@ class StubSingleUserSpawner(MockSpawner):
         Should be:
 
         - authenticated, so we are testing auth
-        - always available (i.e. in base ServerApp and NotebookApp
+        - always available (i.e. in mocked ServerApp and NotebookApp)
+        - *not* an API handler that raises 403 instead of redirecting
         """
-        return "/api/status"
+        return "/tree"
 
     _thread = None
 

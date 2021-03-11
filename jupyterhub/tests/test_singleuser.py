@@ -21,12 +21,18 @@ async def test_singleuser_auth(app):
     user = app.users['nandy']
     if not user.running:
         await user.spawn()
+        await app.proxy.add_user(user)
     url = public_url(app, user)
 
     # no cookies, redirects to login page
     r = await async_requests.get(url)
     r.raise_for_status()
     assert '/hub/login' in r.url
+
+    # unauthenticated /api/ should 403, not redirect
+    api_url = url_path_join(url, "api/status")
+    r = await async_requests.get(api_url, allow_redirects=False)
+    assert r.status_code == 403
 
     # with cookies, login successful
     r = await async_requests.get(url, cookies=cookies)
