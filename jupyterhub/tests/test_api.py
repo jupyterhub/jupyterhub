@@ -1319,7 +1319,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     if for_user != 'missing':
         for_user_obj = add_user(app.db, app, name=for_user)
     data = {'username': for_user}
-    headers = {'Authorization': 'token %s' % u.new_api_token(roles=[as_user])}
+    headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(
         app,
         'users',
@@ -1414,7 +1414,7 @@ async def test_token_list(app, as_user, for_user, status):
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
         for_user_obj = add_user(app.db, app, name=for_user)
-    headers = {'Authorization': 'token %s' % u.new_api_token(roles=[as_user])}
+    headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(app, 'users', for_user, 'tokens', headers=headers)
     assert r.status_code == status
     if status != 200:

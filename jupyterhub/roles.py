@@ -37,9 +37,11 @@ def get_default_roles():
             'description': 'Post activity only',
             'scopes': ['users:activity!user=username'],
         },
-        # {'name': 'token',
-        #  'description': 'Token with same rights as token owner',
-        #  'scopes': ['all']}
+        {
+            'name': 'token',
+            'description': 'Token with same rights as token owner',
+            'scopes': ['all'],
+        },
     ]
     return default_roles
 
@@ -79,7 +81,7 @@ def get_scope_hierarchy():
     """
 
     scopes = {
-        'all': ['read:all'],  # Todo: optional
+        'all': None,  # Optional 'read:all' as subscope, not implemented at this stage
         'users': ['read:users', 'users:activity', 'users:servers'],
         'read:users': [
             'read:users:name',
@@ -134,7 +136,7 @@ def get_scopes_for(orm_object):
     scopes = get_subscopes(*orm_object.roles)
     if 'self' in scopes:
         scopes.remove('self')
-        scopes += expand_self_scope(orm_object.name)
+        scopes |= expand_self_scope(orm_object.name)
     return scopes
 
 
@@ -236,8 +238,8 @@ def update_roles(db, obj, kind, roles=None):
     assigns default if no roles specified"""
 
     Class = orm.get_class(kind)
-    user_role = orm.Role.find(db, 'user')
-
+    default_token_role = orm.Role.find(db, 'token')
+    standard_permissions = {'all', 'read:all'}
     if roles:
         for rolename in roles:
             if Class == orm.APIToken:
@@ -246,6 +248,7 @@ def update_roles(db, obj, kind, roles=None):
                 if role:
                     # compare the requested role permissions with the owner's permissions (scopes)
                     token_scopes = get_subscopes(role)
+                    extra_scopes = token_scopes - standard_permissions
                     # find the owner and their roles
                     owner = None
                     if obj.user_id:
@@ -253,24 +256,24 @@ def update_roles(db, obj, kind, roles=None):
                     elif obj.service_id:
                         owner = db.query(orm.Service).get(obj.service_id)
                     if owner:
-                        owner_scopes = get_subscopes(*owner.roles)
-                        if token_scopes.issubset(owner_scopes):
+                        owner_scopes = get_scopes_for(owner)
+                        if (extra_scopes).issubset(owner_scopes):
                             role.tokens.append(obj)
                         else:
                             raise ValueError(
-                                'Requested token role %r has higher permissions than the token owner'
-                                % rolename
+                                'Requested token role %r has more permissions than the token owner: [%s]'
+                                % (rolename, ",".join(extra_scopes - owner_scopes))
                             )
                 else:
                     raise NameError('Role %r does not exist' % rolename)
             else:
                 add_obj(db, objname=obj.name, kind=kind, rolename=rolename)
     else:
-        # tokens can have only 'user' role as default
-        # assign the default only for user tokens
+        # tokens can have only 'token' role as default
+        # assign the default only for tokens
         if Class == orm.APIToken:
-            if len(obj.roles) < 1 and obj.user is not None:
-                user_role.tokens.append(obj)
+            if not obj.roles and obj.user is not None:
+                default_token_role.tokens.append(obj)
             db.commit()
         # users and services can have 'user' or 'admin' roles as default
         else:

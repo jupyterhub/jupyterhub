@@ -120,18 +120,14 @@ def add_user(db, app=None, **kwargs):
         return orm_user
 
 
-def auth_header(db, name, inherit=True):
+def auth_header(db, name):
     """Return header with user's API authorization token.
     If inherit is True, copies the roles of the invoking user
     """
     user = find_user(db, name)
     if user is None:
         raise KeyError(f"No such user: {name}")
-    if inherit:
-        roles = [role.name for role in user.roles]
-    else:
-        roles = None
-    token = user.new_api_token(roles=roles)
+    token = user.new_api_token()
     return {'Authorization': 'token %s' % token}
 
 

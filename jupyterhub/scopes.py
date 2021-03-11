@@ -23,6 +23,7 @@ def get_scopes_for(orm_object):
         token_scopes = roles.get_scopes_for(orm_object)
         owner_scopes = roles.get_scopes_for(owner)
         if 'all' in token_scopes:
+            token_scopes.remove('all')
             token_scopes |= owner_scopes
         scopes = token_scopes & owner_scopes
         discarded_token_scopes = token_scopes - scopes
