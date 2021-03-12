@@ -447,6 +447,7 @@ class BaseHandler(RequestHandler):
         else:  # deprecated oauth tokens
             user_from_oauth = self.get_current_user_oauth_token()
             self.raw_scopes = scopes.get_scopes_for(user_from_oauth)
+        app_log.debug("Found scopes [%s]", ",".join(self.raw_scopes))
         self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
     @property
