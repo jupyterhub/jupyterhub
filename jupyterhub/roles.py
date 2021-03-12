@@ -74,6 +74,22 @@ def get_scopes():
     return scopes
 
 
+def horizontal_filter(func):
+    """Decorator to account for horizontal filtering in scope syntax"""
+
+    def ignore(scopename):
+        # temporarily remove horizontal filtering if present
+        scopename, mark, hor_filter = scopename.partition('!')
+        expanded_scope = func(scopename)
+        # add the filter back
+        full_expanded_scope = {scope + mark + hor_filter for scope in expanded_scope}
+
+        return full_expanded_scope
+
+    return ignore
+
+
+@horizontal_filter
 def expand_scope(scopename):
     """Returns a set of all subscopes"""
 
@@ -115,13 +131,52 @@ def get_subscopes(*args):
     return scopes
 
 
+def check_scopes(*args):
+    """Check if provided scopes exist"""
+
+    allowed_scopes = get_scopes()
+    allowed_filters = ['!user=', '!group=', '!server=']
+    subscopes = set(
+        chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
+    )
+
+    for scope in args:
+        # check the ! filters
+        if '!' in scope:
+            if any(filter in scope for filter in allowed_filters):
+                scope = scope.split('!', 1)[0]
+            else:
+                raise NameError(
+                    'Scope filter %r in scope %r does not exist',
+                    scope.split('!', 1)[1],
+                    scope,
+                )
+        # check if the actual scope syntax exists
+        if scope not in allowed_scopes.keys() and scope not in subscopes:
+            raise NameError('Scope %r does not exist', scope)
+
+
+def overwrite_role(role, role_dict):
+    """Overwrites role's description and/or scopes with role_dict if role not 'admin'"""
+
+    for attr in role_dict.keys():
+        if attr == 'description' or attr == 'scopes':
+            if role.name == 'admin' and role_dict[attr] != getattr(role, attr):
+                raise ValueError(
+                    'admin role description or scopes cannot be overwritten'
+                )
+            else:
+                setattr(role, attr, role_dict[attr])
+                app_log.info('Role %r %r attribute has been changed', role.name, attr)
+
+
 def add_role(db, role_dict):
     """Adds a new role to database or modifies an existing one"""
 
     default_roles = get_default_roles()
 
     if 'name' not in role_dict.keys():
-        raise ValueError('Role definition in config file must have a name!')
+        raise KeyError('Role definition must have a name')
     else:
         name = role_dict['name']
         role = orm.Role.find(db, name)
@@ -129,20 +184,21 @@ def add_role(db, role_dict):
     description = role_dict.get('description')
     scopes = role_dict.get('scopes')
 
+    # check if the provided scopes exist
+    if scopes:
+        check_scopes(*scopes)
+
     if role is None:
+        if not scopes:
+            app_log.warning('Warning: New defined role %s has no scopes', name)
+
         role = orm.Role(name=name, description=description, scopes=scopes)
         db.add(role)
         if role_dict not in default_roles:
             app_log.info('Adding role %s to database', name)
     else:
-        if description:
-            if role.description != description:
-                app_log.info('Changing role %s description to %s', name, description)
-                role.description = description
-        if scopes:
-            if role.scopes != scopes:
-                app_log.info('Changing role %s scopes to %s', name, scopes)
-                role.scopes = scopes
+        overwrite_role(role, role_dict)
+
     db.commit()
 
 
@@ -228,10 +284,11 @@ def switch_default_role(db, obj, kind, admin):
         add_and_remove(db, obj, kind, admin_role, user_role)
 
 
-def check_token_roles(db, token, role):
+def token_allowed_role(db, token, role):
 
-    """Returns a set of token scopes from its roles and a set of
-    token's owner scopes from their roles and their group roles"""
+    """Returns True if token allowed to have requested role through
+    comparing the requested scopes with the set of token's owner scopes
+    from their roles and their group roles"""
 
     token_scopes = get_subscopes(role)
     owner = None
@@ -251,7 +308,18 @@ def check_token_roles(db, token, role):
 
     owner_scopes = get_subscopes(*roles_to_check)
 
-    return token_scopes, owner_scopes
+    # ignore horizontal filters for comparison
+    t_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in token_scopes
+    }
+    o_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
+    }
+
+    if t_scopes.issubset(o_scopes):
+        return True
+    else:
+        return False
 
 
 def update_roles(db, obj, kind, roles=None):
@@ -270,24 +338,22 @@ def update_roles(db, obj, kind, roles=None):
                     app_log.debug(
                         'Checking token permissions against requested role %s', rolename
                     )
-                    token_scopes, owner_scopes = check_token_roles(db, obj, role)
-                    if token_scopes.issubset(owner_scopes):
+
+                    if token_allowed_role(db, obj, role):
                         role.tokens.append(obj)
                         app_log.info(
                             'Adding role %s for %s: %s', role.name, kind[:-1], obj
                         )
                     else:
                         raise ValueError(
-                            'Requested token role %r of %r with scopes %r has higher permissions than the owner scopes %r'
-                            % (rolename, obj, token_scopes, owner_scopes)
+                            'Requested token role %r of %r with scopes %r cannot grant more permissions than its owner scopes'
+                            % (rolename, obj, role.scopes)
                         )
                 else:
                     raise NameError('Role %r does not exist' % rolename)
             else:
                 add_obj(db, objname=obj.name, kind=kind, rolename=rolename)
     else:
-        # CHECK ME - Does the default role assignment here make sense?
-
         # groups can be without a role
         if Class == orm.Group:
             pass
