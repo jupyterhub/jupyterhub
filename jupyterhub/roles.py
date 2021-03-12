@@ -73,6 +73,22 @@ def get_scopes():
     return scopes
 
 
+def horizontal_filter(func):
+    """Decorator to account for horizontal filtering in scope syntax"""
+
+    def ignore(scopename):
+        # temporarily remove horizontal filtering if present
+        scopename, mark, hor_filter = scopename.partition('!')
+        expanded_scope = func(scopename)
+        # add the filter back
+        full_expanded_scope = {scope + mark + hor_filter for scope in expanded_scope}
+
+        return full_expanded_scope
+
+    return ignore
+
+
+@horizontal_filter
 def expand_scope(scopename):
     """Returns a set of all subscopes"""
 
@@ -264,6 +280,11 @@ def update_roles(db, obj, kind, roles=None):
                 if role:
                     # compare the requested role permissions with the owner's permissions (scopes)
                     token_scopes = get_subscopes(role)
+                    # ignore horizontal filters for comparison
+                    t_scopes = {
+                        scope.split('!', 1)[0] if '!' in scope else scope
+                        for scope in token_scopes
+                    }
                     # find the owner and their roles
                     owner = None
                     if obj.user_id:
@@ -272,7 +293,12 @@ def update_roles(db, obj, kind, roles=None):
                         owner = db.query(orm.Service).get(obj.service_id)
                     if owner:
                         owner_scopes = get_subscopes(*owner.roles)
-                        if token_scopes.issubset(owner_scopes):
+                        # ignore horizontal filters for comparison
+                        o_scopes = {
+                            scope.split('!', 1)[0] if '!' in scope else scope
+                            for scope in owner_scopes
+                        }
+                        if t_scopes.issubset(o_scopes):
                             role.tokens.append(obj)
                         else:
                             raise ValueError(

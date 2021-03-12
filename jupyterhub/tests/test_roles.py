@@ -21,7 +21,7 @@ def test_orm_roles(db):
     """Test orm roles setup"""
     user_role = orm.Role.find(db, name='user')
     if not user_role:
-        user_role = orm.Role(name='user', scopes=['all', 'read:all'])
+        user_role = orm.Role(name='user', scopes=['self'])
         db.add(user_role)
         db.commit()
 
@@ -175,6 +175,10 @@ def test_orm_roles_delete_cascade(db):
         ),
         (['read:users:servers'], {'read:users:servers'}),
         (['admin:groups'], {'admin:groups'}),
+        (
+            ['users:tokens!group=hobbits'],
+            {'users:tokens!group=hobbits', 'read:users:tokens!group=hobbits'},
+        ),
     ],
 )
 def test_get_subscopes(db, scopes, subscopes):
@@ -316,9 +320,8 @@ async def test_load_roles_users(tmpdir, request):
         },
         {
             'name': 'user',
-            'description': 'Only read access',
-            'scopes': ['read:all'],
-            'users': ['bilbo'],
+            'description': 'Read access to users names',
+            'scopes': ['read:users:name'],
         },
     ]
     kwargs = {'load_roles': roles_to_load}
@@ -333,12 +336,13 @@ async def test_load_roles_users(tmpdir, request):
     await hub.init_users()
     await hub.init_roles()
 
-    # test if the 'user' role has been overwritten and assigned
+    # test if the 'user' role has been overwritten
     user_role = orm.Role.find(db, 'user')
-    admin_role = orm.Role.find(db, 'admin')
     assert user_role is not None
-    assert user_role.scopes == ['read:all']
+    assert user_role.description == roles_to_load[1]['description']
+    assert user_role.scopes == roles_to_load[1]['scopes']
 
+    admin_role = orm.Role.find(db, 'admin')
     # test if every user has a role (and no duplicates)
     # and admins have admin role
     for user in db.query(orm.User):
@@ -504,8 +508,9 @@ async def test_get_new_token_via_api(app, headers, role_list, status):
     # check the new-token reply for roles
     reply = r.json()
     assert 'token' in reply
-    assert reply['user'] == 'user'
+    assert reply['user'] == user.name
     if not role_list:
+        # token should have a default role
         assert reply['roles'] == ['user']
     else:
         assert reply['roles'] == ['reader']
