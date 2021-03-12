@@ -110,7 +110,7 @@ define(["jquery", "utils"], function ($, utils) {
     this.api_request(utils.url_path_join("users", user), options);
   };
 
-  JHAPI.prototype.add_groups = function(groupnames, groupinfo, options) {
+  JHAPI.prototype.add_groups = function (groupnames, groupinfo, options) {
     options = options || {};
     var data = update(groupinfo, { groups: groupnames });
     options = update(options, {
@@ -122,7 +122,7 @@ define(["jquery", "utils"], function ($, utils) {
     this.api_request("groups", options);
   };
 
-  JHAPI.prototype.delete_groups = function(groupnames, groupinfo, options) {
+  JHAPI.prototype.delete_groups = function (groupnames, groupinfo, options) {
     options = options || {};
     var data = update(groupinfo, { groups: groupnames });
     options = update(options, {

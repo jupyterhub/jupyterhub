@@ -163,7 +163,11 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     var row = getRow(el);
     var user = row.data("user");
     var admin = row.data("admin");
-    var groups = row.data("groups").split(/[\s,]+/).map(name => name.trim()).filter(name => name.length);;
+    var groups = row
+      .data("groups")
+      .split(/[\s,]+/)
+      .map((name) => name.trim())
+      .filter((name) => name.length);
     var dialog = $("#edit-user-dialog");
     dialog.data("user", user);
     dialog.find(".username-input").val(user);
@@ -178,7 +182,7 @@ require(["jquery", "moment", "jhapi", "utils"], function (
       var dialog = $("#edit-user-dialog");
       var user = dialog.data("user");
       var name = dialog.find(".username-input").val();
-      var groups = dialog.find(".groups-input").val()
+      var groups = dialog.find(".groups-input").val();
       var admin = dialog.find(".admin-checkbox").prop("checked");
       api.edit_user(
         user,
@@ -230,7 +234,10 @@ require(["jquery", "moment", "jhapi", "utils"], function (
     .click(function () {
       var dialog = $("#add-users-dialog");
       var usernames = dialog.find(".username-input").val();
-      usernames = usernames.split(/[\s,]+/).map(name => name.trim()).filter(name => name.length);
+      usernames = usernames
+        .split(/[\s,]+/)
+        .map((name) => name.trim())
+        .filter((name) => name.length);
       var groups = dialog.find(".groups-input").val();
       // groups = groups.split(/[\s,]+/).map(name => name.trim()).filter(name => name.length);
       var admin = dialog.find(".admin-checkbox").prop("checked");
@@ -249,51 +256,54 @@ require(["jquery", "moment", "jhapi", "utils"], function (
       );
     });
 
-    $("#add-groups").click(function () {
+  $("#add-groups").click(function () {
+    var dialog = $("#add-groups-dialog");
+    dialog.find(".groups-input").val("");
+    dialog.modal();
+  });
+
+  $("#add-groups-dialog")
+    .find(".save-button")
+    .click(function () {
       var dialog = $("#add-groups-dialog");
-      dialog.find(".groups-input").val("");
-      dialog.modal();
+      var groups = dialog.find(".groups-input").val();
+      groups = groups
+        .split(/[\s,]+/)
+        .map((group) => group.trim())
+        .filter((group) => group.length);
+
+      api.add_groups(
+        groups,
+        {},
+        {
+          success: function () {
+            window.location.reload();
+          },
+        }
+      );
     });
 
-    $("#add-groups-dialog")
-      .find(".save-button")
-      .click(function () {
-        var dialog = $("#add-groups-dialog");
-        var groups = dialog.find(".groups-input").val();
-        groups = groups.split(/[\s,]+/).map(group => group.trim()).filter(group => group.length);
+  $("#delete-groups").click(function () {
+    var dialog = $("#delete-groups-dialog");
+    dialog.find(".groups-input").val([]);
+    dialog.modal();
+  });
 
-        api.add_groups(
-          groups,
-          {},
-          {
-            success: function () {
-              window.location.reload();
-            },
-          }
-        );
-      });
-
-      $("#delete-groups").click(function () {
-        var dialog = $("#delete-groups-dialog");
-        dialog.find(".groups-input").val([]);
-        dialog.modal();
-      });
-
-      $("#delete-groups-dialog")
-        .find(".delete-button")
-        .click(function () {
-          var dialog = $("#delete-groups-dialog");
-          var groups = dialog.find(".groups-input").val();
-          api.delete_groups(
-            groups,
-            {},
-            {
-              success: function () {
-                window.location.reload();
-              },
-            }
-          );
-        });
+  $("#delete-groups-dialog")
+    .find(".delete-button")
+    .click(function () {
+      var dialog = $("#delete-groups-dialog");
+      var groups = dialog.find(".groups-input").val();
+      api.delete_groups(
+        groups,
+        {},
+        {
+          success: function () {
+            window.location.reload();
+          },
+        }
+      );
+    });
 
   $("#stop-all-servers").click(function () {
     $("#stop-all-servers-dialog").modal();

@@ -92,6 +92,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
         self.write(json.dumps([self.group_model(group) for group in deleted]))
         self.set_status(204)
 
+
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
 
