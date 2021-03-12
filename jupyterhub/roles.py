@@ -135,7 +135,7 @@ def check_scopes(*args):
     """Check if provided scopes exist"""
 
     allowed_scopes = get_scopes()
-    allowed_filters = ['!user=', '!group=', '!server=']
+    allowed_filters = ['!user=', '!service=', '!group=', '!server=']
     subscopes = set(
         chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
     )

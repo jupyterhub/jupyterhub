@@ -389,7 +389,7 @@ async def test_load_roles_services(tmpdir, request):
         {'name': 'admin_service', 'api_token': 'secret-token'},
     ]
     service_tokens = {
-        'some-token': 'cull_idle',
+        'some-token': 'idle-culler',
         'some-other-token': 'user_service',
         'secret-token': 'admin_service',
     }
@@ -620,9 +620,6 @@ async def test_load_roles_service_tokens(tmpdir, request):
     hub.init_db()
     db = hub.db
     await hub.init_api_tokens()
-    # make the service admin
-    service = orm.Service.find(db, 'cull_idle')
-    service.admin = True
     await hub.init_roles()
 
     # test if another-secret-token has culler role
