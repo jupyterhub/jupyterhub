@@ -114,6 +114,11 @@ paths:
                 description: list of usernames to create on the Hub
                 items:
                   type: string
+              groups:
+                type: array
+                description: list of groupnames to which users get added
+                items:
+                  type: string
               admin:
                 description: whether the created users should be admins
                 type: boolean
@@ -147,6 +152,20 @@ paths:
           in: path
           required: true
           type: string
+        - name: body
+          in: body
+          required: false
+          schema:
+            type: object
+            properties:
+              groups:
+                type: array
+                description: list of groupnames to which the user gets added
+                items:
+                  type: string
+              admin:
+                description: whether the created user should be admin
+                type: boolean
       responses:
         "201":
           description: The user has been created
@@ -164,16 +183,21 @@ paths:
         - name: body
           in: body
           required: true
-          description: Updated user info. At least one key to be updated (name or admin) is required.
+          description: Updated user info. At least one key to be updated (name, admin or groups) is required.
           schema:
             type: object
             properties:
               name:
                 type: string
-                description: the new name (optional, if another key is updated i.e. admin)
+                description: the new name (optional, if another key is updated i.e. admin or groups)
+              groups:
+                type: array
+                description: list of groupnames user will be member of (optional, if another key is updated i.e. name or admin)
+                items:
+                  type: string
               admin:
                 type: boolean
-                description: update admin (optional, if another key is updated i.e. name)
+                description: update admin (optional, if another key is updated i.e. name or groups)
       responses:
         "200":
           description: The updated user info
@@ -430,6 +454,55 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Group"
+    post:
+      summary: Create multiple groups
+      parameters:
+        - name: body
+          in: body
+          required: true
+          description: The groups to create
+          schema:
+            type: object
+            properties:
+              groups:
+                type: array
+                description: List of groupnames
+                items:
+                  type: string
+              users:
+                type: array
+                description: List of usernames to add to the groups
+                items:
+                  type: string
+      responses:
+        "201":
+          description: The list of created groups
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Group"
+    delete:
+      summary: Delete multiple groups
+      parameters:
+        - name: body
+          in: body
+          required: false
+          description: The goups to delete
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                description: List of groupnames to delete
+                items:
+                  type: string
+      responses:
+        "204":
+          description: The list of deleted groups
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Group"
   /groups/{name}:
     get:
       summary: Get a group by name
@@ -452,6 +525,18 @@ paths:
           in: path
           required: true
           type: string
+        - name: body
+          in: body
+          required: false
+          description: The users to add to the group
+          schema:
+            type: object
+            properties:
+              users:
+                type: array
+                description: List of usernames to add to the group
+                items:
+                  type: string
       responses:
         "201":
           description: The group has been created
