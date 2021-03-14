@@ -278,6 +278,72 @@ async def test_request_fake_user(app):
     assert r.json()['message'] == err_message
 
 
+async def test_refuse_exceeding_token_permissions(app):
+    user_name = 'abed'
+    user = add_user(app.db, name=user_name)
+    add_user(app.db, name='user')
+    api_token = user.new_api_token()
+    exceeding_role = generate_test_role(user_name, ['read:users'], 'exceeding_role')
+    roles.add_role(app.db, exceeding_role)
+    roles.add_obj(app.db, objname=api_token, kind='tokens', rolename='exceeding_role')
+    app.db.commit()
+    headers = {'Authorization': 'token %s' % api_token}
+    r = await api_request(app, 'users', headers=headers)
+    assert r.status_code == 200
+    result_names = {user['name'] for user in r.json()}
+    assert result_names == {user_name}
+
+
+async def test_exceeding_user_permissions(app):
+    user_name = 'abed'
+    user = add_user(app.db, name=user_name)
+    add_user(app.db, name='user')
+    api_token = user.new_api_token()
+    orm_api_token = orm.APIToken.find(app.db, token=api_token)
+    reader_role = generate_test_role(user_name, ['read:users'], 'reader_role')
+    subreader_role = generate_test_role(
+        user_name, ['read:users:groups'], 'subreader_role'
+    )
+    roles.add_role(app.db, reader_role)
+    roles.add_role(app.db, subreader_role)
+    app.db.commit()
+    roles.update_roles(app.db, user, kind='users', roles=['reader_role'])
+    roles.update_roles(app.db, orm_api_token, kind='tokens', roles=['subreader_role'])
+    orm_api_token.roles.remove(orm.Role.find(app.db, name='token'))
+    app.db.commit()
+
+    headers = {'Authorization': 'token %s' % api_token}
+    r = await api_request(app, 'users', headers=headers)
+    assert r.status_code == 200
+    keys = {key for user in r.json() for key in user.keys()}
+    assert 'groups' in keys
+    assert 'last_activity' not in keys
+
+
+async def test_user_service_separation(app, mockservice_url):
+    name = mockservice_url.name
+    user = add_user(app.db, name=name)
+
+    reader_role = generate_test_role(name, ['read:users'], 'reader_role')
+    subreader_role = generate_test_role(name, ['read:users:groups'], 'subreader_role')
+    roles.add_role(app.db, reader_role)
+    roles.add_role(app.db, subreader_role)
+    app.db.commit()
+    roles.update_roles(app.db, user, kind='users', roles=['subreader_role'])
+    roles.update_roles(
+        app.db, mockservice_url.orm, kind='services', roles=['reader_role']
+    )
+    user.roles.remove(orm.Role.find(app.db, name='user'))
+    api_token = user.new_api_token()
+    app.db.commit()
+    headers = {'Authorization': 'token %s' % api_token}
+    r = await api_request(app, 'users', headers=headers)
+    assert r.status_code == 200
+    keys = {key for user in r.json() for key in user.keys()}
+    assert 'groups' in keys
+    assert 'last_activity' not in keys
+
+
 async def test_request_user_outside_group(app):
     user_name = 'buster'
     fake_user = 'hello'
