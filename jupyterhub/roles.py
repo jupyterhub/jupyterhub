@@ -90,13 +90,13 @@ def horizontal_filter(func):
 
 
 @horizontal_filter
-def expand_scope(scopename):
+def _expand_scope(scopename):
     """Returns a set of all subscopes"""
 
     scopes = get_scopes()
     subscopes = [scopename]
 
-    def expand_subscopes(index):
+    def _expand_subscopes(index):
 
         more_subscopes = list(
             filter(lambda scope: scope in scopes.keys(), subscopes[index:])
@@ -109,9 +109,9 @@ def expand_scope(scopename):
         # record the index from where it should check for "subscopes of sub-subscopes"
         index_for_sssc = len(subscopes)
         # check for "subscopes of subscopes"
-        expand_subscopes(index=1)
+        _expand_subscopes(index=1)
         # check for "subscopes of sub-subscopes"
-        expand_subscopes(index=index_for_sssc)
+        _expand_subscopes(index=index_for_sssc)
 
     expanded_scope = set(subscopes)
 
@@ -126,12 +126,12 @@ def get_subscopes(*args):
     for role in args:
         scope_list.extend(role.scopes)
 
-    scopes = set(chain.from_iterable(list(map(expand_scope, scope_list))))
+    scopes = set(chain.from_iterable(list(map(_expand_scope, scope_list))))
 
     return scopes
 
 
-def check_scopes(*args):
+def _check_scopes(*args):
     """Check if provided scopes exist"""
 
     allowed_scopes = get_scopes()
@@ -156,7 +156,7 @@ def check_scopes(*args):
             raise NameError('Scope %r does not exist', scope)
 
 
-def overwrite_role(role, role_dict):
+def _overwrite_role(role, role_dict):
     """Overwrites role's description and/or scopes with role_dict if role not 'admin'"""
 
     for attr in role_dict.keys():
@@ -186,7 +186,7 @@ def add_role(db, role_dict):
 
     # check if the provided scopes exist
     if scopes:
-        check_scopes(*scopes)
+        _check_scopes(*scopes)
 
     if role is None:
         if not scopes:
@@ -197,7 +197,7 @@ def add_role(db, role_dict):
         if role_dict not in default_roles:
             app_log.info('Adding role %s to database', name)
     else:
-        overwrite_role(role, role_dict)
+        _overwrite_role(role, role_dict)
 
     db.commit()
 
@@ -216,7 +216,7 @@ def remove_role(db, rolename):
 def existing_only(func):
     """Decorator for checking if objects and roles exist"""
 
-    def check_existence(db, objname, kind, rolename):
+    def _check_existence(db, objname, kind, rolename):
 
         Class = orm.get_class(kind)
         obj = Class.find(db, objname)
@@ -229,7 +229,7 @@ def existing_only(func):
         else:
             func(db, obj, kind, role)
 
-    return check_existence
+    return _check_existence
 
 
 @existing_only
@@ -264,13 +264,13 @@ def remove_obj(db, objname, kind, rolename):
         )
 
 
-def switch_default_role(db, obj, kind, admin):
+def _switch_default_role(db, obj, kind, admin):
     """Switch between default user and admin roles for users/services"""
 
     user_role = orm.Role.find(db, 'user')
     admin_role = orm.Role.find(db, 'admin')
 
-    def add_and_remove(db, obj, kind, current_role, new_role):
+    def _add_and_remove(db, obj, kind, current_role, new_role):
 
         if current_role in obj.roles:
             remove_obj(db, objname=obj.name, kind=kind, rolename=current_role.name)
@@ -279,12 +279,12 @@ def switch_default_role(db, obj, kind, admin):
             add_obj(db, objname=obj.name, kind=kind, rolename=new_role.name)
 
     if admin:
-        add_and_remove(db, obj, kind, user_role, admin_role)
+        _add_and_remove(db, obj, kind, user_role, admin_role)
     else:
-        add_and_remove(db, obj, kind, admin_role, user_role)
+        _add_and_remove(db, obj, kind, admin_role, user_role)
 
 
-def token_allowed_role(db, token, role):
+def _token_allowed_role(db, token, role):
 
     """Returns True if token allowed to have requested role through
     comparing the requested scopes with the set of token's owner scopes
@@ -339,7 +339,7 @@ def update_roles(db, obj, kind, roles=None):
                         'Checking token permissions against requested role %s', rolename
                     )
 
-                    if token_allowed_role(db, obj, role):
+                    if _token_allowed_role(db, obj, role):
                         role.tokens.append(obj)
                         app_log.info(
                             'Adding role %s for %s: %s', role.name, kind[:-1], obj
@@ -369,7 +369,7 @@ def update_roles(db, obj, kind, roles=None):
         # users and services can have 'user' or 'admin' roles as default
         else:
             app_log.debug('Assigning default roles to %s', kind)
-            switch_default_role(db, obj, kind, obj.admin)
+            _switch_default_role(db, obj, kind, obj.admin)
 
 
 def add_predef_roles_tokens(db, predef_roles):
