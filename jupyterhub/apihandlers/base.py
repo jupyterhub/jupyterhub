@@ -85,14 +85,14 @@ class APIHandler(BaseHandler):
             param kind: 'users' or 'services' or 'groups'
             """
             if sub_scope == scopes.Scope.ALL:
-                found_resource = True
+                return True
             else:
                 found_resource = orm_resource.name in sub_scope[kind]
             if not found_resource:  # Try group-based access
                 if 'group' in sub_scope and kind == 'user':
                     group_names = {group.name for group in orm_resource.groups}
                     user_in_group = bool(group_names & set(sub_scope['group']))
-                    found_resource |= user_in_group
+                    found_resource = user_in_group
             return found_resource
 
         return has_access

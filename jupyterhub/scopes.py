@@ -14,14 +14,15 @@ class Scope(Enum):
 
 
 def get_scopes_for(orm_object):
-    """Find scopes for a given user or token"""
+    """Find scopes for a given user or token and resolve permissions"""
     scopes = set()
     if orm_object is None:
         return scopes
     elif isinstance(orm_object, orm.APIToken):
+        app_log.warning(f"Authenticated with token {orm_object}")
         owner = orm_object.user or orm_object.service
-        token_scopes = roles.get_scopes_for(orm_object)
-        owner_scopes = roles.get_scopes_for(owner)
+        token_scopes = roles.expand_roles_to_scopes(orm_object)
+        owner_scopes = roles.expand_roles_to_scopes(owner)
         if 'all' in token_scopes:
             token_scopes.remove('all')
             token_scopes |= owner_scopes
@@ -30,11 +31,11 @@ def get_scopes_for(orm_object):
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
             app_log.warning(
-                "Token-based access, discarding scopes [%s]"
+                "discarding scopes [%s], not present in owner roles"
                 % ", ".join(discarded_token_scopes)
             )
     else:
-        scopes = roles.get_scopes_for(orm_object)
+        scopes = roles.expand_roles_to_scopes(orm_object)
     return scopes
 
 

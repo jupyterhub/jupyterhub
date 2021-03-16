@@ -131,10 +131,14 @@ def expand_scope(scopename):
     return expanded_scope
 
 
-def get_scopes_for(orm_object):
-    """Get the scopes for User/Service/Group/Token"""
+def expand_roles_to_scopes(orm_object):
+    """Get the scopes listed in the roles of the User/Service/Group/Token"""
     scopes = get_subscopes(*orm_object.roles)
     if 'self' in scopes:
+        if not (isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user')):
+            raise ValueError(
+                "Metascope 'self' only valid for Users, got %s" % orm_object
+            )
         scopes.remove('self')
         scopes |= expand_self_scope(orm_object.name)
     return scopes
@@ -256,7 +260,7 @@ def update_roles(db, obj, kind, roles=None):
                     elif obj.service_id:
                         owner = db.query(orm.Service).get(obj.service_id)
                     if owner:
-                        owner_scopes = get_scopes_for(owner)
+                        owner_scopes = expand_roles_to_scopes(owner)
                         if (extra_scopes).issubset(owner_scopes):
                             role.tokens.append(obj)
                         else:

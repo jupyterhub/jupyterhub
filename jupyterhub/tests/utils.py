@@ -121,9 +121,7 @@ def add_user(db, app=None, **kwargs):
 
 
 def auth_header(db, name):
-    """Return header with user's API authorization token.
-    If inherit is True, copies the roles of the invoking user
-    """
+    """Return header with user's API authorization token."""
     user = find_user(db, name)
     if user is None:
         raise KeyError(f"No such user: {name}")

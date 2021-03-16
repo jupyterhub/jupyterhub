@@ -101,7 +101,6 @@ async def test_auth_expired_page(app, user, disable_refresh):
     assert user._auth_refreshed == before
 
 
-# Fixme: Why does this text fail?
 async def test_auth_expired_api(app, user, disable_refresh):
     cookies = await app.login_user(user.name)
     assert user._auth_refreshed
