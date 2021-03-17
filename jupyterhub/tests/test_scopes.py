@@ -318,6 +318,7 @@ async def test_exceeding_user_permissions(app):
     keys = {key for user in r.json() for key in user.keys()}
     assert 'groups' in keys
     assert 'last_activity' not in keys
+    roles.remove_obj(app.db, user_name, 'users', 'reader_role')
 
 
 async def test_user_service_separation(app, mockservice_url):
