@@ -90,7 +90,6 @@ class GroupListAPIHandler(_GroupAPIHandler):
             self.db.commit()
             deleted.append(group)
         self.write(json.dumps([self.group_model(group) for group in deleted]))
-        self.set_status(204)
 
 
 class GroupAPIHandler(_GroupAPIHandler):

@@ -110,7 +110,7 @@ class UserListAPIHandler(APIHandler):
 
         usernames = data.pop('usernames')
         self._check_user_model(data)
-        # admin is set for all users
+        # admin and groups is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
         groups = data.get('groups')
@@ -135,6 +135,11 @@ class UserListAPIHandler(APIHandler):
                 msg = "Invalid usernames: %s" % ', '.join(invalid_names)
             raise web.HTTPError(400, msg)
 
+        for groupname in groups:
+            group = orm.Group.find(self.db, name=groupname)
+            if group is None:
+                raise web.HTTPError(409, "Group %s does not exist" % groupname)
+
         if not to_create:
             raise web.HTTPError(409, "All %i users already exist" % len(usernames))
 
@@ -147,8 +152,6 @@ class UserListAPIHandler(APIHandler):
             if groups:
                 for groupname in groups:
                     group = orm.Group.find(self.db, name=groupname)
-                    if group is None:
-                        raise web.HTTPError(409, "Group %s does not exist" % name)
                     user.groups.append(group)
                 self.db.commit()
             try:

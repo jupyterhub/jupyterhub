@@ -371,6 +371,51 @@ async def test_add_multi_user(app):
 
 
 @mark.user
+async def test_add_multi_user_with_groups_bad(app):
+    db = app.db
+    names = ['ag', 'bg']
+    groupnames = ['group-a', 'group-b']
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data=json.dumps({'usernames': names, 'groups': groupnames}),
+    )
+    assert r.status_code == 409
+
+    for name in names:
+        user = find_user(db, name)
+        assert user == None
+
+
+@mark.user
+async def test_add_multi_user_with_groups(app):
+    db = app.db
+    names = ['ag', 'bg']
+    groupnames = ['group-a', 'group-b']
+
+    groups = []
+    for groupname in groupnames:
+        group = orm.Group(name=groupname)
+        groups.append(group)
+        db.add(group)
+    db.commit()
+
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data=json.dumps({'usernames': names, 'groups': groupnames}),
+    )
+    assert r.status_code == 201
+
+    for name in names:
+        user = find_user(db, name)
+        assert user.name == name
+        assert user.groups == groups
+
+
+@mark.user
 async def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
@@ -455,6 +500,33 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
+
+
+@mark.user
+async def test_add_user_to_groups(app):
+    db = app.db
+
+    name = 'tautguser'
+    groupnames = ['tautggroupa', 'tautggroupb']
+
+    user = orm.User(name=name)
+    db.add(user)
+
+    groups = []
+    for groupname in groupnames:
+        group = orm.Group(name=groupname)
+        db.add(group)
+        groups.append(group)
+    db.commit()
+
+    r = await api_request(
+        app, 'users', name, method='patch', data=json.dumps({'groups': groupnames})
+    )
+    assert r.status_code == 200
+    user = find_user(db, name)
+    assert user is not None
+    assert user.name == name
+    assert user.groups == groups
 
 
 @mark.user
@@ -1429,6 +1501,31 @@ async def test_add_multi_group(app):
         app, 'groups', method='post', data=json.dumps({'groups': names})
     )
     assert r.status_code == 409
+
+
+@mark.group
+async def test_add_delete_multi_group(app):
+    db = app.db
+    names = ['group3', 'group4', 'group5']
+    r = await api_request(
+        app, 'groups', method='post', data=json.dumps({'groups': names})
+    )
+    assert r.status_code == 201
+    reply = r.json()
+    r_names = [group['name'] for group in reply]
+    assert names == r_names
+
+    # delete 2 of 3 groups
+    r = await api_request(
+        app, 'groups', method='delete', data=json.dumps({'groups': names[0:1]})
+    )
+    assert r.status_code == 200
+    reply = r.json()
+    r_names = [group['name'] for group in reply]
+    assert names[0:1] == r_names
+    group = orm.Group.find(app.db, name=names[2])
+    assert group
+    assert group.name == names[2]
 
 
 @mark.group
