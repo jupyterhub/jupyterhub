@@ -18,7 +18,6 @@ from ..utils import url_path_join as ujoin
 from .mocking import FalsyCallableFormSpawner
 from .mocking import FormSpawner
 from .test_api import next_event
-from .utils import add_user
 from .utils import api_request
 from .utils import async_requests
 from .utils import get_page
@@ -200,12 +199,10 @@ async def test_spawn_handler_access(app):
     r.raise_for_status()
 
 
-async def test_spawn_admin_access(app, admin_access):
+async def test_spawn_admin_access(app, admin_access, user):
     """GET /user/:name as admin with admin-access spawns user's server"""
     cookies = await app.login_user('admin')
-    name = 'mariel'
-    user = add_user(app.db, app=app, name=name)
-    app.db.commit()
+    name = user.name
     r = await get_page('spawn/' + name, app, cookies=cookies)
     r.raise_for_status()
 
@@ -245,14 +242,13 @@ async def test_spawn_page_falsy_callable(app):
     assert history[1] == ujoin(public_url(app), "hub/spawn-pending/erik")
 
 
-async def test_spawn_page_admin(app, admin_access):
+async def test_spawn_page_admin(app, admin_access, user):
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         cookies = await app.login_user('admin')
-        u = add_user(app.db, app=app, name='melanie')
-        r = await get_page('spawn/' + u.name, app, cookies=cookies)
-        assert r.url.endswith('/spawn/' + u.name)
+        r = await get_page('spawn/' + user.name, app, cookies=cookies)
+        assert r.url.endswith('/spawn/' + user.name)
         assert FormSpawner.options_form in r.text
-        assert "Spawning server for {}".format(u.name) in r.text
+        assert "Spawning server for {}".format(user.name) in r.text
 
 
 async def test_spawn_with_query_arguments(app):
@@ -319,15 +315,14 @@ async def test_spawn_form(app):
         }
 
 
-async def test_spawn_form_admin_access(app, admin_access):
+async def test_spawn_form_admin_access(app, admin_access, user):
     with mock.patch.dict(app.tornado_settings, {'spawner_class': FormSpawner}):
         base_url = ujoin(public_host(app), app.hub.base_url)
         cookies = await app.login_user('admin')
-        u = add_user(app.db, app=app, name='martha')
-        next_url = ujoin(app.base_url, 'user', u.name, 'tree')
+        next_url = ujoin(app.base_url, 'user', user.name, 'tree')
 
         r = await async_requests.post(
-            url_concat(ujoin(base_url, 'spawn', u.name), {'next': next_url}),
+            url_concat(ujoin(base_url, 'spawn', user.name), {'next': next_url}),
             cookies=cookies,
             data={'bounds': ['-3', '3'], 'energy': '938MeV'},
         )
@@ -339,8 +334,8 @@ async def test_spawn_form_admin_access(app, admin_access):
             r.raise_for_status()
 
         assert r.history
-        assert r.url.startswith(public_url(app, u))
-        assert u.spawner.user_options == {
+        assert r.url.startswith(public_url(app, user))
+        assert user.spawner.user_options == {
             'energy': '938MeV',
             'bounds': [-3, 3],
             'notspecified': 5,

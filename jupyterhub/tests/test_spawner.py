@@ -278,9 +278,8 @@ def test_inherit_ok():
             pass
 
 
-async def test_spawner_reuse_api_token(db, app):
+async def test_spawner_reuse_api_token(db, app, user):
     # setup: user with no tokens, whose spawner has set the .will_resume flag
-    user = add_user(app.db, app, name='snoopy')
     spawner = user.spawner
     assert user.api_tokens == []
     # will_resume triggers reuse of tokens
@@ -304,13 +303,12 @@ async def test_spawner_reuse_api_token(db, app):
     assert user.api_tokens == [found]
 
 
-async def test_spawner_insert_api_token(app):
+async def test_spawner_insert_api_token(app, user):
     """Token provided by spawner is not in the db
 
     Insert token into db as a user-provided token.
     """
     # setup: new user, double check that they don't have any tokens registered
-    user = add_user(app.db, app, name='tonkee')
     spawner = user.spawner
     assert user.api_tokens == []
 
@@ -330,12 +328,12 @@ async def test_spawner_insert_api_token(app):
     await user.stop()
 
 
-async def test_spawner_bad_api_token(app):
+async def test_spawner_bad_api_token(app, users):
     """Tokens are revoked when a Spawner gets another user's token"""
     # we need two users for this one
-    user = add_user(app.db, app, name='antimone')
+    user = users[0]
     spawner = user.spawner
-    other_user = add_user(app.db, app, name='alabaster')
+    other_user = users[1]
     assert user.api_tokens == []
     assert other_user.api_tokens == []
 
@@ -352,13 +350,12 @@ async def test_spawner_bad_api_token(app):
     assert other_user.api_tokens == []
 
 
-async def test_spawner_delete_server(app):
+async def test_spawner_delete_server(app, user):
     """Test deleting spawner.server
 
     This can occur during app startup if their server has been deleted.
     """
     db = app.db
-    user = add_user(app.db, app, name='gaston')
     spawner = user.spawner
     orm_server = orm.Server()
     db.add(orm_server)

@@ -113,7 +113,7 @@ class UserListAPIHandler(APIHandler):
         # admin and groups is set for all users
         # to create admin and non-admin users requires at least two API requests
         admin = data.get('admin', False)
-        groups = data.get('groups')
+        groupnames = data.get('groups', [])
 
         to_create = []
         invalid_names = []
@@ -135,10 +135,12 @@ class UserListAPIHandler(APIHandler):
                 msg = "Invalid usernames: %s" % ', '.join(invalid_names)
             raise web.HTTPError(400, msg)
 
-        for groupname in groups:
+        groups = []
+        for groupname in groupnames:
             group = orm.Group.find(self.db, name=groupname)
             if group is None:
                 raise web.HTTPError(409, "Group %s does not exist" % groupname)
+            groups.append(group)
 
         if not to_create:
             raise web.HTTPError(409, "All %i users already exist" % len(usernames))
@@ -150,8 +152,7 @@ class UserListAPIHandler(APIHandler):
                 user.admin = True
                 self.db.commit()
             if groups:
-                for groupname in groups:
-                    group = orm.Group.find(self.db, name=groupname)
+                for group in groups:
                     user.groups.append(group)
                 self.db.commit()
             try:
@@ -207,21 +208,27 @@ class UserAPIHandler(APIHandler):
     async def post(self, name):
         data = self.get_json_body()
         user = self.find_user(name)
+        # validate request
         if user is not None:
             raise web.HTTPError(409, "User %s already exists" % name)
 
+        groups = []
+        if data:
+            for name in data.get("groups", []):
+                group = orm.Group.find(self.db, name=name)
+                if group is None:
+                    raise web.HTTPError(409, "Group %s does not exist" % name)
+                groups.append(group)
+
         user = self.user_from_username(name)
+
         if data:
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
                 self.db.commit()
             if 'groups' in data:
-                for name in data.groups:
-                    group = orm.Group.find(self.db, name=name)
-                    if group is None:
-                        raise web.HTTPError(409, "Group %s does not exist" % name)
-                    user.groups.append(group)
+                user.groups = groups
                 self.db.commit()
 
         try:
@@ -281,21 +288,23 @@ class UserAPIHandler(APIHandler):
                     400,
                     "User %s already exists, username must be unique" % data['name'],
                 )
+        groups = []
+        for groupname in data.get("groups", []):
+            group = orm.Group.find(self.db, name=groupname)
+            if group is None:
+                raise web.HTTPError(409, "Group %s does not exist" % groupname)
+            groups.append(group)
+
         for key, value in data.items():
             if key == 'auth_state':
                 await user.save_auth_state(value)
             elif key == 'groups':
-                groups = value
-                # add user to new groups
-                for name in groups:
-                    group = orm.Group.find(self.db, name=name)
-                    if group is None:
-                        raise web.HTTPError(409, "Group %s does not exist" % name)
+                for group in groups:
                     if group not in user.groups:
                         user.groups.append(group)
                 # delete user from groups not in new groups
                 for group in user.groups:
-                    if group.name not in groups:
+                    if group not in groups:
                         user.groups.remove(group)
             else:
                 setattr(user, key, value)

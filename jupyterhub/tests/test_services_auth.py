@@ -29,7 +29,6 @@ from ..services.auth import HubAuthenticated
 from ..utils import url_path_join
 from .mocking import public_host
 from .mocking import public_url
-from .test_api import add_user
 from .utils import async_requests
 from .utils import AsyncSession
 
@@ -246,10 +245,9 @@ async def test_hubauth_cookie(app, mockservice_url):
     assert sub_reply == {'name': 'badger', 'admin': False}
 
 
-async def test_hubauth_token(app, mockservice_url):
+async def test_hubauth_token(app, mockservice_url, user):
     """Test HubAuthenticated service with user API tokens"""
-    u = add_user(app.db, name='river')
-    token = u.new_api_token()
+    token = user.new_api_token()
     app.db.commit()
 
     # token in Authorization header
@@ -259,7 +257,7 @@ async def test_hubauth_token(app, mockservice_url):
     )
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': 'river', 'admin': False}
+    assert sub_reply == {'name': user.name, 'admin': False}
 
     # token in ?token parameter
     r = await async_requests.get(
@@ -268,7 +266,7 @@ async def test_hubauth_token(app, mockservice_url):
     r.raise_for_status()
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': 'river', 'admin': False}
+    assert sub_reply == {'name': user.name, 'admin': False}
 
     r = await async_requests.get(
         public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
@@ -426,7 +424,7 @@ async def test_oauth_cookie_collision(app, mockservice_url):
     assert state_cookies == []
 
 
-async def test_oauth_logout(app, mockservice_url):
+async def test_oauth_logout(app, mockservice_url, user):
     """Verify that logout via the Hub triggers logout for oauth services
 
     1. clears session id cookie
@@ -439,14 +437,13 @@ async def test_oauth_logout(app, mockservice_url):
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/?foo=bar')
     # first request is only going to set login cookie
     s = AsyncSession()
-    name = 'propha'
-    app_user = add_user(app.db, app=app, name=name)
+    name = user.name
 
     def auth_tokens():
         """Return list of OAuth access tokens for the user"""
         return list(
             app.db.query(orm.OAuthAccessToken).filter(
-                orm.OAuthAccessToken.user_id == app_user.id
+                orm.OAuthAccessToken.user_id == user.id
             )
         )
 

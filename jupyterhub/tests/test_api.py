@@ -10,6 +10,7 @@ from unittest import mock
 from urllib.parse import quote
 from urllib.parse import urlparse
 
+from pytest import fixture
 from pytest import mark
 
 import jupyterhub
@@ -289,14 +290,13 @@ async def test_get_self_service(app, mockservice):
 
 
 @mark.user
-async def test_add_user(app):
+async def test_add_user(app, username):
     db = app.db
-    name = 'newuser'
-    r = await api_request(app, 'users', name, method='post')
+    r = await api_request(app, 'users', username, method='post')
     assert r.status_code == 201
-    user = find_user(db, name)
+    user = find_user(db, username)
     assert user is not None
-    assert user.name == name
+    assert user.name == username
     assert not user.admin
 
 
@@ -335,103 +335,87 @@ async def test_add_multi_user_invalid(app):
 
 
 @mark.user
-async def test_add_multi_user(app):
-    db = app.db
-    names = ['a', 'b']
+async def test_add_multi_user(app, usernames):
     r = await api_request(
-        app, 'users', method='post', data=json.dumps({'usernames': names})
+        app, 'users', method='post', data=json.dumps({'usernames': usernames[:2]})
     )
     assert r.status_code == 201
     reply = r.json()
     r_names = [user['name'] for user in reply]
-    assert names == r_names
+    assert usernames[:2] == r_names
 
-    for name in names:
-        user = find_user(db, name)
+    for name in usernames[:2]:
+        user = find_user(app.db, name)
         assert user is not None
         assert user.name == name
         assert not user.admin
 
     # try to create the same users again
     r = await api_request(
-        app, 'users', method='post', data=json.dumps({'usernames': names})
+        app, 'users', method='post', data=json.dumps({'usernames': usernames[:2]})
     )
     assert r.status_code == 409
 
-    names = ['a', 'b', 'ab']
-
-    # try to create the same users again
+    # try to create some more users
     r = await api_request(
-        app, 'users', method='post', data=json.dumps({'usernames': names})
+        app, 'users', method='post', data=json.dumps({'usernames': usernames})
     )
     assert r.status_code == 201
     reply = r.json()
     r_names = [user['name'] for user in reply]
-    assert r_names == ['ab']
+    assert r_names == usernames[2:]
 
 
 @mark.user
-async def test_add_multi_user_with_groups_bad(app):
-    db = app.db
-    names = ['ag', 'bg']
-    groupnames = ['group-a', 'group-b']
+async def test_add_multi_user_with_groups_bad(app, usernames, groupnames):
     r = await api_request(
         app,
         'users',
         method='post',
-        data=json.dumps({'usernames': names, 'groups': groupnames}),
+        data=json.dumps({'usernames': usernames, 'groups': groupnames}),
     )
     assert r.status_code == 409
 
-    for name in names:
-        user = find_user(db, name)
+    for name in usernames:
+        user = find_user(app.db, name)
         assert user == None
 
 
 @mark.user
-async def test_add_multi_user_with_groups(app):
+async def test_add_multi_user_with_groups(app, usernames, groups):
     db = app.db
-    names = ['ag', 'bg']
-    groupnames = ['group-a', 'group-b']
-
-    groups = []
-    for groupname in groupnames:
-        group = orm.Group(name=groupname)
-        groups.append(group)
-        db.add(group)
-    db.commit()
 
     r = await api_request(
         app,
         'users',
         method='post',
-        data=json.dumps({'usernames': names, 'groups': groupnames}),
+        data=json.dumps(
+            {'usernames': usernames, 'groups': [group.name for group in groups]}
+        ),
     )
     assert r.status_code == 201
 
-    for name in names:
+    for name in usernames:
         user = find_user(db, name)
         assert user.name == name
         assert user.groups == groups
 
 
 @mark.user
-async def test_add_multi_user_admin(app):
-    db = app.db
-    names = ['c', 'd']
+async def test_add_multi_user_admin(app, usernames):
     r = await api_request(
         app,
         'users',
         method='post',
-        data=json.dumps({'usernames': names, 'admin': True}),
+        data=json.dumps({'usernames': usernames, 'admin': True}),
     )
     assert r.status_code == 201
     reply = r.json()
     r_names = [user['name'] for user in reply]
-    assert names == r_names
+    assert usernames == r_names
 
-    for name in names:
-        user = find_user(db, name)
+    for name in usernames:
+        user = find_user(app.db, name)
         assert user is not None
         assert user.name == name
         assert user.admin
@@ -448,84 +432,52 @@ async def test_add_user_bad(app):
 
 
 @mark.user
-async def test_add_user_duplicate(app):
-    db = app.db
-    name = 'user'
-    user = find_user(db, name)
-    # double-check that it exists
-    assert user is not None
-    r = await api_request(app, 'users', name, method='post')
+async def test_add_user_duplicate(app, user):
+    r = await api_request(app, 'users', user.name, method='post')
     # special 409 conflict for creating a user that already exists
     assert r.status_code == 409
 
 
 @mark.user
-async def test_add_admin(app):
-    db = app.db
-    name = 'newadmin'
+async def test_add_admin(app, username):
     r = await api_request(
-        app, 'users', name, method='post', data=json.dumps({'admin': True})
+        app, 'users', username, method='post', data=json.dumps({'admin': True})
     )
     assert r.status_code == 201
-    user = find_user(db, name)
+    user = find_user(app.db, username)
     assert user is not None
-    assert user.name == name
+    assert user.name == username
     assert user.admin
 
 
 @mark.user
-async def test_delete_user(app):
-    db = app.db
-    mal = add_user(db, name='mal')
-    r = await api_request(app, 'users', 'mal', method='delete')
+async def test_delete_user(app, user):
+    r = await api_request(app, 'users', user.name, method='delete')
     assert r.status_code == 204
 
 
 @mark.user
-async def test_make_admin(app):
-    db = app.db
-    name = 'admin2'
-    r = await api_request(app, 'users', name, method='post')
-    assert r.status_code == 201
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
-    assert not user.admin
-
+async def test_make_admin(app, user):
     r = await api_request(
-        app, 'users', name, method='patch', data=json.dumps({'admin': True})
+        app, 'users', user.name, method='patch', data=json.dumps({'admin': True})
     )
     assert r.status_code == 200
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
-    assert user.admin
+    admin = find_user(app.db, user.name)
+    assert admin is not None
+    assert admin.name == user.name
+    assert admin.admin
 
 
 @mark.user
-async def test_add_user_to_groups(app):
-    db = app.db
-
-    name = 'tautguser'
-    groupnames = ['tautggroupa', 'tautggroupb']
-
-    user = orm.User(name=name)
-    db.add(user)
-
-    groups = []
-    for groupname in groupnames:
-        group = orm.Group(name=groupname)
-        db.add(group)
-        groups.append(group)
-    db.commit()
-
+async def test_add_user_to_groups(app, user, groups):
     r = await api_request(
-        app, 'users', name, method='patch', data=json.dumps({'groups': groupnames})
+        app,
+        'users',
+        user.name,
+        method='patch',
+        data=json.dumps({'groups': [group.name for group in groups]}),
     )
     assert r.status_code == 200
-    user = find_user(db, name)
-    assert user is not None
-    assert user.name == name
     assert user.groups == groups
 
 
@@ -605,18 +557,17 @@ async def test_user_get_auth_state(app, auth_state_enabled):
     assert 'auth_state' not in r.json()
 
 
-async def test_spawn(app):
+async def test_spawn(app, user):
     db = app.db
-    name = 'wash'
-    user = add_user(db, app=app, name=name)
+    user = find_user(db, name=user.name, app=app)
     options = {'s': ['value'], 'i': 5}
     before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
     r = await api_request(
-        app, 'users', name, 'server', method='post', data=json.dumps(options)
+        app, 'users', user.name, 'server', method='post', data=json.dumps(options)
     )
     assert r.status_code == 201
     assert 'pid' in user.orm_spawners[''].state
-    app_user = app.users[name]
+    app_user = app.users[user.name]
     assert app_user.spawner is not None
     spawner = app_user.spawner
     assert app_user.spawner.user_options == options
@@ -624,7 +575,7 @@ async def test_spawn(app):
     status = await app_user.spawner.poll()
     assert status is None
 
-    assert spawner.server.base_url == ujoin(app.base_url, 'user/%s' % name) + '/'
+    assert spawner.server.base_url == ujoin(app.base_url, 'user/%s' % user.name) + '/'
     url = public_url(app, user)
     kwargs = {}
     if app.internal_ssl:
@@ -645,7 +596,7 @@ async def test_spawn(app):
     if app.subdomain_host:
         assert env['JUPYTERHUB_HOST'] == app.subdomain_host
 
-    r = await api_request(app, 'users', name, 'server', method='delete')
+    r = await api_request(app, 'users', user.name, 'server', method='delete')
     assert r.status_code == 204
 
     assert 'pid' not in user.orm_spawners[''].state
@@ -661,10 +612,10 @@ async def test_spawn(app):
     assert app.users.count_active_users()['pending'] == 0
 
 
-async def test_user_options(app, username):
+async def test_user_options(app, user):
     db = app.db
-    name = username
-    user = add_user(db, app=app, name=name)
+    name = user.name
+    user = find_user(db, app=app, name=name)
     options = {'s': ['value'], 'i': 5}
     before_servers = sorted(db.query(orm.Server), key=lambda s: s.url)
     r = await api_request(
@@ -713,11 +664,11 @@ async def test_user_options(app, username):
     assert spawner.orm_spawner.user_options == new_options
 
 
-async def test_spawn_handler(app):
+async def test_spawn_handler(app, user):
     """Test that the requesting Handler is passed to Spawner.handler"""
     db = app.db
-    name = 'salmon'
-    user = add_user(db, app=app, name=name)
+    name = user.name
+    user = find_user(db, app=app, name=name)
     app_user = app.users[name]
 
     # spawn via API with ?foo=bar
@@ -744,10 +695,10 @@ async def test_spawn_handler(app):
 
 
 @mark.slow
-async def test_slow_spawn(app, no_patience, slow_spawn):
+async def test_slow_spawn(app, no_patience, slow_spawn, user):
     db = app.db
-    name = 'zoe'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     assert r.status_code == 202
@@ -791,10 +742,10 @@ async def test_slow_spawn(app, no_patience, slow_spawn):
     assert app.users.count_active_users()['active'] == 0
 
 
-async def test_never_spawn(app, no_patience, never_spawn):
+async def test_never_spawn(app, no_patience, never_spawn, user):
     db = app.db
-    name = 'badger'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     assert app_user.spawner is not None
     assert app_user.spawner._spawn_pending
@@ -811,19 +762,19 @@ async def test_never_spawn(app, no_patience, never_spawn):
     assert app.users.count_active_users()['pending'] == 0
 
 
-async def test_bad_spawn(app, bad_spawn):
+async def test_bad_spawn(app, bad_spawn, user):
     db = app.db
-    name = 'prim'
-    user = add_user(db, app=app, name=name)
+    name = user.name
+    user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 500
     assert app.users.count_active_users()['pending'] == 0
 
 
-async def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
+async def test_slow_bad_spawn(app, no_patience, slow_bad_spawn, user):
     db = app.db
-    name = 'zaphod'
-    user = add_user(db, app=app, name=name)
+    name = user.name
+    user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     while user.spawner.pending:
@@ -845,10 +796,10 @@ def next_event(it):
 
 
 @mark.slow
-async def test_progress(request, app, no_patience, slow_spawn):
+async def test_progress(request, app, no_patience, slow_spawn, user):
     db = app.db
-    name = 'martin'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     r = await api_request(app, 'users', name, 'server/progress', stream=True)
@@ -873,10 +824,10 @@ async def test_progress(request, app, no_patience, slow_spawn):
     }
 
 
-async def test_progress_not_started(request, app):
+async def test_progress_not_started(request, app, user):
     db = app.db
-    name = 'nope'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     r = await api_request(app, 'users', name, 'server', method='delete')
@@ -885,24 +836,24 @@ async def test_progress_not_started(request, app):
     assert r.status_code == 404
 
 
-async def test_progress_not_found(request, app):
+async def test_progress_not_found(request, app, user):
     db = app.db
-    name = 'noserver'
+    name = user.name
     r = await api_request(app, 'users', 'nosuchuser', 'server/progress')
     assert r.status_code == 404
-    app_user = add_user(db, app=app, name=name)
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server/progress')
     assert r.status_code == 404
 
 
-async def test_progress_ready(request, app):
+async def test_progress_ready(request, app, user):
     """Test progress API when spawner is already started
 
     e.g. a race between requesting progress and progress already being complete
     """
     db = app.db
-    name = 'saga'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     r.raise_for_status()
     r = await api_request(app, 'users', name, 'server/progress', stream=True)
@@ -917,11 +868,11 @@ async def test_progress_ready(request, app):
     assert evt['url'] == app_user.url
 
 
-async def test_progress_bad(request, app, bad_spawn):
+async def test_progress_bad(request, app, bad_spawn, user):
     """Test progress API when spawner has already failed"""
     db = app.db
-    name = 'simon'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 500
     r = await api_request(app, 'users', name, 'server/progress', stream=True)
@@ -938,11 +889,11 @@ async def test_progress_bad(request, app, bad_spawn):
     }
 
 
-async def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn):
+async def test_progress_bad_slow(request, app, no_patience, slow_bad_spawn, user):
     """Test progress API when spawner fails while watching"""
     db = app.db
-    name = 'eugene'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 202
     r = await api_request(app, 'users', name, 'server/progress', stream=True)
@@ -971,14 +922,14 @@ async def progress_forever():
         await asyncio.sleep(10)
 
 
-async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
+async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn, user):
     """Progress events stop when Spawner finishes
 
     even if progress iterator is still going.
     """
     db = app.db
-    name = 'geddy'
-    app_user = add_user(db, app=app, name=name)
+    name = user.name
+    app_user = find_user(db, app=app, name=name)
     app_user.spawner.progress = progress_forever
     app_user.spawner.delay = 1
 
@@ -997,14 +948,14 @@ async def test_spawn_progress_cutoff(request, app, no_patience, slow_spawn):
     assert evt['progress'] == 100
 
 
-async def test_spawn_limit(app, no_patience, slow_spawn, request):
+async def test_spawn_limit(app, no_patience, slow_spawn, request, usernames):
     db = app.db
     p = mock.patch.dict(app.tornado_settings, {'concurrent_spawn_limit': 2})
     p.start()
     request.addfinalizer(p.stop)
 
     # start two pending spawns
-    names = ['ykka', 'hjarka']
+    names = usernames[:2]
     users = [add_user(db, app=app, name=name) for name in names]
     users[0].spawner._start_future = asyncio.Future()
     users[1].spawner._start_future = asyncio.Future()
@@ -1013,7 +964,7 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
     assert app.users.count_active_users()['pending'] == 2
 
     # ykka and hjarka's spawns are both pending. Essun should fail with 429
-    name = 'essun'
+    name = usernames[2]
     user = add_user(db, app=app, name=name)
     user.spawner._start_future = asyncio.Future()
     r = await api_request(app, 'users', name, 'server', method='post')
@@ -1047,14 +998,14 @@ async def test_spawn_limit(app, no_patience, slow_spawn, request):
 
 
 @mark.slow
-async def test_active_server_limit(app, request):
+async def test_active_server_limit(app, request, usernames):
     db = app.db
     p = mock.patch.dict(app.tornado_settings, {'active_server_limit': 2})
     p.start()
     request.addfinalizer(p.stop)
 
     # start two pending spawns
-    names = ['ykka', 'hjarka']
+    names = usernames[:2]
     users = [add_user(db, app=app, name=name) for name in names]
     for name in names:
         r = await api_request(app, 'users', name, 'server', method='post')
@@ -1065,7 +1016,7 @@ async def test_active_server_limit(app, request):
     assert counts['pending'] == 0
 
     # ykka and hjarka's servers are running. Essun should fail with 429
-    name = 'essun'
+    name = usernames[2]
     user = add_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 429
@@ -1104,8 +1055,8 @@ async def test_active_server_limit(app, request):
 
 
 @mark.slow
-async def test_start_stop_race(app, no_patience, slow_spawn):
-    user = add_user(app.db, app, name='panda')
+async def test_start_stop_race(app, no_patience, slow_spawn, user):
+    user = find_user(app.db, app=app, name=user.name)
     spawner = user.spawner
     # start the server
     r = await api_request(app, 'users', user.name, 'server', method='post')
@@ -1154,10 +1105,10 @@ async def test_get_proxy(app):
     assert list(reply.keys()) == [app.hub.routespec]
 
 
-async def test_cookie(app):
+async def test_cookie(app, user):
     db = app.db
-    name = 'patience'
-    user = add_user(db, app=app, name=name)
+    name = user.name
+    user = find_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
     assert r.status_code == 201
     assert 'pid' in user.orm_spawners[''].state
@@ -1190,9 +1141,9 @@ def normalize_token(token):
     return token
 
 
-async def test_check_token(app):
-    name = 'book'
-    user = add_user(app.db, app=app, name=name)
+async def test_check_token(app, user):
+    name = user.name
+    user = find_user(app.db, app=app, name=name)
     token = user.new_api_token()
     r = await api_request(app, 'authorizations/token', token)
     r.raise_for_status()

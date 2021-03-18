@@ -40,10 +40,9 @@ def default_server_name(app, named_servers):
         app.default_server_name = ''
 
 
-async def test_default_server(app, named_servers):
+async def test_default_server(app, named_servers, user):
     """Test the default /users/:user/server handler when named servers are enabled"""
-    username = 'rosie'
-    user = add_user(app.db, app, name=username)
+    username = user.name
     r = await api_request(app, 'users', username, 'server', method='post')
     assert r.status_code == 201
     assert r.text == ''
@@ -90,9 +89,8 @@ async def test_default_server(app, named_servers):
     )
 
 
-async def test_create_named_server(app, named_servers):
-    username = 'walnut'
-    user = add_user(app.db, app, name=username)
+async def test_create_named_server(app, named_servers, user):
+    username = user.name
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
     servername = 'trevor'
@@ -138,9 +136,8 @@ async def test_create_named_server(app, named_servers):
     )
 
 
-async def test_delete_named_server(app, named_servers):
-    username = 'donaar'
-    user = add_user(app.db, app, name=username)
+async def test_delete_named_server(app, named_servers, user):
+    username = user.name
     assert user.allow_named_servers
     cookies = app.login_user(username)
     servername = 'splugoth'
@@ -194,9 +191,8 @@ async def test_named_server_disabled(app):
     assert r.status_code == 400
 
 
-async def test_named_server_limit(app, named_servers):
-    username = 'foo'
-    user = add_user(app.db, app, name=username)
+async def test_named_server_limit(app, named_servers, user):
+    username = user.name
     cookies = await app.login_user(username)
 
     # Create 1st named server
@@ -219,7 +215,9 @@ async def test_named_server_limit(app, named_servers):
     assert r.status_code == 400
     assert r.json() == {
         "status": 400,
-        "message": "User foo already has the maximum of 2 named servers.  One must be deleted before a new server can be created",
+        "message": "User {} already has the maximum of 2 named servers.  One must be deleted before a new server can be created".format(
+            username
+        ),
     }
 
     # Create default server

@@ -48,6 +48,7 @@ from ..utils import random_port
 from .mocking import MockHub
 from .test_services import mockservice_cmd
 from .utils import add_user
+from .utils import find_user
 from .utils import ssl_setup
 
 # global db session object
@@ -179,40 +180,110 @@ def cleanup_after(request, io_loop):
         app.db.commit()
 
 
-_username_counter = 0
+_name_counter = 0
 
 
-def new_username(prefix='testuser'):
-    """Return a new unique username"""
-    global _username_counter
-    _username_counter += 1
-    return '{}-{}'.format(prefix, _username_counter)
+def new_name(prefix='test'):
+    """Return a new unique name"""
+    global _name_counter
+    _name_counter += 1
+    return '{}-{}'.format(prefix, _name_counter)
 
 
 @fixture
-def username():
+def username(app):
     """allocate a temporary username
 
     unique each time the fixture is used
     """
-    yield new_username()
+
+    username = new_name('user')
+    yield username
+    user = find_user(app.db, name=username)
+    if user is not None:
+        app.users.delete(user)
 
 
 @fixture
-def user(app):
+def user(app, username):
     """Fixture for creating a temporary user
 
     Each time the fixture is used, a new user is created
     """
-    user = add_user(app.db, app, name=new_username())
+
+    user = add_user(app.db, app, name=username)
     yield user
 
 
 @fixture
-def admin_user(app, username):
+def usernames(app):
+    usernames = [new_name('user') for i in range(5)]
+    yield usernames
+    for username in usernames:
+        user = find_user(app.db, name=username)
+        if user is not None:
+            app.users.delete(user)
+
+
+@fixture
+def users(app, usernames):
+    users = []
+    for username in usernames:
+        users.append(add_user(app.db, app, name=username))
+    yield users
+    for user in users:
+        if find_user(app.db, name=user.name):
+            app.users.delete(user)
+
+
+@fixture
+def groupname(app):
+    groupname = new_name("group")
+    yield groupname
+    group = orm.Group.find(app.db, name=groupname)
+    if group is not None:
+        app.db.delete(group)
+        app.db.commit()
+
+
+@fixture
+def group(app, groupname):
+    group = orm.Group(name=groupname)
+    app.db.add(group)
+    app.db.commit()
+    yield group
+
+
+@fixture
+def groupnames(app):
+    groupnames = [new_name('group') for i in range(5)]
+    yield groupnames
+    for groupname in groupnames:
+        group = orm.Group.find(app.db, name=groupname)
+        if group is not None:
+            app.db.delete(group)
+        app.db.commit()
+
+
+@fixture
+def groups(app, groupnames):
+    groups = []
+    for groupname in groupnames:
+        group = orm.Group(name=groupname)
+        app.db.add(group)
+        groups.append(group)
+    app.db.commit()
+    yield groups
+
+
+@fixture
+def admin_user(app):
     """Fixture for creating a temporary admin user"""
-    user = add_user(app.db, app, name=new_username('testadmin'), admin=True)
+    user = add_user(app.db, app, name='testadmin', admin=True)
     yield user
+    user = find_user(app.db, name=user.name)
+    if user is not None:
+        app.users.delete(user)
 
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):

@@ -58,13 +58,12 @@ async def test_connection_proxy_api_wrong_certs(app):
         r.raise_for_status()
 
 
-async def test_connection_notebook_wrong_certs(app):
+async def test_connection_notebook_wrong_certs(app, user):
     """Connecting to a notebook fails without correct certs"""
     with mock.patch.dict(
         app.config.LocalProcessSpawner,
         {'cmd': [sys.executable, '-m', 'jupyterhub.tests.mocksu']},
     ):
-        user = add_user(app.db, app, name='foo')
         await user.spawn()
         await wait_for_spawner(user.spawner)
         spawner = user.spawner

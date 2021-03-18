@@ -342,9 +342,9 @@ def test_handlers(app):
     assert handlers[0][0] == '/login'
 
 
-async def test_auth_state(app, auth_state_enabled):
+async def test_auth_state(app, auth_state_enabled, username):
     """auth_state enabled and available"""
-    name = 'kiwi'
+    name = username
     user = add_user(app.db, app, name=name)
     assert user.encrypted_auth_state is None
     cookies = await app.login_user(name)
@@ -352,9 +352,9 @@ async def test_auth_state(app, auth_state_enabled):
     assert auth_state == app.authenticator.auth_state
 
 
-async def test_auth_admin_non_admin(app):
+async def test_auth_admin_non_admin(app, username):
     """admin should be passed through for non-admin users"""
-    name = 'kiwi'
+    name = username
     user = add_user(app.db, app, name=name, admin=False)
     assert user.admin is False
     cookies = await app.login_user(name)
@@ -371,15 +371,12 @@ async def test_auth_admin_is_admin(app):
     assert user.admin is True
 
 
-async def test_auth_admin_retained_if_unset(app):
+async def test_auth_admin_retained_if_unset(app, admin_user):
     """admin should be unchanged if authenticator doesn't return admin value"""
-    name = 'kiwi'
-    # Add user as admin.
-    user = add_user(app.db, app, name=name, admin=True)
-    assert user.admin is True
+    assert admin_user.admin is True
     # User should remain unchanged.
-    cookies = await app.login_user(name)
-    assert user.admin is True
+    cookies = await app.login_user(admin_user.name)
+    assert admin_user.admin is True
 
 
 @pytest.fixture
@@ -392,12 +389,10 @@ def auth_state_unavailable(auth_state_enabled):
     yield
 
 
-async def test_auth_state_disabled(app, auth_state_unavailable):
-    name = 'driebus'
-    user = add_user(app.db, app, name=name)
+async def test_auth_state_disabled(app, auth_state_unavailable, user):
     assert user.encrypted_auth_state is None
     with pytest.raises(HTTPError):
-        cookies = await app.login_user(name)
+        cookies = await app.login_user(user.name)
     auth_state = await user.get_auth_state()
     assert auth_state is None
 

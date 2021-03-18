@@ -5,8 +5,8 @@ from .utils import add_user
 
 
 @pytest.mark.parametrize("attr", ["self", "id", "name"])
-async def test_userdict_get(db, attr):
-    u = add_user(db, name="rey", app=False)
+async def test_userdict_get(db, attr, username):
+    u = add_user(db, name=username, app=False)
     userdict = UserDict(db_factory=lambda: db, settings={})
 
     if attr == "self":
