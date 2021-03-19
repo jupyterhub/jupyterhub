@@ -17,11 +17,13 @@ from .utils import api_request
 def test_orm_roles(db):
     """Test orm roles setup"""
     user_role = orm.Role.find(db, name='user')
+    token_role = orm.Role.find(db, name='token')
     if not user_role:
-        user_role = orm.Role(name='user', scopes=['all', 'read:all'])
+        user_role = orm.Role(name='user', scopes=['self'])
         db.add(user_role)
-        db.commit()
-
+    if not token_role:
+        token_role = orm.Role(name='token', scopes=['all'])
+        db.add(token_role)
     service_role = orm.Role(name='service', scopes=['users:servers'])
     db.add(service_role)
     db.commit()
@@ -53,8 +55,8 @@ def test_orm_roles(db):
     # assigns it the default 'user' role
     token = user.new_api_token()
     user_token = orm.APIToken.find(db, token=token)
-    assert user_token in user_role.tokens
-    assert user_role in user_token.roles
+    assert user_token in token_role.tokens
+    assert token_role in user_token.roles
 
     # check creating token with a specific role
     token = service.new_api_token(roles=['service'])
@@ -66,7 +68,7 @@ def test_orm_roles(db):
     db.delete(user)
     db.commit()
     assert user_role.users == []
-    assert user_token not in user_role.tokens
+    assert user_token not in token_role.tokens
     # check deleting the service token removes it from 'service' role
     db.delete(service_token)
     db.commit()
@@ -356,11 +358,11 @@ async def test_load_roles_tokens(tmpdir, request):
     assert culler_role in token.roles
 
     # test if all other tokens have default 'user' role
-    user_role = orm.Role.find(db, 'user')
+    token_role = orm.Role.find(db, 'token')
     sec_token = orm.APIToken.find(db, 'secret-token')
-    assert user_role in sec_token.roles
+    assert token_role in sec_token.roles
     s_sec_token = orm.APIToken.find(db, 'super-secret-token')
-    assert user_role in s_sec_token.roles
+    assert token_role in s_sec_token.roles
 
 
 @mark.role
@@ -375,7 +377,7 @@ async def test_load_roles_tokens(tmpdir, request):
 )
 async def test_get_new_token_via_api(app, headers, role_list, status):
     user = add_user(app.db, app, name='user')
-    roles.add_role(app.db, {'name': 'reader', 'scopes': ['read:all']})
+    roles.add_role(app.db, {'name': 'reader', 'scopes': ['all']})
     roles.add_role(app.db, {'name': 'user_creator', 'scopes': ['admin:users']})
     if role_list:
         body = json.dumps({'roles': role_list})
@@ -393,7 +395,7 @@ async def test_get_new_token_via_api(app, headers, role_list, status):
     assert 'token' in reply
     assert reply['user'] == 'user'
     if not role_list:
-        assert reply['roles'] == ['user']
+        assert reply['roles'] == ['token']
     else:
         assert reply['roles'] == ['reader']
     token_id = reply['id']

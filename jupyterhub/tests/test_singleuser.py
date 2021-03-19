@@ -50,11 +50,9 @@ async def test_singleuser_auth(app):
     assert urlparse(r.url).path.endswith('/oauth2/authorize')
     # submit the oauth form to complete authorization
     r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
-    assert (
-        urlparse(r.url)
-        .path.rstrip('/')
-        .endswith(url_path_join('/user/nandy', user.spawner.default_url or "/tree"))
-    )
+    final_url = urlparse(r.url).path.rstrip('/')
+    final_path = url_path_join('/user/nandy', user.spawner.default_url or "/tree")
+    assert final_url.endswith(final_path)
     # user isn't authorized, should raise 403
     assert r.status_code == 403
     assert 'burgess' in r.text

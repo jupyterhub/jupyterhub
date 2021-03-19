@@ -31,6 +31,7 @@ from tornado.web import RequestHandler
 from .. import __version__
 from .. import orm
 from .. import roles
+from .. import scopes
 from ..metrics import PROXY_ADD_DURATION_SECONDS
 from ..metrics import PROXY_DELETE_DURATION_SECONDS
 from ..metrics import ProxyDeleteStatus
@@ -80,13 +81,13 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
-        self.scopes = set()
+        self.raw_scopes = set()
         try:
             await self.get_current_user()
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
-
+        self._resolve_scopes()
         return await maybe_future(super().prepare())
 
     @property
@@ -352,16 +353,20 @@ class BaseHandler(RequestHandler):
             auth_info['auth_state'] = await user.get_auth_state()
         return await self.auth_to_user(auth_info, user)
 
-    def get_current_user_token(self):
-        """get_current_user from Authorization header token"""
+    def get_token(self):
+        """get token from authorization header"""
         token = self.get_auth_token()
         if token is None:
             return None
         orm_token = orm.APIToken.find(self.db, token)
+        return orm_token
+
+    def get_current_user_token(self):
+        """get_current_user from Authorization header token"""
+        # record token activity
+        orm_token = self.get_token()
         if orm_token is None:
             return None
-
-        # record token activity
         now = datetime.utcnow()
         recorded = self._record_activity(orm_token, now)
         if orm_token.user:
@@ -429,9 +434,26 @@ class BaseHandler(RequestHandler):
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
-        if self._jupyterhub_user is not None or self.get_current_user_oauth_token():
-            self.scopes = roles.get_subscopes(*self._jupyterhub_user.roles)
         return self._jupyterhub_user
+
+    def _resolve_scopes(self):
+        self.raw_scopes = set()
+        app_log.debug("Loading and parsing scopes")
+        if not self.current_user:
+            # check for oauth tokens as long as #3380 not merged
+            user_from_oauth = self.get_current_user_oauth_token()
+            if user_from_oauth is not None:
+                self.raw_scopes = {f'read:users!user={user_from_oauth.name}'}
+            else:
+                app_log.debug("No user found, no scopes loaded")
+        else:
+            api_token = self.get_token()
+            if api_token:
+                self.raw_scopes = scopes.get_scopes_for(api_token)
+            else:
+                self.raw_scopes = scopes.get_scopes_for(self.current_user)
+        self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+        app_log.debug("Found scopes [%s]", ",".join(self.raw_scopes))
 
     @property
     def current_user(self):
@@ -989,6 +1011,7 @@ class BaseHandler(RequestHandler):
                 self.log.critical(
                     "Aborting due to %i consecutive spawn failures", failure_count
                 )
+
                 # abort in 2 seconds to allow pending handlers to resolve
                 # mostly propagating errors for the current failures
                 def abort():

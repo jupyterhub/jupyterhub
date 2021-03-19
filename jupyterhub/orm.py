@@ -617,8 +617,8 @@ class APIToken(Hashed, Base):
         db.add(orm_token)
         # load default roles if they haven't been initiated
         # correct to have this here? otherwise some tests fail
-        user_role = Role.find(db, 'user')
-        if not user_role:
+        token_role = Role.find(db, 'token')
+        if not token_role:
             default_roles = get_default_roles()
             for role in default_roles:
                 add_role(db, role)
