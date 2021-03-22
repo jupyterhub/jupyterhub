@@ -342,13 +342,15 @@ class JupyterHubRequestValidator(RequestValidator):
             .filter_by(identifier=request.client.client_id)
             .first()
         )
+        # FIXME: pick a role
+        # this will be empty for now
+        roles = list(self.db.query(orm.Role).filter_by(name='identify'))
         orm_access_token = orm.APIToken.new(
             client_id=client.identifier,
             grant_type=orm.GrantType.authorization_code,
             expires_at=orm.APIToken.now() + timedelta(seconds=token['expires_in']),
             refresh_token=token['refresh_token'],
-            # TODO: save scopes,
-            # scopes=scopes,
+            roles=roles,
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,

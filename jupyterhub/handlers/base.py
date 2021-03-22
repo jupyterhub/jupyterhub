@@ -419,17 +419,10 @@ class BaseHandler(RequestHandler):
     def _resolve_scopes(self):
         self.raw_scopes = set()
         app_log.debug("Loading and parsing scopes")
-        if not self.current_user:
-            # check for oauth tokens as long as #3380 not merged
-            user_from_oauth = self.get_current_user_oauth_token()
-            if user_from_oauth is not None:
-                self.raw_scopes = {f'read:users!user={user_from_oauth.name}'}
-            else:
-                app_log.debug("No user found, no scopes loaded")
-        else:
-            api_token = self.get_token()
-            if api_token:
-                self.raw_scopes = scopes.get_scopes_for(api_token)
+        if self.current_user:
+            orm_token = self.get_token()
+            if orm_token:
+                self.raw_scopes = scopes.get_scopes_for(orm_token)
             else:
                 self.raw_scopes = scopes.get_scopes_for(self.current_user)
         self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)

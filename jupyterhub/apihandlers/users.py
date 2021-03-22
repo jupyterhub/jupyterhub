@@ -14,6 +14,7 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
+from .. import scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
 from ..user import User
@@ -35,8 +36,13 @@ class SelfAPIHandler(APIHandler):
         if user is None:
             raise web.HTTPError(403)
         if isinstance(user, orm.Service):
+            # ensure we have the minimal 'identify' scopes for the token owner
+            self.raw_scopes.update(scopes.identify_scopes(user))
+            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
             model = self.service_model(user)
         else:
+            self.raw_scopes.update(scopes.identify_scopes(user.orm_user))
+            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
             model = self.user_model(user)
         self.write(json.dumps(model))
 
