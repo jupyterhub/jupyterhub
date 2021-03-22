@@ -1,13 +1,12 @@
 # see me at: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#/default
-swagger: '2.0'
+swagger: "2.0"
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
   version: 1.2.0dev
   license:
     name: BSD-3-Clause
-schemes:
-  [http, https]
+schemes: [http, https]
 securityDefinitions:
   token:
     type: apiKey
@@ -60,7 +59,7 @@ paths:
         This endpoint is not authenticated for the purpose of clients and user
         to identify the JupyterHub version before setting up authentication.
       responses:
-        '200':
+        "200":
           description: The JupyterHub version
           schema:
             type: object
@@ -76,7 +75,7 @@ paths:
         JupyterHub's version and executable path,
         and which Authenticator and Spawner are active.
       responses:
-        '200':
+        "200":
           description: Detailed JupyterHub info
           schema:
             type: object
@@ -131,12 +130,12 @@ paths:
 
             Added in JupyterHub 1.3
       responses:
-        '200':
+        "200":
           description: The Hub's user list
           schema:
             type: array
             items:
-              $ref: '#/definitions/User'
+              $ref: "#/definitions/User"
     post:
       summary: Create multiple users
       security:
@@ -158,13 +157,13 @@ paths:
                 description: whether the created users should be admins
                 type: boolean
       responses:
-        '201':
+        "201":
           description: The users have been created
           schema:
             type: array
             description: The created users
             items:
-              $ref: '#/definitions/User'
+              $ref: "#/definitions/User"
   /users/{name}:
     get:
       summary: Get a user by name
@@ -180,10 +179,10 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The User model
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
     post:
       summary: Create a single user
       security:
@@ -196,10 +195,10 @@ paths:
           required: true
           type: string
       responses:
-        '201':
+        "201":
           description: The user has been created
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
     patch:
       summary: Modify a user
       description: Change a user's name or admin status
@@ -226,10 +225,10 @@ paths:
                 type: boolean
                 description: update admin (optional, if another key is updated i.e. name)
       responses:
-        '200':
+        "200":
           description: The updated user info
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
     delete:
       summary: Delete a user
       security:
@@ -242,14 +241,12 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        "204":
           description: The user has been deleted
   /users/{name}/activity:
     post:
-      summary:
-        Notify Hub of activity for a given user.
-      description:
-        Notify the Hub of activity by the user,
+      summary: Notify Hub of activity for a given user.
+      description: Notify the Hub of activity by the user,
         e.g. accessing a service or (more likely)
         actively using a server.
       security:
@@ -281,7 +278,7 @@ paths:
                   The default server has an empty name ('').
                 type: object
                 properties:
-                  '<server name>':
+                  "<server name>":
                     description: |
                       Activity for a single server.
                     type: object
@@ -294,16 +291,16 @@ paths:
                         description: |
                           Timestamp of last-seen activity on this server.
             example:
-              last_activity: '2019-02-06T12:54:14Z'
+              last_activity: "2019-02-06T12:54:14Z"
               servers:
-                '':
-                  last_activity: '2019-02-06T12:54:14Z'
+                "":
+                  last_activity: "2019-02-06T12:54:14Z"
                 gpu:
-                  last_activity: '2019-02-06T12:54:14Z'
+                  last_activity: "2019-02-06T12:54:14Z"
       responses:
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
+        "401":
+          $ref: "#/responses/Unauthorized"
+        "404":
           description: No such user
   /users/{name}/server:
     post:
@@ -332,9 +329,9 @@ paths:
             type: object
 
       responses:
-        '201':
+        "201":
           description: The user's notebook server has started
-        '202':
+        "202":
           description: The user's notebook server has not yet started, but has been requested
     delete:
       summary: Stop a user's server
@@ -349,9 +346,9 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        "204":
           description: The user's notebook server has stopped
-        '202':
+        "202":
           description: The user's notebook server has not yet stopped as it is taking a while to stop
   /users/{name}/servers/{server_name}:
     post:
@@ -370,7 +367,7 @@ paths:
         - name: server_name
           description: |
             name given to a named-server. 
-            
+
             Note that depending on your JupyterHub infrastructure there are chracterter size limitation to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
           in: path
           required: true
@@ -386,9 +383,9 @@ paths:
           schema:
             type: object
       responses:
-        '201':
+        "201":
           description: The user's notebook named-server has started
-        '202':
+        "202":
           description: The user's notebook named-server has not yet started, but has been requested
     delete:
       summary: Stop a user's named-server
@@ -421,9 +418,9 @@ paths:
                   Removing a server deletes things like the state of the stopped server.
                   Default: false.
       responses:
-        '204':
+        "204":
           description: The user's notebook named-server has stopped
-        '202':
+        "202":
           description: The user's notebook named-server has not yet stopped as it is taking a while to stop
   /users/{name}/tokens:
     parameters:
@@ -438,15 +435,15 @@ paths:
         - oauth2:
           - users:tokens
       responses:
-        '200':
+        "200":
           description: The list of tokens
           schema:
             type: array
             items:
-              $ref: '#/definitions/Token'
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
+              $ref: "#/definitions/Token"
+        "401":
+          $ref: "#/responses/Unauthorized"
+        "404":
           description: No such user
     post:
       summary: Create a new token for the user
@@ -470,11 +467,11 @@ paths:
                 type: list
                 description: A list of role names that the token should have
       responses:
-        '201':
+        "201":
           description: The newly created token
           schema:
-            $ref: '#/definitions/Token'
-        '400':
+            $ref: "#/definitions/Token"
+        "400":
           description: Body must be a JSON dict or empty
         '403':
           description: Requested role does not exist
@@ -495,17 +492,17 @@ paths:
         - oauth2:
           - users:tokens
       responses:
-        '200':
+        "200":
           description: The info for the new token
           schema:
-            $ref: '#/definitions/Token'
+            $ref: "#/definitions/Token"
     delete:
       summary: Delete (revoke) a token by id
       security:
         - oauth2:
           - users:tokens
       responses:
-        '204':
+        "204":
           description: The token has been deleted
   /user:
     get:
@@ -515,10 +512,10 @@ paths:
           - all
           - read:all
       responses:
-        '200':
+        "200":
           description: The authenticated user's model is returned.
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
   /groups:
     get:
       summary: List groups
@@ -527,12 +524,12 @@ paths:
           - groups
           - read:groups
       responses:
-        '200':
+        "200":
           description: The list of groups
           schema:
             type: array
             items:
-              $ref: '#/definitions/Group'
+              $ref: "#/definitions/Group"
   /groups/{name}:
     get:
       summary: Get a group by name
@@ -548,10 +545,10 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The group model
           schema:
-            $ref: '#/definitions/Group'
+            $ref: "#/definitions/Group"
     post:
       summary: Create a group
       security:
@@ -564,10 +561,10 @@ paths:
           required: true
           type: string
       responses:
-        '201':
+        "201":
           description: The group has been created
           schema:
-            $ref: '#/definitions/Group'
+            $ref: "#/definitions/Group"
     delete:
       summary: Delete a group
       security:
@@ -580,7 +577,7 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        "204":
           description: The group has been deleted
   /groups/{name}/users:
     post:
@@ -608,10 +605,10 @@ paths:
                 items:
                   type: string
       responses:
-        '200':
+        "200":
           description: The users have been added to the group
           schema:
-            $ref: '#/definitions/Group'
+            $ref: "#/definitions/Group"
     delete:
       summary: Remove users from a group
       security:
@@ -637,7 +634,7 @@ paths:
                 items:
                   type: string
       responses:
-        '200':
+        "200":
           description: The users have been removed from the group
   /services:
     get:
@@ -646,12 +643,12 @@ paths:
         - oauth2:
           - read:services
       responses:
-        '200':
+        "200":
           description: The service list
           schema:
             type: array
             items:
-              $ref: '#/definitions/Service'
+              $ref: "#/definitions/Service"
   /services/{name}:
     get:
       summary: Get a service by name
@@ -665,10 +662,10 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The Service model
           schema:
-            $ref: '#/definitions/Service'
+            $ref: "#/definitions/Service"
   /proxy:
     get:
       summary: Get the proxy's routing table
@@ -677,7 +674,7 @@ paths:
         - oauth2:
           - proxy
       responses:
-        '200':
+        "200":
           description: Routing table
           schema:
             type: object
@@ -688,7 +685,7 @@ paths:
         - oauth2:
           - proxy
       responses:
-        '200':
+        "200":
           description: Success
     patch:
       summary: Notify the Hub about a new proxy
@@ -717,7 +714,7 @@ paths:
                 type: string
                 description: CONFIGPROXY_AUTH_TOKEN for the new proxy
       responses:
-        '200':
+        "200":
           description: Success
   /authorizations/token:
     post:
@@ -742,7 +739,7 @@ paths:
               password:
                 type: string
       responses:
-        '200':
+        "200":
           description: The new API token
           schema:
             type: object
@@ -750,7 +747,7 @@ paths:
               token:
                 type: string
                 description: The new API token.
-        '403':
+        "403":
           description: The user can not be authenticated.
   /authorizations/token/{token}:
     get:
@@ -764,9 +761,9 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The user or service identified by the API token
-        '404':
+        "404":
           description: A user or service is not found.
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
@@ -782,16 +779,16 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The user identified by the cookie
           schema:
-            $ref: '#/definitions/User'
-        '404':
+            $ref: "#/definitions/User"
+        "404":
           description: A user is not found.
       deprecated: true # minrk: let’s not add a scope for this, let’s remove it
   /oauth2/authorize:
     get:
-      summary: 'OAuth 2.0 authorize endpoint'
+      summary: "OAuth 2.0 authorize endpoint"
       description: |
         Redirect users to this URL to begin the OAuth process.
         It is not an API endpoint.
@@ -817,9 +814,9 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: OAuth2Error
   /oauth2/token:
     post:
@@ -856,7 +853,7 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: JSON response including the token
           schema:
             type: object
@@ -886,9 +883,9 @@ paths:
                 type: boolean
                 description: Whether users' notebook servers should be shutdown as well (default from Hub config)
       responses:
-        '202':
+        "202":
           description: Shutdown successful
-        '400':
+        "400":
           description: Unexpeced value for proxy or servers
 # Descriptions of common responses
 responses:
@@ -931,7 +928,7 @@ definitions:
         type: array
         description: The active servers for this user.
         items:
-          $ref: '#/definitions/Server'
+          $ref: "#/definitions/Server"
   Server:
     type: object
     properties:

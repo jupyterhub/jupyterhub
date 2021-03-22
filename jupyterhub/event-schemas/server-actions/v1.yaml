@@ -19,14 +19,14 @@ description: |
   2. Events are only recorded when an action succeeds.
 type: object
 required:
-- action
-- username
-- servername
+  - action
+  - username
+  - servername
 properties:
   action:
     enum:
-    - start
-    - stop
+      - start
+      - stop
     description: |
       Action performed by JupyterHub.
 
@@ -36,7 +36,7 @@ properties:
 
       1. start
          A user's server was successfully started
-      
+
       2. stop
          A user's server was successfully stopped
   username:

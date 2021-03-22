@@ -4,17 +4,20 @@ When troubleshooting, you may see unexpected behaviors or receive an error
 message. This section provide links for identifying the cause of the
 problem and how to resolve it.
 
-[*Behavior*](#behavior)
+[_Behavior_](#behavior)
+
 - JupyterHub proxy fails to start
 - sudospawner fails to run
 - What is the default behavior when none of the lists (admin, allowed,
   allowed groups) are set?
 - JupyterHub Docker container not accessible at localhost
 
-[*Errors*](#errors)
+[_Errors_](#errors)
+
 - 500 error after spawning my single-user server
 
-[*How do I...?*](#how-do-i)
+[_How do I...?_](#how-do-i)
+
 - Use a chained SSL certificate
 - Install JupyterHub without a network connection
 - I want access to the whole filesystem, but still default users to their home directory
@@ -25,7 +28,7 @@ problem and how to resolve it.
 - Toree integration with HDFS rack awareness script
 - Where do I find Docker images and Dockerfiles related to JupyterHub?
 
-[*Troubleshooting commands*](#troubleshooting-commands)
+[_Troubleshooting commands_](#troubleshooting-commands)
 
 ## Behavior
 
@@ -34,8 +37,8 @@ problem and how to resolve it.
 If you have tried to start the JupyterHub proxy and it fails to start:
 
 - check if the JupyterHub IP configuration setting is
-  ``c.JupyterHub.ip = '*'``; if it is, try ``c.JupyterHub.ip = ''``
-- Try starting with ``jupyterhub --ip=0.0.0.0``
+  `c.JupyterHub.ip = '*'`; if it is, try `c.JupyterHub.ip = ''`
+- Try starting with `jupyterhub --ip=0.0.0.0`
 
 **Note**: If this occurs on Ubuntu/Debian, check that the you are using a
 recent version of node. Some versions of Ubuntu/Debian come with a version
@@ -66,13 +69,13 @@ things like inspect other users' servers, or modify the user list at runtime).
 
 ### JupyterHub Docker container not accessible at localhost
 
-Even though the command to start your Docker container exposes port 8000 
-(`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`), 
-it is possible that the IP address itself is not accessible/visible. As a result 
-when you try http://localhost:8000 in your browser, you are unable to connect 
-even though the container is running properly. One workaround is to explicitly 
-tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this 
-command: 
+Even though the command to start your Docker container exposes port 8000
+(`docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub`),
+it is possible that the IP address itself is not accessible/visible. As a result
+when you try http://localhost:8000 in your browser, you are unable to connect
+even though the container is running properly. One workaround is to explicitly
+tell Jupyterhub to start at `0.0.0.0` which is visible to everyone. Try this
+command:
 `docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub --ip 0.0.0.0 --port 8000`
 
 ### How can I kill ports from JupyterHub managed services that have been orphaned?
@@ -108,7 +111,7 @@ sudo MY_ENV=abc123 \
 
 ### How can I view the logs for JupyterHub or the user's Notebook servers when using the DockerSpawner?
 
-Use `docker logs <container>` where `<container>` is the container name defined within `docker-compose.yml`.  For example, to view the logs of the JupyterHub container use:
+Use `docker logs <container>` where `<container>` is the container name defined within `docker-compose.yml`. For example, to view the logs of the JupyterHub container use:
 
     docker logs hub
 
@@ -132,11 +135,11 @@ There are two likely reasons for this:
 
 1. The single-user server cannot connect to the Hub's API (networking
    configuration problems)
-2. The single-user server cannot *authenticate* its requests (invalid token)
+2. The single-user server cannot _authenticate_ its requests (invalid token)
 
 #### Symptoms
 
-The main symptom is a failure to load *any* page served by the single-user
+The main symptom is a failure to load _any_ page served by the single-user
 server, met with a 500 error. This is typically the first page at `/user/<your_name>`
 after logging in or clicking "Start my server". When a single-user notebook server
 receives a request, the notebook server makes an API request to the Hub to
@@ -198,15 +201,15 @@ your server again.
 
 ##### Proxy settings (403 GET)
 
-When your whole JupyterHub sits behind a organization proxy (*not* a reverse proxy like NGINX as part of your setup and *not* the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
+When your whole JupyterHub sits behind a organization proxy (_not_ a reverse proxy like NGINX as part of your setup and _not_ the configurable-http-proxy) the environment variables `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy` might be set. This confuses the jupyterhub-singleuser servers: When connecting to the Hub for authorization they connect via the proxy instead of directly connecting to the Hub on localhost. The proxy might deny the request (403 GET). This results in the singleuser server thinking it has a wrong auth token. To circumvent this you should add `<hub_url>,<hub_ip>,localhost,127.0.0.1` to the environment variables `NO_PROXY` and `no_proxy`.
 
 ### Launching Jupyter Notebooks to run as an externally managed JupyterHub service with the `jupyterhub-singleuser` command returns a `JUPYTERHUB_API_TOKEN` error
 
 [JupyterHub services](https://jupyterhub.readthedocs.io/en/stable/reference/services.html) allow processes to interact with JupyterHub's REST API. Example use-cases include:
 
-* **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
-* **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such grading assignments.
-* **Private Dashboards**: share dashboards with certain group members.
+- **Secure Testing**: provide a canonical Jupyter Notebook for testing production data to reduce the number of entry points into production systems.
+- **Grading Assignments**: provide access to shared Jupyter Notebooks that may be used for management tasks such grading assignments.
+- **Private Dashboards**: share dashboards with certain group members.
 
 If possible, try to run the Jupyter Notebook as an externally managed service with one of the provided [jupyter/docker-stacks](https://github.com/jupyter/docker-stacks).
 
@@ -249,7 +252,6 @@ You would then set in your `jupyterhub_config.py` file the `ssl_key` and
 
     c.JupyterHub.ssl_cert = your_host-chained.crt
     c.JupyterHub.ssl_key = your_host.key
-
 
 #### Example
 
@@ -402,8 +404,8 @@ SyntaxError: Missing parentheses in call to 'print'
 In order to resolve this issue, there are two potential options.
 
 1. Update HDFS core-site.xml, so the parameter "net.topology.script.file.name" points to a custom
-script (e.g. /etc/hadoop/conf/custom_topology_script.py). Copy the original script and change the first line point
-to a python two installation (e.g. /usr/bin/python).
+   script (e.g. /etc/hadoop/conf/custom_topology_script.py). Copy the original script and change the first line point
+   to a python two installation (e.g. /usr/bin/python).
 2. In spark-env.sh add a Python 2 installation to your path (e.g. export PATH=/opt/anaconda2/bin:$PATH).
 
 ### Where do I find Docker images and Dockerfiles related to JupyterHub?

@@ -1941,7 +1941,7 @@ class JupyterHub(Application):
                         # don't allow bad tokens to create users
                         db.delete(obj)
                         db.commit()
-                        raise
+                    raise
             else:
                 self.log.debug("Not duplicating token %s", orm_token)
         db.commit()

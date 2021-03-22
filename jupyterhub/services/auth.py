@@ -19,6 +19,7 @@ import string
 import time
 import uuid
 import warnings
+from unittest import mock
 from urllib.parse import quote
 from urllib.parse import urlencode
 
@@ -832,8 +833,12 @@ class HubAuthenticated(object):
             # add state argument to OAuth url
             state = self.hub_auth.set_state_cookie(self, next_url=self.request.uri)
             login_url = url_concat(login_url, {'state': state})
-        app_log.debug("Redirecting to login url: %s", login_url)
-        return login_url
+        # temporary override at setting level,
+        # to allow any subclass overrides of get_login_url to preserve their effect
+        # for example, APIHandler raises 403 to prevent redirects
+        with mock.patch.dict(self.application.settings, {"login_url": login_url}):
+            app_log.debug("Redirecting to login url: %s", login_url)
+            return super().get_login_url()
 
     def check_hub_user(self, model):
         """Check whether Hub-authenticated user or service should be allowed.

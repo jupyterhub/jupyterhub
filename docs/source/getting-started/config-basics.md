@@ -56,7 +56,7 @@ To display all command line options that are available for configuration:
 ```
 
 Configuration using the command line options is done when launching JupyterHub.
-For example, to start JupyterHub on ``10.0.1.2:443`` with https, you
+For example, to start JupyterHub on `10.0.1.2:443` with https, you
 would enter:
 
 ```bash
@@ -88,13 +88,13 @@ meant as illustration, are:
 
 ## Run the proxy separately
 
-This is *not* strictly necessary, but useful in many cases.  If you
+This is _not_ strictly necessary, but useful in many cases. If you
 use a custom proxy (e.g. Traefik), this also not needed.
 
-Connections to user servers go through the proxy, and *not* the hub
-itself.  If the proxy stays running when the hub restarts (for
+Connections to user servers go through the proxy, and _not_ the hub
+itself. If the proxy stays running when the hub restarts (for
 maintenance, re-configuration, etc.), then use connections are not
-interrupted.  For simplicity, by default the hub starts the proxy
+interrupted. For simplicity, by default the hub starts the proxy
 automatically, so if the hub restarts, the proxy restarts, and user
-connections are interrupted.  It is easy to run the proxy separately,
+connections are interrupted. It is easy to run the proxy separately,
 for information see [the separate proxy page](../reference/separate-proxy).
