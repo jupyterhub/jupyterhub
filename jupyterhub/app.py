@@ -905,8 +905,7 @@ class JupyterHub(Application):
             routespec = routespec + "/"
         if not self.subdomain_host and not routespec.startswith("/"):
             routespec = "/" + routespec
-        if routespec != proposal.value:
-            return routespec
+        return routespec
 
     @observe("hub_routespec")
     def _hub_routespec_changed(self, change):
