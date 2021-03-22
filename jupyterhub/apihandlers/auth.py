@@ -13,8 +13,8 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm
+from .. import scopes
 from ..user import User
-from ..utils import compare_token
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -23,6 +23,11 @@ from .base import BaseHandler
 class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
+        # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
+        # TODO: require specific scope for this deprecated API, applied to oauth client secrets only?
+        self.log.warning(
+            "/authorizations/token/:token endpoint is deprecated in JupyterHub 2.0. Use /api/user"
+        )
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             orm_token = orm.OAuthAccessToken.find(self.db, token)
@@ -32,9 +37,15 @@ class TokenAPIHandler(APIHandler):
         # record activity whenever we see a token
         now = orm_token.last_activity = datetime.utcnow()
         if orm_token.user:
+            # having a token means we should be able to read the owner's model
+            # (this is the only thing this handler is for)
+            self.raw_scopes.add(f'read:users!user={orm_token.user.name}')
+            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
             orm_token.user.last_activity = now
             model = self.user_model(self.users[orm_token.user])
         elif orm_token.service:
+            self.raw_scopes.add(f'read:services!service={orm_token.service.name}')
+            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
             model = self.service_model(orm_token.service)
         else:
             self.log.warning("%s has no user or service. Deleting..." % orm_token)
