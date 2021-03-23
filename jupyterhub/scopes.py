@@ -185,3 +185,25 @@ def needs_scope(*scopes):
         return _auth_func
 
     return scope_decorator
+
+
+def identify_scopes(obj):
+    """Return 'identify' scopes for an orm object
+
+    Arguments:
+      obj: orm.User or orm.Service
+
+    Returns:
+      scopes (set): set of scopes needed for 'identify' endpoints
+    """
+    if isinstance(obj, orm.User):
+        return {
+            f"read:users:{field}!user={obj.name}"
+            for field in {"name", "admin", "groups"}
+        }
+    elif isinstance(obj, orm.Service):
+        return {
+            f"read:services:{field}!service={obj.name}" for field in {"name", "admin"}
+        }
+    else:
+        raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
