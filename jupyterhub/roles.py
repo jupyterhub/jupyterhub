@@ -205,10 +205,16 @@ def add_role(db, role_dict):
 def remove_role(db, rolename):
     """Removes a role from database"""
 
+    # default roles are not removable
+    default_roles = get_default_roles()
+    if any(role['name'] == rolename for role in default_roles):
+        raise ValueError('Default role %r cannot be removed', rolename)
+
     role = orm.Role.find(db, rolename)
     if role:
         db.delete(role)
         db.commit()
+        app_log.info('Role %s has been deleted', rolename)
     else:
         raise NameError('Cannot remove role %r that does not exist', rolename)
 

@@ -282,6 +282,41 @@ async def test_adding_new_roles(
 
 @mark.role
 @mark.parametrize(
+    "role_type, rolename, response_type, response",
+    [
+        (
+            'existing',
+            'test-role1',
+            'info',
+            app_log.info('Role user scopes attribute has been changed'),
+        ),
+        ('non-existing', 'test-role2', 'error', NameError),
+        ('default', 'user', 'error', ValueError),
+    ],
+)
+async def test_delete_roles(db, role_type, rolename, response_type, response):
+    """Test raising errors and info when deleting roles"""
+
+    if response_type == 'info':
+        # add the role to db
+        test_role = orm.Role(name=rolename)
+        db.add(test_role)
+        db.commit()
+        check_role = orm.Role.find(db, rolename)
+        assert check_role is not None
+        # check the role is deleted and info raised
+        with pytest.warns(response):
+            roles.remove_role(db, rolename)
+        check_role = orm.Role.find(db, rolename)
+        assert check_role is None
+
+    elif response_type == 'error':
+        with pytest.raises(response):
+            roles.remove_role(db, rolename)
+
+
+@mark.role
+@mark.parametrize(
     "role, response",
     [
         (
