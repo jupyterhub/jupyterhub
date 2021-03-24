@@ -269,22 +269,25 @@ class APIHandler(BaseHandler):
                         )
         return model
 
-    def group_model(self, group):  # Todo: make consistent to do scope checking here
+    def group_model(self, group):
         """Get the JSON model for a Group object"""
-        return {
-            'kind': 'group',
-            'name': group.name,
-            'users': [u.name for u in group.users],
-        }
+        model = {'kind': 'group', 'name': group.name}
+        req_scope = 'read:groups'
+        if req_scope in self.parsed_scopes:
+            scope_filter = self.get_scope_filter(req_scope)
+            if scope_filter(group, kind='group'):
+                model['users'] = [u.name for u in group.users]
+        return model
 
-    def service_model(self, service):  # Todo: make consistent to do scope checking here
+    def service_model(self, service):
         """Get the JSON model for a Service object"""
-        return {
-            'kind': 'service',
-            'name': service.name,
-            'admin': service.admin,
-            'roles': [r.name for r in service.roles],
-        }
+        model = {'kind': 'servce', 'name': service.name}
+        req_scope = 'read:services'
+        if req_scope in self.parsed_scopes:
+            scope_filter = self.get_scope_filter(req_scope)
+            if scope_filter(service, kind='service'):
+                model['roles'] = [r.name for r in service.roles]
+        return model
 
     _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
 
