@@ -85,6 +85,8 @@ class MockAPIHandler:
     def __init__(self):
         self.raw_scopes = {'users'}
         self.parsed_scopes = {}
+        self.request = mock.Mock(spec=HTTPServerRequest)
+        self.request.path = '/path'
 
     @needs_scope('users')
     def user_thing(self, user_name):
@@ -169,7 +171,6 @@ class MockAPIHandler:
 def test_scope_method_access(scopes, method, arguments, is_allowed):
     obj = MockAPIHandler()
     obj.current_user = mock.Mock(name=arguments[0])
-    obj.request = mock.Mock(spec=HTTPServerRequest)
     obj.raw_scopes = set(scopes)
     obj.parsed_scopes = parse_scopes(obj.raw_scopes)
     api_call = getattr(obj, method)
@@ -183,7 +184,6 @@ def test_scope_method_access(scopes, method, arguments, is_allowed):
 def test_double_scoped_method_succeeds():
     obj = MockAPIHandler()
     obj.current_user = mock.Mock(name='lucille')
-    obj.request = mock.Mock(spec=HTTPServerRequest)
     obj.raw_scopes = {'users', 'read:services'}
     obj.parsed_scopes = parse_scopes(obj.raw_scopes)
     assert obj.secret_thing()
@@ -192,7 +192,6 @@ def test_double_scoped_method_succeeds():
 def test_double_scoped_method_denials():
     obj = MockAPIHandler()
     obj.current_user = mock.Mock(name='lucille2')
-    obj.request = mock.Mock(spec=HTTPServerRequest)
     obj.raw_scopes = {'users', 'read:groups'}
     obj.parsed_scopes = parse_scopes(obj.raw_scopes)
     with pytest.raises(web.HTTPError):
