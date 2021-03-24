@@ -10,9 +10,9 @@ html5lib  # needed for beautifulsoup
 mock
 notebook
 pre-commit
+pytest>=3.3
 pytest-asyncio
 pytest-cov
-pytest>=3.3
 requests-mock
 # blacklist urllib3 releases affected by https://github.com/urllib3/urllib3/issues/1683
 # I *think* this should only affect testing, not production

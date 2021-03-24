@@ -65,7 +65,7 @@ class APIHandler(BaseHandler):
             return False
         return True
 
-    @functools.lru_cache
+    @functools.lru_cache()
     def get_scope_filter(self, req_scope):
         """Produce a filter for `*ListAPIHandlers* so that GET method knows which models to return.
         Filter is a callable that takes a resource name and outputs true or false"""

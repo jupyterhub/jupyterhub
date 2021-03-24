@@ -51,7 +51,6 @@ jobs:
           echo "or after-the-fact on already committed files with"
           echo "    pre-commit run --all-files"
 
-
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04
@@ -131,7 +130,6 @@ jobs:
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v2
-
       # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14

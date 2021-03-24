@@ -440,17 +440,17 @@ class BaseHandler(RequestHandler):
         self.raw_scopes = set()
         app_log.debug("Loading and parsing scopes")
         if not self.current_user:
-            app_log.debug("No user found, no scopes loaded")
-            try:  # check for oauth tokens as long as #3380 not merged
-                user_from_oauth = self.get_current_user_oauth_token()
+            # check for oauth tokens as long as #3380 not merged
+            user_from_oauth = self.get_current_user_oauth_token()
+            if user_from_oauth is not None:
                 self.raw_scopes = {f'read:users!user={user_from_oauth.name}'}
-            except:
-                pass
+            else:
+                app_log.debug("No user found, no scopes loaded")
         else:
             api_token = self.get_token()
             if api_token:
                 self.raw_scopes = scopes.get_scopes_for(api_token)
-            elif self.current_user:
+            else:
                 self.raw_scopes = scopes.get_scopes_for(self.current_user)
         self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
         app_log.debug("Found scopes [%s]", ",".join(self.raw_scopes))
@@ -1604,7 +1604,6 @@ class UserUrlHandler(BaseHandler):
         if self.subdomain_host:
             target = user.host + target
 
-        referer = self.request.headers.get('Referer', '')
         # record redirect count in query parameter
         if redirects:
             self.log.warning("Redirect loop detected on %s", self.request.uri)
@@ -1616,8 +1615,12 @@ class UserUrlHandler(BaseHandler):
             query_parts['redirects'] = redirects + 1
             url_parts = url_parts._replace(query=urlencode(query_parts, doseq=True))
             target = urlunparse(url_parts)
-        elif '/user/{}'.format(user.name) in referer or not referer:
-            # add first counter only if it's a redirect from /user/:name -> /hub/user/:name
+        else:
+            # Start redirect counter.
+            # This should only occur for redirects from /user/:name -> /hub/user/:name
+            # when the corresponding server is already ready.
+            # We don't check this explicitly (direct visits to /hub/user are technically possible),
+            # but that's now the only normal way to get here.
             target = url_concat(target, {'redirects': 1})
 
         self.redirect(target)

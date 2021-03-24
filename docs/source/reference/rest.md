@@ -169,7 +169,7 @@ curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/us
 ```
 
 With the named-server functionality, it's now possible to launch more than one
-specifically named servers against a given user.  This could be used, for instance,
+specifically named servers against a given user. This could be used, for instance,
 to launch each server based on a different image.
 
 First you must enable named-servers by including the following setting in the `jupyterhub_config.py` file.
@@ -187,6 +187,7 @@ hub:
 ```
 
 With that setting in place, a new named-server is activated like this:
+
 ```bash
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverA>"
 curl -X POST -H "Authorization: token <token>" "http://127.0.0.1:8081/hub/api/users/<user>/servers/<serverB>"
@@ -201,7 +202,6 @@ will need to be able to handle the case of multiple servers per user and ensure
 uniqueness of names, particularly if servers are spawned via docker containers
 or kubernetes pods.
 
-
 ## Learn more about the API
 
 You can see the full [JupyterHub REST API][] for details. This REST API Spec can
@@ -210,6 +210,6 @@ Both resources contain the same information and differ only in its display.
 Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
 [interactive style on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
-[OpenAPI Initiative]: https://www.openapis.org/
-[JupyterHub REST API]: ./rest-api
-[Jupyter Notebook REST API]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/master/notebook/services/api/api.yaml
+[openapi initiative]: https://www.openapis.org/
+[jupyterhub rest api]: ./rest-api
+[jupyter notebook rest api]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/master/notebook/services/api/api.yaml

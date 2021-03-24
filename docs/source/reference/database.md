@@ -46,8 +46,8 @@ additional configuration required for MySQL that is not needed for PostgreSQL.
 
 - You should use the `pymysql` sqlalchemy provider (the other one, MySQLdb,
   isn't available for py3).
-- You also need to set `pool_recycle` to some value (typically 60 - 300) 
-  which depends on your  MySQL setup. This is necessary since MySQL kills
+- You also need to set `pool_recycle` to some value (typically 60 - 300)
+  which depends on your MySQL setup. This is necessary since MySQL kills
   connections serverside if they've been idle for a while, and the connection
   from the hub will be idle for longer than most connections. This behavior
   will lead to frustrating 'the connection has gone away' errors from
