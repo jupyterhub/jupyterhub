@@ -13,6 +13,7 @@ import sys
 import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
+from urllib.parse import urlparse
 
 if os.name == 'nt':
     import psutil
@@ -690,6 +691,19 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    hub_connect_url = Unicode(
+        None,
+        allow_none=True,
+        help="""
+        The URL the single-user server should connect to the Hub.
+
+        If the Hub URL set in your JupyterHub config is not reachable
+        from spawned notebooks, you can set differnt URL by this config.
+
+        Is None if you don't need to change the URL.
+        """,
+    ).tag(config=True)
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -768,9 +782,15 @@ class Spawner(LoggingConfigurable):
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
-        env['JUPYTERHUB_API_URL'] = self.hub.api_url
+        if self.hub_connect_url is not None:
+            hub_api_url = url_path_join(
+                self.hub_connect_url, urlparse(self.hub.api_url).path
+            )
+        else:
+            hub_api_url = self.hub.api_url
+        env['JUPYTERHUB_API_URL'] = hub_api_url
         env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
-            self.hub.api_url,
+            hub_api_url,
             'users',
             # tolerate mocks defining only user.name
             getattr(self.user, 'escaped_name', self.user.name),

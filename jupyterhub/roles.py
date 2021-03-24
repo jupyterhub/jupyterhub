@@ -15,8 +15,8 @@ def get_default_roles():
     default_roles = [
         {
             'name': 'user',
-            'description': 'Everything the user can do',
-            'scopes': ['all'],
+            'description': 'Standard user privileges',
+            'scopes': ['self'],
         },
         {
             'name': 'admin',
@@ -40,11 +40,48 @@ def get_default_roles():
             'description': 'Post activity only',
             'scopes': ['users:activity'],
         },
+        {
+            'name': 'token',
+            'description': 'Token with same rights as token owner',
+            'scopes': ['all'],
+        },
+        {
+            'name': 'service',
+            'description': 'Temporary no scope role for services',
+            'scopes': [],
+        },
     ]
     return default_roles
 
 
-def get_scopes():
+def expand_self_scope(name, read_only=False):
+    """
+    Users have a metascope 'self' that should be expanded to standard user privileges.
+    At the moment that is a user-filtered version (optional read) access to
+    users
+    users:name
+    users:groups
+    users:activity
+    users:servers
+    users:tokens
+    """
+    scope_list = [
+        'users',
+        'users:name',
+        'users:groups',
+        'users:activity',
+        'users:servers',
+        'users:tokens',
+    ]
+    read_scope_list = ['read:' + scope for scope in scope_list]
+    if read_only:
+        scope_list = read_scope_list
+    else:
+        scope_list.extend(read_scope_list)
+    return {"{}!user={}".format(scope, name) for scope in scope_list}
+
+
+def get_scope_hierarchy():
     """
     Returns a dictionary of scopes:
     scopes.keys() = scopes of highest level and scopes that have their own subscopes
@@ -52,7 +89,8 @@ def get_scopes():
     """
 
     scopes = {
-        'all': ['read:all'],
+        'self': None,
+        'all': None,  # Optional 'read:all' as subscope, not implemented at this stage
         'users': ['read:users', 'users:activity', 'users:servers'],
         'read:users': [
             'read:users:name',
@@ -93,7 +131,7 @@ def horizontal_filter(func):
 def _expand_scope(scopename):
     """Returns a set of all subscopes"""
 
-    scopes = get_scopes()
+    scopes = get_scope_hierarchy()
     subscopes = [scopename]
 
     def _expand_subscopes(index):
@@ -118,6 +156,29 @@ def _expand_scope(scopename):
     return expanded_scope
 
 
+def expand_roles_to_scopes(orm_object):
+    """Get the scopes listed in the roles of the User/Service/Group/Token
+    If User, take into account the user's groups roles as well"""
+
+    pass_roles = orm_object.roles
+    if isinstance(orm_object, orm.User):
+        groups_roles = []
+        # groups_roles = [role for group.role in orm_object.groups for role in group.roles]
+        for group in orm_object.groups:
+            groups_roles.extend(group.roles)
+        pass_roles.extend(groups_roles)
+    # scopes = get_subscopes(*orm_object.roles)
+    scopes = get_subscopes(*pass_roles)
+    if 'self' in scopes:
+        if not (isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user')):
+            raise ValueError(
+                "Metascope 'self' only valid for Users, got %s" % orm_object
+            )
+        scopes.remove('self')
+        scopes |= expand_self_scope(orm_object.name)
+    return scopes
+
+
 def get_subscopes(*args):
     """Returns a set of all available subscopes for a specified role or list of roles"""
 
@@ -134,7 +195,7 @@ def get_subscopes(*args):
 def _check_scopes(*args):
     """Check if provided scopes exist"""
 
-    allowed_scopes = get_scopes()
+    allowed_scopes = get_scope_hierarchy()
     allowed_filters = ['!user=', '!service=', '!group=', '!server=']
     subscopes = set(
         chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
@@ -195,7 +256,7 @@ def add_role(db, role_dict):
         role = orm.Role(name=name, description=description, scopes=scopes)
         db.add(role)
         if role_dict not in default_roles:
-            app_log.info('Adding role %s to database', name)
+            app_log.info('Role %s added to database', name)
     else:
         _overwrite_role(role, role_dict)
 
@@ -274,6 +335,10 @@ def _switch_default_role(db, obj, kind, admin):
     """Switch between default user and admin roles for users/services"""
 
     user_role = orm.Role.find(db, 'user')
+    # temporary fix of default service role
+    if kind == 'services':
+        user_role = orm.Role.find(db, 'service')
+
     admin_role = orm.Role.find(db, 'admin')
 
     def _add_and_remove(db, obj, kind, current_role, new_role):
@@ -293,39 +358,34 @@ def _switch_default_role(db, obj, kind, admin):
 def _token_allowed_role(db, token, role):
 
     """Returns True if token allowed to have requested role through
-    comparing the requested scopes with the set of token's owner scopes
-    from their roles and their group roles"""
+    comparing the requested scopes with the set of token's owner scopes"""
+
+    standard_permissions = {'all', 'read:all'}
 
     token_scopes = get_subscopes(role)
-    owner = None
-    roles_to_check = []
-
+    extra_scopes = token_scopes - standard_permissions
+    # ignore horizontal filters
+    raw_extra_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in extra_scopes
+    }
     # find the owner and their roles
+    owner = None
     if token.user_id:
         owner = db.query(orm.User).get(token.user_id)
-        roles_to_check.extend(owner.roles)
-        # if user is a member of any groups, include the groups' roles as well
-        for group in owner.groups:
-            roles_to_check.extend(group.roles)
-
     elif token.service_id:
         owner = db.query(orm.Service).get(token.service_id)
-        roles_to_check = owner.roles
-
-    owner_scopes = get_subscopes(*roles_to_check)
-
-    # ignore horizontal filters for comparison
-    t_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in token_scopes
-    }
-    o_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
-    }
-
-    if t_scopes.issubset(o_scopes):
-        return True
+    if owner:
+        owner_scopes = expand_roles_to_scopes(owner)
+        # ignore horizontal filters
+        raw_owner_scopes = {
+            scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
+        }
+        if (raw_extra_scopes).issubset(raw_owner_scopes):
+            return True
+        else:
+            return False
     else:
-        return False
+        raise ValueError('Owner the token %r not found', token)
 
 
 def update_roles(db, obj, kind, roles=None):
@@ -333,9 +393,7 @@ def update_roles(db, obj, kind, roles=None):
     assigns default if no roles specified"""
 
     Class = orm.get_class(kind)
-    user_role = orm.Role.find(db, 'user')
-    admin_role = orm.Role.find(db, 'admin')
-
+    default_token_role = orm.Role.find(db, 'token')
     if roles:
         for rolename in roles:
             if Class == orm.APIToken:
@@ -344,7 +402,6 @@ def update_roles(db, obj, kind, roles=None):
                     app_log.debug(
                         'Checking token permissions against requested role %s', rolename
                     )
-
                     if _token_allowed_role(db, obj, role):
                         role.tokens.append(obj)
                         app_log.info(
@@ -352,8 +409,9 @@ def update_roles(db, obj, kind, roles=None):
                         )
                     else:
                         raise ValueError(
-                            'Requested token role %r of %r with scopes %r cannot grant more permissions than its owner scopes'
-                            % (rolename, obj, role.scopes)
+                            'Requested token role %r of %r has more permissions than the token owner',
+                            rolename,
+                            obj,
                         )
                 else:
                     raise NameError('Role %r does not exist' % rolename)
@@ -363,15 +421,14 @@ def update_roles(db, obj, kind, roles=None):
         # groups can be without a role
         if Class == orm.Group:
             pass
-        # tokens can have only 'user' role as default
-        # assign the default only for user tokens
-        # service tokens with no specified role remain without any role (no default)
+        # tokens can have only 'token' role as default
+        # assign the default only for tokens
         elif Class == orm.APIToken:
             app_log.debug('Assigning default roles to tokens')
-            if len(obj.roles) < 1 and obj.user is not None:
-                user_role.tokens.append(obj)
-                db.commit()
-                app_log.info('Adding role %s to token %s', 'user', obj)
+            if not obj.roles and obj.user is not None:
+                default_token_role.tokens.append(obj)
+                app_log.info('Added role %s to token %s', default_token_role.name, obj)
+            db.commit()
         # users and services can have 'user' or 'admin' roles as default
         else:
             app_log.debug('Assigning default roles to %s', kind)

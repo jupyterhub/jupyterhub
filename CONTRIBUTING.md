@@ -18,39 +18,41 @@ JupyterHub requires Python >= 3.5 and nodejs.
 
 As a Python project, a development install of JupyterHub follows standard practices for the basics (steps 1-2).
 
-
 1. clone the repo
-    ```bash
-    git clone https://github.com/jupyterhub/jupyterhub
-    ```
+   ```bash
+   git clone https://github.com/jupyterhub/jupyterhub
+   ```
 2. do a development install with pip
 
-    ```bash
-    cd jupyterhub
-    python3 -m pip install --editable .
-    ```
+   ```bash
+   cd jupyterhub
+   python3 -m pip install --editable .
+   ```
+
 3. install the development requirements,
    which include things like testing tools
 
-    ```bash
-    python3 -m pip install -r dev-requirements.txt
-    ```
+   ```bash
+   python3 -m pip install -r dev-requirements.txt
+   ```
+
 4. install configurable-http-proxy with npm:
 
-    ```bash
-    npm install -g configurable-http-proxy
-    ```
+   ```bash
+   npm install -g configurable-http-proxy
+   ```
+
 5. set up pre-commit hooks for automatic code formatting, etc.
 
-    ```bash
-    pre-commit install
-    ```
+   ```bash
+   pre-commit install
+   ```
 
-    You can also invoke the pre-commit hook manually at any time with
+   You can also invoke the pre-commit hook manually at any time with
 
-    ```bash
-    pre-commit run
-    ```
+   ```bash
+   pre-commit run
+   ```
 
 ## Contributing
 
@@ -71,7 +73,7 @@ into your text editor to format code automatically.
 
 If you have already committed files before setting up the pre-commit
 hook with `pre-commit install`, you can fix everything up using
-`pre-commit run --all-files`.  You need to make the fixing commit
+`pre-commit run --all-files`. You need to make the fixing commit
 yourself after that.
 
 ## Testing

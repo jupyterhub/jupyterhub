@@ -206,37 +206,3 @@ def public_url(app, user_or_service=None, path=''):
         return host + ujoin(prefix, path)
     else:
         return host + prefix
-
-
-def get_scopes(role='admin'):
-    """Get all scopes for a role. Default role is admin, alternatives are user and service"""
-    all_scopes = {
-        'admin': [
-            'all',
-            'users',
-            'users:name',
-            'users:groups',
-            'users:activity',
-            'users:servers',
-            'users:tokens',
-            'admin:users',
-            'admin:users:servers',
-            'groups',
-            'admin:groups',
-            'services',
-            'proxy',
-            'shutdown',
-            'read:hub',
-        ],
-        'user': [
-            'all',
-            'users!user={username}',
-            'users:activity!user={username}',
-            'users:tokens!user={username}',
-        ],
-        'server': ['users:activity'],
-        'service': ['services'],
-    }
-    scopes = all_scopes[role]
-    read_only = ["read:" + el for el in scopes]
-    return scopes + read_only

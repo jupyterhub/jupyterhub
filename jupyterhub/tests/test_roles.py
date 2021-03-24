@@ -20,13 +20,17 @@ from .utils import api_request
 def test_orm_roles(db):
     """Test orm roles setup"""
     user_role = orm.Role.find(db, name='user')
+    token_role = orm.Role.find(db, name='token')
+    service_role = orm.Role.find(db, name='service')
     if not user_role:
         user_role = orm.Role(name='user', scopes=['self'])
         db.add(user_role)
-        db.commit()
-
-    service_role = orm.Role(name='service', scopes=['users:servers'])
-    db.add(service_role)
+    if not token_role:
+        token_role = orm.Role(name='token', scopes=['all'])
+        db.add(token_role)
+    if not service_role:
+        service_role = orm.Role(name='service', scopes=[])
+        db.add(service_role)
     db.commit()
 
     group_role = orm.Role(name='group', scopes=['read:users'])
@@ -67,11 +71,11 @@ def test_orm_roles(db):
     assert group.roles == [group_role]
 
     # check token creation without specifying its role
-    # assigns it the default 'user' role
+    # assigns it the default 'token' role
     token = user.new_api_token()
     user_token = orm.APIToken.find(db, token=token)
-    assert user_token in user_role.tokens
-    assert user_role in user_token.roles
+    assert user_token in token_role.tokens
+    assert token_role in user_token.roles
 
     # check creating token with a specific role
     token = service.new_api_token(roles=['service'])
@@ -83,8 +87,8 @@ def test_orm_roles(db):
     db.delete(user)
     db.commit()
     assert user_role.users == []
-    assert user_token not in user_role.tokens
-    # check deleting the service token removes it from service_role
+    assert user_token not in token_role.tokens
+    # check deleting the service token removes it from 'service' role
     db.delete(service_token)
     db.commit()
     assert service_token not in service_role.tokens
@@ -222,15 +226,25 @@ async def test_load_default_roles(tmpdir, request):
     db = hub.db
     await hub.init_roles()
     # test default roles loaded to database
-    assert orm.Role.find(db, 'user') is not None
-    assert orm.Role.find(db, 'admin') is not None
-    assert orm.Role.find(db, 'server') is not None
+    default_roles = roles.get_default_roles()
+    for role in default_roles:
+        assert orm.Role.find(db, role['name']) is not None
 
 
 @mark.role
 @mark.parametrize(
     "role, role_def, response_type, response",
     [
+        (
+            'new-role',
+            {
+                'name': 'new-role',
+                'description': 'Some description',
+                'scopes': ['groups'],
+            },
+            'info',
+            app_log.info('Role new-role added to database'),
+        ),
         ('no_name', {'scopes': ['users']}, 'error', KeyError),
         (
             'no_scopes',
@@ -278,6 +292,12 @@ async def test_adding_new_roles(
     elif response_type == 'warning' or response_type == 'info':
         with pytest.warns(response):
             await hub.init_roles()
+        role = orm.Role.find(db, role_def['name'])
+        assert role is not None
+        if 'description' in role_def.keys():
+            assert role.description == role_def['description']
+        if 'scopes' in role_def.keys():
+            assert role.scopes == role_def['scopes']
 
 
 @mark.role
@@ -373,11 +393,6 @@ async def test_load_roles_users(tmpdir, request):
             'scopes': ['users', 'groups'],
             'users': ['cyclops', 'gandalf'],
         },
-        {
-            'name': 'user',
-            'description': 'Read access to users names',
-            'scopes': ['read:users:name'],
-        },
     ]
     kwargs = {'load_roles': roles_to_load}
     ssl_enabled = getattr(request.module, "ssl_enabled", False)
@@ -391,13 +406,8 @@ async def test_load_roles_users(tmpdir, request):
     await hub.init_users()
     await hub.init_roles()
 
-    # test if the 'user' role has been overwritten
-    user_role = orm.Role.find(db, 'user')
-    assert user_role is not None
-    assert user_role.description == roles_to_load[1]['description']
-    assert user_role.scopes == roles_to_load[1]['scopes']
-
     admin_role = orm.Role.find(db, 'admin')
+    user_role = orm.Role.find(db, 'user')
     # test if every user has a role (and no duplicates)
     # and admins have admin role
     for user in db.query(orm.User):
@@ -414,6 +424,10 @@ async def test_load_roles_users(tmpdir, request):
     assert teacher_role in gandalf_user.roles
     cyclops_user = orm.User.find(db, name='cyclops')
     assert teacher_role in cyclops_user.roles
+
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
 
 
 @mark.role
@@ -462,18 +476,29 @@ async def test_load_roles_services(tmpdir, request):
     # test if every service has a role (and no duplicates)
     admin_role = orm.Role.find(db, name='admin')
     user_role = orm.Role.find(db, name='user')
-    for service in db.query(orm.Service):
-        assert len(service.roles) > 0
-        assert len(service.roles) == len(set(service.roles))
-        if service.admin:
-            assert admin_role in service.roles
-            assert user_role not in service.roles
+    service_role = orm.Role.find(db, name='service')
 
     # test if predefined roles loaded and assigned
     culler_role = orm.Role.find(db, name='idle-culler')
-    cull_idle = orm.Service.find(db, name='idle-culler')
-    assert culler_role in cull_idle.roles
-    assert user_role not in cull_idle.roles
+    culler_service = orm.Service.find(db, name='idle-culler')
+    assert culler_role in culler_service.roles
+    assert service_role not in culler_service.roles
+
+    # test if every service has a role (and no duplicates)
+    for service in db.query(orm.Service):
+        assert len(service.roles) > 0
+        assert len(service.roles) == len(set(service.roles))
+
+        # test default role assignment
+        if service.admin:
+            assert admin_role in service.roles
+            assert service_role not in service.roles
+        elif culler_role not in service.roles:
+            assert service_role in service.roles
+            assert service_role.scopes == []
+            assert admin_role not in service.roles
+            # make sure 'user' role not assigned to service
+            assert user_role not in service.roles
 
     # delete the test services
     for service in db.query(orm.Service):
@@ -484,6 +509,10 @@ async def test_load_roles_services(tmpdir, request):
     for token in db.query(orm.APIToken):
         db.delete(token)
     db.commit()
+
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
 
 
 @mark.role
@@ -530,6 +559,10 @@ async def test_load_roles_groups(tmpdir, request):
     assert group2 in assist_role.groups
     assert group3 in head_role.groups
 
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
+
 
 @mark.role
 async def test_load_roles_user_tokens(tmpdir, request):
@@ -541,9 +574,9 @@ async def test_load_roles_user_tokens(tmpdir, request):
     roles_to_load = [
         {
             'name': 'reader',
-            'description': 'Read-only own model',
-            'scopes': ['read:all'],
-            'tokens': ['secrety-token'],
+            'description': 'Read all users models',
+            'scopes': ['read:users'],
+            'tokens': ['super-secret-token'],
         },
     ]
     kwargs = {
@@ -564,20 +597,24 @@ async def test_load_roles_user_tokens(tmpdir, request):
 
     # test if gandalf's token has the 'reader' role
     reader_role = orm.Role.find(db, 'reader')
-    token = orm.APIToken.find(db, 'secrety-token')
+    token = orm.APIToken.find(db, 'super-secret-token')
     assert reader_role in token.roles
 
     # test if all other tokens have default 'user' role
-    user_role = orm.Role.find(db, 'user')
-    sec_token = orm.APIToken.find(db, 'secret-token')
-    assert user_role in sec_token.roles
-    s_sec_token = orm.APIToken.find(db, 'super-secret-token')
-    assert user_role in s_sec_token.roles
+    token_role = orm.Role.find(db, 'token')
+    secret_token = orm.APIToken.find(db, 'secret-token')
+    assert token_role in secret_token.roles
+    secrety_token = orm.APIToken.find(db, 'secrety-token')
+    assert token_role in secrety_token.roles
 
     # delete the test tokens
     for token in db.query(orm.APIToken):
         db.delete(token)
     db.commit()
+
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
 
 
 @mark.role
@@ -587,9 +624,9 @@ async def test_load_roles_user_tokens_not_allowed(tmpdir, request):
     }
     roles_to_load = [
         {
-            'name': 'user-reader',
-            'description': 'Read-only any user model',
-            'scopes': ['read:users'],
+            'name': 'user-creator',
+            'description': 'Creates/deletes any user',
+            'scopes': ['admin:users'],
             'tokens': ['secret-token'],
         },
     ]
@@ -610,17 +647,17 @@ async def test_load_roles_user_tokens_not_allowed(tmpdir, request):
     response = 'allowed'
     # bilbo has only default 'user' role
     # while bilbo's token is requesting role with higher permissions
-    try:
+    with pytest.raises(ValueError):
         await hub.init_roles()
-    except ValueError:
-        response = 'denied'
-
-    assert response == 'denied'
 
     # delete the test tokens
     for token in db.query(orm.APIToken):
         db.delete(token)
     db.commit()
+
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
 
 
 @mark.role
@@ -657,7 +694,7 @@ async def test_load_roles_service_tokens(tmpdir, request):
     await hub.init_api_tokens()
     await hub.init_roles()
 
-    # test if another-secret-token has culler role
+    # test if another-secret-token has idle-culler role
     service = orm.Service.find(db, 'idle-culler')
     culler_role = orm.Role.find(db, 'idle-culler')
     token = orm.APIToken.find(db, 'another-secret-token')
@@ -674,6 +711,10 @@ async def test_load_roles_service_tokens(tmpdir, request):
         db.delete(token)
     db.commit()
 
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
+
 
 @mark.role
 async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
@@ -688,11 +729,16 @@ async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
             'scopes': ['read:users'],
             'services': ['some-service'],
         },
-        # 'culler' role has higher permissions that the token's owner 'some-service'
+        # 'idle-culler' role has higher permissions that the token's owner 'some-service'
         {
-            'name': 'culler',
+            'name': 'idle-culler',
             'description': 'Cull idle servers',
-            'scopes': ['users:servers', 'admin:users:servers'],
+            'scopes': [
+                'read:users:name',
+                'read:users:activity',
+                'read:users:servers',
+                'users:servers',
+            ],
             'tokens': ['secret-token'],
         },
     ]
@@ -708,13 +754,8 @@ async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
     hub.init_db()
     db = hub.db
     await hub.init_api_tokens()
-    response = 'allowed'
-    try:
+    with pytest.raises(ValueError):
         await hub.init_roles()
-    except ValueError:
-        response = 'denied'
-
-    assert response == 'denied'
 
     # delete the test services
     for service in db.query(orm.Service):
@@ -726,44 +767,47 @@ async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
         db.delete(token)
     db.commit()
 
+    # delete the test roles
+    for role in roles_to_load:
+        roles.remove_role(db, role['name'])
+
 
 @mark.role
 @mark.parametrize(
-    "headers, role_list, status",
+    "headers, rolename, scopes, status",
     [
-        # no role requested - gets default 'user' role
-        ({}, None, 200),
+        # no role requested - gets default 'token' role
+        ({}, None, None, 200),
         # role scopes within the user's default 'user' role
-        ({}, ['self-reader'], 200),
+        ({}, 'self-reader', ['read:users'], 200),
         # role scopes outside of the user's role but within the group's role scopes of which the user is a member
-        ({}, ['users-reader'], 200),
+        ({}, 'groups-reader', ['read:groups'], 200),
         # non-existing role request
-        ({}, ['non-existing'], 404),
+        ({}, 'non-existing', [], 404),
         # role scopes outside of both user's role and group's role scopes
-        ({}, ['users-creator'], 403),
+        ({}, 'users-creator', ['admin:users'], 403),
     ],
 )
-async def test_get_new_token_via_api(app, headers, role_list, status):
+async def test_get_new_token_via_api(app, headers, rolename, scopes, status):
+    """Test requesting a token via API with and without roles"""
+
     user = add_user(app.db, app, name='user')
-
-    roles.add_role(app.db, {'name': 'self-reader', 'scopes': ['read:all']})
-    roles.add_role(app.db, {'name': 'users-reader', 'scopes': ['read:users']})
-    roles.add_role(app.db, {'name': 'users-creator', 'scopes': ['admin:users']})
-    # add role for a group
-    roles.add_role(app.db, {'name': 'group_role', 'scopes': ['read:users']})
-
-    # create a group and add the user and group_role
-    group = orm.Group.find(app.db, 'test_group')
-    if not group:
-        group = orm.Group(name='test_group')
-        app.db.add(group)
-        group.users.append(user)
-        group_role = orm.Role.find(app.db, 'group_role')
-        group.roles.append(group_role)
-        app.db.commit()
-
-    if role_list:
-        body = json.dumps({'roles': role_list})
+    if rolename and rolename != 'non-existing':
+        roles.add_role(app.db, {'name': rolename, 'scopes': scopes})
+        if rolename == 'groups-reader':
+            # add role for a group
+            roles.add_role(app.db, {'name': 'group-role', 'scopes': ['groups']})
+            # create a group and add the user and group_role
+            group = orm.Group.find(app.db, 'test-group')
+            if not group:
+                group = orm.Group(name='test-group')
+                app.db.add(group)
+                group_role = orm.Role.find(app.db, 'group-role')
+                group.roles.append(group_role)
+                user.groups.append(group)
+                app.db.commit()
+    if rolename:
+        body = json.dumps({'roles': [rolename]})
     else:
         body = ''
     # request a new token
@@ -777,11 +821,10 @@ async def test_get_new_token_via_api(app, headers, role_list, status):
     reply = r.json()
     assert 'token' in reply
     assert reply['user'] == user.name
-    if not role_list:
-        # token should have a default role
-        assert reply['roles'] == ['user']
+    if not rolename:
+        assert reply['roles'] == ['token']
     else:
-        assert reply['roles'] == role_list
+        assert reply['roles'] == [rolename]
     token_id = reply['id']
 
     # delete the token

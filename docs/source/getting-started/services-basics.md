@@ -16,8 +16,8 @@ document will:
 - clarify that API tokens can be used to authenticate to
   single-user servers as of [version 0.8.0](../changelog)
 - show how the [jupyterhub_idle_culler][] script can be:
-    - used in a Hub-managed service
-    - run as a standalone script
+  - used in a Hub-managed service
+  - run as a standalone script
 
 Both examples for `jupyterhub_idle_culler` will communicate tasks to the
 Hub via the REST API.

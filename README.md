@@ -6,9 +6,7 @@
 **[License](#license)** |
 **[Help and Resources](#help-and-resources)**
 
-
 # [JupyterHub](https://github.com/jupyterhub/jupyterhub)
-
 
 [![Latest PyPI version](https://img.shields.io/pypi/v/jupyterhub?logo=pypi)](https://pypi.python.org/pypi/jupyterhub)
 [![Latest conda-forge version](https://img.shields.io/conda/vn/conda-forge/jupyterhub?logo=conda-forge)](https://www.npmjs.com/package/jupyterhub)
@@ -53,17 +51,16 @@ for administration of the Hub and its users.
 
 ## Installation
 
-
 ### Check prerequisites
 
 - A Linux/Unix based system
 - [Python](https://www.python.org/downloads/) 3.5 or greater
 - [nodejs/npm](https://www.npmjs.com/)
 
-  * If you are using **`conda`**, the nodejs and npm dependencies will be installed for
+  - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
-  * If you are using **`pip`**, install a recent version of
+  - If you are using **`pip`**, install a recent version of
     [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node).
     For example, install it on Linux (Debian/Ubuntu) using:
 
@@ -102,7 +99,7 @@ JupyterHub can be installed with `pip`, and the proxy with `npm`:
 
 ```bash
 npm install -g configurable-http-proxy
-python3 -m pip install jupyterhub    
+python3 -m pip install jupyterhub
 ```
 
 If you plan to run notebook servers locally, you will need to install the
@@ -120,10 +117,10 @@ To start the Hub server, run the command:
 Visit `https://localhost:8000` in your browser, and sign in with your unix
 PAM credentials.
 
-*Note*: To allow multiple users to sign into the server, you will need to
-run the `jupyterhub` command as a *privileged user*, such as root.
+_Note_: To allow multiple users to sign into the server, you will need to
+run the `jupyterhub` command as a _privileged user_, such as root.
 The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
-describes how to run the server as a *less privileged user*, which requires
+describes how to run the server as a _less privileged user_, which requires
 more configuration of the system.
 
 ## Configuration
@@ -142,7 +139,7 @@ To generate a default config file with settings and descriptions:
 
 ### Start the Hub
 
-To start the Hub on a specific url and port ``10.0.1.2:443`` with **https**:
+To start the Hub on a specific url and port `10.0.1.2:443` with **https**:
 
     jupyterhub --ip 10.0.1.2 --port 443 --ssl-key my_ssl.key --ssl-cert my_ssl.cert
 
