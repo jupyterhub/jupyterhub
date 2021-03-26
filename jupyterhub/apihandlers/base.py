@@ -220,7 +220,13 @@ class APIHandler(BaseHandler):
         model.update(extra)
         return model
 
-    def user_model(self, user, include_servers=False, include_state=False):
+    def user_model(
+        self,
+        user,
+        include_servers=False,
+        include_server_state=False,
+        include_auth_state=False,
+    ):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
@@ -234,13 +240,26 @@ class APIHandler(BaseHandler):
             'pending': None,
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
+            'auth_state': '',  # placeholder, filled in later
         }
         access_map = {
-            'read:users': set(model.keys()),  # All available components
+            'read:users': {
+                'kind',
+                'name',
+                'admin',
+                'roles',
+                'groups',
+                'server',
+                'pending',
+                'created',
+                'last_activity',
+            },
             'read:users:name': {'kind', 'name'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},
+            'read:users:auth_state': {'kind', 'name', 'auth_state'},
+            'read:users:server_state': {'kind', 'name', 'server_state'},
         }
         self.log.debug(
             "Asking for user model of %s with scopes [%s]",
@@ -254,18 +273,20 @@ class APIHandler(BaseHandler):
                 if scope_filter(user, kind='user'):
                     allowed_keys |= access_map[scope]
         model = {key: model[key] for key in allowed_keys if key in model}
+        if not include_auth_state:
+            model.pop("auth_state", None)
         if model:
+            include_server_state &= 'server_state' in allowed_keys
             if '' in user.spawners and 'pending' in allowed_keys:
                 model['pending'] = user.spawners[''].pending
             if include_servers and 'servers' in allowed_keys:
-                # Todo: Replace include_state with scope (read|admin):users:auth_state
                 servers = model['servers'] = {}
                 for name, spawner in user.spawners.items():
                     # include 'active' servers, not just ready
                     # (this includes pending events)
                     if spawner.active:
                         servers[name] = self.server_model(
-                            spawner, include_state=include_state
+                            spawner, include_state=include_server_state
                         )
         return model
 
@@ -287,6 +308,11 @@ class APIHandler(BaseHandler):
             scope_filter = self.get_scope_filter(req_scope)
             if scope_filter(service, kind='service'):
                 model['roles'] = [r.name for r in service.roles]
+                model[
+                    'admin'
+                ] = (
+                    service.admin
+                )  # todo: Remove once we replace admin flag with role check
         return model
 
     _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
