@@ -421,3 +421,32 @@ async def test_get_new_token_via_api(app, headers, role_list, status):
     # verify deletion
     r = await api_request(app, 'users/user/tokens', token_id)
     assert r.status_code == 404
+
+
+@mark.role
+@mark.parametrize(
+    "kind, has_user_scopes",
+    [
+        ('users', True),
+        ('services', False),
+    ],
+)
+async def test_self_expansion(app, kind, has_user_scopes):
+    Class = orm.get_class(kind)
+    orm_obj = Class(name=f'test_{kind}')
+    app.db.add(orm_obj)
+    app.db.commit()
+    test_role = orm.Role(name='test_role', scopes=['self'])
+    orm_obj.roles.append(test_role)
+    # test expansion of user/service scopes
+    scopes = roles.expand_roles_to_scopes(orm_obj)
+    assert bool(scopes) == has_user_scopes
+
+    # test expansion of token scopes
+    orm_obj.new_api_token()
+    print(orm_obj.api_tokens[0])
+    token_scopes = scopes.get_scopes_for(orm_obj.api_tokens[0])
+    print(token_scopes)
+    assert bool(token_scopes) == has_user_scopes
+    app.db.delete(orm_obj)
+    app.db.delete(test_role)

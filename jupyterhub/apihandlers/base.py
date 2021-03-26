@@ -281,7 +281,7 @@ class APIHandler(BaseHandler):
 
     def service_model(self, service):
         """Get the JSON model for a Service object"""
-        model = {'kind': 'servce', 'name': service.name}
+        model = {'kind': 'service', 'name': service.name}
         req_scope = 'read:services'
         if req_scope in self.parsed_scopes:
             scope_filter = self.get_scope_filter(req_scope)

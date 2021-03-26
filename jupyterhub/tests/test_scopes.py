@@ -11,6 +11,7 @@ from .. import orm
 from .. import roles
 from ..handlers import BaseHandler
 from ..scopes import _check_scope
+from ..scopes import get_scopes_for
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
 from ..scopes import Scope
@@ -514,3 +515,46 @@ async def test_cross_filter(app):
             assert key_in_full_model in user
         else:
             assert set(user.keys()) == restricted_keys
+
+
+@mark.parametrize(
+    "kind, has_user_scopes",
+    [
+        ('users', True),
+        ('services', False),
+    ],
+)
+async def test_metascope_self_expansion(app, kind, has_user_scopes):
+    Class = orm.get_class(kind)
+    orm_obj = Class(name=f'test_{kind}')
+    app.db.add(orm_obj)
+    app.db.commit()
+    test_role = orm.Role(name='test_role', scopes=['self'])
+    orm_obj.roles.append(test_role)
+    # test expansion of user/service scopes
+    scopes = roles.expand_roles_to_scopes(orm_obj)
+    assert bool(scopes) == has_user_scopes
+
+    # test expansion of token scopes
+    orm_obj.new_api_token()
+    token_scopes = get_scopes_for(orm_obj.api_tokens[0])
+    assert bool(token_scopes) == has_user_scopes
+    app.db.delete(orm_obj)
+    app.db.delete(test_role)
+
+
+async def test_metascope_all_expansion(app):
+    user = add_user(app.db, name='user')
+    scope_set = {scope for role in user.roles for scope in role.scopes}
+    user.new_api_token()
+    token = user.api_tokens[0]
+    # Check 'all' expansion
+    token_scope_set = get_scopes_for(token)
+    user_scope_set = get_scopes_for(user)
+    assert user_scope_set == token_scope_set
+
+    # Check no roles means no permissions
+    token.roles.clear()
+    app.db.commit()
+    token_scope_set = get_scopes_for(token)
+    assert not token_scope_set

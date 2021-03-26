@@ -141,12 +141,9 @@ def expand_roles_to_scopes(orm_object):
     """Get the scopes listed in the roles of the User/Service/Group/Token"""
     scopes = get_subscopes(*orm_object.roles)
     if 'self' in scopes:
-        if not (isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user')):
-            raise ValueError(
-                "Metascope 'self' only valid for Users, got %s" % orm_object
-            )
         scopes.remove('self')
-        scopes |= expand_self_scope(orm_object.name)
+        if isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user'):
+            scopes |= expand_self_scope(orm_object.name)
     return scopes
 
 
