@@ -42,11 +42,6 @@ def get_default_roles():
             'description': 'Token with same rights as token owner',
             'scopes': ['all'],
         },
-        {
-            'name': 'service',
-            'description': 'Temporary no scope role for services',
-            'scopes': [],
-        },
     ]
     return default_roles
 
@@ -223,10 +218,6 @@ def switch_default_role(db, obj, kind, admin):
     """Switch between default user/service and admin roles for users/services"""
 
     user_role = orm.Role.find(db, 'user')
-    # temporary fix of default service role
-    if kind == 'services':
-        user_role = orm.Role.find(db, 'service')
-
     admin_role = orm.Role.find(db, 'admin')
 
     def add_and_remove(db, obj, kind, current_role, new_role):
