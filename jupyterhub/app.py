@@ -1857,15 +1857,16 @@ class JupyterHub(Application):
         # load default roles
         default_roles = roles.get_default_roles()
         for role in default_roles:
-            roles.add_role(db, role)
+            roles.create_role(db, role)
 
         # load predefined roles from config file
         for predef_role in self.load_roles:
-            roles.add_role(db, predef_role)
+            roles.create_role(db, predef_role)
             # add users, services and/or tokens
             for bearer in role_bearers:
                 if bearer in predef_role.keys():
                     for bname in predef_role[bearer]:
+
                         if bearer == 'users':
                             bname = self.authenticator.normalize_username(bname)
                             if not (
@@ -1877,8 +1878,10 @@ class JupyterHub(Application):
                                     "Username %r is not in Authenticator.allowed_users"
                                     % bname
                                 )
-                        roles.add_obj(
-                            db, objname=bname, kind=bearer, rolename=predef_role['name']
+                        Class = orm.get_class(bearer)
+                        orm_obj = Class.find(db, bname)
+                        roles.grant_role(
+                            db, entity=orm_obj, rolename=predef_role['name']
                         )
 
         # make sure all users, services and tokens have at least one role (update with default)
@@ -1886,7 +1889,7 @@ class JupyterHub(Application):
             Class = orm.get_class(bearer)
             for obj in db.query(Class):
                 if len(obj.roles) < 1:
-                    roles.update_roles(db, obj=obj, kind=bearer)
+                    roles.assign_default_roles(db, entity=obj)
         db.commit()
 
     async def _add_tokens(self, token_dict, kind):

@@ -480,7 +480,7 @@ class BaseHandler(RequestHandler):
             # not found, create and register user
             u = orm.User(name=username)
             self.db.add(u)
-            roles.update_roles(self.db, obj=u, kind='users')
+            roles.assign_default_roles(self.db, entity=u)
             TOTAL_USERS.inc()
             self.db.commit()
             user = self._user_from_orm(u)
@@ -765,7 +765,7 @@ class BaseHandler(RequestHandler):
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
             user.admin = admin
-            roles.update_roles(self.db, obj=user, kind='users')
+            roles.assign_default_roles(self.db, entity=user)
             self.db.commit()
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values
