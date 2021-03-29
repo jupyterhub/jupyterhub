@@ -1,10 +1,7 @@
 Eventlogging and Telemetry
 ==========================
 
-JupyterHub can be configured to record structured events from a running server using Jupyter's `Telemetry System`_. The types of events that JupyterHub emits are defined by `JSON schemas`_ listed below_
-
- emitted as JSON data, defined and validated by the JSON schemas listed below.
-
+JupyterHub can be configured to record structured events from a running server using Jupyter's `Telemetry System`_. The types of events that JupyterHub emits are defined by `JSON schemas`_ listed at the bottom of this page_.
 
 .. _logging: https://docs.python.org/3/library/logging.html
 .. _`Telemetry System`: https://github.com/jupyter/telemetry
@@ -38,13 +35,12 @@ Here's a basic example:
 The output is a file, ``"event.log"``, with events recorded as JSON data.
 
 
-
-.. _below:
+.. _page:
 
 Event schemas
 -------------
 
 .. toctree::
-   :maxdepth: 2
+    :maxdepth: 2
 
-   server-actions.rst
+    server-actions.rst

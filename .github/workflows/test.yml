@@ -1,7 +1,7 @@
 # This is a GitHub workflow defining a set of jobs with a set of steps.
 # ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
 #
-name: Run tests
+name: Test
 
 # Trigger the workflow's on all PRs but only on pushed tags or commits to
 # main/master branch to avoid PRs developed in a GitHub fork's dedicated branch
@@ -9,6 +9,7 @@ name: Run tests
 on:
   pull_request:
   push:
+  workflow_dispatch:
 
 defaults:
   run:
@@ -49,7 +50,6 @@ jobs:
           echo "    pre-commit run"
           echo "or after-the-fact on already committed files with"
           echo "    pre-commit run --all-files"
-
 
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
@@ -130,7 +130,6 @@ jobs:
               echo "JUPYTERHUB_SINGLEUSER_APP=jupyterhub.tests.mockserverapp.MockServerApp" >> $GITHUB_ENV
           fi
       - uses: actions/checkout@v2
-
       # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
       #       environment and setup in a fraction of a second.
       - name: Install Node v14

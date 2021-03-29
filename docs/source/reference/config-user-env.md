@@ -22,19 +22,17 @@ This section will focus on user environments, including:
 - Installing kernelspecs
 - Using containers vs. multi-user hosts
 
-
 ## Installing packages
 
 To make packages available to users, you generally will install packages
 system-wide or in a shared environment.
 
 This installation location should always be in the same environment that
-`jupyterhub-singleuser` itself is installed in, and must be *readable and
-executable* by your users. If you want users to be able to install additional
-packages, it must also be *writable* by your users.
+`jupyterhub-singleuser` itself is installed in, and must be _readable and
+executable_ by your users. If you want users to be able to install additional
+packages, it must also be _writable_ by your users.
 
 If you are using a standard system Python install, you would use:
-
 
 ```bash
 sudo python3 -m pip install numpy
@@ -46,7 +44,6 @@ to install the numpy package in the default system Python 3 environment
 You may also use conda to install packages. If you do, you should make sure
 that the conda environment has appropriate permissions for users to be able to
 run Python code in the env.
-
 
 ## Configuring Jupyter and IPython
 
@@ -64,6 +61,7 @@ users. It's generally more efficient to configure user environments "system-wide
 and it's a good idea to avoid creating files in users' home directories.
 
 The typical locations for these config files are:
+
 - **system-wide** in `/etc/{jupyter|ipython}`
 - **env-wide** (environment wide) in `{sys.prefix}/etc/{jupyter|ipython}`.
 
@@ -90,7 +88,6 @@ c.MappingKernelManager.cull_idle_timeout = 20 * 60
 # check for idle kernels every two minutes
 c.MappingKernelManager.cull_interval = 2 * 60
 ```
-
 
 ## Installing kernelspecs
 
@@ -119,7 +116,6 @@ sure are available, I can install their specs system-wide (in /usr/local) with:
 /path/to/python2 -m IPython kernel install --prefix=/usr/local
 ```
 
-
 ## Multi-user hosts vs. Containers
 
 There are two broad categories of user environments that depend on what
@@ -141,8 +137,8 @@ When JupyterHub uses **container-based** Spawners (e.g. KubeSpawner or
 DockerSpawner), the 'system-wide' environment is really the container image
 which you are using for users.
 
-In both cases, you want to *avoid putting configuration in user home
-directories* because users can change those configuration settings. Also,
+In both cases, you want to _avoid putting configuration in user home
+directories_ because users can change those configuration settings. Also,
 home directories typically persist once they are created, so they are
 difficult for admins to update later.
 
@@ -178,4 +174,14 @@ The number of named servers per user can be limited by setting
 
 ```python
 c.JupyterHub.named_server_limit_per_user = 5
+```
+
+## Switching to Jupyter Server
+
+[Jupyter Server](https://jupyter-server.readthedocs.io/en/latest/) is a new Tornado Server backend for Jupyter web applications (e.g. JupyterLab 3.0 uses this package as its default backend).
+
+By default, the single-user notebook server uses the (old) `NotebookApp` from the [notebook](https://github.com/jupyter/notebook) package. You can switch to using Jupyter Server's `ServerApp` backend (this will likely become the default in future releases) by setting the `JUPYTERHUB_SINGLEUSER_APP` environment variable to:
+
+```bash
+export JUPYTERHUB_SINGLEUSER_APP='jupyter_server.serverapp.ServerApp'
 ```

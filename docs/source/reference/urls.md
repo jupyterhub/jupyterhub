@@ -11,8 +11,6 @@ All authenticated handlers redirect to `/hub/login` to login users
 prior to being redirected back to the originating page.
 The returned request should preserve all query parameters.
 
-
-
 ## `/`
 
 The top-level request is always a simple redirect to `/hub/`,
@@ -61,7 +59,7 @@ for starting and stopping the user's server.
 If named servers are enabled, there will be some additional
 tools for management of named servers.
 
-*Version added: 1.0* named server UI is new in 1.0.
+_Version added: 1.0_ named server UI is new in 1.0.
 
 ## `/hub/login`
 
@@ -111,7 +109,7 @@ not the Hub.
 The username is the first part and, if using named servers,
 the server name is the second part.
 
-If the user's server is *not* running, this will be redirected to `/hub/user/:username/...`
+If the user's server is _not_ running, this will be redirected to `/hub/user/:username/...`
 
 ## `/hub/user/:username[/:servername]`
 
@@ -123,8 +121,8 @@ Handling this URL is the most complicated condition in JupyterHub,
 because there can be many states:
 
 1. server is not active
-  a. user matches
-  b. user doesn't match
+   a. user matches
+   b. user doesn't match
 2. server is ready
 3. server is pending, but not ready
 
@@ -146,7 +144,7 @@ without additional user action (i.e. clicking the link on the page)
 
 ![Visiting a URL for a server that's not running](../images/not-running.png)
 
-*Version changed: 1.0*
+_Version changed: 1.0_
 
 Prior to 1.0, this URL itself was responsible for spawning servers,
 and served the progress page if it was pending,
@@ -165,7 +163,7 @@ indicating how to spawn the server.
 This is meant to help applications such as JupyterLab
 that are connected to a server that has stopped.
 
-*Version changed: 1.0*
+_Version changed: 1.0_
 
 JupyterHub 0.9 failed these API requests with status 404,
 but 1.0 uses 503.
@@ -207,12 +205,12 @@ and a POST request will trigger the actual spawn and redirect.
 
 ![The spawn form](../images/spawn-form.png)
 
-*Version added: 1.0*
+_Version added: 1.0_
 
 1.0 adds the ability to specify username and servername.
 Prior to 1.0, only `/hub/spawn` was recognized for the default server.
 
-*Version changed: 1.0*
+_Version changed: 1.0_
 
 Prior to 1.0, this page redirected back to `/hub/user/:username`,
 which was responsible for triggering spawn and rendering progress, etc.
@@ -221,7 +219,7 @@ which was responsible for triggering spawn and rendering progress, etc.
 
 ![The spawn pending page](../images/spawn-pending.png)
 
-*Version added: 1.0* this URL is new in JupyterHub 1.0.
+_Version added: 1.0_ this URL is new in JupyterHub 1.0.
 
 This page renders the progress view for the given spawn request.
 Once the server is ready,

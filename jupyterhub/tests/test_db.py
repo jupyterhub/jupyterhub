@@ -26,7 +26,8 @@ def generate_old_db(env_dir, hub_version, db_url):
     env_pip = os.path.join(env_dir, 'bin', 'pip')
     env_py = os.path.join(env_dir, 'bin', 'python')
     check_call([sys.executable, '-m', 'virtualenv', env_dir])
-    pkgs = ['jupyterhub==' + hub_version]
+    # older jupyterhub needs older sqlachemy version
+    pkgs = ['jupyterhub==' + hub_version, 'sqlalchemy<1.4']
     if 'mysql' in db_url:
         pkgs.append('mysql-connector-python')
     elif 'postgres' in db_url:

@@ -493,6 +493,11 @@ class BaseHandler(RequestHandler):
             path=url_path_join(self.base_url, 'services'),
             **kwargs,
         )
+        # clear tornado cookie
+        self.clear_cookie(
+            '_xsrf',
+            **self.settings.get('xsrf_cookie_kwargs', {}),
+        )
         # Reset _jupyterhub_user
         self._jupyterhub_user = None
 
@@ -1186,8 +1191,8 @@ class BaseHandler(RequestHandler):
         """
         Render jinja2 template
 
-        If sync is set to True, we return an awaitable
-        If sync is set to False, we render the template & return a string
+        If sync is set to True, we render the template & return a string
+        If sync is set to False, we return an awaitable
         """
         template_ns = {}
         template_ns.update(self.template_namespace)
@@ -1570,7 +1575,6 @@ class UserUrlHandler(BaseHandler):
         if self.subdomain_host:
             target = user.host + target
 
-        referer = self.request.headers.get('Referer', '')
         # record redirect count in query parameter
         if redirects:
             self.log.warning("Redirect loop detected on %s", self.request.uri)
@@ -1582,8 +1586,12 @@ class UserUrlHandler(BaseHandler):
             query_parts['redirects'] = redirects + 1
             url_parts = url_parts._replace(query=urlencode(query_parts, doseq=True))
             target = urlunparse(url_parts)
-        elif '/user/{}'.format(user.name) in referer or not referer:
-            # add first counter only if it's a redirect from /user/:name -> /hub/user/:name
+        else:
+            # Start redirect counter.
+            # This should only occur for redirects from /user/:name -> /hub/user/:name
+            # when the corresponding server is already ready.
+            # We don't check this explicitly (direct visits to /hub/user are technically possible),
+            # but that's now the only normal way to get here.
             target = url_concat(target, {'redirects': 1})
 
         self.redirect(target)

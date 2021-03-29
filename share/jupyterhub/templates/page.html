@@ -130,7 +130,9 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Services<span class="caret"></span></a>
               <ul class="dropdown-menu">
               {% for service in services %}
+              {% block service scoped %}
                 <li><a class="dropdown-item" href="{{service.prefix}}">{{service.name}}</a></li>
+              {% endblock %}
               {% endfor %}
               </ul>
             </li>
@@ -144,7 +146,7 @@
               {% block login_widget %}
                 <span id="login_widget">
                   {% if user %}
-		            <p class="navbar-text">{{user.name}}</p>
+                    <p class="navbar-text">{{user.name}}</p>
                     <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                   {% else %}
                     <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>

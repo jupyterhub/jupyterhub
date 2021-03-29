@@ -1,7 +1,7 @@
 // Copyright (c) Jupyter Development Team.
 // Distributed under the terms of the Modified BSD License.
 
-require(["jquery", "moment", "jhapi", "utils"], function(
+require(["jquery", "moment", "jhapi", "utils"], function (
   $,
   moment,
   JHAPI,
@@ -51,41 +51,41 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     window.location = window.location.pathname + "?" + query.join("&");
   }
 
-  $("th").map(function(i, th) {
+  $("th").map(function (i, th) {
     th = $(th);
     var col = th.data("sort");
     if (!col || col.length === 0) {
       return;
     }
     var order = th.find("i").hasClass("fa-sort-desc") ? "asc" : "desc";
-    th.find("a").click(function() {
+    th.find("a").click(function () {
       resort(col, order);
     });
   });
 
-  $(".time-col").map(function(i, el) {
+  $(".time-col").map(function (i, el) {
     // convert ISO datestamps to nice momentjs ones
     el = $(el);
     var m = moment(new Date(el.text().trim()));
     el.text(m.isValid() ? m.fromNow() : "Never");
   });
 
-  $(".stop-server").click(function() {
+  $(".stop-server").click(function () {
     var el = $(this);
     var row = getRow(el);
     var serverName = row.data("server-name");
     var user = row.data("user");
     el.text("stopping...");
-    var stop = function(options) {
+    var stop = function (options) {
       return api.stop_server(user, options);
     };
     if (serverName !== "") {
-      stop = function(options) {
+      stop = function (options) {
         return api.stop_named_server(user, serverName, options);
       };
     }
     stop({
-      success: function() {
+      success: function () {
         el.text("stop " + serverName).addClass("hidden");
         row.find(".access-server").addClass("hidden");
         row.find(".start-server").removeClass("hidden");
@@ -93,20 +93,20 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     });
   });
 
-  $(".delete-server").click(function() {
+  $(".delete-server").click(function () {
     var el = $(this);
     var row = getRow(el);
     var serverName = row.data("server-name");
     var user = row.data("user");
     el.text("deleting...");
     api.delete_named_server(user, serverName, {
-      success: function() {
+      success: function () {
         row.remove();
       },
     });
   });
 
-  $(".access-server").map(function(i, el) {
+  $(".access-server").map(function (i, el) {
     el = $(el);
     var row = getRow(el);
     var user = row.data("user");
@@ -120,7 +120,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
   if (admin_access && options_form) {
     // if admin access and options form are enabled
     // link to spawn page instead of making API requests
-    $(".start-server").map(function(i, el) {
+    $(".start-server").map(function (i, el) {
       el = $(el);
       var row = getRow(el);
       var user = row.data("user");
@@ -134,22 +134,22 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     // since it would mean opening a bunch of tabs
     $("#start-all-servers").addClass("hidden");
   } else {
-    $(".start-server").click(function() {
+    $(".start-server").click(function () {
       var el = $(this);
       var row = getRow(el);
       var user = row.data("user");
       var serverName = row.data("server-name");
       el.text("starting...");
-      var start = function(options) {
+      var start = function (options) {
         return api.start_server(user, options);
       };
       if (serverName !== "") {
-        start = function(options) {
+        start = function (options) {
           return api.start_named_server(user, serverName, options);
         };
       }
       start({
-        success: function() {
+        success: function () {
           el.text("start " + serverName).addClass("hidden");
           row.find(".stop-server").removeClass("hidden");
           row.find(".access-server").removeClass("hidden");
@@ -158,7 +158,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
     });
   }
 
-  $(".edit-user").click(function() {
+  $(".edit-user").click(function () {
     var el = $(this);
     var row = getRow(el);
     var user = row.data("user");
@@ -172,7 +172,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
 
   $("#edit-user-dialog")
     .find(".save-button")
-    .click(function() {
+    .click(function () {
       var dialog = $("#edit-user-dialog");
       var user = dialog.data("user");
       var name = dialog.find(".username-input").val();
@@ -184,14 +184,14 @@ require(["jquery", "moment", "jhapi", "utils"], function(
           name: name,
         },
         {
-          success: function() {
+          success: function () {
             window.location.reload();
           },
         }
       );
     });
 
-  $(".delete-user").click(function() {
+  $(".delete-user").click(function () {
     var el = $(this);
     var row = getRow(el);
     var user = row.data("user");
@@ -202,18 +202,18 @@ require(["jquery", "moment", "jhapi", "utils"], function(
 
   $("#delete-user-dialog")
     .find(".delete-button")
-    .click(function() {
+    .click(function () {
       var dialog = $("#delete-user-dialog");
       var username = dialog.find(".delete-username").text();
       console.log("deleting", username);
       api.delete_user(username, {
-        success: function() {
+        success: function () {
           window.location.reload();
         },
       });
     });
 
-  $("#add-users").click(function() {
+  $("#add-users").click(function () {
     var dialog = $("#add-users-dialog");
     dialog.find(".username-input").val("");
     dialog.find(".admin-checkbox").prop("checked", false);
@@ -222,15 +222,12 @@ require(["jquery", "moment", "jhapi", "utils"], function(
 
   $("#add-users-dialog")
     .find(".save-button")
-    .click(function() {
+    .click(function () {
       var dialog = $("#add-users-dialog");
-      var lines = dialog
-        .find(".username-input")
-        .val()
-        .split("\n");
+      var lines = dialog.find(".username-input").val().split("\n");
       var admin = dialog.find(".admin-checkbox").prop("checked");
       var usernames = [];
-      lines.map(function(line) {
+      lines.map(function (line) {
         var username = line.trim();
         if (username.length) {
           usernames.push(username);
@@ -241,47 +238,45 @@ require(["jquery", "moment", "jhapi", "utils"], function(
         usernames,
         { admin: admin },
         {
-          success: function() {
+          success: function () {
             window.location.reload();
           },
         }
       );
     });
 
-  $("#stop-all-servers").click(function() {
+  $("#stop-all-servers").click(function () {
     $("#stop-all-servers-dialog").modal();
   });
 
-  $("#start-all-servers").click(function() {
+  $("#start-all-servers").click(function () {
     $("#start-all-servers-dialog").modal();
   });
 
   $("#stop-all-servers-dialog")
     .find(".stop-all-button")
-    .click(function() {
+    .click(function () {
       // stop all clicks all the active stop buttons
-      $(".stop-server")
-        .not(".hidden")
-        .click();
+      $(".stop-server").not(".hidden").click();
     });
 
   function start(el) {
-    return function() {
+    return function () {
       $(el).click();
     };
   }
 
   $("#start-all-servers-dialog")
     .find(".start-all-button")
-    .click(function() {
+    .click(function () {
       $(".start-server")
         .not(".hidden")
-        .each(function(i) {
+        .each(function (i) {
           setTimeout(start(this), i * 500);
         });
     });
 
-  $("#shutdown-hub").click(function() {
+  $("#shutdown-hub").click(function () {
     var dialog = $("#shutdown-hub-dialog");
     dialog.find("input[type=checkbox]").prop("checked", true);
     dialog.modal();
@@ -289,7 +284,7 @@ require(["jquery", "moment", "jhapi", "utils"], function(
 
   $("#shutdown-hub-dialog")
     .find(".shutdown-button")
-    .click(function() {
+    .click(function () {
       var dialog = $("#shutdown-hub-dialog");
       var servers = dialog.find(".shutdown-servers-checkbox").prop("checked");
       var proxy = dialog.find(".shutdown-proxy-checkbox").prop("checked");
