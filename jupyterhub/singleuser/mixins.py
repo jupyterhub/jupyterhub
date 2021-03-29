@@ -13,6 +13,7 @@ import importlib
 import json
 import os
 import random
+import secrets
 from datetime import datetime
 from datetime import timezone
 from textwrap import dedent
@@ -243,7 +244,7 @@ class SingleUserNotebookAppMixin(Configurable):
     cookie_secret = Bytes()
 
     def _cookie_secret_default(self):
-        return os.urandom(32)
+        return secrets.token_bytes(32)
 
     user = CUnicode().tag(config=True)
     group = CUnicode().tag(config=True)

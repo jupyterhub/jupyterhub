@@ -8,6 +8,7 @@ import hashlib
 import inspect
 import os
 import random
+import secrets
 import socket
 import ssl
 import sys
@@ -319,7 +320,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
     """
     h = hashlib.new(algorithm)
     if isinstance(salt, int):
-        salt = b2a_hex(os.urandom(salt))
+        salt = b2a_hex(secrets.token_bytes(salt))
     if isinstance(salt, bytes):
         bsalt = salt
         salt = salt.decode('utf8')
