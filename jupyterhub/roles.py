@@ -230,7 +230,7 @@ def _switch_default_role(db, obj, admin):
 
 def assign_default_roles(db, entity):
     """Assigns the default roles to an entity:
-    users and services get 'user' role, unless they have admin flag
+    users and services get 'user' role, or admin role if they have admin flag
     Tokens get 'token' role"""
     default_token_role = orm.Role.find(db, 'token')
     # tokens can have only 'token' role as default
@@ -246,13 +246,10 @@ def assign_default_roles(db, entity):
 
 
 def update_roles(db, entity, roles):
-    """Updates object's roles if specified,
-    assigns default if no roles specified"""
-    Class = type(entity)
+    """Updates object's roles"""
     standard_permissions = {'all', 'read:all'}
     for rolename in roles:
-        if Class == orm.APIToken:
-
+        if isinstance(entity, orm.APIToken):
             role = orm.Role.find(db, rolename)
             if role:
                 # compare the requested role permissions with the owner's permissions (scopes)
@@ -266,7 +263,7 @@ def update_roles(db, entity, roles):
                     owner = db.query(orm.Service).get(entity.service_id)
                 if owner:
                     owner_scopes = expand_roles_to_scopes(owner)
-                    if (extra_scopes).issubset(owner_scopes):
+                    if extra_scopes.issubset(owner_scopes):
                         role.tokens.append(entity)
                     else:
                         raise ValueError(

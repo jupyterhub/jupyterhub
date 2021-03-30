@@ -15,7 +15,6 @@ from tornado.iostream import StreamClosedError
 
 from .. import orm
 from ..roles import assign_default_roles
-from ..roles import update_roles
 from ..scopes import needs_scope
 from ..user import User
 from ..utils import isoformat
@@ -57,7 +56,7 @@ class UserListAPIHandler(APIHandler):
     @needs_scope(
         'read:users',
         'read:users:name',
-        'reda:users:servers',
+        'read:users:servers',
         'read:users:groups',
         'read:users:activity',
     )

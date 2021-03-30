@@ -1884,11 +1884,16 @@ class JupyterHub(Application):
                             db, entity=orm_obj, rolename=predef_role['name']
                         )
 
-        # make sure all users, services and tokens have at least one role (update with default)
-        for bearer in role_bearers:
-            Class = orm.get_class(bearer)
-            for obj in db.query(Class):
-                if len(obj.roles) < 1:
+        # make sure that on no admin situation, all roles are reset
+        admin_role = orm.Role.find(db, name='admin')
+        if not admin_role.users:
+            app_log.info(
+                "No admin users found; assuming hub upgrade. Initializing default roles for all entities"
+            )
+            for bearer in role_bearers:
+                Class = orm.get_class(bearer)
+                for obj in db.query(Class):
+                    # if len(obj.roles) < 1: # todo: Should I check if some roles are already assigned?
                     roles.assign_default_roles(db, entity=obj)
         db.commit()
 
@@ -1994,6 +1999,8 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                if spec.get('admin', False):
+                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
