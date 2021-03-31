@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import signal
 import socket
 import sys
@@ -1475,7 +1476,7 @@ class JupyterHub(Application):
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
-            secret = os.urandom(COOKIE_SECRET_BYTES)
+            secret = secrets.token_bytes(COOKIE_SECRET_BYTES)
 
         if secret_file and secret_from == 'new':
             # if we generated a new secret, store it in the secret_file
