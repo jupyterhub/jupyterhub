@@ -159,6 +159,7 @@ def fill_user(model):
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
     model.setdefault('servers', {})
+    model.setdefault('auth_state', '')
     return model
 
 

@@ -104,9 +104,7 @@ class UserListAPIHandler(APIHandler):
         data = []
         for u in query:
             if post_filter is None or post_filter(u):
-                user_model = self.user_model(
-                    u, include_servers=True, include_server_state=True
-                )
+                user_model = self.user_model(u)
                 if user_model:
                     data.append(user_model)
         self.write(json.dumps(data))
@@ -188,16 +186,15 @@ def admin_or_self(method):
 
 class UserAPIHandler(APIHandler):
     @needs_scope(
-        'read:users'
-    )  # Todo: Add the same list of scopes as at UserListAPIHandler
+        'read:users',
+        'read:users:name',
+        'reda:users:servers',
+        'read:users:groups',
+        'read:users:activity',
+    )
     async def get(self, user_name):
         user = self.find_user(user_name)
-        model = self.user_model(
-            user,
-            include_servers=True,
-            include_server_state=True,
-            include_auth_state=True,
-        )
+        model = self.user_model(user)
         # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they

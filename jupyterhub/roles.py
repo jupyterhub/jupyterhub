@@ -90,7 +90,7 @@ def get_scope_hierarchy():
             'read:users:servers',
         ],
         'users:tokens': ['read:users:tokens'],
-        'admin:users': ['read:users:auth_state', 'read:users:server_state'],
+        'admin:users': ['admin:users:auth_state', 'admin:users:server_state'],
         'admin:users:servers': None,
         'groups': ['read:groups'],
         'admin:groups': None,
