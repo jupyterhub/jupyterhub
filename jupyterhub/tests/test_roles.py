@@ -180,9 +180,9 @@ def test_orm_roles_delete_cascade(db):
 )
 def test_get_subscopes(db, scopes, subscopes):
     """Test role scopes expansion into their subscopes"""
-    roles.add_role(db, {'name': 'testing_scopes', 'scopes': scopes})
+    roles.create_role(db, {'name': 'testing_scopes', 'scopes': scopes})
     role = orm.Role.find(db, name='testing_scopes')
-    response = roles.get_subscopes(role)
+    response = roles._get_subscopes(role)
     assert response == subscopes
     db.delete(role)
 
@@ -386,8 +386,8 @@ async def test_load_roles_tokens(tmpdir, request):
 )
 async def test_get_new_token_via_api(app, headers, role_list, status):
     user = add_user(app.db, app, name='user')
-    roles.add_role(app.db, {'name': 'reader', 'scopes': ['all']})
-    roles.add_role(app.db, {'name': 'user_creator', 'scopes': ['admin:users']})
+    roles.create_role(app.db, {'name': 'reader', 'scopes': ['all']})
+    roles.create_role(app.db, {'name': 'user_creator', 'scopes': ['admin:users']})
     if role_list:
         body = json.dumps({'roles': role_list})
     else:

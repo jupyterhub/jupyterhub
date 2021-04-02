@@ -342,7 +342,7 @@ class MockHub(JupyterHub):
             self.db.add(user)
             self.db.commit()
             metrics.TOTAL_USERS.inc()
-        roles.update_roles(self.db, obj=user, kind='users')
+        roles.assign_default_roles(self.db, entity=user)
         self.db.commit()
 
     def stop(self):
