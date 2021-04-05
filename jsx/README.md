@@ -7,19 +7,6 @@ admin dashboard codebase.
 ### Build Commands  
 - `yarn build`: Installs all dependencies and bundles the application  
 - `yarn hot`: Bundles the application and runs a mock (serverless) version on port 8000  
-
-### Directory Tree 
-```
-jhadmin/
-    .gitignore
-    README.md
-    admin-react-fe/
-        package.json
-        webpack.config.json
-        yarn.lock
-        build/
-            admin.fe.js
-            index.html    
-        src/
-             App.jsx    
-```
+- `yarn lint`: Lints JSX with ESLint  
+- `yarn lint --fix`: Lints and fixes errors JSX with ESLint / formats with Prettier  
+- `yarn place`: Copies the transpiled React bundle to /share/jupyterhub/static/js/admin-react.js for use.

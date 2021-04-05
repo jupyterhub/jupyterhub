@@ -4,7 +4,7 @@
   "description": "React application for the Jupyter Hub admin dashboard service",
   "main": "index.js",
   "author": "nabarber",
-  "license": "MIT",
+  "license": "BSD-3-Clause",
   "scripts": {
     "build": "yarn && webpack",
     "hot": "webpack && webpack-dev-server",
