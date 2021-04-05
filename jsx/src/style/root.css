@@ -1,9 +1,9 @@
 :root {
-    --red: #d7191e,
-    --orange: #f1ad4e,
-    --blue: #2e7ab6,
-    --white: #ffffff,
-    --gray: #f7f7f7
+    --red: #d7191e;
+    --orange: #f1ad4e;
+    --blue: #2e7ab6;
+    --white: #ffffff;
+    --gray: #f7f7f;
 }
 
 /* Color Classes */
