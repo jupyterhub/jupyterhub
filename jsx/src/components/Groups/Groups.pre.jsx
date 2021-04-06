@@ -37,32 +37,43 @@ export class Groups extends Component {
                 <h4>Groups</h4>
               </div>
               <div className="panel-body">
-                {groups_data.map((e, i) => (
-                  <div key={"group-edit" + i} className="group-edit-link">
-                    <h4>
-                      <Link
-                        to={{
-                          pathname: "/group-edit",
-                          state: {
-                            group_data: e,
-                            user_data: user_data,
-                            callback: () => {
-                              refreshGroupsData();
-                              refreshUserData();
+                {groups_data.length > 0 ? (
+                  groups_data.map((e, i) => (
+                    <div key={"group-edit" + i} className="group-edit-link">
+                      <h4>
+                        <Link
+                          to={{
+                            pathname: "/group-edit",
+                            state: {
+                              group_data: e,
+                              user_data: user_data,
+                              callback: () => {
+                                refreshGroupsData();
+                                refreshUserData();
+                              },
                             },
-                          },
-                        }}
-                      >
-                        {e.name}
-                      </Link>
-                    </h4>
+                          }}
+                        >
+                          {e.name}
+                        </Link>
+                      </h4>
+                    </div>
+                  ))
+                ) : (
+                  <div>
+                    <h4>no groups created...</h4>
                   </div>
-                ))}
+                )}
               </div>
               <div className="panel-footer">
-                <div className="btn btn-light">
+                <button className="btn btn-light adjacent-span-spacing">
                   <Link to="/">Back</Link>
-                </div>
+                </button>
+                <button className="btn btn-primary adjacent-span-spacing" onClick={() => {
+                  this.props.history.push("/create-group")
+                }}>
+                  New Group
+                </button>
               </div>
             </div>
           </div>

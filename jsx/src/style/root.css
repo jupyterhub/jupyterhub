@@ -27,3 +27,9 @@
     visibility: visible;
     z-index: 2000
 }
+
+/* Global Util Classes */
+.adjacent-span-spacing {
+    margin-right: 5px;
+    margin-left: 5px;
+}

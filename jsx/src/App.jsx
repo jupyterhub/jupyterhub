@@ -11,6 +11,7 @@ import { createBrowserHistory } from "history";
 import ServerDashboard from "./components/ServerDashboard/ServerDashboard";
 import Groups from "./components/Groups/Groups";
 import GroupEdit from "./components/GroupEdit/GroupEdit";
+import CreateGroup from "./components/CreateGroup/CreateGroup"
 import AddUser from "./components/AddUser/AddUser";
 import EditUser from "./components/EditUser/EditUser";
 
@@ -41,6 +42,7 @@ class App extends Component {
               <Route exact path="/" component={ServerDashboard} />
               <Route exact path="/groups" component={Groups} />
               <Route exact path="/group-edit" component={GroupEdit} />
+              <Route exact path="/create-group" component={CreateGroup} />
               <Route exact path="/add-users" component={AddUser} />
               <Route exact path="/edit-user" component={EditUser} />
             </Switch>
