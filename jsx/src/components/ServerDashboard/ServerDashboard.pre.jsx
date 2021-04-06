@@ -72,7 +72,7 @@ export class ServerDashboard extends Component {
       user_data = this.state.sortMethod(user_data);
 
     return (
-      <div>
+      <div className="container">
         <div
           className="manage-groups"
           style={{ float: "right", margin: "20px" }}
@@ -131,7 +131,7 @@ export class ServerDashboard extends Component {
               </tr>
             </thead>
             <tbody>
-              <tr>
+              <tr className="noborder">
                 <td>
                   <Button variant="light" className="add-users-button">
                     <Link to="/add-users">Add Users</Link>

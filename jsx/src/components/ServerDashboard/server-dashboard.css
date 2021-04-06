@@ -26,3 +26,7 @@
     user-select: none;
     cursor: pointer;
 }
+
+tr.noborder > td {
+    border: none !important;
+}
