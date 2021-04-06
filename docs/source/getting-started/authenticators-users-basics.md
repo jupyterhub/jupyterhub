@@ -91,7 +91,6 @@ JupyterHub's [OAuthenticator][] currently supports the following
 popular services:
 
 - Auth0
-- AzureAD
 - Bitbucket
 - CILogon
 - GitHub
