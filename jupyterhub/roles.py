@@ -38,7 +38,9 @@ def get_default_roles():
         {
             'name': 'server',
             'description': 'Post activity only',
-            'scopes': ['users:activity'],
+            'scopes': [
+                'users:activity'
+            ],  # TO DO - fix scope to refer to only self once implemented
         },
         {
             'name': 'token',
