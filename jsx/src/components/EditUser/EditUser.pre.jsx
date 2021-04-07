@@ -81,7 +81,7 @@ const EditUser = (props) => {
                   className="btn btn-primary"
                   onClick={() => {
                     if (updatedUsername == "" && admin == has_admin) {
-                      noChangeEvent()
+                      noChangeEvent();
                       return;
                     } else if (updatedUsername != "") {
                       if (
@@ -136,6 +136,7 @@ EditUser.propTypes = {
   editUser: PropTypes.func,
   deleteUser: PropTypes.func,
   failRegexEvent: PropTypes.func,
+  noChangeEvent: PropTypes.func,
   refreshUserData: PropTypes.func,
 };
 

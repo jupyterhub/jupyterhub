@@ -15,7 +15,7 @@ const withUserAPI = withProps((props) => ({
       "Cannot change username - either contains special characters or is too short."
     ),
   noChangeEvent: () => {
-    returns
+    returns;
   },
   refreshUserData: () =>
     jhapiRequest("/users", "GET")

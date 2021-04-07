@@ -8,7 +8,8 @@ Enzyme.configure({ adapter: new Adapter() });
 describe("Multiselect Component: ", () => {
   var multiselectJsx = () => (
     <Multiselect
-      options={["foo", "bar", "wombat"]}s
+      options={["foo", "bar", "wombat"]}
+      s
       value={["wombat"]}
       onChange={() => {}}
     />
