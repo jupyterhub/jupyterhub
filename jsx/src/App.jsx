@@ -11,7 +11,7 @@ import { createBrowserHistory } from "history";
 import ServerDashboard from "./components/ServerDashboard/ServerDashboard";
 import Groups from "./components/Groups/Groups";
 import GroupEdit from "./components/GroupEdit/GroupEdit";
-import CreateGroup from "./components/CreateGroup/CreateGroup"
+import CreateGroup from "./components/CreateGroup/CreateGroup";
 import AddUser from "./components/AddUser/AddUser";
 import EditUser from "./components/EditUser/EditUser";
 

@@ -18,7 +18,7 @@ export class GroupEdit extends Component {
       }),
       addToGroup: PropTypes.func,
       removeFromGroup: PropTypes.func,
-      deleteGroup: PropTypes.func
+      deleteGroup: PropTypes.func,
     };
   }
 
@@ -40,7 +40,12 @@ export class GroupEdit extends Component {
 
     var { group_data, user_data, callback } = this.props.location.state;
 
-    var { addToGroup, removeFromGroup, deleteGroup, refreshGroupsData } = this.props;
+    var {
+      addToGroup,
+      removeFromGroup,
+      deleteGroup,
+      refreshGroupsData,
+    } = this.props;
 
     if (!(group_data && user_data)) return <div></div>;
 
@@ -104,13 +109,19 @@ export class GroupEdit extends Component {
             >
               Apply
             </button>
-            <button className="btn btn-danger" style={{ float: "right" }} onClick={() => {
-              var groupName = group_data.name
-              deleteGroup(groupName)
-                .then(refreshGroupsData())
-                .then(this.props.history.push("/groups"))
-                .catch(err => console.log(err))
-            }}>Delete Group</button>
+            <button
+              className="btn btn-danger"
+              style={{ float: "right" }}
+              onClick={() => {
+                var groupName = group_data.name;
+                deleteGroup(groupName)
+                  .then(refreshGroupsData())
+                  .then(this.props.history.push("/groups"))
+                  .catch((err) => console.log(err));
+              }}
+            >
+              Delete Group
+            </button>
             <br></br>
             <br></br>
           </div>

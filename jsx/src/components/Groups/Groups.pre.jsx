@@ -69,9 +69,12 @@ export class Groups extends Component {
                 <button className="btn btn-light adjacent-span-spacing">
                   <Link to="/">Back</Link>
                 </button>
-                <button className="btn btn-primary adjacent-span-spacing" onClick={() => {
-                  this.props.history.push("/create-group")
-                }}>
+                <button
+                  className="btn btn-primary adjacent-span-spacing"
+                  onClick={() => {
+                    this.props.history.push("/create-group");
+                  }}
+                >
                   New Group
                 </button>
               </div>

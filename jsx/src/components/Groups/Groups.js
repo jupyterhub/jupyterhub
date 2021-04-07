@@ -21,7 +21,7 @@ const withGroupsAPI = withProps((props) => ({
     jhapiRequest("/groups/" + name + "/users", "DELETE", {
       body: { users: removed_users },
       json: true,
-    })
+    }),
 }));
 
 export default compose(

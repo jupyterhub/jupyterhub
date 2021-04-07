@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import { compose, withProps } from "recompose";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import { EditUser } from "./EditUser.pre";
+import EditUser from "./EditUser.pre";
 
 const withUserAPI = withProps((props) => ({
   editUser: (username, updated_username, admin) =>

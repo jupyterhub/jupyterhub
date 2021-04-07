@@ -8,8 +8,7 @@ const withGroupsAPI = withProps((props) => ({
     jhapiRequest("/groups/" + groupname + "/users", "POST", { users }),
   removeFromGroup: (users, groupname) =>
     jhapiRequest("/groups/" + groupname + "/users", "DELETE", { users }),
-  deleteGroup: (name) => 
-    jhapiRequest("/groups/" + name, "DELETE"),
+  deleteGroup: (name) => jhapiRequest("/groups/" + name, "DELETE"),
   refreshGroupsData: () =>
     jhapiRequest("/groups", "GET")
       .then((data) => data.json())
