@@ -1,4 +1,4 @@
-import React, { Component, useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 
@@ -25,6 +25,7 @@ const CreateGroup = (props) => {
                     id="group-name"
                     placeholder="group name..."
                     onChange={(e) => {
+                      console.log(e.target.value);
                       setGroupName(e.target.value);
                     }}
                   ></input>
@@ -39,7 +40,6 @@ const CreateGroup = (props) => {
                   id="submit"
                   className="btn btn-primary"
                   onClick={() => {
-                    let groupName = groupName;
                     createGroup(groupName)
                       .then(refreshGroupsData())
                       .then(history.push("/groups"))

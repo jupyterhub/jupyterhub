@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 
@@ -8,7 +8,7 @@ const Groups = (props) => {
     groups_data,
     refreshGroupsData,
     refreshUserData,
-    history
+    history,
   } = props;
 
   if (!groups_data || !user_data) {
@@ -77,6 +77,9 @@ Groups.propTypes = {
   groups_data: PropTypes.array,
   refreshUserData: PropTypes.func,
   refreshGroupsData: PropTypes.func,
+  history: PropTypes.shape({
+    push: PropTypes.func,
+  }),
 };
 
 export default Groups;

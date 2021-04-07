@@ -1,4 +1,4 @@
-import React, { Component, useState } from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import Multiselect from "../Multiselect/Multiselect";
 import PropTypes from "prop-types";
@@ -119,6 +119,7 @@ GroupEdit.propTypes = {
   addToGroup: PropTypes.func,
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
+  refreshGroupsData: PropTypes.func,
 };
 
 export default GroupEdit;
