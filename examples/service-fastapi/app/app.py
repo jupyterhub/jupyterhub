@@ -2,11 +2,12 @@ import os
 
 from fastapi import FastAPI
 
+from .service import router
+
 ### When managed by Jupyterhub, the actual endpoints
 ### will be served out prefixed by /services/:name.
 ### One way to handle this with FastAPI is to use an APIRouter.
 ### All routes are defined in service.py
-from .service import router
 
 app = FastAPI(
     title="Example FastAPI Service",
