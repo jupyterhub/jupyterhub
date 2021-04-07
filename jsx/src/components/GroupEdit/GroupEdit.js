@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import { compose, withProps } from "recompose";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import { GroupEdit } from "./GroupEdit.pre";
+import GroupEdit from "./GroupEdit.pre";
 
 const withGroupsAPI = withProps((props) => ({
   addToGroup: (users, groupname) =>
