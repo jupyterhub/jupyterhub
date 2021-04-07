@@ -25,7 +25,6 @@ const CreateGroup = (props) => {
                     id="group-name"
                     placeholder="group name..."
                     onChange={(e) => {
-                      console.log(e.target.value);
                       setGroupName(e.target.value);
                     }}
                   ></input>
