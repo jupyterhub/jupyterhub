@@ -7,6 +7,7 @@ const EditUser = (props) => {
     editUser,
     deleteUser,
     failRegexEvent,
+    noChangeEvent,
     refreshUserData,
     history,
   } = props;
@@ -80,6 +81,7 @@ const EditUser = (props) => {
                   className="btn btn-primary"
                   onClick={() => {
                     if (updatedUsername == "" && admin == has_admin) {
+                      noChangeEvent()
                       return;
                     } else if (updatedUsername != "") {
                       if (

@@ -85,6 +85,7 @@ const GroupEdit = (props) => {
             Apply
           </button>
           <button
+            id="delete-group"
             className="btn btn-danger"
             style={{ float: "right" }}
             onClick={() => {

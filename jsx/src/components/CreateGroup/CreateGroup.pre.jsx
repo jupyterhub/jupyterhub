@@ -21,8 +21,8 @@ const CreateGroup = (props) => {
                   <input
                     className="group-name-input"
                     type="text"
-                    value={groupName}
                     id="group-name"
+                    value={groupName}
                     placeholder="group name..."
                     onChange={(e) => {
                       setGroupName(e.target.value);
