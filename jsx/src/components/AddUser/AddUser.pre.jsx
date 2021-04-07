@@ -36,14 +36,7 @@ const AddUser = (props) => {
                       type="checkbox"
                       value=""
                       id="admin-check"
-                      onChange={(e) =>
-                        // this.setState(
-                        //   Object.assign({}, this.state, {
-                        //     admin: e.target.checked,
-                        //   })
-                        // )
-                        setAdmin(e.target.checked)
-                      }
+                      onChange={(e) => setAdmin(e.target.checked)}
                     />
                     <span> </span>
                     <label className="form-check-label">Admin</label>

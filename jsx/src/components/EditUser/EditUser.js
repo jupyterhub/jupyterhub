@@ -12,9 +12,7 @@ const withUserAPI = withProps((props) => ({
   deleteUser: (username) => jhapiRequest("/users/" + username, "DELETE"),
   failRegexEvent: () =>
     alert(
-      "Removed " +
-        JSON.stringify(removed_users) +
-        " for either containing special characters or being too short."
+      "Cannot change username - either contains special characters or is too short."
     ),
   refreshUserData: () =>
     jhapiRequest("/users", "GET")

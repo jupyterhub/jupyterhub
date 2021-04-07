@@ -79,24 +79,34 @@ const EditUser = (props) => {
                   id="submit"
                   className="btn btn-primary"
                   onClick={() => {
-                    if (updatedUsername == "" && admin == has_admin) return;
-                    if (
-                      updatedUsername.length > 2 &&
-                      /[!@#$%^&*(),.?":{}|<>]/g.test(updatedUsername) == false
-                    ) {
-                      editUser(
-                        username,
-                        updatedUsername != "" ? updatedUsername : username,
-                        admin
-                      )
+                    if (updatedUsername == "" && admin == has_admin) {
+                      return;
+                    } else if (updatedUsername != "") {
+                      if (
+                        updatedUsername.length > 2 &&
+                        /[!@#$%^&*(),.?":{}|<>]/g.test(updatedUsername) == false
+                      ) {
+                        editUser(
+                          username,
+                          updatedUsername != "" ? updatedUsername : username,
+                          admin
+                        )
+                          .then((data) => {
+                            history.push("/");
+                            refreshUserData();
+                          })
+                          .catch((err) => {});
+                      } else {
+                        setUpdatedUsername("");
+                        failRegexEvent();
+                      }
+                    } else {
+                      editUser(username, username, admin)
                         .then((data) => {
                           history.push("/");
                           refreshUserData();
                         })
                         .catch((err) => {});
-                    } else {
-                      setUpdatedUsername(null);
-                      failRegexEvent();
                     }
                   }}
                 >
