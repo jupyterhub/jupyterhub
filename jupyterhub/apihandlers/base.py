@@ -175,7 +175,7 @@ class APIHandler(BaseHandler):
             json.dumps({'status': status_code, 'message': message or status_message})
         )
 
-    def server_model(self, spawner, include_state=False):
+    def server_model(self, spawner):
         """Get the JSON model for a Spawner"""
         server_scope = 'read:users:servers'
         server_state_scope = 'admin:users:server_state'
@@ -250,7 +250,7 @@ class APIHandler(BaseHandler):
             'pending': None,
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
-            'auth_state': '',  # placeholder, filled in later
+            'auth_state': None,  # placeholder, filled in later
         }
         access_map = {
             'read:users': {
@@ -297,23 +297,31 @@ class APIHandler(BaseHandler):
 
     def group_model(self, group):
         """Get the JSON model for a Group object"""
-        model = {'kind': 'group', 'name': group.name}
+        model = {}
         req_scope = 'read:groups'
         if req_scope in self.parsed_scopes:
             scope_filter = self.get_scope_filter(req_scope)
             if scope_filter(group, kind='group'):
-                model['users'] = [u.name for u in group.users]
+                model = {
+                    'kind': 'group',
+                    'name': group.name,
+                    'users': [u.name for u in group.users],
+                }
         return model
 
     def service_model(self, service):
         """Get the JSON model for a Service object"""
-        model = {'kind': 'service', 'name': service.name}
+        model = {}
         req_scope = 'read:services'
         if req_scope in self.parsed_scopes:
             scope_filter = self.get_scope_filter(req_scope)
             if scope_filter(service, kind='service'):
-                model['roles'] = [r.name for r in service.roles]
-                model['admin'] = service.admin
+                model = {
+                    'kind': 'service',
+                    'name': service.name,
+                    'roles': [r.name for r in service.roles],
+                    'admin': service.admin,
+                }
                 # todo: Remove once we replace admin flag with role check
         return model
 

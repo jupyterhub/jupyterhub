@@ -159,7 +159,6 @@ def fill_user(model):
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
     model.setdefault('servers', {})
-    model.setdefault('auth_state', '')
     return model
 
 
@@ -180,9 +179,12 @@ async def test_get_users(app):
         'admin': False,
         'roles': ['user'],
         'last_activity': None,
+        'auth_state': None,
     }
     assert users == [
-        fill_user({'name': 'admin', 'admin': True, 'roles': ['admin']}),
+        fill_user(
+            {'name': 'admin', 'admin': True, 'roles': ['admin'], 'auth_state': None}
+        ),
         fill_user(user_model),
     ]
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
