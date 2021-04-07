@@ -1,8 +1,7 @@
 # Fastapi
 
-[FastAPI](https://fastapi.tiangolo.com/) is a popular new web framework attractive for its type hinting, async support, and [OpenAPI](https://github.com/OAI/OpenAPI-Specification) integration -- meaning you get a Swagger UI for your endpoints right out of the box.
+[FastAPI](https://fastapi.tiangolo.com/) is a popular new web framework attractive for its type hinting, async support, automatic doc generation (Swagger), and more.  Their [Feature highlights](https://fastapi.tiangolo.com/features/) sum it up nicely.
 
-The example Jupyter service in this repo is built with FastAPI and runs with the [ASGI](https://asgi.readthedocs.io/en/latest/) server [uvicorn](https://www.uvicorn.org/).  It hardly scratches the surface of FastAPI features, noteably not including any [Pydantic](https://pydantic-docs.helpmanual.io/) models.  The main mechanics to highlight are the multiple auth options in `security.py`, and testing authenticated vs non-authenticated endpoints with the Swagger UI.
 
 # Swagger UI with OAuth demo
 
@@ -37,14 +36,12 @@ $ curl -X GET http://127.0.0.1:8000/services/fastapi/me \
        -H "Authorization: Bearer 3fee13ce6d2845da9bd5f2c2170d3428" \
        | jq .
 {
-  "kind": "user",
   "name": "myname",
   "admin": false,
   "groups": [],
   "server": null,
   "pending": null,
-  "created": "2021-04-06T20:35:49.953710Z",
-  "last_activity": "2021-04-06T20:50:15.541302Z",
+  "last_activity": "2021-04-07T18:05:11.587638+00:00",
   "servers": null
 }
 ```
@@ -62,7 +59,7 @@ sudo docker run -it -p 8000:8000 service-fastapi
 
 # PUBLIC_HOST
 
-If you are running your service behind a proxy, or on a Docker / Kubernetes infrastructure, you might run into an error during OAuth that says `Mismatching redirect URI`.  In the Jupterhub logs, there will be a warning along the lines of: `[W 2021-04-06 23:40:06.707 JupyterHub provider:498] Redirect uri https://jupyterhub.my.cloud/services/fastapi/oauth_callback != /services/fastapi/oauth_callback`.  This happens because Swagger UI adds the host, as seen in the browser, to the Authorization URL.
+If you are running your service behind a proxy, or on a Docker / Kubernetes infrastructure, you might run into an error during OAuth that says `Mismatching redirect URI`.  In the Jupterhub logs, there will be a warning along the lines of: `[W 2021-04-06 23:40:06.707 JupyterHub provider:498] Redirect uri https://jupyterhub.my.cloud/services/fastapi/oauth_callback != /services/fastapi/oauth_callback`.  This happens because Swagger UI adds the request host, as seen in the browser, to the Authorization URL.
 
 To solve that problem, the `oauth_redirect_uri` value in the service initialization needs to match what Swagger will auto-generate and what the service will use when POST'ing to `/oauth2/token`.  In this example, setting the `PUBLIC_HOST` environment variable to your public-facing Hub domain (e.g. `https://jupyterhub.my.cloud`) should make it work.
 
@@ -70,17 +67,18 @@ To solve that problem, the `oauth_redirect_uri` value in the service initializat
 
 FastAPI has a concept of a [dependency injection](https://fastapi.tiangolo.com/tutorial/dependencies) using a `Depends` object (and a subclass `Security`) that is automatically instantiated/executed when it is a parameter for your endpoint routes.  You can utilize a `Depends` object for re-useable common parameters or authentication mechanisms like the [`get_user`](https://fastapi.tiangolo.com/tutorial/security/get-current-user) pattern.
 
-JupyterHub OAuth has three ways to authenticate: a `token` url parameter; a `Authorization: Bearer <token>` header; and a `jupyterhub-services` cookie.  FastAPI has helper functions that let us create `Security` (dependency injection) objects for each of those.  When you need to allow multiple / optional authentication dependencies (`Security` objects), then you can use the argument `auto_error=False` and it will return `None` instead of raising an `HTTPException`.
+JupyterHub OAuth has three ways to authenticate: a `token` url parameter; a `Authorization: Bearer <token>` header; and a (deprecated) `jupyterhub-services` cookie.  FastAPI has helper functions that let us create `Security` (dependency injection) objects for each of those.  When you need to allow multiple / optional authentication dependencies (`Security` objects), then you can use the argument `auto_error=False` and it will return `None` instead of raising an `HTTPException`.
 
 Endpoints that need authentication (`/me` and `/debug` in this example) can leverage the `get_user` pattern and effectively pull the user model from the Hub API when a request has authenticated with cookie / token / header all using the simple syntax,
 
 ```python
 from .security import get_current_user
+from .models import User
 
-@router.get("/me")
-async def me(user: dict = Depends(get_current_user)):
-    "Authenticated function that returns the User model"
-    return user
+@router.get("/new_endpoint")
+async def new_endpoint(user: User = Depends(get_current_user)):
+    "Function that needs to work with an authenticated user"
+    return {"Hello": user.name}
 ```
 
 # Notes on client.py
