@@ -2,7 +2,7 @@
 
 A scope has a syntax-based design that reveals which resources it provides access to. Resources are objects with a type, associated data, relationships to other resources, and a set of methods that operate on them (see [RESTful API](https://restful-api-design.readthedocs.io/en/latest/resources.html) documentation for more information). 
 
-`<resource>` in the scope syntax here refers to the resource name in the [JupyterHub's API](../reference/rest-api.rst) endpoints. For instance, `<resource>` equal to `users` corresponds to JupyterHub's API endpoints beginning with _/users_.
+`<resource>` in the RBAC scope design refers to the resource name in the [JupyterHub's API](../reference/rest-api.rst) endpoints in most cases. For instance, `<resource>` equal to `users` corresponds to JupyterHub's API endpoints beginning with _/users_.
 
 ## Scope syntax
 
@@ -10,37 +10,47 @@ A scope has a syntax-based design that reveals which resources it provides acces
 The `<resource>` scopes, such as `users` or `groups`, grant read and write permissions to the resource itself and all its sub-resources. E.g., the scope `users:servers` is included within the scope `users`.
 +++
 
-- `<resource>:<subresource>` \
-The {ref}`vertically filtered <vertical-filtering-target>` scopes provide access to a subset of the information granted by the `<resource>` scope. E.g., the scope `users:name` allows for accessing user names only.
-+++
-
-- `<resource>!<object>=<objectname>` \
-{ref}`horizontal-filtering-target` is implemented by adding `!<object>=<objectname>` to the scope structure. A resource (or subresource) can be filtered based on `user`, `server`, `group` or `service` name. For instance, `<resource>!user=charlie` limits access to only return resources of user `charlie`. \
-Only one filter per scope is allowed, but filters for the same scope have an additive effect; a larger filter can be used by supplying the scope multiple times with different filters.
-+++
-
 - `read:<resource>` \
-Limits permissions to **read-only** operations on the resource. 
+Limits permissions to read-only operations on the resource. 
 +++
 
 - `admin:<resource>` \
-Grants **create/delete permissions only** on the corresponding resource. For example, the scope `admin:users` allows creating and deleting users but does not allow for accessing information about existing users or modifying them, which is provided by the scope `users`. 
+Grants create/delete permissions on the corresponding resource in addition to read and write permissions.
++++
+
+- `<resource>:<subresource>` \
+The {ref}`vertically filtered <vertical-filtering-target>` scopes provide access to a subset of the information granted by the `<resource>` scope. E.g., the scope `users:servers` allows for accessing user servers only.
++++
+
+- `<resource>!<object>=<objectname>` \
+{ref}`horizontal-filtering-target` is implemented by the `!<object>=<objectname>`scope structure. A resource (or sub-resource) can be filtered based on `user`, `server`, `group` or `service` name. For instance, `<resource>!user=charlie` limits access to only return resources of user `charlie`. \
+Only one filter per scope is allowed, but filters for the same scope have an additive effect; a larger filter can be used by supplying the scope multiple times with different filters.
 
 By adding a scope to an existing role, all role bearers will gain the associated permissions.
 
-## Available scopes
 
-[](../reference/rest-api.rst) documentation lists all available scopes. Each API endpoint has a list of scopes which can be used to access the API. 
-```{important} 
-Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can be added to scopes to customize them. `<resource>` scopes, `<resource>:<subresource>`, `read:<resource>` and `admin:<resource>` scopes are predefined and cannot be changed otherwise.
-```
+## Metascopes
+
+Metascopes do not follow the general scope syntax. Instead, a metascope resolves to a set of scopes, which can refer to different resources, based on their owning entity. In JupyterHub, there are currently two metascopes:
+1. default user scope `self`, and
+2. default token scope `all`.
 
 (default-user-scope-target)=
-## Default user scope
+### Default user scope
+Access to the user's own resources and subresources is covered by metascope `self`. This metascope includes the user's model, activity, servers and tokens. For example, `self` for a user named "gerard" includes:
+- `users!user=gerard` where the `users` scope provides access to the full user model and activity. The filter restricts this access to the user's own resources.
+- `users:servers!user=gerard` which grants the user access to their own servers without being able to create/delete any.
+- `users:tokens!user=gerard` which allows the user to access, request and delete their own tokens.
 
-The default user scope `all` provides access to the user's own resources and subresources, including the user's model, activity, servers and tokens. For example, the scope for a user `'gerard'` covers:
-- `users!user=gerard` where the `users` scope includes access to the full user model, activity and starting/stopping servers. The horizontal filter restricts this access to the user's own resources.
-- `users:tokens!user=gerard` allows the user to access, request and delete his own tokens only.
+The `self` scope is only valid for user entities. In other cases (e.g., for services) it resolves to an empty set of scopes.
+
+(default-token-scope-target)=
+### Default token scope
+The token metascope `all` covers the same scopes as the token owner's scopes during requests. For example, if a token owner has roles containing the scopes `read:groups` and `read:users`, the `all` scope resolves to the set of scopes `{read:groups, read:users}`. 
+
+If the token owner has default `user` role, the `all` scope resolves to `self`, which will subsequently be expanded to include all the user-specific scopes (or empty set in the case of services).
+
+If the token owner is a member of any group with roles, the group scopes will also be included in resolving the `all` scope.  
 
 (horizontal-filtering-target)=
 ## Horizontal filtering
@@ -59,3 +69,19 @@ In case the client has multiple subscopes, the call returns the union of the dat
 
 
 The payload of an API call can be filtered both horizontally and vertically simultaneously. For instance, performing an API call to the endpoint `/users/` with the scope `users:name!user=juliette` returns a payload of `[{name: 'juliette'}]` (provided that this name is present in the database).
+
+
+## Available scopes
+
+Table below lists all available scopes and illustrates their hierarchy.
+
+_Table of scopes here_
+
+```{Caution} 
+Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can be added to scopes to customize them. \
+Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>` and `admin:<resource>` scopes are predefined and cannot be changed otherwise.
+```
+### Scopes and APIs
+The scopes are also listed in the [](../reference/rest-api.rst) documentation. Each API endpoint has a list of scopes which can be used to access the API; if no scopes are listed, the API is not authenticated and can be accessed without any permissions (i.e., no scopes).
+
+Listed scopes by each API endpoint reflect the "lowest" permissions required to gain any access to the corresponding API. For example, posting user's activity (_POST /users/:name/activity_) needs `users:activity` scope. If scope `users` is passed during the request, the access will be granted as the required scope is a subscope of the `users` scope. If, on the other hand, `read:users:activity` scope is passed, the access will be denied.

@@ -1,17 +1,14 @@
 # Use Cases
 
-To determine which scopes a role should have it is best to follow these steps:
+To determine which scopes a role should have, one can follow these steps:
 1. Determine what actions the role holder should have/have not access to
-2. Match the actions against the JupyterHub's REST APIs
+2. Match the actions against the [JupyterHub's APIs](../reference/rest-api.rst)
 3. Check which scopes are required to access the APIs
-4. Customize the scopes with filters if needed
-5. Define the role with required scopes and assign to users/services/groups/tokens
+4. Combine scopes and subscopes if applicable
+5. Customize the scopes with filters if needed
+6. Define the role with required scopes and assign to users/services/groups/tokens
 
 Below, different use cases are presented on how to use the RBAC framework.
-
-## User access
-
-A regular user should be able to view and manage all of their own resources. This can be achieved using the scope `all` (or assigning the `user` role). If the user's access is to be restricted from modifying any of their resources (e.g., when a teacher wants to check their notebooks), their role should be changed to read-only access, in this case scope `read:all`.
   
 ## Service to cull idle servers
 
@@ -39,7 +36,7 @@ Below follows a short tutorial on how to add a cull-idle service in the RBAC sys
         {
             "name": "idle-culler",
             "description": "Culls idle servers",
-            "scopes": ["read:users:name", "read:users:activity", "read:users:servers", "users:servers"],
+            "scopes": ["read:users:name", "read:users:activity", "users:servers"],
             "services": ["idle-culler"],
         }
     ]
@@ -47,27 +44,41 @@ Below follows a short tutorial on how to add a cull-idle service in the RBAC sys
     ```{important}
     Note that in the RBAC system the `admin` field in the `idle-culler` service definition is omitted. Instead, the `idle-culler` role provides the service with only the permissions it needs.
 
-    If the optional actions of deleting the idle servers and/or removing inactive users are desired, **add the following scopes** to the `idle-culler` role definition:
-    - `admin:users:servers` for deleting servers
-    - `admin:users` for deleting users.
+    If the optional actions of deleting the idle servers and/or removing inactive users are desired, **change the following scopes** in the `idle-culler` role definition:
+    - `users:servers` to `admin:users:servers` for deleting servers
+    - `read:users:name`, `read:users:activity` to `admin:users` for deleting users.
     ```
 3. Restart JupyterHub to complete the process.
 
 
 ## API launcher
 A service capable of creating/removing users and launching multiple servers should have access to:
-1. POST and DELETE /users
-2. POST and DELETE /users/{name}/server
+1. _POST_ and _DELETE /users_
+2. _POST_ and _DELETE /users/:name/server_ or _/users/:name/servers/:server_name_
 3. Creating/deleting servers
 
-From the above, the scopes required for the role are
+The scopes required to access the API enpoints:
 1. `admin:users`
 2. `users:servers`
 3. `admin:users:servers`
 
+From the above, the role definition is:
+```python
+# in jupyterhub_config.py
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "api-launcher",
+        "description": "Manages servers",
+        "scopes": ["admin:users", "admin:users:servers"],
+        "services": [<service_name>]
+    }
+]
+```
+
 If needed, the scopes can be modified to limit the permissions to e.g. a particular group with `!group=groupname` filter.
 
-## Users as group admins/Group admin roles
+## Group admin roles
 
 Roles can be used to specify different group member privileges.
 
