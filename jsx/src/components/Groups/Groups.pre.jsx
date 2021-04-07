@@ -2,86 +2,81 @@ import React, { Component } from "react";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 
-export class Groups extends Component {
-  static get propTypes() {
-    return {
-      user_data: PropTypes.array,
-      groups_data: PropTypes.array,
-      refreshUserData: PropTypes.func,
-      refreshGroupsData: PropTypes.func,
-    };
+const Groups = (props) => {
+  var {
+    user_data,
+    groups_data,
+    refreshGroupsData,
+    refreshUserData,
+    history
+  } = props;
+
+  if (!groups_data || !user_data) {
+    return <div></div>;
   }
 
-  constructor(props) {
-    super(props);
-  }
-
-  render() {
-    var {
-      user_data,
-      groups_data,
-      refreshGroupsData,
-      refreshUserData,
-    } = this.props;
-
-    if (!groups_data || !user_data) {
-      return <div></div>;
-    }
-
-    return (
-      <div className="container">
-        <div className="row">
-          <div className="col-md-12 col-lg-10 col-lg-offset-1">
-            <div className="panel panel-default">
-              <div className="panel-heading">
-                <h4>Groups</h4>
-              </div>
-              <div className="panel-body">
-                {groups_data.length > 0 ? (
-                  groups_data.map((e, i) => (
-                    <div key={"group-edit" + i} className="group-edit-link">
-                      <h4>
-                        <Link
-                          to={{
-                            pathname: "/group-edit",
-                            state: {
-                              group_data: e,
-                              user_data: user_data,
-                              callback: () => {
-                                refreshGroupsData();
-                                refreshUserData();
-                              },
+  return (
+    <div className="container">
+      <div className="row">
+        <div className="col-md-12 col-lg-10 col-lg-offset-1">
+          <div className="panel panel-default">
+            <div className="panel-heading">
+              <h4>Groups</h4>
+            </div>
+            <div className="panel-body">
+              {groups_data.length > 0 ? (
+                groups_data.map((e, i) => (
+                  <div key={"group-edit" + i} className="group-edit-link">
+                    <h4>
+                      <Link
+                        to={{
+                          pathname: "/group-edit",
+                          state: {
+                            group_data: e,
+                            user_data: user_data,
+                            callback: () => {
+                              refreshGroupsData();
+                              refreshUserData();
                             },
-                          }}
-                        >
-                          {e.name}
-                        </Link>
-                      </h4>
-                    </div>
-                  ))
-                ) : (
-                  <div>
-                    <h4>no groups created...</h4>
+                          },
+                        }}
+                      >
+                        {e.name}
+                      </Link>
+                    </h4>
                   </div>
-                )}
-              </div>
-              <div className="panel-footer">
-                <button className="btn btn-light adjacent-span-spacing">
-                  <Link to="/">Back</Link>
-                </button>
-                <button
-                  className="btn btn-primary adjacent-span-spacing"
-                  onClick={() => {
-                    this.props.history.push("/create-group");
-                  }}
-                >
-                  New Group
-                </button>
-              </div>
+                ))
+              ) : (
+                <div>
+                  <h4>no groups created...</h4>
+                </div>
+              )}
+            </div>
+            <div className="panel-footer">
+              <button className="btn btn-light adjacent-span-spacing">
+                <Link to="/">Back</Link>
+              </button>
+              <button
+                className="btn btn-primary adjacent-span-spacing"
+                onClick={() => {
+                  history.push("/create-group");
+                }}
+              >
+                New Group
+              </button>
             </div>
           </div>
         </div>
       </div>
-    );
-  }
-}
+    </div>
+  );
+};
+
+Groups.propTypes = {
+  user_data: PropTypes.array,
+  groups_data: PropTypes.array,
+  refreshUserData: PropTypes.func,
+  refreshGroupsData: PropTypes.func,
+};
+
+export default Groups;
