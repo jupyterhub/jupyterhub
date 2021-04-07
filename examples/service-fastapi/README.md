@@ -1,12 +1,12 @@
 # Fastapi
 
-[FastAPI](https://fastapi.tiangolo.com/) is a popular new web framework attractive for it's type hinting, async support, and [OpenAPI](https://github.com/OAI/OpenAPI-Specification) integration -- meaning you get a Swagger UI for your endpoints right out of the box.
+[FastAPI](https://fastapi.tiangolo.com/) is a popular new web framework attractive for its type hinting, async support, and [OpenAPI](https://github.com/OAI/OpenAPI-Specification) integration -- meaning you get a Swagger UI for your endpoints right out of the box.
 
-The example Jupyter service here is built with FastAPI and runs with the ASGI server [uvicorn](https://www.uvicorn.org/).  It hardly scratches the surface of FastAPI features, noteably not including any Pydantic models.  The mechanics to highlight are the multiple auth options in `security.py` and testing authenticated vs non-authenticated endpoints with the Swagger UI.
+The example Jupyter service in this repo is built with FastAPI and runs with the ASGI server [uvicorn](https://www.uvicorn.org/).  It hardly scratches the surface of FastAPI features, noteably not including any [Pydantic](https://pydantic-docs.helpmanual.io/) models.  The main mechanics to highlight are the multiple auth options in `security.py`, and testing authenticated vs non-authenticated endpoints with the Swagger UI.
 
 # Swagger UI with OAuth demo
 
-
+![Fastapi Service Example](./fastapi_example.gif)
 
 # Try it out locally
 
@@ -102,4 +102,4 @@ async with get_client() as client:
     ...
 ```
 
-This example did not try to match the complete parity of `jupyterhub.services.auth.HubAuth`, but it should be feasible to create an equivalent `HubAuth` class with async support.
+This example did not try to match the feature set in `jupyterhub.services.auth.HubAuth`, but it should be feasible to create an equivalent `HubAuth` class with async support.
