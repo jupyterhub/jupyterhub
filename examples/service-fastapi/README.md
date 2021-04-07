@@ -2,7 +2,7 @@
 
 [FastAPI](https://fastapi.tiangolo.com/) is a popular new web framework attractive for its type hinting, async support, and [OpenAPI](https://github.com/OAI/OpenAPI-Specification) integration -- meaning you get a Swagger UI for your endpoints right out of the box.
 
-The example Jupyter service in this repo is built with FastAPI and runs with the ASGI server [uvicorn](https://www.uvicorn.org/).  It hardly scratches the surface of FastAPI features, noteably not including any [Pydantic](https://pydantic-docs.helpmanual.io/) models.  The main mechanics to highlight are the multiple auth options in `security.py`, and testing authenticated vs non-authenticated endpoints with the Swagger UI.
+The example Jupyter service in this repo is built with FastAPI and runs with the [ASGI](https://asgi.readthedocs.io/en/latest/) server [uvicorn](https://www.uvicorn.org/).  It hardly scratches the surface of FastAPI features, noteably not including any [Pydantic](https://pydantic-docs.helpmanual.io/) models.  The main mechanics to highlight are the multiple auth options in `security.py`, and testing authenticated vs non-authenticated endpoints with the Swagger UI.
 
 # Swagger UI with OAuth demo
 
@@ -85,7 +85,7 @@ async def me(user: dict = Depends(get_current_user)):
 
 # Notes on client.py
 
-FastAPI is designed to be an asyncronous web server, so the interactions with the Hub API should be made asyncronously as well.  Instead of using `requests` to get user information from a token/cookie, this example uses [`httpx`](https://www.python-httpx.org/).  `client.py` defines a small function that creates a `Client` (equivalent of `requests.Session`) with the Hub API url as it's `base_url` and adding the `JUPYTERHUB_API_TOKEN` to every header.
+FastAPI is designed to be an asynchronous web server, so the interactions with the Hub API should be made asynchronously as well.  Instead of using `requests` to get user information from a token/cookie, this example uses [`httpx`](https://www.python-httpx.org/).  `client.py` defines a small function that creates a `Client` (equivalent of `requests.Session`) with the Hub API url as it's `base_url` and adding the `JUPYTERHUB_API_TOKEN` to every header.
 
 ```python
 import os
