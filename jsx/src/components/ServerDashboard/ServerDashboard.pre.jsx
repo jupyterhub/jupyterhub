@@ -24,7 +24,7 @@ const ServerDashboard = (props) => {
     runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
 
   var [addUser, setAddUser] = useState(false),
-    [sortMethod, setSortMethod] = useState(undefined);
+    [sortMethod, setSortMethod] = useState(null);
 
   var {
     user_data,
@@ -47,7 +47,9 @@ const ServerDashboard = (props) => {
 
   if (!user_data) return <div></div>;
 
-  if (sortMethod != undefined) user_data = sortMethod(user_data);
+  if (sortMethod != null) {
+    user_data = sortMethod(user_data);
+  }
 
   return (
     <div className="container">
@@ -62,28 +64,28 @@ const ServerDashboard = (props) => {
                 User{" "}
                 <SortHandler
                   sorts={{ asc: usernameAsc, desc: usernameDesc }}
-                  callback={(method) => setSortMethod(method)}
+                  callback={(method) => setSortMethod(() => method)}
                 />
               </th>
               <th id="admin-header">
                 Admin{" "}
                 <SortHandler
                   sorts={{ asc: adminAsc, desc: adminDesc }}
-                  callback={(method) => setSortMethod(method)}
+                  callback={(method) => setSortMethod(() => method)}
                 />
               </th>
               <th id="last-activity-header">
                 Last Activity{" "}
                 <SortHandler
                   sorts={{ asc: dateAsc, desc: dateDesc }}
-                  callback={(method) => setSortMethod(method)}
+                  callback={(method) => setSortMethod(() => method)}
                 />
               </th>
               <th id="running-status-header">
                 Running{" "}
                 <SortHandler
                   sorts={{ asc: runningAsc, desc: runningDesc }}
-                  callback={(method) => setSortMethod(method)}
+                  callback={(method) => setSortMethod(() => method)}
                 />
               </th>
               <th id="actions-header">Actions</th>

@@ -1,6 +1,6 @@
 import React from "react";
 import Enzyme, { shallow, mount } from "enzyme";
-import { ServerDashboard } from "./ServerDashboard.pre";
+import ServerDashboard from "./ServerDashboard.pre";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 import { HashRouter, Switch } from "react-router-dom";
 

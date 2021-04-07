@@ -1,6 +1,6 @@
 import React from "react";
 import Enzyme, { shallow } from "enzyme";
-import { GroupEdit } from "./GroupEdit.pre";
+import GroupEdit from "./GroupEdit.pre";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 
 Enzyme.configure({ adapter: new Adapter() });

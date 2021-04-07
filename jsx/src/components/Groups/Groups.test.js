@@ -1,6 +1,6 @@
 import React from "react";
 import Enzyme, { shallow } from "enzyme";
-import { Groups } from "./Groups.pre";
+import Groups from "./Groups.pre";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 
 Enzyme.configure({ adapter: new Adapter() });
