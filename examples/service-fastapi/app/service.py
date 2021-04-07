@@ -6,6 +6,9 @@ from fastapi import Form
 from fastapi import Request
 
 from .client import get_client
+from .models import AuthorizationError
+from .models import HubApiError
+from .models import User
 from .security import get_current_user
 
 # APIRouter prefix cannot end in /
@@ -20,7 +23,7 @@ async def get_token(code: str = Form(...)):
     # Everything else we can hardcode / pull from env
     async with get_client() as client:
         redirect_uri = (
-            os.getenv("PUBLIC_HOST", "") + os.environ["JUPYTERHUB_OAUTH_CALLBACK_URL"],
+            os.environ["PUBLIC_HOST"] + os.environ["JUPYTERHUB_OAUTH_CALLBACK_URL"],
         )
         data = {
             "client_id": os.environ["JUPYTERHUB_CLIENT_ID"],
@@ -30,7 +33,7 @@ async def get_token(code: str = Form(...)):
             "redirect_uri": redirect_uri,
         }
         resp = await client.post("/oauth2/token", data=data)
-    ### response is {'access_token': <token>, 'token_type': 'Bearer'}
+    ### resp.json() is {'access_token': <token>, 'token_type': 'Bearer'}
     return resp.json()
 
 
@@ -40,15 +43,20 @@ async def index():
     return {"Hello": "World"}
 
 
-# See security.py comment, consider a User model instead of dict?
-@router.get("/me")
-async def me(user: dict = Depends(get_current_user)):
+# response_model and responses dict translate to OpenAPI (Swagger) hints
+# compare and contrast what the /me endpoint looks like in Swagger vs /debug
+@router.get(
+    "/me",
+    response_model=User,
+    responses={401: {'model': AuthorizationError}, 400: {'model': HubApiError}},
+)
+async def me(user: User = Depends(get_current_user)):
     "Authenticated function that returns the User model"
     return user
 
 
 @router.get("/debug")
-async def index(request: Request, user: dict = Depends(get_current_user)):
+async def index(request: Request, user: User = Depends(get_current_user)):
     """
     Authenticated function that returns a few pieces of debug
      * Environ of the service process
