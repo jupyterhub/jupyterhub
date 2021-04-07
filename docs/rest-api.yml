@@ -1,13 +1,12 @@
 # see me at: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#/default
-swagger: '2.0'
+swagger: "2.0"
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
   version: 1.2.0dev
   license:
     name: BSD-3-Clause
-schemes:
-  [http, https]
+schemes: [http, https]
 securityDefinitions:
   token:
     type: apiKey
@@ -16,38 +15,41 @@ securityDefinitions:
   oauth2:
     type: oauth2
     flow: accessCode
-    authorizationUrl: '/hub/api/oauth2/authorize' # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
-    tokenUrl: '/hub/api/oauth2/token'
+    authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
+    tokenUrl: "/hub/api/oauth2/token"
     scopes:
-      all: Everything a user can do
-      read:all: Read-only access to everything a user can read (also whoami handler)
+      self: Everything a standard user can do
+      all: Everything a token owner can do
       users: Grants access to managing users including reading users’ model, posting activity and starting/stoping users servers
       read:users: Read-only access to the above
-      read:users!user=username: Read-only access to a single user's model
+      read:users!user=username: Read-only access to a single user's model (example horizontal filter)
       read:users:name: Read-only access to users' names
       read:users:groups: Read-only access to users' groups
       read:users:activity: Read-only access to users' activity
-      read:users:activity!group=groupname: Read-only access to specific group's users' activity
-      read:users:servers: Read-only access to users' servers
-      users:activity!user=username: Update a user's activity
+      read:users:activity!group=groupname: Read-only access to specific group's users' activity (example horizontal filter)
+      users:activity: Update users' activity
+      users:activity!user=username: Update a single user's activity (example horizontal filter)
       users:servers: Grants access to start/stop any server
-      users:servers!server=servername: Limits the above to a specific server
+      users:servers!server=servername: Limits the above to a specific server (example horizontal filter)
+      read:users:servers: Read-only access to users' servers
       users:tokens: Grants access to users' token (includes create/revoke a token)
-      read:users:tokens: Identify a user from a token
-      admin:users: Grants access to creating/removing users
-      admin:users:servers: Grants access to create/remove users' servers
+      read:users:tokens: Read-only access to users' tokens
+      admin:users: Grants access to creating/removing users on top of managing access
+      admin:users:auth_state: Access users' auth state
+      admin:users:servers: Grants access to create/remove users' servers on top of managing access
+      admin:users:server_state: Access servers' state
       groups: Add/remove users from any group
-      groups!group=groupname: Add/remove users from a specific group only
+      groups!group=groupname: Add/remove users from a specific group only (example horizontal filter)
       read:groups: Read-only access to groups
       admin:groups: Grants access to create/delete groups
       read:services: Read-only access to services
       read:hub: Read-only access to detailed information about JupyterHub
       proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
       shutdown: Grants access to shutdown the Hub
-security: 
+security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope self) or have both (either can be used)?
   - token: []
   - oauth2:
-    - all
+      - self
 basePath: /hub/api
 produces:
   - application/json
@@ -61,7 +63,7 @@ paths:
         This endpoint is not authenticated for the purpose of clients and user
         to identify the JupyterHub version before setting up authentication.
       responses:
-        '200':
+        "200":
           description: The JupyterHub version
           schema:
             type: object
@@ -72,15 +74,15 @@ paths:
   /info:
     get:
       summary: Get detailed info about JupyterHub
+      security:
+        - oauth2:
+            - read:hub
       description: |
         Detailed JupyterHub information, including Python version,
         JupyterHub's version and executable path,
         and which Authenticator and Spawner are active.
-      security:
-        - oauth2:
-          - read:hub
       responses:
-        '200':
+        "200":
           description: Detailed JupyterHub info
           schema:
             type: object
@@ -117,8 +119,12 @@ paths:
       summary: List users
       security:
         - oauth2:
-          - users
-          - read:users
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:users:servers
+            #TODO: add admin:users:auth_state/server_state?
       parameters:
         - name: state
           in: query
@@ -135,17 +141,17 @@ paths:
 
             Added in JupyterHub 1.3
       responses:
-        '200':
+        "200":
           description: The Hub's user list
           schema:
             type: array
             items:
-              $ref: '#/definitions/User'
+              $ref: "#/definitions/User"
     post:
       summary: Create multiple users
       security:
         - oauth2:
-          - admin:users
+            - admin:users
       parameters:
         - name: body
           in: body
@@ -162,21 +168,24 @@ paths:
                 description: whether the created users should be admins
                 type: boolean
       responses:
-        '201':
+        "201":
           description: The users have been created
           schema:
             type: array
             description: The created users
             items:
-              $ref: '#/definitions/User'
+              $ref: "#/definitions/User"
   /users/{name}:
     get:
       summary: Get a user by name
       security:
         - oauth2:
-          - users
-          - read:users
-          - read:users!user=username
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:users:servers
+            #TODO: add admin:users:auth_state/server_state?
       parameters:
         - name: name
           description: username
@@ -184,15 +193,15 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The User model
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
     post:
       summary: Create a single user
       security:
         - oauth2:
-          - admin:users
+            - admin:users
       parameters:
         - name: name
           description: username
@@ -200,16 +209,16 @@ paths:
           required: true
           type: string
       responses:
-        '201':
+        "201":
           description: The user has been created
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
     patch:
       summary: Modify a user
       description: Change a user's name or admin status
       security:
         - oauth2:
-          - users
+            - users
       parameters:
         - name: name
           description: username
@@ -230,15 +239,15 @@ paths:
                 type: boolean
                 description: update admin (optional, if another key is updated i.e. name)
       responses:
-        '200':
+        "200":
           description: The updated user info
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
     delete:
       summary: Delete a user
       security:
         - oauth2:
-          - admin:users
+            - admin:users
       parameters:
         - name: name
           description: username
@@ -246,20 +255,17 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        "204":
           description: The user has been deleted
   /users/{name}/activity:
     post:
-      summary:
-        Notify Hub of activity for a given user.
-      description:
-        Notify the Hub of activity by the user,
+      summary: Notify Hub of activity for a given user.
+      description: Notify the Hub of activity by the user,
         e.g. accessing a service or (more likely)
         actively using a server.
       security:
         - oauth2:
-          - users
-          - users:activity!user=username
+            - users:activity
       parameters:
         - name: name
           description: username
@@ -285,7 +291,7 @@ paths:
                   The default server has an empty name ('').
                 type: object
                 properties:
-                  '<server name>':
+                  "<server name>":
                     description: |
                       Activity for a single server.
                     type: object
@@ -298,24 +304,23 @@ paths:
                         description: |
                           Timestamp of last-seen activity on this server.
             example:
-              last_activity: '2019-02-06T12:54:14Z'
+              last_activity: "2019-02-06T12:54:14Z"
               servers:
-                '':
-                  last_activity: '2019-02-06T12:54:14Z'
+                "":
+                  last_activity: "2019-02-06T12:54:14Z"
                 gpu:
-                  last_activity: '2019-02-06T12:54:14Z'
+                  last_activity: "2019-02-06T12:54:14Z"
       responses:
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
+        "401":
+          $ref: "#/responses/Unauthorized"
+        "404":
           description: No such user
   /users/{name}/server:
     post:
       summary: Start a user's single-user notebook server
       security:
         - oauth2:
-          - users
-          - users:servers
+            - users:servers
       parameters:
         - name: name
           description: username
@@ -336,16 +341,15 @@ paths:
             type: object
 
       responses:
-        '201':
+        "201":
           description: The user's notebook server has started
-        '202':
+        "202":
           description: The user's notebook server has not yet started, but has been requested
     delete:
       summary: Stop a user's server
       security:
         - oauth2:
-          - users
-          - users:servers
+            - users:servers
       parameters:
         - name: name
           description: username
@@ -353,18 +357,16 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        "204":
           description: The user's notebook server has stopped
-        '202':
+        "202":
           description: The user's notebook server has not yet stopped as it is taking a while to stop
   /users/{name}/servers/{server_name}:
     post:
       summary: Start a user's single-user named-server notebook server
       security:
         - oauth2:
-          - users
-          - users:servers
-          - users:servers!server=servername
+            - users:servers
       parameters:
         - name: name
           description: username
@@ -374,7 +376,7 @@ paths:
         - name: server_name
           description: |
             name given to a named-server. 
-            
+
             Note that depending on your JupyterHub infrastructure there are chracterter size limitation to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
           in: path
           required: true
@@ -390,17 +392,15 @@ paths:
           schema:
             type: object
       responses:
-        '201':
+        "201":
           description: The user's notebook named-server has started
-        '202':
+        "202":
           description: The user's notebook named-server has not yet started, but has been requested
     delete:
       summary: Stop a user's named-server
       security:
         - oauth2:
-          - users
-          - users:servers
-          - users:servers!server=servername
+            - users:servers
       parameters:
         - name: name
           description: username
@@ -425,9 +425,9 @@ paths:
                   Removing a server deletes things like the state of the stopped server.
                   Default: false.
       responses:
-        '204':
+        "204":
           description: The user's notebook named-server has stopped
-        '202':
+        "202":
           description: The user's notebook named-server has not yet stopped as it is taking a while to stop
   /users/{name}/tokens:
     parameters:
@@ -440,23 +440,23 @@ paths:
       summary: List tokens for the user
       security:
         - oauth2:
-          - users:tokens
+            - read:users:tokens
       responses:
-        '200':
+        "200":
           description: The list of tokens
           schema:
             type: array
             items:
-              $ref: '#/definitions/Token'
-        '401':
-          $ref: '#/responses/Unauthorized'
-        '404':
+              $ref: "#/definitions/Token"
+        "401":
+          $ref: "#/responses/Unauthorized"
+        "404":
           description: No such user
     post:
       summary: Create a new token for the user
       security:
         - oauth2:
-          - users:tokens
+            - users:tokens
       parameters:
         - name: token_params
           in: body
@@ -471,19 +471,19 @@ paths:
                 type: string
                 description: A note attached to the token for future bookkeeping
               roles:
-                type: list
+                type: array
+                items:
+                  type: string
                 description: A list of role names that the token should have
       responses:
-        '201':
+        "201":
           description: The newly created token
           schema:
-            $ref: '#/definitions/Token'
-        '400':
+            $ref: "#/definitions/Token"
+        "400":
           description: Body must be a JSON dict or empty
-        '403':
-          description: Requested roles cannot have higher permissions than the token owner
-        '404':
-          description: Requested roles not found
+        "403":
+          description: Requested role does not exist
   /users/{name}/tokens/{token_id}:
     parameters:
       - name: name
@@ -499,54 +499,55 @@ paths:
       summary: Get the model for a token by id
       security:
         - oauth2:
-          - users:tokens
+            - read:users:tokens
       responses:
-        '200':
+        "200":
           description: The info for the new token
           schema:
-            $ref: '#/definitions/Token'
+            $ref: "#/definitions/Token"
     delete:
       summary: Delete (revoke) a token by id
       security:
         - oauth2:
-          - users:tokens
+            - users:tokens
       responses:
-        '204':
+        "204":
           description: The token has been deleted
   /user:
     get:
       summary: Return authenticated user's model
       security:
         - oauth2:
-          - all
-          - read:all
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:users:servers
+            #TODO: add admin:users:auth_state/server_state?
       responses:
-        '200':
+        "200":
           description: The authenticated user's model is returned.
           schema:
-            $ref: '#/definitions/User'
+            $ref: "#/definitions/User"
   /groups:
     get:
       summary: List groups
       security:
         - oauth2:
-          - groups
-          - read:groups
+            - read:groups
       responses:
-        '200':
+        "200":
           description: The list of groups
           schema:
             type: array
             items:
-              $ref: '#/definitions/Group'
+              $ref: "#/definitions/Group"
   /groups/{name}:
     get:
       summary: Get a group by name
       security:
         - oauth2:
-          - groups
-          - groups!group=groupname
-          - read:groups
+            - read:groups
       parameters:
         - name: name
           description: group name
@@ -554,15 +555,15 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The group model
           schema:
-            $ref: '#/definitions/Group'
+            $ref: "#/definitions/Group"
     post:
       summary: Create a group
       security:
         - oauth2:
-          - admin:groups
+            - admin:groups
       parameters:
         - name: name
           description: group name
@@ -570,15 +571,15 @@ paths:
           required: true
           type: string
       responses:
-        '201':
+        "201":
           description: The group has been created
           schema:
-            $ref: '#/definitions/Group'
+            $ref: "#/definitions/Group"
     delete:
       summary: Delete a group
       security:
         - oauth2:
-          - admin:groups
+            - admin:groups
       parameters:
         - name: name
           description: group name
@@ -586,15 +587,14 @@ paths:
           required: true
           type: string
       responses:
-        '204':
+        "204":
           description: The group has been deleted
   /groups/{name}/users:
     post:
       summary: Add users to a group
       security:
         - oauth2:
-          - groups
-          - groups!group=groupname
+            - groups
       parameters:
         - name: name
           description: group name
@@ -614,16 +614,15 @@ paths:
                 items:
                   type: string
       responses:
-        '200':
+        "200":
           description: The users have been added to the group
           schema:
-            $ref: '#/definitions/Group'
+            $ref: "#/definitions/Group"
     delete:
       summary: Remove users from a group
       security:
         - oauth2:
-          - groups
-          - groups!group=groupname
+            - groups
       parameters:
         - name: name
           description: group name
@@ -643,27 +642,27 @@ paths:
                 items:
                   type: string
       responses:
-        '200':
+        "200":
           description: The users have been removed from the group
   /services:
     get:
       summary: List services
       security:
         - oauth2:
-          - read:services
+            - read:services
       responses:
-        '200':
+        "200":
           description: The service list
           schema:
             type: array
             items:
-              $ref: '#/definitions/Service'
+              $ref: "#/definitions/Service"
   /services/{name}:
     get:
       summary: Get a service by name
       security:
         - oauth2:
-          - read:services
+            - read:services
       parameters:
         - name: name
           description: service name
@@ -671,19 +670,19 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The Service model
           schema:
-            $ref: '#/definitions/Service'
+            $ref: "#/definitions/Service"
   /proxy:
     get:
       summary: Get the proxy's routing table
       description: A convenience alias for getting the routing table directly from the proxy
       security:
         - oauth2:
-          - proxy
+            - proxy
       responses:
-        '200':
+        "200":
           description: Routing table
           schema:
             type: object
@@ -692,16 +691,16 @@ paths:
       summary: Force the Hub to sync with the proxy
       security:
         - oauth2:
-          - proxy
+            - proxy
       responses:
-        '200':
+        "200":
           description: Success
     patch:
       summary: Notify the Hub about a new proxy
       description: Notifies the Hub of a new proxy to use.
       security:
         - oauth2:
-          - proxy
+            - proxy
       parameters:
         - name: body
           in: body
@@ -723,7 +722,7 @@ paths:
                 type: string
                 description: CONFIGPROXY_AUTH_TOKEN for the new proxy
       responses:
-        '200':
+        "200":
           description: Success
   /authorizations/token:
     post:
@@ -736,7 +735,7 @@ paths:
         accepts passwords (e.g. not OAuth).
       security:
         - oauth2:
-          - users:tokens # minrk: this is a deprecated alias to POST /users/{name}/tokens, either remove it or use the same scope
+            - users:tokens # minrk: this is a deprecated alias to POST /users/{name}/tokens, either remove it or use the same scope
       parameters:
         - name: credentials
           in: body
@@ -748,7 +747,7 @@ paths:
               password:
                 type: string
       responses:
-        '200':
+        "200":
           description: The new API token
           schema:
             type: object
@@ -756,23 +755,23 @@ paths:
               token:
                 type: string
                 description: The new API token.
-        '403':
+        "403":
           description: The user can not be authenticated.
   /authorizations/token/{token}:
     get:
       summary: Identify a user or service from an API token
       security:
         - oauth2:
-          - read:users:tokens # minrk: is it really necessary to have a scope for this, or use self handler for token whoami?
+            - read:users:tokens # minrk: is it really necessary to have a scope for this, or use self handler for token whoami?
       parameters:
         - name: token
           in: path
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The user or service identified by the API token
-        '404':
+        "404":
           description: A user or service is not found.
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
@@ -788,16 +787,16 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: The user identified by the cookie
           schema:
-            $ref: '#/definitions/User'
-        '404':
+            $ref: "#/definitions/User"
+        "404":
           description: A user is not found.
       deprecated: true # minrk: let’s not add a scope for this, let’s remove it
   /oauth2/authorize:
     get:
-      summary: 'OAuth 2.0 authorize endpoint'
+      summary: "OAuth 2.0 authorize endpoint"
       description: |
         Redirect users to this URL to begin the OAuth process.
         It is not an API endpoint.
@@ -823,9 +822,9 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: Success
-        '400':
+        "400":
           description: OAuth2Error
   /oauth2/token:
     post:
@@ -862,7 +861,7 @@ paths:
           required: true
           type: string
       responses:
-        '200':
+        "200":
           description: JSON response including the token
           schema:
             type: object
@@ -878,7 +877,7 @@ paths:
       summary: Shutdown the Hub
       security:
         - oauth2:
-          - shutdown
+            - shutdown
       parameters:
         - name: body
           in: body
@@ -892,9 +891,9 @@ paths:
                 type: boolean
                 description: Whether users' notebook servers should be shutdown as well (default from Hub config)
       responses:
-        '202':
+        "202":
           description: Shutdown successful
-        '400':
+        "400":
           description: Unexpeced value for proxy or servers
 # Descriptions of common responses
 responses:
@@ -937,7 +936,11 @@ definitions:
         type: array
         description: The active servers for this user.
         items:
-          $ref: '#/definitions/Server'
+          $ref: "#/definitions/Server"
+      auth_state:
+        type: string
+        #TODO: will there be predefined states? Should it rather be object instead of string?
+        description: Authentication state of the user. Only available with admin:users:auth_state scope. None otherwise. 
   Server:
     type: object
     properties:
@@ -974,7 +977,7 @@ definitions:
         description: UTC timestamp last-seen activity on this server.
       state:
         type: object
-        description: Arbitrary internal state from this server's spawner.  Only available on the hub's users list or get-user-by-name method, and only if a hub admin.  None otherwise.
+        description: Arbitrary internal state from this server's spawner. Only available on the hub's users list or get-user-by-name method, and only with admin:users:server_state scope. None otherwise.
       user_options:
         type: object
         description: User specified options for the user's spawned instance of a single-user server.
@@ -987,6 +990,11 @@ definitions:
       users:
         type: array
         description: The names of users who are members of this group
+        items:
+          type: string
+      roles:
+        type: array
+        description: The names of roles this group has
         items:
           type: string
   Service:
