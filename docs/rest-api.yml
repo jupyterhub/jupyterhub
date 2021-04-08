@@ -218,7 +218,8 @@ paths:
       description: Change a user's name or admin status
       security:
         - oauth2:
-            - users
+            - admin:users
+            #TODO: confirm, this scope allows to also create/delete users but users scope would allow any user to change their own name and admin status
       parameters:
         - name: name
           description: username
