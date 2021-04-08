@@ -320,9 +320,15 @@ class APIHandler(BaseHandler):
                 # todo: Remove once we replace admin flag with role check
         return model
 
-    _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
+    _user_model_types = {
+        'name': str,
+        'admin': bool,
+        'groups': list,
+        'roles': list,
+        'auth_state': dict,
+    }
 
-    _group_model_types = {'name': str, 'users': list}
+    _group_model_types = {'name': str, 'users': list, 'roles': list}
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request
