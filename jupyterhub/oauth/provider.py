@@ -558,19 +558,23 @@ class JupyterHubOAuthServer(WebApplicationServer):
 
         hash its client_secret before putting it in the database.
         """
-        # clear existing clients with same ID
-        for orm_client in self.db.query(orm.OAuthClient).filter_by(
-            identifier=client_id
-        ):
-            self.db.delete(orm_client)
-        self.db.commit()
-
-        orm_client = orm.OAuthClient(
-            identifier=client_id,
-            secret=hash_token(client_secret),
-            redirect_uri=redirect_uri,
-            description=description,
+        # Update client if it already exists, else create it
+        # Sqlalchemy doesn't have a good db agnostic UPSERT,
+        # so we do this manually. It's protected inside a
+        # transaction, so should fail if there are multiple
+        # rows with the same identifier.
+        # TODO: Is this safe?
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
         )
+        if orm_client is None:
+            orm_client = orm.OAuthClient(
+                identifier=client_id,
+            )
+
+        orm_client.secret = hash_token(client_secret)
+        orm_client.redirect_uri = redirect_uri
+        orm_client.description = description
         self.db.add(orm_client)
         self.db.commit()
 
