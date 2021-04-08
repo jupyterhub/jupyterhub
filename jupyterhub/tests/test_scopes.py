@@ -540,6 +540,7 @@ async def test_metascope_self_expansion(app, kind, has_user_scopes):
     assert bool(token_scopes) == has_user_scopes
     app.db.delete(orm_obj)
     app.db.delete(test_role)
+    app.db.commit()
 
 
 async def test_metascope_all_expansion(app):
@@ -557,3 +558,77 @@ async def test_metascope_all_expansion(app):
     app.db.commit()
     token_scope_set = get_scopes_for(token)
     assert not token_scope_set
+
+
+@mark.parametrize(
+    "scopes, can_stop ,num_servers, keys_in, keys_out",
+    [
+        (['read:users:servers!user=almond'], False, 2, {'name'}, {'state'}),
+        (
+            ['admin:users:server_state', 'read:users:servers'],
+            True,
+            2,
+            {'name', 'state'},
+            set(),
+        ),
+        (['users:servers', 'read:users:name'], True, 0, set(), set()),
+        (
+            [
+                'read:users:name!user=almond',
+                'read:users:servers!server=almond/bianca',  # fixme: server-scope not working yet
+                'admin:users:server_state!server=almond/bianca',
+            ],
+            False,
+            1,
+            {'name', 'state'},
+            set(),
+        ),
+    ],
+)
+async def test_server_state_access(
+    app, scopes, can_stop, num_servers, keys_in, keys_out
+):
+    with mock.patch.dict(
+        app.tornado_settings,
+        {'allow_named_servers': True, 'named_server_limit_per_user': 2},
+    ):
+        ## 1. Test a user can access all servers without auth_state
+        ## 2. Test a service with admin:user but no admin:users:servers gets no access to any server data
+        ## 3. Test a service with admin:user:server_state gets access to auth_state
+        ## 4. Test a service with user:servers:server gives access to one server, and the correct server.
+        username = 'almond'
+        user = add_user(app.db, app, name=username)
+
+        server_names = ['bianca', 'terry']
+        try:
+            for server_name in server_names:
+                await api_request(
+                    app, 'users', username, 'servers', server_name, method='post'
+                )
+            role = orm.Role(name=f"{username}-role", scopes=scopes)
+            app.db.add(role)
+            app.db.commit()
+            service_name = 'server_accessor'
+            service = orm.Service(name=service_name)
+            app.db.add(service)
+            service.roles.append(role)
+            app.db.commit()
+            api_token = service.new_api_token()
+            app.init_roles()
+            headers = {'Authorization': 'token %s' % api_token}
+            r = await api_request(app, 'users', username, headers=headers)
+            r.raise_for_status()
+            user_model = r.json()
+            if num_servers:
+                assert 'servers' in user_model
+                server_models = user_model['servers']
+                assert len(server_models) == num_servers
+                for server, server_model in server_models.items():
+                    assert keys_in.issubset(server_model)
+                    assert keys_out.isdisjoint(server_model)
+            else:
+                assert 'servers' not in user_model
+        finally:
+            app.db.delete(role)
+            app.db.delete(service)
+            app.db.commit()

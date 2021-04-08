@@ -188,11 +188,13 @@ class UserAPIHandler(APIHandler):
     @needs_scope(
         'read:users',
         'read:users:name',
-        'reda:users:servers',
+        'read:users:servers',
         'read:users:groups',
         'read:users:activity',
     )
-    async def get(self, user_name):
+    async def get(
+        self, user_name
+    ):  # Fixme: Does not work when only server filter is selected
         user = self.find_user(user_name)
         model = self.user_model(user)
         # auth state will only be shown if the requester is an admin
@@ -263,7 +265,7 @@ class UserAPIHandler(APIHandler):
 
         self.set_status(204)
 
-    @needs_scope('admin:users')
+    @needs_scope('admin:users')  # Todo: Change to `users`?
     async def patch(self, user_name):
         user = self.find_user(user_name)
         if user is None:
@@ -326,6 +328,7 @@ class UserTokenListAPIHandler(APIHandler):
             oauth_tokens.append(self.token_model(token))
         self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
+    # Todo: Set to @needs_scope('users:tokens')
     async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
@@ -765,7 +768,7 @@ class ActivityAPIHandler(APIHandler):
             )
         return servers
 
-    @needs_scope('users')
+    @needs_scope('users:activity')
     def post(self, user_name):
         user = self.find_user(user_name)
         if user is None:

@@ -90,8 +90,8 @@ def _get_scope_hierarchy():
             'read:users:servers',
         ],
         'users:tokens': ['read:users:tokens'],
-        'admin:users': ['admin:users:auth_state', 'admin:users:server_state'],
-        'admin:users:servers': None,
+        'admin:users': ['admin:users:auth_state'],
+        'admin:users:servers': ['admin:users:server_state'],
         'groups': ['read:groups'],
         'admin:groups': None,
         'read:services': None,
@@ -236,7 +236,7 @@ def assign_default_roles(db, entity):
     # tokens can have only 'token' role as default
     # assign the default only for tokens
     if isinstance(entity, orm.APIToken):
-        if not entity.roles and entity.user is not None:
+        if not entity.roles and (entity.user or entity.service) is not None:
             default_token_role.tokens.append(entity)
         db.commit()
     # users and services can have 'user' or 'admin' roles as default

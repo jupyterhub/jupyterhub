@@ -340,6 +340,12 @@ async def test_load_roles_tokens(tmpdir, request):
             'scopes': ['users:servers', 'admin:servers'],
             'tokens': ['another-secret-token'],
         },
+        {
+            'name': 'admin',
+            'description': 'Admin access',
+            'scopes': ['a lot'],
+            'users': ['admin'],
+        },
     ]
     kwargs = {
         'load_roles': roles_to_load,

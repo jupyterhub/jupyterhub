@@ -88,9 +88,12 @@ class APIHandler(BaseHandler):
             if sub_scope == scopes.Scope.ALL:
                 return True
             else:
-                found_resource = orm_resource.name in sub_scope[kind]
+                try:
+                    found_resource = orm_resource.name in sub_scope[kind]
+                except KeyError:
+                    found_resource = False
             if not found_resource:  # Try group-based access
-                if kind == 'server':
+                if kind == 'server' and 'user' in sub_scope:
                     # First check if we have access to user info
                     user_name = orm_resource.user.name
                     found_resource = user_name in sub_scope['user']
