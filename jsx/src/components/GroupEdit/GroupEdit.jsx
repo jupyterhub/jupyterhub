@@ -137,14 +137,4 @@ GroupEdit.propTypes = {
   refreshGroupsData: PropTypes.func,
 };
 
-const withGroupsAPI = withProps((props) => ({
-  addToGroup: (users, groupname) =>
-    jhapiRequest("/groups/" + groupname + "/users", "POST", { users }),
-  removeFromGroup: (users, groupname) =>
-    jhapiRequest("/groups/" + groupname + "/users", "DELETE", { users }),
-  deleteGroup: (name) => jhapiRequest("/groups/" + name, "DELETE"),
-  refreshGroupsData: () =>
-    jhapiRequest("/groups", "GET").then((data) => data.json()),
-}));
-
-export default compose(withGroupsAPI)(GroupEdit);
+export default GroupEdit;

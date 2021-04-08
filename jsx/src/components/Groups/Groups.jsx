@@ -102,21 +102,4 @@ Groups.propTypes = {
   }),
 };
 
-const withGroupsAPI = withProps((props) => ({
-  refreshGroupsData: () =>
-    jhapiRequest("/groups", "GET").then((data) => data.json()),
-  refreshUserData: () =>
-    jhapiRequest("/users", "GET").then((data) => data.json()),
-  addUsersToGroup: (name, new_users) =>
-    jhapiRequest("/groups/" + name + "/users", "POST", {
-      body: { users: new_users },
-      json: true,
-    }),
-  removeUsersFromGroup: (name, removed_users) =>
-    jhapiRequest("/groups/" + name + "/users", "DELETE", {
-      body: { users: removed_users },
-      json: true,
-    }),
-}));
-
-export default compose(withGroupsAPI)(Groups);
+export default Groups;

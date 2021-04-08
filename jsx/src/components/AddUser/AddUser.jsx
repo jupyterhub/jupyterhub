@@ -107,17 +107,4 @@ AddUser.propTypes = {
   }),
 };
 
-const withUserAPI = withProps((props) => ({
-  addUsers: (usernames, admin) =>
-    jhapiRequest("/users", "POST", { usernames, admin }),
-  failRegexEvent: () =>
-    alert(
-      "Removed " +
-        JSON.stringify(removed_users) +
-        " for either containing special characters or being too short."
-    ),
-  refreshUserData: () =>
-    jhapiRequest("/users", "GET").then((data) => data.json()),
-}));
-
-export default compose(withUserAPI)(AddUser);
+export default AddUser;

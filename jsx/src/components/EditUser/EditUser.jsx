@@ -1,11 +1,7 @@
 import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { compose, withProps } from "recompose";
+import { useDispatch } from "react-redux";
 import PropTypes from "prop-types";
-
 import { Link } from "react-router-dom";
-
-import { jhapiRequest } from "../../util/jhapiUtil";
 
 const EditUser = (props) => {
   var dispatch = useDispatch();
@@ -160,22 +156,4 @@ EditUser.propTypes = {
   refreshUserData: PropTypes.func,
 };
 
-const withUserAPI = withProps((props) => ({
-  editUser: (username, updated_username, admin) =>
-    jhapiRequest("/users/" + username, "PATCH", {
-      name: updated_username,
-      admin,
-    }),
-  deleteUser: (username) => jhapiRequest("/users/" + username, "DELETE"),
-  failRegexEvent: () =>
-    alert(
-      "Cannot change username - either contains special characters or is too short."
-    ),
-  noChangeEvent: () => {
-    returns;
-  },
-  refreshUserData: () =>
-    jhapiRequest("/users", "GET").then((data) => data.json()),
-}));
-
-export default compose(withUserAPI)(EditUser);
+export default EditUser;

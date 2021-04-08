@@ -1,30 +1,54 @@
 import React from "react";
-import Enzyme, { shallow } from "enzyme";
-import EditUser from "./EditUser.pre";
+import Enzyme, { mount } from "enzyme";
+import EditUser from "./EditUser";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
+import { Provider, useDispatch } from "react-redux";
+import { createStore } from "redux";
+import { HashRouter } from "react-router-dom";
 
 Enzyme.configure({ adapter: new Adapter() });
+
+jest.mock("react-redux", () => ({
+  ...jest.requireActual("react-redux"),
+  useDispatch: jest.fn(),
+}));
 
 describe("EditUser Component: ", () => {
   var mockAsync = () =>
     jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
   var mockSync = () => jest.fn();
 
-  var editUserJsx = (callbackSpy) => (
-    <EditUser
-      location={{ state: { username: "foo", has_admin: false } }}
-      deleteUser={callbackSpy}
-      editUser={callbackSpy}
-      refreshUserData={mockSync()}
-      history={{ push: (a) => {} }}
-      failRegexEvent={callbackSpy}
-      noChangeEvent={callbackSpy}
-    />
+  var editUserJsx = (callbackSpy, empty) => (
+    <Provider store={createStore(() => {}, {})}>
+      <HashRouter>
+        <EditUser
+          location={
+            empty ? {} : { state: { username: "foo", has_admin: false } }
+          }
+          deleteUser={callbackSpy}
+          editUser={callbackSpy}
+          refreshUserData={callbackSpy}
+          history={{ push: (a) => {} }}
+          failRegexEvent={callbackSpy}
+          noChangeEvent={callbackSpy}
+        />
+      </HashRouter>
+    </Provider>
   );
+
+  beforeEach(() => {
+    useDispatch.mockImplementation((callback) => {
+      return () => {};
+    });
+  });
+
+  afterEach(() => {
+    useDispatch.mockClear();
+  });
 
   it("Calls the delete user function when the button is pressed", () => {
     let callbackSpy = mockAsync(),
-      component = shallow(editUserJsx(callbackSpy)),
+      component = mount(editUserJsx(callbackSpy)),
       deleteUser = component.find("#delete-user");
     deleteUser.simulate("click");
     expect(callbackSpy).toHaveBeenCalled();
@@ -32,9 +56,15 @@ describe("EditUser Component: ", () => {
 
   it("Submits the edits when the button is pressed", () => {
     let callbackSpy = mockSync(),
-      component = shallow(editUserJsx(callbackSpy)),
+      component = mount(editUserJsx(callbackSpy)),
       submit = component.find("#submit");
     submit.simulate("click");
     expect(callbackSpy).toHaveBeenCalled();
+  });
+
+  it("Doesn't render when no data is provided", () => {
+    let callbackSpy = mockSync(),
+      component = mount(editUserJsx(callbackSpy, true));
+    expect(component.find(".container").length).toBe(0);
   });
 });

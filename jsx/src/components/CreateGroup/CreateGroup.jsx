@@ -81,16 +81,4 @@ CreateGroup.propTypes = {
   }),
 };
 
-const withGroupsAPI = withProps((props) => ({
-  createGroup: (groupName) => jhapiRequest("/groups/" + groupName, "POST"),
-  failRegexEvent: () =>
-    alert(
-      "Removed " +
-        JSON.stringify(removed_users) +
-        " for either containing special characters or being too short."
-    ),
-  refreshGroupsData: () =>
-    jhapiRequest("/groups", "GET").then((data) => data.json()),
-}));
-
-export default compose(withGroupsAPI)(CreateGroup);
+export default CreateGroup;
