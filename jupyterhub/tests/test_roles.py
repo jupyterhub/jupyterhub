@@ -10,6 +10,7 @@ from tornado.log import app_log
 
 from .. import orm
 from .. import roles
+from ..scopes import get_scopes_for
 from ..utils import maybe_future
 from .mocking import MockHub
 from .utils import add_user
@@ -326,13 +327,13 @@ async def test_delete_roles(db, role_type, rolename, response_type, response):
         assert check_role is not None
         # check the role is deleted and info raised
         with pytest.warns(response):
-            roles.remove_role(db, rolename)
+            roles.delete_role(db, rolename)
         check_role = orm.Role.find(db, rolename)
         assert check_role is None
 
     elif response_type == 'error':
         with pytest.raises(response):
-            roles.remove_role(db, rolename)
+            roles.delete_role(db, rolename)
 
 
 @mark.role
@@ -367,20 +368,20 @@ async def test_scope_existence(tmpdir, request, role, response):
     db = hub.db
 
     if response == 'existing':
-        roles.add_role(db, role)
+        roles.create_role(db, role)
         added_role = orm.Role.find(db, role['name'])
         assert added_role is not None
         assert added_role.scopes == role['scopes']
 
     elif response == NameError:
         with pytest.raises(response):
-            roles.add_role(db, role)
+            roles.create_role(db, role)
         added_role = orm.Role.find(db, role['name'])
         assert added_role is None
 
     # delete the tested roles
     if added_role:
-        roles.remove_role(db, added_role.name)
+        roles.delete_role(db, added_role.name)
 
 
 @mark.role
@@ -427,7 +428,7 @@ async def test_load_roles_users(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -507,7 +508,7 @@ async def test_load_roles_services(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -556,7 +557,7 @@ async def test_load_roles_groups(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -609,7 +610,7 @@ async def test_load_roles_user_tokens(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -652,12 +653,14 @@ async def test_load_roles_user_tokens_not_allowed(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
 async def test_load_roles_service_tokens(tmpdir, request):
-    services = [{'name': 'idle-culler', 'api_token': 'another-secret-token'}]
+    services = [
+        {'name': 'idle-culler', 'api_token': 'another-secret-token'},
+    ]
     service_tokens = {
         'another-secret-token': 'idle-culler',
     }
@@ -673,12 +676,6 @@ async def test_load_roles_service_tokens(tmpdir, request):
             ],
             'services': ['idle-culler'],
             'tokens': ['another-secret-token'],
-        },
-        {
-            'name': 'admin',
-            'description': 'Admin access',
-            'scopes': ['a lot'],
-            'users': ['admin'],
         },
     ]
     kwargs = {
@@ -714,7 +711,7 @@ async def test_load_roles_service_tokens(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -770,7 +767,7 @@ async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -858,7 +855,7 @@ async def test_self_expansion(app, kind, has_user_scopes):
     # test expansion of token scopes
     orm_obj.new_api_token()
     print(orm_obj.api_tokens[0])
-    token_scopes = scopes.get_scopes_for(orm_obj.api_tokens[0])
+    token_scopes = get_scopes_for(orm_obj.api_tokens[0])
     print(token_scopes)
     assert bool(token_scopes) == has_user_scopes
     app.db.delete(orm_obj)

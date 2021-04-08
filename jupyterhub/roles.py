@@ -86,6 +86,7 @@ def _get_scope_hierarchy():
     """
 
     scopes = {
+        'self': None,
         'all': None,  # Optional 'read:all' as subscope, not implemented at this stage
         'users': ['read:users', 'users:activity', 'users:servers'],
         'read:users': [
@@ -256,7 +257,7 @@ def create_role(db, role_dict):
     db.commit()
 
 
-def remove_role(db, rolename):
+def delete_role(db, rolename):
     """Removes a role from database"""
 
     # default roles are not removable
@@ -422,6 +423,44 @@ def update_roles(db, entity, roles):
         else:
             app_log.debug('Assigning default roles to %s', type(entity).__name__)
             grant_role(db, entity=entity, rolename=rolename)
+
+
+def add_predef_roles_tokens(db, predef_roles):
+
+    """Adds tokens to predefined roles in config file
+    if their permissions allow"""
+
+    for predef_role in predef_roles:
+        if 'tokens' in predef_role.keys():
+            token_role = orm.Role.find(db, name=predef_role['name'])
+            for token_name in predef_role['tokens']:
+                token = orm.APIToken.find(db, token_name)
+                if token is None:
+                    raise ValueError(
+                        "Token %r does not exist and cannot assign it to role %r"
+                        % (token_name, token_role.name)
+                    )
+                else:
+                    update_roles(db, token, roles=[token_role.name])
+
+
+def check_for_default_roles(db, bearer):
+
+    """Checks that role bearers have at least one role (default if none).
+    Groups can be without a role"""
+
+    Class = orm.get_class(bearer)
+    if Class == orm.Group:
+        pass
+    else:
+        for obj in (
+            db.query(Class)
+            .outerjoin(orm.Role, Class.roles)
+            .group_by(Class.id)
+            .having(func.count(orm.Role.id) == 0)
+        ):
+            assign_default_roles(db, obj)
+    db.commit()
 
 
 def mock_roles(app, name, kind):

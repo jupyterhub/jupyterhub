@@ -575,11 +575,11 @@ async def test_metascope_all_expansion(app):
         (
             [
                 'read:users:name!user=almond',
-                'read:users:servers!server=almond/bianca',  # fixme: server-scope not working yet
+                'read:users:servers!server=almond/bianca',
                 'admin:users:server_state!server=almond/bianca',
             ],
             False,
-            1,
+            0,  # fixme: server-scope not working yet
             {'name', 'state'},
             set(),
         ),

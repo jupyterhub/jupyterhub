@@ -305,6 +305,7 @@ class APIHandler(BaseHandler):
         if req_scope in self.parsed_scopes:
             scope_filter = self.get_scope_filter(req_scope)
             if scope_filter(group, kind='group'):
+                model['roles'] = [r.name for r in group.roles]
                 model['users'] = [u.name for u in group.users]
         return model
 
