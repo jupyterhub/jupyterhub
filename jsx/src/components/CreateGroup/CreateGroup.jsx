@@ -1,9 +1,21 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
+import { jhapiRequest } from "../../util/jhapiUtil";
 
 const CreateGroup = (props) => {
   var [groupName, setGroupName] = useState("");
+
+  var dispatch = useDispatch();
+
+  var dispatchGroupsData = (data) => {
+    dispatch({
+      type: "GROUPS_DATA",
+      value: data,
+    });
+  };
 
   var { createGroup, refreshGroupsData, history } = props;
 
@@ -40,12 +52,16 @@ const CreateGroup = (props) => {
                   className="btn btn-primary"
                   onClick={() => {
                     createGroup(groupName)
-                      .then(refreshGroupsData())
+                      .then(
+                        refreshGroupsData()
+                          .then((data) => dispatchGroupsData(data))
+                          .catch((err) => console.log(err))
+                      )
                       .then(history.push("/groups"))
                       .catch((err) => console.log(err));
                   }}
                 >
-                  Add Users
+                  Create
                 </button>
               </div>
             </div>
@@ -65,4 +81,16 @@ CreateGroup.propTypes = {
   }),
 };
 
-export default CreateGroup;
+const withGroupsAPI = withProps((props) => ({
+  createGroup: (groupName) => jhapiRequest("/groups/" + groupName, "POST"),
+  failRegexEvent: () =>
+    alert(
+      "Removed " +
+        JSON.stringify(removed_users) +
+        " for either containing special characters or being too short."
+    ),
+  refreshGroupsData: () =>
+    jhapiRequest("/groups", "GET").then((data) => data.json()),
+}));
+
+export default compose(withGroupsAPI)(CreateGroup);

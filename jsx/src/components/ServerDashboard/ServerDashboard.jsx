@@ -1,10 +1,15 @@
 import React, { useState } from "react";
+import { compose, withProps } from "recompose";
+import { useSelector, useDispatch } from "react-redux";
+import PropTypes from "prop-types";
+
 import { Button } from "react-bootstrap";
 import { Link } from "react-router-dom";
+import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
+
 import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
-import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
-import PropTypes from "prop-types";
+import { jhapiRequest } from "../../util/jhapiUtil";
 
 const ServerDashboard = (props) => {
   // sort methods
@@ -23,11 +28,13 @@ const ServerDashboard = (props) => {
     runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
     runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
 
-  var [addUser, setAddUser] = useState(false),
-    [sortMethod, setSortMethod] = useState(null);
+  var [sortMethod, setSortMethod] = useState(null);
+
+  var user_data = useSelector((state) => state.user_data);
+
+  const dispatch = useDispatch();
 
   var {
-    user_data,
     updateUsers,
     shutdownHub,
     startServer,
@@ -35,7 +42,6 @@ const ServerDashboard = (props) => {
     startAll,
     stopAll,
     history,
-    dispatch,
   } = props;
 
   var dispatchUserUpdate = (data) => {
@@ -45,7 +51,9 @@ const ServerDashboard = (props) => {
     });
   };
 
-  if (!user_data) return <div></div>;
+  if (!user_data) {
+    return <div></div>;
+  }
 
   if (sortMethod != null) {
     user_data = sortMethod(user_data);
@@ -280,4 +288,15 @@ SortHandler.propTypes = {
   callback: PropTypes.func,
 };
 
-export default ServerDashboard;
+const withHubActions = withProps((props) => ({
+  updateUsers: (cb) => jhapiRequest("/users", "GET"),
+  shutdownHub: () => jhapiRequest("/shutdown", "POST"),
+  startServer: (name) => jhapiRequest("/users/" + name + "/server", "POST"),
+  stopServer: (name) => jhapiRequest("/users/" + name + "/server", "DELETE"),
+  startAll: (names) =>
+    names.map((e) => jhapiRequest("/users/" + e + "/server", "POST")),
+  stopAll: (names) =>
+    names.map((e) => jhapiRequest("/users/" + e + "/server", "DELETE")),
+}));
+
+export default compose(withHubActions)(ServerDashboard);

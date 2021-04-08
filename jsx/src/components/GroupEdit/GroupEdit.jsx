@@ -1,13 +1,25 @@
 import React, { useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
-import Multiselect from "../Multiselect/Multiselect";
 import PropTypes from "prop-types";
+import { jhapiRequest } from "../../util/jhapiUtil";
+import Multiselect from "../Multiselect/Multiselect";
 
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
     [added, setAdded] = useState(undefined),
     [removed, setRemoved] = useState(undefined);
+
+  var dispatch = useDispatch();
+
+  const dispatchGroupsData = (data) => {
+    dispatch({
+      type: "GROUPS_DATA",
+      value: data,
+    });
+  };
 
   var {
     addToGroup,
@@ -91,7 +103,9 @@ const GroupEdit = (props) => {
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
-                .then(refreshGroupsData())
+                .then(
+                  refreshGroupsData().then((data) => dispatchGroupsData(data))
+                )
                 .then(history.push("/groups"))
                 .catch((err) => console.log(err));
             }}
@@ -123,4 +137,14 @@ GroupEdit.propTypes = {
   refreshGroupsData: PropTypes.func,
 };
 
-export default GroupEdit;
+const withGroupsAPI = withProps((props) => ({
+  addToGroup: (users, groupname) =>
+    jhapiRequest("/groups/" + groupname + "/users", "POST", { users }),
+  removeFromGroup: (users, groupname) =>
+    jhapiRequest("/groups/" + groupname + "/users", "DELETE", { users }),
+  deleteGroup: (name) => jhapiRequest("/groups/" + name, "DELETE"),
+  refreshGroupsData: () =>
+    jhapiRequest("/groups", "GET").then((data) => data.json()),
+}));
+
+export default compose(withGroupsAPI)(GroupEdit);

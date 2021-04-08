@@ -1,8 +1,22 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { compose, withProps } from "recompose";
 import PropTypes from "prop-types";
 
+import { Link } from "react-router-dom";
+
+import { jhapiRequest } from "../../util/jhapiUtil";
+
 const EditUser = (props) => {
+  var dispatch = useDispatch();
+
+  var dispatchUserData = (data) => {
+    dispatch({
+      type: "USER_DATA",
+      value: data,
+    });
+  };
+
   var {
     editUser,
     deleteUser,
@@ -61,7 +75,9 @@ const EditUser = (props) => {
                         deleteUser(username)
                           .then((data) => {
                             history.push("/");
-                            refreshUserData();
+                            refreshUserData()
+                              .then((data) => dispatchUserData(data))
+                              .catch((err) => console.log(err));
                           })
                           .catch((err) => console.log(err));
                       }}
@@ -95,7 +111,9 @@ const EditUser = (props) => {
                         )
                           .then((data) => {
                             history.push("/");
-                            refreshUserData();
+                            refreshUserData()
+                              .then((data) => dispatchUserData(data))
+                              .catch((err) => console.log(err));
                           })
                           .catch((err) => {});
                       } else {
@@ -106,7 +124,9 @@ const EditUser = (props) => {
                       editUser(username, username, admin)
                         .then((data) => {
                           history.push("/");
-                          refreshUserData();
+                          refreshUserData()
+                            .then((data) => dispatchUserData(data))
+                            .catch((err) => console.log(err));
                         })
                         .catch((err) => {});
                     }
@@ -140,4 +160,22 @@ EditUser.propTypes = {
   refreshUserData: PropTypes.func,
 };
 
-export default EditUser;
+const withUserAPI = withProps((props) => ({
+  editUser: (username, updated_username, admin) =>
+    jhapiRequest("/users/" + username, "PATCH", {
+      name: updated_username,
+      admin,
+    }),
+  deleteUser: (username) => jhapiRequest("/users/" + username, "DELETE"),
+  failRegexEvent: () =>
+    alert(
+      "Cannot change username - either contains special characters or is too short."
+    ),
+  noChangeEvent: () => {
+    returns;
+  },
+  refreshUserData: () =>
+    jhapiRequest("/users", "GET").then((data) => data.json()),
+}));
+
+export default compose(withUserAPI)(EditUser);
