@@ -9,6 +9,7 @@ from subprocess import Popen
 from async_generator import asynccontextmanager
 from tornado.ioloop import IOLoop
 
+from ..roles import update_roles
 from ..utils import maybe_future
 from ..utils import random_port
 from ..utils import url_path_join
@@ -91,8 +92,11 @@ async def test_external_service(app):
         await maybe_future(app.init_roles())
         await app.init_api_tokens()
         await app.proxy.add_all_services(app._service_map)
+        await app.init_roles()
 
         service = app._service_map[name]
+        api_token = service.orm.api_tokens[0]
+        update_roles(app.db, api_token, 'tokens', roles=['token'])
         url = public_url(app, service) + '/api/users'
         r = await async_requests.get(url, allow_redirects=False)
         r.raise_for_status()

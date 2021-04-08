@@ -1454,7 +1454,7 @@ async def test_groups_list(app):
     r = await api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': []}]
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
 
 @mark.group
@@ -1489,7 +1489,12 @@ async def test_group_get(app):
     r = await api_request(app, 'groups/alphaflight')
     r.raise_for_status()
     reply = r.json()
-    assert reply == {'kind': 'group', 'name': 'alphaflight', 'users': ['sasquatch']}
+    assert reply == {
+        'kind': 'group',
+        'name': 'alphaflight',
+        'users': ['sasquatch'],
+        'roles': [],
+    }
 
 
 @mark.group
@@ -1702,7 +1707,7 @@ async def test_update_activity_403(app, user, admin_user):
 
 
 async def test_update_activity_admin(app, user, admin_user):
-    token = admin_user.new_api_token()
+    token = admin_user.new_api_token(roles=['admin'])
     r = await api_request(
         app,
         "users/{}/activity".format(user.name),

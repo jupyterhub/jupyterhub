@@ -45,6 +45,7 @@ from . import mocking
 from .. import crypto
 from .. import orm
 from ..roles import mock_roles
+from ..roles import update_roles
 from ..utils import random_port
 from .mocking import MockHub
 from .test_services import mockservice_cmd
@@ -249,6 +250,8 @@ def _mockservice(request, app, url=False):
         mock_roles(app, name, 'services')
         assert name in app._service_map
         service = app._service_map[name]
+        token = service.orm.api_tokens[0]
+        update_roles(app.db, token, 'tokens', roles=['token'])
 
         async def start():
             # wait for proxy to be updated before starting the service

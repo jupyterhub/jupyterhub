@@ -1,4 +1,5 @@
 # Roles
+
 JupyterHub provides four roles that are available by default:
 
 ```{admonition} **Default roles**
@@ -11,10 +12,11 @@ JupyterHub provides four roles that are available by default:
 ```
 
 New roles can also be customly defined (see {ref}`define_role_target`). Roles can be assigned to the following entities:
+
 - Users
 - Services
 - Groups
-- Tokens 
+- Tokens
 
 An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added to or removed from entities at any time.
 
@@ -25,12 +27,14 @@ When a new user or service gets created, they are assigned their default role ( 
 A group does not require any role, and has no roles by default. If a user is a member of a group, they autimatically inherit any of the group's permissions (see {ref}`resolving-roles-scopes-target` for more details). This is useful for assigning a set of common permissions to several users.
 
 **Tokens** \
-A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific role is requested for a new token, the token is assigned the `token` role. 
+A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific role is requested for a new token, the token is assigned the `token` role.
 
 (define_role_target)=
+
 ## Defining Roles
 
 Roles can be defined or modified in the configuration file as a list of dictionaries. An example:
+
 ```python
 # in jupyterhub_config.py
 
@@ -46,16 +50,20 @@ c.JupyterHub.load_roles = [
  }
 ]
 ```
+
 The role `server-rights` now allows the starting and stopping of servers by any of the following:
+
 - users `alice` and `bob`
 - the service `idle-culler`
 - any member of the `admin-group`
 - requests using the tokens `foo-6f6e65` or `bar-74776f`.
+
 ```{attention}
 The `foo-6f6e65` and `bar-74776f` tokens will be assigned the `server-rights` role only if their owner has the corresponding permissions, otherwise JupyterHub throws an error. See {ref}`resolving-roles-scopes-target` for more details on how this is assessed.
 ```
 
 Another example:
+
 ```python
 # in jupyterhub_config.py
 
@@ -79,6 +87,7 @@ If no scopes are defined for new role, JupyterHub will raise a warning. Providin
 Moreover, `users`, `services`, `groups` and `tokens` only accept objects that already exist or are defined previously in the file.\
 It is not possible to implicitly add a new user to the database by defining a new role.
 ```
+
 \
 In case the role with a certain name already exists in the database, its definition and scopes will be overwritten. This holds true for all roles except the `admin` role, which cannot be overwritten; an error will be raised if trying to do so. \
 Any previously defined role bearers for this role will remain the role bearers but their permissions will change if the role's permissions are overwritten. The newly defined bearers (in this case `maria` and `joe` and `external`) will be added to the existing ones.

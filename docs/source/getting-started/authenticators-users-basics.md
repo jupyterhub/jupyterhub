@@ -9,7 +9,6 @@ with an account and password on the system will be allowed to login.
 You can restrict which users are allowed to login with a set,
 `Authenticator.allowed_users`:
 
-
 ```python
 c.Authenticator.allowed_users = {'mal', 'zoe', 'inara', 'kaylee'}
 ```
@@ -28,6 +27,7 @@ A set of initial admin users, `admin_users` can configured be as follows:
 ```python
 c.Authenticator.admin_users = {'mal', 'zoe'}
 ```
+
 Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 
@@ -44,8 +44,8 @@ c.PAMAuthenticator.admin_groups = {'wheel'}
 
 Since the default `JupyterHub.admin_access` setting is False, the admins
 do not have permission to log in to the single user notebook servers
-owned by *other users*. If `JupyterHub.admin_access` is set to True,
-then admins have permission to log in *as other users* on their
+owned by _other users_. If `JupyterHub.admin_access` is set to True,
+then admins have permission to log in _as other users_ on their
 respective machines, for debugging. **As a courtesy, you should make
 sure your users know if admin_access is enabled.**
 
@@ -115,5 +115,5 @@ To set a global password, add this to the config file:
 c.DummyAuthenticator.password = "some_password"
 ```
 
-[PAM]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
-[OAuthenticator]: https://github.com/jupyterhub/oauthenticator
+[pam]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
+[oauthenticator]: https://github.com/jupyterhub/oauthenticator

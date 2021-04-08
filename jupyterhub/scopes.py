@@ -6,33 +6,37 @@ from tornado import web
 from tornado.log import app_log
 
 from . import orm
+from . import roles
 
 
 class Scope(Enum):
     ALL = True
 
 
-def get_user_scopes(name):
-    """
-    Scopes have a metascope 'all' that should be expanded to everything a user can do.
-    At the moment that is a user-filtered version (optional read) access to
-    users
-    users:name
-    users:groups
-    users:activity
-    users:servers
-    users:tokens
-    """
-    scope_list = [
-        'users',
-        'users:name',
-        'users:groups',
-        'users:activity',
-        'users:servers',
-        'users:tokens',
-    ]
-    scope_list.extend(['read:' + scope for scope in scope_list])
-    return {"{}!user={}".format(scope, name) for scope in scope_list}
+def get_scopes_for(orm_object):
+    """Find scopes for a given user or token and resolve permissions"""
+    scopes = set()
+    if orm_object is None:
+        return scopes
+    elif isinstance(orm_object, orm.APIToken):
+        app_log.warning(f"Authenticated with token {orm_object}")
+        owner = orm_object.user or orm_object.service
+        token_scopes = roles.expand_roles_to_scopes(orm_object)
+        owner_scopes = roles.expand_roles_to_scopes(owner)
+        if 'all' in token_scopes:
+            token_scopes.remove('all')
+            token_scopes |= owner_scopes
+        scopes = token_scopes & owner_scopes
+        discarded_token_scopes = token_scopes - scopes
+        # Not taking symmetric difference here because token owner can naturally have more scopes than token
+        if discarded_token_scopes:
+            app_log.warning(
+                "discarding scopes [%s], not present in owner roles"
+                % ", ".join(discarded_token_scopes)
+            )
+    else:
+        scopes = roles.expand_roles_to_scopes(orm_object)
+    return scopes
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -54,65 +58,53 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     user = handler.find_user(user_name)
     if user is None:
         raise web.HTTPError(404, "No access to resources or resources not found")
-    group_names = {group.name for group in user.groups}  # Todo: Replace with SQL query
+    group_names = {group.name for group in user.groups}
     return bool(set(scope_group_names) & group_names)
 
 
-def _get_scope_filter(db, req_scope, sub_scope):
-    """Produce a filter for `*ListAPIHandlers* so that get method knows which models to return"""
-    scope_translator = {
-        'read:users': 'users',
-        'read:services': 'services',
-        'read:groups': 'groups',
-    }
-    if req_scope not in scope_translator:
-        raise AttributeError("Internal error: inconsistent scope situation")
-    kind = scope_translator[req_scope]
-    Resource = orm.get_class(kind)
-    sub_scope_values = next(iter(sub_scope.values()))
-    query = db.query(Resource).filter(Resource.name.in_(sub_scope_values))
-    scope_filter = {entry.name for entry in query.all()}
-    if 'group' in sub_scope and kind == 'users':
-        groups = orm.Group.name.in_(sub_scope['group'])
-        users_in_groups = db.query(orm.User).join(orm.Group.users).filter(groups)
-        scope_filter |= {user.name for user in users_in_groups}
-    return scope_filter
-
-
-def _check_scope(api_handler, req_scope, scopes, **kwargs):
+def _check_scope(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
-    Returns either Scope.ALL for unrestricted access, Scope.NONE for refused access or
-    an iterable with a filter
+    Returns True for (restricted) access, False for refused access
     """
     # Parse user name and server name together
+    try:
+        api_name = api_handler.request.path
+    except AttributeError:
+        api_name = type(api_handler).__name__
     if 'user' in kwargs and 'server' in kwargs:
         kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
-    if req_scope not in scopes:
+    if req_scope not in api_handler.parsed_scopes:
+        app_log.debug("No scopes present to access %s" % api_name)
         return False
-    if scopes[req_scope] == Scope.ALL:
+    if api_handler.parsed_scopes[req_scope] == Scope.ALL:
+        app_log.debug("Unrestricted access to %s call", api_name)
         return True
     # Apply filters
-    sub_scope = scopes[req_scope]
-    if 'scope_filter' in kwargs:
-        scope_filter = _get_scope_filter(api_handler.db, req_scope, sub_scope)
-        return scope_filter
-    else:
-        if not kwargs:
-            return False  # Separated from 404 error below because in this case we don't leak information
-        # Interface change: Now can have multiple filters
-        for (filter_, filter_value) in kwargs.items():
-            if filter_ in sub_scope and filter_value in sub_scope[filter_]:
+    sub_scope = api_handler.parsed_scopes[req_scope]
+    if not kwargs:
+        app_log.debug(
+            "Client has restricted access to %s. Internal filtering may apply"
+            % api_name
+        )
+        return True
+    for (filter_, filter_value) in kwargs.items():
+        if filter_ in sub_scope and filter_value in sub_scope[filter_]:
+            app_log.debug(
+                "Restricted client access supported by endpoint %s" % api_name
+            )
+            return True
+        if _needs_scope_expansion(filter_, filter_value, sub_scope):
+            group_names = sub_scope['group']
+            if _check_user_in_expanded_scope(api_handler, filter_value, group_names):
+                app_log.debug("Restricted client access supported with group expansion")
                 return True
-            if _needs_scope_expansion(filter_, filter_value, sub_scope):
-                group_names = sub_scope['group']
-                if _check_user_in_expanded_scope(
-                    api_handler, filter_value, group_names
-                ):
-                    return True
-        raise web.HTTPError(404, "No access to resources or resources not found")
+    app_log.debug(
+        "Client access refused; filters do not match API endpoint %s request" % api_name
+    )
+    raise web.HTTPError(404, "No access to resources or resources not found")
 
 
-def _parse_scopes(scope_list):
+def parse_scopes(scope_list):
     """
     Parses scopes and filters in something akin to JSON style
 
@@ -120,7 +112,7 @@ def _parse_scopes(scope_list):
     would lead to scope model
     {
        "users":scope.ALL,
-       "users:admin":{
+       "admin:users":{
           "user":[
              "alice"
           ]
@@ -148,7 +140,7 @@ def _parse_scopes(scope_list):
     return parsed_scopes
 
 
-def needs_scope(scope):
+def needs_scope(*scopes):
     """Decorator to restrict access to users or services with the required scope"""
 
     def scope_decorator(func):
@@ -157,42 +149,61 @@ def needs_scope(scope):
             sig = inspect.signature(func)
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
+            # Load scopes in case they haven't been loaded yet
+            if not hasattr(self, 'raw_scopes'):
+                self.raw_scopes = {}
+                self.parsed_scopes = {}
+
             s_kwargs = {}
             for resource in {'user', 'server', 'group', 'service'}:
                 resource_name = resource + '_name'
                 if resource_name in bound_sig.arguments:
                     resource_value = bound_sig.arguments[resource_name]
                     s_kwargs[resource] = resource_value
-            if 'scope_filter' in bound_sig.arguments:
-                s_kwargs['scope_filter'] = None
-            if 'all' in self.scopes and self.current_user:
-                self.scopes |= get_user_scopes(self.current_user.name)
-            parsed_scopes = _parse_scopes(self.scopes)
-            scope_filter = _check_scope(self, scope, parsed_scopes, **s_kwargs)
-            # todo: This checks if True/False or set of resource names. Can be improved
-            if isinstance(scope_filter, set):
-                kwargs['scope_filter'] = scope_filter
-            if scope_filter:
+            has_access = False
+            for scope in scopes:
+                has_access |= _check_scope(self, scope, **s_kwargs)
+            if has_access:
                 return func(self, *args, **kwargs)
             else:
-                # catching attr error occurring for older_requirements test
-                # could be done more ellegantly?
                 try:
-                    request_path = self.request.path
+                    end_point = self.request.path
                 except AttributeError:
-                    request_path = 'the requested API'
+                    end_point = self.__name__
                 app_log.warning(
-                    "Not authorizing access to {}. Requires scope {}, not derived from scopes [{}]".format(
-                        request_path, scope, ", ".join(self.scopes)
+                    "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
+                        end_point, ", ".join(scopes), ", ".join(self.raw_scopes)
                     )
                 )
                 raise web.HTTPError(
                     403,
-                    "Action is not authorized with current scopes; requires {}".format(
-                        scope
+                    "Action is not authorized with current scopes; requires any of [{}]".format(
+                        ", ".join(scopes)
                     ),
                 )
 
         return _auth_func
 
     return scope_decorator
+
+
+def identify_scopes(obj):
+    """Return 'identify' scopes for an orm object
+
+    Arguments:
+      obj: orm.User or orm.Service
+
+    Returns:
+      scopes (set): set of scopes needed for 'identify' endpoints
+    """
+    if isinstance(obj, orm.User):
+        return {
+            f"read:users:{field}!user={obj.name}"
+            for field in {"name", "admin", "groups"}
+        }
+    elif isinstance(obj, orm.Service):
+        return {
+            f"read:services:{field}!service={obj.name}" for field in {"name", "admin"}
+        }
+    else:
+        raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")

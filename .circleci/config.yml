@@ -24,7 +24,6 @@ jobs:
           command: |
             docker run --rm -it -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
 
-
 # Tell CircleCI to use this workflow when it builds the site
 workflows:
   version: 2

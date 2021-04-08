@@ -8,18 +8,17 @@ and a custom Spawner needs to be able to take three actions:
 - poll whether the process is still running
 - stop the process
 
-
 ## Examples
 
 Custom Spawners for JupyterHub can be found on the [JupyterHub wiki](https://github.com/jupyterhub/jupyterhub/wiki/Spawners).
 Some examples include:
 
 - [DockerSpawner](https://github.com/jupyterhub/dockerspawner) for spawning user servers in Docker containers
-  * `dockerspawner.DockerSpawner` for spawning identical Docker containers for
+  - `dockerspawner.DockerSpawner` for spawning identical Docker containers for
     each users
-  * `dockerspawner.SystemUserSpawner` for spawning Docker containers with an
+  - `dockerspawner.SystemUserSpawner` for spawning Docker containers with an
     environment and home directory for each users
-  * both `DockerSpawner` and `SystemUserSpawner` also work with Docker Swarm for
+  - both `DockerSpawner` and `SystemUserSpawner` also work with Docker Swarm for
     launching containers on remote machines
 - [SudoSpawner](https://github.com/jupyterhub/sudospawner) enables JupyterHub to
   run without being root, by spawning an intermediate process via `sudo`
@@ -29,7 +28,6 @@ Some examples include:
   servers in YARN containers on a Hadoop cluster
 - [SSHSpawner](https://github.com/NERSC/sshspawner) to spawn notebooks
   on a remote server using SSH
-
 
 ## Spawner control methods
 
@@ -41,7 +39,7 @@ an object encapsulating the user's name, authentication, and server info.
 
 The return value of `Spawner.start` should be the (ip, port) of the running server.
 
-**NOTE:** When writing coroutines, *never* `yield` in between a database change and a commit.
+**NOTE:** When writing coroutines, _never_ `yield` in between a database change and a commit.
 
 Most `Spawner.start` functions will look similar to this example:
 
@@ -80,7 +78,6 @@ to check if the local process is still running. On Windows, it uses `psutil.pid_
 
 `Spawner.stop` should stop the process. It must be a tornado coroutine, which should return when the process has finished exiting.
 
-
 ## Spawner state
 
 JupyterHub should be able to stop and restart without tearing down
@@ -111,7 +108,6 @@ def clear_state(self):
     super().clear_state()
     self.pid = 0
 ```
-
 
 ## Spawner options form
 
@@ -170,8 +166,7 @@ which would return:
 
 When `Spawner.start` is called, this dictionary is accessible as `self.user_options`.
 
-
-[Spawner]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/spawner.py
+[spawner]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/spawner.py
 
 ## Writing a custom spawner
 
@@ -212,7 +207,6 @@ Additionally, configurable attributes for your spawner will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
 
-
 ## Spawners, resource limits, and guarantees (Optional)
 
 Some spawners of the single-user notebook servers allow setting limits or
@@ -224,10 +218,9 @@ support for them**. For example, LocalProcessSpawner, the default
 spawner, does not support limits and guarantees. One of the spawners
 that supports limits and guarantees is the `systemdspawner`.
 
-
 ### Memory Limits & Guarantees
 
-`c.Spawner.mem_limit`: A **limit** specifies the *maximum amount of memory*
+`c.Spawner.mem_limit`: A **limit** specifies the _maximum amount of memory_
 that may be allocated, though there is no promise that the maximum amount will
 be available. In supported spawners, you can set `c.Spawner.mem_limit` to
 limit the total amount of memory that a single-user notebook server can
@@ -235,8 +228,8 @@ allocate. Attempting to use more memory than this limit will cause errors. The
 single-user notebook server can discover its own memory limit by looking at
 the environment variable `MEM_LIMIT`, which is specified in absolute bytes.
 
-`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a *minimum amount of
-memory* is desirable. In this case, you can set `c.Spawner.mem_guarantee` to
+`c.Spawner.mem_guarantee`: Sometimes, a **guarantee** of a _minimum amount of
+memory_ is desirable. In this case, you can set `c.Spawner.mem_guarantee` to
 to provide a guarantee that at minimum this much memory will always be
 available for the single-user notebook server to use. The environment variable
 `MEM_GUARANTEE` will also be set in the single-user notebook server.
@@ -271,7 +264,7 @@ utilize these certs, there are two methods of interest on the base `Spawner`
 class: `.create_certs` and `.move_certs`.
 
 The first method, `.create_certs` will sign a key-cert pair using an internally
-trusted authority for notebooks.  During this process, `.create_certs` can
+trusted authority for notebooks. During this process, `.create_certs` can
 apply `ip` and `dns` name information to the cert via an `alt_names` `kwarg`.
 This is used for certificate authentication (verification). Without proper
 verification, the `Notebook` will be unable to communicate with the `Hub` and

@@ -8,23 +8,25 @@ high performance computing.
 
 Please submit pull requests to update information or to add new institutions or uses.
 
-
 ## Academic Institutions, Research Labs, and Supercomputer Centers
 
 ### University of California Berkeley
 
 - [BIDS - Berkeley Institute for Data Science](https://bids.berkeley.edu/)
-    - [Teaching with Jupyter notebooks and JupyterHub](https://bids.berkeley.edu/resources/videos/teaching-ipythonjupyter-notebooks-and-jupyterhub)
+
+  - [Teaching with Jupyter notebooks and JupyterHub](https://bids.berkeley.edu/resources/videos/teaching-ipythonjupyter-notebooks-and-jupyterhub)
 
 - [Data 8](http://data8.org/)
-    - [GitHub organization](https://github.com/data-8)
+
+  - [GitHub organization](https://github.com/data-8)
 
 - [NERSC](http://www.nersc.gov/)
-    - [Press release on Jupyter and Cori](http://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
-    - [Moving and sharing data](https://www.nersc.gov/assets/Uploads/03-MovingAndSharingData-Cholia.pdf)
+
+  - [Press release on Jupyter and Cori](http://www.nersc.gov/news-publications/nersc-news/nersc-center-news/2016/jupyter-notebooks-will-open-up-new-possibilities-on-nerscs-cori-supercomputer/)
+  - [Moving and sharing data](https://www.nersc.gov/assets/Uploads/03-MovingAndSharingData-Cholia.pdf)
 
 - [Research IT](http://research-it.berkeley.edu)
-    - [JupyterHub server supports campus research computation](http://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
+  - [JupyterHub server supports campus research computation](http://research-it.berkeley.edu/blog/17/01/24/free-fully-loaded-jupyterhub-server-supports-campus-research-computation)
 
 ### University of California Davis
 
@@ -62,20 +64,21 @@ easy to do with RStudio too.
 ### Clemson University
 
 - Advanced Computing
-    - [Palmetto cluster and JupyterHub](http://citi.sites.clemson.edu/2016/08/18/JupyterHub-for-Palmetto-Cluster.html)
+  - [Palmetto cluster and JupyterHub](http://citi.sites.clemson.edu/2016/08/18/JupyterHub-for-Palmetto-Cluster.html)
 
 ### University of Colorado Boulder
 
 - (CU Research Computing) CURC
-    - [JupyterHub User Guide](https://www.rc.colorado.edu/support/user-guide/jupyterhub.html)
-        - Slurm job dispatched on Crestone compute cluster
-        - log troubleshooting
-        - Profiles in IPython Clusters tab
-    - [Parallel Processing with JupyterHub tutorial](https://www.rc.colorado.edu/support/examples-and-tutorials/parallel-processing-with-jupyterhub.html)
-    - [Parallel Programming with JupyterHub document](https://www.rc.colorado.edu/book/export/html/833)
+
+  - [JupyterHub User Guide](https://www.rc.colorado.edu/support/user-guide/jupyterhub.html)
+    - Slurm job dispatched on Crestone compute cluster
+    - log troubleshooting
+    - Profiles in IPython Clusters tab
+  - [Parallel Processing with JupyterHub tutorial](https://www.rc.colorado.edu/support/examples-and-tutorials/parallel-processing-with-jupyterhub.html)
+  - [Parallel Programming with JupyterHub document](https://www.rc.colorado.edu/book/export/html/833)
 
 - Earth Lab at CU
-    - [Tutorial on Parallel R on JupyterHub](https://earthdatascience.org/tutorials/parallel-r-on-jupyterhub/)
+  - [Tutorial on Parallel R on JupyterHub](https://earthdatascience.org/tutorials/parallel-r-on-jupyterhub/)
 
 ### George Washington University
 
@@ -112,7 +115,7 @@ easy to do with RStudio too.
 ### Paderborn University
 
 - [Data Science (DICE) group](https://dice.cs.uni-paderborn.de/)
-    - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
+  - [nbgraderutils](https://github.com/dice-group/nbgraderutils): Use JupyterHub + nbgrader + iJava kernel for online Java exercises. Used in lecture Statistical Natural Language Processing.
 
 ### Penn State University
 
@@ -125,27 +128,28 @@ easy to do with RStudio too.
 ### University of California San Diego
 
 - San Diego Supercomputer Center - Andrea Zonca
-    - [Deploy JupyterHub on a Supercomputer with SSH](https://zonca.github.io/2017/05/jupyterhub-hpc-batchspawner-ssh.html)
-    - [Run Jupyterhub on a Supercomputer](https://zonca.github.io/2015/04/jupyterhub-hpc.html)
-    - [Deploy JupyterHub on a VM for a Workshop](https://zonca.github.io/2016/04/jupyterhub-sdsc-cloud.html)
-    - [Customize your Python environment in Jupyterhub](https://zonca.github.io/2017/02/customize-python-environment-jupyterhub.html)
-    - [Jupyterhub deployment on multiple nodes with Docker Swarm](https://zonca.github.io/2016/05/jupyterhub-docker-swarm.html)
-    - [Sample deployment of Jupyterhub in HPC on SDSC Comet](https://zonca.github.io/2017/02/sample-deployment-jupyterhub-hpc.html)
+
+  - [Deploy JupyterHub on a Supercomputer with SSH](https://zonca.github.io/2017/05/jupyterhub-hpc-batchspawner-ssh.html)
+  - [Run Jupyterhub on a Supercomputer](https://zonca.github.io/2015/04/jupyterhub-hpc.html)
+  - [Deploy JupyterHub on a VM for a Workshop](https://zonca.github.io/2016/04/jupyterhub-sdsc-cloud.html)
+  - [Customize your Python environment in Jupyterhub](https://zonca.github.io/2017/02/customize-python-environment-jupyterhub.html)
+  - [Jupyterhub deployment on multiple nodes with Docker Swarm](https://zonca.github.io/2016/05/jupyterhub-docker-swarm.html)
+  - [Sample deployment of Jupyterhub in HPC on SDSC Comet](https://zonca.github.io/2017/02/sample-deployment-jupyterhub-hpc.html)
 
 - Educational Technology Services - Paul Jamason
-    - [jupyterhub.ucsd.edu](https://jupyterhub.ucsd.edu)
+  - [jupyterhub.ucsd.edu](https://jupyterhub.ucsd.edu)
 
 ### TACC University of Texas
 
 ### Texas A&M
 
 - Kristen Thyng - Oceanography
-    - [Teaching with JupyterHub and nbgrader](http://kristenthyng.com/blog/2016/09/07/jupyterhub+nbgrader/)
+  - [Teaching with JupyterHub and nbgrader](http://kristenthyng.com/blog/2016/09/07/jupyterhub+nbgrader/)
 
 ### Elucidata
-  - What's new in Jupyter Notebooks @[Elucidata](https://elucidata.io/):
-      - Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE
-            - https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d
+
+- What's new in Jupyter Notebooks @[Elucidata](https://elucidata.io/):
+  - Using Jupyter Notebooks with Jupyterhub on GCP, managed by GKE - https://medium.com/elucidata/why-you-should-be-using-a-jupyter-notebook-8385a4ccd93d
 
 ## Service Providers
 
@@ -174,7 +178,6 @@ easy to do with RStudio too.
 ### Hadoop
 
 - [Deploying JupyterHub on Hadoop](https://jupyterhub-on-hadoop.readthedocs.io)
-
 
 ## Miscellaneous
 

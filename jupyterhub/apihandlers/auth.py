@@ -13,8 +13,8 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm
+from .. import scopes
 from ..user import User
-from ..utils import compare_token
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -23,11 +23,23 @@ from .base import BaseHandler
 class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
+        # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
+        # TODO: require specific scope for this deprecated API, applied to oauth client secrets only?
+        self.log.warning(
+            "/authorizations/token/:token endpoint is deprecated in JupyterHub 2.0. Use /api/user"
+        )
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
             orm_token = orm.OAuthAccessToken.find(self.db, token)
         if orm_token is None:
             raise web.HTTPError(404)
+
+        owner = orm_token.user or orm_token.service
+        if owner:
+            # having a token means we should be able to read the owner's model
+            # (this is the only thing this handler is for)
+            self.raw_scopes.update(scopes.identify_scopes(owner))
+            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
 
         # record activity whenever we see a token
         now = orm_token.last_activity = datetime.utcnow()

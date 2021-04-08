@@ -3,18 +3,17 @@
 In this example, we show a configuration file for a fairly standard JupyterHub
 deployment with the following assumptions:
 
-* Running JupyterHub on a single cloud server
-* Using SSL on the standard HTTPS port 443
-* Using GitHub OAuth (using oauthenticator) for login
-* Using the default spawner (to configure other spawners, uncomment and edit
+- Running JupyterHub on a single cloud server
+- Using SSL on the standard HTTPS port 443
+- Using GitHub OAuth (using oauthenticator) for login
+- Using the default spawner (to configure other spawners, uncomment and edit
   `spawner_class` as well as follow the instructions for your desired spawner)
-* Users exist locally on the server
-* Users' notebooks to be served from `~/assignments` to allow users to browse
+- Users exist locally on the server
+- Users' notebooks to be served from `~/assignments` to allow users to browse
   for notebooks within other users' home directories
-* You want the landing page for each user to be a `Welcome.ipynb` notebook in
+- You want the landing page for each user to be a `Welcome.ipynb` notebook in
   their assignments directory.
-* All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
-
+- All runtime files are put into `/srv/jupyterhub` and log files in `/var/log`.
 
 The `jupyterhub_config.py` file would have these settings:
 

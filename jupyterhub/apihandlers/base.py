@@ -1,7 +1,9 @@
 """Base API handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import functools
 import json
+import re
 from datetime import datetime
 from http.client import responses
 
@@ -9,6 +11,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
 
 from .. import orm
+from .. import scopes
 from ..handlers import BaseHandler
 from ..utils import isoformat
 from ..utils import url_path_join
@@ -61,6 +64,38 @@ class APIHandler(BaseHandler):
             )
             return False
         return True
+
+    @functools.lru_cache()
+    def get_scope_filter(self, req_scope):
+        """Produce a filter for `*ListAPIHandlers* so that GET method knows which models to return.
+        Filter is a callable that takes a resource name and outputs true or false"""
+
+        try:
+            sub_scope = self.parsed_scopes[req_scope]
+        except AttributeError:
+            raise web.HTTPError(
+                403,
+                "Resource scope %s (that was just accessed) not found in parsed scope model"
+                % req_scope,
+            )
+
+        def has_access(orm_resource, kind):
+            """
+            param orm_resource: User or Service or Group
+            param kind: 'users' or 'services' or 'groups'
+            """
+            if sub_scope == scopes.Scope.ALL:
+                return True
+            else:
+                found_resource = orm_resource.name in sub_scope[kind]
+            if not found_resource:  # Try group-based access
+                if 'group' in sub_scope and kind == 'user':
+                    group_names = {group.name for group in orm_resource.groups}
+                    user_in_group = bool(group_names & set(sub_scope['group']))
+                    found_resource = user_in_group
+            return found_resource
+
+        return has_access
 
     def get_current_user_cookie(self):
         """Override get_user_cookie to check Referer header"""
@@ -189,7 +224,6 @@ class APIHandler(BaseHandler):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
-
         model = {
             'kind': 'user',
             'name': user.name,
@@ -201,30 +235,50 @@ class APIHandler(BaseHandler):
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
         }
-        if '' in user.spawners:
-            model['pending'] = user.spawners[''].pending
-
-        if not include_servers:
-            model['servers'] = None
-            return model
-
-        servers = model['servers'] = {}
-        for name, spawner in user.spawners.items():
-            # include 'active' servers, not just ready
-            # (this includes pending events)
-            if spawner.active:
-                servers[name] = self.server_model(spawner, include_state=include_state)
+        access_map = {
+            'read:users': set(model.keys()),  # All available components
+            'read:users:name': {'kind', 'name'},
+            'read:users:groups': {'kind', 'name', 'groups'},
+            'read:users:activity': {'kind', 'name', 'last_activity'},
+            'read:users:servers': {'kind', 'name', 'servers'},
+        }
+        self.log.debug(
+            "Asking for user model of %s with scopes [%s]",
+            user.name,
+            ", ".join(self.raw_scopes),
+        )
+        allowed_keys = set()
+        for scope in access_map:
+            if scope in self.parsed_scopes:
+                scope_filter = self.get_scope_filter(scope)
+                if scope_filter(user, kind='user'):
+                    allowed_keys |= access_map[scope]
+        model = {key: model[key] for key in allowed_keys if key in model}
+        if model:
+            if '' in user.spawners and 'pending' in allowed_keys:
+                model['pending'] = user.spawners[''].pending
+            if include_servers and 'servers' in allowed_keys:
+                # Todo: Replace include_state with scope (read|admin):users:auth_state
+                servers = model['servers'] = {}
+                for name, spawner in user.spawners.items():
+                    # include 'active' servers, not just ready
+                    # (this includes pending events)
+                    if spawner.active:
+                        servers[name] = self.server_model(
+                            spawner, include_state=include_state
+                        )
         return model
 
-    def group_model(self, group):
+    def group_model(self, group):  # Todo: make consistent to do scope checking here
         """Get the JSON model for a Group object"""
         return {
             'kind': 'group',
             'name': group.name,
             'users': [u.name for u in group.users],
+            'roles': [r.name for r in group.roles],
         }
 
-    def service_model(self, service):
+    def service_model(self, service):  # Todo: make consistent to do scope checking here
         """Get the JSON model for a Service object"""
         return {
             'kind': 'service',
@@ -233,9 +287,15 @@ class APIHandler(BaseHandler):
             'roles': [r.name for r in service.roles],
         }
 
-    _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
+    _user_model_types = {
+        'name': str,
+        'admin': bool,
+        'groups': list,
+        'roles': list,
+        'auth_state': dict,
+    }
 
-    _group_model_types = {'name': str, 'users': list}
+    _group_model_types = {'name': str, 'users': list, 'roles': list}
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request

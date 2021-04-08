@@ -940,7 +940,7 @@ definitions:
       auth_state:
         type: string
         #TODO: will there be predefined states? Should it rather be object instead of string?
-        description: Authentication state of the user. Only available with admin:users:auth_state scope. None otherwise. 
+        description: Authentication state of the user. Only available with admin:users:auth_state scope. None otherwise.
   Server:
     type: object
     properties:

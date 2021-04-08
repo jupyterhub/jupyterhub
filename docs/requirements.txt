@@ -7,6 +7,6 @@ https://github.com/jupyterhub/autodoc-traits/archive/75885ee24636efbfebfceed1043
 myst-parser
 pydata-sphinx-theme
 pytablewriter>=0.56
+sphinx>=1.7
 sphinx-copybutton
 sphinx-jsonschema
-sphinx>=1.7
