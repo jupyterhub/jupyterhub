@@ -1,40 +1,40 @@
 @import url(../../style/root.css);
 
 .multi-container {
-    width: 100%;
-    position: relative;
-    padding: 5px;
-    overflow-x: scroll;
+  width: 100%;
+  position: relative;
+  padding: 5px;
+  overflow-x: scroll;
 }
 
 .multi-container div {
-    display: inline-block;
+  display: inline-block;
 }
 
 .multi-container .item {
-    padding: 3px;
-    padding-left: 6px;
-    padding-right: 6px;
-    border-radius: 3px;
-    font-size: 14px;
-    margin-left: 4px;
-    margin-right: 4px;
-    transition: 30ms ease-in all;
-    cursor: pointer;
-    user-select: none;
-    border: solid 1px #dfdfdf;
+  padding: 3px;
+  padding-left: 6px;
+  padding-right: 6px;
+  border-radius: 3px;
+  font-size: 14px;
+  margin-left: 4px;
+  margin-right: 4px;
+  transition: 30ms ease-in all;
+  cursor: pointer;
+  user-select: none;
+  border: solid 1px #dfdfdf;
 }
 
 .multi-container .item.unselected {
-    background-color: #f7f7f7;
-    color: #777;
+  background-color: #f7f7f7;
+  color: #777;
 }
 
 .multi-container .item.selected {
-    background-color: orange;
-    color: white;
+  background-color: orange;
+  color: white;
 }
 
 .multi-container .item:hover {
-    opacity: 0.7;
+  opacity: 0.7;
 }

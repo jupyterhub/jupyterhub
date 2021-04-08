@@ -1,41 +1,33 @@
 {
-    "extends": [
-        "plugin:react/recommended"
-    ],
-    "parserOptions": {
-        "ecmaVersion": 6,
-        "sourceType": "module",
-        "ecmaFeatures": {
-            "jsx": true
-        }
-    },
-    "settings": {
-        "react": {
-            "version": "detect"
-        }
-    },
-    "plugins": [
-        "eslint-plugin-react",
-        "prettier"
-    ],
-    "env": {
-        "es6": true,
-        "browser": true
-    },
-    "rules": {
-        "semi": "off",
-        "quotes": "off",
-        "prettier/prettier": "warn"
-    },
-    "overrides": [
-        {
-            "files": [
-                "**/*.test.js",
-                "**/*.test.jsx"
-            ],
-            "env": {
-                "jest": true
-            }
-        }
-    ]
+  "extends": ["plugin:react/recommended"],
+  "parserOptions": {
+    "ecmaVersion": 6,
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true
+    }
+  },
+  "settings": {
+    "react": {
+      "version": "detect"
+    }
+  },
+  "plugins": ["eslint-plugin-react", "prettier"],
+  "env": {
+    "es6": true,
+    "browser": true
+  },
+  "rules": {
+    "semi": "off",
+    "quotes": "off",
+    "prettier/prettier": "warn"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.js", "**/*.test.jsx"],
+      "env": {
+        "jest": true
+      }
+    }
+  ]
 }

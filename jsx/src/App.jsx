@@ -17,7 +17,7 @@ import EditUser from "./components/EditUser/EditUser";
 
 import "./style/root.css";
 
-const store = createStore(reducers, initialState)
+const store = createStore(reducers, initialState);
 
 const App = (props) => {
   useEffect(() => {
