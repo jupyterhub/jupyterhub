@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import { compose, withProps } from "recompose";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import { EditUser } from "./EditUser.pre";
+import EditUser from "./EditUser.pre";
 
 const withUserAPI = withProps((props) => ({
   editUser: (username, updated_username, admin) =>
@@ -12,10 +12,11 @@ const withUserAPI = withProps((props) => ({
   deleteUser: (username) => jhapiRequest("/users/" + username, "DELETE"),
   failRegexEvent: () =>
     alert(
-      "Removed " +
-        JSON.stringify(removed_users) +
-        " for either containing special characters or being too short."
+      "Cannot change username - either contains special characters or is too short."
     ),
+  noChangeEvent: () => {
+    returns;
+  },
   refreshUserData: () =>
     jhapiRequest("/users", "GET")
       .then((data) => data.json())

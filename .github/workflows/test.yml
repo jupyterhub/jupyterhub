@@ -219,6 +219,9 @@ jobs:
         #        https://github.com/actions/runner/issues/241
         run: |
           pytest -v --maxfail=2 --color=yes --cov=jupyterhub jupyterhub/tests
+      - name: Run yarn jest test
+        run: |
+          npm install -g yarn && cd jsx && yarn && yarn test
       - name: Submit codecov report
         run: |
           codecov

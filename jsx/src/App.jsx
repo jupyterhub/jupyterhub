@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { Component, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
@@ -11,17 +11,16 @@ import { createBrowserHistory } from "history";
 import ServerDashboard from "./components/ServerDashboard/ServerDashboard";
 import Groups from "./components/Groups/Groups";
 import GroupEdit from "./components/GroupEdit/GroupEdit";
-import CreateGroup from "./components/CreateGroup/CreateGroup"
+import CreateGroup from "./components/CreateGroup/CreateGroup";
 import AddUser from "./components/AddUser/AddUser";
 import EditUser from "./components/EditUser/EditUser";
 
 import "./style/root.css";
 
-const store = createStore(reducers, initialState),
-  routerHistory = createBrowserHistory();
+const store = createStore(reducers, initialState)
 
-class App extends Component {
-  componentDidMount() {
+const App = (props) => {
+  useEffect(() => {
     jhapiRequest("/users", "GET")
       .then((data) => data.json())
       .then((data) => store.dispatch({ type: "USER_DATA", value: data }))
@@ -31,26 +30,24 @@ class App extends Component {
       .then((data) => data.json())
       .then((data) => store.dispatch({ type: "GROUPS_DATA", value: data }))
       .catch((err) => console.log(err));
-  }
+  });
 
-  render() {
-    return (
-      <div className="resets">
-        <Provider store={store}>
-          <HashRouter>
-            <Switch>
-              <Route exact path="/" component={ServerDashboard} />
-              <Route exact path="/groups" component={Groups} />
-              <Route exact path="/group-edit" component={GroupEdit} />
-              <Route exact path="/create-group" component={CreateGroup} />
-              <Route exact path="/add-users" component={AddUser} />
-              <Route exact path="/edit-user" component={EditUser} />
-            </Switch>
-          </HashRouter>
-        </Provider>
-      </div>
-    );
-  }
-}
+  return (
+    <div className="resets">
+      <Provider store={store}>
+        <HashRouter>
+          <Switch>
+            <Route exact path="/" component={ServerDashboard} />
+            <Route exact path="/groups" component={Groups} />
+            <Route exact path="/group-edit" component={GroupEdit} />
+            <Route exact path="/create-group" component={CreateGroup} />
+            <Route exact path="/add-users" component={AddUser} />
+            <Route exact path="/edit-user" component={EditUser} />
+          </Switch>
+        </HashRouter>
+      </Provider>
+    </div>
+  );
+};
 
 ReactDOM.render(<App />, document.getElementById("react-admin-hook"));

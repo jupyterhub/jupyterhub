@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import { compose, withProps } from "recompose";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import { AddUser } from "./AddUser.pre";
+import AddUser from "./AddUser.pre";
 
 const withUserAPI = withProps((props) => ({
   addUsers: (usernames, admin) =>

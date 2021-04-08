@@ -1,7 +1,7 @@
 import { compose, withProps } from "recompose";
 import { connect } from "react-redux";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import { Groups } from "./Groups.pre";
+import Groups from "./Groups.pre";
 
 const withGroupsAPI = withProps((props) => ({
   refreshGroupsData: () =>
@@ -21,7 +21,7 @@ const withGroupsAPI = withProps((props) => ({
     jhapiRequest("/groups/" + name + "/users", "DELETE", {
       body: { users: removed_users },
       json: true,
-    })
+    }),
 }));
 
 export default compose(

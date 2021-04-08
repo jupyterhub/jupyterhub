@@ -61,7 +61,6 @@
     "eslint-plugin-react": "^7.22.0",
     "identity-obj-proxy": "^3.0.0",
     "jest": "^26.6.3",
-    "prettier": "^2.2.1",
-    "react-test-renderer": "^17.0.1"
+    "prettier": "^2.2.1"
   }
 }

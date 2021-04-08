@@ -1,6 +1,6 @@
 import React from "react";
 import Enzyme, { shallow } from "enzyme";
-import { AddUser } from "./AddUser.pre";
+import AddUser from "./AddUser.pre";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 
 Enzyme.configure({ adapter: new Adapter() });
@@ -18,39 +18,28 @@ describe("AddUser Component: ", () => {
     />
   );
 
-  it("Updates state.users on textbox blur", () => {
-    let component = shallow(addUserJsx(mockAsync())),
-      textarea = component.find("textarea");
-    textarea.simulate("blur", { target: { value: "foo" } });
-    expect(JSON.stringify(component.state("users"))).toBe('["foo"]');
+  it("Renders", () => {
+    let component = shallow(addUserJsx(mockAsync()));
+    expect(component.find(".container").length).toBe(1);
   });
 
-  it("Can separate newline spaced names into an array", () => {
-    let component = shallow(addUserJsx(mockAsync())),
-      textarea = component.find("textarea");
-    textarea.simulate("blur", { target: { value: "foo\nbar\nsoforth" } });
-    expect(JSON.stringify(component.state("users"))).toBe(
-      '["foo","bar","soforth"]'
-    );
-  });
-
-  it("Deliminates names with special / less than 3 characters", () => {
-    let component = shallow(addUserJsx(mockAsync())),
-      textarea = component.find("textarea"),
-      submit = component.find("#submit");
-    textarea.simulate("blur", {
-      target: { value: "foo\nbar\nb%%%\n$andy\nhalfdecent" },
-    });
+  it("Removes users when they fail Regex", () => {
+    let callbackSpy = mockAsync(),
+      component = shallow(addUserJsx(callbackSpy)),
+      textarea = component.find("textarea").first();
+    textarea.simulate("blur", { target: { value: "foo\nbar\n!!*&*" } });
+    let submit = component.find("#submit");
     submit.simulate("click");
-    expect(JSON.stringify(component.state("users"))).toBe(
-      '["foo","bar","halfdecent"]'
-    );
+    expect(callbackSpy).toHaveBeenCalledWith(["foo", "bar"], false);
   });
 
-  it("Recognizes admin user selection", () => {
-    let component = shallow(addUserJsx(mockAsync())),
-      admin = component.find("#admin-check");
-    admin.simulate("change", { target: { checked: true } });
-    expect(component.state("admin")).toBe(true);
+  it("Correctly submits admin", () => {
+    let callbackSpy = mockAsync(),
+      component = shallow(addUserJsx(callbackSpy)),
+      input = component.find("input").first();
+    input.simulate("change", { target: { checked: true } });
+    let submit = component.find("#submit");
+    submit.simulate("click");
+    expect(callbackSpy).toHaveBeenCalledWith([], true);
   });
 });

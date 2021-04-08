@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import { compose, withProps } from "recompose";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import { CreateGroup } from "./CreateGroup.pre";
+import CreateGroup from "./CreateGroup.pre";
 
 const withUserAPI = withProps((props) => ({
   createGroup: (groupName) => jhapiRequest("/groups/" + groupName, "POST"),
