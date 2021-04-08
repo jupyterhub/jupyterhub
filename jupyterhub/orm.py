@@ -166,6 +166,14 @@ api_token_role_map = Table(
     Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
 )
 
+# group:role many:many mapping table
+group_role_map = Table(
+    'group_role_map',
+    Base.metadata,
+    Column('group_id', ForeignKey('groups.id', ondelete='CASCADE'), primary_key=True),
+    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
+)
+
 
 class Role(Base):
     """User Roles"""
@@ -178,6 +186,7 @@ class Role(Base):
     users = relationship('User', secondary='user_role_map', backref='roles')
     services = relationship('Service', secondary='service_role_map', backref='roles')
     tokens = relationship('APIToken', secondary='api_token_role_map', backref='roles')
+    groups = relationship('Group', secondary='group_role_map', backref='roles')
 
     def __repr__(self):
         return "<%s %s (%s) - scopes: %s>" % (
