@@ -2,11 +2,11 @@ import React, { Component, useEffect } from "react";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
 import { createStore } from "redux";
-import { Button } from "react-bootstrap";
+import { compose } from "recompose";
 import { initialState, reducers } from "./Store";
 import { jhapiRequest } from "./util/jhapiUtil";
+import withAPI from "./util/withAPI";
 import { HashRouter, Switch, Route, Link } from "react-router-dom";
-import { createBrowserHistory } from "history";
 
 import ServerDashboard from "./components/ServerDashboard/ServerDashboard";
 import Groups from "./components/Groups/Groups";
@@ -37,12 +37,32 @@ const App = (props) => {
       <Provider store={store}>
         <HashRouter>
           <Switch>
-            <Route exact path="/" component={ServerDashboard} />
-            <Route exact path="/groups" component={Groups} />
-            <Route exact path="/group-edit" component={GroupEdit} />
-            <Route exact path="/create-group" component={CreateGroup} />
-            <Route exact path="/add-users" component={AddUser} />
-            <Route exact path="/edit-user" component={EditUser} />
+            <Route
+              exact
+              path="/"
+              component={compose(withAPI)(ServerDashboard)}
+            />
+            <Route exact path="/groups" component={compose(withAPI)(Groups)} />
+            <Route
+              exact
+              path="/group-edit"
+              component={compose(withAPI)(GroupEdit)}
+            />
+            <Route
+              exact
+              path="/create-group"
+              component={compose(withAPI)(CreateGroup)}
+            />
+            <Route
+              exact
+              path="/add-users"
+              component={compose(withAPI)(AddUser)}
+            />
+            <Route
+              exact
+              path="/edit-user"
+              component={compose(withAPI)(EditUser)}
+            />
           </Switch>
         </HashRouter>
       </Provider>

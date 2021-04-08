@@ -1,19 +1,35 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { compose, withProps } from "recompose";
 import PropTypes from "prop-types";
 
+import { Link } from "react-router-dom";
+import { jhapiRequest } from "../../util/jhapiUtil";
+
 const Groups = (props) => {
-  var {
-    user_data,
-    groups_data,
-    refreshGroupsData,
-    refreshUserData,
-    history,
-  } = props;
+  var user_data = useSelector((state) => state.user_data),
+    groups_data = useSelector((state) => state.groups_data),
+    dispatch = useDispatch();
+
+  var { refreshGroupsData, refreshUserData, history } = props;
 
   if (!groups_data || !user_data) {
     return <div></div>;
   }
+
+  const dispatchGroupsData = (data) => {
+    dispatch({
+      type: "GROUPS_DATA",
+      value: data,
+    });
+  };
+
+  const dispatchUserData = (data) => {
+    dispatch({
+      type: "USER_DATA",
+      value: data,
+    });
+  };
 
   return (
     <div className="container">
@@ -35,8 +51,12 @@ const Groups = (props) => {
                             group_data: e,
                             user_data: user_data,
                             callback: () => {
-                              refreshGroupsData();
-                              refreshUserData();
+                              refreshGroupsData()
+                                .then((data) => dispatchGroupsData(data))
+                                .catch((err) => console.log(err));
+                              refreshUserData()
+                                .then((data) => dispatchUserData(data))
+                                .catch((err) => console.log(err));
                             },
                           },
                         }}

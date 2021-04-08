@@ -1,10 +1,22 @@
 import React, { useState } from "react";
+import { useDispatch } from "react-redux";
+import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
+import { jhapiRequest } from "../../util/jhapiUtil";
 
 const AddUser = (props) => {
   var [users, setUsers] = useState([]),
     [admin, setAdmin] = useState(false);
+
+  var dispatch = useDispatch();
+
+  var dispatchUserData = (data) => {
+    dispatch({
+      type: "USER_DATA",
+      value: data,
+    });
+  };
 
   var { addUsers, failRegexEvent, refreshUserData, history } = props;
 
@@ -66,7 +78,11 @@ const AddUser = (props) => {
                     }
 
                     addUsers(filtered_users, admin)
-                      .then(() => refreshUserData())
+                      .then(
+                        refreshUserData()
+                          .then((data) => dispatchUserData(data))
+                          .catch((err) => console.log(err))
+                      )
                       .then(() => history.push("/"))
                       .catch((err) => console.log(err));
                   }}
