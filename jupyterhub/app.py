@@ -356,6 +356,32 @@ class JupyterHub(Application):
         Default is two weeks.
         """,
     ).tag(config=True)
+
+    oauth_token_expires_in = Integer(
+        24 * 3600,
+        help="""Expiry (in seconds) of OAuth access tokens.
+
+        These are the tokens stored in cookies when you visit
+        a single-user server or service.
+        When they expire, you must re-authenticate with the Hub,
+        even if your Hub authentication is still valid.
+        If your Hub authentication is valid,
+        logging in may be a transparent redirect as you refresh the page.
+        
+        This does not affect JupyterHub API tokens in general,
+        which do not expire by default.
+        Only tokens issued during the oauth flow
+        accessing services and single-user servers are affected.
+
+        .. versionadded:: 1.4
+            OAuth token expires_in was not previously configurable.
+        .. versionchanged:: 1.4
+            Default is now one day.
+            Previously, it was one hour.
+        """,
+        config=True,
+    )
+
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
     ).tag(config=True)
@@ -2164,6 +2190,7 @@ class JupyterHub(Application):
             lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login'),
+            token_expires_in=self.oauth_token_expires_in,
         )
 
     def cleanup_oauth_clients(self):
