@@ -98,10 +98,11 @@ class UserListAPIHandler(APIHandler):
             query = self.db.query(orm.User)
 
         # Apply offset and limit for request pagination
-        if offset is not None or limit is not None:
-            offset = 0 if not offset else int(offset)
-            limit = None if not limit else int(limit)
-            query = query.offset(offset).limit(limit)
+        if offset is not None:
+            query = query.offset(int(offset))
+
+        if limit is not None:
+            query = query.limit(int(limit))
 
         data = [
             self.user_model(u, include_servers=True, include_state=True)
