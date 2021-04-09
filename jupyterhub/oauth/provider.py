@@ -584,9 +584,9 @@ class JupyterHubOAuthServer(WebApplicationServer):
         return self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
 
 
-def make_provider(session_factory, url_prefix, login_url):
+def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):
     """Make an OAuth provider"""
     db = session_factory()
     validator = JupyterHubRequestValidator(db)
-    server = JupyterHubOAuthServer(db, validator)
+    server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
     return server
