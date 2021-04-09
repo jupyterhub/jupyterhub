@@ -1942,6 +1942,12 @@ class JupyterHub(Application):
                     db.add(obj)
                     db.commit()
                 self.log.info("Adding API token for %s: %s", kind, name)
+                # If we have roles in the configuration file, they will be added later
+                config_roles = None
+                for config_role in self.load_roles:
+                    if 'tokens' in config_role and token in config_role['tokens']:
+                        config_roles = []
+                        break
                 try:
                     # set generated=False to ensure that user-provided tokens
                     # get extra hashing (don't trust entropy of user-provided tokens)
@@ -1949,6 +1955,7 @@ class JupyterHub(Application):
                         token,
                         note="from config",
                         generated=self.trust_user_provided_tokens,
+                        roles=config_roles,
                     )
                 except Exception:
                     if created:

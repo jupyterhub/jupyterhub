@@ -632,7 +632,7 @@ class APIToken(Hashed, Base):
             default_roles = get_default_roles()
             for role in default_roles:
                 create_role(db, role)
-        if roles:
+        if roles is not None:
             update_roles(db, entity=orm_token, roles=roles)
         else:
             assign_default_roles(db, entity=orm_token)
