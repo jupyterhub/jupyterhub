@@ -41,8 +41,11 @@ async def get_current_user(
         )
 
     async with get_client() as client:
-        endpoint = "/authorizations/token/%s" % token
-        resp = await client.get(endpoint)
+        endpoint = "/user"
+        # normally we auth to Hub API with service api token,
+        # but this time auth as the user token to get user model
+        headers = {"Authorization": f"Bearer {token}"}
+        resp = await client.get(endpoint, headers=headers)
         if resp.is_error:
             raise HTTPException(
                 status.HTTP_400_BAD_REQUEST,
