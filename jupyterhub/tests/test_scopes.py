@@ -564,9 +564,10 @@ async def test_metascope_all_expansion(app):
     "scopes, can_stop ,num_servers, keys_in, keys_out",
     [
         (['read:users:servers!user=almond'], False, 2, {'name'}, {'state'}),
+        (['read:users:servers!group=nuts'], False, 2, {'name'}, {'state'}),
         (
             ['admin:users:server_state', 'read:users:servers'],
-            True,
+            True,  # Todo: test for server stop
             2,
             {'name', 'state'},
             set(),
@@ -595,10 +596,17 @@ async def test_server_state_access(
         ## 1. Test a user can access all servers without auth_state
         ## 2. Test a service with admin:user but no admin:users:servers gets no access to any server data
         ## 3. Test a service with admin:user:server_state gets access to auth_state
-        ## 4. Test a service with user:servers:server gives access to one server, and the correct server.
+        ## 4. Test a service with user:servers!server=x gives access to one server, and the correct server.
+        ## 5. Test a service with users:servers!group=x gives access to both servers
         username = 'almond'
         user = add_user(app.db, app, name=username)
-
+        group_name = 'nuts'
+        group = orm.Group.find(app.db, name=group_name)
+        if not group:
+            group = orm.Group(name=group_name)
+            app.db.add(group)
+        group.users.append(user)
+        app.db.commit()
         server_names = ['bianca', 'terry']
         try:
             for server_name in server_names:
@@ -631,4 +639,5 @@ async def test_server_state_access(
         finally:
             app.db.delete(role)
             app.db.delete(service)
+            app.db.delete(group)
             app.db.commit()

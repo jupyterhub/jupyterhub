@@ -101,8 +101,12 @@ class APIHandler(BaseHandler):
                         # Now check for specific servers:
                         server_format = f"{orm_resource.user / orm_resource.name}"
                         found_resource = server_format in sub_scope[kind]
-                elif 'group' in sub_scope and kind == 'user':
-                    group_names = {group.name for group in orm_resource.groups}
+                elif 'group' in sub_scope:
+                    group_names = set()
+                    if kind == 'user':
+                        group_names = {group.name for group in orm_resource.groups}
+                    elif kind == 'server':
+                        group_names = {group.name for group in orm_resource.user.groups}
                     user_in_group = bool(group_names & set(sub_scope['group']))
                     found_resource = user_in_group
             return found_resource
