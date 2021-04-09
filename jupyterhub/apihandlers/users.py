@@ -14,7 +14,7 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
-from ..roles import update_roles
+from ..roles import assign_default_roles
 from ..scopes import needs_scope
 from ..user import User
 from ..utils import isoformat
@@ -56,7 +56,7 @@ class UserListAPIHandler(APIHandler):
     @needs_scope(
         'read:users',
         'read:users:name',
-        'reda:users:servers',
+        'read:users:servers',
         'read:users:groups',
         'read:users:activity',
     )
@@ -104,9 +104,7 @@ class UserListAPIHandler(APIHandler):
         data = []
         for u in query:
             if post_filter is None or post_filter(u):
-                user_model = self.user_model(
-                    u, include_servers=True, include_state=True
-                )
+                user_model = self.user_model(u)
                 if user_model:
                     data.append(user_model)
         self.write(json.dumps(data))
@@ -151,7 +149,7 @@ class UserListAPIHandler(APIHandler):
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
-            update_roles(self.db, obj=user, kind='users')
+            assign_default_roles(self.db, entity=user)
             self.db.commit()
             try:
                 await maybe_future(self.authenticator.add_user(user))
@@ -187,18 +185,23 @@ def admin_or_self(method):
 
 
 class UserAPIHandler(APIHandler):
-    @needs_scope('read:users')
-    async def get(self, user_name):
+    @needs_scope(
+        'read:users',
+        'read:users:name',
+        'read:users:servers',
+        'read:users:groups',
+        'read:users:activity',
+    )
+    async def get(
+        self, user_name
+    ):  # Fixme: Does not work when only server filter is selected
         user = self.find_user(user_name)
-        model = self.user_model(
-            user, include_servers=True, include_state=self.current_user.admin
-        )
+        model = self.user_model(user)
         # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
         # will see their auth state but normal users won't
-        requester = self.current_user
-        if requester.admin:
+        if 'auth_state' in model:
             model['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(model))
 
@@ -214,7 +217,7 @@ class UserAPIHandler(APIHandler):
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
-                update_roles(self.db, obj=user, kind='users')
+                assign_default_roles(self.db, entity=user)
         self.db.commit()
 
         try:
@@ -262,7 +265,7 @@ class UserAPIHandler(APIHandler):
 
         self.set_status(204)
 
-    @needs_scope('admin:users')
+    @needs_scope('admin:users')  # Todo: Change to `users`?
     async def patch(self, user_name):
         user = self.find_user(user_name)
         if user is None:
@@ -282,7 +285,7 @@ class UserAPIHandler(APIHandler):
             else:
                 setattr(user, key, value)
                 if key == 'admin':
-                    update_roles(self.db, obj=user, kind='users')
+                    assign_default_roles(self.db, entity=user)
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
@@ -325,6 +328,7 @@ class UserTokenListAPIHandler(APIHandler):
             oauth_tokens.append(self.token_model(token))
         self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
+    # Todo: Set to @needs_scope('users:tokens')
     async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
@@ -764,7 +768,7 @@ class ActivityAPIHandler(APIHandler):
             )
         return servers
 
-    @needs_scope('users')
+    @needs_scope('users:activity')
     def post(self, user_name):
         user = self.find_user(user_name)
         if user is None:

@@ -96,7 +96,7 @@ async def test_external_service(app):
 
         service = app._service_map[name]
         api_token = service.orm.api_tokens[0]
-        update_roles(app.db, api_token, 'tokens', roles=['token'])
+        update_roles(app.db, api_token, roles=['token'])
         url = public_url(app, service) + '/api/users'
         r = await async_requests.get(url, allow_redirects=False)
         r.raise_for_status()

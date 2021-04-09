@@ -1860,12 +1860,12 @@ class JupyterHub(Application):
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
         for role in default_roles:
-            roles.add_role(db, role)
+            roles.create_role(db, role)
 
         # load predefined roles from config file
         self.log.debug('Loading predefined roles from config file to database')
         for predef_role in self.load_roles:
-            roles.add_role(db, predef_role)
+            roles.create_role(db, predef_role)
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
             for bearer in role_bearers:
@@ -1882,19 +1882,26 @@ class JupyterHub(Application):
                                     "Username %r is not in Authenticator.allowed_users"
                                     % bname
                                 )
-                        roles.add_obj(
-                            db, objname=bname, kind=bearer, rolename=predef_role['name']
+                        Class = orm.get_class(bearer)
+                        orm_obj = Class.find(db, bname)
+                        roles.grant_role(
+                            db, entity=orm_obj, rolename=predef_role['name']
                         )
+        # make sure that on no admin situation, all roles are reset
+        admin_role = orm.Role.find(db, name='admin')
+        if not admin_role.users:
+            app_log.info(
+                "No admin users found; assuming hub upgrade. Initializing default roles for all entities"
+            )
+            # make sure all users, services and tokens have at least one role (update with default)
+            for bearer in role_bearers:
+                roles.check_for_default_roles(db, bearer)
 
-        # make sure role bearers have at least a default role
-        for bearer in role_bearers:
-            roles.check_for_default_roles(db, bearer)
+            # now add roles to tokens if their owner's permissions allow
+            roles.add_predef_roles_tokens(db, self.load_roles)
 
-        # now add roles to tokens if their owner's permissions allow
-        roles.add_predef_roles_tokens(db, self.load_roles)
-
-        # check tokens for default roles
-        roles.check_for_default_roles(db, bearer='tokens')
+            # check tokens for default roles
+            roles.check_for_default_roles(db, bearer='tokens')
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
@@ -1935,6 +1942,13 @@ class JupyterHub(Application):
                     db.add(obj)
                     db.commit()
                 self.log.info("Adding API token for %s: %s", kind, name)
+                # If we have roles in the configuration file, they will be added later
+                # Todo: works but ugly
+                config_roles = None
+                for config_role in self.load_roles:
+                    if 'tokens' in config_role and token in config_role['tokens']:
+                        config_roles = []
+                        break
                 try:
                     # set generated=False to ensure that user-provided tokens
                     # get extra hashing (don't trust entropy of user-provided tokens)
@@ -1942,6 +1956,7 @@ class JupyterHub(Application):
                         token,
                         note="from config",
                         generated=self.trust_user_provided_tokens,
+                        roles=config_roles,
                     )
                 except Exception:
                     if created:
@@ -1998,6 +2013,8 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                if spec.get('admin', False):
+                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()

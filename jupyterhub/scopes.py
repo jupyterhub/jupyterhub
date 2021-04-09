@@ -64,7 +64,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
 
 def _check_scope(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
-    Returns True for (restricted) access, False for refused access
+    Returns True for (potentially restricted) access, False for refused access
     """
     # Parse user name and server name together
     try:
@@ -74,24 +74,23 @@ def _check_scope(api_handler, req_scope, **kwargs):
     if 'user' in kwargs and 'server' in kwargs:
         kwargs['server'] = "{}/{}".format(kwargs['user'], kwargs['server'])
     if req_scope not in api_handler.parsed_scopes:
-        app_log.debug("No scopes present to access %s" % api_name)
+        app_log.debug("No access to %s via %s", api_name, req_scope)
         return False
     if api_handler.parsed_scopes[req_scope] == Scope.ALL:
-        app_log.debug("Unrestricted access to %s call", api_name)
+        app_log.debug("Unrestricted access to %s via %s", api_name, req_scope)
         return True
     # Apply filters
     sub_scope = api_handler.parsed_scopes[req_scope]
     if not kwargs:
         app_log.debug(
-            "Client has restricted access to %s. Internal filtering may apply"
-            % api_name
+            "Client has restricted access to %s via %s. Internal filtering may apply",
+            api_name,
+            req_scope,
         )
         return True
     for (filter_, filter_value) in kwargs.items():
         if filter_ in sub_scope and filter_value in sub_scope[filter_]:
-            app_log.debug(
-                "Restricted client access supported by endpoint %s" % api_name
-            )
+            app_log.debug("Argument-based access to %s via %s", api_name, req_scope)
             return True
         if _needs_scope_expansion(filter_, filter_value, sub_scope):
             group_names = sub_scope['group']
@@ -160,27 +159,26 @@ def needs_scope(*scopes):
                 if resource_name in bound_sig.arguments:
                     resource_value = bound_sig.arguments[resource_name]
                     s_kwargs[resource] = resource_value
-            has_access = False
             for scope in scopes:
-                has_access |= _check_scope(self, scope, **s_kwargs)
-            if has_access:
-                return func(self, *args, **kwargs)
-            else:
-                try:
-                    end_point = self.request.path
-                except AttributeError:
-                    end_point = self.__name__
-                app_log.warning(
-                    "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
-                        end_point, ", ".join(scopes), ", ".join(self.raw_scopes)
-                    )
+                app_log.debug("Checking access via scope %s", scope)
+                has_access = _check_scope(self, scope, **s_kwargs)
+                if has_access:
+                    return func(self, *args, **kwargs)
+            try:
+                end_point = self.request.path
+            except AttributeError:
+                end_point = self.__name__
+            app_log.warning(
+                "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
+                    end_point, ", ".join(scopes), ", ".join(self.raw_scopes)
                 )
-                raise web.HTTPError(
-                    403,
-                    "Action is not authorized with current scopes; requires any of [{}]".format(
-                        ", ".join(scopes)
-                    ),
-                )
+            )
+            raise web.HTTPError(
+                403,
+                "Action is not authorized with current scopes; requires any of [{}]".format(
+                    ", ".join(scopes)
+                ),
+            )
 
         return _auth_func
 

@@ -11,6 +11,7 @@ from .. import orm
 from .. import roles
 from ..handlers import BaseHandler
 from ..scopes import _check_scope
+from ..scopes import get_scopes_for
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
 from ..scopes import Scope
@@ -229,7 +230,7 @@ async def test_expand_groups(app, user_name, in_group, status_code):
             'read:groups',
         ],
     }
-    roles.add_role(app.db, test_role)
+    roles.create_role(app.db, test_role)
     user = add_user(app.db, name=user_name)
     group_name = 'bluth'
     group = orm.Group.find(app.db, name=group_name)
@@ -239,8 +240,8 @@ async def test_expand_groups(app, user_name, in_group, status_code):
     if in_group and user not in group.users:
         group.users.append(user)
     kind = 'users'
-    roles.update_roles(app.db, user, kind, roles=['test'])
-    roles.remove_obj(app.db, user_name, kind, 'user')
+    roles.update_roles(app.db, user, roles=['test'])
+    roles.strip_role(app.db, user, 'user')
     app.db.commit()
     r = await api_request(
         app, 'users', user_name, headers=auth_header(app.db, user_name)
@@ -264,10 +265,10 @@ err_message = "No access to resources or resources not found"
 async def test_request_fake_user(app):
     user_name = 'buster'
     fake_user = 'annyong'
-    add_user(app.db, name=user_name)
+    user = add_user(app.db, name=user_name)
     test_role = generate_test_role(user_name, ['read:users!group=stuff'])
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
     app.db.commit()
     r = await api_request(
         app, 'users', fake_user, headers=auth_header(app.db, user_name)
@@ -283,8 +284,8 @@ async def test_refuse_exceeding_token_permissions(app):
     add_user(app.db, name='user')
     api_token = user.new_api_token()
     exceeding_role = generate_test_role(user_name, ['read:users'], 'exceeding_role')
-    roles.add_role(app.db, exceeding_role)
-    roles.add_obj(app.db, objname=api_token, kind='tokens', rolename='exceeding_role')
+    roles.create_role(app.db, exceeding_role)
+    roles.grant_role(app.db, entity=user.api_tokens[0], rolename='exceeding_role')
     app.db.commit()
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
@@ -303,11 +304,11 @@ async def test_exceeding_user_permissions(app):
     subreader_role = generate_test_role(
         user_name, ['read:users:groups'], 'subreader_role'
     )
-    roles.add_role(app.db, reader_role)
-    roles.add_role(app.db, subreader_role)
+    roles.create_role(app.db, reader_role)
+    roles.create_role(app.db, subreader_role)
     app.db.commit()
-    roles.update_roles(app.db, user, kind='users', roles=['reader_role'])
-    roles.update_roles(app.db, orm_api_token, kind='tokens', roles=['subreader_role'])
+    roles.update_roles(app.db, user, roles=['reader_role'])
+    roles.update_roles(app.db, orm_api_token, roles=['subreader_role'])
     orm_api_token.roles.remove(orm.Role.find(app.db, name='token'))
     app.db.commit()
 
@@ -317,7 +318,7 @@ async def test_exceeding_user_permissions(app):
     keys = {key for user in r.json() for key in user.keys()}
     assert 'groups' in keys
     assert 'last_activity' not in keys
-    roles.remove_obj(app.db, user_name, 'users', 'reader_role')
+    roles.strip_role(app.db, user, 'reader_role')
 
 
 async def test_user_service_separation(app, mockservice_url):
@@ -326,13 +327,11 @@ async def test_user_service_separation(app, mockservice_url):
 
     reader_role = generate_test_role(name, ['read:users'], 'reader_role')
     subreader_role = generate_test_role(name, ['read:users:groups'], 'subreader_role')
-    roles.add_role(app.db, reader_role)
-    roles.add_role(app.db, subreader_role)
+    roles.create_role(app.db, reader_role)
+    roles.create_role(app.db, subreader_role)
     app.db.commit()
-    roles.update_roles(app.db, user, kind='users', roles=['subreader_role'])
-    roles.update_roles(
-        app.db, mockservice_url.orm, kind='services', roles=['reader_role']
-    )
+    roles.update_roles(app.db, user, roles=['subreader_role'])
+    roles.update_roles(app.db, mockservice_url.orm, roles=['reader_role'])
     user.roles.remove(orm.Role.find(app.db, name='user'))
     api_token = user.new_api_token()
     app.db.commit()
@@ -347,12 +346,12 @@ async def test_user_service_separation(app, mockservice_url):
 async def test_request_user_outside_group(app):
     user_name = 'buster'
     fake_user = 'hello'
-    add_user(app.db, name=user_name)
+    user = add_user(app.db, name=user_name)
     add_user(app.db, name=fake_user)
     test_role = generate_test_role(user_name, ['read:users!group=stuff'])
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
-    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
+    roles.strip_role(app.db, entity=user, rolename='user')
     app.db.commit()
     r = await api_request(
         app, 'users', fake_user, headers=auth_header(app.db, user_name)
@@ -368,9 +367,9 @@ async def test_user_filter(app):
     app.db.commit()
     scopes = ['read:users!user=lindsay', 'read:users!user=gob', 'read:users!user=oscar']
     test_role = generate_test_role(user, scopes)
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
-    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
+    roles.strip_role(app.db, entity=user, rolename='user')
     name_in_scope = {'lindsay', 'oscar', 'gob'}
     outside_scope = {'maeby', 'marta'}
     group_name = 'bluth'
@@ -401,8 +400,8 @@ async def test_service_filter(app):
     user = add_user(app.db, name=user_name)
     app.db.commit()
     test_role = generate_test_role(user, ['read:services!service=cull_idle'])
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
     r = await api_request(app, 'services', headers=auth_header(app.db, user_name))
     assert r.status_code == 200
     service_names = set(r.json().keys())
@@ -412,12 +411,12 @@ async def test_service_filter(app):
 async def test_user_filter_with_group(app):
     # Move role setup to setup method?
     user_name = 'sally'
-    add_user(app.db, name=user_name)
+    user = add_user(app.db, name=user_name)
     external_user_name = 'britta'
     add_user(app.db, name=external_user_name)
     test_role = generate_test_role(user_name, ['read:users!group=sitwell'])
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
 
     name_set = {'sally', 'stan'}
     group_name = 'sitwell'
@@ -440,11 +439,11 @@ async def test_user_filter_with_group(app):
 
 async def test_group_scope_filter(app):
     user_name = 'rollerblade'
-    add_user(app.db, name=user_name)
+    user = add_user(app.db, name=user_name)
     scopes = ['read:groups!group=sitwell', 'read:groups!group=bluth']
     test_role = generate_test_role(user_name, scopes)
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
 
     group_set = {'sitwell', 'bluth', 'austero'}
     for group_name in group_set:
@@ -461,11 +460,11 @@ async def test_group_scope_filter(app):
 
 async def test_vertical_filter(app):
     user_name = 'lindsey'
-    add_user(app.db, name=user_name)
+    user = add_user(app.db, name=user_name)
     test_role = generate_test_role(user_name, ['read:users:name'])
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
-    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
+    roles.strip_role(app.db, entity=user, rolename='user')
     app.db.commit()
 
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
@@ -476,12 +475,13 @@ async def test_vertical_filter(app):
 
 async def test_stacked_vertical_filter(app):
     user_name = 'user'
+    user = add_user(app.db, name=user_name)
     test_role = generate_test_role(
         user_name, ['read:users:activity', 'read:users:servers']
     )
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
-    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
+    roles.strip_role(app.db, entity=user, rolename='user')
     app.db.commit()
 
     r = await api_request(app, 'users', headers=auth_header(app.db, user_name))
@@ -493,13 +493,13 @@ async def test_stacked_vertical_filter(app):
 
 async def test_cross_filter(app):
     user_name = 'abed'
-    add_user(app.db, name=user_name)
+    user = add_user(app.db, name=user_name)
     test_role = generate_test_role(
         user_name, ['read:users:activity', 'read:users!user=abed']
     )
-    roles.add_role(app.db, test_role)
-    roles.add_obj(app.db, objname=user_name, kind='users', rolename='test')
-    roles.remove_obj(app.db, objname=user_name, kind='users', rolename='user')
+    roles.create_role(app.db, test_role)
+    roles.grant_role(app.db, entity=user, rolename='test')
+    roles.strip_role(app.db, entity=user, rolename='user')
     app.db.commit()
     new_users = {'britta', 'jeff', 'annie'}
     for new_user_name in new_users:
@@ -514,3 +514,130 @@ async def test_cross_filter(app):
             assert key_in_full_model in user
         else:
             assert set(user.keys()) == restricted_keys
+
+
+@mark.parametrize(
+    "kind, has_user_scopes",
+    [
+        ('users', True),
+        ('services', False),
+    ],
+)
+async def test_metascope_self_expansion(app, kind, has_user_scopes):
+    Class = orm.get_class(kind)
+    orm_obj = Class(name=f'test_{kind}')
+    app.db.add(orm_obj)
+    app.db.commit()
+    test_role = orm.Role(name='test_role', scopes=['self'])
+    orm_obj.roles.append(test_role)
+    # test expansion of user/service scopes
+    scopes = roles.expand_roles_to_scopes(orm_obj)
+    assert bool(scopes) == has_user_scopes
+
+    # test expansion of token scopes
+    orm_obj.new_api_token()
+    token_scopes = get_scopes_for(orm_obj.api_tokens[0])
+    assert bool(token_scopes) == has_user_scopes
+    app.db.delete(orm_obj)
+    app.db.delete(test_role)
+    app.db.commit()
+
+
+async def test_metascope_all_expansion(app):
+    user = add_user(app.db, name='user')
+    scope_set = {scope for role in user.roles for scope in role.scopes}
+    user.new_api_token()
+    token = user.api_tokens[0]
+    # Check 'all' expansion
+    token_scope_set = get_scopes_for(token)
+    user_scope_set = get_scopes_for(user)
+    assert user_scope_set == token_scope_set
+
+    # Check no roles means no permissions
+    token.roles.clear()
+    app.db.commit()
+    token_scope_set = get_scopes_for(token)
+    assert not token_scope_set
+
+
+@mark.parametrize(
+    "scopes, can_stop ,num_servers, keys_in, keys_out",
+    [
+        (['read:users:servers!user=almond'], False, 2, {'name'}, {'state'}),
+        (['read:users:servers!group=nuts'], False, 2, {'name'}, {'state'}),
+        (
+            ['admin:users:server_state', 'read:users:servers'],
+            True,  # Todo: test for server stop
+            2,
+            {'name', 'state'},
+            set(),
+        ),
+        (['users:servers', 'read:users:name'], True, 0, set(), set()),
+        (
+            [
+                'read:users:name!user=almond',
+                'read:users:servers!server=almond/bianca',
+                'admin:users:server_state!server=almond/bianca',
+            ],
+            False,
+            0,  # fixme: server-scope not working yet
+            {'name', 'state'},
+            set(),
+        ),
+    ],
+)
+async def test_server_state_access(
+    app, scopes, can_stop, num_servers, keys_in, keys_out
+):
+    with mock.patch.dict(
+        app.tornado_settings,
+        {'allow_named_servers': True, 'named_server_limit_per_user': 2},
+    ):
+        ## 1. Test a user can access all servers without auth_state
+        ## 2. Test a service with admin:user but no admin:users:servers gets no access to any server data
+        ## 3. Test a service with admin:user:server_state gets access to auth_state
+        ## 4. Test a service with user:servers!server=x gives access to one server, and the correct server.
+        ## 5. Test a service with users:servers!group=x gives access to both servers
+        username = 'almond'
+        user = add_user(app.db, app, name=username)
+        group_name = 'nuts'
+        group = orm.Group.find(app.db, name=group_name)
+        if not group:
+            group = orm.Group(name=group_name)
+            app.db.add(group)
+        group.users.append(user)
+        app.db.commit()
+        server_names = ['bianca', 'terry']
+        try:
+            for server_name in server_names:
+                await api_request(
+                    app, 'users', username, 'servers', server_name, method='post'
+                )
+            role = orm.Role(name=f"{username}-role", scopes=scopes)
+            app.db.add(role)
+            app.db.commit()
+            service_name = 'server_accessor'
+            service = orm.Service(name=service_name)
+            app.db.add(service)
+            service.roles.append(role)
+            app.db.commit()
+            api_token = service.new_api_token()
+            app.init_roles()
+            headers = {'Authorization': 'token %s' % api_token}
+            r = await api_request(app, 'users', username, headers=headers)
+            r.raise_for_status()
+            user_model = r.json()
+            if num_servers:
+                assert 'servers' in user_model
+                server_models = user_model['servers']
+                assert len(server_models) == num_servers
+                for server, server_model in server_models.items():
+                    assert keys_in.issubset(server_model)
+                    assert keys_out.isdisjoint(server_model)
+            else:
+                assert 'servers' not in user_model
+        finally:
+            app.db.delete(role)
+            app.db.delete(service)
+            app.db.delete(group)
+            app.db.commit()

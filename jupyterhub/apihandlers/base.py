@@ -79,23 +79,39 @@ class APIHandler(BaseHandler):
                 % req_scope,
             )
 
-        def has_access(orm_resource, kind):
+        def has_access_to(orm_resource, kind):
             """
-            param orm_resource: User or Service or Group
-            param kind: 'users' or 'services' or 'groups'
+            param orm_resource: User or Service or Group or spawner
+            param kind: 'user' or 'service' or 'group' or 'server'.
+            `kind` could probably be derived from `orm_resource`, problem is Jupyterhub.users.User
             """
             if sub_scope == scopes.Scope.ALL:
                 return True
             else:
-                found_resource = orm_resource.name in sub_scope[kind]
+                try:
+                    found_resource = orm_resource.name in sub_scope[kind]
+                except KeyError:
+                    found_resource = False
             if not found_resource:  # Try group-based access
-                if 'group' in sub_scope and kind == 'user':
-                    group_names = {group.name for group in orm_resource.groups}
+                if kind == 'server' and 'user' in sub_scope:
+                    # First check if we have access to user info
+                    user_name = orm_resource.user.name
+                    found_resource = user_name in sub_scope['user']
+                    if not found_resource:
+                        # Now check for specific servers:
+                        server_format = f"{orm_resource.user / orm_resource.name}"
+                        found_resource = server_format in sub_scope[kind]
+                elif 'group' in sub_scope:
+                    group_names = set()
+                    if kind == 'user':
+                        group_names = {group.name for group in orm_resource.groups}
+                    elif kind == 'server':
+                        group_names = {group.name for group in orm_resource.user.groups}
                     user_in_group = bool(group_names & set(sub_scope['group']))
                     found_resource = user_in_group
             return found_resource
 
-        return has_access
+        return has_access_to
 
     def get_current_user_cookie(self):
         """Override get_user_cookie to check Referer header"""
@@ -166,19 +182,26 @@ class APIHandler(BaseHandler):
             json.dumps({'status': status_code, 'message': message or status_message})
         )
 
-    def server_model(self, spawner, include_state=False):
+    def server_model(self, spawner):
         """Get the JSON model for a Spawner"""
-        return {
+        server_scope = 'read:users:servers'
+        server_state_scope = 'admin:users:server_state'
+        model = {
             'name': spawner.name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
-            'state': spawner.get_state() if include_state else None,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'user_options': spawner.user_options,
             'progress_url': spawner._progress_url,
         }
+        # First check users, then servers
+        if server_state_scope in self.parsed_scopes:
+            scope_filter = self.get_scope_filter(server_state_scope)
+            if scope_filter(spawner, kind='server'):
+                model['state'] = spawner.get_state()
+        return model
 
     def token_model(self, token):
         """Get the JSON model for an APIToken"""
@@ -220,7 +243,7 @@ class APIHandler(BaseHandler):
         model.update(extra)
         return model
 
-    def user_model(self, user, include_servers=False, include_state=False):
+    def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
@@ -234,13 +257,26 @@ class APIHandler(BaseHandler):
             'pending': None,
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
+            'auth_state': None,  # placeholder, filled in later
         }
         access_map = {
-            'read:users': set(model.keys()),  # All available components
+            'read:users': {
+                'kind',
+                'name',
+                'admin',
+                'roles',
+                'groups',
+                'server',
+                'pending',
+                'created',
+                'last_activity',
+            },
             'read:users:name': {'kind', 'name'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},
+            'admin:users:auth_state': {'kind', 'name', 'auth_state'},
+            'admin:users:server_state': {'kind', 'name', 'servers', 'server_state'},
         }
         self.log.debug(
             "Asking for user model of %s with scopes [%s]",
@@ -257,35 +293,45 @@ class APIHandler(BaseHandler):
         if model:
             if '' in user.spawners and 'pending' in allowed_keys:
                 model['pending'] = user.spawners[''].pending
-            if include_servers and 'servers' in allowed_keys:
-                # Todo: Replace include_state with scope (read|admin):users:auth_state
+            if 'servers' in allowed_keys:
                 servers = model['servers'] = {}
                 for name, spawner in user.spawners.items():
                     # include 'active' servers, not just ready
                     # (this includes pending events)
                     if spawner.active:
-                        servers[name] = self.server_model(
-                            spawner, include_state=include_state
-                        )
+                        servers[name] = self.server_model(spawner)
         return model
 
-    def group_model(self, group):  # Todo: make consistent to do scope checking here
+    def group_model(self, group):
         """Get the JSON model for a Group object"""
-        return {
-            'kind': 'group',
-            'name': group.name,
-            'users': [u.name for u in group.users],
-            'roles': [r.name for r in group.roles],
-        }
+        model = {}
+        req_scope = 'read:groups'
+        if req_scope in self.parsed_scopes:
+            scope_filter = self.get_scope_filter(req_scope)
+            if scope_filter(group, kind='group'):
+                model = {
+                    'kind': 'group',
+                    'name': group.name,
+                    'roles': [r.name for r in group.roles],
+                    'users': [u.name for u in group.users],
+                }
+        return model
 
-    def service_model(self, service):  # Todo: make consistent to do scope checking here
+    def service_model(self, service):
         """Get the JSON model for a Service object"""
-        return {
-            'kind': 'service',
-            'name': service.name,
-            'admin': service.admin,
-            'roles': [r.name for r in service.roles],
-        }
+        model = {}
+        req_scope = 'read:services'
+        if req_scope in self.parsed_scopes:
+            scope_filter = self.get_scope_filter(req_scope)
+            if scope_filter(service, kind='service'):
+                model = {
+                    'kind': 'service',
+                    'name': service.name,
+                    'roles': [r.name for r in service.roles],
+                    'admin': service.admin,
+                }
+                # todo: Remove once we replace admin flag with role check
+        return model
 
     _user_model_types = {
         'name': str,

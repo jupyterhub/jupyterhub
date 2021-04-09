@@ -251,7 +251,7 @@ def _mockservice(request, app, url=False):
         assert name in app._service_map
         service = app._service_map[name]
         token = service.orm.api_tokens[0]
-        update_roles(app.db, token, 'tokens', roles=['token'])
+        update_roles(app.db, token, roles=['token'])
 
         async def start():
             # wait for proxy to be updated before starting the service

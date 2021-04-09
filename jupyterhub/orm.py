@@ -39,7 +39,8 @@ from sqlalchemy.types import Text
 from sqlalchemy.types import TypeDecorator
 from tornado.log import app_log
 
-from .roles import add_role
+from .roles import assign_default_roles
+from .roles import create_role
 from .roles import get_default_roles
 from .roles import update_roles
 from .utils import compare_token
@@ -630,8 +631,12 @@ class APIToken(Hashed, Base):
         if not token_role:
             default_roles = get_default_roles()
             for role in default_roles:
-                add_role(db, role)
-        update_roles(db, obj=orm_token, kind='tokens', roles=roles)
+                create_role(db, role)
+        if roles is not None:
+            update_roles(db, entity=orm_token, roles=roles)
+        else:
+            assign_default_roles(db, entity=orm_token)
+
         db.commit()
         return token
 
