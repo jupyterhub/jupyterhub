@@ -358,8 +358,10 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     oauth_token_expires_in = Integer(
-        24 * 3600,
         help="""Expiry (in seconds) of OAuth access tokens.
+
+        The default is to expire when the cookie storing them expires,
+        according to `cookie_max_age_days` config.
 
         These are the tokens stored in cookies when you visit
         a single-user server or service.
@@ -376,11 +378,19 @@ class JupyterHub(Application):
         .. versionadded:: 1.4
             OAuth token expires_in was not previously configurable.
         .. versionchanged:: 1.4
-            Default is now one day.
+            Default now uses cookie_max_age_days so that oauth tokens
+            which are generally stored in cookies,
+            expire when the cookies storing them expire.
             Previously, it was one hour.
         """,
         config=True,
     )
+
+    @default("oauth_token_expires_in")
+    def _cookie_max_age_seconds(self):
+        """default to cookie max age, where these tokens are stored"""
+        # convert cookie max age days to seconds
+        return int(self.cookie_max_age_days * 24 * 3600)
 
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
