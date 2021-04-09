@@ -3,9 +3,7 @@ import os
 import httpx
 
 
-### For consideration: turn this into a class with
-### feature parity for HubAuth, or even subclass HubAuth?
-### See jupyterhub.services.auth.HubAuth for details
+# a minimal alternative to using HubOAuth class
 def get_client():
     base_url = os.environ["JUPYTERHUB_API_URL"]
     token = os.environ["JUPYTERHUB_API_TOKEN"]
