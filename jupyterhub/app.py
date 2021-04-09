@@ -1943,6 +1943,7 @@ class JupyterHub(Application):
                     db.commit()
                 self.log.info("Adding API token for %s: %s", kind, name)
                 # If we have roles in the configuration file, they will be added later
+                # Todo: works but ugly
                 config_roles = None
                 for config_role in self.load_roles:
                     if 'tokens' in config_role and token in config_role['tokens']:
