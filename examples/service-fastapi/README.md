@@ -84,7 +84,10 @@ async def new_endpoint(user: User = Depends(get_current_user)):
 
 FastAPI is designed to be an asynchronous web server, so the interactions with the Hub API should be made asynchronously as well. Instead of using `requests` to get user information from a token/cookie, this example uses [`httpx`](https://www.python-httpx.org/). `client.py` defines a small function that creates a `Client` (equivalent of `requests.Session`) with the Hub API url as it's `base_url` and adding the `JUPYTERHUB_API_TOKEN` to every header.
 
+Consider this a very minimal alternative to using `jupyterhub.services.auth.HubOAuth`
+
 ```python
+# client.py
 import os
 
 def get_client():
@@ -92,11 +95,13 @@ def get_client():
     token = os.environ["JUPYTERHUB_API_TOKEN"]
     headers = {"Authorization": "Bearer %s" % token}
     return httpx.AsyncClient(base_url=base_url, headers=headers)
+```
 
-# use --
+```python
+# other modules
+from .client import get_client
+
 async with get_client() as client:
     resp = await client.get('/endpoint')
     ...
 ```
-
-This example did not try to match the feature set in `jupyterhub.services.auth.HubAuth`, but it should be feasible to create an equivalent `HubAuth` class with async support.
