@@ -563,7 +563,6 @@ class JupyterHubOAuthServer(WebApplicationServer):
         # so we do this manually. It's protected inside a
         # transaction, so should fail if there are multiple
         # rows with the same identifier.
-        # TODO: Is this safe?
         orm_client = (
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
         )
@@ -571,11 +570,13 @@ class JupyterHubOAuthServer(WebApplicationServer):
             orm_client = orm.OAuthClient(
                 identifier=client_id,
             )
-
+            self.db.add(orm_client)
+            app_log.info(f'Creating oauth client {client_id}')
+        else:
+            app_log.info(f'Updating oauth client {client_id}')
         orm_client.secret = hash_token(client_secret)
         orm_client.redirect_uri = redirect_uri
         orm_client.description = description
-        self.db.add(orm_client)
         self.db.commit()
 
     def fetch_by_client_id(self, client_id):
