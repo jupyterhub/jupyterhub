@@ -7,11 +7,6 @@ from pydantic import BaseModel
 
 
 # https://jupyterhub.readthedocs.io/en/stable/_static/rest-api/index.html
-class Group(BaseModel):
-    name: str
-    users: List[str]
-
-
 class Server(BaseModel):
     name: str
     ready: bool
@@ -27,7 +22,7 @@ class Server(BaseModel):
 class User(BaseModel):
     name: str
     admin: bool
-    groups: List[Group]
+    groups: List[str]
     server: Optional[str]
     pending: Optional[str]
     last_activity: datetime
