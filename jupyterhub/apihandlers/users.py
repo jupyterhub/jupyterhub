@@ -55,6 +55,8 @@ class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
         state_filter = self.get_argument("state", None)
+        offset = self.get_argument("offset", None)
+        limit = self.get_argument("limit", None)
 
         # post_filter
         post_filter = None
@@ -95,11 +97,18 @@ class UserListAPIHandler(APIHandler):
             # no filter, return all users
             query = self.db.query(orm.User)
 
+        # Apply offset and limit for request pagination
+        if offset is not None or limit is not None:
+            offset = 0 if not offset else int(offset)
+            limit = None if not limit else int(limit)
+            query = query.offset(offset).limit(limit)
+
         data = [
             self.user_model(u, include_servers=True, include_state=True)
             for u in query
             if (post_filter is None or post_filter(u))
         ]
+
         self.write(json.dumps(data))
 
     @admin_only

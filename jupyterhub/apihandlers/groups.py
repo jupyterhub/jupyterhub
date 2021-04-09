@@ -37,7 +37,17 @@ class GroupListAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self):
         """List groups"""
-        data = [self.group_model(g) for g in self.db.query(orm.Group)]
+        offset = self.get_argument("offset", None)
+        limit = self.get_argument("limit", None)
+
+        groups_query = self.db.query(orm.Group)
+
+        if offset is not None or limit is not None:
+            offset = 0 if not offset else int(offset)
+            limit = None if not limit else int(limit)
+            groups_query = groups_query.offset(offset).limit(limit)
+
+        data = [self.group_model(g) for g in groups_query]
         self.write(json.dumps(data))
 
     @admin_only
@@ -76,7 +86,8 @@ class GroupAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self, name):
         group = self.find_group(name)
-        self.write(json.dumps(self.group_model(group)))
+        group_model = self.group_model(group)
+        self.write(json.dumps(group_model))
 
     @admin_only
     async def post(self, name):
