@@ -371,7 +371,7 @@ def _token_allowed_role(db, token, role):
         raw_owner_scopes = {
             scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
         }
-        if (raw_extra_scopes).issubset(raw_owner_scopes):
+        if raw_extra_scopes.issubset(raw_owner_scopes):
             return True
         else:
             return False

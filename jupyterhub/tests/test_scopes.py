@@ -613,7 +613,7 @@ async def test_server_state_access(
             service.roles.append(role)
             app.db.commit()
             api_token = service.new_api_token()
-            app.init_roles()
+            await app.init_roles()
             headers = {'Authorization': 'token %s' % api_token}
             r = await api_request(app, 'users', username, headers=headers)
             r.raise_for_status()
