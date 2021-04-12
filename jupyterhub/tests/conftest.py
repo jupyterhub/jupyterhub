@@ -129,6 +129,12 @@ def db():
         user = orm.User(name=getuser())
         _db.add(user)
         _db.commit()
+        # make sure some initial db contents are filled out
+        # specifically, the 'default' jupyterhub oauth client
+        app = MockHub()
+        app.db = _db
+        app.init_hub()
+        app.init_oauth()
     return _db
 
 
@@ -164,9 +170,14 @@ def cleanup_after(request, io_loop):
     allows cleanup of servers between tests
     without having to launch a whole new app
     """
+
     try:
         yield
     finally:
+        if _db is not None:
+            # cleanup after failed transactions
+            _db.rollback()
+
         if not MockHub.initialized():
             return
         app = MockHub.instance()
