@@ -345,18 +345,19 @@ class JupyterHubRequestValidator(RequestValidator):
         # FIXME: pick a role
         # this will be empty for now
         roles = list(self.db.query(orm.Role).filter_by(name='identify'))
-        orm_access_token = orm.APIToken.new(
+        # FIXME: support refresh tokens
+        # These should be in a new table
+        token.pop("refresh_token", None)
+
+        # APIToken.new commits the token to the db
+        orm.APIToken.new(
             client_id=client.identifier,
-            grant_type=orm.GrantType.authorization_code,
-            expires_at=orm.APIToken.now() + timedelta(seconds=token['expires_in']),
-            refresh_token=token['refresh_token'],
+            expires_in=token['expires_in'],
             roles=roles,
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
         )
-        self.db.add(orm_access_token)
-        self.db.commit()
         return client.redirect_uri
 
     def validate_bearer_token(self, token, scopes, request):

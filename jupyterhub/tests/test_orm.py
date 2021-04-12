@@ -356,7 +356,8 @@ def test_user_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.APIToken(
-        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
+        client=oauth_client,
+        user=user,
     )
     db.add(oauth_token)
     db.commit()
@@ -392,11 +393,12 @@ def test_oauth_client_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.APIToken(
-        client=oauth_client, user=user, grant_type=orm.GrantType.authorization_code
+        client=oauth_client,
+        user=user,
     )
     db.add(oauth_token)
     db.commit()
-    assert user.tokens == [oauth_token]
+    assert user.api_tokens == [oauth_token]
 
     # record all of the ids
     oauth_code_id = oauth_code.id
@@ -409,7 +411,7 @@ def test_oauth_client_delete_cascade(db):
     # verify that everything gets deleted
     assert_not_found(db, orm.OAuthCode, oauth_code_id)
     assert_not_found(db, orm.APIToken, oauth_token_id)
-    assert user.tokens == []
+    assert user.api_tokens == []
     assert user.oauth_codes == []
 
 
@@ -515,10 +517,9 @@ def test_expiring_oauth_token(app, user):
     db.add(client)
     orm_token = orm.APIToken(
         token=token,
-        grant_type=orm.GrantType.authorization_code,
         client=client,
         user=user,
-        expires_at=now() + datetime.timedelta(seconds=30),
+        expires_at=now() + timedelta(seconds=30),
     )
     db.add(orm_token)
     db.commit()
@@ -530,7 +531,7 @@ def test_expiring_oauth_token(app, user):
     found = orm.APIToken.find(db, token)
     assert found is orm_token
 
-    with mock.patch.object(orm.APIToken, 'now', lambda: now() + 60):
+    with mock.patch.object(orm.APIToken, 'now', lambda: now() + timedelta(seconds=60)):
         found = orm.APIToken.find(db, token)
         assert found is None
         assert orm_token in db.query(orm.APIToken)

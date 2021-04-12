@@ -277,7 +277,6 @@ async def test_get_self(app):
         user=u.orm_user,
         client=oauth_client,
         token=token,
-        grant_type=orm.GrantType.authorization_code,
     )
     db.add(oauth_token)
     db.commit()

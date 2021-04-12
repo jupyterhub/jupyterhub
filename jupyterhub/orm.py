@@ -548,9 +548,15 @@ class APIToken(Hashed, Base):
 
     __tablename__ = 'api_tokens'
 
-    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+    user_id = Column(
+        Integer,
+        ForeignKey('users.id', ondelete="CASCADE"),
+        nullable=True,
+    )
     service_id = Column(
-        Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True
+        Integer,
+        ForeignKey('services.id', ondelete="CASCADE"),
+        nullable=True,
     )
 
     id = Column(Integer, primary_key=True)
@@ -563,12 +569,23 @@ class APIToken(Hashed, Base):
 
     # added in 2.0
     client_id = Column(
-        Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='CASCADE',
+        ),
     )
-    grant_type = Column(Enum(GrantType), nullable=False)
-    refresh_token = Column(Unicode(255))
-    # the browser session id associated with a given token
-    session_id = Column(Unicode(255))
+    # FIXME: refresh_tokens not implemented
+    # should be a relation to another token table
+    # refresh_token = Column(
+    #     Integer,
+    #     ForeignKey('refresh_tokens.id', ondelete="CASCADE"),
+    #     nullable=True,
+    # )
+
+    # the browser session id associated with a given token,
+    # if issued during oauth to be stored in a cookie
+    session_id = Column(Unicode(255), nullable=True)
 
     # token metadata for bookkeeping
     now = datetime.utcnow  # for expiry
@@ -633,8 +650,10 @@ class APIToken(Hashed, Base):
         roles=None,
         note='',
         generated=True,
+        session_id=None,
         expires_in=None,
         client_id='jupyterhub',
+        return_orm=False,
     ):
         """Generate a new API token for a user or service"""
         assert user or service
@@ -652,8 +671,8 @@ class APIToken(Hashed, Base):
         orm_token = cls(
             generated=generated,
             note=note or '',
-            grant_type=GrantType.authorization_code,
             client_id=client_id,
+            session_id=session_id,
         )
         orm_token.token = token
         if user:

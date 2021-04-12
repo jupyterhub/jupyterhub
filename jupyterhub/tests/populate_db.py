@@ -6,6 +6,7 @@ used in test_db.py
 """
 import os
 from datetime import datetime
+from functools import partial
 
 import jupyterhub
 from jupyterhub import orm
@@ -69,13 +70,15 @@ def populate_db(url):
     db.add(code)
     db.commit()
     if jupyterhub.version_info < (2, 0):
-        Token = orm.OAuthAccessToken
+        Token = partial(
+            orm.OAuthAccessToken,
+            grant_type=orm.GrantType.authorization_code,
+        )
     else:
         Token = orm.APIToken
     access_token = Token(
         client_id=client.identifier,
         user_id=user.id,
-        grant_type=orm.GrantType.authorization_code,
     )
     db.add(access_token)
     db.commit()
