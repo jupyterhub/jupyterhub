@@ -214,8 +214,6 @@ class NewToken(Application):
         hub = JupyterHub(parent=self)
         hub.load_config_file(hub.config_file)
         hub.init_db()
-        hub.init_hub()
-        hub.init_oauth()
 
         def init_users():
             loop = asyncio.new_event_loop()
@@ -1694,6 +1692,26 @@ class JupyterHub(Application):
         except orm.DatabaseSchemaMismatch as e:
             self.exit(e)
 
+        # ensure the default oauth client exists
+        if (
+            not self.db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .one_or_none()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            client = orm.OAuthClient(
+                identifier="jupyterhub",
+                secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
+            self.db.add(client)
+            self.db.commit()
+
     def init_hub(self):
         """Load the Hub URL config"""
         hub_args = dict(
@@ -2295,23 +2313,6 @@ class JupyterHub(Application):
             login_url=url_path_join(base_url, 'login'),
             token_expires_in=self.oauth_token_expires_in,
         )
-        # ensure the default oauth client exists
-        if (
-            not self.db.query(orm.OAuthClient)
-            .filter_by(identifier="jupyterhub")
-            .first()
-        ):
-            # create the oauth client for jupyterhub itself
-            # this allows us to distinguish between orphaned tokens
-            # (failed cascade deletion) and tokens issued by the hub
-            # it has no client_secret, which means it cannot be used
-            # to make requests
-            self.oauth_provider.add_client(
-                client_id="jupyterhub",
-                client_secret="",
-                redirect_uri="",
-                description="JupyterHub",
-            )
 
     def cleanup_oauth_clients(self):
         """Cleanup any OAuth clients that shouldn't be in the database.

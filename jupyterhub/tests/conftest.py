@@ -125,16 +125,14 @@ def db():
     """Get a db session"""
     global _db
     if _db is None:
-        _db = orm.new_session_factory('sqlite:///:memory:')()
+        # make sure some initial db contents are filled out
+        # specifically, the 'default' jupyterhub oauth client
+        app = MockHub(db_url='sqlite:///:memory:')
+        app.init_db()
+        _db = app.db
         user = orm.User(name=getuser())
         _db.add(user)
         _db.commit()
-        # make sure some initial db contents are filled out
-        # specifically, the 'default' jupyterhub oauth client
-        app = MockHub()
-        app.db = _db
-        app.init_hub()
-        app.init_oauth()
     return _db
 
 
