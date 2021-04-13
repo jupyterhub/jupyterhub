@@ -180,7 +180,6 @@ def mock_handler():
     ],
 )
 def test_scope_method_access(mock_handler, scopes, method, arguments, is_allowed):
-    mock_handler = MockAPIHandler()
     mock_handler.current_user = mock.Mock(name=arguments[0])
     mock_handler.set_scopes(*scopes)
     api_call = getattr(mock_handler, method)
@@ -235,7 +234,6 @@ async def test_expand_groups(app, user_name, in_group, status_code):
         app.db.add(group)
     if in_group and user not in group.users:
         group.users.append(user)
-    kind = 'users'
     roles.update_roles(app.db, user, roles=['test'])
     roles.strip_role(app.db, user, 'user')
     app.db.commit()
@@ -261,21 +259,21 @@ err_message = "No access to resources or resources not found"
 
 
 @pytest.fixture
-def temp_role(app):
+def create_temp_role(app):
     """Generate a temporary role with certain scopes.
-    Convenience function that takes care of db stuff and teardown"""
+    Convenience function that provides setup, database handling and teardown"""
     temp_roles = []
     index = [1]
 
     def temp_role_creator(scopes, role_name=None):
         if not role_name:
-            role_name = f'test_role_{index[0]}'
+            role_name = f'temp_role_{index[0]}'
             index[0] += 1
-        role = orm.Role(name=role_name, scopes=list(scopes))
-        temp_roles.append(role)
-        app.db.add(role)
+        temp_role = orm.Role(name=role_name, scopes=list(scopes))
+        temp_roles.append(temp_role)
+        app.db.add(temp_role)
         app.db.commit()
-        return role
+        return temp_role
 
     yield temp_role_creator
     for role in temp_roles:
@@ -284,17 +282,18 @@ def temp_role(app):
 
 
 @pytest.fixture
-def user_with_scopes(app, temp_role):
+def create_user_with_scopes(app, create_temp_role):
     """Generate a temporary user with specific scopes.
-    Takes care of db stuff and teardown"""
+    Convenience function that provides setup, database handling and teardown"""
     temp_users = []
-    index = [1]
-    role_function = temp_role
+    counter = 0
+    get_role = create_temp_role
 
     def temp_user_creator(*scopes):
-        name = f"temporary_user_{index[0]}"
-        index[0] += 1
-        role = role_function(scopes)
+        nonlocal counter
+        counter += 1
+        name = f"temp_user_{counter}"
+        role = get_role(scopes)
         orm_user = orm.User(name=name)
         app.db.add(orm_user)
         app.db.commit()
@@ -308,16 +307,17 @@ def user_with_scopes(app, temp_role):
 
 
 @pytest.fixture
-def service_with_scopes(app, temp_role):
+def create_service_with_scopes(app, create_temp_role):
     """Generate a temporary service with specific scopes.
-    Takes care of db stuff and teardown"""
+    Convenience function that provides setup, database handling and teardown"""
     temp_service = []
-    index = [1]
-    role_function = temp_role
+    counter = 0
+    role_function = create_temp_role
 
     def temp_service_creator(*scopes):
-        name = f"temporary_service_{index[0]}"
-        index[0] += 1
+        nonlocal counter
+        counter += 1
+        name = f"temp_service_{counter}"
         role = role_function(scopes)
         app.services.append({'name': name})
         app.init_services()
@@ -332,9 +332,9 @@ def service_with_scopes(app, temp_role):
     app.db.commit()
 
 
-async def test_request_fake_user(app, user_with_scopes):
+async def test_request_fake_user(app, create_user_with_scopes):
     fake_user = 'annyong'
-    user = user_with_scopes('read:users!group=stuff')
+    user = create_user_with_scopes('read:users!group=stuff')
     r = await api_request(
         app, 'users', fake_user, headers=auth_header(app.db, user.name)
     )
@@ -343,19 +343,23 @@ async def test_request_fake_user(app, user_with_scopes):
     assert r.json()['message'] == err_message
 
 
-async def test_refuse_exceeding_token_permissions(app, user_with_scopes, temp_role):
-    user = user_with_scopes('self')
+async def test_refuse_exceeding_token_permissions(
+    app, create_user_with_scopes, create_temp_role
+):
+    user = create_user_with_scopes('self')
     user.new_api_token()
-    temp_role(['admin:users'], 'exceeding_role')
+    create_temp_role(['admin:users'], 'exceeding_role')
     with pytest.raises(ValueError):
         roles.update_roles(app.db, entity=user.api_tokens[0], roles=['exceeding_role'])
 
 
-async def test_exceeding_user_permissions(app, user_with_scopes, temp_role):
-    user = user_with_scopes('read:users:groups')
+async def test_exceeding_user_permissions(
+    app, create_user_with_scopes, create_temp_role
+):
+    user = create_user_with_scopes('read:users:groups')
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
-    temp_role(['read:users'], 'reader_role')
+    create_temp_role(['read:users'], 'reader_role')
     roles.grant_role(app.db, orm_api_token, rolename='reader_role')
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
@@ -365,12 +369,12 @@ async def test_exceeding_user_permissions(app, user_with_scopes, temp_role):
     assert 'last_activity' not in keys
 
 
-async def test_user_service_separation(app, mockservice_url, temp_role):
+async def test_user_service_separation(app, mockservice_url, create_temp_role):
     name = mockservice_url.name
     user = add_user(app.db, name=name)
 
-    temp_role(['read:users'], 'reader_role')
-    temp_role(['read:users:groups'], 'subreader_role')
+    create_temp_role(['read:users'], 'reader_role')
+    create_temp_role(['read:users:groups'], 'subreader_role')
     roles.update_roles(app.db, user, roles=['subreader_role'])
     roles.update_roles(app.db, mockservice_url.orm, roles=['reader_role'])
     user.roles.remove(orm.Role.find(app.db, name='user'))
@@ -383,9 +387,9 @@ async def test_user_service_separation(app, mockservice_url, temp_role):
     assert 'last_activity' not in keys
 
 
-async def test_request_user_outside_group(app, user_with_scopes):
+async def test_request_user_outside_group(app, create_user_with_scopes):
     outside_user = 'hello'
-    user = user_with_scopes('read:users!group=stuff')
+    user = create_user_with_scopes('read:users!group=stuff')
     add_user(app.db, name=outside_user)
     r = await api_request(
         app, 'users', outside_user, headers=auth_header(app.db, user.name)
@@ -395,8 +399,8 @@ async def test_request_user_outside_group(app, user_with_scopes):
     assert r.json()['message'] == err_message
 
 
-async def test_user_filter(app, user_with_scopes):
-    user = user_with_scopes(
+async def test_user_filter(app, create_user_with_scopes):
+    user = create_user_with_scopes(
         'read:users!user=lindsay', 'read:users!user=gob', 'read:users!user=oscar'
     )
     name_in_scope = {'lindsay', 'oscar', 'gob'}
@@ -419,7 +423,7 @@ async def test_user_filter(app, user_with_scopes):
     app.db.commit()
 
 
-async def test_service_filter(app, user_with_scopes):
+async def test_service_filter(app, create_user_with_scopes):
     services = [
         {'name': 'cull_idle', 'api_token': 'some-token'},
         {'name': 'user_service', 'api_token': 'some-other-token'},
@@ -427,18 +431,18 @@ async def test_service_filter(app, user_with_scopes):
     for service in services:
         app.services.append(service)
     app.init_services()
-    user = user_with_scopes('read:services!service=cull_idle')
+    user = create_user_with_scopes('read:services!service=cull_idle')
     r = await api_request(app, 'services', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
     service_names = set(r.json().keys())
     assert service_names == {'cull_idle'}
 
 
-async def test_user_filter_with_group(app, user_with_scopes):
+async def test_user_filter_with_group(app, create_user_with_scopes):
     group_name = 'sitwell'
-    user1 = user_with_scopes(f'read:users!group={group_name}')
-    user2 = user_with_scopes('self')
-    external_user = user_with_scopes('self')
+    user1 = create_user_with_scopes(f'read:users!group={group_name}')
+    user2 = create_user_with_scopes('self')
+    external_user = create_user_with_scopes('self')
     name_set = {user1.name, user2.name}
     group = orm.Group.find(app.db, name=group_name)
     if not group:
@@ -457,10 +461,12 @@ async def test_user_filter_with_group(app, user_with_scopes):
     app.db.commit()
 
 
-async def test_group_scope_filter(app, user_with_scopes):
+async def test_group_scope_filter(app, create_user_with_scopes):
     in_groups = {'sitwell', 'bluth'}
     out_groups = {'austero'}
-    user = user_with_scopes(*(f'read:groups!group={group}' for group in in_groups))
+    user = create_user_with_scopes(
+        *(f'read:groups!group={group}' for group in in_groups)
+    )
     for group_name in in_groups | out_groups:
         group = orm.Group.find(app.db, name=group_name)
         if not group:
@@ -477,16 +483,16 @@ async def test_group_scope_filter(app, user_with_scopes):
     app.db.commit()
 
 
-async def test_vertical_filter(app, user_with_scopes):
-    user = user_with_scopes('read:users:name')
+async def test_vertical_filter(app, create_user_with_scopes):
+    user = create_user_with_scopes('read:users:name')
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
     allowed_keys = {'name', 'kind'}
     assert set([key for user in r.json() for key in user.keys()]) == allowed_keys
 
 
-async def test_stacked_vertical_filter(app, user_with_scopes):
-    user = user_with_scopes('read:users:activity', 'read:users:servers')
+async def test_stacked_vertical_filter(app, create_user_with_scopes):
+    user = create_user_with_scopes('read:users:activity', 'read:users:servers')
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
     allowed_keys = {'name', 'kind', 'servers', 'last_activity'}
@@ -494,8 +500,8 @@ async def test_stacked_vertical_filter(app, user_with_scopes):
     assert result_model == allowed_keys
 
 
-async def test_cross_filter(app, user_with_scopes):
-    user = user_with_scopes('read:users:activity', 'self')
+async def test_cross_filter(app, create_user_with_scopes):
+    user = create_user_with_scopes('read:users:activity', 'self')
     new_users = {'britta', 'jeff', 'annie'}
     for new_user_name in new_users:
         add_user(app.db, name=new_user_name)
@@ -519,12 +525,12 @@ async def test_cross_filter(app, user_with_scopes):
     ],
 )
 async def test_metascope_self_expansion(
-    app, kind, has_user_scopes, user_with_scopes, service_with_scopes
+    app, kind, has_user_scopes, create_user_with_scopes, create_service_with_scopes
 ):
     if kind == 'users':
-        orm_obj = user_with_scopes('self')
+        orm_obj = create_user_with_scopes('self')
     else:
-        orm_obj = service_with_scopes('self')
+        orm_obj = create_service_with_scopes('self')
     # test expansion of user/service scopes
     scopes = roles.expand_roles_to_scopes(orm_obj)
     assert bool(scopes) == has_user_scopes
@@ -535,8 +541,8 @@ async def test_metascope_self_expansion(
     assert bool(token_scopes) == has_user_scopes
 
 
-async def test_metascope_all_expansion(app, user_with_scopes):
-    user = user_with_scopes('self')
+async def test_metascope_all_expansion(app, create_user_with_scopes):
+    user = create_user_with_scopes('self')
     user.new_api_token()
     token = user.api_tokens[0]
     # Check 'all' expansion
