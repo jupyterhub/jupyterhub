@@ -66,3 +66,53 @@ jobs:
         run: |
           pip install twine
           twine upload --skip-existing dist/*
+
+  publish-docker:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+
+      # Setup docker to build for multiple platforms (requires qemu).
+      # See:
+      # https://github.com/docker/build-push-action/tree/v2.3.0#usage
+      # https://github.com/docker/build-push-action/blob/v2.3.0/docs/advanced/multi-platform.md
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      # https://github.com/docker/login-action/tree/v1.8.0#docker-hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # https://github.com/jupyterhub/action-major-minor-tag-calculator
+      # If this is a tagged build this will return additional parent tags.
+      # E.g. 1.2.3 is expanded to Docker tags
+      # [{prefix}:1.2.3, {prefix}:1.2, {prefix}:1, {prefix}:latest] unless
+      # this is a backported tag in which case the newer tags aren't updated.
+      # For branches this will return the branch name.
+      # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
+      - name: Get list of tags
+        id: gettags
+        uses: jupyterhub/action-major-minor-tag-calculator@main
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "jupyterhub/jupyterhub:"
+
+      - name: Display tags
+        run: echo "Docker tags ${{ steps.gettags.outputs.tags }}"
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          platforms: linux/amd64,linux/arm64
+          push: ${{ startsWith(github.ref, 'refs/tags/') }}
+          # tags parameter must be a string input so convert `gettags` JSON
+          # array into a comma separated list of tags
+          tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
