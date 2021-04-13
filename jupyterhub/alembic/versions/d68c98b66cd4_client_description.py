@@ -16,7 +16,8 @@ import sqlalchemy as sa
 
 
 def upgrade():
-    tables = op.get_bind().engine.table_names()
+    engine = op.get_bind().engine
+    tables = sa.inspect(engine).get_table_names()
     if 'oauth_clients' in tables:
         op.add_column(
             'oauth_clients', sa.Column('description', sa.Unicode(length=1023))

@@ -873,7 +873,7 @@ def check_db_revision(engine):
     - Empty databases are tagged with the current revision
     """
     # Check database schema version
-    current_table_names = set(engine.table_names())
+    current_table_names = set(inspect(engine).get_table_names())
     my_table_names = set(Base.metadata.tables.keys())
 
     from .dbutil import _temp_alembic_ini

@@ -23,7 +23,7 @@ tables = ('oauth_access_tokens', 'oauth_codes')
 
 def add_column_if_table_exists(table, column):
     engine = op.get_bind().engine
-    if table not in engine.table_names():
+    if table not in sa.inspect(engine).get_table_names():
         # table doesn't exist, no need to upgrade
         # because jupyterhub will create it on launch
         logger.warning("Skipping upgrade of absent table: %s", table)
