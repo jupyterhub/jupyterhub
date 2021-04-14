@@ -70,6 +70,10 @@ jobs:
   publish-docker:
     runs-on: ubuntu-20.04
     steps:
+      - name: Should we push this image to a registry?
+        run: |
+          echo "PUSH_IMAGE=${{ startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/master') }}" >> $GITHUB_ENV
+
       - uses: actions/checkout@v2
 
       # Setup docker to build for multiple platforms (requires qemu).
@@ -86,7 +90,7 @@ jobs:
       # https://github.com/docker/login-action/tree/v1.8.0#docker-hub
       - name: Login to Docker Hub
         uses: docker/login-action@v1
-        if: startsWith(github.ref, 'refs/tags/')
+        if: ${{ env.PUSH_IMAGE == 'true' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -98,7 +102,7 @@ jobs:
       # this is a backported tag in which case the newer tags aren't updated.
       # For branches this will return the branch name.
       # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
-      - name: Get list of tags
+      - name: Get list of jupyterhub tags
         id: gettags
         uses: jupyterhub/action-major-minor-tag-calculator@main
         with:
@@ -108,11 +112,12 @@ jobs:
       - name: Display tags
         run: echo "Docker tags ${{ steps.gettags.outputs.tags }}"
 
-      - name: Build and push
+      - name: Build and push jupyterhub
         uses: docker/build-push-action@v2
         with:
+          context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ startsWith(github.ref, 'refs/tags/') }}
+          push: ${{ env.PUSH_IMAGE == 'true' }}
           # tags parameter must be a string input so convert `gettags` JSON
           # array into a comma separated list of tags
           tags: ${{ join(fromJson(steps.gettags.outputs.tags)) }}
