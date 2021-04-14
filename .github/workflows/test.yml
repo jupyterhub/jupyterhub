@@ -238,8 +238,8 @@ jobs:
 
       - name: smoke test jupyterhub
         run: |
-          docker run --rm -it jupyterhub/jupyterhub jupyterhub --help
+          docker run --rm -t jupyterhub/jupyterhub jupyterhub --help
 
       - name: verify static files
         run: |
-          docker run --rm -it -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
+          docker run --rm -t -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py
