@@ -109,9 +109,6 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "jupyterhub/jupyterhub:"
 
-      - name: Display tags
-        run: echo "Docker tags ${{ steps.gettags.outputs.tags }}"
-
       - name: Build and push jupyterhub
         uses: docker/build-push-action@v2
         with:
