@@ -125,7 +125,11 @@ def db():
     """Get a db session"""
     global _db
     if _db is None:
-        _db = orm.new_session_factory('sqlite:///:memory:')()
+        # make sure some initial db contents are filled out
+        # specifically, the 'default' jupyterhub oauth client
+        app = MockHub(db_url='sqlite:///:memory:')
+        app.init_db()
+        _db = app.db
         user = orm.User(name=getuser())
         _db.add(user)
         _db.commit()
@@ -164,9 +168,14 @@ def cleanup_after(request, io_loop):
     allows cleanup of servers between tests
     without having to launch a whole new app
     """
+
     try:
         yield
     finally:
+        if _db is not None:
+            # cleanup after failed transactions
+            _db.rollback()
+
         if not MockHub.initialized():
             return
         app = MockHub.instance()

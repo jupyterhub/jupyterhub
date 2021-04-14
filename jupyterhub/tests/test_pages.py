@@ -869,8 +869,9 @@ async def test_oauth_token_page(app):
     user = app.users[orm.User.find(app.db, name)]
     client = orm.OAuthClient(identifier='token')
     app.db.add(client)
-    oauth_token = orm.OAuthAccessToken(
-        client=client, user=user, grant_type=orm.GrantType.authorization_code
+    oauth_token = orm.APIToken(
+        client=client,
+        user=user,
     )
     app.db.add(oauth_token)
     app.db.commit()

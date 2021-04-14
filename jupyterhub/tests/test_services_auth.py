@@ -444,11 +444,7 @@ async def test_oauth_logout(app, mockservice_url):
 
     def auth_tokens():
         """Return list of OAuth access tokens for the user"""
-        return list(
-            app.db.query(orm.OAuthAccessToken).filter(
-                orm.OAuthAccessToken.user_id == app_user.id
-            )
-        )
+        return list(app.db.query(orm.APIToken).filter_by(user_id=app_user.id))
 
     # ensure we start empty
     assert auth_tokens() == []

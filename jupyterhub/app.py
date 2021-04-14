@@ -1692,6 +1692,26 @@ class JupyterHub(Application):
         except orm.DatabaseSchemaMismatch as e:
             self.exit(e)
 
+        # ensure the default oauth client exists
+        if (
+            not self.db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .one_or_none()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            client = orm.OAuthClient(
+                identifier="jupyterhub",
+                secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
+            self.db.add(client)
+            self.db.commit()
+
     def init_hub(self):
         """Load the Hub URL config"""
         hub_args = dict(
@@ -2014,12 +2034,13 @@ class JupyterHub(Application):
         run periodically
         """
         # this should be all the subclasses of Expiring
-        for cls in (orm.APIToken, orm.OAuthAccessToken, orm.OAuthCode):
+        for cls in (orm.APIToken, orm.OAuthCode):
             self.log.debug("Purging expired {name}s".format(name=cls.__name__))
             cls.purge_expired(self.db)
 
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
+
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
 
@@ -2298,7 +2319,7 @@ class JupyterHub(Application):
 
         This should mainly be services that have been removed from configuration or renamed.
         """
-        oauth_client_ids = set()
+        oauth_client_ids = {"jupyterhub"}
         for service in self._service_map.values():
             if service.oauth_available:
                 oauth_client_ids.add(service.oauth_client_id)

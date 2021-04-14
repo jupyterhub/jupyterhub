@@ -552,36 +552,32 @@ class TokenPageHandler(BaseHandler):
             return (token.last_activity or never, token.created or never)
 
         now = datetime.utcnow()
-        api_tokens = []
-        for token in sorted(user.api_tokens, key=sort_key, reverse=True):
-            if token.expires_at and token.expires_at < now:
-                self.db.delete(token)
-                self.db.commit()
-                continue
-            api_tokens.append(token)
 
         # group oauth client tokens by client id
-        # AccessTokens have expires_at as an integer timestamp
-        now_timestamp = now.timestamp()
-        oauth_tokens = defaultdict(list)
-        for token in user.oauth_tokens:
-            if token.expires_at and token.expires_at < now_timestamp:
-                self.log.warning("Deleting expired token")
+        all_tokens = defaultdict(list)
+        for token in sorted(user.api_tokens, key=sort_key, reverse=True):
+            if token.expires_at and token.expires_at < now:
+                self.log.warning(f"Deleting expired token {token}")
                 self.db.delete(token)
                 self.db.commit()
                 continue
             if not token.client_id:
                 # token should have been deleted when client was deleted
-                self.log.warning("Deleting stale oauth token for %s", user.name)
+                self.log.warning("Deleting stale oauth token {token}")
                 self.db.delete(token)
                 self.db.commit()
                 continue
-            oauth_tokens[token.client_id].append(token)
+            all_tokens[token.client_id].append(token)
 
+        # individually list tokens issued by jupyterhub itself
+        api_tokens = all_tokens.pop("jupyterhub", [])
+
+        # group all other tokens issued under their owners
         # get the earliest created and latest last_activity
         # timestamp for a given oauth client
         oauth_clients = []
-        for client_id, tokens in oauth_tokens.items():
+
+        for client_id, tokens in all_tokens.items():
             created = tokens[0].created
             last_activity = tokens[0].last_activity
             for token in tokens[1:]:

@@ -51,6 +51,7 @@ from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
 from traitlets import Unicode
+from traitlets import validate
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
@@ -283,6 +284,15 @@ class Service(LoggingConfigurable):
     @default('oauth_client_id')
     def _default_client_id(self):
         return 'service-%s' % self.name
+
+    @validate("oauth_client_id")
+    def _validate_client_id(self, proposal):
+        if not proposal.value.startswith("service-"):
+            raise ValueError(
+                f"service {self.name} has oauth_client_id='{proposal.value}'."
+                " Service oauth client ids must start with 'service-'"
+            )
+        return proposal.value
 
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI for this service.
