@@ -1927,7 +1927,7 @@ class JupyterHub(Application):
         # make sure that on no admin situation, all roles are reset
         admin_role = orm.Role.find(db, name='admin')
         if not admin_role.users:
-            app_log.info(
+            app_log.warning(
                 "No admin users found; assuming hub upgrade. Initializing default roles for all entities"
             )
             # make sure all users, services and tokens have at least one role (update with default)
