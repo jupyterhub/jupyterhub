@@ -169,6 +169,9 @@ jobs:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
           context: demo-image
-          platforms: linux/amd64,linux/arm64
+          # linux/arm64 currently fails:
+          # ERROR: Could not build wheels for argon2-cffi which use PEP 517 and cannot be installed directly
+          # ERROR: executor failed running [/bin/sh -c python3 -m pip install notebook]: exit code: 1
+          platforms: linux/amd64
           push: true
           tags: ${{ join(fromJson(steps.demotags.outputs.tags)) }}
