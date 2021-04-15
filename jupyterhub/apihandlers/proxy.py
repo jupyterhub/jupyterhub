@@ -17,7 +17,35 @@ class ProxyAPIHandler(APIHandler):
         This is the same as fetching the routing table directly from the proxy,
         but without clients needing to maintain separate
         """
+        offset = self.get_argument("offset", None)
+        limit = self.get_argument("limit", None)
+
         routes = await self.proxy.get_all_routes()
+
+        if offset is not None:
+            try:
+                offset = int(offset)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, offset must be an integer"
+                )
+            routes = {
+                key: routes[key]
+                for key in list(routes.keys())[offset:]
+                if key in routes
+            }
+
+        if limit is not None:
+            try:
+                limit = int(limit)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, limit must be an integer"
+                )
+            routes = {
+                key: routes[key] for key in list(routes.keys())[:limit] if key in routes
+            }
+
         self.write(json.dumps(routes))
 
     @admin_only
