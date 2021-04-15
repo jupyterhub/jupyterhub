@@ -154,8 +154,6 @@ def _expand_scope(scopename):
 
 
 def expand_roles_to_scopes(orm_object):
-    """Get the scopes listed in the roles of the User/Service/Group/Token"""
-    scopes = _get_subscopes(*orm_object.roles)
     """Get the scopes listed in the roles of the User/Service/Group/Token
     If User, take into account the user's groups roles as well"""
 
