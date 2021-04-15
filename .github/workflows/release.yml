@@ -120,10 +120,11 @@ jobs:
       # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
       - name: Get list of jupyterhub tags
         id: jupyterhubtags
-        uses: jupyterhub/action-major-minor-tag-calculator@main
+        uses: manics/action-major-minor-tag-calculator@noref
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
 
       - name: Build and push jupyterhub
         uses: docker/build-push-action@v2
@@ -139,10 +140,11 @@ jobs:
 
       - name: Get list of jupyterhub-onbuild tags
         id: onbuildtags
-        uses: jupyterhub/action-major-minor-tag-calculator@main
+        uses: manics/action-major-minor-tag-calculator@noref
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub-onbuild/jupyterhub:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub-onbuild/jupyterhub:noref"
 
       - name: Build and push jupyterhub-onbuild
         uses: docker/build-push-action@v2
@@ -158,10 +160,11 @@ jobs:
 
       - name: Get list of jupyterhub-demo tags
         id: demotags
-        uses: jupyterhub/action-major-minor-tag-calculator@main
+        uses: manics/action-major-minor-tag-calculator@noref
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub-demo/jupyterhub:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub-demo/jupyterhub:noref"
 
       - name: Build and push jupyterhub-demo
         uses: docker/build-push-action@v2
