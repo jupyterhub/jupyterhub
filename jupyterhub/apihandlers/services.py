@@ -40,28 +40,6 @@ class ServiceListAPIHandler(APIHandler):
         self.write(json.dumps(data))
 
 
-def admin_or_self(method):
-    """Decorator for restricting access to either the target service or admin"""
-    """***Deprecated in favor of RBAC. Use scope-based decorator***"""
-
-    def decorated_method(self, name):
-        current = self.current_user
-        if current is None:
-            raise web.HTTPError(403)
-        if not current.admin:
-            # not admin, maybe self
-            if not isinstance(current, orm.Service):
-                raise web.HTTPError(403)
-            if current.name != name:
-                raise web.HTTPError(403)
-        # raise 404 if not found
-        if name not in self.services:
-            raise web.HTTPError(404)
-        return method(self, name)
-
-    return decorated_method
-
-
 class ServiceAPIHandler(APIHandler):
     @needs_scope('read:services')
     def get(self, service_name):

@@ -288,19 +288,6 @@ def authenticated_403(self):
 
 
 @auth_decorator
-def admin_only(self):
-    """Decorator for restricting access to admin users
-    Deprecated in favor of scopes.need_scope()
-    """
-    user = self.current_user
-    app_log.warning(
-        "Admin decorator is deprecated and will be removed soon. Use scope-based decorator instead"
-    )
-    if user is None or not user.admin:
-        raise web.HTTPError(403)
-
-
-@auth_decorator
 def metrics_authentication(self):
     """Decorator for restricting access to metrics"""
     user = self.current_user

@@ -561,6 +561,7 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     "scopes, can_stop ,num_servers, keys_in, keys_out",
     [
         (['read:users:servers!user=almond'], False, 2, {'name'}, {'state'}),
+        (['admin:users', 'read:users'], False, 0, set(), set()),
         (['read:users:servers!group=nuts'], False, 2, {'name'}, {'state'}),
         (
             ['admin:users:server_state', 'read:users:servers'],
@@ -569,15 +570,13 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
             {'name', 'state'},
             set(),
         ),
-        (['users:servers', 'read:users:name'], True, 0, set(), set()),
         (
             [
-                'read:users:name!user=almond',
                 'read:users:servers!server=almond/bianca',
                 'admin:users:server_state!server=almond/bianca',
             ],
             False,
-            0,  # fixme: server-scope not working yet
+            1,
             {'name', 'state'},
             set(),
         ),
@@ -590,11 +589,6 @@ async def test_server_state_access(
         app.tornado_settings,
         {'allow_named_servers': True, 'named_server_limit_per_user': 2},
     ):
-        ## 1. Test a user can access all servers without auth_state
-        ## 2. Test a service with admin:user but no admin:users:servers gets no access to any server data
-        ## 3. Test a service with admin:user:server_state gets access to auth_state
-        ## 4. Test a service with user:servers!server=x gives access to one server, and the correct server.
-        ## 5. Test a service with users:servers!group=x gives access to both servers
         username = 'almond'
         user = add_user(app.db, app, name=username)
         group_name = 'nuts'

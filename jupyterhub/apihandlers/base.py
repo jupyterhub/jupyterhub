@@ -87,29 +87,23 @@ class APIHandler(BaseHandler):
             """
             if sub_scope == scopes.Scope.ALL:
                 return True
-            else:
-                try:
-                    found_resource = orm_resource.name in sub_scope[kind]
-                except KeyError:
-                    found_resource = False
-            if not found_resource:  # Try group-based access
-                if kind == 'server' and 'user' in sub_scope:
-                    # First check if we have access to user info
-                    user_name = orm_resource.user.name
-                    found_resource = user_name in sub_scope['user']
-                    if not found_resource:
-                        # Now check for specific servers:
-                        server_format = f"{orm_resource.user / orm_resource.name}"
-                        found_resource = server_format in sub_scope[kind]
-                elif 'group' in sub_scope:
-                    group_names = set()
-                    if kind == 'user':
-                        group_names = {group.name for group in orm_resource.groups}
-                    elif kind == 'server':
-                        group_names = {group.name for group in orm_resource.user.groups}
-                    user_in_group = bool(group_names & set(sub_scope['group']))
-                    found_resource = user_in_group
-            return found_resource
+            elif orm_resource.name in sub_scope.get(kind, []):
+                return True
+            if kind == 'server':
+                server_format = f"{orm_resource.user.name}/{orm_resource.name}"
+                if server_format in sub_scope.get(kind, []):
+                    return True
+                # Fall back on checking if we have user access
+                if orm_resource.user.name in sub_scope.get('user', []):
+                    return True
+                # Fall back on checking if we have group access for this user
+                orm_resource = orm_resource.user
+            if 'group' in sub_scope:
+                group_names = {group.name for group in orm_resource.groups}
+                user_in_group = bool(group_names & set(sub_scope['group']))
+                if user_in_group:
+                    return True
+            return False
 
         return has_access_to
 
@@ -183,8 +177,8 @@ class APIHandler(BaseHandler):
         )
 
     def server_model(self, spawner):
-        """Get the JSON model for a Spawner"""
-        server_scope = 'read:users:servers'
+        """Get the JSON model for a Spawner
+        Assume server permission already granted"""
         server_state_scope = 'admin:users:server_state'
         model = {
             'name': spawner.name,
@@ -196,7 +190,6 @@ class APIHandler(BaseHandler):
             'user_options': spawner.user_options,
             'progress_url': spawner._progress_url,
         }
-        # First check users, then servers
         if server_state_scope in self.parsed_scopes:
             scope_filter = self.get_scope_filter(server_state_scope)
             if scope_filter(spawner, kind='server'):
@@ -260,7 +253,6 @@ class APIHandler(BaseHandler):
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},
             'admin:users:auth_state': {'kind', 'name', 'auth_state'},
-            'admin:users:server_state': {'kind', 'name', 'servers', 'server_state'},
         }
         self.log.debug(
             "Asking for user model of %s with scopes [%s]",
@@ -277,13 +269,18 @@ class APIHandler(BaseHandler):
         if model:
             if '' in user.spawners and 'pending' in allowed_keys:
                 model['pending'] = user.spawners[''].pending
-            if 'servers' in allowed_keys:
-                servers = model['servers'] = {}
+
+            servers = model['servers'] = {}
+            scope = 'read:users:servers'
+            if scope in self.parsed_scopes:
+                scope_filter = self.get_scope_filter('read:users:servers')
                 for name, spawner in user.spawners.items():
                     # include 'active' servers, not just ready
                     # (this includes pending events)
-                    if spawner.active:
+                    if spawner.active and scope_filter(spawner, kind='server'):
                         servers[name] = self.server_model(spawner)
+            if not servers:
+                model.pop('servers')
         return model
 
     def group_model(self, group):
