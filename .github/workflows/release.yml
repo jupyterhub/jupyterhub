@@ -120,7 +120,7 @@ jobs:
       # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
       - name: Get list of jupyterhub tags
         id: jupyterhubtags
-        uses: manics/action-major-minor-tag-calculator@noref
+        uses: jupyterhub/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
@@ -140,7 +140,7 @@ jobs:
 
       - name: Get list of jupyterhub-onbuild tags
         id: onbuildtags
-        uses: manics/action-major-minor-tag-calculator@noref
+        uses: jupyterhub/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub-onbuild/jupyterhub:"
@@ -160,7 +160,7 @@ jobs:
 
       - name: Get list of jupyterhub-demo tags
         id: demotags
-        uses: manics/action-major-minor-tag-calculator@noref
+        uses: jupyterhub/action-major-minor-tag-calculator@main
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub-demo/jupyterhub:"
