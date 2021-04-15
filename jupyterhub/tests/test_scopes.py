@@ -492,10 +492,10 @@ async def test_vertical_filter(app, create_user_with_scopes):
 
 
 async def test_stacked_vertical_filter(app, create_user_with_scopes):
-    user = create_user_with_scopes('read:users:activity', 'read:users:servers')
+    user = create_user_with_scopes('read:users:activity', 'read:users:groups')
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    allowed_keys = {'name', 'kind', 'servers', 'last_activity'}
+    allowed_keys = {'name', 'kind', 'groups', 'last_activity'}
     result_model = set([key for user in r.json() for key in user.keys()])
     assert result_model == allowed_keys
 

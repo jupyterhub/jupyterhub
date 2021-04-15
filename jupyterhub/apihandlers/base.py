@@ -70,14 +70,12 @@ class APIHandler(BaseHandler):
         """Produce a filter for `*ListAPIHandlers* so that GET method knows which models to return.
         Filter is a callable that takes a resource name and outputs true or false"""
 
-        try:
-            sub_scope = self.parsed_scopes[req_scope]
-        except AttributeError:
-            raise web.HTTPError(
-                403,
-                "Resource scope %s (that was just accessed) not found in parsed scope model"
-                % req_scope,
-            )
+        def has_no_access(orm_resource, kind):
+            return False
+
+        if req_scope not in self.parsed_scopes:
+            return has_no_access
+        sub_scope = self.parsed_scopes[req_scope]
 
         def has_access_to(orm_resource, kind):
             """
@@ -98,7 +96,8 @@ class APIHandler(BaseHandler):
                     return True
                 # Fall back on checking if we have group access for this user
                 orm_resource = orm_resource.user
-            if 'group' in sub_scope:
+                kind = 'user'
+            if kind == 'user' and 'group' in sub_scope:
                 group_names = {group.name for group in orm_resource.groups}
                 user_in_group = bool(group_names & set(sub_scope['group']))
                 if user_in_group:

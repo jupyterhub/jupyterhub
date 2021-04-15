@@ -158,7 +158,7 @@ def fill_user(model):
     model.setdefault('pending', None)
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
-    model.setdefault('servers', {})
+    # model.setdefault('servers', {})
     return model
 
 
