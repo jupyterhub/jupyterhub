@@ -221,8 +221,11 @@ def _overwrite_role(role, role_dict):
                     'admin role description or scopes cannot be overwritten'
                 )
             else:
-                setattr(role, attr, role_dict[attr])
-                app_log.info('Role %r %r attribute has been changed', role.name, attr)
+                if role_dict[attr] != getattr(role, attr):
+                    setattr(role, attr, role_dict[attr])
+                    app_log.info(
+                        'Role %r %r attribute has been changed', role.name, attr
+                    )
 
 
 def create_role(db, role_dict):
