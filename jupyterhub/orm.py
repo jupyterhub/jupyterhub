@@ -128,9 +128,7 @@ class Group(Base):
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
-    users = relationship(
-        'User', secondary='user_group_map', backref='groups', lazy="dynamic"
-    )
+    users = relationship('User', secondary='user_group_map', backref='groups')
 
     def __repr__(self):
         return "<%s %s (%i users)>" % (

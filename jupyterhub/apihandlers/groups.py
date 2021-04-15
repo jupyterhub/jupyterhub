@@ -104,6 +104,9 @@ class GroupAPIHandler(_GroupAPIHandler):
         group = self.find_group(name)
         users_slice = None
 
+        print(type(group.users))
+        print(group.users)
+
         if offset is not None:
             try:
                 offset = int(offset)
@@ -112,7 +115,7 @@ class GroupAPIHandler(_GroupAPIHandler):
                     400, "Invalid argument type, offset must be an integer"
                 )
 
-            users_slice = group.users.offset(int(offset))
+            group.users = group.users[offset:]
 
         if limit is not None:
             try:
@@ -122,10 +125,7 @@ class GroupAPIHandler(_GroupAPIHandler):
                     400, "Invalid argument type, limit must be an integer"
                 )
 
-            if users_slice is not None:
-                users_slice = users_slice.limit(int(limit))
-            else:
-                users_slice = group.users.limit(int(limit))
+            group.users = group.users[:limit]
 
         group_model = self.group_model(group)
 
