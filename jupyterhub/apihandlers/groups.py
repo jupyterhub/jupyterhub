@@ -28,6 +28,7 @@ class _GroupAPIHandler(APIHandler):
         Raise 404 if not found.
         """
         group = orm.Group.find(self.db, name=name)
+
         if group is None:
             raise web.HTTPError(404, "No such group: %s", name)
         return group
@@ -43,9 +44,21 @@ class GroupListAPIHandler(_GroupAPIHandler):
         query = self.db.query(orm.Group)
 
         if offset is not None:
-            query = query.offset(int(offset))
+            try:
+                offset = int(offset)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, offset must be an integer"
+                )
+            query = query.offset(offset)
 
         if limit is not None:
+            try:
+                limit = int(limit)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, limit must be an integer"
+                )
             query = query.limit(int(limit))
 
         data = [self.group_model(group) for group in query]
@@ -86,8 +99,39 @@ class GroupAPIHandler(_GroupAPIHandler):
 
     @admin_only
     def get(self, name):
+        offset = self.get_argument("offset", None)
+        limit = self.get_argument("limit", None)
         group = self.find_group(name)
+        users_slice = None
+
+        if offset is not None:
+            try:
+                offset = int(offset)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, offset must be an integer"
+                )
+
+            users_slice = group.users.offset(int(offset))
+
+        if limit is not None:
+            try:
+                limit = int(limit)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, limit must be an integer"
+                )
+
+            if users_slice is not None:
+                users_slice = users_slice.limit(int(limit))
+            else:
+                users_slice = group.users.limit(int(limit))
+
         group_model = self.group_model(group)
+
+        if users_slice is not None:
+            group_model['users'] = [u.name for u in users_slice]
+
         self.write(json.dumps(group_model))
 
     @admin_only
