@@ -289,10 +289,11 @@ def create_user_with_scopes(app, create_temp_role):
     counter = 0
     get_role = create_temp_role
 
-    def temp_user_creator(*scopes):
+    def temp_user_creator(*scopes, name=None):
         nonlocal counter
-        counter += 1
-        name = f"temp_user_{counter}"
+        if name is None:
+            counter += 1
+            name = f"temp_user_{counter}"
         role = get_role(scopes)
         orm_user = orm.User(name=name)
         app.db.add(orm_user)
@@ -314,10 +315,11 @@ def create_service_with_scopes(app, create_temp_role):
     counter = 0
     role_function = create_temp_role
 
-    def temp_service_creator(*scopes):
+    def temp_service_creator(*scopes, name=None):
         nonlocal counter
-        counter += 1
-        name = f"temp_service_{counter}"
+        if name is None:
+            counter += 1
+            name = f"temp_service_{counter}"
         role = role_function(scopes)
         app.services.append({'name': name})
         app.init_services()
@@ -562,10 +564,16 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     [
         (['read:users:servers!user=almond'], False, 2, {'name'}, {'state'}),
         (['admin:users', 'read:users'], False, 0, set(), set()),
-        (['read:users:servers!group=nuts'], False, 2, {'name'}, {'state'}),
+        (
+            ['read:users:servers!group=nuts', 'users:servers'],
+            True,
+            2,
+            {'name'},
+            {'state'},
+        ),
         (
             ['admin:users:server_state', 'read:users:servers'],
-            True,  # Todo: test for server stop
+            False,
             2,
             {'name', 'state'},
             set(),
@@ -583,14 +591,20 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     ],
 )
 async def test_server_state_access(
-    app, scopes, can_stop, num_servers, keys_in, keys_out
+    app,
+    create_user_with_scopes,
+    create_service_with_scopes,
+    scopes,
+    can_stop,
+    num_servers,
+    keys_in,
+    keys_out,
 ):
     with mock.patch.dict(
         app.tornado_settings,
         {'allow_named_servers': True, 'named_server_limit_per_user': 2},
     ):
-        username = 'almond'
-        user = add_user(app.db, app, name=username)
+        user = create_user_with_scopes('self', name='almond')
         group_name = 'nuts'
         group = orm.Group.find(app.db, name=group_name)
         if not group:
@@ -599,36 +613,38 @@ async def test_server_state_access(
         group.users.append(user)
         app.db.commit()
         server_names = ['bianca', 'terry']
-        try:
-            for server_name in server_names:
-                await api_request(
-                    app, 'users', username, 'servers', server_name, method='post'
-                )
-            role = orm.Role(name=f"{username}-role", scopes=scopes)
-            app.db.add(role)
-            app.db.commit()
-            service_name = 'server_accessor'
-            service = orm.Service(name=service_name)
-            app.db.add(service)
-            service.roles.append(role)
-            app.db.commit()
-            api_token = service.new_api_token()
-            await app.init_roles()
-            headers = {'Authorization': 'token %s' % api_token}
-            r = await api_request(app, 'users', username, headers=headers)
-            r.raise_for_status()
-            user_model = r.json()
-            if num_servers:
-                assert 'servers' in user_model
-                server_models = user_model['servers']
-                assert len(server_models) == num_servers
-                for server, server_model in server_models.items():
-                    assert keys_in.issubset(server_model)
-                    assert keys_out.isdisjoint(server_model)
-            else:
-                assert 'servers' not in user_model
-        finally:
-            app.db.delete(role)
-            app.db.delete(service)
-            app.db.delete(group)
-            app.db.commit()
+        for server_name in server_names:
+            await api_request(
+                app, 'users', user.name, 'servers', server_name, method='post'
+            )
+        service = create_service_with_scopes(*scopes)
+        api_token = service.new_api_token()
+        await app.init_roles()
+        headers = {'Authorization': 'token %s' % api_token}
+        r = await api_request(app, 'users', user.name, headers=headers)
+        r.raise_for_status()
+        user_model = r.json()
+        if num_servers:
+            assert 'servers' in user_model
+            server_models = user_model['servers']
+            assert len(server_models) == num_servers
+            for server, server_model in server_models.items():
+                assert keys_in.issubset(server_model)
+                assert keys_out.isdisjoint(server_model)
+        else:
+            assert 'servers' not in user_model
+        r = await api_request(
+            app,
+            'users',
+            user.name,
+            'servers',
+            server_names[0],
+            method='delete',
+            headers=headers,
+        )
+        if can_stop:
+            assert r.status_code == 204
+        else:
+            assert r.status_code == 403
+        app.db.delete(group)
+        app.db.commit()
