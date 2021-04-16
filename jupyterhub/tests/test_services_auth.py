@@ -444,11 +444,7 @@ async def test_oauth_logout(app, mockservice_url):
 
     def auth_tokens():
         """Return list of OAuth access tokens for the user"""
-        return list(
-            app.db.query(orm.OAuthAccessToken).filter(
-                orm.OAuthAccessToken.user_id == app_user.id
-            )
-        )
+        return list(app.db.query(orm.APIToken).filter_by(user_id=app_user.id))
 
     # ensure we start empty
     assert auth_tokens() == []
@@ -475,6 +471,10 @@ async def test_oauth_logout(app, mockservice_url):
     session_id = s.cookies['jupyterhub-session-id']
 
     assert len(auth_tokens()) == 1
+    token = auth_tokens()[0]
+    assert token.expires_in is not None
+    # verify that oauth_token_expires_in has its desired effect
+    assert abs(app.oauth_token_expires_in - token.expires_in) < 30
 
     # hit hub logout URL
     r = await s.get(public_url(app, path='hub/logout'))

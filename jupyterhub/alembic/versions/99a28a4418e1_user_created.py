@@ -31,7 +31,7 @@ def upgrade():
         % (now,)
     )
 
-    tables = c.engine.table_names()
+    tables = sa.inspect(c.engine).get_table_names()
 
     if 'spawners' in tables:
         op.add_column('spawners', sa.Column('started', sa.DateTime, nullable=True))

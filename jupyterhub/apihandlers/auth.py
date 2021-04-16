@@ -30,8 +30,6 @@ class TokenAPIHandler(APIHandler):
         )
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
-            orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None:
             raise web.HTTPError(404)
 
         owner = orm_token.user or orm_token.service

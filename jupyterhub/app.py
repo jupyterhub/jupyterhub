@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import signal
 import socket
 import sys
@@ -382,6 +383,42 @@ class JupyterHub(Application):
         Default is two weeks.
         """,
     ).tag(config=True)
+
+    oauth_token_expires_in = Integer(
+        help="""Expiry (in seconds) of OAuth access tokens.
+
+        The default is to expire when the cookie storing them expires,
+        according to `cookie_max_age_days` config.
+
+        These are the tokens stored in cookies when you visit
+        a single-user server or service.
+        When they expire, you must re-authenticate with the Hub,
+        even if your Hub authentication is still valid.
+        If your Hub authentication is valid,
+        logging in may be a transparent redirect as you refresh the page.
+        
+        This does not affect JupyterHub API tokens in general,
+        which do not expire by default.
+        Only tokens issued during the oauth flow
+        accessing services and single-user servers are affected.
+
+        .. versionadded:: 1.4
+            OAuth token expires_in was not previously configurable.
+        .. versionchanged:: 1.4
+            Default now uses cookie_max_age_days so that oauth tokens
+            which are generally stored in cookies,
+            expire when the cookies storing them expire.
+            Previously, it was one hour.
+        """,
+        config=True,
+    )
+
+    @default("oauth_token_expires_in")
+    def _cookie_max_age_seconds(self):
+        """default to cookie max age, where these tokens are stored"""
+        # convert cookie max age days to seconds
+        return int(self.cookie_max_age_days * 24 * 3600)
+
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
     ).tag(config=True)
@@ -1502,7 +1539,7 @@ class JupyterHub(Application):
         if not secret:
             secret_from = 'new'
             self.log.debug("Generating new %s", trait_name)
-            secret = os.urandom(COOKIE_SECRET_BYTES)
+            secret = secrets.token_bytes(COOKIE_SECRET_BYTES)
 
         if secret_file and secret_from == 'new':
             # if we generated a new secret, store it in the secret_file
@@ -1654,6 +1691,26 @@ class JupyterHub(Application):
             self.exit(1)
         except orm.DatabaseSchemaMismatch as e:
             self.exit(e)
+
+        # ensure the default oauth client exists
+        if (
+            not self.db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .one_or_none()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            client = orm.OAuthClient(
+                identifier="jupyterhub",
+                secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
+            self.db.add(client)
+            self.db.commit()
 
     def init_hub(self):
         """Load the Hub URL config"""
@@ -1860,12 +1917,12 @@ class JupyterHub(Application):
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
         for role in default_roles:
-            roles.add_role(db, role)
+            roles.create_role(db, role)
 
         # load predefined roles from config file
         self.log.debug('Loading predefined roles from config file to database')
         for predef_role in self.load_roles:
-            roles.add_role(db, predef_role)
+            roles.create_role(db, predef_role)
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
             for bearer in role_bearers:
@@ -1882,19 +1939,26 @@ class JupyterHub(Application):
                                     "Username %r is not in Authenticator.allowed_users"
                                     % bname
                                 )
-                        roles.add_obj(
-                            db, objname=bname, kind=bearer, rolename=predef_role['name']
+                        Class = orm.get_class(bearer)
+                        orm_obj = Class.find(db, bname)
+                        roles.grant_role(
+                            db, entity=orm_obj, rolename=predef_role['name']
                         )
+        # make sure that on no admin situation, all roles are reset
+        admin_role = orm.Role.find(db, name='admin')
+        if not admin_role.users:
+            app_log.warning(
+                "No admin users found; assuming hub upgrade. Initializing default roles for all entities"
+            )
+            # make sure all users, services and tokens have at least one role (update with default)
+            for bearer in role_bearers:
+                roles.check_for_default_roles(db, bearer)
 
-        # make sure role bearers have at least a default role
-        for bearer in role_bearers:
-            roles.check_for_default_roles(db, bearer)
+            # now add roles to tokens if their owner's permissions allow
+            roles.add_predef_roles_tokens(db, self.load_roles)
 
-        # now add roles to tokens if their owner's permissions allow
-        roles.add_predef_roles_tokens(db, self.load_roles)
-
-        # check tokens for default roles
-        roles.check_for_default_roles(db, bearer='tokens')
+            # check tokens for default roles
+            roles.check_for_default_roles(db, bearer='tokens')
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
@@ -1935,6 +1999,13 @@ class JupyterHub(Application):
                     db.add(obj)
                     db.commit()
                 self.log.info("Adding API token for %s: %s", kind, name)
+                # If we have roles in the configuration file, they will be added later
+                # Todo: works but ugly
+                config_roles = None
+                for config_role in self.load_roles:
+                    if 'tokens' in config_role and token in config_role['tokens']:
+                        config_roles = []
+                        break
                 try:
                     # set generated=False to ensure that user-provided tokens
                     # get extra hashing (don't trust entropy of user-provided tokens)
@@ -1942,6 +2013,7 @@ class JupyterHub(Application):
                         token,
                         note="from config",
                         generated=self.trust_user_provided_tokens,
+                        roles=config_roles,
                     )
                 except Exception:
                     if created:
@@ -1962,12 +2034,13 @@ class JupyterHub(Application):
         run periodically
         """
         # this should be all the subclasses of Expiring
-        for cls in (orm.APIToken, orm.OAuthAccessToken, orm.OAuthCode):
+        for cls in (orm.APIToken, orm.OAuthCode):
             self.log.debug("Purging expired {name}s".format(name=cls.__name__))
             cls.purge_expired(self.db)
 
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
+
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
 
@@ -1998,6 +2071,8 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                if spec.get('admin', False):
+                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
@@ -2236,6 +2311,7 @@ class JupyterHub(Application):
             lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login'),
+            token_expires_in=self.oauth_token_expires_in,
         )
 
     def cleanup_oauth_clients(self):
@@ -2243,7 +2319,7 @@ class JupyterHub(Application):
 
         This should mainly be services that have been removed from configuration or renamed.
         """
-        oauth_client_ids = set()
+        oauth_client_ids = {"jupyterhub"}
         for service in self._service_map.values():
             if service.oauth_available:
                 oauth_client_ids.add(service.oauth_client_id)

@@ -247,26 +247,6 @@ class BaseHandler(RequestHandler):
             return None
         return match.group(1)
 
-    def get_current_user_oauth_token(self):
-        """Get the current user identified by OAuth access token
-
-        Separate from API token because OAuth access tokens
-        can only be used for identifying users,
-        not using the API.
-        """
-        token = self.get_auth_token()
-        if token is None:
-            return None
-        orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None:
-            return None
-
-        now = datetime.utcnow()
-        recorded = self._record_activity(orm_token, now)
-        if self._record_activity(orm_token.user, now) or recorded:
-            self.db.commit()
-        return self._user_from_orm(orm_token.user)
-
     def _record_activity(self, obj, timestamp=None):
         """record activity on an ORM object
 
@@ -373,7 +353,7 @@ class BaseHandler(RequestHandler):
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
-            if not orm_token.note.startswith("Server at "):
+            if not orm_token.note or not orm_token.note.startswith("Server at "):
                 recorded = self._record_activity(orm_token.user, now) or recorded
         if recorded:
             self.db.commit()
@@ -439,17 +419,10 @@ class BaseHandler(RequestHandler):
     def _resolve_scopes(self):
         self.raw_scopes = set()
         app_log.debug("Loading and parsing scopes")
-        if not self.current_user:
-            # check for oauth tokens as long as #3380 not merged
-            user_from_oauth = self.get_current_user_oauth_token()
-            if user_from_oauth is not None:
-                self.raw_scopes = {f'read:users!user={user_from_oauth.name}'}
-            else:
-                app_log.debug("No user found, no scopes loaded")
-        else:
-            api_token = self.get_token()
-            if api_token:
-                self.raw_scopes = scopes.get_scopes_for(api_token)
+        if self.current_user:
+            orm_token = self.get_token()
+            if orm_token:
+                self.raw_scopes = scopes.get_scopes_for(orm_token)
             else:
                 self.raw_scopes = scopes.get_scopes_for(self.current_user)
         self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
@@ -480,7 +453,7 @@ class BaseHandler(RequestHandler):
             # not found, create and register user
             u = orm.User(name=username)
             self.db.add(u)
-            roles.update_roles(self.db, obj=u, kind='users')
+            roles.assign_default_roles(self.db, entity=u)
             TOTAL_USERS.inc()
             self.db.commit()
             user = self._user_from_orm(u)
@@ -501,10 +474,8 @@ class BaseHandler(RequestHandler):
                 # don't clear session tokens if not logged in,
                 # because that could be a malicious logout request!
                 count = 0
-                for access_token in (
-                    self.db.query(orm.OAuthAccessToken)
-                    .filter(orm.OAuthAccessToken.user_id == user.id)
-                    .filter(orm.OAuthAccessToken.session_id == session_id)
+                for access_token in self.db.query(orm.APIToken).filter_by(
+                    user_id=user.id, session_id=session_id
                 ):
                     self.db.delete(access_token)
                     count += 1
@@ -765,7 +736,7 @@ class BaseHandler(RequestHandler):
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
             user.admin = admin
-            roles.update_roles(self.db, obj=user, kind='users')
+            roles.assign_default_roles(self.db, entity=user)
             self.db.commit()
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values

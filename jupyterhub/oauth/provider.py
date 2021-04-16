@@ -2,18 +2,18 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
+from datetime import timedelta
+
 from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code
 from oauthlib.oauth2.rfc6749.grant_types import base
-from tornado.escape import url_escape
 from tornado.log import app_log
 
 from .. import orm
 from ..utils import compare_token
 from ..utils import hash_token
-from ..utils import url_path_join
 
 # patch absolute-uri check
 # because we want to allow relative uri oauth
@@ -59,6 +59,9 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if oauth_client is None:
+            return False
+        if not client_secret or not oauth_client.secret:
+            # disallow authentication with no secret
             return False
         if not compare_token(oauth_client.secret, client_secret):
             app_log.warning("Client secret mismatch for %s", client_id)
@@ -339,19 +342,22 @@ class JupyterHubRequestValidator(RequestValidator):
             .filter_by(identifier=request.client.client_id)
             .first()
         )
-        orm_access_token = orm.OAuthAccessToken(
-            client=client,
-            grant_type=orm.GrantType.authorization_code,
-            expires_at=orm.OAuthAccessToken.now() + token['expires_in'],
-            refresh_token=token['refresh_token'],
-            # TODO: save scopes,
-            # scopes=scopes,
+        # FIXME: pick a role
+        # this will be empty for now
+        roles = list(self.db.query(orm.Role).filter_by(name='identify'))
+        # FIXME: support refresh tokens
+        # These should be in a new table
+        token.pop("refresh_token", None)
+
+        # APIToken.new commits the token to the db
+        orm.APIToken.new(
+            client_id=client.identifier,
+            expires_in=token['expires_in'],
+            roles=roles,
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
         )
-        self.db.add(orm_access_token)
-        self.db.commit()
         return client.redirect_uri
 
     def validate_bearer_token(self, token, scopes, request):
@@ -411,6 +417,8 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if orm_client is None:
+            return False
+        if not orm_client.secret:
             return False
         request.client = orm_client
         return True
@@ -558,30 +566,37 @@ class JupyterHubOAuthServer(WebApplicationServer):
 
         hash its client_secret before putting it in the database.
         """
-        # clear existing clients with same ID
-        for orm_client in self.db.query(orm.OAuthClient).filter_by(
-            identifier=client_id
-        ):
-            self.db.delete(orm_client)
-        self.db.commit()
-
-        orm_client = orm.OAuthClient(
-            identifier=client_id,
-            secret=hash_token(client_secret),
-            redirect_uri=redirect_uri,
-            description=description,
+        # Update client if it already exists, else create it
+        # Sqlalchemy doesn't have a good db agnostic UPSERT,
+        # so we do this manually. It's protected inside a
+        # transaction, so should fail if there are multiple
+        # rows with the same identifier.
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
         )
-        self.db.add(orm_client)
+        if orm_client is None:
+            orm_client = orm.OAuthClient(
+                identifier=client_id,
+            )
+            self.db.add(orm_client)
+            app_log.info(f'Creating oauth client {client_id}')
+        else:
+            app_log.info(f'Updating oauth client {client_id}')
+        orm_client.secret = hash_token(client_secret) if client_secret else ""
+        orm_client.redirect_uri = redirect_uri
+        orm_client.description = description
         self.db.commit()
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
-        return self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        client = self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        if client and client.secret:
+            return client
 
 
-def make_provider(session_factory, url_prefix, login_url):
+def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):
     """Make an OAuth provider"""
     db = session_factory()
     validator = JupyterHubRequestValidator(db)
-    server = JupyterHubOAuthServer(db, validator)
+    server = JupyterHubOAuthServer(db, validator, **oauth_server_kwargs)
     return server

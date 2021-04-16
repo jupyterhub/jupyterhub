@@ -39,7 +39,8 @@ from sqlalchemy.types import Text
 from sqlalchemy.types import TypeDecorator
 from tornado.log import app_log
 
-from .roles import add_role
+from .roles import assign_default_roles
+from .roles import create_role
 from .roles import get_default_roles
 from .roles import update_roles
 from .utils import compare_token
@@ -276,9 +277,6 @@ class User(Base):
     last_activity = Column(DateTime, nullable=True)
 
     api_tokens = relationship("APIToken", backref="user", cascade="all, delete-orphan")
-    oauth_tokens = relationship(
-        "OAuthAccessToken", backref="user", cascade="all, delete-orphan"
-    )
     oauth_codes = relationship(
         "OAuthCode", backref="user", cascade="all, delete-orphan"
     )
@@ -484,7 +482,9 @@ class Hashed(Expiring):
     @classmethod
     def check_token(cls, db, token):
         """Check if a token is acceptable"""
+        print("checking", cls, token, len(token), cls.min_length)
         if len(token) < cls.min_length:
+            print("raising")
             raise ValueError(
                 "Tokens must be at least %i characters, got %r"
                 % (cls.min_length, token)
@@ -529,14 +529,34 @@ class Hashed(Expiring):
                 return orm_token
 
 
+# ------------------------------------
+# OAuth tables
+# ------------------------------------
+
+
+class GrantType(enum.Enum):
+    # we only use authorization_code for now
+    authorization_code = 'authorization_code'
+    implicit = 'implicit'
+    password = 'password'
+    client_credentials = 'client_credentials'
+    refresh_token = 'refresh_token'
+
+
 class APIToken(Hashed, Base):
     """An API token"""
 
     __tablename__ = 'api_tokens'
 
-    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+    user_id = Column(
+        Integer,
+        ForeignKey('users.id', ondelete="CASCADE"),
+        nullable=True,
+    )
     service_id = Column(
-        Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True
+        Integer,
+        ForeignKey('services.id', ondelete="CASCADE"),
+        nullable=True,
     )
 
     id = Column(Integer, primary_key=True)
@@ -546,6 +566,26 @@ class APIToken(Hashed, Base):
     @property
     def api_id(self):
         return 'a%i' % self.id
+
+    # added in 2.0
+    client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='CASCADE',
+        ),
+    )
+    # FIXME: refresh_tokens not implemented
+    # should be a relation to another token table
+    # refresh_token = Column(
+    #     Integer,
+    #     ForeignKey('refresh_tokens.id', ondelete="CASCADE"),
+    #     nullable=True,
+    # )
+
+    # the browser session id associated with a given token,
+    # if issued during oauth to be stored in a cookie
+    session_id = Column(Unicode(255), nullable=True)
 
     # token metadata for bookkeeping
     now = datetime.utcnow  # for expiry
@@ -565,8 +605,12 @@ class APIToken(Hashed, Base):
             # this shouldn't happen
             kind = 'owner'
             name = 'unknown'
-        return "<{cls}('{pre}...', {kind}='{name}')>".format(
-            cls=self.__class__.__name__, pre=self.prefix, kind=kind, name=name
+        return "<{cls}('{pre}...', {kind}='{name}', client_id={client_id!r})>".format(
+            cls=self.__class__.__name__,
+            pre=self.prefix,
+            kind=kind,
+            name=name,
+            client_id=self.client_id,
         )
 
     @classmethod
@@ -587,6 +631,14 @@ class APIToken(Hashed, Base):
             raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
         for orm_token in prefix_match:
             if orm_token.match(token):
+                if not orm_token.client_id:
+                    app_log.warning(
+                        "Deleting stale oauth token for %s with no client",
+                        orm_token.user and orm_token.user.name,
+                    )
+                    db.delete(orm_token)
+                    db.commit()
+                    return
                 return orm_token
 
     @classmethod
@@ -598,7 +650,10 @@ class APIToken(Hashed, Base):
         roles=None,
         note='',
         generated=True,
+        session_id=None,
         expires_in=None,
+        client_id='jupyterhub',
+        return_orm=False,
     ):
         """Generate a new API token for a user or service"""
         assert user or service
@@ -613,7 +668,12 @@ class APIToken(Hashed, Base):
             cls.check_token(db, token)
         # two stages to ensure orm_token.generated has been set
         # before token setter is called
-        orm_token = cls(generated=generated, note=note or '')
+        orm_token = cls(
+            generated=generated,
+            note=note or '',
+            client_id=client_id,
+            session_id=session_id,
+        )
         orm_token.token = token
         if user:
             assert user.id is not None
@@ -630,80 +690,14 @@ class APIToken(Hashed, Base):
         if not token_role:
             default_roles = get_default_roles()
             for role in default_roles:
-                add_role(db, role)
-        update_roles(db, obj=orm_token, kind='tokens', roles=roles)
+                create_role(db, role)
+        if roles is not None:
+            update_roles(db, entity=orm_token, roles=roles)
+        else:
+            assign_default_roles(db, entity=orm_token)
+
         db.commit()
         return token
-
-
-# ------------------------------------
-# OAuth tables
-# ------------------------------------
-
-
-class GrantType(enum.Enum):
-    # we only use authorization_code for now
-    authorization_code = 'authorization_code'
-    implicit = 'implicit'
-    password = 'password'
-    client_credentials = 'client_credentials'
-    refresh_token = 'refresh_token'
-
-
-class OAuthAccessToken(Hashed, Base):
-    __tablename__ = 'oauth_access_tokens'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    @staticmethod
-    def now():
-        return datetime.utcnow().timestamp()
-
-    @property
-    def api_id(self):
-        return 'o%i' % self.id
-
-    client_id = Column(
-        Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
-    )
-    grant_type = Column(Enum(GrantType), nullable=False)
-    expires_at = Column(Integer)
-    refresh_token = Column(Unicode(255))
-    # TODO: drop refresh_expires_at. Refresh tokens shouldn't expire
-    refresh_expires_at = Column(Integer)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    service = None  # for API-equivalence with APIToken
-
-    # the browser session id associated with a given token
-    session_id = Column(Unicode(255))
-
-    # from Hashed
-    hashed = Column(Unicode(255), unique=True)
-    prefix = Column(Unicode(16), index=True)
-
-    created = Column(DateTime, default=datetime.utcnow)
-    last_activity = Column(DateTime, nullable=True)
-
-    def __repr__(self):
-        return "<{cls}('{prefix}...', client_id={client_id!r}, user={user!r}, expires_in={expires_in}>".format(
-            cls=self.__class__.__name__,
-            client_id=self.client_id,
-            user=self.user and self.user.name,
-            prefix=self.prefix,
-            expires_in=self.expires_in,
-        )
-
-    @classmethod
-    def find(cls, db, token):
-        orm_token = super().find(db, token)
-        if orm_token and not orm_token.client_id:
-            app_log.warning(
-                "Deleting stale oauth token for %s with no client",
-                orm_token.user and orm_token.user.name,
-            )
-            db.delete(orm_token)
-            db.commit()
-            return
-        return orm_token
 
 
 class OAuthCode(Expiring, Base):
@@ -747,7 +741,7 @@ class OAuthClient(Base):
         return self.identifier
 
     access_tokens = relationship(
-        OAuthAccessToken, backref='client', cascade='all, delete-orphan'
+        APIToken, backref='client', cascade='all, delete-orphan'
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
 
@@ -868,7 +862,7 @@ def check_db_revision(engine):
     - Empty databases are tagged with the current revision
     """
     # Check database schema version
-    current_table_names = set(engine.table_names())
+    current_table_names = set(inspect(engine).get_table_names())
     my_table_names = set(Base.metadata.tables.keys())
 
     from .dbutil import _temp_alembic_ini

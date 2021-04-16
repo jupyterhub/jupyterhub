@@ -52,7 +52,6 @@ async def test_default_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
-    print(user_model)
     assert user_model == fill_user(
         {
             'name': username,

@@ -10,6 +10,7 @@ from tornado.log import app_log
 
 from .. import orm
 from .. import roles
+from ..scopes import get_scopes_for
 from ..utils import maybe_future
 from .mocking import MockHub
 from .utils import add_user
@@ -207,9 +208,9 @@ def test_orm_roles_delete_cascade(db):
 )
 def test_get_subscopes(db, scopes, subscopes):
     """Test role scopes expansion into their subscopes"""
-    roles.add_role(db, {'name': 'testing_scopes', 'scopes': scopes})
+    roles.create_role(db, {'name': 'testing_scopes', 'scopes': scopes})
     role = orm.Role.find(db, name='testing_scopes')
-    response = roles.get_subscopes(role)
+    response = roles._get_subscopes(role)
     assert response == subscopes
     db.delete(role)
 
@@ -245,6 +246,16 @@ async def test_load_default_roles(tmpdir, request):
             'info',
             app_log.info('Role new-role added to database'),
         ),
+        (
+            'the-same-role',
+            {
+                'name': 'new-role',
+                'description': 'Some description',
+                'scopes': ['groups'],
+            },
+            'no-log',
+            None,
+        ),
         ('no_name', {'scopes': ['users']}, 'error', KeyError),
         (
             'no_scopes',
@@ -270,34 +281,42 @@ async def test_load_default_roles(tmpdir, request):
             'info',
             app_log.info('Role user scopes attribute has been changed'),
         ),
+        # rewrite the user role back to 'default'
+        (
+            'user',
+            {'name': 'user', 'scopes': ['self']},
+            'info',
+            app_log.info('Role user scopes attribute has been changed'),
+        ),
     ],
 )
-async def test_adding_new_roles(
-    tmpdir, request, role, role_def, response_type, response
-):
-    """Test raising errors and warnings when creating new roles"""
+async def test_creating_roles(app, role, role_def, response_type, response):
+    """Test raising errors and warnings when creating/modifying roles"""
 
-    kwargs = {'load_roles': [role_def]}
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
+    db = app.db
 
     if response_type == 'error':
         with pytest.raises(response):
-            await hub.init_roles()
+            roles.create_role(db, role_def)
 
     elif response_type == 'warning' or response_type == 'info':
         with pytest.warns(response):
-            await hub.init_roles()
+            roles.create_role(db, role_def)
+        # check the role has been created/modified
         role = orm.Role.find(db, role_def['name'])
         assert role is not None
         if 'description' in role_def.keys():
             assert role.description == role_def['description']
         if 'scopes' in role_def.keys():
             assert role.scopes == role_def['scopes']
+
+    # make sure no warnings/info logged when the role exists and its definition hasn't been changed
+    elif response_type == 'no-log':
+        with pytest.warns(response) as record:
+            roles.create_role(db, role_def)
+        assert not record.list
+        role = orm.Role.find(db, role_def['name'])
+        assert role is not None
 
 
 @mark.role
@@ -326,13 +345,13 @@ async def test_delete_roles(db, role_type, rolename, response_type, response):
         assert check_role is not None
         # check the role is deleted and info raised
         with pytest.warns(response):
-            roles.remove_role(db, rolename)
+            roles.delete_role(db, rolename)
         check_role = orm.Role.find(db, rolename)
         assert check_role is None
 
     elif response_type == 'error':
         with pytest.raises(response):
-            roles.remove_role(db, rolename)
+            roles.delete_role(db, rolename)
 
 
 @mark.role
@@ -367,20 +386,20 @@ async def test_scope_existence(tmpdir, request, role, response):
     db = hub.db
 
     if response == 'existing':
-        roles.add_role(db, role)
+        roles.create_role(db, role)
         added_role = orm.Role.find(db, role['name'])
         assert added_role is not None
         assert added_role.scopes == role['scopes']
 
     elif response == NameError:
         with pytest.raises(response):
-            roles.add_role(db, role)
+            roles.create_role(db, role)
         added_role = orm.Role.find(db, role['name'])
         assert added_role is None
 
     # delete the tested roles
     if added_role:
-        roles.remove_role(db, added_role.name)
+        roles.delete_role(db, added_role.name)
 
 
 @mark.role
@@ -427,7 +446,7 @@ async def test_load_roles_users(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -476,13 +495,11 @@ async def test_load_roles_services(tmpdir, request):
     # test if every service has a role (and no duplicates)
     admin_role = orm.Role.find(db, name='admin')
     user_role = orm.Role.find(db, name='user')
-    service_role = orm.Role.find(db, name='service')
 
     # test if predefined roles loaded and assigned
     culler_role = orm.Role.find(db, name='idle-culler')
     culler_service = orm.Service.find(db, name='idle-culler')
     assert culler_role in culler_service.roles
-    assert service_role not in culler_service.roles
 
     # test if every service has a role (and no duplicates)
     for service in db.query(orm.Service):
@@ -492,13 +509,10 @@ async def test_load_roles_services(tmpdir, request):
         # test default role assignment
         if service.admin:
             assert admin_role in service.roles
-            assert service_role not in service.roles
-        elif culler_role not in service.roles:
-            assert service_role in service.roles
-            assert service_role.scopes == []
-            assert admin_role not in service.roles
-            # make sure 'user' role not assigned to service
             assert user_role not in service.roles
+        elif culler_role not in service.roles:
+            assert user_role in service.roles
+            assert admin_role not in service.roles
 
     # delete the test services
     for service in db.query(orm.Service):
@@ -512,7 +526,7 @@ async def test_load_roles_services(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -561,7 +575,7 @@ async def test_load_roles_groups(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -614,7 +628,7 @@ async def test_load_roles_user_tokens(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -657,12 +671,14 @@ async def test_load_roles_user_tokens_not_allowed(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
 async def test_load_roles_service_tokens(tmpdir, request):
-    services = [{'name': 'idle-culler', 'api_token': 'another-secret-token'}]
+    services = [
+        {'name': 'idle-culler', 'api_token': 'another-secret-token'},
+    ]
     service_tokens = {
         'another-secret-token': 'idle-culler',
     }
@@ -713,7 +729,7 @@ async def test_load_roles_service_tokens(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -769,7 +785,7 @@ async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
 
     # delete the test roles
     for role in roles_to_load:
-        roles.remove_role(db, role['name'])
+        roles.delete_role(db, role['name'])
 
 
 @mark.role
@@ -793,10 +809,10 @@ async def test_get_new_token_via_api(app, headers, rolename, scopes, status):
 
     user = add_user(app.db, app, name='user')
     if rolename and rolename != 'non-existing':
-        roles.add_role(app.db, {'name': rolename, 'scopes': scopes})
+        roles.create_role(app.db, {'name': rolename, 'scopes': scopes})
         if rolename == 'groups-reader':
             # add role for a group
-            roles.add_role(app.db, {'name': 'group-role', 'scopes': ['groups']})
+            roles.create_role(app.db, {'name': 'group-role', 'scopes': ['groups']})
             # create a group and add the user and group_role
             group = orm.Group.find(app.db, 'test-group')
             if not group:
@@ -833,3 +849,32 @@ async def test_get_new_token_via_api(app, headers, rolename, scopes, status):
     # verify deletion
     r = await api_request(app, 'users/user/tokens', token_id)
     assert r.status_code == 404
+
+
+@mark.role
+@mark.parametrize(
+    "kind, has_user_scopes",
+    [
+        ('users', True),
+        ('services', False),
+    ],
+)
+async def test_self_expansion(app, kind, has_user_scopes):
+    Class = orm.get_class(kind)
+    orm_obj = Class(name=f'test_{kind}')
+    app.db.add(orm_obj)
+    app.db.commit()
+    test_role = orm.Role(name='test_role', scopes=['self'])
+    orm_obj.roles.append(test_role)
+    # test expansion of user/service scopes
+    scopes = roles.expand_roles_to_scopes(orm_obj)
+    assert bool(scopes) == has_user_scopes
+
+    # test expansion of token scopes
+    orm_obj.new_api_token()
+    print(orm_obj.api_tokens[0])
+    token_scopes = get_scopes_for(orm_obj.api_tokens[0])
+    print(token_scopes)
+    assert bool(token_scopes) == has_user_scopes
+    app.db.delete(orm_obj)
+    app.db.delete(test_role)
