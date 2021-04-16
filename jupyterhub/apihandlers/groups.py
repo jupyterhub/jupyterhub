@@ -109,7 +109,6 @@ class GroupAPIHandler(_GroupAPIHandler):
         max_limit = self.settings['app'].api_page_max_limit
 
         group = self.find_group(name)
-        users_slice = None
 
         if offset is not None:
             try:
@@ -134,9 +133,6 @@ class GroupAPIHandler(_GroupAPIHandler):
         group.users = group.users[:limit]
 
         group_model = self.group_model(group)
-
-        if users_slice is not None:
-            group_model['users'] = [u.name for u in users_slice]
 
         self.write(json.dumps(group_model))
 
