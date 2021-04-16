@@ -175,6 +175,8 @@ r.raise_for_status()
 r.json()
 ```
 
+By default, pagination limit will be specified by the `JupyterHub.api_page_default_limit` config variable.
+
 Pagination is enabled on the `GET /users`, `GET /groups`, `GET /groups/{name}`, and `GET /proxy` REST endpoints.
 
 ## Enabling users to spawn multiple named-servers via the API

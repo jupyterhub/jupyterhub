@@ -39,7 +39,8 @@ class GroupListAPIHandler(_GroupAPIHandler):
     def get(self):
         """List groups"""
         offset = self.get_argument("offset", None)
-        limit = self.get_argument("limit", None)
+        limit = self.get_argument("limit", self.settings['app'].api_page_default_limit)
+        max_limit = self.settings['app'].api_page_max_limit
 
         query = self.db.query(orm.Group)
 
@@ -52,14 +53,18 @@ class GroupListAPIHandler(_GroupAPIHandler):
                 )
             query = query.offset(offset)
 
-        if limit is not None:
+        if limit != self.settings['app'].api_page_default_limit:
             try:
                 limit = int(limit)
+                if limit > max_limit:
+                    limit = max_limit
+
             except Exception as e:
                 raise web.HTTPError(
                     400, "Invalid argument type, limit must be an integer"
                 )
-            query = query.limit(int(limit))
+
+        query = query.limit(limit)
 
         data = [self.group_model(group) for group in query]
         self.write(json.dumps(data))
@@ -100,12 +105,11 @@ class GroupAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self, name):
         offset = self.get_argument("offset", None)
-        limit = self.get_argument("limit", None)
+        limit = self.get_argument("limit", self.settings['app'].api_page_default_limit)
+        max_limit = self.settings['app'].api_page_max_limit
+
         group = self.find_group(name)
         users_slice = None
-
-        print(type(group.users))
-        print(group.users)
 
         if offset is not None:
             try:
@@ -117,15 +121,17 @@ class GroupAPIHandler(_GroupAPIHandler):
 
             group.users = group.users[offset:]
 
-        if limit is not None:
+        if limit != self.settings['app'].api_page_default_limit:
             try:
                 limit = int(limit)
+                if limit > max_limit:
+                    limit = max_limit
             except Exception as e:
                 raise web.HTTPError(
                     400, "Invalid argument type, limit must be an integer"
                 )
 
-            group.users = group.users[:limit]
+        group.users = group.users[:limit]
 
         group_model = self.group_model(group)
 

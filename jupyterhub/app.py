@@ -936,6 +936,15 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    api_page_default_limit = Integer(
+        50,
+        help="The default amount of records returned by a paginated endpoint",
+    ).tag(config=True)
+
+    api_page_max_limit = Integer(
+        200, help="The maximum amount of records that can be returned at once"
+    )
+
     authenticate_prometheus = Bool(
         True, help="Authentication for prometheus metrics"
     ).tag(config=True)

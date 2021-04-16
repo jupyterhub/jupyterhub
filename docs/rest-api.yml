@@ -108,7 +108,7 @@ paths:
           description: |
             Return a finite number of users.
             Can be used with offset to paginate.
-            If unspecified, return all users.
+            If unspecified, use api_page_default_limit.
       responses:
         "200":
           description: The Hub's user list
@@ -455,7 +455,7 @@ paths:
           description: |
             Return a finite number of groups.
             Can be used with offset to paginate.
-            If unspecified, return all groups.
+            If unspecified, use api_page_default_limit.
       responses:
         "200":
           description: The list of groups
@@ -487,7 +487,7 @@ paths:
           description: |
             Return a finite number of users within the given group.
             Can be used with offset to paginate.
-            If unspecified, return all users.
+            If unspecified, use api_page_default_limit
       responses:
         "200":
           description: The group model
@@ -610,7 +610,7 @@ paths:
           description: |
             Return a finite number of routes.
             Can be used with offset to paginate.
-            If unspecified, return all routes.
+            If unspecified, use api_page_default_limit
       responses:
         "200":
           description: Routing table

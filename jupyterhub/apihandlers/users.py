@@ -56,7 +56,8 @@ class UserListAPIHandler(APIHandler):
     def get(self):
         state_filter = self.get_argument("state", None)
         offset = self.get_argument("offset", None)
-        limit = self.get_argument("limit", None)
+        limit = self.get_argument("limit", self.settings['app'].api_page_default_limit)
+        max_limit = self.settings['app'].api_page_max_limit
 
         # post_filter
         post_filter = None
@@ -99,10 +100,25 @@ class UserListAPIHandler(APIHandler):
 
         # Apply offset and limit for request pagination
         if offset is not None:
-            query = query.offset(int(offset))
+            try:
+                offset = int(offset)
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, offset must be an integer"
+                )
+            query = query.offset(offset)
 
-        if limit is not None:
-            query = query.limit(int(limit))
+        if limit != self.settings['app'].api_page_default_limit:
+            try:
+                limit = int(limit)
+                if limit > max_limit:
+                    limit = max_limit
+            except Exception as e:
+                raise web.HTTPError(
+                    400, "Invalid argument type, limit must be an integer"
+                )
+
+        query = query.limit(limit)
 
         data = [
             self.user_model(u, include_servers=True, include_state=True)
