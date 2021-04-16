@@ -81,7 +81,7 @@ The payload of an API call can be filtered both horizontally and vertically simu
 ## Available scopes
 
 Table below lists all available scopes and illustrates their hierarchy. Indented scopes indicate subscopes of the scope(s) above them.
-
+% TODO: Automatically generate this table from code when creating docs
 Table 1. Available scopes and their hierarchy
 | Scope name | Description |
 | :--------- | :---------- |
