@@ -18,34 +18,37 @@ securityDefinitions:
     authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
     tokenUrl: "/hub/api/oauth2/token"
     scopes:
-      self: Everything a standard user can do
-      all: Everything a token owner can do
-      users: Grants access to managing users including reading users’ model, posting activity and starting/stoping users servers
-      read:users: Read-only access to the above
-      read:users!user=username: Read-only access to a single user's model (example horizontal filter)
-      read:users:name: Read-only access to users' names
-      read:users:groups: Read-only access to users' groups
-      read:users:activity: Read-only access to users' activity
-      read:users:activity!group=groupname: Read-only access to specific group's users' activity (example horizontal filter)
-      users:activity: Update users' activity
-      users:activity!user=username: Update a single user's activity (example horizontal filter)
-      users:servers: Grants access to start/stop any server
-      users:servers!server=servername: Limits the above to a specific server (example horizontal filter)
-      read:users:servers: Read-only access to users' servers
-      users:tokens: Grants access to users' token (includes create/revoke a token)
-      read:users:tokens: Read-only access to users' tokens
-      admin:users: Grants access to creating/removing users on top of managing access
-      admin:users:auth_state: Access users' auth state
-      admin:users:servers: Grants access to create/remove users' servers on top of managing access
-      admin:users:server_state: Access servers' state
-      groups: Add/remove users from any group
-      groups!group=groupname: Add/remove users from a specific group only (example horizontal filter)
-      read:groups: Read-only access to groups
-      admin:groups: Grants access to create/delete groups
-      read:services: Read-only access to services
-      read:hub: Read-only access to detailed information about JupyterHub
-      proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
-      shutdown: Grants access to shutdown the Hub
+      self: Metascope, grants access to user's own resources; resolves to (no scope) for services.
+      all: Metascope, valid for tokens only. Grants access to everything that the token's owning entity can do.
+      admin:users: Grants read, write, create and delete access to users and their authentication state but not their servers or tokens.
+      admin:users:auth_state: Grants access to users' authentication state only.
+      users: Grants read and write permissions to users' models apart from servers, tokens and authentication state.
+      users:activity: Grants access to read and post users' activity only.
+      users:activity!user=username: Update a single user's activity (example horizontal filter).
+      read:users: Read-only access to users' models apart from servers, tokens and authentication state.
+      read:users!user=username: As above limited to a specific user (example horizontal filter).
+      read:users:name: Read-only access to users' names.
+      read:users:roles: Read-only access to a list of users' roles names.
+      read:users:groups: Read-only access to a list of users' group names.
+      read:users:activity: Read-only access to users' activity.
+      read:users:activity!group=groupname: Read-only access to specific group's users' activity (example horizontal filter).
+      admin:users:servers: Grants read, start/stop, create and delete permissions to users' servers and their state.
+      admin:users:server_state: Grants access to servers' state only.
+      users:servers: Allows for starting/stopping users' servers in addition to read access to their models. Does not include the server state.
+      users:servers!server=servername: Limits the above to a specific server (example horizontal filter).
+      read:users:servers: Read-only access to users' server models. Does not include the server state.
+      users:tokens: Grants read, write, create and delete permissions to users' tokens.
+      read:users:tokens: Read-only access to users' tokens.
+      admin:groups: Grants read, write, create and delete access to groups.
+      groups: Grants read and write permissions to groups, including adding/removing users to/from groups.
+      groups!group=groupname: As above limited to a specific group only (example horizontal filter)
+      read:groups: Read-only access to groups.
+      read:services: Read-only access to service models.
+      read:services:name: Read-only access to service names.
+      read:services:roles: Read-only access to a list of service roles names.
+      read:hub: Read-only access to detailed information about JupyterHub.
+      proxy: Allows for obtaining information about the proxy's routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy.
+      shutdown: Grants access to shutdown the Hub.
 security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope self) or have both (either can be used)?
   - token: []
   - oauth2:

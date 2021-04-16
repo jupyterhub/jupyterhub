@@ -95,7 +95,7 @@ Table 1. Available scopes and their hierarchy
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users` | Read-only access to users' models _apart from servers, tokens and authentication state_. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:name` | Read-only access to users' names. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:roles` | Read-only access to a list of users' roles names. |
-| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:groups` | Read-only access to users' groups. |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:groups` | Read-only access to a list of users' group names. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:activity` | Read-only access to users' activity. |
 | `admin:users:servers` | Grants read, start/stop, create and delete permissions to users' servers and their state. |
 | &nbsp;&nbsp;&nbsp;`admin:users:server_state` | Grants access to servers' state only. |
