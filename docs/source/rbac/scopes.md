@@ -76,6 +76,8 @@ In case the client has multiple subscopes, the call returns the union of the dat
 
 The payload of an API call can be filtered both horizontally and vertically simultaneously. For instance, performing an API call to the endpoint `/users/` with the scope `users:name!user=juliette` returns a payload of `[{name: 'juliette'}]` (provided that this name is present in the database).
 
+(available-scopes-target)=
+
 ## Available scopes
 
 Table below lists all available scopes and illustrates their hierarchy. Indented scopes indicate subscopes of the scope(s) above them.
