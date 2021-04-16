@@ -94,18 +94,21 @@ Table 1. Available scopes and their hierarchy
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`users:activity` | Grants access to read and post users' activity only. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users` | Read-only access to users' models _apart from servers, tokens and authentication state_. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:name` | Read-only access to users' names. |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:roles` | Read-only access to a list of users' roles names. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:groups` | Read-only access to users' groups. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:activity` | Read-only access to users' activity. |
 | `admin:users:servers` | Grants read, start/stop, create and delete permissions to users' servers and their state. |
 | &nbsp;&nbsp;&nbsp;`admin:users:server_state` | Grants access to servers' state only. |
-| &nbsp;&nbsp;&nbsp;`users:servers` | Allows for starting/stopping users' servers in addition to read access. _Does not include the server state_. |
-| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:servers` | Read-only access to users' servers. _Does not include the server state_. |
+| &nbsp;&nbsp;&nbsp;`users:servers` | Allows for starting/stopping users' servers in addition to read access to their models. _Does not include the server state_. |
+| &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:users:servers` | Read-only access to users' server models. _Does not include the server state_. |
 | `users:tokens` | Grants read, write, create and delete permissions to users' tokens. |
 | &nbsp;&nbsp;&nbsp;`read:users:tokens` | Read-only access to users' tokens. |
 | `admin:groups` | Grants read, write, create and delete access to groups. |
 | &nbsp;&nbsp;&nbsp;`groups` | Grants read and write permissions to groups, including adding/removing users to/from groups. |
 | &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`read:groups` | Read-only access to groups. |
-| `read:services` | Read-only access to services. |
+| `read:services` | Read-only access to service models. |
+| &nbsp;&nbsp;&nbsp;`read:services:name` | Read-only access to service names. |
+| &nbsp;&nbsp;&nbsp;`read:services:roles` | Read-only access to a list of service roles names. |
 | `read:hub` | Read-only access to detailed information about the Hub. |
 | `proxy` | Allows for obtaining information about the proxy's routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy. |
 | `shutdown` | Grants access to shutdown the hub. |
