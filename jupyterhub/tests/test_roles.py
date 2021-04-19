@@ -878,3 +878,25 @@ async def test_self_expansion(app, kind, has_user_scopes):
     assert bool(token_scopes) == has_user_scopes
     app.db.delete(orm_obj)
     app.db.delete(test_role)
+
+
+@mark.role
+@mark.parametrize(
+    "name, valid",
+    [
+        ('abc', True),
+        ('group', True),
+        ("a-pretty-long-name-with-123", True),
+        ("0-abc", False),  # starts with number
+        ("role-", False),  # ends with -
+        ("has-Uppercase", False),  # Uppercase
+        ("a" * 256, False),  # too long
+        ("has space", False),  # space is illegal
+    ],
+)
+async def test_valid_names(name, valid):
+    if valid:
+        assert roles._validate_role_name(name)
+    else:
+        with pytest.raises(ValueError):
+            roles._validate_role_name(name)
