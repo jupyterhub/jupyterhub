@@ -195,6 +195,19 @@ async def test_check_routes(app, username, disable_check_routes):
     assert before == after
 
 
+async def test_extra_routes(app):
+    proxy = app.proxy
+    route_spec = '/test-extra-routs/'
+    target = 'http://localhost:9999/test'
+    proxy.extra_routes = {route_spec: target}
+
+    await proxy.check_routes(app.users, app._service_map)
+
+    routes = await app.proxy.get_all_routes()
+    assert route_spec in routes
+    assert routes[route_spec]['target'] == target
+
+
 @pytest.mark.parametrize(
     "routespec",
     [

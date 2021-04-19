@@ -32,6 +32,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets import Any
 from traitlets import Bool
 from traitlets import default
+from traitlets import Dict
 from traitlets import Instance
 from traitlets import Integer
 from traitlets import observe
@@ -109,6 +110,17 @@ class Proxy(LoggingConfigurable):
         If True, the Hub will start the proxy and stop it.
         Set to False if the proxy is managed externally,
         such as by systemd, docker, or another service manager.
+        """,
+    )
+
+    extra_routes = Dict(
+        {},
+        config=True,
+        help="""
+        Additional routes to be maintained in the proxy.
+
+        A dictionary with a route specification as key, and
+        a URL as target.
         """,
     )
 
@@ -383,6 +395,11 @@ class Proxy(LoggingConfigurable):
                         service.server.host,
                     )
                     futures.append(self.add_service(service))
+
+        # Add extra routes we've been configured for
+        for routespec, url in self.extra_routes.items():
+            good_routes.add(routespec)
+            futures.append(self.add_route(routespec, url, {'hub': True}))
 
         # Now delete the routes that shouldn't be there
         for routespec in routes:
