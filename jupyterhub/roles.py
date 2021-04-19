@@ -227,7 +227,7 @@ def _overwrite_role(role, role_dict):
                     )
 
 
-_role_name_pattern = re.compile(r'^[a-z][a-z0-9\-]{1,253}[a-z0-9]$')
+_role_name_pattern = re.compile(r'^[a-z][a-z0-9\-_~\.]{1,253}[a-z0-9]$')
 
 
 def _validate_role_name(name):
@@ -240,9 +240,9 @@ def _validate_role_name(name):
             f"Invalid role name: {name!r}."
             " Role names must:\n"
             " - be 3-255 characters\n"
-            " - contain only lowercase ascii letters, numbers, and '-'\n"
+            " - contain only lowercase ascii letters, numbers, and URL unreserved special characters '-.~_'\n"
             " - start with a letter\n"
-            " - not end with '-'\n"
+            " - end with letter or number\n"
         )
     return True
 
