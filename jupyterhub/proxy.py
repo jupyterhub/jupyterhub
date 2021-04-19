@@ -123,6 +123,12 @@ class Proxy(LoggingConfigurable):
         a URL as target. The hub will ensure this route is present
         in the proxy.
 
+        If the hub is running in host based mode (with 
+        JupyterHub.subdomain_host set), the routespec *must*
+        have a domain component (example.com/my-url/). If the
+        hub is not running in host based mode, the routespec
+        *must not* have a domain component (/my-url/).
+
         Helpful when the hub is running in API-only mode.
         """,
     )
