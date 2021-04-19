@@ -143,8 +143,8 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v1
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub-onbuild/jupyterhub:"
-          defaultTag: "${{ env.REGISTRY }}jupyterhub-onbuild/jupyterhub:noref"
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
 
       - name: Build and push jupyterhub-onbuild
         uses: docker/build-push-action@v2
@@ -163,8 +163,8 @@ jobs:
         uses: jupyterhub/action-major-minor-tag-calculator@v1
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
-          prefix: "${{ env.REGISTRY }}jupyterhub-demo/jupyterhub:"
-          defaultTag: "${{ env.REGISTRY }}jupyterhub-demo/jupyterhub:noref"
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
 
       - name: Build and push jupyterhub-demo
         uses: docker/build-push-action@v2
