@@ -24,7 +24,7 @@ This is now also configurable via `JupyterHub.oauth_token_expires_in`.
 The result is that it should be much less likely for auth tokens stored in cookies
 to expire during the lifetime of a server.
 
-### 1.4.0
+### 1.4.0 2021-04-19
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.3.0...1.4.0))
 
@@ -1042,7 +1042,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 
 First preview release
 
-[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.3.0...HEAD
+[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.4.0...HEAD
+[1.4.0]: https://github.com/jupyterhub/jupyterhub/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...1.3.0
 [1.2.2]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...1.2.2
 [1.2.1]: https://github.com/jupyterhub/jupyterhub/compare/1.2.0...1.2.1
