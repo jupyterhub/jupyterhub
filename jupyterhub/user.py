@@ -804,14 +804,8 @@ class User:
                 if orm_token:
                     self.db.delete(orm_token)
                 # remove oauth client as well
-                # handle upgrades from 0.8, where client id will be `user-USERNAME`,
-                # not just `jupyterhub-user-USERNAME`
-                client_ids = (
-                    spawner.oauth_client_id,
-                    spawner.oauth_client_id.split('-', 1)[1],
-                )
-                for oauth_client in self.db.query(orm.OAuthClient).filter(
-                    orm.OAuthClient.identifier.in_(client_ids)
+                for oauth_client in self.db.query(orm.OAuthClient).filter_by(
+                    identifier=spawner.oauth_client_id,
                 ):
                     self.log.debug("Deleting oauth client %s", oauth_client.identifier)
                     self.db.delete(oauth_client)

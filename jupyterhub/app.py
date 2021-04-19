@@ -2274,10 +2274,6 @@ class JupyterHub(Application):
         for user in self.users.values():
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
-                # avoid deleting clients created by 0.8
-                # 0.9 uses `jupyterhub-user-...` for the client id, while
-                # 0.8 uses just `user-...`
-                oauth_client_ids.add(spawner.oauth_client_id.split('-', 1)[1])
 
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
