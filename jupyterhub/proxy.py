@@ -408,7 +408,7 @@ class Proxy(LoggingConfigurable):
         # Add extra routes we've been configured for
         for routespec, url in self.extra_routes.items():
             good_routes.add(routespec)
-            futures.append(self.add_route(routespec, url, {'hub': True}))
+            futures.append(self.add_route(routespec, url, {'extra': True}))
 
         # Now delete the routes that shouldn't be there
         for routespec in routes:
