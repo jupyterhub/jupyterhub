@@ -729,7 +729,7 @@ class Spawner(LoggingConfigurable):
         Returns
         -------
         state: dict
-             a JSONable dict of state
+            a JSONable dict of state
         """
         state = {}
         return state
