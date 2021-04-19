@@ -668,12 +668,15 @@ class HubOAuth(HubAuth):
 
         Parameters
         ----------
-        handler (RequestHandler): A tornado RequestHandler
-        next_url (str): The page to redirect to on successful login
+        handler : RequestHandler
+            A tornado RequestHandler
+        next_url : str
+            The page to redirect to on successful login
 
         Returns
         -------
-        state (str): The OAuth state that has been stored in the cookie (url safe, base64-encoded)
+        state : str
+            The OAuth state that has been stored in the cookie (url safe, base64-encoded)
         """
         extra_state = {}
         if handler.get_cookie(self.state_cookie_name):
@@ -710,7 +713,8 @@ class HubOAuth(HubAuth):
 
         Parameters
         ----------
-        next_url (str): The URL of the page to redirect to on successful login.
+        next_url : str
+            The URL of the page to redirect to on successful login.
 
         Returns
         -------
