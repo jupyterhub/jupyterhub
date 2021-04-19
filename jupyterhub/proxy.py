@@ -120,7 +120,10 @@ class Proxy(LoggingConfigurable):
         Additional routes to be maintained in the proxy.
 
         A dictionary with a route specification as key, and
-        a URL as target.
+        a URL as target. The hub will ensure this route is present
+        in the proxy.
+
+        Helpful when the hub is running in API-only mode.
         """,
     )
 
