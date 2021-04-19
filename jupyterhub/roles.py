@@ -1,6 +1,7 @@
 """Roles utils"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import re
 from itertools import chain
 
 from sqlalchemy import func
@@ -226,6 +227,26 @@ def _overwrite_role(role, role_dict):
                     )
 
 
+_role_name_pattern = re.compile(r'^[a-z][a-z0-9\-_~\.]{1,253}[a-z0-9]$')
+
+
+def _validate_role_name(name):
+    """Ensure a role has a valid name
+
+    Raises ValueError if role name is invalid
+    """
+    if not _role_name_pattern.match(name):
+        raise ValueError(
+            f"Invalid role name: {name!r}."
+            " Role names must:\n"
+            " - be 3-255 characters\n"
+            " - contain only lowercase ascii letters, numbers, and URL unreserved special characters '-.~_'\n"
+            " - start with a letter\n"
+            " - end with letter or number\n"
+        )
+    return True
+
+
 def create_role(db, role_dict):
     """Adds a new role to database or modifies an existing one"""
 
@@ -235,6 +256,7 @@ def create_role(db, role_dict):
         raise KeyError('Role definition must have a name')
     else:
         name = role_dict['name']
+        _validate_role_name(name)
         role = orm.Role.find(db, name)
 
     description = role_dict.get('description')
