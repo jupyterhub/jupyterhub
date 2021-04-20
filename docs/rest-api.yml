@@ -188,7 +188,8 @@ paths:
             - read:users:groups
             - read:users:activity
             - read:users:servers
-            #TODO: add admin:users:auth_state/server_state?
+            - admin:users:auth_state
+            - admin:users:server_state
       parameters:
         - name: name
           description: username
@@ -222,7 +223,6 @@ paths:
       security:
         - oauth2:
             - admin:users
-            #TODO: confirm, this scope allows to also create/delete users but users scope would allow any user to change their own name and admin status
       parameters:
         - name: name
           description: username
@@ -527,7 +527,8 @@ paths:
             - read:users:groups
             - read:users:activity
             - read:users:servers
-            #TODO: add admin:users:auth_state/server_state?
+            - admin:users:auth_state
+            - admin:users:server_state
       responses:
         "200":
           description: The authenticated user's model is returned.
