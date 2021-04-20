@@ -1311,7 +1311,7 @@ async def test_get_new_token(app, headers, status, note, expires_in):
     [
         ('admin', 'other', 200),
         ('admin', 'missing', 404),
-        ('user', 'other', 403),
+        ('user', 'other', 404),
         ('user', 'user', 200),
     ],
 )
