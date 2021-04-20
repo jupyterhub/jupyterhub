@@ -301,7 +301,7 @@ class UserTokenListAPIHandler(APIHandler):
 
         self.write(json.dumps({'api_tokens': api_tokens}))
 
-    @needs_scope('users:tokens')
+    # @needs_scope('users:tokens') #Todo: needs internal scope checking
     async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
