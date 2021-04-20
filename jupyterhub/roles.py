@@ -25,6 +25,7 @@ def get_default_roles():
             'scopes': [
                 'all',
                 'users',
+                'users:servers',
                 'users:tokens',
                 'admin:users',
                 'admin:users:servers',
@@ -52,7 +53,7 @@ def get_default_roles():
     return default_roles
 
 
-def expand_self_scope(name, read_only=False):
+def expand_self_scope(name):
     """
     Users have a metascope 'self' that should be expanded to standard user privileges.
     At the moment that is a user-filtered version (optional read) access to
@@ -72,10 +73,7 @@ def expand_self_scope(name, read_only=False):
         'users:tokens',
     ]
     read_scope_list = ['read:' + scope for scope in scope_list]
-    if read_only:
-        scope_list = read_scope_list
-    else:
-        scope_list.extend(read_scope_list)
+    scope_list.extend(read_scope_list)
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
@@ -88,18 +86,18 @@ def _get_scope_hierarchy():
 
     scopes = {
         'self': None,
-        'all': None,  # Optional 'read:all' as subscope, not implemented at this stage
-        'users': ['read:users', 'users:activity', 'users:servers'],
+        'all': None,
+        'users': ['read:users', 'users:groups', 'users:activity'],
         'read:users': [
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
-            'read:users:servers',
         ],
         'users:tokens': ['read:users:tokens'],
         'admin:users': ['admin:users:auth_state'],
         'admin:users:servers': ['admin:users:server_state'],
         'groups': ['read:groups'],
+        'users:servers': ['read:users:servers'],
         'admin:groups': None,
         'read:services': None,
         'read:hub': None,
@@ -113,13 +111,21 @@ def _get_scope_hierarchy():
 def horizontal_filter(func):
     """Decorator to account for horizontal filtering in scope syntax"""
 
+    def expand_server_filter(hor_filter):
+        resource, mark, value = hor_filter.partition('=')
+        if resource == 'server':
+            user, mark, server = value.partition('/')
+            return f'read:users:name!user={user}'
+
     def ignore(scopename):
         # temporarily remove horizontal filtering if present
         scopename, mark, hor_filter = scopename.partition('!')
         expanded_scope = func(scopename)
         # add the filter back
         full_expanded_scope = {scope + mark + hor_filter for scope in expanded_scope}
-
+        server_filter = expand_server_filter(hor_filter)
+        if server_filter:
+            full_expanded_scope.add(server_filter)
         return full_expanded_scope
 
     return ignore
