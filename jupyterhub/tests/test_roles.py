@@ -878,3 +878,37 @@ async def test_self_expansion(app, kind, has_user_scopes):
     assert bool(token_scopes) == has_user_scopes
     app.db.delete(orm_obj)
     app.db.delete(test_role)
+
+
+@mark.role
+@mark.parametrize(
+    "scope_list, kind, test_token",
+    [
+        (['users:activity!user'], 'users', False),
+        (['users:activity!user', 'read:users'], 'users', False),
+        (['users:activity!user'], 'users', True),
+    ],
+)
+async def test_user_filter_expansion(app, scope_list, kind, test_token):
+    Class = orm.get_class(kind)
+    orm_obj = Class(name=f'test_{kind}')
+    app.db.add(orm_obj)
+    app.db.commit()
+
+    test_role = orm.Role(name='test_role', scopes=scope_list)
+    orm_obj.roles.append(test_role)
+
+    if test_token:
+        token = orm_obj.new_api_token(roles=['test_role'])
+        orm_token = orm.APIToken.find(app.db, token)
+        scope_set = roles.expand_roles_to_scopes(orm_token)
+    else:
+        scope_set = roles.expand_roles_to_scopes(orm_obj)
+
+    for scope in scope_set:
+        if '!user' in scope:
+            assert not scope.endswith('!user')
+            assert scope.endswith(orm_obj.name)
+
+    app.db.delete(orm_obj)
+    app.db.delete(test_role)

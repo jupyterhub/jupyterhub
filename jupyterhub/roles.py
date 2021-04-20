@@ -1,6 +1,7 @@
 """Roles utils"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import re
 from itertools import chain
 
 from sqlalchemy import func
@@ -39,7 +40,7 @@ def get_default_roles():
             'name': 'server',
             'description': 'Post activity only',
             'scopes': [
-                'users:activity'
+                'users:activity!user'
             ],  # TO DO - fix scope to refer to only self once implemented
         },
         {
@@ -164,10 +165,27 @@ def expand_roles_to_scopes(orm_object):
             groups_roles.extend(group.roles)
         pass_roles.extend(groups_roles)
     scopes = _get_subscopes(*pass_roles)
+
+    # transform !user filter to !user=ownername
+    for scope in scopes:
+        base_scope, _, filter = scope.partition('!')
+        if filter == 'user':
+            scopes.remove(scope)
+            if isinstance(orm_object, orm.APIToken):
+                owner = orm_object.user
+                if owner is None:
+                    owner = orm_object.service
+                name = owner.name
+            else:
+                name = orm_object.name
+            trans_scope = f'{base_scope}!user={name}'
+            scopes.add(trans_scope)
+
     if 'self' in scopes:
         scopes.remove('self')
         if isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user'):
             scopes |= expand_self_scope(orm_object.name)
+
     return scopes
 
 
@@ -188,7 +206,7 @@ def _check_scopes(*args):
     """Check if provided scopes exist"""
 
     allowed_scopes = _get_scope_hierarchy()
-    allowed_filters = ['!user=', '!service=', '!group=', '!server=']
+    allowed_filters = ['!user=', '!service=', '!group=', '!server=', '!user']
     subscopes = set(
         chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
     )
