@@ -351,7 +351,7 @@ class JupyterHubRequestValidator(RequestValidator):
         orm.APIToken.new(
             client_id=client.identifier,
             expires_in=token['expires_in'],
-            roles=request._jupyterhub_roles,
+            roles=[rolename for rolename in request.scopes],
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
@@ -454,7 +454,6 @@ class JupyterHubRequestValidator(RequestValidator):
         request.user = orm_code.user
         request.session_id = orm_code.session_id
         request.scopes = [role.name for role in orm_code.roles]
-        request._jupyterhub_roles = orm_code.roles
         return True
 
     def validate_grant_type(
@@ -573,6 +572,7 @@ class JupyterHubRequestValidator(RequestValidator):
         app_log.debug(
             f"Allowing request for role(s) for {client_id}:  {','.join(requested_roles) or '[]'}"
         )
+        # these will be stored on the OAuthCode object
         request._jupyterhub_roles = [
             client_allowed_roles[name]
             for name in requested_roles
