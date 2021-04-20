@@ -83,6 +83,12 @@ The role `reader` allows users `maria` and `joe` and service `external` to read 
 ```{admonition} Requirements
 :class: warning
 In a role definition, the `name` field is required, while all other fields are optional.\
+**Role names must:**
+- be 3 - 255 characters
+- use ascii lowercase, numbers, 'unreserved' URL punctuation `-_.~`
+- start with a letter
+- end with letter or number.
+
 If no scopes are defined for new role, JupyterHub will raise a warning. Providing non-existing scopes will result in an error.\
 Moreover, `users`, `services`, `groups` and `tokens` only accept objects that already exist or are defined previously in the file.\
 It is not possible to implicitly add a new user to the database by defining a new role.
