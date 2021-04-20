@@ -244,6 +244,16 @@ async def test_load_default_roles(tmpdir, request):
             'info',
             app_log.info('Role new-role added to database'),
         ),
+        (
+            'the-same-role',
+            {
+                'name': 'new-role',
+                'description': 'Some description',
+                'scopes': ['groups'],
+            },
+            'no-log',
+            None,
+        ),
         ('no_name', {'scopes': ['users']}, 'error', KeyError),
         (
             'no_scopes',
@@ -269,34 +279,42 @@ async def test_load_default_roles(tmpdir, request):
             'info',
             app_log.info('Role user scopes attribute has been changed'),
         ),
+        # rewrite the user role back to 'default'
+        (
+            'user',
+            {'name': 'user', 'scopes': ['self']},
+            'info',
+            app_log.info('Role user scopes attribute has been changed'),
+        ),
     ],
 )
-async def test_adding_new_roles(
-    tmpdir, request, role, role_def, response_type, response
-):
-    """Test raising errors and warnings when creating new roles"""
+async def test_creating_roles(app, role, role_def, response_type, response):
+    """Test raising errors and warnings when creating/modifying roles"""
 
-    kwargs = {'load_roles': [role_def]}
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
+    db = app.db
 
     if response_type == 'error':
         with pytest.raises(response):
-            await hub.init_roles()
+            roles.create_role(db, role_def)
 
     elif response_type == 'warning' or response_type == 'info':
         with pytest.warns(response):
-            await hub.init_roles()
+            roles.create_role(db, role_def)
+        # check the role has been created/modified
         role = orm.Role.find(db, role_def['name'])
         assert role is not None
         if 'description' in role_def.keys():
             assert role.description == role_def['description']
         if 'scopes' in role_def.keys():
             assert role.scopes == role_def['scopes']
+
+    # make sure no warnings/info logged when the role exists and its definition hasn't been changed
+    elif response_type == 'no-log':
+        with pytest.warns(response) as record:
+            roles.create_role(db, role_def)
+        assert not record.list
+        role = orm.Role.find(db, role_def['name'])
+        assert role is not None
 
 
 @mark.role
@@ -858,3 +876,25 @@ async def test_self_expansion(app, kind, has_user_scopes):
     assert bool(token_scopes) == has_user_scopes
     app.db.delete(orm_obj)
     app.db.delete(test_role)
+
+
+@mark.role
+@mark.parametrize(
+    "name, valid",
+    [
+        ('abc', True),
+        ('group', True),
+        ("a-pretty-long-name-with-123", True),
+        ("0-abc", False),  # starts with number
+        ("role-", False),  # ends with -
+        ("has-Uppercase", False),  # Uppercase
+        ("a" * 256, False),  # too long
+        ("has space", False),  # space is illegal
+    ],
+)
+async def test_valid_names(name, valid):
+    if valid:
+        assert roles._validate_role_name(name)
+    else:
+        with pytest.raises(ValueError):
+            roles._validate_role_name(name)
