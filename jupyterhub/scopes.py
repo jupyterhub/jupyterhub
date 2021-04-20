@@ -18,7 +18,18 @@ def get_scopes_for(orm_object):
     scopes = set()
     if orm_object is None:
         return scopes
-    elif isinstance(orm_object, orm.APIToken):
+
+    if not isinstance(orm_object, orm.Base):
+        from .user import User
+
+        if isinstance(orm_object, User):
+            orm_object = orm_object.orm_user
+        else:
+            raise TypeError(
+                f"Only allow orm objects or User wrappers, got {orm_object}"
+            )
+
+    if isinstance(orm_object, orm.APIToken):
         app_log.warning(f"Authenticated with token {orm_object}")
         owner = orm_object.user or orm_object.service
         token_scopes = roles.expand_roles_to_scopes(orm_object)

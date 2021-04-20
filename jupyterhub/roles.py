@@ -163,10 +163,8 @@ def _expand_scope(scopename):
 def expand_roles_to_scopes(orm_object):
     """Get the scopes listed in the roles of the User/Service/Group/Token
     If User, take into account the user's groups roles as well"""
-    from .user import User
-
-    if isinstance(orm_object, User):
-        orm_object = User.orm_user
+    if not isinstance(orm_object, orm.Base):
+        raise TypeError(f"Only orm objects allowed, got {orm_object}")
 
     pass_roles = orm_object.roles
 

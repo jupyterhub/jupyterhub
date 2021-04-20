@@ -530,7 +530,7 @@ async def test_metascope_self_expansion(
     app, kind, has_user_scopes, create_user_with_scopes, create_service_with_scopes
 ):
     if kind == 'users':
-        orm_obj = create_user_with_scopes('self')
+        orm_obj = create_user_with_scopes('self').orm_user
     else:
         orm_obj = create_service_with_scopes('self')
     # test expansion of user/service scopes
