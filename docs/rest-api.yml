@@ -472,22 +472,6 @@ paths:
           in: path
           required: true
           type: string
-        - name: offset
-          in: query
-          required: false
-          type: number
-          description: |
-            Return a number of users within the given group starting at the specified offset.
-            Can be used with limit to paginate.
-            If unspecified, return all group users.
-        - name: limit
-          in: query
-          required: false
-          type: number
-          description: |
-            Return a finite number of users within the given group.
-            Can be used with offset to paginate.
-            If unspecified, use api_page_default_limit
       responses:
         "200":
           description: The group model
