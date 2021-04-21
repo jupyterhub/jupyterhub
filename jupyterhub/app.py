@@ -1377,14 +1377,16 @@ class JupyterHub(Application):
             max(self.log_level, logging.INFO)
         )
 
-        # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
             # ensure all log statements identify the application they come from
             log.name = self.log.name
-        logger = logging.getLogger('tornado')
-        logger.propagate = True
-        logger.parent = self.log
-        logger.setLevel(self.log.level)
+
+        # hook up tornado's and oauthlib's loggers to our own
+        for name in ("tornado", "oauthlib"):
+            logger = logging.getLogger(name)
+            logger.propagate = True
+            logger.parent = self.log
+            logger.setLevel(self.log.level)
 
     @staticmethod
     def add_url_prefix(prefix, handlers):

@@ -163,22 +163,22 @@ def _expand_scope(scopename):
 def expand_roles_to_scopes(orm_object):
     """Get the scopes listed in the roles of the User/Service/Group/Token
     If User, take into account the user's groups roles as well"""
+    if not isinstance(orm_object, orm.Base):
+        raise TypeError(f"Only orm objects allowed, got {orm_object}")
 
     pass_roles = orm_object.roles
+
     if isinstance(orm_object, orm.User):
         groups_roles = []
         for group in orm_object.groups:
             groups_roles.extend(group.roles)
         pass_roles.extend(groups_roles)
-    scopes = _get_subscopes(*pass_roles)
-    if 'self' in scopes:
-        scopes.remove('self')
-        if isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user'):
-            scopes |= expand_self_scope(orm_object.name)
+
+    scopes = _get_subscopes(*pass_roles, owner=orm_object)
     return scopes
 
 
-def _get_subscopes(*args):
+def _get_subscopes(*args, owner=None):
     """Returns a set of all available subscopes for a specified role or list of roles"""
 
     scope_list = []
@@ -187,6 +187,11 @@ def _get_subscopes(*args):
         scope_list.extend(role.scopes)
 
     scopes = set(chain.from_iterable(list(map(_expand_scope, scope_list))))
+
+    if 'self' in scopes:
+        scopes.remove('self')
+        if owner and isinstance(owner, orm.User):
+            scopes |= expand_self_scope(owner.name)
 
     return scopes
 
@@ -380,32 +385,36 @@ def _token_allowed_role(db, token, role):
     """Returns True if token allowed to have requested role through
     comparing the requested scopes with the set of token's owner scopes"""
 
-    standard_permissions = {'all', 'read:all'}
+    owner = token.user
+    if owner is None:
+        owner = token.service
 
-    token_scopes = _get_subscopes(role)
-    extra_scopes = token_scopes - standard_permissions
+    if owner is None:
+        raise ValueError(f"Owner not found for {token}")
+
+    token_scopes = _get_subscopes(role, owner=owner)
+
+    implicit_permissions = {'all', 'read:all'}
+    explicit_scopes = token_scopes - implicit_permissions
     # ignore horizontal filters
-    raw_extra_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in extra_scopes
+    raw_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in explicit_scopes
     }
-    # find the owner and their roles
-    owner = None
-    if token.user_id:
-        owner = db.query(orm.User).get(token.user_id)
-    elif token.service_id:
-        owner = db.query(orm.Service).get(token.service_id)
-    if owner:
-        owner_scopes = expand_roles_to_scopes(owner)
-        # ignore horizontal filters
-        raw_owner_scopes = {
-            scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
-        }
-        if raw_extra_scopes.issubset(raw_owner_scopes):
-            return True
-        else:
-            return False
+    # find the owner's scopes
+    owner_scopes = expand_roles_to_scopes(owner)
+    # ignore horizontal filters
+    raw_owner_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
+    }
+    disallowed_scopes = raw_scopes.difference(raw_owner_scopes)
+    if not disallowed_scopes:
+        # no scopes requested outside owner's own scopes
+        return True
     else:
-        raise ValueError('Owner the token %r not found', token)
+        app_log.warning(
+            f"Token requesting scopes exceeding owner {owner.name}: {disallowed_scopes}"
+        )
+        return False
 
 
 def assign_default_roles(db, entity):
@@ -440,12 +449,10 @@ def update_roles(db, entity, roles):
                 )
                 if _token_allowed_role(db, entity, role):
                     role.tokens.append(entity)
-                    app_log.info('Adding role %s for token: %s', role.name, entity)
+                    app_log.info('Adding role %s to token: %s', role.name, entity)
                 else:
                     raise ValueError(
-                        'Requested token role %r of %r has more permissions than the token owner',
-                        rolename,
-                        entity,
+                        f'Requested token role {rolename} of {entity} has more permissions than the token owner'
                     )
             else:
                 raise NameError('Role %r does not exist' % rolename)

@@ -137,43 +137,34 @@ class Server(Base):
         return "<Server(%s:%s)>" % (self.ip, self.port)
 
 
-# user:role many:many mapping table
-user_role_map = Table(
-    'user_role_map',
-    Base.metadata,
-    Column('user_id', ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
-    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
-)
+# lots of things have roles
+# mapping tables are the same for all of them
 
-# service:role many:many mapping table
-service_role_map = Table(
-    'service_role_map',
-    Base.metadata,
-    Column(
-        'service_id', ForeignKey('services.id', ondelete='CASCADE'), primary_key=True
-    ),
-    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
-)
+_role_map_tables = []
 
-# token:role many:many mapping table
-api_token_role_map = Table(
-    'api_token_role_map',
-    Base.metadata,
-    Column(
-        'api_token_id',
-        ForeignKey('api_tokens.id', ondelete='CASCADE'),
-        primary_key=True,
-    ),
-    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
-)
-
-# group:role many:many mapping table
-group_role_map = Table(
-    'group_role_map',
-    Base.metadata,
-    Column('group_id', ForeignKey('groups.id', ondelete='CASCADE'), primary_key=True),
-    Column('role_id', ForeignKey('roles.id', ondelete='CASCADE'), primary_key=True),
-)
+for has_role in (
+    'user',
+    'group',
+    'service',
+    'api_token',
+    'oauth_client',
+    'oauth_code',
+):
+    role_map = Table(
+        f'{has_role}_role_map',
+        Base.metadata,
+        Column(
+            f'{has_role}_id',
+            ForeignKey(f'{has_role}s.id', ondelete='CASCADE'),
+            primary_key=True,
+        ),
+        Column(
+            'role_id',
+            ForeignKey('roles.id', ondelete='CASCADE'),
+            primary_key=True,
+        ),
+    )
+    _role_map_tables.append(role_map)
 
 
 class Role(Base):
@@ -714,6 +705,8 @@ class OAuthCode(Expiring, Base):
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
+    roles = relationship('Role', secondary='oauth_code_role_map')
+
     @staticmethod
     def now():
         return datetime.utcnow().timestamp()
@@ -744,6 +737,10 @@ class OAuthClient(Base):
         APIToken, backref='client', cascade='all, delete-orphan'
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
+
+    # these are the roles an oauth client is allowed to request
+    # *not* the roles of the client itself
+    allowed_roles = relationship('Role', secondary='oauth_client_role_map')
 
 
 # General database utilities

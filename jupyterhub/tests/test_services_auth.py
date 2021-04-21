@@ -9,8 +9,10 @@ from functools import partial
 from queue import Queue
 from threading import Thread
 from unittest import mock
+from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
+import pytest
 import requests
 import requests_mock
 from pytest import raises
@@ -318,8 +320,48 @@ async def test_hubauth_service_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-async def test_oauth_service(app, mockservice_url):
+@pytest.mark.parametrize(
+    "client_allowed_roles, request_roles, expected_roles",
+    [
+        # allow empty roles
+        ([], [], []),
+        # allow original 'identify' scope to map to no role
+        ([], ["identify"], []),
+        # requesting roles outside client list doesn't work
+        ([], ["admin"], None),
+        ([], ["token"], None),
+        # requesting nonexistent roles fails in the same way (no server error)
+        ([], ["nosuchrole"], None),
+        # requesting exactly client allow list works
+        (["user"], ["user"], ["user"]),
+        # no explicit request, defaults to all
+        (["token", "user"], [], ["token", "user"]),
+        # explicit 'identify' maps to none
+        (["token", "user"], ["identify"], []),
+        # any item outside the list isn't allowed
+        (["token", "user"], ["token", "server"], None),
+        # reuesting subset
+        (["admin", "user"], ["user"], ["user"]),
+        (["user", "token", "server"], ["token", "user"], ["token", "user"]),
+    ],
+)
+async def test_oauth_service(
+    app,
+    mockservice_url,
+    client_allowed_roles,
+    request_roles,
+    expected_roles,
+):
     service = mockservice_url
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_roles = [
+        orm.Role.find(app.db, role_name) for role_name in client_allowed_roles
+    ]
+    app.db.commit()
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     # first request is only going to login and get us to the oauth form page
     s = AsyncSession()
@@ -334,7 +376,18 @@ async def test_oauth_service(app, mockservice_url):
     assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
 
     # submit the oauth form to complete authorization
-    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    data = {}
+    if request_roles:
+        data["scopes"] = request_roles
+    r = await s.post(r.url, data=data, headers={'Referer': r.url})
+    if expected_roles is None:
+        # expected failed auth, stop here
+        # verify expected 'invalid scope' error, not server error
+        dest_url, _, query = r.url.partition("?")
+        assert dest_url == public_url(app, mockservice_url) + "oauth_callback"
+        assert parse_qs(query).get("error") == ["invalid_scope"]
+        assert r.status_code == 400
+        return
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
