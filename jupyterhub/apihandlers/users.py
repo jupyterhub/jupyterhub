@@ -336,7 +336,7 @@ class UserTokenListAPIHandler(APIHandler):
         scope_filter = self.get_scope_filter('users:tokens')
         if user is None or not scope_filter(user, kind):
             raise web.HTTPError(
-                404,
+                403,
                 f"{kind.title()} {user_name} not found or no permissions to generate tokens",
             )
 
