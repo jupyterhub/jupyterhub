@@ -1505,36 +1505,6 @@ async def test_group_get(app):
 
 
 @mark.group
-async def test_group_user_pagination(app):
-    group = orm.Group.find(app.db, name='betaflight')
-    user = add_user(app.db, app=app, name='bigfoot')
-    second_user = add_user(app.db, app=app, name='birdman')
-    group.users.append(user)
-    group.users.append(second_user)
-    app.db.commit()
-
-    # Test offset for pagination
-    r = await api_request(app, 'groups/betaflight?offset=1')
-    r.raise_for_status()
-    reply = r.json()
-    assert reply == {'kind': 'group', 'name': 'betaflight', 'users': ['birdman']}
-
-    r = await api_request(app, 'groups/betaflight?offset=10')
-    r.raise_for_status()
-    assert r.json() == {'kind': 'group', 'name': 'betaflight', 'users': []}
-
-    # Test limit for pagination
-    r = await api_request(app, 'groups/betaflight?limit=1')
-    r.raise_for_status()
-    reply = r.json()
-    assert reply == {'kind': 'group', 'name': 'betaflight', 'users': ['bigfoot']}
-
-    r = await api_request(app, 'groups/betaflight?limit=0')
-    r.raise_for_status()
-    assert r.json() == {'kind': 'group', 'name': 'betaflight', 'users': []}
-
-
-@mark.group
 async def test_group_create_delete(app):
     db = app.db
     r = await api_request(app, 'groups/runaways', method='delete')

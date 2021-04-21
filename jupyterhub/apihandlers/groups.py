@@ -38,34 +38,9 @@ class GroupListAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self):
         """List groups"""
-        offset = self.get_argument("offset", None)
-        limit = self.get_argument("limit", self.settings['app'].api_page_default_limit)
-        max_limit = self.settings['app'].api_page_max_limit
-
         query = self.db.query(orm.Group)
-
-        if offset is not None:
-            try:
-                offset = int(offset)
-            except Exception as e:
-                raise web.HTTPError(
-                    400, "Invalid argument type, offset must be an integer"
-                )
-            query = query.offset(offset)
-
-        if limit != self.settings['app'].api_page_default_limit:
-            try:
-                limit = int(limit)
-                if limit > max_limit:
-                    limit = max_limit
-
-            except Exception as e:
-                raise web.HTTPError(
-                    400, "Invalid argument type, limit must be an integer"
-                )
-
-        query = query.limit(limit)
-
+        offset, limit = self.get_api_pagination()
+        query = query.offset(offset).limit(limit)
         data = [self.group_model(group) for group in query]
         self.write(json.dumps(data))
 
@@ -104,36 +79,8 @@ class GroupAPIHandler(_GroupAPIHandler):
 
     @admin_only
     def get(self, name):
-        offset = self.get_argument("offset", None)
-        limit = self.get_argument("limit", self.settings['app'].api_page_default_limit)
-        max_limit = self.settings['app'].api_page_max_limit
-
         group = self.find_group(name)
-
-        if offset is not None:
-            try:
-                offset = int(offset)
-            except Exception as e:
-                raise web.HTTPError(
-                    400, "Invalid argument type, offset must be an integer"
-                )
-
-            group.users = group.users[offset:]
-
-        if limit != self.settings['app'].api_page_default_limit:
-            try:
-                limit = int(limit)
-                if limit > max_limit:
-                    limit = max_limit
-            except Exception as e:
-                raise web.HTTPError(
-                    400, "Invalid argument type, limit must be an integer"
-                )
-
-        group.users = group.users[:limit]
-
         group_model = self.group_model(group)
-
         self.write(json.dumps(group_model))
 
     @admin_only
