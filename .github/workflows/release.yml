@@ -66,3 +66,115 @@ jobs:
         run: |
           pip install twine
           twine upload --skip-existing dist/*
+
+  publish-docker:
+    runs-on: ubuntu-20.04
+
+    services:
+      # So that we can test this in PRs/branches
+      local-registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    steps:
+      - name: Should we push this image to a public registry?
+        run: |
+          if [ "${{ startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/master') }}" = "true" ]; then
+              # Empty => Docker Hub
+              echo "REGISTRY=" >> $GITHUB_ENV
+          else
+              echo "REGISTRY=localhost:5000/" >> $GITHUB_ENV
+          fi
+
+      - uses: actions/checkout@v2
+
+      # Setup docker to build for multiple platforms (requires qemu).
+      # See:
+      # https://github.com/docker/build-push-action/tree/v2.3.0#usage
+      # https://github.com/docker/build-push-action/blob/v2.3.0/docs/advanced/multi-platform.md
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          # Allows pushing to registry on localhost:5000
+          driver-opts: network=host
+
+      # https://github.com/docker/login-action/tree/v1.8.0#docker-hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v1
+        if: env.REGISTRY != 'localhost:5000/'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # https://github.com/jupyterhub/action-major-minor-tag-calculator
+      # If this is a tagged build this will return additional parent tags.
+      # E.g. 1.2.3 is expanded to Docker tags
+      # [{prefix}:1.2.3, {prefix}:1.2, {prefix}:1, {prefix}:latest] unless
+      # this is a backported tag in which case the newer tags aren't updated.
+      # For branches this will return the branch name.
+      # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
+      - name: Get list of jupyterhub tags
+        id: jupyterhubtags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
+
+      - name: Build and push jupyterhub
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # tags parameter must be a string input so convert `gettags` JSON
+          # array into a comma separated list of tags
+          tags: ${{ join(fromJson(steps.jupyterhubtags.outputs.tags)) }}
+
+      # jupyterhub-onbuild
+
+      - name: Get list of jupyterhub-onbuild tags
+        id: onbuildtags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
+
+      - name: Build and push jupyterhub-onbuild
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            BASE_IMAGE=${{ fromJson(steps.jupyterhubtags.outputs.tags)[0] }}
+          context: onbuild
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ join(fromJson(steps.onbuildtags.outputs.tags)) }}
+
+      # jupyterhub-demo
+
+      - name: Get list of jupyterhub-demo tags
+        id: demotags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
+
+      - name: Build and push jupyterhub-demo
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
+          context: demo-image
+          # linux/arm64 currently fails:
+          # ERROR: Could not build wheels for argon2-cffi which use PEP 517 and cannot be installed directly
+          # ERROR: executor failed running [/bin/sh -c python3 -m pip install notebook]: exit code: 1
+          platforms: linux/amd64
+          push: true
+          tags: ${{ join(fromJson(steps.demotags.outputs.tags)) }}

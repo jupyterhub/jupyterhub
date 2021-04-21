@@ -858,6 +858,66 @@ class JupyterHub(Application):
     def _hub_prefix_default(self):
         return url_path_join(self.base_url, '/hub/')
 
+    hub_routespec = Unicode(
+        "/",
+        help="""
+        The routing prefix for the Hub itself.
+        
+        Override to send only a subset of traffic to the Hub.
+        Default is to use the Hub as the default route for all requests.
+
+        This is necessary for normal jupyterhub operation,
+        as the Hub must receive requests for e.g. `/user/:name`
+        when the user's server is not running.
+
+        However, some deployments using only the JupyterHub API
+        may want to handle these events themselves,
+        in which case they can register their own default target with the proxy
+        and set e.g. `hub_routespec = /hub/` to serve only the hub's own pages, or even `/hub/api/` for api-only operation.
+        
+        Note: hub_routespec must include the base_url, if any.
+
+        .. versionadded:: 1.4
+        """,
+    ).tag(config=True)
+
+    @default("hub_routespec")
+    def _default_hub_routespec(self):
+        # Default routespec for the Hub is the *app* base url
+        # not the hub URL, so the Hub receives requests for non-running servers
+        # use `/` with host-based routing so the Hub
+        # gets requests for all hosts
+        if self.subdomain_host:
+            routespec = '/'
+        else:
+            routespec = self.base_url
+        return routespec
+
+    @validate("hub_routespec")
+    def _validate_hub_routespec(self, proposal):
+        """ensure leading/trailing / on custom routespec prefix
+
+        - trailing '/' always required
+        - leading '/' required unless using subdomains
+        """
+        routespec = proposal.value
+        if not routespec.endswith("/"):
+            routespec = routespec + "/"
+        if not self.subdomain_host and not routespec.startswith("/"):
+            routespec = "/" + routespec
+        return routespec
+
+    @observe("hub_routespec")
+    def _hub_routespec_changed(self, change):
+        if change.new == change.old:
+            return
+        routespec = change.new
+        if routespec not in {'/', self.base_url}:
+            self.log.warning(
+                f"Using custom route for Hub: {routespec}."
+                " Requests for not-running servers may not be handled."
+            )
+
     @observe('base_url')
     def _update_hub_prefix(self, change):
         """add base URL to hub prefix"""
@@ -1678,6 +1738,7 @@ class JupyterHub(Application):
         """Load the Hub URL config"""
         hub_args = dict(
             base_url=self.hub_prefix,
+            routespec=self.hub_routespec,
             public_host=self.subdomain_host,
             certfile=self.internal_ssl_cert,
             keyfile=self.internal_ssl_key,
@@ -1693,17 +1754,15 @@ class JupyterHub(Application):
             hub_args['ip'] = self.hub_ip
             hub_args['port'] = self.hub_port
 
-        # routespec for the Hub is the *app* base url
-        # not the hub URL, so it receives requests for non-running servers
-        # use `/` with host-based routing so the Hub
-        # gets requests for all hosts
-        host = ''
-        if self.subdomain_host:
-            routespec = '/'
-        else:
-            routespec = self.base_url
+        self.hub = Hub(**hub_args)
 
-        self.hub = Hub(routespec=routespec, **hub_args)
+        if not self.subdomain_host:
+            api_prefix = url_path_join(self.hub.base_url, "api/")
+            if not api_prefix.startswith(self.hub.routespec):
+                self.log.warning(
+                    f"Hub API prefix {api_prefix} not on prefix {self.hub.routespec}. "
+                    "The Hub may not receive any API requests from outside."
+                )
 
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip

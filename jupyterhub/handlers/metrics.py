@@ -1,3 +1,4 @@
+"""Handlers for serving prometheus metrics"""
 from prometheus_client import CONTENT_TYPE_LATEST
 from prometheus_client import generate_latest
 from prometheus_client import REGISTRY
@@ -17,4 +18,7 @@ class MetricsHandler(BaseHandler):
         self.write(generate_latest(REGISTRY))
 
 
-default_handlers = [(r'/metrics$', MetricsHandler)]
+default_handlers = [
+    (r'/metrics$', MetricsHandler),
+    (r'/api/metrics$', MetricsHandler),
+]
