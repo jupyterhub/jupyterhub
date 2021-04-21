@@ -89,27 +89,32 @@ jobs:
 
       - uses: actions/checkout@v2
 
-      # Setup docker to build for multiple platforms (requires qemu).
-      # See:
-      # https://github.com/docker/build-push-action/tree/v2.3.0#usage
-      # https://github.com/docker/build-push-action/blob/v2.3.0/docs/advanced/multi-platform.md
+      # Setup docker to build for multiple platforms, see:
+      # https://github.com/docker/build-push-action/tree/v2.4.0#usage
+      # https://github.com/docker/build-push-action/blob/v2.4.0/docs/advanced/multi-platform.md
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+      - name: Set up QEMU (for docker buildx)
+        uses: docker/setup-qemu-action@25f0500ff22e406f7191a2a8ba8cda16901ca018 # associated tag: v1.0.2
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+      - name: Set up Docker Buildx (for multi-arch builds)
+        uses: docker/setup-buildx-action@2a4b53665e15ce7d7049afb11ff1f70ff1610609 # associated tag: v1.1.2
         with:
           # Allows pushing to registry on localhost:5000
           driver-opts: network=host
 
-      # https://github.com/docker/login-action/tree/v1.8.0#docker-hub
-      - name: Login to Docker Hub
-        uses: docker/login-action@v1
+      - name: Setup push rights to Docker Hub
+        # This was setup by...
+        # 1. Creating a Docker Hub service account "jupyterhubbot"
+        # 2. Creating a access token for the service account specific to this
+        #    repository: https://hub.docker.com/settings/security
+        # 3. Making the account part of the "bots" team, and granting that team
+        #    permissions to push to the relevant images:
+        #    https://hub.docker.com/orgs/jupyterhub/teams/bots/permissions
+        # 4. Registering the username and token as a secret for this repo:
+        #    https://github.com/jupyterhub/jupyterhub/settings/secrets/actions
         if: env.REGISTRY != 'localhost:5000/'
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
 
       # https://github.com/jupyterhub/action-major-minor-tag-calculator
       # If this is a tagged build this will return additional parent tags.
@@ -127,7 +132,7 @@ jobs:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
 
       - name: Build and push jupyterhub
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -147,7 +152,7 @@ jobs:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
 
       - name: Build and push jupyterhub-onbuild
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.jupyterhubtags.outputs.tags)[0] }}
@@ -167,7 +172,7 @@ jobs:
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
 
       - name: Build and push jupyterhub-demo
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
