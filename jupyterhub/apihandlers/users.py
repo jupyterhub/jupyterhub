@@ -169,24 +169,6 @@ class UserListAPIHandler(APIHandler):
         self.set_status(201)
 
 
-def admin_or_self(method):
-    """Decorator for restricting access to either the target user or admin"""
-
-    def m(self, name, *args, **kwargs):
-        current = self.current_user
-        if current is None:
-            raise web.HTTPError(403)
-        if not (current.name == name or current.admin):
-            raise web.HTTPError(403)
-
-        # raise 404 if not found
-        if not self.find_user(name):
-            raise web.HTTPError(404)
-        return method(self, name, *args, **kwargs)
-
-    return m
-
-
 class UserAPIHandler(APIHandler):
     @needs_scope(
         'read:users',
@@ -195,9 +177,7 @@ class UserAPIHandler(APIHandler):
         'read:users:groups',
         'read:users:activity',
     )
-    async def get(
-        self, user_name
-    ):  # Fixme: Does not work when only server filter is selected
+    async def get(self, user_name):
         user = self.find_user(user_name)
         model = self.user_model(user)
         # auth state will only be shown if the requester is an admin
@@ -268,7 +248,7 @@ class UserAPIHandler(APIHandler):
 
         self.set_status(204)
 
-    @needs_scope('admin:users')  # Todo: Change to `users`?
+    @needs_scope('admin:users')
     async def patch(self, user_name):
         user = self.find_user(user_name)
         if user is None:
@@ -321,7 +301,7 @@ class UserTokenListAPIHandler(APIHandler):
 
         self.write(json.dumps({'api_tokens': api_tokens}))
 
-    # Todo: Set to @needs_scope('users:tokens')
+    # @needs_scope('users:tokens') #Todo: needs internal scope checking
     async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):

@@ -25,6 +25,7 @@ def get_default_roles():
             'scopes': [
                 'all',
                 'users',
+                'users:servers',
                 'users:tokens',
                 'admin:users',
                 'admin:users:servers',
@@ -52,7 +53,7 @@ def get_default_roles():
     return default_roles
 
 
-def expand_self_scope(name, read_only=False):
+def expand_self_scope(name):
     """
     Users have a metascope 'self' that should be expanded to standard user privileges.
     At the moment that is a user-filtered version (optional read) access to
@@ -72,10 +73,7 @@ def expand_self_scope(name, read_only=False):
         'users:tokens',
     ]
     read_scope_list = ['read:' + scope for scope in scope_list]
-    if read_only:
-        scope_list = read_scope_list
-    else:
-        scope_list.extend(read_scope_list)
+    scope_list.extend(read_scope_list)
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
@@ -88,18 +86,18 @@ def _get_scope_hierarchy():
 
     scopes = {
         'self': None,
-        'all': None,  # Optional 'read:all' as subscope, not implemented at this stage
-        'users': ['read:users', 'users:activity', 'users:servers'],
+        'all': None,
+        'users': ['read:users', 'users:groups', 'users:activity'],
         'read:users': [
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
-            'read:users:servers',
         ],
         'users:tokens': ['read:users:tokens'],
         'admin:users': ['admin:users:auth_state'],
         'admin:users:servers': ['admin:users:server_state'],
         'groups': ['read:groups'],
+        'users:servers': ['read:users:servers'],
         'admin:groups': None,
         'read:services': None,
         'read:hub': None,
@@ -113,13 +111,21 @@ def _get_scope_hierarchy():
 def horizontal_filter(func):
     """Decorator to account for horizontal filtering in scope syntax"""
 
+    def expand_server_filter(hor_filter):
+        resource, mark, value = hor_filter.partition('=')
+        if resource == 'server':
+            user, mark, server = value.partition('/')
+            return f'read:users:name!user={user}'
+
     def ignore(scopename):
         # temporarily remove horizontal filtering if present
         scopename, mark, hor_filter = scopename.partition('!')
         expanded_scope = func(scopename)
         # add the filter back
         full_expanded_scope = {scope + mark + hor_filter for scope in expanded_scope}
-
+        server_filter = expand_server_filter(hor_filter)
+        if server_filter:
+            full_expanded_scope.add(server_filter)
         return full_expanded_scope
 
     return ignore
@@ -157,39 +163,23 @@ def _expand_scope(scopename):
 def expand_roles_to_scopes(orm_object):
     """Get the scopes listed in the roles of the User/Service/Group/Token
     If User, take into account the user's groups roles as well"""
+    if not isinstance(orm_object, orm.Base):
+        raise TypeError(f"Only orm objects allowed, got {orm_object}")
 
     pass_roles = orm_object.roles
+
     if isinstance(orm_object, orm.User):
         groups_roles = []
         for group in orm_object.groups:
             groups_roles.extend(group.roles)
         pass_roles.extend(groups_roles)
-    scopes = _get_subscopes(*pass_roles)
 
-    # transform !user filter to !user=ownername
-    for scope in scopes:
-        base_scope, _, filter = scope.partition('!')
-        if filter == 'user':
-            scopes.remove(scope)
-            if isinstance(orm_object, orm.APIToken):
-                owner = orm_object.user
-                if owner is None:
-                    owner = orm_object.service
-                name = owner.name
-            else:
-                name = orm_object.name
-            trans_scope = f'{base_scope}!user={name}'
-            scopes.add(trans_scope)
-
-    if 'self' in scopes:
-        scopes.remove('self')
-        if isinstance(orm_object, orm.User) or hasattr(orm_object, 'orm_user'):
-            scopes |= expand_self_scope(orm_object.name)
+    scopes = _get_subscopes(*pass_roles, owner=orm_object)
 
     return scopes
 
 
-def _get_subscopes(*args):
+def _get_subscopes(*args, owner=None):
     """Returns a set of all available subscopes for a specified role or list of roles"""
 
     scope_list = []
@@ -198,6 +188,26 @@ def _get_subscopes(*args):
         scope_list.extend(role.scopes)
 
     scopes = set(chain.from_iterable(list(map(_expand_scope, scope_list))))
+
+    # transform !user filter to !user=ownername
+    for scope in scopes:
+        base_scope, _, filter = scope.partition('!')
+        if filter == 'user':
+            scopes.remove(scope)
+            if isinstance(owner, orm.APIToken):
+                token_owner = owner.user
+                if token_owner is None:
+                    token_owner = owner.service
+                name = token_owner.name
+            else:
+                name = owner.name
+            trans_scope = f'{base_scope}!user={name}'
+            scopes.add(trans_scope)
+
+    if 'self' in scopes:
+        scopes.remove('self')
+        if owner and isinstance(owner, orm.User):
+            scopes |= expand_self_scope(owner.name)
 
     return scopes
 
@@ -244,6 +254,26 @@ def _overwrite_role(role, role_dict):
                     )
 
 
+_role_name_pattern = re.compile(r'^[a-z][a-z0-9\-_~\.]{1,253}[a-z0-9]$')
+
+
+def _validate_role_name(name):
+    """Ensure a role has a valid name
+
+    Raises ValueError if role name is invalid
+    """
+    if not _role_name_pattern.match(name):
+        raise ValueError(
+            f"Invalid role name: {name!r}."
+            " Role names must:\n"
+            " - be 3-255 characters\n"
+            " - contain only lowercase ascii letters, numbers, and URL unreserved special characters '-.~_'\n"
+            " - start with a letter\n"
+            " - end with letter or number\n"
+        )
+    return True
+
+
 def create_role(db, role_dict):
     """Adds a new role to database or modifies an existing one"""
 
@@ -253,6 +283,7 @@ def create_role(db, role_dict):
         raise KeyError('Role definition must have a name')
     else:
         name = role_dict['name']
+        _validate_role_name(name)
         role = orm.Role.find(db, name)
 
     description = role_dict.get('description')
@@ -370,32 +401,36 @@ def _token_allowed_role(db, token, role):
     """Returns True if token allowed to have requested role through
     comparing the requested scopes with the set of token's owner scopes"""
 
-    standard_permissions = {'all', 'read:all'}
+    owner = token.user
+    if owner is None:
+        owner = token.service
 
-    token_scopes = _get_subscopes(role)
-    extra_scopes = token_scopes - standard_permissions
+    if owner is None:
+        raise ValueError(f"Owner not found for {token}")
+
+    token_scopes = _get_subscopes(role, owner=owner)
+
+    implicit_permissions = {'all', 'read:all'}
+    explicit_scopes = token_scopes - implicit_permissions
     # ignore horizontal filters
-    raw_extra_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in extra_scopes
+    raw_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in explicit_scopes
     }
-    # find the owner and their roles
-    owner = None
-    if token.user_id:
-        owner = db.query(orm.User).get(token.user_id)
-    elif token.service_id:
-        owner = db.query(orm.Service).get(token.service_id)
-    if owner:
-        owner_scopes = expand_roles_to_scopes(owner)
-        # ignore horizontal filters
-        raw_owner_scopes = {
-            scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
-        }
-        if raw_extra_scopes.issubset(raw_owner_scopes):
-            return True
-        else:
-            return False
+    # find the owner's scopes
+    owner_scopes = expand_roles_to_scopes(owner)
+    # ignore horizontal filters
+    raw_owner_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
+    }
+    disallowed_scopes = raw_scopes.difference(raw_owner_scopes)
+    if not disallowed_scopes:
+        # no scopes requested outside owner's own scopes
+        return True
     else:
-        raise ValueError('Owner the token %r not found', token)
+        app_log.warning(
+            f"Token requesting scopes exceeding owner {owner.name}: {disallowed_scopes}"
+        )
+        return False
 
 
 def assign_default_roles(db, entity):
@@ -430,12 +465,10 @@ def update_roles(db, entity, roles):
                 )
                 if _token_allowed_role(db, entity, role):
                     role.tokens.append(entity)
-                    app_log.info('Adding role %s for token: %s', role.name, entity)
+                    app_log.info('Adding role %s to token: %s', role.name, entity)
                 else:
                     raise ValueError(
-                        'Requested token role %r of %r has more permissions than the token owner',
-                        rolename,
-                        entity,
+                        f'Requested token role {rolename} of {entity} has more permissions than the token owner'
                     )
             else:
                 raise NameError('Role %r does not exist' % rolename)

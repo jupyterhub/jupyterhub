@@ -86,7 +86,7 @@ async def test_default_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
-        {'name': username, 'roles': ['user'], 'servers': {}, 'auth_state': None}
+        {'name': username, 'roles': ['user'], 'auth_state': None}
     )
 
 
@@ -160,7 +160,7 @@ async def test_delete_named_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
-        {'name': username, 'roles': ['user'], 'auth_state': None, 'servers': {}}
+        {'name': username, 'roles': ['user'], 'auth_state': None}
     )
     # wrapper Spawner is gone
     assert servername not in user.spawners
