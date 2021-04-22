@@ -4,7 +4,7 @@ A scope has a syntax-based design that reveals which resources it provides acces
 
 `<resource>` in the RBAC scope design refers to the resource name in the [JupyterHub's API](../reference/rest-api.rst) endpoints in most cases. For instance, `<resource>` equal to `users` corresponds to JupyterHub's API endpoints beginning with _/users_.
 
-## Scope syntax
+## Scope conventions
 
 - `<resource>` \
   The `<resource>` scopes, such as `users` or `groups`, grant read and write permissions to the resource itself and all its sub-resources. E.g., the scope `users:servers` is included within the scope `users`.
@@ -15,7 +15,7 @@ A scope has a syntax-based design that reveals which resources it provides acces
   +++
 
 - `admin:<resource>` \
-  Grants create/delete permissions on the corresponding resource in addition to read and write permissions.
+  Grants additional permissions such as create/delete on the corresponding resource in addition to read and write permissions.
   +++
 
 - `<resource>:<subresource>` \
