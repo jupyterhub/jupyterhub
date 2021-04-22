@@ -531,7 +531,7 @@ class User:
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
         note = "Server at %s" % base_url
-        api_token = self.new_api_token(note=note)
+        api_token = self.new_api_token(note=note, roles=['server'])
         db.commit()
 
         spawner = self.spawners[server_name]
