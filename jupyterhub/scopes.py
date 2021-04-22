@@ -37,8 +37,25 @@ def get_scopes_for(orm_object):
         if 'all' in token_scopes:
             token_scopes.remove('all')
             token_scopes |= owner_scopes
-        scopes = token_scopes & owner_scopes
-        discarded_token_scopes = token_scopes - scopes
+
+        # Ignore horizontal filters for comparison
+        token_base_scopes = {scope.partition('!')[0] for scope in token_scopes}
+        owner_base_scopes = {scope.partition('!')[0] for scope in owner_scopes}
+
+        base_scopes = token_base_scopes & owner_base_scopes
+        discarded_token_scopes = token_base_scopes - base_scopes
+
+        # Pass the token intersection scopes with original horizontal filters
+        scopes = set()
+        for scope in token_scopes:
+            base, _, filter = scope.partition('!')
+            for base_scope in base_scopes:
+                if base_scope == base:
+                    scopes.add(scope)
+
+        # scopes = token_scopes & owner_scopes
+        # discarded_token_scopes = token_scopes - scopes
+
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
             app_log.warning(
