@@ -936,17 +936,22 @@ async def test_valid_names(name, valid):
 
 @mark.role
 async def test_server_token_role(app):
-    orm_user = app.db.query(orm.User).first()
-    user = app.users[orm_user]
-    print(user.api_tokens)
+    user = add_user(app.db, app, name='test_user')
     assert user.api_tokens == []
     spawner = user.spawner
     spawner.cmd = ['jupyterhub-singleuser']
     await user.spawn()
-    assert len(user.api_tokens) == 1
-    server_token = user.api_tokens[0]
+
+    server_token = spawner.api_token
+    orm_server_token = orm.APIToken.find(app.db, server_token)
+    assert orm_server_token
 
     server_role = orm.Role.find(app.db, 'server')
     token_role = orm.Role.find(app.db, 'token')
-    assert server_role in server_token.roles
-    assert token_role not in server_token.roles
+    assert server_role in orm_server_token.roles
+    assert token_role not in orm_server_token.roles
+
+    assert orm_server_token.user.name == user.name
+    assert user.api_tokens == [orm_server_token]
+
+    await user.stop()
