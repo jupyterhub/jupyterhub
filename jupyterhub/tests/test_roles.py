@@ -932,3 +932,21 @@ async def test_valid_names(name, valid):
     else:
         with pytest.raises(ValueError):
             roles._validate_role_name(name)
+
+
+@mark.role
+async def test_server_token_role(app):
+    orm_user = app.db.query(orm.User).first()
+    user = app.users[orm_user]
+    print(user.api_tokens)
+    assert user.api_tokens == []
+    spawner = user.spawner
+    spawner.cmd = ['jupyterhub-singleuser']
+    await user.spawn()
+    assert len(user.api_tokens) == 1
+    server_token = user.api_tokens[0]
+
+    server_role = orm.Role.find(app.db, 'server')
+    token_role = orm.Role.find(app.db, 'token')
+    assert server_role in server_token.roles
+    assert token_role not in server_token.roles
