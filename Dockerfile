@@ -21,7 +21,7 @@
 # your jupyterhub_config.py will be added automatically
 # from your docker directory.
 
-ARG BASE_IMAGE=ubuntu:focal-20200729@sha256:6f2fb2f9fb5582f8b587837afd6ea8f37d8d1d9e41168c90f410a6ef15fa8ce5
+ARG BASE_IMAGE=ubuntu:focal-20200729
 FROM $BASE_IMAGE AS builder
 
 USER root

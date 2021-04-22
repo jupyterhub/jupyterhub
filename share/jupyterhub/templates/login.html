@@ -10,6 +10,7 @@
 
 {% block login %}
 <div id="login-main" class="container">
+{% block login_container %}
 {% if custom_html %}
 {{ custom_html | safe }}
 {% elif login_service %}
@@ -83,6 +84,7 @@
   </div>
 </form>
 {% endif %}
+{% endblock login_container %}
 </div>
 {% endblock login %}
 

@@ -72,9 +72,8 @@ def check_db_locks(func):
     The decorator relies on an instance of JupyterHubApp being the first
     argument to the decorated function.
 
-    Example
-    -------
-
+    Examples
+    --------
         @check_db_locks
         def api_request(app, *api_path, **kwargs):
 

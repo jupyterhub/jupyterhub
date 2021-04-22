@@ -66,3 +66,120 @@ jobs:
         run: |
           pip install twine
           twine upload --skip-existing dist/*
+
+  publish-docker:
+    runs-on: ubuntu-20.04
+
+    services:
+      # So that we can test this in PRs/branches
+      local-registry:
+        image: registry:2
+        ports:
+          - 5000:5000
+
+    steps:
+      - name: Should we push this image to a public registry?
+        run: |
+          if [ "${{ startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/master') }}" = "true" ]; then
+              # Empty => Docker Hub
+              echo "REGISTRY=" >> $GITHUB_ENV
+          else
+              echo "REGISTRY=localhost:5000/" >> $GITHUB_ENV
+          fi
+
+      - uses: actions/checkout@v2
+
+      # Setup docker to build for multiple platforms, see:
+      # https://github.com/docker/build-push-action/tree/v2.4.0#usage
+      # https://github.com/docker/build-push-action/blob/v2.4.0/docs/advanced/multi-platform.md
+
+      - name: Set up QEMU (for docker buildx)
+        uses: docker/setup-qemu-action@25f0500ff22e406f7191a2a8ba8cda16901ca018 # associated tag: v1.0.2
+
+      - name: Set up Docker Buildx (for multi-arch builds)
+        uses: docker/setup-buildx-action@2a4b53665e15ce7d7049afb11ff1f70ff1610609 # associated tag: v1.1.2
+        with:
+          # Allows pushing to registry on localhost:5000
+          driver-opts: network=host
+
+      - name: Setup push rights to Docker Hub
+        # This was setup by...
+        # 1. Creating a Docker Hub service account "jupyterhubbot"
+        # 2. Creating a access token for the service account specific to this
+        #    repository: https://hub.docker.com/settings/security
+        # 3. Making the account part of the "bots" team, and granting that team
+        #    permissions to push to the relevant images:
+        #    https://hub.docker.com/orgs/jupyterhub/teams/bots/permissions
+        # 4. Registering the username and token as a secret for this repo:
+        #    https://github.com/jupyterhub/jupyterhub/settings/secrets/actions
+        if: env.REGISTRY != 'localhost:5000/'
+        run: |
+          docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+
+      # https://github.com/jupyterhub/action-major-minor-tag-calculator
+      # If this is a tagged build this will return additional parent tags.
+      # E.g. 1.2.3 is expanded to Docker tags
+      # [{prefix}:1.2.3, {prefix}:1.2, {prefix}:1, {prefix}:latest] unless
+      # this is a backported tag in which case the newer tags aren't updated.
+      # For branches this will return the branch name.
+      # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
+      - name: Get list of jupyterhub tags
+        id: jupyterhubtags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
+
+      - name: Build and push jupyterhub
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          # tags parameter must be a string input so convert `gettags` JSON
+          # array into a comma separated list of tags
+          tags: ${{ join(fromJson(steps.jupyterhubtags.outputs.tags)) }}
+
+      # jupyterhub-onbuild
+
+      - name: Get list of jupyterhub-onbuild tags
+        id: onbuildtags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
+
+      - name: Build and push jupyterhub-onbuild
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        with:
+          build-args: |
+            BASE_IMAGE=${{ fromJson(steps.jupyterhubtags.outputs.tags)[0] }}
+          context: onbuild
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ join(fromJson(steps.onbuildtags.outputs.tags)) }}
+
+      # jupyterhub-demo
+
+      - name: Get list of jupyterhub-demo tags
+        id: demotags
+        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
+
+      - name: Build and push jupyterhub-demo
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        with:
+          build-args: |
+            BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
+          context: demo-image
+          # linux/arm64 currently fails:
+          # ERROR: Could not build wheels for argon2-cffi which use PEP 517 and cannot be installed directly
+          # ERROR: executor failed running [/bin/sh -c python3 -m pip install notebook]: exit code: 1
+          platforms: linux/amd64
+          push: true
+          tags: ${{ join(fromJson(steps.demotags.outputs.tags)) }}

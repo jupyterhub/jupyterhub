@@ -195,6 +195,25 @@ async def test_check_routes(app, username, disable_check_routes):
     assert before == after
 
 
+async def test_extra_routes(app):
+    proxy = app.proxy
+    # When using host_routing, it's up to the admin to
+    # provide routespecs that have a domain in them.
+    # We don't explicitly validate that here.
+    if app.subdomain_host:
+        route_spec = 'example.com/test-extra-routes/'
+    else:
+        route_spec = '/test-extra-routes/'
+    target = 'http://localhost:9999/test'
+    proxy.extra_routes = {route_spec: target}
+
+    await proxy.check_routes(app.users, app._service_map)
+
+    routes = await app.proxy.get_all_routes()
+    assert route_spec in routes
+    assert routes[route_spec]['target'] == target
+
+
 @pytest.mark.parametrize(
     "routespec",
     [
