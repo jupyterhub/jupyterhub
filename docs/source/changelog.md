@@ -495,12 +495,11 @@ whether it was through discussion, testing, documentation, or development.
   allowing the Authenticator to _require_ that authentication data is fresh
   immediately before the user's server is launched.
 
-```eval_rst
-.. seealso::
+```{seealso}
 
-  - :meth:`.Authenticator.refresh_user`
-  - :meth:`.Spawner.create_certs`
-  - :meth:`.Spawner.move_certs`
+  - {meth}`.Authenticator.refresh_user`
+  - {meth}`.Spawner.create_certs`
+  - {meth}`.Spawner.move_certs`
 ```
 
 #### New features

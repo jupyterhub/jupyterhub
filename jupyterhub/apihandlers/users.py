@@ -354,7 +354,7 @@ class UserTokenListAPIHandler(APIHandler):
         except ValueError:
             raise web.HTTPError(
                 403,
-                "Requested token roles %r have higher permissions than the token owner"
+                "Requested roles %r cannot have higher permissions than the token owner"
                 % token_roles,
             )
         if requester is not user:
