@@ -1176,76 +1176,13 @@ async def test_check_token(app):
     assert r.status_code == 404
 
 
-@mark.parametrize("headers, status", [({}, 200), ({'Authorization': 'token bad'}, 403)])
+@mark.parametrize("headers, status", [({}, 404), ({'Authorization': 'token bad'}, 404)])
 async def test_get_new_token_deprecated(app, headers, status):
     # request a new token
     r = await api_request(
         app, 'authorizations', 'token', method='post', headers=headers
     )
     assert r.status_code == status
-    if status != 200:
-        return
-    reply = r.json()
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == 'admin'
-
-
-async def test_token_formdata_deprecated(app):
-    """Create a token for a user with formdata and no auth header"""
-    data = {'username': 'fake', 'password': 'fake'}
-    r = await api_request(
-        app,
-        'authorizations',
-        'token',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
-    assert r.status_code == 200
-    reply = r.json()
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == data['username']
-
-
-@mark.parametrize(
-    "as_user, for_user, status",
-    [
-        ('admin', 'other', 200),
-        ('admin', 'missing', 400),
-        ('user', 'other', 403),
-        ('user', 'user', 200),
-    ],
-)
-async def test_token_as_user_deprecated(app, as_user, for_user, status):
-    # ensure both users exist
-    u = add_user(app.db, app, name=as_user)
-    if for_user != 'missing':
-        for_user_obj = add_user(app.db, app, name=for_user)
-    data = {'username': for_user}
-    headers = {'Authorization': 'token %s' % u.new_api_token()}
-    r = await api_request(
-        app,
-        'authorizations',
-        'token',
-        method='post',
-        data=json.dumps(data),
-        headers=headers,
-    )
-    assert r.status_code == status
-    reply = r.json()
-    if status != 200:
-        return
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == data['username']
 
 
 @mark.parametrize(

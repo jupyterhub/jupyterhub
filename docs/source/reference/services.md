@@ -203,8 +203,6 @@ To use HubAuth, you must set the `.api_token`, either programmatically when cons
 or via the `JUPYTERHUB_API_TOKEN` environment variable.
 
 Most of the logic for authentication implementation is found in the
-[`HubAuth.user_for_cookie`][hubauth.user_for_cookie]
-and in the
 [`HubAuth.user_for_token`][hubauth.user_for_token]
 methods, which makes a request of the Hub, and returns:
 
@@ -241,11 +239,11 @@ from urllib.parse import quote
 
 from flask import Flask, redirect, request, Response
 
-from jupyterhub.services.auth import HubAuth
+from jupyterhub.services.auth import HubOAuth
 
 prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
 
-auth = HubAuth(
+auth = HubOAuth(
     api_token=os.environ['JUPYTERHUB_API_TOKEN'],
     cache_max_age=60,
 )
@@ -257,11 +255,8 @@ def authenticated(f):
     """Decorator for authenticating with the Hub"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        cookie = request.cookies.get(auth.cookie_name)
         token = request.headers.get(auth.auth_header_name)
-        if cookie:
-            user = auth.user_for_cookie(cookie)
-        elif token:
+        if token:
             user = auth.user_for_token(token)
         else:
             user = None

@@ -44,6 +44,11 @@ class SelfAPIHandler(APIHandler):
             self.raw_scopes.update(scopes.identify_scopes(user.orm_user))
             self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
             model = self.user_model(user)
+        # validate return, should have at least kind and name,
+        # otherwise our filters did something wrong
+        for key in ("kind", "name"):
+            if key not in model:
+                raise ValueError(f"Missing identify model for {user}: {model}")
         self.write(json.dumps(model))
 
 

@@ -269,6 +269,9 @@ def identify_scopes(obj):
             for field in {"name", "admin", "groups"}
         }
     elif isinstance(obj, orm.Service):
+        # FIXME: need sub-scopes for services
+        # until then, we have just one service scope:
+        return {f"read:services!service={obj.name}"}
         return {
             f"read:services:{field}!service={obj.name}" for field in {"name", "admin"}
         }
