@@ -880,14 +880,16 @@ async def test_self_expansion(app, kind, has_user_scopes):
 
 @mark.role
 @mark.parametrize(
-    "scope_list, kind, test_token",
+    "scope_list, kind, test_for_token",
     [
         (['users:activity!user'], 'users', False),
         (['users:activity!user', 'read:users'], 'users', False),
+        (['users:activity!user=otheruser', 'read:users'], 'users', False),
         (['users:activity!user'], 'users', True),
+        (['users:activity!user=otheruser', 'groups'], 'users', True),
     ],
 )
-async def test_user_filter_expansion(app, scope_list, kind, test_token):
+async def test_user_filter_expansion(app, scope_list, kind, test_for_token):
     Class = orm.get_class(kind)
     orm_obj = Class(name=f'test_{kind}')
     app.db.add(orm_obj)
@@ -896,17 +898,23 @@ async def test_user_filter_expansion(app, scope_list, kind, test_token):
     test_role = orm.Role(name='test_role', scopes=scope_list)
     orm_obj.roles.append(test_role)
 
-    if test_token:
+    if test_for_token:
         token = orm_obj.new_api_token(roles=['test_role'])
         orm_token = orm.APIToken.find(app.db, token)
-        scope_set = roles.expand_roles_to_scopes(orm_token)
+        expanded_scopes = roles.expand_roles_to_scopes(orm_token)
     else:
-        scope_set = roles.expand_roles_to_scopes(orm_obj)
+        expanded_scopes = roles.expand_roles_to_scopes(orm_obj)
 
-    for scope in scope_set:
-        if '!user' in scope:
-            assert not scope.endswith('!user')
-            assert scope.endswith(orm_obj.name)
+    for scope in scope_list:
+        base, _, filter = scope.partition('!')
+        for ex_scope in expanded_scopes:
+            ex_base, ex__, ex_filter = ex_scope.partition('!')
+            # check that the filter has been expanded to include the username if '!user' filter
+            if scope in ex_scope and filter == 'user':
+                assert ex_filter == f'{filter}={orm_obj.name}'
+            # make sure the filter has been left unchanged if other filter provided
+            elif scope in ex_scope and '=' in filter:
+                assert ex_filter == filter
 
     app.db.delete(orm_obj)
     app.db.delete(test_role)
