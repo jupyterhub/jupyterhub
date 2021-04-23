@@ -587,7 +587,7 @@ class JupyterHubOAuthServer(WebApplicationServer):
         super().__init__(validator, *args, **kwargs)
 
     def add_client(
-        self, client_id, client_secret, redirect_uri, allowed_roles, description=''
+        self, client_id, client_secret, redirect_uri, allowed_roles=None, description=''
     ):
         """Add a client
 
@@ -609,6 +609,8 @@ class JupyterHubOAuthServer(WebApplicationServer):
             app_log.info(f'Creating oauth client {client_id}')
         else:
             app_log.info(f'Updating oauth client {client_id}')
+        if allowed_roles == None:
+            allowed_roles = []
         orm_client.secret = hash_token(client_secret) if client_secret else ""
         orm_client.redirect_uri = redirect_uri
         orm_client.description = description
