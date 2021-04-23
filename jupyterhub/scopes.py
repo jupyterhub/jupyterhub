@@ -13,6 +13,42 @@ class Scope(Enum):
     ALL = True
 
 
+def _intersect_scopes(token_scopes, owner_scopes):
+    """Compares the permissions of token and its owner including horizontal filters
+    Returns the intersection of the two sets of scopes"""
+    owner_parsed_scopes = parse_scopes(owner_scopes)
+    token_parsed_scopes = parse_scopes(token_scopes)
+
+    common_bases = owner_parsed_scopes.keys() & token_parsed_scopes.keys()
+
+    common_filters = {}
+    for base in common_bases:
+        if owner_parsed_scopes[base] == Scope.ALL:
+            common_filters[base] = token_parsed_scopes[base]
+        elif token_parsed_scopes[base] == Scope.ALL:
+            common_filters[base] = owner_parsed_scopes[base]
+        else:
+            common_entities = (
+                owner_parsed_scopes[base].keys() & token_parsed_scopes[base].keys()
+            )
+            common_filters[base] = {
+                entity: set(owner_parsed_scopes[base][entity])
+                & set(token_parsed_scopes[base][entity])
+                for entity in common_entities
+            }
+
+    scopes = set()
+    for base in common_filters:
+        if common_filters[base] == Scope.ALL:
+            scopes.add(base)
+        else:
+            for entity, names_list in common_filters[base].items():
+                for name in names_list:
+                    scopes.add(f'{base}!{entity}={name}')
+
+    return scopes
+
+
 def get_scopes_for(orm_object):
     """Find scopes for a given user or token and resolve permissions"""
     scopes = set()
@@ -38,23 +74,8 @@ def get_scopes_for(orm_object):
             token_scopes.remove('all')
             token_scopes |= owner_scopes
 
-        # Ignore horizontal filters for comparison
-        token_base_scopes = {scope.partition('!')[0] for scope in token_scopes}
-        owner_base_scopes = {scope.partition('!')[0] for scope in owner_scopes}
-
-        base_scopes = token_base_scopes & owner_base_scopes
-        discarded_token_scopes = token_base_scopes - base_scopes
-
-        # Pass the token intersection scopes with original horizontal filters
-        scopes = set()
-        for scope in token_scopes:
-            base, _, filter = scope.partition('!')
-            for base_scope in base_scopes:
-                if base_scope == base:
-                    scopes.add(scope)
-
-        # scopes = token_scopes & owner_scopes
-        # discarded_token_scopes = token_scopes - scopes
+        scopes = _intersect_scopes(token_scopes, owner_scopes)
+        discarded_token_scopes = token_scopes - scopes
 
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
