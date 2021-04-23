@@ -1,7 +1,7 @@
 """Authenticating services with JupyterHub.
 
-Cookies are sent to the Hub for verification. The Hub replies with a JSON
-model describing the authenticated user.
+Tokens are sent to the Hub for verification.
+The Hub replies with a JSON model describing the authenticated user.
 
 ``HubAuth`` can be used in any application, even outside tornado.
 
@@ -10,6 +10,7 @@ authenticate with the Hub.
 
 """
 import base64
+import hashlib
 import json
 import os
 import random
@@ -20,7 +21,6 @@ import time
 import uuid
 import warnings
 from unittest import mock
-from urllib.parse import quote
 from urllib.parse import urlencode
 
 import requests
@@ -113,9 +113,15 @@ class HubAuth(SingletonConfigurable):
 
     This can be used by any application.
 
+    Use this base class only for direct, token-authenticated applications
+    (web APIs).
+    For applications that support direct visits from browsers,
+    use HubOAuth to enable OAuth redirect-based authentication.
+
+
     If using tornado, use via :class:`HubAuthenticated` mixin.
-    If using manually, use the ``.user_for_cookie(cookie_value)`` method
-    to identify the user corresponding to a given cookie value.
+    If using manually, use the ``.user_for_token(token_value)`` method
+    to identify the user owning a given token.
 
     The following config must be set:
 
@@ -129,9 +135,6 @@ class HubAuth(SingletonConfigurable):
     - cookie_cache_max_age: the number of seconds responses
       from the Hub should be cached.
     - login_url (the *public* ``/hub/login`` URL of the Hub).
-    - cookie_name: the name of the cookie I should be using,
-      if different from the default (unlikely).
-
     """
 
     hub_host = Unicode(
@@ -239,10 +242,6 @@ class HubAuth(SingletonConfigurable):
         """,
     ).tag(config=True)
 
-    cookie_name = Unicode(
-        'jupyterhub-services', help="""The name of the cookie I should be looking for"""
-    ).tag(config=True)
-
     cookie_options = Dict(
         help="""Additional options to pass when setting cookies.
 
@@ -286,12 +285,12 @@ class HubAuth(SingletonConfigurable):
     def _default_cache(self):
         return _ExpiringDict(self.cache_max_age)
 
-    def _check_hub_authorization(self, url, cache_key=None, use_cache=True):
+    def _check_hub_authorization(self, url, api_token, cache_key=None, use_cache=True):
         """Identify a user with the Hub
 
         Args:
             url (str): The API URL to check the Hub for authorization
-                       (e.g. http://127.0.0.1:8081/hub/api/authorizations/token/abc-def)
+                       (e.g. http://127.0.0.1:8081/hub/api/user)
             cache_key (str): The key for checking the cache
             use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
 
@@ -309,7 +308,9 @@ class HubAuth(SingletonConfigurable):
             except KeyError:
                 app_log.debug("HubAuth cache miss: %s", cache_key)
 
-        data = self._api_request('GET', url, allow_404=True)
+        data = self._api_request(
+            'GET', url, headers={"Authorization": "token " + api_token}, allow_404=True
+        )
         if data is None:
             app_log.warning("No Hub user identified for request")
         else:
@@ -389,26 +390,9 @@ class HubAuth(SingletonConfigurable):
         return data
 
     def user_for_cookie(self, encrypted_cookie, use_cache=True, session_id=''):
-        """Ask the Hub to identify the user for a given cookie.
-
-        Args:
-            encrypted_cookie (str): the cookie value (not decrypted, the Hub will do that)
-            use_cache (bool): Specify use_cache=False to skip cached cookie values (default: True)
-
-        Returns:
-            user_model (dict): The user model, if a user is identified, None if authentication fails.
-
-            The 'name' field contains the user's name.
-        """
-        return self._check_hub_authorization(
-            url=url_path_join(
-                self.api_url,
-                "authorizations/cookie",
-                self.cookie_name,
-                quote(encrypted_cookie, safe=''),
-            ),
-            cache_key='cookie:{}:{}'.format(session_id, encrypted_cookie),
-            use_cache=use_cache,
+        """Deprecated and removed. Use HubOAuth to authenticate browsers."""
+        raise RuntimeError(
+            "Identifying users by shared cookie is removed in JupyterHub 2.0. Use OAuth tokens."
         )
 
     def user_for_token(self, token, use_cache=True, session_id=''):
@@ -425,9 +409,14 @@ class HubAuth(SingletonConfigurable):
         """
         return self._check_hub_authorization(
             url=url_path_join(
-                self.api_url, "authorizations/token", quote(token, safe='')
+                self.api_url,
+                "user",
             ),
-            cache_key='token:{}:{}'.format(session_id, token),
+            api_token=token,
+            cache_key='token:{}:{}'.format(
+                session_id,
+                hashlib.sha256(token.encode("utf8", "replace")).hexdigest(),
+            ),
             use_cache=use_cache,
         )
 
@@ -453,10 +442,8 @@ class HubAuth(SingletonConfigurable):
 
     def _get_user_cookie(self, handler):
         """Get the user model from a cookie"""
-        encrypted_cookie = handler.get_cookie(self.cookie_name)
-        session_id = self.get_session_id(handler)
-        if encrypted_cookie:
-            return self.user_for_cookie(encrypted_cookie, session_id=session_id)
+        # overridden in HubOAuth to store the access token after oauth
+        return None
 
     def get_session_id(self, handler):
         """Get the jupyterhub session id
@@ -508,6 +495,9 @@ class HubAuth(SingletonConfigurable):
 
 class HubOAuth(HubAuth):
     """HubAuth using OAuth for login instead of cookies set by the Hub.
+
+    Use this class if you want users to be able to visit your service with a browser.
+    They will be authenticated via OAuth with the Hub.
 
     .. versionadded: 0.8
     """
