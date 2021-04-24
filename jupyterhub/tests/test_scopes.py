@@ -648,3 +648,62 @@ async def test_server_state_access(
             assert r.status_code == 403
         app.db.delete(group)
         app.db.commit()
+
+
+@mark.parametrize(
+    "name, user_scope, token_scope, discarded_own_scope, retained_owner_scope",
+    [
+        ('no_filter', 'users:activity', 'users:activity', False, False),
+        ('valid_own_filter', 'users:activity', 'users:activity!user', False, False),
+        (
+            'valid_other_filter',
+            'users:activity',
+            'users:activity!user=otheruser',
+            False,
+            False,
+        ),
+        ('no_filter_owner_filter', 'users:activity!user', 'users:activity', True, True),
+        (
+            'valid_own_filter',
+            'users:activity!user',
+            'users:activity!user',
+            False,
+            False,
+        ),
+        (
+            'invalid_filter',
+            'users:activity!user',
+            'users:activity!user=otheruser',
+            True,
+            False,
+        ),
+    ],
+)
+async def test_resolve_token_permissions(
+    app,
+    create_user_with_scopes,
+    create_temp_role,
+    name,
+    user_scope,
+    token_scope,
+    discarded_own_scope,
+    retained_owner_scope,
+):
+
+    orm_user = create_user_with_scopes(user_scope).orm_user
+    create_temp_role([token_scope], 'active-posting')
+    api_token = orm_user.new_api_token(roles=['active-posting'])
+    orm_api_token = orm.APIToken.find(app.db, token=api_token)
+
+    # get expanded !user filter scopes for check
+    user_scope = roles.expand_roles_to_scopes(orm_user)
+    token_scope = roles.expand_roles_to_scopes(orm_api_token)
+
+    token_retained_scope = get_scopes_for(orm_api_token)
+
+    if not discarded_own_scope and not retained_owner_scope:
+        assert token_retained_scope == token_scope
+    elif discarded_own_scope and not retained_owner_scope:
+        assert token_retained_scope == set()
+    elif discarded_own_scope and retained_owner_scope:
+        assert token_retained_scope == user_scope
