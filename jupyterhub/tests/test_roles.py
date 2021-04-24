@@ -12,6 +12,7 @@ from .. import orm
 from .. import roles
 from ..scopes import get_scopes_for
 from ..utils import maybe_future
+from ..utils import utcnow
 from .mocking import MockHub
 from .utils import add_user
 from .utils import api_request
@@ -963,3 +964,29 @@ async def test_server_token_role(app):
     assert user.api_tokens == [orm_server_token]
 
     await user.stop()
+
+
+@mark.role
+@mark.parametrize(
+    "token_role, response",
+    [
+        ('server', 200),
+        ('token', 200),
+        ('no_role', 403),
+    ],
+)
+async def test_server_posting_activity(app, token_role, response):
+    user = add_user(app.db, app, name='test_user')
+    if token_role == 'no_role':
+        api_token = user.new_api_token(roles=[])
+    else:
+        api_token = user.new_api_token(roles=[token_role])
+
+    r = await api_request(
+        app,
+        "users/{}/activity".format(user.name),
+        headers={"Authorization": "token {}".format(api_token)},
+        data=json.dumps({"servers": {"": {"last_activity": utcnow().isoformat()}}}),
+        method="post",
+    )
+    assert r.status_code == response
