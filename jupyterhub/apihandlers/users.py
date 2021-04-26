@@ -16,6 +16,7 @@ from tornado.iostream import StreamClosedError
 from .. import orm
 from ..user import User
 from ..utils import admin_only
+from ..utils import eventlogging_schema_fqn
 from ..utils import isoformat
 from ..utils import iterate_until
 from ..utils import maybe_future
@@ -100,6 +101,11 @@ class UserListAPIHandler(APIHandler):
             for u in query
             if (post_filter is None or post_filter(u))
         ]
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {'action': 'list', 'requester': self.current_user.name},
+        )
         self.write(json.dumps(data))
 
     @admin_only
@@ -153,6 +159,15 @@ class UserListAPIHandler(APIHandler):
                 )
             else:
                 created.append(user)
+                self.eventlog.record_event(
+                    eventlogging_schema_fqn('user-action'),
+                    1,
+                    {
+                        'action': 'create',
+                        'target_user': {'name': user.name, 'admin': user.admin},
+                        'requester': self.current_user.name,
+                    },
+                )
 
         self.write(json.dumps([self.user_model(u) for u in created]))
         self.set_status(201)
@@ -190,6 +205,15 @@ class UserAPIHandler(APIHandler):
         requester = self.current_user
         if requester.admin:
             model['auth_state'] = await user.get_auth_state()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'get',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps(model))
 
     @admin_only
@@ -214,6 +238,15 @@ class UserAPIHandler(APIHandler):
             self.users.delete(user)
             raise web.HTTPError(400, "Failed to create user: %s" % name)
 
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'create',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
 
@@ -246,6 +279,15 @@ class UserAPIHandler(APIHandler):
 
         # remove from registry
         self.users.delete(user)
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'delete',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': self.current_user.name,
+            },
+        )
 
         self.set_status(204)
 
@@ -254,6 +296,7 @@ class UserAPIHandler(APIHandler):
         user = self.find_user(name)
         if user is None:
             raise web.HTTPError(404)
+        prior_state = {'name': user.name, 'admin': user.admin}
         data = self.get_json_body()
         self._check_user_model(data)
         if 'name' in data and data['name'] != name:
@@ -271,6 +314,17 @@ class UserAPIHandler(APIHandler):
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('user-action'),
+            1,
+            {
+                'action': 'modify',
+                'requester': self.current_user.name,
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'prior_state': prior_state,
+                'auth_state_change': 'auth_state' in data,
+            },
+        )
         self.write(json.dumps(user_))
 
 
@@ -309,6 +363,15 @@ class UserTokenListAPIHandler(APIHandler):
                 self.db.commit()
                 continue
             oauth_tokens.append(self.token_model(token))
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('token-action'),
+            1,
+            {
+                'action': 'list',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': self.current_user.name,
+            },
+        )
         self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
 
     async def post(self, name):
@@ -369,6 +432,16 @@ class UserTokenListAPIHandler(APIHandler):
         # retrieve the model
         token_model = self.token_model(orm.APIToken.find(self.db, api_token))
         token_model['token'] = api_token
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('token-action'),
+            1,
+            {
+                'action': 'create',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': requester.name,
+                'token_id': token_model['id'],
+            },
+        )
         self.write(json.dumps(token_model))
 
 
@@ -406,6 +479,16 @@ class UserTokenAPIHandler(APIHandler):
         if not user:
             raise web.HTTPError(404, "No such user: %s" % name)
         token = self.find_token_by_id(user, token_id)
+        self.eventlog.record_event(
+            eventlogging_schema_fqn('token-action'),
+            1,
+            {
+                'action': 'get',
+                'target_user': {'name': user.name, 'admin': user.admin},
+                'requester': self.current_user.name,
+                'token_id': token.api_id,
+            },
+        )
         self.write(json.dumps(self.token_model(token)))
 
     @admin_or_self
@@ -426,6 +509,17 @@ class UserTokenAPIHandler(APIHandler):
         for token in tokens:
             self.db.delete(token)
         self.db.commit()
+        for token in tokens:
+            self.eventlog.record_event(
+                eventlogging_schema_fqn('token-action'),
+                1,
+                {
+                    'action': 'delete',
+                    'target_user': {'name': user.name, 'admin': user.admin},
+                    'requester': self.current_user.name,
+                    'token_id': token.api_id,
+                },
+            )
         self.set_header('Content-Type', 'text/plain')
         self.set_status(204)
 
