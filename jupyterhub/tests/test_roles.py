@@ -182,7 +182,6 @@ def test_orm_roles_delete_cascade(db):
                 'users',
                 'read:users',
                 'users:activity',
-                'users:groups',
                 'read:users:name',
                 'read:users:groups',
                 'read:users:activity',
@@ -968,25 +967,52 @@ async def test_server_token_role(app):
 
 @mark.role
 @mark.parametrize(
-    "token_role, response",
+    "token_role, api_method, api_endpoint, for_user, response",
     [
-        ('server', 200),
-        ('token', 200),
-        ('no_role', 403),
+        ('server', 'post', 'activity', 'same_user', 200),
+        ('server', 'post', 'activity', 'other_user', 404),
+        ('server', 'get', 'users', 'same_user', 200),
+        ('token', 'post', 'activity', 'same_user', 200),
+        ('no_role', 'post', 'activity', 'same_user', 403),
     ],
 )
-async def test_server_posting_activity(app, token_role, response):
+async def test_server_role_api_calls(
+    app, token_role, api_method, api_endpoint, for_user, response
+):
     user = add_user(app.db, app, name='test_user')
     if token_role == 'no_role':
         api_token = user.new_api_token(roles=[])
     else:
         api_token = user.new_api_token(roles=[token_role])
 
+    if for_user == 'same_user':
+        username = user.name
+    else:
+        username = 'otheruser'
+
+    if api_endpoint == 'activity':
+        path = "users/{}/activity".format(username)
+        data = json.dumps({"servers": {"": {"last_activity": utcnow().isoformat()}}})
+    elif api_endpoint == 'users':
+        path = "users"
+        data = ""
+
     r = await api_request(
         app,
-        "users/{}/activity".format(user.name),
+        path,
         headers={"Authorization": "token {}".format(api_token)},
-        data=json.dumps({"servers": {"": {"last_activity": utcnow().isoformat()}}}),
-        method="post",
+        data=data,
+        method=api_method,
     )
     assert r.status_code == response
+
+    if api_endpoint == 'users' and token_role == 'server':
+        reply = r.json()
+        assert len(reply) == 1
+
+        user_model = reply[0]
+        assert user_model['name'] == username
+        assert 'last_activity' in user_model.keys()
+        assert (
+            all(key for key in ['groups', 'roles', 'servers']) not in user_model.keys()
+        )

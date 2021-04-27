@@ -87,12 +87,13 @@ def _get_scope_hierarchy():
     scopes = {
         'self': None,
         'all': None,
-        'users': ['read:users', 'users:groups', 'users:activity'],
+        'users': ['read:users', 'users:activity'],
         'read:users': [
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
         ],
+        'users:activity': ['read:users:activity'],
         'users:tokens': ['read:users:tokens'],
         'admin:users': ['admin:users:auth_state'],
         'admin:users:servers': ['admin:users:server_state'],
