@@ -99,6 +99,7 @@ def _get_scope_hierarchy():
         'admin:users:servers': ['admin:users:server_state'],
         'groups': ['read:groups'],
         'users:servers': ['read:users:servers'],
+        'read:users:servers': ['read:users:name'],
         'admin:groups': None,
         'read:services': None,
         'read:hub': None,

@@ -651,31 +651,90 @@ async def test_server_state_access(
 
 
 @mark.parametrize(
-    "name, user_scope, token_scope, discarded_own_scope, retained_owner_scope",
+    "name, user_scopes, token_scopes, intersection_scopes",
     [
-        ('no_filter', 'users:activity', 'users:activity', False, False),
-        ('valid_own_filter', 'users:activity', 'users:activity!user', False, False),
         (
-            'valid_other_filter',
-            'users:activity',
-            'users:activity!user=otheruser',
-            False,
-            False,
+            'no_filter',
+            ['users:activity'],
+            ['users:activity'],
+            {'users:activity', 'read:users:activity'},
         ),
-        ('no_filter_owner_filter', 'users:activity!user', 'users:activity', True, True),
         (
             'valid_own_filter',
-            'users:activity!user',
-            'users:activity!user',
-            False,
-            False,
+            ['read:users:activity'],
+            ['read:users:activity!user'],
+            {'read:users:activity!user=temp_user_1'},
+        ),
+        (
+            'valid_other_filter',
+            ['read:users:activity'],
+            ['read:users:activity!user=otheruser'],
+            {'read:users:activity!user=otheruser'},
+        ),
+        (
+            'no_filter_owner_filter',
+            ['read:users:activity!user'],
+            ['read:users:activity'],
+            {'read:users:activity!user=temp_user_1'},
+        ),
+        (
+            'valid_own_filter',
+            ['read:users:activity!user'],
+            ['read:users:activity!user'],
+            {'read:users:activity!user=temp_user_1'},
         ),
         (
             'invalid_filter',
-            'users:activity!user',
-            'users:activity!user=otheruser',
-            True,
-            False,
+            ['read:users:activity!user'],
+            ['read:users:activity!user=otheruser'],
+            set(),
+        ),
+        (
+            'subscopes_cross_filter',
+            ['users!user=x'],
+            ['read:users:name'],
+            {'read:users:name!user=x'},
+        ),
+        (
+            'multiple_user_filter',
+            ['users!user=x', 'users!user=y'],
+            ['read:users:name!user=x'],
+            {'read:users:name!user=x'},
+        ),
+        (
+            'no_intersection_group_user',
+            ['users!group=y'],
+            ['users!user=x'],
+            set(),
+        ),
+        (
+            'no_intersection_user_server',
+            ['users:servers!user=y'],
+            ['users:servers!server=x'],
+            set(),
+        ),
+        (
+            'users_and_groups_both',
+            ['users!group=x', 'users!user=y'],
+            ['read:users:name!group=x', 'read:users!user=y'],
+            {
+                'read:users:name!group=x',
+                'read:users!user=y',
+                'read:users:name!user=y',
+                'read:users:groups!user=y',
+                'read:users:activity!user=y',
+            },
+        ),
+        (
+            'users_and_groups_user_only',
+            ['users!group=x', 'users!user=y'],
+            ['read:users:name!group=z', 'read:users!user=y'],
+            {
+                'read:users!user=y',
+                'read:users:name!user=y',
+                'read:users:groups!user=y',
+                'read:users:activity!user=y',
+            },
         ),
     ],
 )
@@ -684,26 +743,20 @@ async def test_resolve_token_permissions(
     create_user_with_scopes,
     create_temp_role,
     name,
-    user_scope,
-    token_scope,
-    discarded_own_scope,
-    retained_owner_scope,
+    user_scopes,
+    token_scopes,
+    intersection_scopes,
 ):
 
-    orm_user = create_user_with_scopes(user_scope).orm_user
-    create_temp_role([token_scope], 'active-posting')
+    orm_user = create_user_with_scopes(*user_scopes).orm_user
+    create_temp_role(token_scopes, 'active-posting')
     api_token = orm_user.new_api_token(roles=['active-posting'])
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
 
     # get expanded !user filter scopes for check
-    user_scope = roles.expand_roles_to_scopes(orm_user)
-    token_scope = roles.expand_roles_to_scopes(orm_api_token)
+    user_scopes = roles.expand_roles_to_scopes(orm_user)
+    token_scopes = roles.expand_roles_to_scopes(orm_api_token)
 
-    token_retained_scope = get_scopes_for(orm_api_token)
+    token_retained_scopes = get_scopes_for(orm_api_token)
 
-    if not discarded_own_scope and not retained_owner_scope:
-        assert token_retained_scope == token_scope
-    elif discarded_own_scope and not retained_owner_scope:
-        assert token_retained_scope == set()
-    elif discarded_own_scope and retained_owner_scope:
-        assert token_retained_scope == user_scope
+    assert token_retained_scopes == intersection_scopes
