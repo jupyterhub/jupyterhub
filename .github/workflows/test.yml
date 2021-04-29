@@ -222,3 +222,25 @@ jobs:
       - name: Submit codecov report
         run: |
           codecov
+
+  docker-build:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: build images
+        run: |
+          docker build -t jupyterhub/jupyterhub .
+          docker build -t jupyterhub/jupyterhub-onbuild onbuild
+          docker build -t jupyterhub/jupyterhub:alpine -f dockerfiles/Dockerfile.alpine .
+          docker build -t jupyterhub/singleuser singleuser
+
+      - name: smoke test jupyterhub
+        run: |
+          docker run --rm -t jupyterhub/jupyterhub jupyterhub --help
+
+      - name: verify static files
+        run: |
+          docker run --rm -t -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py

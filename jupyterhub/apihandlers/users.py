@@ -301,7 +301,6 @@ class UserTokenListAPIHandler(APIHandler):
 
         self.write(json.dumps({'api_tokens': api_tokens}))
 
-    # @needs_scope('users:tokens') #Todo: needs internal scope checking
     async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
@@ -330,13 +329,16 @@ class UserTokenListAPIHandler(APIHandler):
         if requester is None:
             # couldn't identify requester
             raise web.HTTPError(403)
+        self._jupyterhub_user = requester
+        self._resolve_scopes()
         user = self.find_user(user_name)
-        if requester is not user and not requester.admin:
-            raise web.HTTPError(403, "Only admins can request tokens for other users")
-        if not user:
-            raise web.HTTPError(404, "No such user: %s" % user_name)
-        if requester is not user:
-            kind = 'user' if isinstance(requester, User) else 'service'
+        kind = 'user' if isinstance(requester, User) else 'service'
+        scope_filter = self.get_scope_filter('users:tokens')
+        if user is None or not scope_filter(user, kind):
+            raise web.HTTPError(
+                403,
+                f"{kind.title()} {user_name} not found or no permissions to generate tokens",
+            )
 
         note = body.get('note')
         if not note:
@@ -354,7 +356,7 @@ class UserTokenListAPIHandler(APIHandler):
         except ValueError:
             raise web.HTTPError(
                 403,
-                "Requested token roles %r have higher permissions than the token owner"
+                "Requested roles %r cannot have higher permissions than the token owner"
                 % token_roles,
             )
         if requester is not user:

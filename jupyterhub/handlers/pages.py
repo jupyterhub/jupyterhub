@@ -676,4 +676,5 @@ default_handlers = [
     (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
     (r'/health$', HealthCheckHandler),
+    (r'/api/health$', HealthCheckHandler),
 ]

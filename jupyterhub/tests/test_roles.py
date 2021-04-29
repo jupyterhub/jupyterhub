@@ -14,6 +14,7 @@ from ..scopes import get_scopes_for
 from ..utils import maybe_future
 from ..utils import utcnow
 from .mocking import MockHub
+from .test_scopes import create_temp_role
 from .utils import add_user
 from .utils import api_request
 
@@ -1016,3 +1017,19 @@ async def test_server_role_api_calls(
         assert (
             all(key for key in ['groups', 'roles', 'servers']) not in user_model.keys()
         )
+
+
+async def test_oauth_allowed_roles(app, create_temp_role):
+    allowed_roles = ['oracle', 'goose']
+    service = {
+        'name': 'oas1',
+        'api_token': 'some-token',
+        'oauth_roles': ['oracle', 'goose'],
+    }
+    for role in allowed_roles:
+        create_temp_role('read:users', role_name=role)
+    app.services.append(service)
+    app.init_services()
+    app_service = app.services[0]
+    assert app_service['name'] == 'oas1'
+    assert set(app_service['oauth_roles']) == set(allowed_roles)

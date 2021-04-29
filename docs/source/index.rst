@@ -108,6 +108,14 @@ API Reference
 
    api/index
 
+RBAC Reference
+--------------
+
+.. toctree::
+   :maxdepth: 2
+
+   rbac/index
+
 Contributing
 ------------
 

@@ -3,7 +3,7 @@ swagger: "2.0"
 info:
   title: JupyterHub
   description: The REST API for JupyterHub
-  version: 1.2.0dev
+  version: 1.4.0
   license:
     name: BSD-3-Clause
 schemes: [http, https]
@@ -18,35 +18,41 @@ securityDefinitions:
     authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
     tokenUrl: "/hub/api/oauth2/token"
     scopes:
-      all: Everything a user can do
-      read:all: Read-only access to everything a user can read (also whoami handler)
-      users: Grants access to managing users including reading users’ model, posting activity and starting/stoping users servers
-      read:users: Read-only access to the above
-      read:users!user=username: Read-only access to a single user's model
-      read:users:names: Read-only access to users' names
-      read:users:groups: Read-only access to users' groups
-      read:users:activity: Read-only access to users' activity
-      read:users:activity!group=groupname: Read-only access to specific group's users' activity
-      read:users:servers: Read-only access to users' servers
-      users:activity!user=username: Update a user's activity
-      users:servers: Grants access to start/stop any server
-      users:servers!server=servername: Limits the above to a specific server
-      users:tokens: Grants access to users' token (includes create/revoke a token)
-      read:users:tokens: Identify a user from a token
-      admin:users: Grants access to creating/removing users
-      admin:users:servers: Grants access to create/remove users' servers
-      groups: Add/remove users from any group
-      groups!group=groupname: Add/remove users from a specific group only
-      read:groups: Read-only access to groups
-      admin:groups: Grants access to create/delete groups
-      read:services: Read-only access to services
-      read:hub: Read-only access to detailed information about JupyterHub
-      proxy: Grants access to proxy's routing table, syncing and notifying about a new proxy
-      shutdown: Grants access to shutdown the Hub
-security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope all) or have both (either can be used)?
+      self: Metascope, grants access to user's own resources; resolves to (no scope) for services.
+      all: Metascope, valid for tokens only. Grants access to everything that the token's owning entity can do.
+      admin:users: Grants read, write, create and delete access to users and their authentication state but not their servers or tokens.
+      admin:users:auth_state: Grants access to users' authentication state only.
+      users: Grants read and write permissions to users' models apart from servers, tokens and authentication state.
+      users:activity: Grants access to read and post users' activity only.
+      users:activity!user=username: Update a single user's activity (example horizontal filter).
+      read:users: Read-only access to users' models apart from servers, tokens and authentication state.
+      read:users!user=username: As above limited to a specific user (example horizontal filter).
+      read:users:name: Read-only access to users' names.
+      read:users:roles: Read-only access to a list of users' roles names.
+      read:users:groups: Read-only access to a list of users' group names.
+      read:users:activity: Read-only access to users' activity.
+      read:users:activity!group=groupname: Read-only access to specific group's users' activity (example horizontal filter).
+      admin:users:servers: Grants read, start/stop, create and delete permissions to users' servers and their state.
+      admin:users:server_state: Grants access to servers' state only.
+      users:servers: Allows for starting/stopping users' servers in addition to read access to their models. Does not include the server state.
+      users:servers!server=servername: Limits the above to a specific server (example horizontal filter).
+      read:users:servers: Read-only access to users' server models. Does not include the server state.
+      users:tokens: Grants read, write, create and delete permissions to users' tokens.
+      read:users:tokens: Read-only access to users' tokens.
+      admin:groups: Grants read, write, create and delete access to groups.
+      groups: Grants read and write permissions to groups, including adding/removing users to/from groups.
+      groups!group=groupname: As above limited to a specific group only (example horizontal filter)
+      read:groups: Read-only access to groups.
+      read:services: Read-only access to service models.
+      read:services:name: Read-only access to service names.
+      read:services:roles: Read-only access to a list of service roles names.
+      read:hub: Read-only access to detailed information about JupyterHub.
+      proxy: Allows for obtaining information about the proxy's routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy.
+      shutdown: Grants access to shutdown the Hub.
+security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope self) or have both (either can be used)?
   - token: []
   - oauth2:
-      - all
+      - self
 basePath: /hub/api
 produces:
   - application/json
@@ -116,8 +122,12 @@ paths:
       summary: List users
       security:
         - oauth2:
-            - users
             - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:users:servers
+            #TODO: add admin:users:auth_state/server_state?
       parameters:
         - name: state
           in: query
@@ -173,9 +183,13 @@ paths:
       summary: Get a user by name
       security:
         - oauth2:
-            - users
             - read:users
-            - read:users!user=username
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:users:servers
+            - admin:users:auth_state
+            - admin:users:server_state
       parameters:
         - name: name
           description: username
@@ -208,7 +222,7 @@ paths:
       description: Change a user's name or admin status
       security:
         - oauth2:
-            - users
+            - admin:users
       parameters:
         - name: name
           description: username
@@ -255,8 +269,7 @@ paths:
         actively using a server.
       security:
         - oauth2:
-            - users
-            - users:activity!user=username
+            - users:activity
       parameters:
         - name: name
           description: username
@@ -311,7 +324,6 @@ paths:
       summary: Start a user's single-user notebook server
       security:
         - oauth2:
-            - users
             - users:servers
       parameters:
         - name: name
@@ -341,7 +353,6 @@ paths:
       summary: Stop a user's server
       security:
         - oauth2:
-            - users
             - users:servers
       parameters:
         - name: name
@@ -359,9 +370,7 @@ paths:
       summary: Start a user's single-user named-server notebook server
       security:
         - oauth2:
-            - users
             - users:servers
-            - users:servers!server=servername
       parameters:
         - name: name
           description: username
@@ -395,9 +404,7 @@ paths:
       summary: Stop a user's named-server
       security:
         - oauth2:
-            - users
             - users:servers
-            - users:servers!server=servername
       parameters:
         - name: name
           description: username
@@ -437,7 +444,7 @@ paths:
       summary: List tokens for the user
       security:
         - oauth2:
-            - users:tokens
+            - read:users:tokens
       responses:
         "200":
           description: The list of tokens
@@ -468,7 +475,9 @@ paths:
                 type: string
                 description: A note attached to the token for future bookkeeping
               roles:
-                type: list
+                type: array
+                items:
+                  type: string
                 description: A list of role names that the token should have
       responses:
         "201":
@@ -494,7 +503,7 @@ paths:
       summary: Get the model for a token by id
       security:
         - oauth2:
-            - users:tokens
+            - read:users:tokens
       responses:
         "200":
           description: The info for the new token
@@ -513,8 +522,13 @@ paths:
       summary: Return authenticated user's model
       security:
         - oauth2:
-            - all
-            - read:all
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:users:servers
+            - admin:users:auth_state
+            - admin:users:server_state
       responses:
         "200":
           description: The authenticated user's model is returned.
@@ -525,7 +539,6 @@ paths:
       summary: List groups
       security:
         - oauth2:
-            - groups
             - read:groups
       responses:
         "200":
@@ -539,8 +552,6 @@ paths:
       summary: Get a group by name
       security:
         - oauth2:
-            - groups
-            - groups!group=groupname
             - read:groups
       parameters:
         - name: name
@@ -589,7 +600,6 @@ paths:
       security:
         - oauth2:
             - groups
-            - groups!group=groupname
       parameters:
         - name: name
           description: group name
@@ -618,7 +628,6 @@ paths:
       security:
         - oauth2:
             - groups
-            - groups!group=groupname
       parameters:
         - name: name
           description: group name
@@ -933,6 +942,10 @@ definitions:
         description: The active servers for this user.
         items:
           $ref: "#/definitions/Server"
+      auth_state:
+        type: string
+        #TODO: will there be predefined states? Should it rather be object instead of string?
+        description: Authentication state of the user. Only available with admin:users:auth_state scope. None otherwise.
   Server:
     type: object
     properties:
@@ -969,7 +982,7 @@ definitions:
         description: UTC timestamp last-seen activity on this server.
       state:
         type: object
-        description: Arbitrary internal state from this server's spawner.  Only available on the hub's users list or get-user-by-name method, and only if a hub admin.  None otherwise.
+        description: Arbitrary internal state from this server's spawner. Only available on the hub's users list or get-user-by-name method, and only with admin:users:server_state scope. None otherwise.
       user_options:
         type: object
         description: User specified options for the user's spawned instance of a single-user server.
