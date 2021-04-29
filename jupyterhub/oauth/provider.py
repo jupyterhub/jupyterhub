@@ -586,7 +586,9 @@ class JupyterHubOAuthServer(WebApplicationServer):
         self.db = db
         super().__init__(validator, *args, **kwargs)
 
-    def add_client(self, client_id, client_secret, redirect_uri, description=''):
+    def add_client(
+        self, client_id, client_secret, redirect_uri, allowed_roles=None, description=''
+    ):
         """Add a client
 
         hash its client_secret before putting it in the database.
@@ -607,9 +609,12 @@ class JupyterHubOAuthServer(WebApplicationServer):
             app_log.info(f'Creating oauth client {client_id}')
         else:
             app_log.info(f'Updating oauth client {client_id}')
+        if allowed_roles == None:
+            allowed_roles = []
         orm_client.secret = hash_token(client_secret) if client_secret else ""
         orm_client.redirect_uri = redirect_uri
         orm_client.description = description
+        orm_client.allowed_roles = allowed_roles
         self.db.commit()
 
     def fetch_by_client_id(self, client_id):

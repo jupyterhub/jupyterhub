@@ -50,6 +50,7 @@ from traitlets import default
 from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
+from traitlets import List
 from traitlets import Unicode
 from traitlets import validate
 from traitlets.config import LoggingConfigurable
@@ -187,6 +188,19 @@ class Service(LoggingConfigurable):
         Only specify if the service runs an HTTP(s) endpoint that.
         If managed, will be passed as JUPYTERHUB_SERVICE_URL env.
         """
+    ).tag(input=True)
+
+    oauth_roles = List(
+        help="""OAuth allowed roles.
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued for this service
+        (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the service can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+      """
     ).tag(input=True)
 
     api_token = Unicode(
