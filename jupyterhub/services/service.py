@@ -190,7 +190,7 @@ class Service(LoggingConfigurable):
         """
     ).tag(input=True)
 
-    allowed_roles = List(
+    oauth_roles = List(
         help="""OAuth allowed roles.
     
     List of roles that are passed to generated tokens if the service act as an OAuth client

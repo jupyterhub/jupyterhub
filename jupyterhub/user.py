@@ -568,7 +568,8 @@ class User:
                 client_id,
                 api_token,
                 url_path_join(self.url, server_name, 'oauth_callback'),
-                description="Server at %s"  # todo: own server: 'users:servers!user={username} as allowed role?
+                allowed_roles=spawner.allowed_roles,
+                description="Server at %s"
                 % (url_path_join(self.base_url, server_name) + '/'),
             )
         db.commit()

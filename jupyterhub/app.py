@@ -2127,7 +2127,6 @@ class JupyterHub(Application):
             name = spec['name']
             # get/create orm
             orm_service = orm.Service.find(self.db, name=name)
-            allowed_roles = spec.get('allowed_roles', [])
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
@@ -2192,7 +2191,7 @@ class JupyterHub(Application):
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
-                    allowed_roles=allowed_roles,
+                    allowed_roles=service.oauth_roles,
                     description="JupyterHub service %s" % service.name,
                 )
 

@@ -906,7 +906,7 @@ async def test_oauth_allowed_roles(app, create_temp_role):
     service = {
         'name': 'oas1',
         'api_token': 'some-token',
-        'allowed_roles': ['oracle', 'goose'],
+        'oauth_roles': ['oracle', 'goose'],
     }
     for role in allowed_roles:
         create_temp_role('read:users', role_name=role)
@@ -914,4 +914,4 @@ async def test_oauth_allowed_roles(app, create_temp_role):
     app.init_services()
     app_service = app.services[0]
     assert app_service['name'] == 'oas1'
-    assert set(app_service['allowed_roles']) == set(allowed_roles)
+    assert set(app_service['oauth_roles']) == set(allowed_roles)

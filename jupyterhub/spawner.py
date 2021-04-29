@@ -219,6 +219,11 @@ class Spawner(LoggingConfigurable):
     oauth_client_id = Unicode()
     handler = Any()
 
+    allowed_roles = List(
+        help="""OAuth allowed roles for single-user servers
+    """
+    ).tag(input=True)
+
     will_resume = Bool(
         False,
         help="""Whether the Spawner will resume on next start

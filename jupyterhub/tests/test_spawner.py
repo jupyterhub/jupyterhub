@@ -426,3 +426,9 @@ async def test_hub_connect_url(db):
         env["JUPYTERHUB_ACTIVITY_URL"]
         == "https://example.com/api/users/%s/activity" % name
     )
+
+
+async def test_spawner_oauth_roles(app):
+    allowed_roles = ['lotsa', 'roles']
+    spawner = new_spawner(app.db, allowed_roles=allowed_roles)
+    assert spawner.allowed_roles == allowed_roles
