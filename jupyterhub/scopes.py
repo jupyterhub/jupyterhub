@@ -208,11 +208,11 @@ def identify_scopes(obj):
     if isinstance(obj, orm.User):
         return {
             f"read:users:{field}!user={obj.name}"
-            for field in {"name", "admin", "groups"}
+            for field in {"name", "roles", "groups"}
         }
     elif isinstance(obj, orm.Service):
         return {
-            f"read:services:{field}!service={obj.name}" for field in {"name", "admin"}
+            f"read:services:{field}!service={obj.name}" for field in {"name", "roles"}
         }
     else:
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
