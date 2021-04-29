@@ -192,9 +192,15 @@ class Service(LoggingConfigurable):
 
     oauth_roles = List(
         help="""OAuth allowed roles.
-    
-    List of roles that are passed to generated tokens if the service act as an OAuth client
-    on behalf of users"""
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued for this service
+        (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the service can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+      """
     ).tag(input=True)
 
     api_token = Unicode(
