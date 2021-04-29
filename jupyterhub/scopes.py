@@ -13,6 +13,62 @@ class Scope(Enum):
     ALL = True
 
 
+def _intersect_scopes(token_scopes, owner_scopes):
+    """Compares the permissions of token and its owner including horizontal filters
+    Returns the intersection of the two sets of scopes
+
+    Note: Intersects correctly with ALL and exact filter matches
+          (i.e. users!user=x & read:users:name -> read:users:name!user=x)
+
+          Does not currently intersect with containing filters
+          (i.e. users!group=x & users!user=y even if user y is in group x,
+          same for users:servers!user=x & users:servers!server=y)
+    """
+    owner_parsed_scopes = parse_scopes(owner_scopes)
+    token_parsed_scopes = parse_scopes(token_scopes)
+
+    common_bases = owner_parsed_scopes.keys() & token_parsed_scopes.keys()
+
+    common_filters = {}
+    warn = False
+    for base in common_bases:
+        if owner_parsed_scopes[base] == Scope.ALL:
+            common_filters[base] = token_parsed_scopes[base]
+        elif token_parsed_scopes[base] == Scope.ALL:
+            common_filters[base] = owner_parsed_scopes[base]
+        else:
+            common_entities = (
+                owner_parsed_scopes[base].keys() & token_parsed_scopes[base].keys()
+            )
+            all_entities = (
+                owner_parsed_scopes[base].keys() | token_parsed_scopes[base].keys()
+            )
+            if 'user' in all_entities and ('group' or 'server' in all_entities):
+                warn = True
+
+            common_filters[base] = {
+                entity: set(owner_parsed_scopes[base][entity])
+                & set(token_parsed_scopes[base][entity])
+                for entity in common_entities
+            }
+
+    if warn:
+        app_log.warning(
+            "[!user=, !group=] or [!user=, !server=] combinations of filters present, intersection between not considered. May result in lower than intended permissions."
+        )
+
+    scopes = set()
+    for base in common_filters:
+        if common_filters[base] == Scope.ALL:
+            scopes.add(base)
+        else:
+            for entity, names_list in common_filters[base].items():
+                for name in names_list:
+                    scopes.add(f'{base}!{entity}={name}')
+
+    return scopes
+
+
 def get_scopes_for(orm_object):
     """Find scopes for a given user or token and resolve permissions"""
     scopes = set()
@@ -37,8 +93,10 @@ def get_scopes_for(orm_object):
         if 'all' in token_scopes:
             token_scopes.remove('all')
             token_scopes |= owner_scopes
-        scopes = token_scopes & owner_scopes
+
+        scopes = _intersect_scopes(token_scopes, owner_scopes)
         discarded_token_scopes = token_scopes - scopes
+
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
             app_log.warning(

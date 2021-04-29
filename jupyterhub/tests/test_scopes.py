@@ -648,3 +648,115 @@ async def test_server_state_access(
             assert r.status_code == 403
         app.db.delete(group)
         app.db.commit()
+
+
+@mark.parametrize(
+    "name, user_scopes, token_scopes, intersection_scopes",
+    [
+        (
+            'no_filter',
+            ['users:activity'],
+            ['users:activity'],
+            {'users:activity', 'read:users:activity'},
+        ),
+        (
+            'valid_own_filter',
+            ['read:users:activity'],
+            ['read:users:activity!user'],
+            {'read:users:activity!user=temp_user_1'},
+        ),
+        (
+            'valid_other_filter',
+            ['read:users:activity'],
+            ['read:users:activity!user=otheruser'],
+            {'read:users:activity!user=otheruser'},
+        ),
+        (
+            'no_filter_owner_filter',
+            ['read:users:activity!user'],
+            ['read:users:activity'],
+            {'read:users:activity!user=temp_user_1'},
+        ),
+        (
+            'valid_own_filter',
+            ['read:users:activity!user'],
+            ['read:users:activity!user'],
+            {'read:users:activity!user=temp_user_1'},
+        ),
+        (
+            'invalid_filter',
+            ['read:users:activity!user'],
+            ['read:users:activity!user=otheruser'],
+            set(),
+        ),
+        (
+            'subscopes_cross_filter',
+            ['users!user=x'],
+            ['read:users:name'],
+            {'read:users:name!user=x'},
+        ),
+        (
+            'multiple_user_filter',
+            ['users!user=x', 'users!user=y'],
+            ['read:users:name!user=x'],
+            {'read:users:name!user=x'},
+        ),
+        (
+            'no_intersection_group_user',
+            ['users!group=y'],
+            ['users!user=x'],
+            set(),
+        ),
+        (
+            'no_intersection_user_server',
+            ['users:servers!user=y'],
+            ['users:servers!server=x'],
+            set(),
+        ),
+        (
+            'users_and_groups_both',
+            ['users!group=x', 'users!user=y'],
+            ['read:users:name!group=x', 'read:users!user=y'],
+            {
+                'read:users:name!group=x',
+                'read:users!user=y',
+                'read:users:name!user=y',
+                'read:users:groups!user=y',
+                'read:users:activity!user=y',
+            },
+        ),
+        (
+            'users_and_groups_user_only',
+            ['users!group=x', 'users!user=y'],
+            ['read:users:name!group=z', 'read:users!user=y'],
+            {
+                'read:users!user=y',
+                'read:users:name!user=y',
+                'read:users:groups!user=y',
+                'read:users:activity!user=y',
+            },
+        ),
+    ],
+)
+async def test_resolve_token_permissions(
+    app,
+    create_user_with_scopes,
+    create_temp_role,
+    name,
+    user_scopes,
+    token_scopes,
+    intersection_scopes,
+):
+
+    orm_user = create_user_with_scopes(*user_scopes).orm_user
+    create_temp_role(token_scopes, 'active-posting')
+    api_token = orm_user.new_api_token(roles=['active-posting'])
+    orm_api_token = orm.APIToken.find(app.db, token=api_token)
+
+    # get expanded !user filter scopes for check
+    user_scopes = roles.expand_roles_to_scopes(orm_user)
+    token_scopes = roles.expand_roles_to_scopes(orm_api_token)
+
+    token_retained_scopes = get_scopes_for(orm_api_token)
+
+    assert token_retained_scopes == intersection_scopes
