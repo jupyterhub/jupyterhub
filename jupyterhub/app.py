@@ -333,7 +333,6 @@ class JupyterHub(Application):
                                 'scopes': ['users', 'groups'],
                                 'users': ['cyclops', 'gandalf'],
                                 'services': [],
-                                'tokens': [],
                                 'groups': []
                             }
                         ]
@@ -2013,9 +2012,6 @@ class JupyterHub(Application):
             for bearer in role_bearers:
                 roles.check_for_default_roles(db, bearer)
 
-            # now add roles to tokens if their owner's permissions allow
-            roles.add_predef_roles_tokens(db, self.load_roles)
-
             # check tokens for default roles
             roles.check_for_default_roles(db, bearer='tokens')
 
@@ -2058,13 +2054,6 @@ class JupyterHub(Application):
                     db.add(obj)
                     db.commit()
                 self.log.info("Adding API token for %s: %s", kind, name)
-                # If we have roles in the configuration file, they will be added later
-                # Todo: works but ugly
-                config_roles = None
-                for config_role in self.load_roles:
-                    if 'tokens' in config_role and token in config_role['tokens']:
-                        config_roles = []
-                        break
                 try:
                     # set generated=False to ensure that user-provided tokens
                     # get extra hashing (don't trust entropy of user-provided tokens)
@@ -2072,7 +2061,6 @@ class JupyterHub(Application):
                         token,
                         note="from config",
                         generated=self.trust_user_provided_tokens,
-                        roles=config_roles,
                     )
                 except Exception:
                     if created:

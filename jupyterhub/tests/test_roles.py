@@ -589,7 +589,6 @@ async def test_load_roles_user_tokens(tmpdir, request):
             'name': 'reader',
             'description': 'Read all users models',
             'scopes': ['read:users'],
-            'tokens': ['super-secret-token'],
         },
     ]
     kwargs = {
@@ -608,174 +607,12 @@ async def test_load_roles_user_tokens(tmpdir, request):
     await hub.init_api_tokens()
     await hub.init_roles()
 
-    # test if gandalf's token has the 'reader' role
-    reader_role = orm.Role.find(db, 'reader')
-    token = orm.APIToken.find(db, 'super-secret-token')
-    assert reader_role in token.roles
-
     # test if all other tokens have default 'user' role
     token_role = orm.Role.find(db, 'token')
     secret_token = orm.APIToken.find(db, 'secret-token')
     assert token_role in secret_token.roles
     secrety_token = orm.APIToken.find(db, 'secrety-token')
     assert token_role in secrety_token.roles
-
-    # delete the test tokens
-    for token in db.query(orm.APIToken):
-        db.delete(token)
-    db.commit()
-
-    # delete the test roles
-    for role in roles_to_load:
-        roles.delete_role(db, role['name'])
-
-
-@mark.role
-async def test_load_roles_user_tokens_not_allowed(tmpdir, request):
-    user_tokens = {
-        'secret-token': 'bilbo',
-    }
-    roles_to_load = [
-        {
-            'name': 'user-creator',
-            'description': 'Creates/deletes any user',
-            'scopes': ['admin:users'],
-            'tokens': ['secret-token'],
-        },
-    ]
-    kwargs = {
-        'load_roles': roles_to_load,
-        'api_tokens': user_tokens,
-    }
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
-    hub.authenticator.allowed_users = ['bilbo']
-    await hub.init_users()
-    await hub.init_api_tokens()
-
-    response = 'allowed'
-    # bilbo has only default 'user' role
-    # while bilbo's token is requesting role with higher permissions
-    with pytest.raises(ValueError):
-        await hub.init_roles()
-
-    # delete the test tokens
-    for token in db.query(orm.APIToken):
-        db.delete(token)
-    db.commit()
-
-    # delete the test roles
-    for role in roles_to_load:
-        roles.delete_role(db, role['name'])
-
-
-@mark.role
-async def test_load_roles_service_tokens(tmpdir, request):
-    services = [
-        {'name': 'idle-culler', 'api_token': 'another-secret-token'},
-    ]
-    service_tokens = {
-        'another-secret-token': 'idle-culler',
-    }
-    roles_to_load = [
-        {
-            'name': 'idle-culler',
-            'description': 'Cull idle servers',
-            'scopes': [
-                'read:users:name',
-                'read:users:activity',
-                'read:users:servers',
-                'users:servers',
-            ],
-            'services': ['idle-culler'],
-            'tokens': ['another-secret-token'],
-        },
-    ]
-    kwargs = {
-        'load_roles': roles_to_load,
-        'services': services,
-        'service_tokens': service_tokens,
-    }
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
-    await hub.init_api_tokens()
-    await hub.init_roles()
-
-    # test if another-secret-token has idle-culler role
-    service = orm.Service.find(db, 'idle-culler')
-    culler_role = orm.Role.find(db, 'idle-culler')
-    token = orm.APIToken.find(db, 'another-secret-token')
-    assert len(token.roles) == 1
-    assert culler_role in token.roles
-
-    # delete the test services
-    for service in db.query(orm.Service):
-        db.delete(service)
-    db.commit()
-
-    # delete the test tokens
-    for token in db.query(orm.APIToken):
-        db.delete(token)
-    db.commit()
-
-    # delete the test roles
-    for role in roles_to_load:
-        roles.delete_role(db, role['name'])
-
-
-@mark.role
-async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
-    services = [{'name': 'some-service', 'api_token': 'secret-token'}]
-    service_tokens = {
-        'secret-token': 'some-service',
-    }
-    roles_to_load = [
-        {
-            'name': 'user-reader',
-            'description': 'Read-only user models',
-            'scopes': ['read:users'],
-            'services': ['some-service'],
-        },
-        # 'idle-culler' role has higher permissions that the token's owner 'some-service'
-        {
-            'name': 'idle-culler',
-            'description': 'Cull idle servers',
-            'scopes': [
-                'read:users:name',
-                'read:users:activity',
-                'read:users:servers',
-                'users:servers',
-            ],
-            'tokens': ['secret-token'],
-        },
-    ]
-    kwargs = {
-        'load_roles': roles_to_load,
-        'services': services,
-        'service_tokens': service_tokens,
-    }
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
-    await hub.init_api_tokens()
-    with pytest.raises(ValueError):
-        await hub.init_roles()
-
-    # delete the test services
-    for service in db.query(orm.Service):
-        db.delete(service)
-    db.commit()
 
     # delete the test tokens
     for token in db.query(orm.APIToken):

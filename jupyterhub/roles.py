@@ -479,25 +479,6 @@ def update_roles(db, entity, roles):
             grant_role(db, entity=entity, rolename=rolename)
 
 
-def add_predef_roles_tokens(db, predef_roles):
-
-    """Adds tokens to predefined roles in config file
-    if their permissions allow"""
-
-    for predef_role in predef_roles:
-        if 'tokens' in predef_role.keys():
-            token_role = orm.Role.find(db, name=predef_role['name'])
-            for token_name in predef_role['tokens']:
-                token = orm.APIToken.find(db, token_name)
-                if token is None:
-                    raise ValueError(
-                        "Token %r does not exist and cannot assign it to role %r"
-                        % (token_name, token_role.name)
-                    )
-                else:
-                    update_roles(db, token, roles=[token_role.name])
-
-
 def check_for_default_roles(db, bearer):
 
     """Checks that role bearers have at least one role (default if none).
