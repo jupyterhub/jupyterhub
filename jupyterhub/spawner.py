@@ -219,6 +219,20 @@ class Spawner(LoggingConfigurable):
     oauth_client_id = Unicode()
     handler = Any()
 
+    oauth_roles = Union(
+        [Callable(), List()],
+        help="""Allowed roles for oauth tokens.
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued by a single-user server's
+        oauth client (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the server can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+    """,
+    ).tag(config=True)
+
     will_resume = Bool(
         False,
         help="""Whether the Spawner will resume on next start

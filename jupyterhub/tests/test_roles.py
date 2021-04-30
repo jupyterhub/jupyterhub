@@ -12,7 +12,9 @@ from .. import orm
 from .. import roles
 from ..scopes import get_scopes_for
 from ..utils import maybe_future
+from ..utils import utcnow
 from .mocking import MockHub
+from .test_scopes import create_temp_role
 from .utils import add_user
 from .utils import api_request
 
@@ -892,6 +894,48 @@ async def test_self_expansion(app, kind, has_user_scopes):
 
 @mark.role
 @mark.parametrize(
+    "scope_list, kind, test_for_token",
+    [
+        (['users:activity!user'], 'users', False),
+        (['users:activity!user', 'read:users'], 'users', False),
+        (['users:activity!user=otheruser', 'read:users'], 'users', False),
+        (['users:activity!user'], 'users', True),
+        (['users:activity!user=otheruser', 'groups'], 'users', True),
+    ],
+)
+async def test_user_filter_expansion(app, scope_list, kind, test_for_token):
+    Class = orm.get_class(kind)
+    orm_obj = Class(name=f'test_{kind}')
+    app.db.add(orm_obj)
+    app.db.commit()
+
+    test_role = orm.Role(name='test_role', scopes=scope_list)
+    orm_obj.roles.append(test_role)
+
+    if test_for_token:
+        token = orm_obj.new_api_token(roles=['test_role'])
+        orm_token = orm.APIToken.find(app.db, token)
+        expanded_scopes = roles.expand_roles_to_scopes(orm_token)
+    else:
+        expanded_scopes = roles.expand_roles_to_scopes(orm_obj)
+
+    for scope in scope_list:
+        base, _, filter = scope.partition('!')
+        for ex_scope in expanded_scopes:
+            ex_base, ex__, ex_filter = ex_scope.partition('!')
+            # check that the filter has been expanded to include the username if '!user' filter
+            if scope in ex_scope and filter == 'user':
+                assert ex_filter == f'{filter}={orm_obj.name}'
+            # make sure the filter has been left unchanged if other filter provided
+            elif scope in ex_scope and '=' in filter:
+                assert ex_filter == filter
+
+    app.db.delete(orm_obj)
+    app.db.delete(test_role)
+
+
+@mark.role
+@mark.parametrize(
     "name, valid",
     [
         ('abc', True),
@@ -910,3 +954,95 @@ async def test_valid_names(name, valid):
     else:
         with pytest.raises(ValueError):
             roles._validate_role_name(name)
+
+
+@mark.role
+async def test_server_token_role(app):
+    user = add_user(app.db, app, name='test_user')
+    assert user.api_tokens == []
+    spawner = user.spawner
+    spawner.cmd = ['jupyterhub-singleuser']
+    await user.spawn()
+
+    server_token = spawner.api_token
+    orm_server_token = orm.APIToken.find(app.db, server_token)
+    assert orm_server_token
+
+    server_role = orm.Role.find(app.db, 'server')
+    token_role = orm.Role.find(app.db, 'token')
+    assert server_role in orm_server_token.roles
+    assert token_role not in orm_server_token.roles
+
+    assert orm_server_token.user.name == user.name
+    assert user.api_tokens == [orm_server_token]
+
+    await user.stop()
+
+
+@mark.role
+@mark.parametrize(
+    "token_role, api_method, api_endpoint, for_user, response",
+    [
+        ('server', 'post', 'activity', 'same_user', 200),
+        ('server', 'post', 'activity', 'other_user', 404),
+        ('server', 'get', 'users', 'same_user', 200),
+        ('token', 'post', 'activity', 'same_user', 200),
+        ('no_role', 'post', 'activity', 'same_user', 403),
+    ],
+)
+async def test_server_role_api_calls(
+    app, token_role, api_method, api_endpoint, for_user, response
+):
+    user = add_user(app.db, app, name='test_user')
+    if token_role == 'no_role':
+        api_token = user.new_api_token(roles=[])
+    else:
+        api_token = user.new_api_token(roles=[token_role])
+
+    if for_user == 'same_user':
+        username = user.name
+    else:
+        username = 'otheruser'
+
+    if api_endpoint == 'activity':
+        path = "users/{}/activity".format(username)
+        data = json.dumps({"servers": {"": {"last_activity": utcnow().isoformat()}}})
+    elif api_endpoint == 'users':
+        path = "users"
+        data = ""
+
+    r = await api_request(
+        app,
+        path,
+        headers={"Authorization": "token {}".format(api_token)},
+        data=data,
+        method=api_method,
+    )
+    assert r.status_code == response
+
+    if api_endpoint == 'users' and token_role == 'server':
+        reply = r.json()
+        assert len(reply) == 1
+
+        user_model = reply[0]
+        assert user_model['name'] == username
+        assert 'last_activity' in user_model.keys()
+        assert (
+            all(key for key in ['groups', 'roles', 'servers']) not in user_model.keys()
+        )
+
+
+async def test_oauth_allowed_roles(app, create_temp_role):
+    allowed_roles = ['oracle', 'goose']
+    service = {
+        'name': 'oas1',
+        'api_token': 'some-token',
+        'oauth_roles': ['oracle', 'goose'],
+    }
+    for role in allowed_roles:
+        create_temp_role('read:users', role_name=role)
+    app.services.append(service)
+    app.init_services()
+    app_service = app.services[0]
+    assert app_service['name'] == 'oas1'
+    assert set(app_service['oauth_roles']) == set(allowed_roles)

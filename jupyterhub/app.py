@@ -111,14 +111,12 @@ from .objects import Hub, Server
 # For faking stats
 from .emptyclass import EmptyClass
 
-
 common_aliases = {
     'log-level': 'Application.log_level',
     'f': 'JupyterHub.config_file',
     'config': 'JupyterHub.config_file',
     'db': 'JupyterHub.db_url',
 }
-
 
 aliases = {
     'base-url': 'JupyterHub.base_url',
@@ -2193,6 +2191,7 @@ class JupyterHub(Application):
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
+                    allowed_roles=service.oauth_roles,
                     description="JupyterHub service %s" % service.name,
                 )
 

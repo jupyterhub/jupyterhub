@@ -37,7 +37,7 @@ def get_default_roles():
             'name': 'server',
             'description': 'Post activity only',
             'scopes': [
-                'users:activity'
+                'users:activity!user'
             ],  # TO DO - fix scope to refer to only self once implemented
         },
         {
@@ -173,6 +173,7 @@ def expand_roles_to_scopes(orm_object):
         pass_roles.extend(groups_roles)
 
     scopes = _get_subscopes(*pass_roles, owner=orm_object)
+
     return scopes
 
 
@@ -186,6 +187,21 @@ def _get_subscopes(*args, owner=None):
 
     scopes = set(chain.from_iterable(list(map(_expand_scope, scope_list))))
 
+    # transform !user filter to !user=ownername
+    for scope in scopes:
+        base_scope, _, filter = scope.partition('!')
+        if filter == 'user':
+            scopes.remove(scope)
+            if isinstance(owner, orm.APIToken):
+                token_owner = owner.user
+                if token_owner is None:
+                    token_owner = owner.service
+                name = token_owner.name
+            else:
+                name = owner.name
+            trans_scope = f'{base_scope}!user={name}'
+            scopes.add(trans_scope)
+
     if 'self' in scopes:
         scopes.remove('self')
         if owner and isinstance(owner, orm.User):
@@ -198,7 +214,7 @@ def _check_scopes(*args):
     """Check if provided scopes exist"""
 
     allowed_scopes = _get_scope_hierarchy()
-    allowed_filters = ['!user=', '!service=', '!group=', '!server=']
+    allowed_filters = ['!user=', '!service=', '!group=', '!server=', '!user']
     subscopes = set(
         chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
     )

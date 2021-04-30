@@ -531,7 +531,7 @@ class User:
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
         note = "Server at %s" % base_url
-        api_token = self.new_api_token(note=note)
+        api_token = self.new_api_token(note=note, roles=['server'])
         db.commit()
 
         spawner = self.spawners[server_name]
@@ -564,10 +564,16 @@ class User:
             oauth_client = oauth_provider.fetch_by_client_id(client_id)
             # create a new OAuth client + secret on every launch
             # containers that resume will be updated below
+
+            allowed_roles = spawner.oauth_roles
+            if callable(allowed_roles):
+                allowed_roles = allowed_roles(spawner)
+
             oauth_provider.add_client(
                 client_id,
                 api_token,
                 url_path_join(self.url, server_name, 'oauth_callback'),
+                allowed_roles=allowed_roles,
                 description="Server at %s"
                 % (url_path_join(self.base_url, server_name) + '/'),
             )
