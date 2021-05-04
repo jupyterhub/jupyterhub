@@ -797,8 +797,27 @@ class Spawner(LoggingConfigurable):
             'activity',
         )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
+
         if self.server:
+            base_url = self.server.base_url
+            if self.ip or self.port:
+                self.server.ip = self.ip
+                self.server.port = self.port
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
+        else:
+            # this should only occur in mock/testing schenarios
+            base_url = '/'
+
+        if self.ip or self.port:
+            # specify JUPYTERHUB_SERVICE_URL *if* ip or port is specified
+            # TODO: set this always?
+            # Prior to 2.0, leaving 'ip' or 'port' unset meant letting the subprocess default be used
+            # setting via a URL means we cannot specify explicit ip or port without specifying *both*
+            # this results in a changed default behavior of specifying only report
+            # specifying ip='' *explicitly*, which is the same as all interfaces, instead of localhost
+            s = 's' if self.internal_ssl else ''
+            bind_url = f"http{s}://{self.ip}:{self.port}{base_url}"
+            env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -818,6 +837,20 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
             env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
+        if self.notebook_dir:
+            notebook_dir = self.format_string(self.notebook_dir)
+            env["JUPYTERHUB_ROOT_DIR"] = notebook_dir
+
+        if self.default_url:
+            default_url = self.format_string(self.default_url)
+            env["JUPYTERHUB_DEFAULT_URL"] = default_url
+
+        if self.debug:
+            env["JUPYTERHUB_DEBUG"] = "1"
+
+        if self.disable_user_config:
+            env["JUPYTERHUB_DISABLE_USER_CONFIG"] = "1"
+
         # env overrides from config. If the value is a callable, it will be called with
         # one parameter - the current spawner instance - and the return value
         # will be assigned to the environment variable. This will be called at
@@ -829,7 +862,6 @@ class Spawner(LoggingConfigurable):
                 env[key] = value(self)
             else:
                 env[key] = value
-
         return env
 
     async def get_url(self):
@@ -996,24 +1028,16 @@ class Spawner(LoggingConfigurable):
         """Return the arguments to be passed after self.cmd
 
         Doesn't expect shell expansion to happen.
+
+        .. versionchanged:: 2.0
+            Prior to 2.0, JupyterHub passed some options such as
+            ip, port, and default_url to the command-line.
+            JupyterHub 2.0 no longer builds any CLI args
+            other than `Spawner.cmd` and `Spawner.args`.
+            All values that come from jupyterhub itself
+            will be passed via environment variables.
         """
-        args = []
-
-        if self.notebook_dir:
-            notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
-        if self.default_url:
-            default_url = self.format_string(self.default_url)
-            args.append(
-                '--SingleUserNotebookApp.default_url=%s' % _quote_safe(default_url)
-            )
-
-        if self.debug:
-            args.append('--debug')
-        if self.disable_user_config:
-            args.append('--disable-user-config')
-        args.extend(self.args)
-        return args
+        return self.args
 
     def run_pre_spawn_hook(self):
         """Run the pre_spawn_hook if defined"""
@@ -1268,6 +1292,11 @@ class LocalProcessSpawner(Spawner):
 
     Note: This spawner does not implement CPU / memory guarantees and limits.
     """
+
+    @default('ip')
+    def _default_ip(self):
+        """Listen on localhost by default for local processes"""
+        return '127.0.0.1'
 
     interrupt_timeout = Integer(
         10,

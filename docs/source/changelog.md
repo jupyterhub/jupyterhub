@@ -899,7 +899,7 @@ Bugfixes on 0.6:
 
 ### [0.6.0] - 2016-04-25
 
-- JupyterHub has moved to a new `jupyterhub` namespace on GitHub and Docker. What was `juptyer/jupyterhub` is now `jupyterhub/jupyterhub`, etc.
+- JupyterHub has moved to a new `jupyterhub` namespace on GitHub and Docker. What was `jupyter/jupyterhub` is now `jupyterhub/jupyterhub`, etc.
 - `jupyterhub/jupyterhub` image on DockerHub no longer loads the jupyterhub_config.py in an ONBUILD step. A new `jupyterhub/jupyterhub-onbuild` image does this
 - Add statsd support, via `c.JupyterHub.statsd_{host,port,prefix}`
 - Update to traitlets 4.1 `@default`, `@observe` APIs for traits

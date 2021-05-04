@@ -10,6 +10,7 @@ with JupyterHub authentication mixins enabled.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import json
+import logging
 import os
 import random
 import warnings
@@ -46,6 +47,17 @@ from ..utils import exponential_backoff
 from ..utils import isoformat
 from ..utils import make_ssl_context
 from ..utils import url_path_join
+
+
+def _bool_env(key):
+    """Cast an environment variable to bool
+
+    0, empty, or unset is False; All other values are True.
+    """
+    if os.environ.get(key, "") in {"", "0"}:
+        return False
+    else:
+        return True
 
 
 # Authenticate requests with the Hub
@@ -268,6 +280,10 @@ class SingleUserNotebookAppMixin(Configurable):
     def _user_changed(self, change):
         self.log.name = change.new
 
+    @default("default_url")
+    def _default_url(self):
+        return os.environ.get("JUPYTERHUB_DEFAULT_URL", "/tree/")
+
     hub_host = Unicode().tag(config=True)
 
     hub_prefix = Unicode('/hub/').tag(config=True)
@@ -350,7 +366,26 @@ class SingleUserNotebookAppMixin(Configurable):
         """,
     ).tag(config=True)
 
-    @validate('notebook_dir')
+    @default("disable_user_config")
+    def _default_disable_user_config(self):
+        return _bool_env("JUPYTERHUB_DISABLE_USER_CONFIG")
+
+    @default("root_dir")
+    def _default_root_dir(self):
+        if os.environ.get("JUPYTERHUB_ROOT_DIR"):
+            proposal = {"value": os.environ["JUPYTERHUB_ROOT_DIR"]}
+            # explicitly call validator, not called on default values
+            return self._notebook_dir_validate(proposal)
+        else:
+            return os.getcwd()
+
+    # notebook_dir is used by the classic notebook server
+    # root_dir is the future in jupyter server
+    @default("notebook_dir")
+    def _default_notebook_dir(self):
+        return self._default_root_dir()
+
+    @validate("notebook_dir", "root_dir")
     def _notebook_dir_validate(self, proposal):
         value = os.path.expanduser(proposal['value'])
         # Strip any trailing slashes
@@ -365,6 +400,13 @@ class SingleUserNotebookAppMixin(Configurable):
         if not os.path.isdir(value):
             raise TraitError("No such notebook dir: %r" % value)
         return value
+
+    @default('log_level')
+    def _log_level_defaul(self):
+        if _bool_env("JUPYTERHUB_DEBUG"):
+            return logging.DEBUG
+        else:
+            return logging.INFO
 
     @default('log_datefmt')
     def _log_datefmt_default(self):
