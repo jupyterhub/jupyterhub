@@ -178,6 +178,19 @@ def test_orm_roles_delete_cascade(db):
     "scopes, subscopes",
     [
         (
+            ['admin:users'],
+            {
+                'admin:users',
+                'admin:users:auth_state',
+                'users',
+                'read:users',
+                'users:activity',
+                'read:users:name',
+                'read:users:groups',
+                'read:users:activity',
+            },
+        ),
+        (
             ['users'],
             {
                 'users',
@@ -198,7 +211,7 @@ def test_orm_roles_delete_cascade(db):
             },
         ),
         (['read:users:servers'], {'read:users:servers', 'read:users:name'}),
-        (['admin:groups'], {'admin:groups'}),
+        (['admin:groups'], {'admin:groups', 'groups', 'read:groups'}),
         (
             ['users:tokens!group=hobbits'],
             {'users:tokens!group=hobbits', 'read:users:tokens!group=hobbits'},
