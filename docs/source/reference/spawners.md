@@ -37,14 +37,13 @@ Some examples include:
 Information about the user can be retrieved from `self.user`,
 an object encapsulating the user's name, authentication, and server info.
 
-The return value of `Spawner.start` should be the (ip, port) of the running server.
-
-**NOTE:** When writing coroutines, _never_ `yield` in between a database change and a commit.
+The return value of `Spawner.start` should be the `(ip, port)` of the running server,
+or a full URL as a string.
 
 Most `Spawner.start` functions will look similar to this example:
 
 ```python
-def start(self):
+async def start(self):
     self.ip = '127.0.0.1'
     self.port = random_port()
     # get environment variables,
@@ -56,14 +55,58 @@ def start(self):
     cmd.extend(self.cmd)
     cmd.extend(self.get_args())
 
-    yield self._actually_start_server_somehow(cmd, env)
-    return (self.ip, self.port)
+    await self._actually_start_server_somehow(cmd, env)
+    # url may not match self.ip:self.port, but it could!
+    url = self._get_connectable_url()
+    return url
 ```
 
 When `Spawner.start` returns, the single-user server process should actually be running,
 not just requested. JupyterHub can handle `Spawner.start` being very slow
 (such as PBS-style batch queues, or instantiating whole AWS instances)
 via relaxing the `Spawner.start_timeout` config value.
+
+#### Note on IPs and ports
+
+`Spawner.ip` and `Spawner.port` attributes set the _bind_ url,
+which the single-user server should listen on
+(passed to the single-user process via the `JUPYTERHUB_SERVICE_URL` environment variable).
+The _return_ value is the ip and port (or full url) the Hub should _connect to_.
+These are not necessarily the same, and usually won't be in any Spawner that works with remote resources or containers.
+
+The default for Spawner.ip, and Spawner.port is `127.0.0.1:{random}`,
+which is appropriate for Spawners that launch local processes,
+where everything is on localhost and each server needs its own port.
+For remote or container Spawners, it will often make sense to use a different value,
+such as `ip = '0.0.0.0'` and a fixed port, e.g. `8888`.
+The defaults can be changed in the class,
+preserving configuration with traitlets:
+
+```python
+from traitlets import default
+from jupyterhub.spawner import Spawner
+
+class MySpawner(Spawner):
+    @default("ip")
+    def _default_ip(self):
+        return '0.0.0.0'
+
+    @default("port")
+    def _default_port(self):
+        return 8888
+
+    async def start(self):
+        env = self.get_env()
+        cmd = []
+        # get jupyterhub command to run,
+        # typically ['jupyterhub-singleuser']
+        cmd.extend(self.cmd)
+        cmd.extend(self.get_args())
+
+        remote_server_info = await self._actually_start_server_somehow(cmd, env)
+        url = self.get_public_url_from(remote_server_info)
+        return url
+```
 
 ### Spawner.poll
 
@@ -206,6 +249,73 @@ previously required.
 Additionally, configurable attributes for your spawner will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
+
+## Environment variables and command-line arguments
+
+Spawners mainly do one thing: launch a command in an environment.
+
+The command-line is constructed from user configuration:
+
+- Spawner.cmd (default: `['jupterhub-singleuser']`)
+- Spawner.args (cli args to pass to the cmd, default: empty)
+
+where the configuration:
+
+```python
+c.Spawner.cmd = ["my-singleuser-wrapper"]
+c.Spawner.args = ["--debug", "--flag"]
+```
+
+would result in spawning the command:
+
+```bash
+my-singleuser-wrapper --debug --flag
+```
+
+The `Spawner.get_args()` method is how Spawner.args is accessed,
+and can be used by Spawners to customize/extend user-provided arguments.
+
+Prior to 2.0, JupyterHub unconditionally added certain options _if specified_ to the command-line,
+such as `--ip={Spawner.ip}` and `--port={Spawner.port}`.
+These have now all been moved to environment variables,
+and from JupyterHub 2.0,
+the command-line launched by JupyterHub is fully specified by overridable configuration `Spawner.cmd + Spawner.args`.
+
+Most process configuration is passed via environment variables.
+Additional variables can be specified via the `Spawner.environment` configuration.
+
+The process environment is returned by `Spawner.get_env`, which specifies the following environment variables:
+
+- JUPYTERHUB*SERVICE_URL - the \_bind* url where the server should launch its http server (`http://127.0.0.1:12345`).
+  This includes Spawner.ip and Spawner.port; _new in 2.0, prior to 2.0 ip,port were on the command-line and only if specified_
+- JUPYTERHUB_SERVICE_PREFIX - the URL prefix the service will run on (e.g. `/user/name/`)
+- JUPYTERHUB_USER - the JupyterHub user's username
+- JUPYTERHUB_SERVER_NAME - the server's name, if using named servers (default server has an empty name)
+- JUPYTERHUB_API_URL - the full url for the JupyterHub API (http://17.0.0.1:8001/hub/api)
+- JUPYTERHUB_BASE_URL - the base url of the whole jupyterhub deployment, i.e. the bit before `hub/` or `user/`,
+  as set by c.JupyterHub.base_url (default: `/`)
+- JUPYTERHUB_API_TOKEN - the API token the server can use to make requests to the Hub.
+  This is also the OAuth client secret.
+- JUPYTERHUB_CLIENT_ID - the OAuth client ID for authenticating visitors.
+- JUPYTERHUB_OAUTH_CALLBACK_URL - the callback URL to use in oauth, typically `/user/:name/oauth_callback`
+
+Optional environment variables, depending on configuration:
+
+- JUPYTERHUB*SSL*[KEYFILE|CERTFILE|CLIENT_CI] - SSL configuration, when internal_ssl is enabled
+- JUPYTERHUB_ROOT_DIR - the root directory of the server (notebook directory), when Spawner.notebook_dir is defined (new in 2.0)
+- JUPYTERHUB_DEFAULT_URL - the default URL for the server (for redirects from /user/:name/),
+  if Spawner.default_url is defined
+  (new in 2.0, previously passed via cli)
+- JUPYTERHUB_DEBUG=1 - generic debug flag, sets maximum log level when Spawner.debug is True
+  (new in 2.0, previously passed via cli)
+- JUPYTERHUB_DISABLE_USER_CONFIG=1 - disable loading user config,
+  sets maximum log level when Spawner.debug is True (new in 2.0,
+  previously passed via cli)
+
+- JUPYTERHUB*[MEM|CPU]*[LIMIT_GUARANTEE] - the values of cpu and memory limits and guarantees.
+  These are not expected to be enforced by the process,
+  but are made available as a hint,
+  e.g. for resource monitoring extensions.
 
 ## Spawners, resource limits, and guarantees (Optional)
 
