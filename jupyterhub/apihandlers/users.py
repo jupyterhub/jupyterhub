@@ -55,6 +55,7 @@ class UserListAPIHandler(APIHandler):
     @admin_only
     def get(self):
         state_filter = self.get_argument("state", None)
+        offset, limit = self.get_api_pagination()
 
         # post_filter
         post_filter = None
@@ -95,11 +96,14 @@ class UserListAPIHandler(APIHandler):
             # no filter, return all users
             query = self.db.query(orm.User)
 
+        query = query.offset(offset).limit(limit)
+
         data = [
             self.user_model(u, include_servers=True, include_state=True)
             for u in query
             if (post_filter is None or post_filter(u))
         ]
+
         self.write(json.dumps(data))
 
     @admin_only

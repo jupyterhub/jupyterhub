@@ -356,6 +356,42 @@ class JupyterHub(Application):
         Default is two weeks.
         """,
     ).tag(config=True)
+
+    oauth_token_expires_in = Integer(
+        help="""Expiry (in seconds) of OAuth access tokens.
+
+        The default is to expire when the cookie storing them expires,
+        according to `cookie_max_age_days` config.
+
+        These are the tokens stored in cookies when you visit
+        a single-user server or service.
+        When they expire, you must re-authenticate with the Hub,
+        even if your Hub authentication is still valid.
+        If your Hub authentication is valid,
+        logging in may be a transparent redirect as you refresh the page.
+        
+        This does not affect JupyterHub API tokens in general,
+        which do not expire by default.
+        Only tokens issued during the oauth flow
+        accessing services and single-user servers are affected.
+
+        .. versionadded:: 1.4
+            OAuth token expires_in was not previously configurable.
+        .. versionchanged:: 1.4
+            Default now uses cookie_max_age_days so that oauth tokens
+            which are generally stored in cookies,
+            expire when the cookies storing them expire.
+            Previously, it was one hour.
+        """,
+        config=True,
+    )
+
+    @default("oauth_token_expires_in")
+    def _cookie_max_age_seconds(self):
+        """default to cookie max age, where these tokens are stored"""
+        # convert cookie max age days to seconds
+        return int(self.cookie_max_age_days * 24 * 3600)
+
     redirect_to_server = Bool(
         True, help="Redirect user to server (if running), instead of control panel."
     ).tag(config=True)
@@ -822,6 +858,66 @@ class JupyterHub(Application):
     def _hub_prefix_default(self):
         return url_path_join(self.base_url, '/hub/')
 
+    hub_routespec = Unicode(
+        "/",
+        help="""
+        The routing prefix for the Hub itself.
+        
+        Override to send only a subset of traffic to the Hub.
+        Default is to use the Hub as the default route for all requests.
+
+        This is necessary for normal jupyterhub operation,
+        as the Hub must receive requests for e.g. `/user/:name`
+        when the user's server is not running.
+
+        However, some deployments using only the JupyterHub API
+        may want to handle these events themselves,
+        in which case they can register their own default target with the proxy
+        and set e.g. `hub_routespec = /hub/` to serve only the hub's own pages, or even `/hub/api/` for api-only operation.
+        
+        Note: hub_routespec must include the base_url, if any.
+
+        .. versionadded:: 1.4
+        """,
+    ).tag(config=True)
+
+    @default("hub_routespec")
+    def _default_hub_routespec(self):
+        # Default routespec for the Hub is the *app* base url
+        # not the hub URL, so the Hub receives requests for non-running servers
+        # use `/` with host-based routing so the Hub
+        # gets requests for all hosts
+        if self.subdomain_host:
+            routespec = '/'
+        else:
+            routespec = self.base_url
+        return routespec
+
+    @validate("hub_routespec")
+    def _validate_hub_routespec(self, proposal):
+        """ensure leading/trailing / on custom routespec prefix
+
+        - trailing '/' always required
+        - leading '/' required unless using subdomains
+        """
+        routespec = proposal.value
+        if not routespec.endswith("/"):
+            routespec = routespec + "/"
+        if not self.subdomain_host and not routespec.startswith("/"):
+            routespec = "/" + routespec
+        return routespec
+
+    @observe("hub_routespec")
+    def _hub_routespec_changed(self, change):
+        if change.new == change.old:
+            return
+        routespec = change.new
+        if routespec not in {'/', self.base_url}:
+            self.log.warning(
+                f"Using custom route for Hub: {routespec}."
+                " Requests for not-running servers may not be handled."
+            )
+
     @observe('base_url')
     def _update_hub_prefix(self, change):
         """add base URL to hub prefix"""
@@ -899,6 +995,15 @@ class JupyterHub(Application):
         Consider using services for general services that talk to the JupyterHub API.
         """,
     ).tag(config=True)
+
+    api_page_default_limit = Integer(
+        50,
+        help="The default amount of records returned by a paginated endpoint",
+    ).tag(config=True)
+
+    api_page_max_limit = Integer(
+        200, help="The maximum amount of records that can be returned at once"
+    )
 
     authenticate_prometheus = Bool(
         True, help="Authentication for prometheus metrics"
@@ -1633,6 +1738,7 @@ class JupyterHub(Application):
         """Load the Hub URL config"""
         hub_args = dict(
             base_url=self.hub_prefix,
+            routespec=self.hub_routespec,
             public_host=self.subdomain_host,
             certfile=self.internal_ssl_cert,
             keyfile=self.internal_ssl_key,
@@ -1648,17 +1754,15 @@ class JupyterHub(Application):
             hub_args['ip'] = self.hub_ip
             hub_args['port'] = self.hub_port
 
-        # routespec for the Hub is the *app* base url
-        # not the hub URL, so it receives requests for non-running servers
-        # use `/` with host-based routing so the Hub
-        # gets requests for all hosts
-        host = ''
-        if self.subdomain_host:
-            routespec = '/'
-        else:
-            routespec = self.base_url
+        self.hub = Hub(**hub_args)
 
-        self.hub = Hub(routespec=routespec, **hub_args)
+        if not self.subdomain_host:
+            api_prefix = url_path_join(self.hub.base_url, "api/")
+            if not api_prefix.startswith(self.hub.routespec):
+                self.log.warning(
+                    f"Hub API prefix {api_prefix} not on prefix {self.hub.routespec}. "
+                    "The Hub may not receive any API requests from outside."
+                )
 
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
@@ -2164,6 +2268,7 @@ class JupyterHub(Application):
             lambda: self.db,
             url_prefix=url_path_join(base_url, 'api/oauth2'),
             login_url=url_path_join(base_url, 'login'),
+            token_expires_in=self.oauth_token_expires_in,
         )
 
     def cleanup_oauth_clients(self):
@@ -2178,10 +2283,6 @@ class JupyterHub(Application):
         for user in self.users.values():
             for spawner in user.spawners.values():
                 oauth_client_ids.add(spawner.oauth_client_id)
-                # avoid deleting clients created by 0.8
-                # 0.9 uses `jupyterhub-user-...` for the client id, while
-                # 0.8 uses just `user-...`
-                oauth_client_ids.add(spawner.oauth_client_id.split('-', 1)[1])
 
         for i, oauth_client in enumerate(self.db.query(orm.OAuthClient)):
             if oauth_client.identifier not in oauth_client_ids:
