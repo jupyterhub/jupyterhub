@@ -28,6 +28,7 @@ class _GroupAPIHandler(APIHandler):
         Raise 404 if not found.
         """
         group = orm.Group.find(self.db, name=name)
+
         if group is None:
             raise web.HTTPError(404, "No such group: %s", name)
         return group
@@ -37,7 +38,10 @@ class GroupListAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self):
         """List groups"""
-        data = [self.group_model(g) for g in self.db.query(orm.Group)]
+        query = self.db.query(orm.Group)
+        offset, limit = self.get_api_pagination()
+        query = query.offset(offset).limit(limit)
+        data = [self.group_model(group) for group in query]
         self.write(json.dumps(data))
 
     @admin_only
@@ -76,7 +80,8 @@ class GroupAPIHandler(_GroupAPIHandler):
     @admin_only
     def get(self, name):
         group = self.find_group(name)
-        self.write(json.dumps(self.group_model(group)))
+        group_model = self.group_model(group)
+        self.write(json.dumps(group_model))
 
     @admin_only
     async def post(self, name):

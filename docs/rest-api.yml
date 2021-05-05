@@ -93,6 +93,22 @@ paths:
             inactive: all users who have *no* active servers (complement of active)
 
             Added in JupyterHub 1.3
+        - name: offset
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a number users starting at the given offset.
+            Can be used with limit to paginate.
+            If unspecified, return all users.
+        - name: limit
+          in: query
+          requred: false
+          type: number
+          description: |
+            Return a finite number of users.
+            Can be used with offset to paginate.
+            If unspecified, use api_page_default_limit.
       responses:
         "200":
           description: The Hub's user list
@@ -423,6 +439,23 @@ paths:
   /groups:
     get:
       summary: List groups
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a number of groups starting at the specified offset.
+            Can be used with limit to paginate.
+            If unspecified, return all groups.
+        - name: limit
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a finite number of groups.
+            Can be used with offset to paginate.
+            If unspecified, use api_page_default_limit.
       responses:
         "200":
           description: The list of groups
@@ -545,6 +578,23 @@ paths:
     get:
       summary: Get the proxy's routing table
       description: A convenience alias for getting the routing table directly from the proxy
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a number of routes starting at the given offset.
+            Can be used with limit to paginate.
+            If unspecified, return all routes.
+        - name: limit
+          in: query
+          requred: false
+          type: number
+          description: |
+            Return a finite number of routes.
+            Can be used with offset to paginate.
+            If unspecified, use api_page_default_limit
       responses:
         "200":
           description: Routing table
