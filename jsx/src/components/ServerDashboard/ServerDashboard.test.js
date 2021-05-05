@@ -55,13 +55,13 @@ describe("ServerDashboard Component: ", () => {
   });
 
   it("Renders users from props.user_data into table", () => {
-    let component = mount(serverDashboardJsx(jest.fn())),
+    let component = mount(serverDashboardJsx(mockAsync())),
       userRows = component.find(".user-row");
     expect(userRows.length).toBe(2);
   });
 
   it("Renders correctly the status of a single-user server", () => {
-    let component = mount(serverDashboardJsx(jest.fn())),
+    let component = mount(serverDashboardJsx(mockAsync())),
       userRows = component.find(".user-row");
     // Renders .stop-button when server is started
     // Should be 1 since user foo is started
@@ -96,7 +96,7 @@ describe("ServerDashboard Component: ", () => {
   });
 
   it("Sorts according to username", () => {
-    let component = mount(serverDashboardJsx(jest.fn())).find(
+    let component = mount(serverDashboardJsx(mockAsync())).find(
         "ServerDashboard"
       ),
       handler = component.find("SortHandler").first();
@@ -109,7 +109,7 @@ describe("ServerDashboard Component: ", () => {
   });
 
   it("Sorts according to admin", () => {
-    let component = mount(serverDashboardJsx(jest.fn())).find(
+    let component = mount(serverDashboardJsx(mockAsync())).find(
         "ServerDashboard"
       ),
       handler = component.find("SortHandler").at(1);
@@ -122,7 +122,7 @@ describe("ServerDashboard Component: ", () => {
   });
 
   it("Sorts according to last activity", () => {
-    let component = mount(serverDashboardJsx(jest.fn())).find(
+    let component = mount(serverDashboardJsx(mockAsync())).find(
         "ServerDashboard"
       ),
       handler = component.find("SortHandler").at(2);
@@ -137,7 +137,7 @@ describe("ServerDashboard Component: ", () => {
   });
 
   it("Sorts according to server status (running/not running)", () => {
-    let component = mount(serverDashboardJsx(jest.fn())).find(
+    let component = mount(serverDashboardJsx(mockAsync())).find(
         "ServerDashboard"
       ),
       handler = component.find("SortHandler").at(3);
