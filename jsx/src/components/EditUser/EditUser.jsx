@@ -1,15 +1,20 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 
 const EditUser = (props) => {
+  var limit = useSelector((state) => state.limit);
+
   var dispatch = useDispatch();
 
-  var dispatchUserData = (data) => {
+  var dispatchPageChange = (data, page) => {
     dispatch({
-      type: "USER_DATA",
-      value: data,
+      type: "USER_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
@@ -18,7 +23,7 @@ const EditUser = (props) => {
     deleteUser,
     failRegexEvent,
     noChangeEvent,
-    refreshUserData,
+    updateUsers,
     history,
   } = props;
 
@@ -70,9 +75,9 @@ const EditUser = (props) => {
                       onClick={() => {
                         deleteUser(username)
                           .then((data) => {
-                            history.push("/");
-                            refreshUserData()
-                              .then((data) => dispatchUserData(data))
+                            updateUsers(0, limit)
+                              .then((data) => dispatchPageChange(data, 0))
+                              .then(() => history.push("/"))
                               .catch((err) => console.log(err));
                           })
                           .catch((err) => console.log(err));
@@ -106,9 +111,9 @@ const EditUser = (props) => {
                           admin
                         )
                           .then((data) => {
-                            history.push("/");
-                            refreshUserData()
-                              .then((data) => dispatchUserData(data))
+                            updateUsers(0, limit)
+                              .then((data) => dispatchPageChange(data, 0))
+                              .then(() => history.push("/"))
                               .catch((err) => console.log(err));
                           })
                           .catch((err) => {});
@@ -119,9 +124,9 @@ const EditUser = (props) => {
                     } else {
                       editUser(username, username, admin)
                         .then((data) => {
-                          history.push("/");
-                          refreshUserData()
-                            .then((data) => dispatchUserData(data))
+                          updateUsers(0, limit)
+                            .then((data) => dispatchPageChange(data, 0))
+                            .then(() => history.push("/"))
                             .catch((err) => console.log(err));
                         })
                         .catch((err) => {});
@@ -153,7 +158,7 @@ EditUser.propTypes = {
   deleteUser: PropTypes.func,
   failRegexEvent: PropTypes.func,
   noChangeEvent: PropTypes.func,
-  refreshUserData: PropTypes.func,
+  updateUsers: PropTypes.func,
 };
 
 export default EditUser;

@@ -1,0 +1,1 @@
+- When changing route with nothing edited, pass user_data / group_data through location to maintain spot

@@ -1,23 +1,25 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
-import { compose, withProps } from "recompose";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
-import { jhapiRequest } from "../../util/jhapiUtil";
 
 const CreateGroup = (props) => {
-  var [groupName, setGroupName] = useState("");
+  var [groupName, setGroupName] = useState(""),
+    limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
 
-  var dispatchGroupsData = (data) => {
+  var dispatchPageUpdate = (data, page) => {
     dispatch({
       type: "GROUPS_DATA",
-      value: data,
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
-  var { createGroup, refreshGroupsData, history } = props;
+  var { createGroup, updateGroups, history } = props;
 
   return (
     <>
@@ -53,11 +55,11 @@ const CreateGroup = (props) => {
                   onClick={() => {
                     createGroup(groupName)
                       .then(
-                        refreshGroupsData()
-                          .then((data) => dispatchGroupsData(data))
+                        updateGroups(0, limit)
+                          .then((data) => dispatchPageUpdate(data, 0))
+                          .then(history.push("/groups"))
                           .catch((err) => console.log(err))
                       )
-                      .then(history.push("/groups"))
                       .catch((err) => console.log(err));
                   }}
                 >
@@ -74,7 +76,7 @@ const CreateGroup = (props) => {
 
 CreateGroup.propTypes = {
   createGroup: PropTypes.func,
-  refreshGroupsData: PropTypes.func,
+  updateGroups: PropTypes.func,
   failRegexEvent: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,

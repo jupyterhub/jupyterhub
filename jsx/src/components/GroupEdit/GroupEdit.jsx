@@ -10,14 +10,18 @@ const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
     [added, setAdded] = useState(undefined),
-    [removed, setRemoved] = useState(undefined);
+    [removed, setRemoved] = useState(undefined),
+    limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
 
-  const dispatchGroupsData = (data) => {
+  const dispatchPageUpdate = (data, page) => {
     dispatch({
-      type: "GROUPS_DATA",
-      value: data,
+      type: "GROUPS_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
@@ -25,7 +29,7 @@ const GroupEdit = (props) => {
     addToGroup,
     removeFromGroup,
     deleteGroup,
-    refreshGroupsData,
+    updateGroups,
     history,
     location,
   } = props;
@@ -88,10 +92,12 @@ const GroupEdit = (props) => {
                 );
 
               Promise.all(promiseQueue)
-                .then((e) => callback())
+                .then((e) => {
+                  updateGroups(0, limit)
+                    .then((data) => dispatchPageUpdate(data, 0))
+                    .then(() => history.push("/groups"));
+                })
                 .catch((err) => console.log(err));
-
-              history.push("/groups");
             }}
           >
             Apply
@@ -103,10 +109,11 @@ const GroupEdit = (props) => {
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
-                .then(
-                  refreshGroupsData().then((data) => dispatchGroupsData(data))
-                )
-                .then(history.push("/groups"))
+                .then((e) => {
+                  updateGroups(0, limit)
+                    .then((data) => dispatchPageUpdate(data, 0))
+                    .then(() => history.push("/groups"));
+                })
                 .catch((err) => console.log(err));
             }}
           >
@@ -134,7 +141,7 @@ GroupEdit.propTypes = {
   addToGroup: PropTypes.func,
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
-  refreshGroupsData: PropTypes.func,
+  updateGroups: PropTypes.func,
 };
 
 export default GroupEdit;
