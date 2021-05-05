@@ -402,7 +402,7 @@ class SingleUserNotebookAppMixin(Configurable):
         return value
 
     @default('log_level')
-    def _log_level_defaul(self):
+    def _log_level_default(self):
         if _bool_env("JUPYTERHUB_DEBUG"):
             return logging.DEBUG
         else:

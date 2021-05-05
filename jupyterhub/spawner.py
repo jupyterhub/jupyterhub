@@ -39,7 +39,6 @@ from .traitlets import ByteSpecification
 from .traitlets import Callable
 from .traitlets import Command
 from .utils import exponential_backoff
-from .utils import iterate_until
 from .utils import maybe_future
 from .utils import random_port
 from .utils import url_path_join
@@ -232,11 +231,22 @@ class Spawner(LoggingConfigurable):
     )
 
     ip = Unicode(
-        '',
+        '127.0.0.1',
         help="""
         The IP address (or hostname) the single-user server should listen on.
 
+        Usually either '127.0.0.1' (default) or '0.0.0.0'.
+
         The JupyterHub proxy implementation should be able to send packets to this interface.
+
+        Subclasses which launch remotely or in containers
+        should override the default to '0.0.0.0'.
+
+        .. versionchanged:: 2.0
+            Default changed to '127.0.0.1', from ''.
+            In most cases, this does not result in a change in behavior,
+            as '' was interpreted as 'unspecified',
+            which used the subprocesses' own default, itself usually '127.0.0.1'.
         """,
     ).tag(config=True)
 
@@ -805,19 +815,12 @@ class Spawner(LoggingConfigurable):
                 self.server.port = self.port
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
         else:
-            # this should only occur in mock/testing schenarios
+            # this should only occur in mock/testing scenarios
             base_url = '/'
 
-        if self.ip or self.port:
-            # specify JUPYTERHUB_SERVICE_URL *if* ip or port is specified
-            # TODO: set this always?
-            # Prior to 2.0, leaving 'ip' or 'port' unset meant letting the subprocess default be used
-            # setting via a URL means we cannot specify explicit ip or port without specifying *both*
-            # this results in a changed default behavior of specifying only report
-            # specifying ip='' *explicitly*, which is the same as all interfaces, instead of localhost
-            s = 's' if self.internal_ssl else ''
-            bind_url = f"http{s}://{self.ip}:{self.port}{base_url}"
-            env["JUPYTERHUB_SERVICE_URL"] = bind_url
+        proto = 'https' if self.internal_ssl else 'http'
+        bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
+        env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -1293,11 +1296,6 @@ class LocalProcessSpawner(Spawner):
     Note: This spawner does not implement CPU / memory guarantees and limits.
     """
 
-    @default('ip')
-    def _default_ip(self):
-        """Listen on localhost by default for local processes"""
-        return '127.0.0.1'
-
     interrupt_timeout = Integer(
         10,
         help="""
@@ -1474,7 +1472,8 @@ class LocalProcessSpawner(Spawner):
 
     async def start(self):
         """Start the single-user server."""
-        self.port = random_port()
+        if self.port == 0:
+            self.port = random_port()
         cmd = []
         env = self.get_env()
 
