@@ -242,11 +242,7 @@ class UserAPIHandler(APIHandler):
 
         await maybe_future(self.authenticator.delete_user(user))
 
-        # allow the spawner to cleanup any persistent resources associated with the user
-        try:
-            await user.spawner.delete_forever()
-        except Exception as e:
-            self.log.error("Error cleaning up persistent resources: %s" % e)
+        await user.delete_spawners()
 
         # remove from registry
         self.users.delete(user)
@@ -488,10 +484,18 @@ class UserServerAPIHandler(APIHandler):
         options = self.get_json_body()
         remove = (options or {}).get('remove', False)
 
-        def _remove_spawner(f=None):
-            if f and f.exception():
-                return
+        async def _remove_spawner(f=None):
+            """Remove the spawner object
+
+            only called after it stops successfully
+            """
+            if f:
+                # await f, stop on error,
+                # leaving resources in the db in case of failure to stop
+                await f
             self.log.info("Deleting spawner %s", spawner._log_name)
+            await maybe_future(user._delete_spawner(spawner))
+
             self.db.delete(spawner.orm_spawner)
             user.spawners.pop(server_name, None)
             self.db.commit()
@@ -512,7 +516,8 @@ class UserServerAPIHandler(APIHandler):
             self.set_header('Content-Type', 'text/plain')
             self.set_status(202)
             if remove:
-                spawner._stop_future.add_done_callback(_remove_spawner)
+                # schedule remove when stop completes
+                asyncio.ensure_future(_remove_spawner(spawner._stop_future))
             return
 
         if spawner.pending:
@@ -530,9 +535,10 @@ class UserServerAPIHandler(APIHandler):
 
         if remove:
             if stop_future:
-                stop_future.add_done_callback(_remove_spawner)
+                # schedule remove when stop completes
+                asyncio.ensure_future(_remove_spawner(spawner._stop_future))
             else:
-                _remove_spawner()
+                await _remove_spawner()
 
         status = 202 if spawner._stop_pending else 204
         self.set_header('Content-Type', 'text/plain')
