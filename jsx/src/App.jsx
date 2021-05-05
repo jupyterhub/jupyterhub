@@ -21,12 +21,13 @@ const store = createStore(reducers, initialState);
 
 const App = (props) => {
   useEffect(() => {
-    jhapiRequest("/users", "GET")
+    let { limit, user_page, groups_page } = initialState;
+    jhapiRequest(`/users?offset=${user_page * limit}&limit=${limit}`, "GET")
       .then((data) => data.json())
       .then((data) => store.dispatch({ type: "USER_DATA", value: data }))
       .catch((err) => console.log(err));
 
-    jhapiRequest("/groups", "GET")
+    jhapiRequest(`/groups?offset=${groups_page * limit}&limit=${limit}`, "GET")
       .then((data) => data.json())
       .then((data) => store.dispatch({ type: "GROUPS_DATA", value: data }))
       .catch((err) => console.log(err));

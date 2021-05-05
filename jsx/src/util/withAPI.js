@@ -2,7 +2,8 @@ import { withProps } from "recompose";
 import { jhapiRequest } from "./jhapiUtil";
 
 const withAPI = withProps((props) => ({
-  updateUsers: (cb) => jhapiRequest("/users", "GET"),
+  updateUsers: (offset, limit) =>
+    jhapiRequest(`/users?offset=${offset}&limit=${limit}`, "GET"),
   shutdownHub: () => jhapiRequest("/shutdown", "POST"),
   startServer: (name) => jhapiRequest("/users/" + name + "/server", "POST"),
   stopServer: (name) => jhapiRequest("/users/" + name + "/server", "DELETE"),

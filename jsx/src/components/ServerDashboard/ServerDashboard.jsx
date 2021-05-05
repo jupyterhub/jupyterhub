@@ -31,6 +31,11 @@ const ServerDashboard = (props) => {
   var [sortMethod, setSortMethod] = useState(null);
 
   var user_data = useSelector((state) => state.user_data);
+  var user_page = useSelector((state) => state.user_page);
+  var limit = useSelector((state) => state.limit);
+  var page = parseInt(new URLSearchParams(props.location.search).get("page"));
+  page = isNaN(page) ? 0 : page;
+  var slice = [page * limit, limit];
 
   const dispatch = useDispatch();
 
@@ -51,8 +56,24 @@ const ServerDashboard = (props) => {
     });
   };
 
+  var dispatchPageChange = (data, page) => {
+    dispatch({
+      type: "USER_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
+    });
+  };
+
   if (!user_data) {
     return <div></div>;
+  }
+
+  if (page != user_page) {
+    updateUsers(...slice)
+      .then((data) => data.json())
+      .then((data) => dispatchPageChange(data, page));
   }
 
   if (sortMethod != null) {
@@ -116,7 +137,7 @@ const ServerDashboard = (props) => {
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
-                        updateUsers()
+                        updateUsers(...slice)
                           .then((data) => data.json())
                           .then((data) => {
                             dispatchUserUpdate(data);
@@ -137,7 +158,7 @@ const ServerDashboard = (props) => {
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
-                        updateUsers()
+                        updateUsers(...slice)
                           .then((data) => data.json())
                           .then((data) => {
                             dispatchUserUpdate(data);
@@ -177,7 +198,7 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         stopServer(e.name)
                           .then((res) => {
-                            updateUsers()
+                            updateUsers(...slice)
                               .then((data) => data.json())
                               .then((data) => {
                                 dispatchUserUpdate(data);
@@ -196,7 +217,7 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         startServer(e.name)
                           .then((res) => {
-                            updateUsers()
+                            updateUsers(...slice)
                               .then((data) => data.json())
                               .then((data) => {
                                 dispatchUserUpdate(data);
@@ -232,6 +253,25 @@ const ServerDashboard = (props) => {
             ))}
           </tbody>
         </table>
+        <br></br>
+        <p>
+          Displaying users {slice[0]}-{slice[0] + user_data.length}
+          {user_data.length >= limit ? (
+            <button className="btn btn-link">
+              <Link to={`/?page=${page + 1}`}>Next</Link>
+            </button>
+          ) : (
+            <></>
+          )}
+          {page >= 1 ? (
+            <button className="btn btn-link">
+              <Link to={`/?page=${page - 1}`}>Previous</Link>
+            </button>
+          ) : (
+            <></>
+          )}
+        </p>
+        <br></br>
       </div>
     </div>
   );
@@ -248,6 +288,9 @@ ServerDashboard.propTypes = {
   dispatch: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
+  }),
+  location: PropTypes.shape({
+    search: PropTypes.string,
   }),
 };
 
