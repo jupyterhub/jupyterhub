@@ -25,11 +25,11 @@ This app is written in JSX, and then transpiled into an ES5 bundle with Babel an
 
 The app use Redux throughout the components via the `useSelector` and `useDispatch` hooks to store and update user and group data from the API. With Redux, this data is available to any connected component. This means that if one component recieves new data, they all do.
 
-### API functions
+#### API functions
 
 All API functions used by the front end are packaged as a library of props within `/src/util/withAPI.js`. This keeps our web service logic separate from our presentational logic, allowing us to connect API functionality to our components at a high level and keep the code more modular. This connection specifically happens in `/src/App.jsx`, within the route assignments.
 
-### Pagination
+#### Pagination
 
 Indicies of paginated user and group data is stored in a `page` variable in the query string, as well as the `user_page` / `group_page` state variables in Redux. This allows the app to maintain two sources of truth, as well as protect the admin user's place in the collection on page reload. Limit is constant at this point and is held in the Redux state.
 
