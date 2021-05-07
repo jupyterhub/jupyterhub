@@ -237,7 +237,7 @@ async def test_load_default_roles(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
-    await hub.init_roles()
+    await hub.init_role_creation()
     # test default roles loaded to database
     default_roles = roles.get_default_roles()
     for role in default_roles:
@@ -435,8 +435,8 @@ async def test_load_roles_users(tmpdir, request):
     hub.authenticator.admin_users = ['admin']
     hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
     await hub.init_users()
-    await hub.init_roles()
-
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
     admin_role = orm.Role.find(db, 'admin')
     user_role = orm.Role.find(db, 'user')
     # test if every user has a role (and no duplicates)
@@ -502,8 +502,8 @@ async def test_load_roles_services(tmpdir, request):
     admin_service = orm.Service.find(db, 'admin_service')
     admin_service.admin = True
     db.commit()
-    await hub.init_roles()
-
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
     # test if every service has a role (and no duplicates)
     admin_role = orm.Role.find(db, name='admin')
     user_role = orm.Role.find(db, name='user')
@@ -571,7 +571,8 @@ async def test_load_roles_groups(tmpdir, request):
     hub.init_db()
     db = hub.db
     await hub.init_groups()
-    await hub.init_roles()
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
 
     assist_role = orm.Role.find(db, name='assistant')
     head_role = orm.Role.find(db, name='head')
@@ -618,8 +619,8 @@ async def test_load_roles_user_tokens(tmpdir, request):
     hub.authenticator.allowed_users = ['cyclops', 'gandalf']
     await hub.init_users()
     await hub.init_api_tokens()
-    await hub.init_roles()
-
+    await hub.init_role_creation()
+    await hub.init_role_assignment()
     # test if all other tokens have default 'user' role
     token_role = orm.Role.find(db, 'token')
     secret_token = orm.APIToken.find(db, 'secret-token')

@@ -619,7 +619,7 @@ async def test_server_state_access(
             )
         service = create_service_with_scopes(*scopes)
         api_token = service.new_api_token()
-        await app.init_roles()
+        await app.init_role_creation()
         headers = {'Authorization': 'token %s' % api_token}
         r = await api_request(app, 'users', user.name, headers=headers)
         r.raise_for_status()

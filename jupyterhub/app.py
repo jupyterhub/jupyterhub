@@ -329,7 +329,7 @@ class JupyterHub(Application):
             load_roles = [
                             {
                                 'name': 'teacher',
-                                'description': 'Access users information, servers and groups without create/delete privileges',
+                                'description': 'Access to users' information, servers and groups',
                                 'scopes': ['users', 'groups'],
                                 'users': ['cyclops', 'gandalf'],
                                 'services': [],
@@ -1965,25 +1965,27 @@ class JupyterHub(Application):
                 group.users.append(user)
         db.commit()
 
-    async def init_roles(self):
+    async def init_role_creation(self):
         """Load default and predefined roles into the database"""
-        db = self.db
-        # tokens are added separately
-        role_bearers = ['users', 'services', 'groups']
-
-        # load default roles
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
         for role in default_roles:
-            roles.create_role(db, role)
+            roles.create_role(self.db, role)
 
+    async def init_role_assignment(self):
+        # tokens are added separately
+        role_bearers = ['users', 'services', 'groups']
+
+        db = self.db
         # load predefined roles from config file
         self.log.debug('Loading predefined roles from config file to database')
         for predef_role in self.load_roles:
             roles.create_role(db, predef_role)
+            predef_role_obj = orm.Role.find(db, name=predef_role['name'])
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
             for bearer in role_bearers:
+                orm_role_bearers = []
                 if bearer in predef_role.keys():
                     for bname in predef_role[bearer]:
                         if bearer == 'users':
@@ -1999,9 +2001,11 @@ class JupyterHub(Application):
                                 )
                         Class = orm.get_class(bearer)
                         orm_obj = Class.find(db, bname)
-                        roles.grant_role(
-                            db, entity=orm_obj, rolename=predef_role['name']
-                        )
+                        orm_role_bearers.append(orm_obj)
+                        # roles.grant_role(
+                        #     db, entity=orm_obj, rolename=predef_role['name']
+                        # )
+                setattr(predef_role_obj, bearer, orm_role_bearers)
         # make sure that on no admin situation, all roles are reset
         admin_role = orm.Role.find(db, name='admin')
         if not admin_role.users:
@@ -2606,11 +2610,12 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         self.init_oauth()
+        await self.init_role_creation()
         await self.init_users()
         await self.init_groups()
         self.init_services()
         await self.init_api_tokens()
-        await self.init_roles()
+        await self.init_role_assignment()
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()
