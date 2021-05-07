@@ -249,6 +249,7 @@ class APIHandler(BaseHandler):
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},
+            'read:users:roles': {'kind', 'name', 'roles'},
             'admin:users:auth_state': {'kind', 'name', 'auth_state'},
         }
         self.log.debug(

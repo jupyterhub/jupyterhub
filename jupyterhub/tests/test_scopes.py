@@ -747,7 +747,6 @@ async def test_resolve_token_permissions(
     token_scopes,
     intersection_scopes,
 ):
-
     orm_user = create_user_with_scopes(*user_scopes).orm_user
     create_temp_role(token_scopes, 'active-posting')
     api_token = orm_user.new_api_token(roles=['active-posting'])
@@ -760,3 +759,15 @@ async def test_resolve_token_permissions(
     token_retained_scopes = get_scopes_for(orm_api_token)
 
     assert token_retained_scopes == intersection_scopes
+
+
+async def test_roles_access(app, create_user_with_scopes):
+    pass
+
+
+async def test_service_model_filtering(app, create_user_with_scopes):
+    pass
+
+
+async def test_group_model_filtering(app, create_user_with_scopes):
+    pass
