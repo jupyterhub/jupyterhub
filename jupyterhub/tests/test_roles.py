@@ -884,3 +884,34 @@ async def test_oauth_allowed_roles(app, create_temp_role):
     app_service = app.services[0]
     assert app_service['name'] == 'oas1'
     assert set(app_service['oauth_roles']) == set(allowed_roles)
+
+
+async def test_config_role_assignment():
+    role_name = 'painter'
+    user_name = 'benny'
+    other_users = ['agnetha', 'bjorn', 'anni-frid']
+    roles_to_load = [
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': other_users,
+        },
+    ]
+    for user_in_config in [False, True]:
+        if user_in_config:
+            roles_to_load[0]['users'].append(user_name)
+        kwargs = {'load_roles': roles_to_load}
+        hub = MockHub(**kwargs, clean_db=False)
+        hub.init_db()
+        hub.authenticator.admin_users = ['admin']
+        hub.authenticator.allowed_users = other_users + [user_name]
+        await hub.init_users()
+        await hub.init_role_creation()
+        await hub.init_role_assignment()
+        user = orm.User.find(hub.db, name=user_name)
+        role = orm.Role.find(hub.db, name=role_name)
+        if user_in_config:
+            assert role in user.roles
+        else:
+            assert role not in user.roles
