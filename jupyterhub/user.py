@@ -804,7 +804,7 @@ class User:
             spawner._start_pending = False
         return spawner
 
-    async def stop(self, server_name=''):
+    async def stop(self, server_name='', options=None):
         """Stop the user's spawner
 
         and cleanup after it.
@@ -820,6 +820,8 @@ class User:
 
         try:
             api_token = spawner.api_token
+            if options:
+                spawner.user_options = options
             status = await spawner.poll()
             if status is None:
                 await spawner.stop()

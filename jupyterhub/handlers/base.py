@@ -1086,7 +1086,7 @@ class BaseHandler(RequestHandler):
 
         await user.stop(server_name)
 
-    async def stop_single_user(self, user, server_name=''):
+    async def stop_single_user(self, user, server_name='', options=None):
         if server_name not in user.spawners:
             raise KeyError("User %s has no such spawner %r", user.name, server_name)
         spawner = user.spawners[server_name]
@@ -1110,7 +1110,7 @@ class BaseHandler(RequestHandler):
                     status=ProxyDeleteStatus.success
                 ).observe(time.perf_counter() - tic)
 
-                await user.stop(server_name)
+                await user.stop(server_name, options)
                 toc = time.perf_counter()
                 self.log.info(
                     "User %s server took %.3f seconds to stop", user.name, toc - tic
