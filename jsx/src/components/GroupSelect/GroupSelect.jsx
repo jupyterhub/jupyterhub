@@ -23,6 +23,7 @@ const GroupSelect = (props) => {
       <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2 text-left">
         <div className="input-group">
           <input
+            id="username-input"
             type="text"
             className="form-control"
             placeholder="Add by username"
@@ -33,10 +34,10 @@ const GroupSelect = (props) => {
           />
           <span className="input-group-btn">
             <button
+              id="validate-user"
               className="btn btn-default"
               type="button"
               onClick={() => {
-                // check user exists then
                 validateUser(username).then((exists) => {
                   if (exists && !selected.includes(username)) {
                     let updated_selection = selected.concat([username]);

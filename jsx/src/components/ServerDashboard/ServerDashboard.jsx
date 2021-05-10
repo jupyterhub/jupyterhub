@@ -36,8 +36,6 @@ const ServerDashboard = (props) => {
     limit = useSelector((state) => state.limit),
     page = parseInt(new URLSearchParams(props.location.search).get("page"));
 
-  console.log(user_page);
-
   page = isNaN(page) ? 0 : page;
   var slice = [page * limit, limit];
 

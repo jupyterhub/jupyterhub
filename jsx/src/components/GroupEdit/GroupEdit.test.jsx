@@ -5,6 +5,8 @@ import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
+import ReactDOM from "react-dom";
+import { act } from "react-dom/test-utils";
 
 Enzyme.configure({ adapter: new Adapter() });
 
@@ -14,8 +16,9 @@ jest.mock("react-redux", () => ({
 }));
 
 describe("GroupEdit Component: ", () => {
-  var mockAsync = () =>
-    jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
+  var mockAsync = () => jest.fn().mockImplementation(() => Promise.resolve());
+
+  var okPacket = new Promise((resolve) => resolve(true));
 
   var groupEditJsx = (callbackSpy) => (
     <Provider store={createStore(() => {}, {})}>
@@ -23,7 +26,6 @@ describe("GroupEdit Component: ", () => {
         <GroupEdit
           location={{
             state: {
-              user_data: [{ name: "foo" }, { name: "bar" }],
               group_data: { users: ["foo"], name: "group" },
               callback: () => {},
             },
@@ -32,16 +34,15 @@ describe("GroupEdit Component: ", () => {
           removeFromGroup={callbackSpy}
           deleteGroup={callbackSpy}
           history={{ push: (a) => callbackSpy }}
-          refreshGroupsData={callbackSpy}
+          updateGroups={callbackSpy}
+          validateUser={jest.fn().mockImplementation(() => okPacket)}
         />
       </HashRouter>
     </Provider>
   );
 
   var mockAppState = () => ({
-    user_data: JSON.parse(
-      '[{"kind":"user","name":"foo","admin":true,"groups":[],"server":"/user/foo/","pending":null,"created":"2020-12-07T18:46:27.112695Z","last_activity":"2020-12-07T21:00:33.336354Z","servers":{"":{"name":"","last_activity":"2020-12-07T20:58:02.437408Z","started":"2020-12-07T20:58:01.508266Z","pending":null,"ready":true,"state":{"pid":28085},"url":"/user/foo/","user_options":{},"progress_url":"/hub/api/users/foo/server/progress"}}},{"kind":"user","name":"bar","admin":false,"groups":[],"server":null,"pending":null,"created":"2020-12-07T18:46:27.115528Z","last_activity":"2020-12-07T20:43:51.013613Z","servers":{}}]'
-    ),
+    limit: 3,
   });
 
   beforeEach(() => {
@@ -54,24 +55,39 @@ describe("GroupEdit Component: ", () => {
     useSelector.mockClear();
   });
 
-  it("Adds a newly selected user to group on submit", () => {
+  it("Adds user from input to user selectables on button click", async () => {
     let callbackSpy = mockAsync(),
       component = mount(groupEditJsx(callbackSpy)),
-      unselected = component.find(".unselected"),
+      input = component.find("#username-input"),
+      validateUser = component.find("#validate-user"),
       submit = component.find("#submit");
-    unselected.simulate("click");
+
+    input.simulate("change", { target: { value: "bar" } });
+    validateUser.simulate("click");
+    await act(() => okPacket);
     submit.simulate("click");
-    expect(callbackSpy).toHaveBeenCalledWith(["bar"], "group");
+    expect(callbackSpy).toHaveBeenNthCalledWith(1, ["bar"], "group");
   });
 
-  it("Removes a user from group on submit", () => {
+  it("Removes a user recently added from input from the selectables list", () => {
     let callbackSpy = mockAsync(),
       component = mount(groupEditJsx(callbackSpy)),
-      selected = component.find(".selected"),
-      submit = component.find("#submit");
-    selected.simulate("click");
+      unsubmittedUser = component.find(".item.selected").last();
+    unsubmittedUser.simulate("click");
+    expect(component.find(".item").length).toBe(1);
+  });
+
+  it("Grays out a user, already in the group, when unselected and calls deleteUser on submit", () => {
+    let callbackSpy = mockAsync(),
+      component = mount(groupEditJsx(callbackSpy)),
+      groupUser = component.find(".item.selected").first();
+    groupUser.simulate("click");
+    expect(component.find(".item.unselected").length).toBe(1);
+    expect(component.find(".item").length).toBe(1);
+    // test deleteUser call
+    let submit = component.find("#submit");
     submit.simulate("click");
-    expect(callbackSpy).toHaveBeenCalledWith(["foo"], "group");
+    expect(callbackSpy).toHaveBeenNthCalledWith(1, ["foo"], "group");
   });
 
   it("Calls deleteGroup on button click", () => {
@@ -80,6 +96,5 @@ describe("GroupEdit Component: ", () => {
       deleteGroup = component.find("#delete-group").first();
     deleteGroup.simulate("click");
     expect(callbackSpy).toHaveBeenNthCalledWith(1, "group");
-    expect(callbackSpy).toHaveBeenNthCalledWith(2);
   });
 });

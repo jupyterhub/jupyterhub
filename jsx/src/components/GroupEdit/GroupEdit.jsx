@@ -31,7 +31,7 @@ const GroupEdit = (props) => {
     removeFromGroup,
     deleteGroup,
     updateGroups,
-    findUser,
+    validateUser,
     history,
     location,
   } = props;
@@ -41,9 +41,9 @@ const GroupEdit = (props) => {
     return <></>;
   }
 
-  var { group_data, user_data, callback } = location.state;
+  var { group_data, callback } = location.state;
 
-  if (!(group_data && user_data)) return <div></div>;
+  if (!group_data) return <div></div>;
 
   return (
     <div className="container">
@@ -56,10 +56,7 @@ const GroupEdit = (props) => {
       </div>
       <GroupSelect
         users={group_data.users}
-        validateUser={async (username) => {
-          let user = await findUser(username);
-          return user.status > 200 ? false : true;
-        }}
+        validateUser={validateUser}
         onChange={(selection) => {
           setSelected(selection);
           setChanged(true);
@@ -139,7 +136,6 @@ GroupEdit.propTypes = {
   location: PropTypes.shape({
     state: PropTypes.shape({
       group_data: PropTypes.object,
-      user_data: PropTypes.array,
       callback: PropTypes.func,
     }),
   }),

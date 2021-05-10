@@ -33,6 +33,10 @@ const withAPI = withProps((props) => ({
     }),
   deleteUser: (username) => jhapiRequest("/users/" + username, "DELETE"),
   findUser: (username) => jhapiRequest("/users/" + username, "GET"),
+  validateUser: (username) =>
+    findUser(username)
+      .then((data) => data.status)
+      .then((data) => (data > 200 ? false : true)),
   failRegexEvent: () =>
     alert(
       "Cannot change username - either contains special characters or is too short."

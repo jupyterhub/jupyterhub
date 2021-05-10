@@ -9,7 +9,7 @@
     "build": "yarn && webpack",
     "hot": "webpack && webpack-dev-server",
     "place": "cp -r build/admin-react.js ../share/jupyterhub/static/js/admin-react.js",
-    "test": "jest",
+    "test": "jest --verbose",
     "snap": "jest --updateSnapshot",
     "lint": "eslint --ext .jsx --ext .js src/",
     "lint:fix": "eslint --ext .jsx --ext .js src/ --fix"
