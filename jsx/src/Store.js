@@ -5,7 +5,7 @@ export const initialState = {
   user_page: 0,
   groups_data: undefined,
   groups_page: 0,
-  limit: 3,
+  limit: 50,
 };
 
 export const reducers = (state = initialState, action) => {
