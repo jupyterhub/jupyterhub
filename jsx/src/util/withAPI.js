@@ -34,7 +34,7 @@ const withAPI = withProps((props) => ({
   deleteUser: (username) => jhapiRequest("/users/" + username, "DELETE"),
   findUser: (username) => jhapiRequest("/users/" + username, "GET"),
   validateUser: (username) =>
-    findUser(username)
+    jhapiRequest("/users/" + username, "GET")
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
   failRegexEvent: () =>

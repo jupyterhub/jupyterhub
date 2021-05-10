@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
-import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
-import { jhapiRequest } from "../../util/jhapiUtil";
+import regeneratorRuntime from "regenerator-runtime";
 import GroupSelect from "../GroupSelect/GroupSelect";
 
 const GroupEdit = (props) => {
@@ -146,7 +144,7 @@ GroupEdit.propTypes = {
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
   updateGroups: PropTypes.func,
-  findUser: PropTypes.func,
+  validateUser: PropTypes.func,
 };
 
 export default GroupEdit;
