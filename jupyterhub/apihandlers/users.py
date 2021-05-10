@@ -531,7 +531,9 @@ class UserServerAPIHandler(APIHandler):
             # include notify, so that a server that died is noticed immediately
             status = await spawner.poll_and_notify()
             if status is None:
-                stop_future = await self.stop_single_user(user, server_name, options=options)
+                stop_future = await self.stop_single_user(
+                    user, server_name, options=options
+                )
 
         if remove:
             if stop_future:
