@@ -2,7 +2,7 @@ import React from "react";
 import Enzyme, { mount } from "enzyme";
 import EditUser from "./EditUser";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
-import { Provider, useDispatch } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
 
@@ -11,6 +11,7 @@ Enzyme.configure({ adapter: new Adapter() });
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useDispatch: jest.fn(),
+  useSelector: jest.fn(),
 }));
 
 describe("EditUser Component: ", () => {
@@ -27,7 +28,7 @@ describe("EditUser Component: ", () => {
           }
           deleteUser={callbackSpy}
           editUser={callbackSpy}
-          refreshUserData={callbackSpy}
+          updateUsers={callbackSpy}
           history={{ push: (a) => {} }}
           failRegexEvent={callbackSpy}
           noChangeEvent={callbackSpy}
@@ -36,9 +37,16 @@ describe("EditUser Component: ", () => {
     </Provider>
   );
 
+  var mockAppState = () => ({
+    limit: 3,
+  });
+
   beforeEach(() => {
     useDispatch.mockImplementation((callback) => {
       return () => {};
+    });
+    useSelector.mockImplementation((callback) => {
+      return callback(mockAppState());
     });
   });
 

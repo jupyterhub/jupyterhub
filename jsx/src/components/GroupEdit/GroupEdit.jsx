@@ -1,23 +1,26 @@
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
-import { jhapiRequest } from "../../util/jhapiUtil";
-import Multiselect from "../Multiselect/Multiselect";
+import regeneratorRuntime from "regenerator-runtime";
+import GroupSelect from "../GroupSelect/GroupSelect";
 
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
     [added, setAdded] = useState(undefined),
-    [removed, setRemoved] = useState(undefined);
+    [removed, setRemoved] = useState(undefined),
+    limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
 
-  const dispatchGroupsData = (data) => {
+  const dispatchPageUpdate = (data, page) => {
     dispatch({
-      type: "GROUPS_DATA",
-      value: data,
+      type: "GROUPS_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
@@ -25,7 +28,8 @@ const GroupEdit = (props) => {
     addToGroup,
     removeFromGroup,
     deleteGroup,
-    refreshGroupsData,
+    updateGroups,
+    validateUser,
     history,
     location,
   } = props;
@@ -35,9 +39,9 @@ const GroupEdit = (props) => {
     return <></>;
   }
 
-  var { group_data, user_data, callback } = location.state;
+  var { group_data, callback } = location.state;
 
-  if (!(group_data && user_data)) return <div></div>;
+  if (!group_data) return <div></div>;
 
   return (
     <div className="container">
@@ -45,16 +49,19 @@ const GroupEdit = (props) => {
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <h3>Editing Group {group_data.name}</h3>
           <br></br>
-          <div className="alert alert-info">Select group members</div>
-          <Multiselect
-            options={user_data.map((e) => e.name)}
-            value={group_data.users}
-            onChange={(selection, options) => {
-              setSelected(selection);
-              setChanged(true);
-            }}
-          />
-          <br></br>
+          <div className="alert alert-info">Manage group members</div>
+        </div>
+      </div>
+      <GroupSelect
+        users={group_data.users}
+        validateUser={validateUser}
+        onChange={(selection) => {
+          setSelected(selection);
+          setChanged(true);
+        }}
+      />
+      <div className="row">
+        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <button id="return" className="btn btn-light">
             <Link to="/groups">Back</Link>
           </button>
@@ -88,10 +95,12 @@ const GroupEdit = (props) => {
                 );
 
               Promise.all(promiseQueue)
-                .then((e) => callback())
+                .then((e) => {
+                  updateGroups(0, limit)
+                    .then((data) => dispatchPageUpdate(data, 0))
+                    .then(() => history.push("/groups"));
+                })
                 .catch((err) => console.log(err));
-
-              history.push("/groups");
             }}
           >
             Apply
@@ -103,10 +112,11 @@ const GroupEdit = (props) => {
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
-                .then(
-                  refreshGroupsData().then((data) => dispatchGroupsData(data))
-                )
-                .then(history.push("/groups"))
+                .then((e) => {
+                  updateGroups(0, limit)
+                    .then((data) => dispatchPageUpdate(data, 0))
+                    .then(() => history.push("/groups"));
+                })
                 .catch((err) => console.log(err));
             }}
           >
@@ -124,7 +134,6 @@ GroupEdit.propTypes = {
   location: PropTypes.shape({
     state: PropTypes.shape({
       group_data: PropTypes.object,
-      user_data: PropTypes.array,
       callback: PropTypes.func,
     }),
   }),
@@ -134,7 +143,8 @@ GroupEdit.propTypes = {
   addToGroup: PropTypes.func,
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
-  refreshGroupsData: PropTypes.func,
+  updateGroups: PropTypes.func,
+  validateUser: PropTypes.func,
 };
 
 export default GroupEdit;

@@ -1,17 +1,17 @@
 @import url(../../style/root.css);
 
-.multi-container {
+.users-container {
   width: 100%;
   position: relative;
   padding: 5px;
   overflow-x: scroll;
 }
 
-.multi-container div {
+.users-container div {
   display: inline-block;
 }
 
-.multi-container .item {
+.users-container .item {
   padding: 3px;
   padding-left: 6px;
   padding-right: 6px;
@@ -25,16 +25,16 @@
   border: solid 1px #dfdfdf;
 }
 
-.multi-container .item.unselected {
+.users-container .item.unselected {
   background-color: #f7f7f7;
   color: #777;
 }
 
-.multi-container .item.selected {
+.users-container .item.selected {
   background-color: orange;
   color: white;
 }
 
-.multi-container .item:hover {
+.users-container .item:hover {
   opacity: 0.7;
 }

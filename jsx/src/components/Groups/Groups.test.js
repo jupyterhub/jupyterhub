@@ -2,7 +2,7 @@ import React from "react";
 import Enzyme, { mount } from "enzyme";
 import Groups from "./Groups";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
-import { Provider, useSelector } from "react-redux";
+import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
 
@@ -15,10 +15,13 @@ jest.mock("react-redux", () => ({
 }));
 
 describe("Groups Component: ", () => {
-  var groupsJsx = () => (
+  var mockAsync = () =>
+    jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
+
+  var groupsJsx = (callbackSpy) => (
     <Provider store={createStore(() => {}, {})}>
       <HashRouter>
-        <Groups />
+        <Groups location={{ search: "0" }} updateGroups={callbackSpy} />
       </HashRouter>
     </Provider>
   );
@@ -36,6 +39,9 @@ describe("Groups Component: ", () => {
     useSelector.mockImplementation((callback) => {
       return callback(mockAppState());
     });
+    useDispatch.mockImplementation((callback) => {
+      return () => {};
+    });
   });
 
   afterEach(() => {
@@ -43,8 +49,9 @@ describe("Groups Component: ", () => {
   });
 
   it("Renders groups_data prop into links", () => {
-    let component = mount(groupsJsx()),
-      links = component.find(".group-edit-link");
+    let callbackSpy = mockAsync(),
+      component = mount(groupsJsx(callbackSpy)),
+      links = component.find("li");
     expect(links.length).toBe(2);
   });
 

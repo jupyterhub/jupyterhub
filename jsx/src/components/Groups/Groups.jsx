@@ -4,32 +4,41 @@ import { compose, withProps } from "recompose";
 import PropTypes from "prop-types";
 
 import { Link } from "react-router-dom";
-import { jhapiRequest } from "../../util/jhapiUtil";
+import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const Groups = (props) => {
   var user_data = useSelector((state) => state.user_data),
     groups_data = useSelector((state) => state.groups_data),
-    dispatch = useDispatch();
+    groups_page = useSelector((state) => state.groups_page),
+    user_page = useSelector((state) => state.user_page),
+    limit = useSelector((state) => state.limit),
+    dispatch = useDispatch(),
+    page = parseInt(new URLSearchParams(props.location.search).get("page"));
 
-  var { refreshGroupsData, refreshUserData, history } = props;
+  page = isNaN(page) ? 0 : page;
+  var slice = [page * limit, limit];
+
+  var { updateGroups, history } = props;
 
   if (!groups_data || !user_data) {
     return <div></div>;
   }
 
-  const dispatchGroupsData = (data) => {
+  const dispatchPageChange = (data, page) => {
     dispatch({
-      type: "GROUPS_DATA",
-      value: data,
+      type: "GROUPS_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
-  const dispatchUserData = (data) => {
-    dispatch({
-      type: "USER_DATA",
-      value: data,
+  if (groups_page != page) {
+    updateGroups(...slice).then((data) => {
+      dispatchPageChange(data, page);
     });
-  };
+  }
 
   return (
     <div className="container">
@@ -40,37 +49,39 @@ const Groups = (props) => {
               <h4>Groups</h4>
             </div>
             <div className="panel-body">
-              {groups_data.length > 0 ? (
-                groups_data.map((e, i) => (
-                  <div key={"group-edit" + i} className="group-edit-link">
-                    <h4>
+              <ul className="list-group">
+                {groups_data.length > 0 ? (
+                  groups_data.map((e, i) => (
+                    <li className="list-group-item" key={"group-item" + i}>
+                      <span className="badge badge-pill badge-success">
+                        {e.users.length + " users"}
+                      </span>
                       <Link
                         to={{
                           pathname: "/group-edit",
                           state: {
                             group_data: e,
                             user_data: user_data,
-                            callback: () => {
-                              refreshGroupsData()
-                                .then((data) => dispatchGroupsData(data))
-                                .catch((err) => console.log(err));
-                              refreshUserData()
-                                .then((data) => dispatchUserData(data))
-                                .catch((err) => console.log(err));
-                            },
                           },
                         }}
                       >
                         {e.name}
                       </Link>
-                    </h4>
+                    </li>
+                  ))
+                ) : (
+                  <div>
+                    <h4>no groups created...</h4>
                   </div>
-                ))
-              ) : (
-                <div>
-                  <h4>no groups created...</h4>
-                </div>
-              )}
+                )}
+              </ul>
+              <PaginationFooter
+                endpoint="/groups"
+                page={page}
+                limit={limit}
+                numOffset={slice[0]}
+                numElements={groups_data.length}
+              />
             </div>
             <div className="panel-footer">
               <button className="btn btn-light adjacent-span-spacing">
@@ -95,10 +106,13 @@ const Groups = (props) => {
 Groups.propTypes = {
   user_data: PropTypes.array,
   groups_data: PropTypes.array,
-  refreshUserData: PropTypes.func,
-  refreshGroupsData: PropTypes.func,
+  updateUsers: PropTypes.func,
+  updateGroups: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
+  }),
+  location: PropTypes.shape({
+    search: PropTypes.string,
   }),
 };
 

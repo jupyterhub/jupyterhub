@@ -10,6 +10,7 @@ import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import { jhapiRequest } from "../../util/jhapiUtil";
+import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const ServerDashboard = (props) => {
   // sort methods
@@ -30,7 +31,13 @@ const ServerDashboard = (props) => {
 
   var [sortMethod, setSortMethod] = useState(null);
 
-  var user_data = useSelector((state) => state.user_data);
+  var user_data = useSelector((state) => state.user_data),
+    user_page = useSelector((state) => state.user_page),
+    limit = useSelector((state) => state.limit),
+    page = parseInt(new URLSearchParams(props.location.search).get("page"));
+
+  page = isNaN(page) ? 0 : page;
+  var slice = [page * limit, limit];
 
   const dispatch = useDispatch();
 
@@ -44,15 +51,22 @@ const ServerDashboard = (props) => {
     history,
   } = props;
 
-  var dispatchUserUpdate = (data) => {
+  var dispatchPageUpdate = (data, page) => {
     dispatch({
-      type: "USER_DATA",
-      value: data,
+      type: "USER_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
   if (!user_data) {
     return <div></div>;
+  }
+
+  if (page != user_page) {
+    updateUsers(...slice).then((data) => dispatchPageUpdate(data, page));
   }
 
   if (sortMethod != null) {
@@ -116,10 +130,9 @@ const ServerDashboard = (props) => {
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
-                        updateUsers()
-                          .then((data) => data.json())
+                        updateUsers(...slice)
                           .then((data) => {
-                            dispatchUserUpdate(data);
+                            dispatchPageUpdate(data, page);
                           })
                           .catch((err) => console.log(err));
                         return res;
@@ -137,10 +150,9 @@ const ServerDashboard = (props) => {
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
-                        updateUsers()
-                          .then((data) => data.json())
+                        updateUsers(...slice)
                           .then((data) => {
-                            dispatchUserUpdate(data);
+                            dispatchPageUpdate(data, page);
                           })
                           .catch((err) => console.log(err));
                         return res;
@@ -177,11 +189,9 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         stopServer(e.name)
                           .then((res) => {
-                            updateUsers()
-                              .then((data) => data.json())
-                              .then((data) => {
-                                dispatchUserUpdate(data);
-                              });
+                            updateUsers(...slice).then((data) => {
+                              dispatchPageUpdate(data, page);
+                            });
                             return res;
                           })
                           .catch((err) => console.log(err))
@@ -196,11 +206,9 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         startServer(e.name)
                           .then((res) => {
-                            updateUsers()
-                              .then((data) => data.json())
-                              .then((data) => {
-                                dispatchUserUpdate(data);
-                              });
+                            updateUsers(...slice).then((data) => {
+                              dispatchPageUpdate(data, page);
+                            });
                             return res;
                           })
                           .catch((err) => console.log(err))
@@ -232,6 +240,14 @@ const ServerDashboard = (props) => {
             ))}
           </tbody>
         </table>
+        <PaginationFooter
+          endpoint="/"
+          page={page}
+          limit={limit}
+          numOffset={slice[0]}
+          numElements={user_data.length}
+        />
+        <br></br>
       </div>
     </div>
   );
@@ -248,6 +264,9 @@ ServerDashboard.propTypes = {
   dispatch: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
+  }),
+  location: PropTypes.shape({
+    search: PropTypes.string,
   }),
 };
 

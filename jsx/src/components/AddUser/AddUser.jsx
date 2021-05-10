@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
@@ -7,18 +7,22 @@ import { jhapiRequest } from "../../util/jhapiUtil";
 
 const AddUser = (props) => {
   var [users, setUsers] = useState([]),
-    [admin, setAdmin] = useState(false);
+    [admin, setAdmin] = useState(false),
+    limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
 
-  var dispatchUserData = (data) => {
+  var dispatchPageChange = (data, page) => {
     dispatch({
-      type: "USER_DATA",
-      value: data,
+      type: "USER_PAGE",
+      value: {
+        data: data,
+        page: page,
+      },
     });
   };
 
-  var { addUsers, failRegexEvent, refreshUserData, history } = props;
+  var { addUsers, failRegexEvent, updateUsers, history } = props;
 
   return (
     <>
@@ -78,12 +82,12 @@ const AddUser = (props) => {
                     }
 
                     addUsers(filtered_users, admin)
-                      .then(
-                        refreshUserData()
-                          .then((data) => dispatchUserData(data))
+                      .then(() =>
+                        updateUsers(0, limit)
+                          .then((data) => dispatchPageChange(data, 0))
+                          .then(() => history.push("/"))
                           .catch((err) => console.log(err))
                       )
-                      .then(() => history.push("/"))
                       .catch((err) => console.log(err));
                   }}
                 >
@@ -101,7 +105,7 @@ const AddUser = (props) => {
 AddUser.propTypes = {
   addUsers: PropTypes.func,
   failRegexEvent: PropTypes.func,
-  refreshUserData: PropTypes.func,
+  updateUsers: PropTypes.func,
   history: PropTypes.shape({
     push: PropTypes.func,
   }),
