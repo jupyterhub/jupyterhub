@@ -1,10 +1,11 @@
 import React, { useState } from "react";
+import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
 import { jhapiRequest } from "../../util/jhapiUtil";
-import Multiselect from "../Multiselect/Multiselect";
+import GroupSelect from "../GroupSelect/GroupSelect";
 
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
@@ -30,6 +31,7 @@ const GroupEdit = (props) => {
     removeFromGroup,
     deleteGroup,
     updateGroups,
+    findUser,
     history,
     location,
   } = props;
@@ -49,16 +51,22 @@ const GroupEdit = (props) => {
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <h3>Editing Group {group_data.name}</h3>
           <br></br>
-          <div className="alert alert-info">Select group members</div>
-          <Multiselect
-            options={user_data.map((e) => e.name)}
-            value={group_data.users}
-            onChange={(selection, options) => {
-              setSelected(selection);
-              setChanged(true);
-            }}
-          />
-          <br></br>
+          <div className="alert alert-info">Manage group members</div>
+        </div>
+      </div>
+      <GroupSelect
+        users={group_data.users}
+        validateUser={async (username) => {
+          let user = await findUser(username);
+          return user.status > 200 ? false : true;
+        }}
+        onChange={(selection) => {
+          setSelected(selection);
+          setChanged(true);
+        }}
+      />
+      <div className="row">
+        <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <button id="return" className="btn btn-light">
             <Link to="/groups">Back</Link>
           </button>
@@ -142,6 +150,7 @@ GroupEdit.propTypes = {
   removeFromGroup: PropTypes.func,
   deleteGroup: PropTypes.func,
   updateGroups: PropTypes.func,
+  findUser: PropTypes.func,
 };
 
 export default GroupEdit;
