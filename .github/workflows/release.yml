@@ -114,7 +114,7 @@ jobs:
         #    https://github.com/jupyterhub/jupyterhub/settings/secrets/actions
         if: env.REGISTRY != 'localhost:5000/'
         run: |
-          docker login -u "${{ secrets.DOCKER_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
+          docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
 
       # https://github.com/jupyterhub/action-major-minor-tag-calculator
       # If this is a tagged build this will return additional parent tags.

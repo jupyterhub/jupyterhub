@@ -43,7 +43,7 @@ port.
 
 By default, this REST API listens on port 8001 of `localhost` only.
 The Hub service talks to the proxy via a REST API on a secondary port. The
-API URL can be configured separately and override the default settings.
+API URL can be configured separately to override the default settings.
 
 ### Set api_url
 
@@ -82,13 +82,13 @@ c.JupyterHub.hub_ip = '10.0.1.4'
 c.JupyterHub.hub_port = 54321
 ```
 
-**Added in 0.8:** The `c.JupyterHub.hub_connect_ip` setting is the ip address or
+**Added in 0.8:** The `c.JupyterHub.hub_connect_ip` setting is the IP address or
 hostname that other services should use to connect to the Hub. A common
 configuration for, e.g. docker, is:
 
 ```python
 c.JupyterHub.hub_ip = '0.0.0.0'  # listen on all interfaces
-c.JupyterHub.hub_connect_ip = '10.0.1.4'  # ip as seen on the docker network. Can also be a hostname.
+c.JupyterHub.hub_connect_ip = '10.0.1.4'  # IP as seen on the docker network. Can also be a hostname.
 ```
 
 ## Adjusting the hub's URL

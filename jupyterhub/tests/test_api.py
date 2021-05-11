@@ -192,6 +192,30 @@ async def test_get_users(app):
     r_user_model = r.json()[0]
     assert r_user_model['name'] == user_model['name']
 
+    # Tests offset for pagination
+    r = await api_request(app, 'users?offset=1')
+    assert r.status_code == 200
+
+    users = sorted(r.json(), key=lambda d: d['name'])
+    users = [normalize_user(u) for u in users]
+    assert users == [fill_user({'name': 'user', 'admin': False})]
+
+    r = await api_request(app, 'users?offset=20')
+    assert r.status_code == 200
+    assert r.json() == []
+
+    # Test limit for pagination
+    r = await api_request(app, 'users?limit=1')
+    assert r.status_code == 200
+
+    users = sorted(r.json(), key=lambda d: d['name'])
+    users = [normalize_user(u) for u in users]
+    assert users == [fill_user({'name': 'admin', 'admin': True})]
+
+    r = await api_request(app, 'users?limit=0')
+    assert r.status_code == 200
+    assert r.json() == []
+
 
 @mark.user
 @mark.parametrize(
@@ -1384,15 +1408,44 @@ async def test_groups_list(app):
     reply = r.json()
     assert reply == []
 
-    # create a group
+    # create two groups
     group = orm.Group(name='alphaflight')
+    group_2 = orm.Group(name='betaflight')
     app.db.add(group)
+    app.db.add(group_2)
     app.db.commit()
 
     r = await api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
+    assert reply == [
+        {'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []},
+        {'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []},
+    ]
+
+    # Test offset for pagination
+    r = await api_request(app, "groups?offset=1")
+    r.raise_for_status()
+    reply = r.json()
+    assert r.status_code == 200
+    assert reply == [{'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []}]
+
+    r = await api_request(app, "groups?offset=10")
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == []
+
+    # Test limit for pagination
+    r = await api_request(app, "groups?limit=1")
+    r.raise_for_status()
+    reply = r.json()
+    assert r.status_code == 200
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': []}]
+
+    r = await api_request(app, "groups?limit=0")
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == []
 
 
 @mark.group

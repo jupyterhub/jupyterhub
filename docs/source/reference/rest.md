@@ -158,6 +158,27 @@ provided by notebook servers managed by JupyterHub if one of the following is tr
 1. The token is for the same user as the owner of the notebook
 2. The token is tied to an admin user or service **and** `c.JupyterHub.admin_access` is set to `True`
 
+## Paginating API requests
+
+Pagination is available through the `offset` and `limit` query parameters on
+certain endpoints, which can be used to return ideally sized windows of results.
+Here's example code demonstrating pagination on the `GET /users`
+endpoint to fetch the first 20 records.
+
+```python
+import requests
+
+api_url = 'http://127.0.0.1:8081/hub/api'
+
+r = requests.get(api_url + '/users?offset=0&limit=20')
+r.raise_for_status()
+r.json()
+```
+
+By default, pagination limit will be specified by the `JupyterHub.api_page_default_limit` config variable.
+
+Pagination is enabled on the `GET /users`, `GET /groups`, and `GET /proxy` REST endpoints.
+
 ## Enabling users to spawn multiple named-servers via the API
 
 With JupyterHub version 0.8, support for multiple servers per user has landed.
