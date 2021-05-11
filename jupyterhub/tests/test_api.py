@@ -198,7 +198,11 @@ async def test_get_users(app):
 
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
-    assert users == [fill_user({'name': 'user', 'admin': False})]
+    assert users == [
+        fill_user(
+            {'name': 'user', 'admin': False, 'auth_state': None, 'roles': ['user']}
+        )
+    ]
 
     r = await api_request(app, 'users?offset=20')
     assert r.status_code == 200
@@ -210,7 +214,11 @@ async def test_get_users(app):
 
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
-    assert users == [fill_user({'name': 'admin', 'admin': True})]
+    assert users == [
+        fill_user(
+            {'name': 'admin', 'admin': True, 'auth_state': None, 'roles': ['admin']}
+        )
+    ]
 
     r = await api_request(app, 'users?limit=0')
     assert r.status_code == 200
@@ -1440,7 +1448,7 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert r.status_code == 200
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': []}]
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
     r = await api_request(app, "groups?limit=0")
     r.raise_for_status()
