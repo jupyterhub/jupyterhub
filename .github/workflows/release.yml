@@ -80,7 +80,7 @@ jobs:
     steps:
       - name: Should we push this image to a public registry?
         run: |
-          if [ "${{ startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/master') }}" = "true" ]; then
+          if [ "${{ startsWith(github.ref, 'refs/tags/') || (github.ref == 'refs/heads/main') }}" = "true" ]; then
               # Empty => Docker Hub
               echo "REGISTRY=" >> $GITHUB_ENV
           else

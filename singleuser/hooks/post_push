@@ -13,7 +13,7 @@ function get_hub_version() {
     hub_xy="${hub_xy}.${split[3]}"
   fi
 }
-# tag e.g. 0.9 with master
+# tag e.g. 0.9 with main
 get_hub_version
 docker tag $DOCKER_REPO:$DOCKER_TAG $DOCKER_REPO:$hub_xy
 docker push $DOCKER_REPO:$hub_xy
