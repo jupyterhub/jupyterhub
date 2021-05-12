@@ -352,6 +352,22 @@ class APIHandler(BaseHandler):
                     400, ("group names must be str, not %r", type(groupname))
                 )
 
+    def get_api_pagination(self):
+        default_limit = self.settings["app"].api_page_default_limit
+        max_limit = self.settings["app"].api_page_max_limit
+        offset = self.get_argument("offset", None)
+        limit = self.get_argument("limit", default_limit)
+        try:
+            offset = abs(int(offset)) if offset is not None else 0
+            limit = abs(int(limit))
+            if limit > max_limit:
+                limit = max_limit
+        except Exception as e:
+            raise web.HTTPError(
+                400, "Invalid argument type, offset and limit must be integers"
+            )
+        return offset, limit
+
     def options(self, *args, **kwargs):
         self.finish()
 

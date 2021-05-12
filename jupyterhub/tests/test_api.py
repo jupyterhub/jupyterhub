@@ -192,6 +192,38 @@ async def test_get_users(app):
     r_user_model = r.json()[0]
     assert r_user_model['name'] == user_model['name']
 
+    # Tests offset for pagination
+    r = await api_request(app, 'users?offset=1')
+    assert r.status_code == 200
+
+    users = sorted(r.json(), key=lambda d: d['name'])
+    users = [normalize_user(u) for u in users]
+    assert users == [
+        fill_user(
+            {'name': 'user', 'admin': False, 'auth_state': None, 'roles': ['user']}
+        )
+    ]
+
+    r = await api_request(app, 'users?offset=20')
+    assert r.status_code == 200
+    assert r.json() == []
+
+    # Test limit for pagination
+    r = await api_request(app, 'users?limit=1')
+    assert r.status_code == 200
+
+    users = sorted(r.json(), key=lambda d: d['name'])
+    users = [normalize_user(u) for u in users]
+    assert users == [
+        fill_user(
+            {'name': 'admin', 'admin': True, 'auth_state': None, 'roles': ['admin']}
+        )
+    ]
+
+    r = await api_request(app, 'users?limit=0')
+    assert r.status_code == 200
+    assert r.json() == []
+
 
 @mark.user
 @mark.parametrize(
@@ -1176,76 +1208,13 @@ async def test_check_token(app):
     assert r.status_code == 404
 
 
-@mark.parametrize("headers, status", [({}, 200), ({'Authorization': 'token bad'}, 403)])
+@mark.parametrize("headers, status", [({}, 404), ({'Authorization': 'token bad'}, 404)])
 async def test_get_new_token_deprecated(app, headers, status):
     # request a new token
     r = await api_request(
         app, 'authorizations', 'token', method='post', headers=headers
     )
     assert r.status_code == status
-    if status != 200:
-        return
-    reply = r.json()
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == 'admin'
-
-
-async def test_token_formdata_deprecated(app):
-    """Create a token for a user with formdata and no auth header"""
-    data = {'username': 'fake', 'password': 'fake'}
-    r = await api_request(
-        app,
-        'authorizations',
-        'token',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
-    assert r.status_code == 200
-    reply = r.json()
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == data['username']
-
-
-@mark.parametrize(
-    "as_user, for_user, status",
-    [
-        ('admin', 'other', 200),
-        ('admin', 'missing', 400),
-        ('user', 'other', 403),
-        ('user', 'user', 200),
-    ],
-)
-async def test_token_as_user_deprecated(app, as_user, for_user, status):
-    # ensure both users exist
-    u = add_user(app.db, app, name=as_user)
-    if for_user != 'missing':
-        for_user_obj = add_user(app.db, app, name=for_user)
-    data = {'username': for_user}
-    headers = {'Authorization': 'token %s' % u.new_api_token()}
-    r = await api_request(
-        app,
-        'authorizations',
-        'token',
-        method='post',
-        data=json.dumps(data),
-        headers=headers,
-    )
-    assert r.status_code == status
-    reply = r.json()
-    if status != 200:
-        return
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == data['username']
 
 
 @mark.parametrize(
@@ -1447,15 +1416,44 @@ async def test_groups_list(app):
     reply = r.json()
     assert reply == []
 
-    # create a group
+    # create two groups
     group = orm.Group(name='alphaflight')
+    group_2 = orm.Group(name='betaflight')
     app.db.add(group)
+    app.db.add(group_2)
     app.db.commit()
 
     r = await api_request(app, 'groups')
     r.raise_for_status()
     reply = r.json()
+    assert reply == [
+        {'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []},
+        {'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []},
+    ]
+
+    # Test offset for pagination
+    r = await api_request(app, "groups?offset=1")
+    r.raise_for_status()
+    reply = r.json()
+    assert r.status_code == 200
+    assert reply == [{'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []}]
+
+    r = await api_request(app, "groups?offset=10")
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == []
+
+    # Test limit for pagination
+    r = await api_request(app, "groups?limit=1")
+    r.raise_for_status()
+    reply = r.json()
+    assert r.status_code == 200
     assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
+
+    r = await api_request(app, "groups?limit=0")
+    r.raise_for_status()
+    reply = r.json()
+    assert reply == []
 
 
 @mark.group

@@ -143,6 +143,22 @@ paths:
             inactive: all users who have *no* active servers (complement of active)
 
             Added in JupyterHub 1.3
+        - name: offset
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a number users starting at the given offset.
+            Can be used with limit to paginate.
+            If unspecified, return all users.
+        - name: limit
+          in: query
+          requred: false
+          type: number
+          description: |
+            Return a finite number of users.
+            Can be used with offset to paginate.
+            If unspecified, use api_page_default_limit.
       responses:
         "200":
           description: The Hub's user list
@@ -379,7 +395,7 @@ paths:
           type: string
         - name: server_name
           description: |
-            name given to a named-server. 
+            name given to a named-server.
 
             Note that depending on your JupyterHub infrastructure there are chracterter size limitation to `server_name`. Default spawner with K8s pod will not allow Jupyter Notebooks to be spawned with a name that contains more than 253 characters (keep in mind that the pod will be spawned with extra characters to identify the user and hub).
           in: path
@@ -540,6 +556,23 @@ paths:
       security:
         - oauth2:
             - read:groups
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a number of groups starting at the specified offset.
+            Can be used with limit to paginate.
+            If unspecified, return all groups.
+        - name: limit
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a finite number of groups.
+            Can be used with offset to paginate.
+            If unspecified, use api_page_default_limit.
       responses:
         "200":
           description: The list of groups
@@ -686,6 +719,23 @@ paths:
       security:
         - oauth2:
             - proxy
+      parameters:
+        - name: offset
+          in: query
+          required: false
+          type: number
+          description: |
+            Return a number of routes starting at the given offset.
+            Can be used with limit to paginate.
+            If unspecified, return all routes.
+        - name: limit
+          in: query
+          requred: false
+          type: number
+          description: |
+            Return a finite number of routes.
+            Can be used with offset to paginate.
+            If unspecified, use api_page_default_limit
       responses:
         "200":
           description: Routing table

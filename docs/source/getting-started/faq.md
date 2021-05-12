@@ -26,7 +26,7 @@ so Breq would open `/user/breq/notebooks/foo.ipynb` and
 Seivarden would open `/user/seivarden/notebooks/foo.ipynb`, etc.
 
 JupyterHub has a special URL that does exactly this!
-It's called `/hub/user-redirect/...` and after the visitor logs in,
+It's called `/hub/user-redirect/...`.
 So if you replace `/user/yourname` in your URL bar
 with `/hub/user-redirect` any visitor should get the same
 URL on their own server, rather than visiting yours.

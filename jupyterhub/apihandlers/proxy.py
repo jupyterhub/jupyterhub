@@ -17,7 +17,16 @@ class ProxyAPIHandler(APIHandler):
         This is the same as fetching the routing table directly from the proxy,
         but without clients needing to maintain separate
         """
+        offset, limit = self.get_api_pagination()
+
         routes = await self.proxy.get_all_routes()
+
+        routes = {
+            key: routes[key]
+            for key in list(routes.keys())[offset:limit]
+            if key in routes
+        }
+
         self.write(json.dumps(routes))
 
     @needs_scope('proxy')
