@@ -259,7 +259,7 @@ PAM session.
 
 Beginning with version 0.8, JupyterHub is an OAuth provider.
 
-[authenticator]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/auth.py
+[authenticator]: https://github.com/jupyterhub/jupyterhub/blob/HEAD/jupyterhub/auth.py
 [pam]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
 [oauth]: https://en.wikipedia.org/wiki/OAuth
 [github oauth]: https://developer.github.com/v3/oauth/

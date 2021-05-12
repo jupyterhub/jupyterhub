@@ -24,6 +24,7 @@ import time
 from functools import wraps
 from subprocess import Popen
 from urllib.parse import quote
+from weakref import WeakKeyDictionary
 
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
@@ -44,7 +45,6 @@ from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
 from .utils import exponential_backoff
-from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
 
@@ -55,11 +55,18 @@ def _one_at_a_time(method):
     If multiple concurrent calls to this method are made,
     queue them instead of allowing them to be concurrently outstanding.
     """
-    method._lock = asyncio.Lock()
+    # use weak dict for locks
+    # so that the lock is always acquired within the current asyncio loop
+    # should only be relevant in testing, where eventloops are created and destroyed often
+    method._locks = WeakKeyDictionary()
 
     @wraps(method)
     async def locked_method(*args, **kwargs):
-        async with method._lock:
+        loop = asyncio.get_event_loop()
+        lock = method._locks.get(loop, None)
+        if lock is None:
+            lock = method._locks[loop] = asyncio.Lock()
+        async with lock:
             return await method(*args, **kwargs)
 
     return locked_method
@@ -123,7 +130,7 @@ class Proxy(LoggingConfigurable):
         a URL as target. The hub will ensure this route is present
         in the proxy.
 
-        If the hub is running in host based mode (with 
+        If the hub is running in host based mode (with
         JupyterHub.subdomain_host set), the routespec *must*
         have a domain component (example.com/my-url/). If the
         hub is not running in host based mode, the routespec

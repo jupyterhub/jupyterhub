@@ -11,7 +11,7 @@ Yes! JupyterHub has been used at-scale for large pools of users, as well
 as complex and high-performance computing. For example, UC Berkeley uses
 JupyterHub for its Data Science Education Program courses (serving over
 3,000 students). The Pangeo project uses JupyterHub to provide access
-to scalable cloud computing with Dask. JupyterHub is stable customizable
+to scalable cloud computing with Dask. JupyterHub is stable and customizable
 to the use-cases of large organizations.
 
 ### I keep hearing about Jupyter Notebook, JupyterLab, and now JupyterHub. What’s the difference?
@@ -27,14 +27,14 @@ Here is a quick breakdown of these three tools:
   for other parts of the data science stack.
 - **JupyterHub** is an application that manages interactive computing sessions for **multiple users**.
   It also connects them with infrastructure those users wish to access. It can provide
-  remote access to Jupyter Notebooks and Jupyter Lab for many people.
+  remote access to Jupyter Notebooks and JupyterLab for many people.
 
 ## For management
 
 ### Briefly, what problem does JupyterHub solve for us?
 
 JupyterHub provides a shared platform for data science and collaboration.
-It allows users to utilize familiar data science workflows (such as the scientific python stack,
+It allows users to utilize familiar data science workflows (such as the scientific Python stack,
 the R tidyverse, and Jupyter Notebooks) on institutional infrastructure. It also allows administrators
 some control over access to resources, security, environments, and authentication.
 
@@ -55,7 +55,7 @@ industry, and government research labs. It is most-commonly used by two kinds of
 - Large teams (e.g., a department, a large class, or a large group of remote users) to provide
   access to organizational hardware, data, and analytics environments at scale.
 
-Here are a sample of organizations that use JupyterHub:
+Here is a sample of organizations that use JupyterHub:
 
 - **Universities and colleges**: UC Berkeley, UC San Diego, Cal Poly SLO, Harvard University, University of Chicago,
   University of Oslo, University of Sheffield, Université Paris Sud, University of Versailles
@@ -99,7 +99,7 @@ that we currently suggest are:
   guide that runs on Kubernetes. Better for larger or dynamic user groups (50-10,000) or more complex
   compute/data needs.
 - [The Littlest JupyterHub](https://tljh.jupyter.org) is a lightweight JupyterHub that runs on a single
-  single machine (in the cloud or under your desk). Better for smaller usergroups (4-80) or more
+  single machine (in the cloud or under your desk). Better for smaller user groups (4-80) or more
   lightweight computational resources.
 
 ### Does JupyterHub run well in the cloud?
@@ -123,7 +123,7 @@ level for several years, and makes a number of "default" security decisions that
 users.
 
 - For security considerations in the base JupyterHub application,
-  [see the JupyterHub security page](https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html)
+  [see the JupyterHub security page](https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html).
 - For security considerations when deploying JupyterHub on Kubernetes, see the
   [JupyterHub on Kubernetes security page](https://zero-to-jupyterhub.readthedocs.io/en/latest/security.html).
 
@@ -183,7 +183,7 @@ how those resources are controlled is taken care of by the non-JupyterHub applic
 
 Yes - JupyterHub can provide access to many kinds of computing infrastructure.
 Especially when combined with other open-source schedulers such as Dask, you can manage fairly
-complex computing infrastructure from the interactive sessions of a JupyterHub. For example
+complex computing infrastructures from the interactive sessions of a JupyterHub. For example
 [see the Dask HPC page](https://docs.dask.org/en/latest/setup/hpc.html).
 
 ### How much resources do user sessions take?
@@ -192,7 +192,7 @@ This is highly configurable by the administrator. If you wish for your users to 
 data analytics environments for prototyping and light data exploring, you can restrict their
 memory and CPU based on the resources that you have available. If you'd like your JupyterHub
 to serve as a gateway to high-performance compute or data resources, you may increase the
-resources available on user machines, or connect them with computing infrastructure elsewhere.
+resources available on user machines, or connect them with computing infrastructures elsewhere.
 
 ### Can I customize the look and feel of a JupyterHub?
 
@@ -217,7 +217,7 @@ your JupyterHub with the various services and tools that you wish to provide to 
 ### How well does JupyterHub scale? What are JupyterHub's limitations?
 
 JupyterHub works well at both a small scale (e.g., a single VM or machine) as well as a
-high scale (e.g., a scalable Kubernetes cluster). It can be used for teams as small a 2, and
+high scale (e.g., a scalable Kubernetes cluster). It can be used for teams as small as 2, and
 for user bases as large as 10,000. The scalability of JupyterHub largely depends on the
 infrastructure on which it is deployed. JupyterHub has been designed to be lightweight and
 flexible, so you can tailor your JupyterHub deployment to your needs.
@@ -249,7 +249,7 @@ share their results with one another.
 
 JupyterHub also provides a computational framework to share computational narratives between
 different levels of an organization. For example, data scientists can share Jupyter Notebooks
-rendered as [voila dashboards](https://voila.readthedocs.io/en/stable/) with those who are not
+rendered as [Voilà dashboards](https://voila.readthedocs.io/en/stable/) with those who are not
 familiar with programming, or create publicly-available interactive analyses to allow others to
 interact with your work.
 
