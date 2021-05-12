@@ -228,7 +228,7 @@ configurable by the `cookie_cache_max_age` setting (default: five minutes).
 For example, you have a Flask service that returns information about a user.
 JupyterHub's HubAuth class can be used to authenticate requests to the Flask
 service. See the `service-whoami-flask` example in the
-[JupyterHub GitHub repo](https://github.com/jupyterhub/jupyterhub/tree/master/examples/service-whoami-flask)
+[JupyterHub GitHub repo](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-whoami-flask)
 for more details.
 
 ```python

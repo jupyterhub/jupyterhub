@@ -230,7 +230,7 @@ be viewed in a more [interactive style on swagger's petstore][].
 Both resources contain the same information and differ only in its display.
 Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
 
-[interactive style on swagger's petstore]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default
+[interactive style on swagger's petstore]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/HEAD/docs/rest-api.yml#!/default
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
-[jupyter notebook rest api]: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/master/notebook/services/api/api.yaml
+[jupyter notebook rest api]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/HEAD/notebook/services/api/api.yaml

@@ -13,7 +13,7 @@ Building documentation locally
 We use `sphinx <http://sphinx-doc.org>`_ to build our documentation. It takes
 our documentation source files (written in `markdown
 <https://daringfireball.net/projects/markdown/>`_ or `reStructuredText
-<http://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_ &
+<https://www.sphinx-doc.org/en/master/usage/restructuredtext/basics.html>`_ &
 stored under the ``docs/source`` directory) and converts it into various
 formats for people to read. To make sure the documentation you write or
 change renders correctly, it is good practice to test it locally.
@@ -39,8 +39,8 @@ change renders correctly, it is good practice to test it locally.
    along with the filename / line number in which they occurred. Fix them,
    and re-run the ``make html`` command to re-render the documentation.
 
-#. View the rendered documentation by opening ``build/html/index.html`` in 
-   a web browser. 
+#. View the rendered documentation by opening ``build/html/index.html`` in
+   a web browser.
 
    .. tip::
 
