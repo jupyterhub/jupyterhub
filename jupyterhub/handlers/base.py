@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
+import functools
 import json
 import math
 import random
@@ -427,6 +428,24 @@ class BaseHandler(RequestHandler):
                 self.expanded_scopes = scopes.get_scopes_for(self.current_user)
         self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
         app_log.debug("Found scopes [%s]", ",".join(self.expanded_scopes))
+
+    @functools.lru_cache()
+    def get_scope_filter(self, req_scope):
+        """Produce a filter function for req_scope on resources
+
+        Returns `has_access_to(orm_resource, kind)` which returns True or False
+        for whether the current request has access to req_scope on the given resource.
+        """
+
+        def no_access(orm_resource, kind):
+            return False
+
+        if req_scope not in self.parsed_scopes:
+            return no_access
+
+        sub_scope = self.parsed_scopes[req_scope]
+
+        return functools.partial(scopes.check_scope_filter, sub_scope)
 
     @property
     def current_user(self):

@@ -332,11 +332,13 @@ def parse_scopes(scope_list):
             parsed_scopes[base_scope] = Scope.ALL
         elif base_scope not in parsed_scopes:
             parsed_scopes[base_scope] = {}
+
         if parsed_scopes[base_scope] != Scope.ALL:
-            key, _, val = filter_.partition('=')
+            key, _, value = filter_.partition('=')
             if key not in parsed_scopes[base_scope]:
-                parsed_scopes[base_scope][key] = []
-            parsed_scopes[base_scope][key].append(val)
+                parsed_scopes[base_scope][key] = set([value])
+            else:
+                parsed_scopes[base_scope][key].add(value)
     return parsed_scopes
 
 
@@ -422,3 +424,35 @@ def identify_scopes(obj):
         }
     else:
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
+
+
+def check_scope_filter(sub_scope, orm_resource, kind):
+    """Return whether a sub_scope filter applies to a given resource.
+
+    param sub_scope: parsed_scopes filter (i.e. dict or Scope.ALL)
+    param orm_resource: User or Service or Group or Spawner
+    param kind: 'user' or 'service' or 'group' or 'server'.
+
+    Returns True or False
+    """
+    if sub_scope is Scope.ALL:
+        return True
+    elif kind in sub_scope and orm_resource.name in sub_scope[kind]:
+        return True
+
+    if kind == 'server':
+        server_format = f"{orm_resource.user.name}/{orm_resource.name}"
+        if server_format in sub_scope.get(kind, []):
+            return True
+        # Fall back on checking if we have user access
+        if 'user' in sub_scope and orm_resource.user.name in sub_scope['user']:
+            return True
+        # Fall back on checking if we have group access for this user
+        orm_resource = orm_resource.user
+        kind = 'user'
+    elif kind == 'user' and 'group' in sub_scope:
+        group_names = {group.name for group in orm_resource.groups}
+        user_in_group = bool(group_names & set(sub_scope['group']))
+        if user_in_group:
+            return True
+    return False
