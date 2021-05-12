@@ -24,20 +24,21 @@ Some relevant points:
 ### Key OAuth terms
 
 - **provider** the entity responsible for managing.
-  JupyterHub is _always_ an oauth provider for its components.
+  JupyterHub is _always_ an oauth provider for JupyterHub's components.
   When OAuthenticator is used, an external service, such as GitHub or KeyCloak, is also an oauth provider.
 - **client** An entity that requests OAuth tokens on a user's behalf.
   JupyterHub _services_ or single-user _servers_ are OAuth clients of the JupyterHub _provider_.
   When OAuthenticator is used, JupyterHub is itself also an OAuth _client_ for the external oauth _provider_, e.g. GitHub.
-- **browser** A user's web browser, which makes requests and stores things like cookies to
-- **token** The secret value used to represent a user's authorization. This is the final product of the OAuth process
+- **browser** A user's web browser, which makes requests and stores things like cookies
+- **token** The secret value used to represent a user's authorization. This is the final product of the OAuth process.
 
 ### The oauth flow
 
-OAuth flow is what we call the sequence of HTTP requests involved in authenticating a user and issuing a token.
+OAuth flow is what we call the sequence of HTTP requests involved in authenticating a user and issuing a token, ultimately used for authorized access to a service or single-user server.
 
 It generally goes like this:
 
+#### Oauth request and redirect
 1. A _browser_ makes an HTTP request to an oauth _client_.
 2. There are no credentials, so the client _redirects_ the browser to an "authorize" page on the oauth _provider_ with some extra information:
    - the oauth **client id** of the client itself
@@ -55,6 +56,7 @@ It generally goes like this:
    (or "oauth callback uri"),
    with the oauth code in a url parameter.
 
+#### State after redirect
 At this point:
 
 - The browser is authenticated with the _provider_
@@ -63,6 +65,7 @@ At this point:
 - All requests so far have been made directly by the browser.
   No requests have originated at the client or provider.
 
+#### OAuth Client Handles Callback Request
 Now we get to finish the OAuth process.
 Let's dig into what the oauth client does when it handles
 the oauth callback request with the
@@ -92,7 +95,7 @@ Our starting point:
 
 First request:
 
-- browser->single-user server
+- browser->single-user server running JupyterLab or Jupyter Classic
 - `GET /user/danez/notebooks/mynotebook.ipynb`
 - no credentials, so client starts oauth process with JupyterHub
 - response: 302 redirect -> `/hub/api/oauth2/authorize`
@@ -134,7 +137,7 @@ The first:
 - JupyterHub->GitHub
 - `POST https://github.com/login/oauth/access_token`
 - request made with oauth code from url parameter
-- response includes an Access token
+- response includes an access token
 
 The second:
 
