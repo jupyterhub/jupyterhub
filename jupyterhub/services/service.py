@@ -98,6 +98,14 @@ class _ServiceSpawner(LocalProcessSpawner):
 
     cwd = Unicode()
     cmd = Command(minlen=0)
+    _service_name = Unicode()
+
+    @default("oauth_scopes")
+    def _default_oauth_scopes(self):
+        return [
+            "access:services",
+            f"access:services!service={self._service_name}",
+        ]
 
     def make_preexec_fn(self, name):
         if not name:
@@ -331,6 +339,10 @@ class Service(LoggingConfigurable):
         return bool(self.server is not None or self.oauth_redirect_uri)
 
     @property
+    def oauth_client(self):
+        return self.orm.oauth_client
+
+    @property
     def server(self):
         if self.orm.server:
             return Server.from_orm(self.orm.server)
@@ -384,6 +396,7 @@ class Service(LoggingConfigurable):
             environment=env,
             api_token=self.api_token,
             oauth_client_id=self.oauth_client_id,
+            _service_name=self.name,
             cookie_options=self.cookie_options,
             cwd=self.cwd,
             hub=self.hub,

@@ -24,11 +24,13 @@ def get_default_roles():
         {
             'name': 'user',
             'description': 'Standard user privileges',
-            'scopes': ['self'],
+            'scopes': [
+                'self',
+            ],
         },
         {
             'name': 'admin',
-            'description': 'Admin privileges (currently can do everything)',
+            'description': 'Admin privileges (can do everything)',
             'scopes': [
                 'admin:users',
                 'admin:users:servers',
@@ -38,12 +40,17 @@ def get_default_roles():
                 'read:hub',
                 'proxy',
                 'shutdown',
+                'access:services',
+                'access:users:servers',
             ],
         },
         {
             'name': 'server',
             'description': 'Post activity only',
-            'scopes': ['users:activity!user'],
+            'scopes': [
+                'users:activity!user',
+                'access:users:servers!user',
+            ],
         },
         {
             'name': 'token',
@@ -64,6 +71,7 @@ def expand_self_scope(name):
     users:activity
     users:servers
     users:tokens
+    access:users:servers
 
     Arguments:
       name (str): user name
@@ -80,6 +88,8 @@ def expand_self_scope(name):
         'users:tokens',
     ]
     read_scope_list = ['read:' + scope for scope in scope_list]
+    # access doesn't want the 'read:' prefix
+    scope_list.append('access:users:servers')
     scope_list.extend(read_scope_list)
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 

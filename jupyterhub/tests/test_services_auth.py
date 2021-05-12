@@ -25,6 +25,7 @@ from tornado.web import HTTPError
 from tornado.web import RequestHandler
 
 from .. import orm
+from .. import roles
 from ..services.auth import _ExpiringDict
 from ..services.auth import HubOAuth
 from ..services.auth import HubOAuthenticated
@@ -87,6 +88,7 @@ async def test_hubauth_token(app, mockservice_url):
         public_url(app, mockservice_url) + '/whoami/',
         headers={'Authorization': 'token %s' % token},
     )
+    r.raise_for_status()
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
     assert sub_reply == {'name': 'river', 'admin': False}
@@ -111,36 +113,101 @@ async def test_hubauth_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-async def test_hubauth_service_token(app, mockservice_url):
+@pytest.mark.parametrize(
+    "scopes, allowed",
+    [
+        (
+            [
+                "access:services",
+            ],
+            True,
+        ),
+        (
+            [
+                "access:services!service=$service",
+            ],
+            True,
+        ),
+        (
+            [
+                "access:services!service=other-service",
+            ],
+            False,
+        ),
+        (
+            [
+                "access:users:servers!user=$service",
+            ],
+            False,
+        ),
+    ],
+)
+async def test_hubauth_service_token(request, app, mockservice_url, scopes, allowed):
     """Test HubAuthenticated service with service API tokens"""
+
+    scopes = [scope.replace('$service', mockservice_url.name) for scope in scopes]
 
     token = hexlify(os.urandom(5)).decode('utf8')
     name = 'test-api-service'
     app.service_tokens[token] = name
     await app.init_api_tokens()
 
+    orm_service = app.db.query(orm.Service).filter_by(name=name).one()
+    role_name = "test-hubauth-service-token"
+
+    roles.create_role(
+        app.db,
+        {
+            "name": role_name,
+            "description": "role for test",
+            "scopes": scopes,
+        },
+    )
+    request.addfinalizer(lambda: roles.delete_role(app.db, role_name))
+    roles.grant_role(app.db, orm_service, role_name)
+
     # token in Authorization header
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/',
+        public_url(app, mockservice_url) + 'whoami/',
         headers={'Authorization': 'token %s' % token},
         allow_redirects=False,
     )
-    r.raise_for_status()
-    assert r.status_code == 200
-    reply = r.json()
-    assert reply == {'kind': 'service', 'name': name, 'admin': False, 'roles': []}
-    assert not r.cookies
+    if allowed:
+        r.raise_for_status()
+        assert r.status_code == 200
+        reply = r.json()
+        assert reply == {
+            'kind': 'service',
+            'name': name,
+            'admin': False,
+            'roles': [role_name],
+            'scopes': scopes,
+        }
+        assert not r.cookies
+    else:
+        assert r.status_code == 403
 
     # token in ?token parameter
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/?token=%s' % token
+        public_url(app, mockservice_url) + 'whoami/?token=%s' % token
     )
-    r.raise_for_status()
-    reply = r.json()
-    assert reply == {'kind': 'service', 'name': name, 'admin': False, 'roles': []}
+    if allowed:
+        r.raise_for_status()
+        assert r.status_code == 200
+        reply = r.json()
+        assert reply == {
+            'kind': 'service',
+            'name': name,
+            'admin': False,
+            'roles': [role_name],
+            'scopes': scopes,
+        }
+        assert not r.cookies
+    else:
+        assert r.status_code == 403
 
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+        public_url(app, mockservice_url) + 'whoami/?token=no-such-token',
         allow_redirects=False,
     )
     assert r.status_code == 302
