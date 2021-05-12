@@ -10,7 +10,6 @@ from http.client import responses
 from jinja2 import TemplateNotFound
 from tornado import web
 from tornado.httputil import url_concat
-from tornado.httputil import urlparse
 
 from .. import __version__
 from .. import orm
@@ -590,8 +589,9 @@ class TokenPageHandler(BaseHandler):
             token = tokens[0]
             oauth_clients.append(
                 {
-                    'client': token.client,
-                    'description': token.client.description or token.client.identifier,
+                    'client': token.oauth_client,
+                    'description': token.oauth_client.description
+                    or token.oauth_client.identifier,
                     'created': created,
                     'last_activity': last_activity,
                     'tokens': tokens,

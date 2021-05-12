@@ -326,6 +326,21 @@ class Spawner(Base):
     last_activity = Column(DateTime, nullable=True)
     user_options = Column(JSONDict)
 
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("spawner", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
+
     # properties on the spawner wrapper
     # some APIs get these low-level objects
     # when the spawner isn't running,
@@ -376,6 +391,21 @@ class Service(Base):
         cascade="all, delete-orphan",
     )
     pid = Column(Integer)
+
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("service", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
@@ -567,6 +597,7 @@ class APIToken(Hashed, Base):
             ondelete='CASCADE',
         ),
     )
+
     # FIXME: refresh_tokens not implemented
     # should be a relation to another token table
     # refresh_token = Column(
@@ -746,7 +777,7 @@ class OAuthClient(Base):
         return self.identifier
 
     access_tokens = relationship(
-        APIToken, backref='client', cascade='all, delete-orphan'
+        APIToken, backref='oauth_client', cascade='all, delete-orphan'
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
 

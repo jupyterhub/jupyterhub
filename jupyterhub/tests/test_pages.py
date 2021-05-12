@@ -870,7 +870,7 @@ async def test_oauth_token_page(app):
     client = orm.OAuthClient(identifier='token')
     app.db.add(client)
     oauth_token = orm.APIToken(
-        client=client,
+        oauth_client=client,
         user=user,
     )
     app.db.add(oauth_token)

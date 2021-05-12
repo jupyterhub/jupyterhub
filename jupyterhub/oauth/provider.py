@@ -2,8 +2,6 @@
 
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
-from datetime import timedelta
-
 from oauthlib import uri_validate
 from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer

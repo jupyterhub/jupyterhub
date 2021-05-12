@@ -394,7 +394,7 @@ class JupyterHub(Application):
         even if your Hub authentication is still valid.
         If your Hub authentication is valid,
         logging in may be a transparent redirect as you refresh the page.
-        
+
         This does not affect JupyterHub API tokens in general,
         which do not expire by default.
         Only tokens issued during the oauth flow
@@ -887,7 +887,7 @@ class JupyterHub(Application):
         "/",
         help="""
         The routing prefix for the Hub itself.
-        
+
         Override to send only a subset of traffic to the Hub.
         Default is to use the Hub as the default route for all requests.
 
@@ -899,7 +899,7 @@ class JupyterHub(Application):
         may want to handle these events themselves,
         in which case they can register their own default target with the proxy
         and set e.g. `hub_routespec = /hub/` to serve only the hub's own pages, or even `/hub/api/` for api-only operation.
-        
+
         Note: hub_routespec must include the base_url, if any.
 
         .. versionadded:: 1.4
@@ -1484,7 +1484,7 @@ class JupyterHub(Application):
         Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
 
         ::
-        
+
             def default_url_fn(handler):
                 user = handler.current_user
                 if user and user.admin:
@@ -1956,6 +1956,7 @@ class JupyterHub(Application):
         for name, usernames in self.load_groups.items():
             group = orm.Group.find(db, name)
             if group is None:
+                self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
             for username in usernames:
@@ -1970,8 +1971,10 @@ class JupyterHub(Application):
                 if user is None:
                     if not self.authenticator.validate_username(username):
                         raise ValueError("Group username %r is not valid" % username)
+                    self.log.info(f"Creating user {username} for group {name}")
                     user = orm.User(name=username)
                     db.add(user)
+                self.log.debug(f"Adding user {username} to group {name}")
                 group.users.append(user)
         db.commit()
 
@@ -2264,6 +2267,10 @@ class JupyterHub(Application):
                     allowed_roles=service.oauth_roles,
                     description="JupyterHub service %s" % service.name,
                 )
+                service.orm.oauth_client_id = service.oauth_client_id
+            else:
+                if service.oauth_client:
+                    self.db.delete(service.oauth_client)
 
             self._service_map[name] = service
 
