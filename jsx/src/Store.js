@@ -17,20 +17,12 @@ export const reducers = (state = initialState, action) => {
         user_data: action.value.data,
       });
 
-    // Deprecated - doesn't store pagination values
-    case "USER_DATA":
-      return Object.assign({}, state, { user_data: action.value });
-
     // Updates the client group model data and stores the page
     case "GROUPS_PAGE":
       return Object.assign({}, state, {
         groups_page: action.value.page,
         groups_data: action.value.data,
       });
-
-    // Deprecated - doesn't store pagination values
-    case "GROUPS_DATA":
-      return Object.assign({}, state, { groups_data: action.value });
 
     default:
       return state;

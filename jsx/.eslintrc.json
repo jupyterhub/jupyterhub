@@ -12,7 +12,7 @@
       "version": "detect"
     }
   },
-  "plugins": ["eslint-plugin-react", "prettier"],
+  "plugins": ["eslint-plugin-react", "prettier", "unused-imports"],
   "env": {
     "es6": true,
     "browser": true
@@ -20,7 +20,8 @@
   "rules": {
     "semi": "off",
     "quotes": "off",
-    "prettier/prettier": "warn"
+    "prettier/prettier": "warn",
+    "no-unused-vars": "warn"
   },
   "overrides": [
     {

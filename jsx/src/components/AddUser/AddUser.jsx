@@ -8,6 +8,7 @@ import { jhapiRequest } from "../../util/jhapiUtil";
 const AddUser = (props) => {
   var [users, setUsers] = useState([]),
     [admin, setAdmin] = useState(false),
+    [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
@@ -27,6 +28,15 @@ const AddUser = (props) => {
   return (
     <>
       <div className="container">
+        {errorAlert != null ? (
+          <div className="row">
+            <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+              <div className="alert alert-danger">{errorAlert}</div>
+            </div>
+          </div>
+        ) : (
+          <></>
+        )}
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
             <div className="panel panel-default">
@@ -82,11 +92,17 @@ const AddUser = (props) => {
                     }
 
                     addUsers(filtered_users, admin)
-                      .then(() =>
-                        updateUsers(0, limit)
-                          .then((data) => dispatchPageChange(data, 0))
-                          .then(() => history.push("/"))
-                          .catch((err) => console.log(err))
+                      .then((data) =>
+                        data.status < 300
+                          ? updateUsers(0, limit)
+                              .then((data) => dispatchPageChange(data, 0))
+                              .then(() => history.push("/"))
+                              .catch((err) => console.log(err))
+                          : setErrorAlert(
+                              `[${data.status}] Failed to create user. ${
+                                data.status == 409 ? "User already exists." : ""
+                              }`
+                            )
                       )
                       .catch((err) => console.log(err));
                   }}

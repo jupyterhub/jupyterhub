@@ -5,13 +5,14 @@ import PropTypes from "prop-types";
 
 const CreateGroup = (props) => {
   var [groupName, setGroupName] = useState(""),
+    [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
 
   var dispatchPageUpdate = (data, page) => {
     dispatch({
-      type: "GROUPS_DATA",
+      type: "GROUPS_PAGE",
       value: {
         data: data,
         page: page,
@@ -24,6 +25,15 @@ const CreateGroup = (props) => {
   return (
     <>
       <div className="container">
+        {errorAlert != null ? (
+          <div className="row">
+            <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+              <div className="alert alert-danger">{errorAlert}</div>
+            </div>
+          </div>
+        ) : (
+          <></>
+        )}
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
             <div className="panel panel-default">
@@ -54,11 +64,19 @@ const CreateGroup = (props) => {
                   className="btn btn-primary"
                   onClick={() => {
                     createGroup(groupName)
-                      .then(
-                        updateGroups(0, limit)
-                          .then((data) => dispatchPageUpdate(data, 0))
-                          .then(history.push("/groups"))
-                          .catch((err) => console.log(err))
+                      .then((data) =>
+                        data.status < 300
+                          ? updateGroups(0, limit)
+                              .then((data) => dispatchPageUpdate(data, 0))
+                              .then((data) => history.push("/groups"))
+                              .catch((err) => console.log(err))
+                          : setErrorAlert(
+                              `[${data.status}] Failed to create group. ${
+                                data.status == 409
+                                  ? "Group already exists."
+                                  : ""
+                              }`
+                            )
                       )
                       .catch((err) => console.log(err));
                   }}
