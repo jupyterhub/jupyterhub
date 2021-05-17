@@ -5,6 +5,7 @@ import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
+import regeneratorRuntime from "regenerator-runtime"; // eslint-disable-line
 
 Enzyme.configure({ adapter: new Adapter() });
 
@@ -15,8 +16,8 @@ jest.mock("react-redux", () => ({
 }));
 
 describe("CreateGroup Component: ", () => {
-  var mockAsync = () =>
-    jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
+  var mockAsync = (result) =>
+    jest.fn().mockImplementation(() => Promise.resolve(result));
 
   var createGroupJsx = (callbackSpy) => (
     <Provider store={createStore(() => {}, {})}>
@@ -35,7 +36,7 @@ describe("CreateGroup Component: ", () => {
   });
 
   beforeEach(() => {
-    useDispatch.mockImplementation((callback) => {
+    useDispatch.mockImplementation(() => {
       return () => () => {};
     });
     useSelector.mockImplementation((callback) => {
@@ -52,14 +53,14 @@ describe("CreateGroup Component: ", () => {
     expect(component.find(".container").length).toBe(1);
   });
 
-  it("Calls createGroup and refreshGroupsData on submit", () => {
-    let callbackSpy = mockAsync(),
+  it("Calls createGroup on submit", () => {
+    let callbackSpy = mockAsync({ status: 200 }),
       component = mount(createGroupJsx(callbackSpy)),
       input = component.find("input").first(),
       submit = component.find("#submit").first();
     input.simulate("change", { target: { value: "" } });
     submit.simulate("click");
     expect(callbackSpy).toHaveBeenNthCalledWith(1, "");
-    expect(callbackSpy).toHaveBeenNthCalledWith(2, 0, 3);
+    expect(component.find(".alert.alert-danger").length).toBe(0);
   });
 });

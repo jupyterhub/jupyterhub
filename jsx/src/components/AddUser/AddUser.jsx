@@ -1,9 +1,7 @@
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { compose, withProps } from "recompose";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
-import { jhapiRequest } from "../../util/jhapiUtil";
 
 const AddUser = (props) => {
   var [users, setUsers] = useState([]),
@@ -84,9 +82,6 @@ const AddUser = (props) => {
                         /[!@#$%^&*(),.?":{}|<>]/g.test(e) == false
                     );
                     if (filtered_users.length < users.length) {
-                      let removed_users = users.filter(
-                        (e) => !filtered_users.includes(e)
-                      );
                       setUsers(filtered_users);
                       failRegexEvent();
                     }

@@ -64,11 +64,11 @@ const CreateGroup = (props) => {
                   className="btn btn-primary"
                   onClick={() => {
                     createGroup(groupName)
-                      .then((data) =>
-                        data.status < 300
+                      .then((data) => {
+                        return data.status < 300
                           ? updateGroups(0, limit)
                               .then((data) => dispatchPageUpdate(data, 0))
-                              .then((data) => history.push("/groups"))
+                              .then(() => history.push("/groups"))
                               .catch((err) => console.log(err))
                           : setErrorAlert(
                               `[${data.status}] Failed to create group. ${
@@ -76,8 +76,8 @@ const CreateGroup = (props) => {
                                   ? "Group already exists."
                                   : ""
                               }`
-                            )
-                      )
+                            );
+                      })
                       .catch((err) => console.log(err));
                   }}
                 >

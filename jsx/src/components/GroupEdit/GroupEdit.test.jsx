@@ -1,12 +1,12 @@
 import React from "react";
-import Enzyme, { mount, shallow } from "enzyme";
+import Enzyme, { mount } from "enzyme";
 import GroupEdit from "./GroupEdit";
 import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
-import ReactDOM from "react-dom";
 import { act } from "react-dom/test-utils";
+import regeneratorRuntime from "regenerator-runtime"; // eslint-disable-line
 
 Enzyme.configure({ adapter: new Adapter() });
 
@@ -33,7 +33,7 @@ describe("GroupEdit Component: ", () => {
           addToGroup={callbackSpy}
           removeFromGroup={callbackSpy}
           deleteGroup={callbackSpy}
-          history={{ push: (a) => callbackSpy }}
+          history={{ push: () => callbackSpy }}
           updateGroups={callbackSpy}
           validateUser={jest.fn().mockImplementation(() => okPacket)}
         />

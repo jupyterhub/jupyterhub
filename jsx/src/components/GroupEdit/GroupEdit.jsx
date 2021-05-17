@@ -2,14 +2,11 @@ import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import PropTypes from "prop-types";
-import regeneratorRuntime from "regenerator-runtime";
 import GroupSelect from "../GroupSelect/GroupSelect";
 
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
-    [added, setAdded] = useState(undefined),
-    [removed, setRemoved] = useState(undefined),
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
@@ -39,7 +36,7 @@ const GroupEdit = (props) => {
     return <></>;
   }
 
-  var { group_data, callback } = location.state;
+  var { group_data } = location.state;
 
   if (!group_data) return <div></div>;
 
@@ -83,9 +80,6 @@ const GroupEdit = (props) => {
                 (e) => !selected.includes(e)
               );
 
-              setAdded(new_users);
-              setRemoved(removed_users);
-
               let promiseQueue = [];
               if (new_users.length > 0)
                 promiseQueue.push(addToGroup(new_users, group_data.name));
@@ -95,7 +89,7 @@ const GroupEdit = (props) => {
                 );
 
               Promise.all(promiseQueue)
-                .then((e) => {
+                .then(() => {
                   updateGroups(0, limit)
                     .then((data) => dispatchPageUpdate(data, 0))
                     .then(() => history.push("/groups"));
@@ -112,7 +106,7 @@ const GroupEdit = (props) => {
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
-                .then((e) => {
+                .then(() => {
                   updateGroups(0, limit)
                     .then((data) => dispatchPageUpdate(data, 0))
                     .then(() => history.push("/groups"));

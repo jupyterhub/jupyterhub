@@ -1,5 +1,3 @@
-import { combineReducers } from "redux";
-
 export const initialState = {
   user_data: undefined,
   user_page: 0,

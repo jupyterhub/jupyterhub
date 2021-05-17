@@ -1,6 +1,5 @@
 import React from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { compose, withProps } from "recompose";
 import PropTypes from "prop-types";
 
 import { Link } from "react-router-dom";
@@ -10,7 +9,6 @@ const Groups = (props) => {
   var user_data = useSelector((state) => state.user_data),
     groups_data = useSelector((state) => state.groups_data),
     groups_page = useSelector((state) => state.groups_page),
-    user_page = useSelector((state) => state.user_page),
     limit = useSelector((state) => state.limit),
     dispatch = useDispatch(),
     page = parseInt(new URLSearchParams(props.location.search).get("page"));

@@ -16,7 +16,9 @@ jest.mock("react-redux", () => ({
 
 describe("EditUser Component: ", () => {
   var mockAsync = () =>
-    jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
+    jest
+      .fn()
+      .mockImplementation(() => Promise.resolve({ key: "value", status: 200 }));
   var mockSync = () => jest.fn();
 
   var editUserJsx = (callbackSpy, empty) => (
@@ -29,7 +31,7 @@ describe("EditUser Component: ", () => {
           deleteUser={callbackSpy}
           editUser={callbackSpy}
           updateUsers={callbackSpy}
-          history={{ push: (a) => {} }}
+          history={{ push: () => {} }}
           failRegexEvent={callbackSpy}
           noChangeEvent={callbackSpy}
         />
@@ -42,7 +44,7 @@ describe("EditUser Component: ", () => {
   });
 
   beforeEach(() => {
-    useDispatch.mockImplementation((callback) => {
+    useDispatch.mockImplementation(() => {
       return () => {};
     });
     useSelector.mockImplementation((callback) => {

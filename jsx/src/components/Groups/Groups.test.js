@@ -39,7 +39,7 @@ describe("Groups Component: ", () => {
     useSelector.mockImplementation((callback) => {
       return callback(mockAppState());
     });
-    useDispatch.mockImplementation((callback) => {
+    useDispatch.mockImplementation(() => {
       return () => {};
     });
   });

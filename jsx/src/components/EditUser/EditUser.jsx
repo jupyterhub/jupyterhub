@@ -4,7 +4,8 @@ import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 
 const EditUser = (props) => {
-  var limit = useSelector((state) => state.limit);
+  var limit = useSelector((state) => state.limit),
+    [errorAlert, setErrorAlert] = useState(null);
 
   var dispatch = useDispatch();
 
@@ -40,6 +41,15 @@ const EditUser = (props) => {
   return (
     <>
       <div className="container">
+        {errorAlert != null ? (
+          <div className="row">
+            <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+              <div className="alert alert-danger">{errorAlert}</div>
+            </div>
+          </div>
+        ) : (
+          <></>
+        )}
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
             <div className="panel panel-default">
@@ -64,7 +74,7 @@ const EditUser = (props) => {
                       checked={admin}
                       type="checkbox"
                       id="admin-check"
-                      onChange={(e) => setAdmin(!admin)}
+                      onChange={() => setAdmin(!admin)}
                     />
                     <span> </span>
                     <label className="form-check-label">Admin</label>
@@ -75,10 +85,14 @@ const EditUser = (props) => {
                       onClick={() => {
                         deleteUser(username)
                           .then((data) => {
-                            updateUsers(0, limit)
-                              .then((data) => dispatchPageChange(data, 0))
-                              .then(() => history.push("/"))
-                              .catch((err) => console.log(err));
+                            data.status < 300
+                              ? updateUsers(0, limit)
+                                  .then((data) => dispatchPageChange(data, 0))
+                                  .then(() => history.push("/"))
+                                  .catch((err) => console.log(err))
+                              : setErrorAlert(
+                                  `[${data.status}] Failed to edit user.`
+                                );
                           })
                           .catch((err) => console.log(err));
                       }}
@@ -111,12 +125,18 @@ const EditUser = (props) => {
                           admin
                         )
                           .then((data) => {
-                            updateUsers(0, limit)
-                              .then((data) => dispatchPageChange(data, 0))
-                              .then(() => history.push("/"))
-                              .catch((err) => console.log(err));
+                            data.status < 300
+                              ? updateUsers(0, limit)
+                                  .then((data) => dispatchPageChange(data, 0))
+                                  .then(() => history.push("/"))
+                                  .catch((err) => console.log(err))
+                              : setErrorAlert(
+                                  `[${data.status}] Failed to edit user.`
+                                );
                           })
-                          .catch((err) => {});
+                          .catch((err) => {
+                            console.log(err);
+                          });
                       } else {
                         setUpdatedUsername("");
                         failRegexEvent();
@@ -124,12 +144,18 @@ const EditUser = (props) => {
                     } else {
                       editUser(username, username, admin)
                         .then((data) => {
-                          updateUsers(0, limit)
-                            .then((data) => dispatchPageChange(data, 0))
-                            .then(() => history.push("/"))
-                            .catch((err) => console.log(err));
+                          data.status < 300
+                            ? updateUsers(0, limit)
+                                .then((data) => dispatchPageChange(data, 0))
+                                .then(() => history.push("/"))
+                                .catch((err) => console.log(err))
+                            : setErrorAlert(
+                                `[${data.status}] Failed to edit user.`
+                              );
                         })
-                        .catch((err) => {});
+                        .catch((err) => {
+                          console.log(err);
+                        });
                     }
                   }}
                 >

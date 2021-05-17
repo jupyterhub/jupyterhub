@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { compose, withProps } from "recompose";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
@@ -9,7 +8,6 @@ import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
 import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
-import { jhapiRequest } from "../../util/jhapiUtil";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
 const ServerDashboard = (props) => {

@@ -21,7 +21,17 @@
     "semi": "off",
     "quotes": "off",
     "prettier/prettier": "warn",
-    "no-unused-vars": "warn"
+    "no-unused-vars": "off",
+    "unused-imports/no-unused-imports": "error",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^regeneratorRuntime|^_",
+        "args": "after-used",
+        "argsIgnorePattern": "^_"
+      }
+    ]
   },
   "overrides": [
     {

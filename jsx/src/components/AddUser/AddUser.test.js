@@ -16,7 +16,9 @@ jest.mock("react-redux", () => ({
 
 describe("AddUser Component: ", () => {
   var mockAsync = () =>
-    jest.fn().mockImplementation(() => Promise.resolve({ key: "value" }));
+    jest
+      .fn()
+      .mockImplementation(() => Promise.resolve({ key: "value", status: 200 }));
 
   var addUserJsx = (callbackSpy) => (
     <Provider store={createStore(() => {}, {})}>
@@ -25,7 +27,7 @@ describe("AddUser Component: ", () => {
           addUsers={callbackSpy}
           failRegexEvent={callbackSpy}
           updateUsers={callbackSpy}
-          history={{ push: (a) => {} }}
+          history={{ push: () => {} }}
         />
       </HashRouter>
     </Provider>
@@ -36,7 +38,7 @@ describe("AddUser Component: ", () => {
   });
 
   beforeEach(() => {
-    useDispatch.mockImplementation((callback) => {
+    useDispatch.mockImplementation(() => {
       return () => {};
     });
     useSelector.mockImplementation((callback) => {

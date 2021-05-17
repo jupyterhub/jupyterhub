@@ -1,7 +1,7 @@
 import { withProps } from "recompose";
 import { jhapiRequest } from "./jhapiUtil";
 
-const withAPI = withProps((props) => ({
+const withAPI = withProps(() => ({
   updateUsers: (offset, limit) =>
     jhapiRequest(`/users?offset=${offset}&limit=${limit}`, "GET").then((data) =>
       data.json()
