@@ -4,7 +4,7 @@ const express = require("express");
 
 module.exports = {
   entry: path.resolve(__dirname, "src", "App.jsx"),
-  mode: "development",
+  mode: "production",
   module: {
     rules: [
       {
