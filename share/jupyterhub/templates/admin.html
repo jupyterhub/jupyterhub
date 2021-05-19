@@ -17,6 +17,9 @@
 
 {% block main %}
 <div id="react-admin-hook">
+  <script id="jupyterhub-admin-config">
+    window.api_page_limit = parseInt("{{ api_page_limit|safe }}")
+  </script>
   <script src="static/js/admin-react.js"></script>
 </div>
 {% endblock %}

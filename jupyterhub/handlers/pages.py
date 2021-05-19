@@ -466,6 +466,7 @@ class AdminHandler(BaseHandler):
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
             server_version='{} {}'.format(__version__, self.version_hash),
+            api_page_limit=self.settings["app"].api_page_default_limit,
         )
         self.finish(html)
 
