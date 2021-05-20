@@ -84,9 +84,12 @@ def check_db_locks(func):
         maybe_future = func(app, *args, **kwargs)
 
         def _check(_=None):
-            with app.session_factory() as temp_session:
+            temp_session = app.session_factory()
+            try:
                 temp_session.execute('CREATE TABLE dummy (foo INT)')
                 temp_session.execute('DROP TABLE dummy')
+            finally:
+                temp_session.close()
 
         async def await_then_check():
             result = await maybe_future
