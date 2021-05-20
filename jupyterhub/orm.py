@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
+import warnings
 from base64 import decodebytes
 from base64 import encodebytes
 from datetime import datetime
@@ -674,18 +675,29 @@ class APIToken(Hashed, Base):
             orm_token.service = service
         if expires_in is not None:
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
+
         db.add(orm_token)
-        # load default roles if they haven't been initiated
-        # correct to have this here? otherwise some tests fail
         token_role = Role.find(db, 'token')
         if not token_role:
+            # FIXME: remove this.
+            # Creating a token before the db has roles defined should raise an error.
+            # PR #3460 should let us fix it by ensuring default roles are define
+
+            warnings.warn(
+                "Token created before default roles!", RuntimeWarning, stacklevel=2
+            )
             default_roles = get_default_roles()
             for role in default_roles:
                 create_role(db, role)
-        if roles is not None:
-            update_roles(db, entity=orm_token, roles=roles)
-        else:
-            assign_default_roles(db, entity=orm_token)
+        try:
+            if roles is not None:
+                update_roles(db, entity=orm_token, roles=roles)
+            else:
+                assign_default_roles(db, entity=orm_token)
+        except Exception:
+            db.delete(orm_token)
+            db.commit()
+            raise
 
         db.commit()
         return token
