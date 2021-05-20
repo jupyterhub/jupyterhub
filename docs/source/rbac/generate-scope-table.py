@@ -84,6 +84,9 @@ class ScopeTableGenerator:
         with open(filename, 'w') as f:
             f.write(content)
         print(f"Generated {filename}.")
+        print(
+            "Run 'make clean' before 'make html' to ensure the built scopes.html contains latest scope table changes."
+        )
 
 
 def main():
