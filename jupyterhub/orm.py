@@ -514,9 +514,7 @@ class Hashed(Expiring):
     @classmethod
     def check_token(cls, db, token):
         """Check if a token is acceptable"""
-        print("checking", cls, token, len(token), cls.min_length)
         if len(token) < cls.min_length:
-            print("raising")
             raise ValueError(
                 "Tokens must be at least %i characters, got %r"
                 % (cls.min_length, token)
@@ -773,6 +771,11 @@ class OAuthCode(Expiring, Base):
             .first()
         )
 
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}(id={self.id}, client_id={self.client_id!r})>"
+        )
+
 
 class OAuthClient(Base):
     __tablename__ = 'oauth_clients'
@@ -794,6 +797,9 @@ class OAuthClient(Base):
     # these are the roles an oauth client is allowed to request
     # *not* the roles of the client itself
     allowed_roles = relationship('Role', secondary='oauth_client_role_map')
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}(identifier={self.identifier!r})>"
 
 
 # General database utilities

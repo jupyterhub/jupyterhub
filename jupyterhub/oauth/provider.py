@@ -614,6 +614,7 @@ class JupyterHubOAuthServer(WebApplicationServer):
         orm_client.description = description or client_id
         orm_client.allowed_roles = allowed_roles
         self.db.commit()
+        return orm_client
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
