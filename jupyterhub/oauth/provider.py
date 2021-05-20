@@ -611,7 +611,7 @@ class JupyterHubOAuthServer(WebApplicationServer):
             allowed_roles = []
         orm_client.secret = hash_token(client_secret) if client_secret else ""
         orm_client.redirect_uri = redirect_uri
-        orm_client.description = description
+        orm_client.description = description or client_id
         orm_client.allowed_roles = allowed_roles
         self.db.commit()
 
