@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import os
 from concurrent.futures import ThreadPoolExecutor
 
@@ -80,14 +81,23 @@ def check_db_locks(func):
     """
 
     def new_func(app, *args, **kwargs):
-        retval = func(app, *args, **kwargs)
+        maybe_future = func(app, *args, **kwargs)
 
-        temp_session = app.session_factory()
-        temp_session.execute('CREATE TABLE dummy (foo INT)')
-        temp_session.execute('DROP TABLE dummy')
-        temp_session.close()
+        def _check(_=None):
+            with app.session_factory() as temp_session:
+                temp_session.execute('CREATE TABLE dummy (foo INT)')
+                temp_session.execute('DROP TABLE dummy')
 
-        return retval
+        async def await_then_check():
+            result = await maybe_future
+            _check()
+            return result
+
+        if inspect.isawaitable(maybe_future):
+            return await_then_check()
+        else:
+            _check()
+            return maybe_future
 
     return new_func
 
