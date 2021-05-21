@@ -68,7 +68,7 @@ source/reference/metrics.rst: generate-metrics.py
 
 scopes: source/rbac/scope-table.md
 
-source/rbac/scope-table.md: source/rbac/generate-scope-table.py source/rbac/scopedict.py
+source/rbac/scope-table.md: source/rbac/generate-scope-table.py
 	python3 source/rbac/generate-scope-table.py
 
 html: rest-api metrics scopes

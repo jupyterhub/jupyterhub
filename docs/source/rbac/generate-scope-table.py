@@ -2,14 +2,15 @@ import os
 from collections import defaultdict
 
 from pytablewriter import MarkdownTableWriter
-from scopedict import get_scope_dict
+
+from jupyterhub.scopes import scope_definitions
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 
 
 class ScopeTableGenerator:
     def __init__(self):
-        self.scopes = get_scope_dict()
+        self.scopes = scope_definitions
 
     @classmethod
     def create_writer(cls, table_name, headers, values):
