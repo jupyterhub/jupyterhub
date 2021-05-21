@@ -274,7 +274,7 @@ class User(Base):
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
 
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, nullable=True)
 
@@ -386,7 +386,7 @@ class Service(Base):
 
     # common user interface:
     name = Column(Unicode(255), unique=True)
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
 
     api_tokens = relationship(
         "APIToken", backref="service", cascade="all, delete-orphan"
