@@ -824,13 +824,26 @@ class UserNotAllowed(Exception):
         )
 
 
-class HubAuthenticated(object):
+class HubAuthenticated:
     """Mixin for tornado handlers that are authenticated with JupyterHub
 
     A handler that mixes this in must have the following attributes/properties:
 
     - .hub_auth: A HubAuth instance
     - .hub_scopes: A set of JupyterHub 2.0 OAuth scopes to allow.
+      Default comes from .hub_auth.oauth_scopes,
+      which in turn is set by $JUPYTERHUB_OAUTH_SCOPES
+      Default values include:
+      - 'access:services', 'access:services!service={service_name}' for services
+      - 'access:users:servers', 'access:users:servers!user={user}',
+        'access:users:servers!server={user}/{server_name}'
+        for single-user servers
+
+    If hub_scopes is not used (e.g. JupyterHub 1.x),
+    these additional properties can be used:
+
+    - .allow_admin: If True, allow any admin user.
+      Default: False.
     - .hub_users: A set of usernames to allow.
       If left unspecified or None, username will not be checked.
     - .hub_groups: A set of group names to allow.
@@ -942,6 +955,8 @@ class HubAuthenticated(object):
                 # if hub_scopes are used, *only* hub_scopes are used
                 # note: this means successful authentication, but insufficient permission
                 raise UserNotAllowed(model)
+
+        # proceed with the pre-2.0 way if hub_scopes is not set
 
         if self.allow_admin and model.get('admin', False):
             app_log.debug("Allowing Hub admin %s", name)

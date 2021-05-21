@@ -86,10 +86,18 @@ Hub-Managed Service would include:
 This example would be configured as follows in `jupyterhub_config.py`:
 
 ```python
+c.JupyterHub.load_roles = [
+    {
+        "name": "idle-culler",
+        "scopes": [
+            "users:servers",
+            # also 'admin:users' if culling idle users as well
+        ]
+    }
+
 c.JupyterHub.services = [
     {
         'name': 'idle-culler',
-        'admin': True,
         'command': [sys.executable, '-m', 'jupyterhub_idle_culler', '--timeout=3600']
     }
 ]
@@ -114,6 +122,7 @@ JUPYTERHUB_BASE_URL:       Base URL of the Hub (https://mydomain[:port]/)
 JUPYTERHUB_SERVICE_PREFIX: URL path prefix of this service (/services/:service-name/)
 JUPYTERHUB_SERVICE_URL:    Local URL where the service is expected to be listening.
                            Only for proxied web services.
+JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing access to the service.
 ```
 
 For the previous 'cull idle' Service example, these environment variables
@@ -231,50 +240,8 @@ service. See the `service-whoami-flask` example in the
 [JupyterHub GitHub repo](https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-whoami-flask)
 for more details.
 
-```python
-from functools import wraps
-import json
-import os
-from urllib.parse import quote
-
-from flask import Flask, redirect, request, Response
-
-from jupyterhub.services.auth import HubOAuth
-
-prefix = os.environ.get('JUPYTERHUB_SERVICE_PREFIX', '/')
-
-auth = HubOAuth(
-    api_token=os.environ['JUPYTERHUB_API_TOKEN'],
-    cache_max_age=60,
-)
-
-app = Flask(__name__)
-
-
-def authenticated(f):
-    """Decorator for authenticating with the Hub"""
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get(auth.auth_header_name)
-        if token:
-            user = auth.user_for_token(token)
-        else:
-            user = None
-        if user:
-            return f(user, *args, **kwargs)
-        else:
-            # redirect to login url on failed auth
-            return redirect(auth.login_url + '?next=%s' % quote(request.path))
-    return decorated
-
-
-@app.route(prefix)
-@authenticated
-def whoami(user):
-    return Response(
-        json.dumps(user, indent=1, sort_keys=True),
-        mimetype='application/json',
-        )
+```{literalinclude} ../../../examples/service-whoami-flask/whoami-flask.py
+:language: python
 ```
 
 ### Authenticating tornado services with JupyterHub
@@ -315,25 +282,38 @@ undefined, then any user will be allowed.
 If you don't want to use the reference implementation
 (e.g. you find the implementation a poor fit for your Flask app),
 you can implement authentication via the Hub yourself.
-We recommend looking at the [`HubAuth`][hubauth] class implementation for reference,
+JupyterHub is a standard OAuth2 provider,
+so you can any OAuth 2 implementation appropriate for
+See the [FastAPI example][] for an example of using JupyterHub as an OAuth provider with fastapi,
+without using any code imported from JupyterHub.
+
+On completion of OAuth, you will have an access token for JupyterHub,
+which can be used to identify the user and the permissions (scopes)
+the user has authorized for your service.
+
+You will only get to this stage if the user has the required `access:services!service=$service-name` scope.
+
+To retrieve the user model for the token, make a request to `GET /hub/api/user` with the token in the Authorization header.
+For example, using flask:
+
+```{literal-include} ../../../examples/service-whoami-flask/whoami-flask.py
+:language: python
+```
+
+We recommend looking at the [`HubOAuth`][huboauth] class implementation for reference,
 and taking note of the following process:
 
-1. retrieve the cookie `jupyterhub-services` from the request.
-2. Make an API request `GET /hub/api/authorizations/cookie/jupyterhub-services/cookie-value`,
-   where cookie-value is the url-encoded value of the `jupyterhub-services` cookie.
-   This request must be authenticated with a Hub API token in the `Authorization` header,
-   for example using the `api_token` from your [external service's configuration](#externally-managed-services).
+1. retrieve the token from the request.
+2. Make an API request `GET /hub/api/user`,
+   with the token in the `Authorization` header.
 
    For example, with [requests][]:
 
    ```python
    r = requests.get(
-       '/'.join(["http://127.0.0.1:8081/hub/api",
-                  "authorizations/cookie/jupyterhub-services",
-                  quote(encrypted_cookie, safe=''),
-       ]),
+       "http://127.0.0.1:8081/hub/api/user",
        headers = {
-           'Authorization' : 'token %s' % api_token,
+           'Authorization' : f'token {api_token}',
        },
    )
    r.raise_for_status()
@@ -342,12 +322,26 @@ and taking note of the following process:
 
 3. On success, the reply will be a JSON model describing the user:
 
-   ```json
+   ```python
    {
      "name": "inara",
-     "groups": ["serenity", "guild"]
+     # groups  may be omitted, depending on permissions
+     "groups": ["serenity", "guild"],
+     # scopes is new in JupyterHub 2.0
+     "scopes": [
+       "access:services",
+       "read:users:name",
+       "read:users!user=inara",
+       "..."
+     ]
    }
    ```
+
+The `scopes` field can be used to manage access.
+Note: a user will have access to a service to complete oauth access to the service for the first time.
+Individual permissions may be revoked at any later point without revoking the token,
+in which case the `scopes` field in this model should be checked on each access.
+The default required scopes for access are available from `hub_auth.oauth_scopes` or `$JUPYTERHUB_OAUTH_SCOPES`.
 
 An example of using an Externally-Managed Service and authentication is
 in [nbviewer README][nbviewer example] section on securing the notebook viewer,
@@ -357,9 +351,9 @@ section on securing the notebook viewer.
 
 [requests]: http://docs.python-requests.org/en/master/
 [services_auth]: ../api/services.auth.html
-[hubauth]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth
-[hubauth.user_for_cookie]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_cookie
+[huboauth]: ../api/services.auth.html#jupyterhub.services.auth.HubOAuth
 [hubauth.user_for_token]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_token
 [hubauthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
+[fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi
 [jupyterhub_idle_culler]: https://github.com/jupyterhub/jupyterhub-idle-culler

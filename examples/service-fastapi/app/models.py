@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Any
+from typing import Dict
 from typing import List
 from typing import Optional
 
@@ -22,11 +23,12 @@ class Server(BaseModel):
 class User(BaseModel):
     name: str
     admin: bool
-    groups: List[str]
+    groups: Optional[List[str]]
     server: Optional[str]
     pending: Optional[str]
     last_activity: datetime
-    servers: Optional[List[Server]]
+    servers: Optional[Dict[str, Server]]
+    scopes: List[str]
 
 
 # https://stackoverflow.com/questions/64501193/fastapi-how-to-use-httpexception-in-responses
