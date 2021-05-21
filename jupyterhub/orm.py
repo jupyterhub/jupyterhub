@@ -681,7 +681,7 @@ class APIToken(Hashed, Base):
         if not token_role:
             # FIXME: remove this.
             # Creating a token before the db has roles defined should raise an error.
-            # PR #3460 should let us fix it by ensuring default roles are define
+            # PR #3460 should let us fix it by ensuring default roles are defined
 
             warnings.warn(
                 "Token created before default roles!", RuntimeWarning, stacklevel=2
