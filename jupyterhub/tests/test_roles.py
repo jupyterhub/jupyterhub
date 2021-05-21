@@ -1046,3 +1046,71 @@ async def test_oauth_allowed_roles(app, create_temp_role):
     app_service = app.services[0]
     assert app_service['name'] == 'oas1'
     assert set(app_service['oauth_roles']) == set(allowed_roles)
+
+
+async def test_user_group_roles(app, create_temp_role):
+    user = add_user(app.db, app, name='jack')
+    another_user = add_user(app.db, app, name='jill')
+
+    group = orm.Group.find(app.db, name='A')
+    if not group:
+        group = orm.Group(name='A')
+        app.db.add(group)
+        app.db.commit()
+
+    if group not in user.groups:
+        user.groups.append(group)
+        app.db.commit()
+
+    if group not in another_user.groups:
+        another_user.groups.append(group)
+        app.db.commit()
+
+    group_role = orm.Role.find(app.db, 'student-a')
+    if not group_role:
+        create_temp_role(['read:groups!group=A'], 'student-a')
+        roles.grant_role(app.db, group, rolename='student-a')
+        group_role = orm.Role.find(app.db, 'student-a')
+
+    # repeat check to ensure group roles don't get added to the user more than once
+    # regression test for #3472
+    roles_before = list(user.roles)
+    for i in range(3):
+        roles.expand_roles_to_scopes(user.orm_user)
+        user_roles = list(user.roles)
+        assert user_roles == roles_before
+
+    # jack's API token
+    token = user.new_api_token()
+
+    headers = {'Authorization': 'token %s' % token}
+    r = await api_request(app, 'users', method='get', headers=headers)
+    assert r.status_code == 200
+    r.raise_for_status()
+    reply = r.json()
+
+    print(reply)
+
+    assert len(reply[0]['roles']) == 1
+    assert reply[0]['name'] == 'jack'
+    assert group_role.name not in reply[0]['roles']
+
+    headers = {'Authorization': 'token %s' % token}
+    r = await api_request(app, 'groups', method='get', headers=headers)
+    assert r.status_code == 200
+    r.raise_for_status()
+    reply = r.json()
+
+    print(reply)
+
+    headers = {'Authorization': 'token %s' % token}
+    r = await api_request(app, 'users', method='get', headers=headers)
+    assert r.status_code == 200
+    r.raise_for_status()
+    reply = r.json()
+
+    print(reply)
+
+    assert len(reply[0]['roles']) == 1
+    assert reply[0]['name'] == 'jack'
+    assert group_role.name not in reply[0]['roles']
