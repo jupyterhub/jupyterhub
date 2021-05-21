@@ -37,7 +37,7 @@ with any provider, is also available.
 ## The Dummy Authenticator
 
 When testing, it may be helpful to use the
-:class:`~jupyterhub.auth.DummyAuthenticator`. This allows for any username and
+{class}`jupyterhub.auth.DummyAuthenticator`. This allows for any username and
 password unless if a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
