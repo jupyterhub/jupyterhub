@@ -13,7 +13,9 @@ import functools
 import inspect
 import warnings
 from enum import Enum
+from functools import lru_cache
 
+import sqlalchemy as sa
 from tornado import web
 from tornado.log import app_log
 
@@ -114,21 +116,38 @@ class Scope(Enum):
     ALL = True
 
 
-def _intersect_expanded_scopes(scopes_a, scopes_b):
-    """Intersect two sets of expanded scopes by comparing their permissions
+def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
+    """Intersect two sets of scopes by comparing their permissions
 
     Arguments:
       scopes_a, scopes_b: sets of expanded scopes
+      db (optional): db connection for resolving group membership
 
     Returns:
       intersection: set of expanded scopes as intersection of the arguments
 
-    Note: Intersects correctly with ALL and exact filter matches
-          (i.e. users!user=x & read:users:name -> read:users:name!user=x)
-
-          Does not currently intersect with containing filters
-          (i.e. users!group=x & users!user=y even if user y is in group x)
+    If db is given, group membership will be accounted for in intersections,
+    Otherwise, it can result in lower than intended permissions,
+          (i.e. users!group=x & users!user=y will be empty, even if user y is in group x.)
     """
+    empty_set = frozenset()
+
+    # cached lookups for group membership of users and servers
+    @lru_cache()
+    def groups_for_user(username):
+        """Get set of group names for a given username"""
+        user = db.query(orm.User).filter_by(name=username).first()
+        if user is None:
+            return empty_set
+        else:
+            return {group.name for group in user.groups}
+
+    @lru_cache()
+    def groups_for_server(server):
+        """Get set of group names for a given server"""
+        username, _, servername = server.partition("/")
+        return groups_for_user(username)
+
     parsed_scopes_a = parse_scopes(scopes_a)
     parsed_scopes_b = parse_scopes(scopes_b)
 
@@ -144,11 +163,14 @@ def _intersect_expanded_scopes(scopes_a, scopes_b):
         elif filters_b == Scope.ALL:
             common_filters[base] = filters_a
         else:
-            # warn *if* there are non-overlapping user= and group= filters
             common_entities = filters_a.keys() & filters_b.keys()
             all_entities = filters_a.keys() | filters_b.keys()
+
+            # if we don't have a db session, we can't check group membership
+            # warn *if* there are non-overlapping user= and group= filters that we can't check
             if (
-                not warned
+                db is None
+                and not warned
                 and 'group' in all_entities
                 and ('user' in all_entities or 'server' in all_entities)
             ):
@@ -160,39 +182,67 @@ def _intersect_expanded_scopes(scopes_a, scopes_b):
                             not warned
                             and "group" in a
                             and b_key in b
-                            and set(a["group"]).difference(b.get("group", []))
-                            and set(b[b_key]).difference(a.get(b_key, []))
+                            and a["group"].difference(b.get("group", []))
+                            and b[b_key].difference(a.get(b_key, []))
                         ):
                             warnings.warn(
                                 f"{base}[!{b_key}={b[b_key]}, !group={a['group']}] combinations of filters present,"
-                                " intersection between not considered. May result in lower than intended permissions.",
+                                " without db access. Intersection between not considered."
+                                " May result in lower than intended permissions.",
                                 UserWarning,
                             )
                             warned = True
 
             common_filters[base] = {
-                entity: set(parsed_scopes_a[base][entity])
-                & set(parsed_scopes_b[base][entity])
+                entity: filters_a[entity] & filters_b[entity]
                 for entity in common_entities
             }
 
-            if 'server' in all_entities and 'user' in all_entities:
-                if filters_a.get('server') == filters_b.get('server'):
-                    continue
+            # resolve hierarchies (group/user/server) in both directions
+            common_servers = common_filters[base].get("server", set())
+            common_users = common_filters[base].get("user", set())
 
-                additional_servers = set()
-                # resolve user/server hierarchy in both directions
-                for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
-                    if 'server' in a and 'user' in b:
-                        for server in a['server']:
+            for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
+                if 'server' in a and b.get('server') != a['server']:
+                    # skip already-added servers (includes overlapping servers)
+                    servers = a['server'].difference(common_servers)
+
+                    # resolve user/server hierarchy
+                    if servers and 'user' in b:
+                        for server in servers:
                             username, _, servername = server.partition("/")
                             if username in b['user']:
-                                additional_servers.add(server)
+                                common_servers.add(server)
 
-                if additional_servers:
-                    if "server" not in common_filters[base]:
-                        common_filters[base]["server"] = set()
-                    common_filters[base]["server"].update(additional_servers)
+                    # resolve group/server hierarchy if db available
+                    servers = servers.difference(common_servers)
+                    if db is not None and servers and 'group' in b:
+                        for server in servers:
+                            server_groups = groups_for_server(server)
+                            if server_groups & b['group']:
+                                common_servers.add(server)
+
+                # resolve group/user hierarchy if db available and user sets aren't identical
+                if (
+                    db is not None
+                    and 'user' in a
+                    and 'group' in b
+                    and b.get('user') != a['user']
+                ):
+                    # skip already-added users (includes overlapping users)
+                    users = a['user'].difference(common_users)
+                    for username in users:
+                        groups = groups_for_user(username)
+                        if groups & b["group"]:
+                            common_users.add(username)
+
+            # add server filter if there wasn't one before
+            if common_servers and "server" not in common_filters[base]:
+                common_filters[base]["server"] = common_servers
+
+            # add user filter if it's non-empty and there wasn't one before
+            if common_users and "user" not in common_filters[base]:
+                common_filters[base]["user"] = common_users
 
     return unparse_scopes(common_filters)
 
@@ -244,11 +294,21 @@ def get_scopes_for(orm_object):
                     )
 
         owner_scopes = roles.expand_roles_to_scopes(owner)
+
+        if token_scopes == {'all'}:
+            # token_scopes is only 'all', return owner scopes as-is
+            # short-circuit common case where we don't need to compute an intersection
+            return owner_scopes
+
         if 'all' in token_scopes:
             token_scopes.remove('all')
             token_scopes |= owner_scopes
 
-        intersection = _intersect_expanded_scopes(token_scopes, owner_scopes)
+        intersection = _intersect_expanded_scopes(
+            token_scopes,
+            owner_scopes,
+            db=sa.inspect(orm_object).session,
+        )
         discarded_token_scopes = token_scopes - intersection
 
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
@@ -473,7 +533,8 @@ def check_scope_filter(sub_scope, orm_resource, kind):
         # Fall back on checking if we have group access for this user
         orm_resource = orm_resource.user
         kind = 'user'
-    elif kind == 'user' and 'group' in sub_scope:
+
+    if kind == 'user' and 'group' in sub_scope:
         group_names = {group.name for group in orm_resource.groups}
         user_in_group = bool(group_names & set(sub_scope['group']))
         if user_in_group:

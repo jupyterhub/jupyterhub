@@ -763,3 +763,81 @@ def test_intersect_expanded_scopes(left, right, expected, should_warn, recwarn):
         assert len(recwarn) == 1
     else:
         assert len(recwarn) == 0
+
+
+@pytest.mark.parametrize(
+    "left, right, expected, groups",
+    [
+        (
+            ["users!group=gx"],
+            ["users!user=ux"],
+            ["users!user=ux"],
+            {"gx": ["ux"]},
+        ),
+        (
+            ["read:users!group=gx"],
+            ["read:users!user=nosuchuser"],
+            [],
+            {},
+        ),
+        (
+            ["read:users!group=gx"],
+            ["read:users!server=nosuchuser/server"],
+            [],
+            {},
+        ),
+        (
+            ["read:users!group=gx"],
+            ["read:users!server=ux/server"],
+            ["read:users!server=ux/server"],
+            {"gx": ["ux"]},
+        ),
+        (
+            ["read:users!group=gx"],
+            ["read:users!server=ux/server", "read:users!user=uy"],
+            ["read:users!server=ux/server"],
+            {"gx": ["ux"], "gy": ["uy"]},
+        ),
+        (
+            ["read:users!group=gy"],
+            ["read:users!server=ux/server", "read:users!user=uy"],
+            ["read:users!user=uy"],
+            {"gx": ["ux"], "gy": ["uy"]},
+        ),
+    ],
+)
+def test_intersect_groups(request, db, left, right, expected, groups):
+    if isinstance(left, str):
+        left = set([left])
+    if isinstance(right, str):
+        right = set([right])
+
+    # if we have a db connection, we can actually resolve
+    created = []
+    for groupname, members in groups.items():
+        group = orm.Group.find(db, name=groupname)
+        if not group:
+            group = orm.Group(name=groupname)
+            db.add(group)
+            created.append(group)
+            db.commit()
+        for username in members:
+            user = orm.User.find(db, name=username)
+            if user is None:
+                user = orm.User(name=username)
+                db.add(user)
+                created.append(user)
+            user.groups.append(group)
+    db.commit()
+
+    def _cleanup():
+        for obj in created:
+            db.delete(obj)
+        db.commit()
+
+    request.addfinalizer(_cleanup)
+
+    # run every test in both directions, to ensure symmetry of the inputs
+    for a, b in [(left, right), (right, left)]:
+        intersection = _intersect_expanded_scopes(set(left), set(right), db)
+        assert intersection == set(expected)

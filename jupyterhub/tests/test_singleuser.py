@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 import pytest
 
 import jupyterhub
+from .. import orm
 from ..utils import url_path_join
 from .mocking import public_url
 from .mocking import StubSingleUserSpawner
@@ -16,6 +17,8 @@ from .utils import AsyncSession
 @pytest.mark.parametrize(
     "access_scopes, server_name, expect_success",
     [
+        (["access:users:servers!group=$group"], "", True),
+        (["access:users:servers!group=other-group"], "", False),
         (["access:users:servers"], "", True),
         (["access:users:servers"], "named", True),
         (["access:users:servers!user=$user"], "", True),
@@ -46,6 +49,16 @@ async def test_singleuser_auth(
     # login, start the server
     cookies = await app.login_user('nandy')
     user = app.users['nandy']
+
+    group = orm.Group.find(app.db, name="visitors")
+    if group is None:
+        group = orm.Group(name="visitors")
+        app.db.add(group)
+        app.db.commit()
+    if group not in user.groups:
+        user.groups.append(group)
+        app.db.commit()
+
     if server_name not in user.spawners or not user.spawners[server_name].active:
         await user.spawn(server_name)
         await app.proxy.add_user(user, server_name)
@@ -85,6 +98,7 @@ async def test_singleuser_auth(
     access_scopes = [
         s.replace("$server", f"{user.name}/{server_name}") for s in access_scopes
     ]
+    access_scopes = [s.replace("$group", f"{group.name}") for s in access_scopes]
     other_user = create_user_with_scopes(*access_scopes, name="burgess")
 
     cookies = await app.login_user('burgess')
