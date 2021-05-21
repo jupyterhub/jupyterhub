@@ -39,7 +39,6 @@ from .traitlets import ByteSpecification
 from .traitlets import Callable
 from .traitlets import Command
 from .utils import exponential_backoff
-from .utils import iterate_until
 from .utils import maybe_future
 from .utils import random_port
 from .utils import url_path_join
@@ -246,11 +245,22 @@ class Spawner(LoggingConfigurable):
     )
 
     ip = Unicode(
-        '',
+        '127.0.0.1',
         help="""
         The IP address (or hostname) the single-user server should listen on.
 
+        Usually either '127.0.0.1' (default) or '0.0.0.0'.
+
         The JupyterHub proxy implementation should be able to send packets to this interface.
+
+        Subclasses which launch remotely or in containers
+        should override the default to '0.0.0.0'.
+
+        .. versionchanged:: 2.0
+            Default changed to '127.0.0.1', from ''.
+            In most cases, this does not result in a change in behavior,
+            as '' was interpreted as 'unspecified',
+            which used the subprocesses' own default, itself usually '127.0.0.1'.
         """,
     ).tag(config=True)
 
@@ -811,8 +821,20 @@ class Spawner(LoggingConfigurable):
             'activity',
         )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
+
         if self.server:
+            base_url = self.server.base_url
+            if self.ip or self.port:
+                self.server.ip = self.ip
+                self.server.port = self.port
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
+        else:
+            # this should only occur in mock/testing scenarios
+            base_url = '/'
+
+        proto = 'https' if self.internal_ssl else 'http'
+        bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
+        env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -832,6 +854,20 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
             env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
+        if self.notebook_dir:
+            notebook_dir = self.format_string(self.notebook_dir)
+            env["JUPYTERHUB_ROOT_DIR"] = notebook_dir
+
+        if self.default_url:
+            default_url = self.format_string(self.default_url)
+            env["JUPYTERHUB_DEFAULT_URL"] = default_url
+
+        if self.debug:
+            env["JUPYTERHUB_DEBUG"] = "1"
+
+        if self.disable_user_config:
+            env["JUPYTERHUB_DISABLE_USER_CONFIG"] = "1"
+
         # env overrides from config. If the value is a callable, it will be called with
         # one parameter - the current spawner instance - and the return value
         # will be assigned to the environment variable. This will be called at
@@ -843,7 +879,6 @@ class Spawner(LoggingConfigurable):
                 env[key] = value(self)
             else:
                 env[key] = value
-
         return env
 
     async def get_url(self):
@@ -1010,35 +1045,16 @@ class Spawner(LoggingConfigurable):
         """Return the arguments to be passed after self.cmd
 
         Doesn't expect shell expansion to happen.
+
+        .. versionchanged:: 2.0
+            Prior to 2.0, JupyterHub passed some options such as
+            ip, port, and default_url to the command-line.
+            JupyterHub 2.0 no longer builds any CLI args
+            other than `Spawner.cmd` and `Spawner.args`.
+            All values that come from jupyterhub itself
+            will be passed via environment variables.
         """
-        args = []
-
-        if self.ip:
-            args.append('--ip=%s' % _quote_safe(self.ip))
-
-        if self.port:
-            args.append('--port=%i' % self.port)
-        elif self.server and self.server.port:
-            self.log.warning(
-                "Setting port from user.server is deprecated as of JupyterHub 0.7."
-            )
-            args.append('--port=%i' % self.server.port)
-
-        if self.notebook_dir:
-            notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
-        if self.default_url:
-            default_url = self.format_string(self.default_url)
-            args.append(
-                '--SingleUserNotebookApp.default_url=%s' % _quote_safe(default_url)
-            )
-
-        if self.debug:
-            args.append('--debug')
-        if self.disable_user_config:
-            args.append('--disable-user-config')
-        args.extend(self.args)
-        return args
+        return self.args
 
     def run_pre_spawn_hook(self):
         """Run the pre_spawn_hook if defined"""
@@ -1482,7 +1498,8 @@ class LocalProcessSpawner(Spawner):
 
     async def start(self):
         """Start the single-user server."""
-        self.port = random_port()
+        if self.port == 0:
+            self.port = random_port()
         cmd = []
         env = self.get_env()
 

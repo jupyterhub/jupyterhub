@@ -643,10 +643,17 @@ async def test_spawn(app):
     r = await async_requests.get(ujoin(url, 'args'), **kwargs)
     assert r.status_code == 200
     argv = r.json()
-    assert '--port' in ' '.join(argv)
+    assert '--port' not in ' '.join(argv)
+    # we pass no CLI args anymore:
+    assert len(argv) == 1
     r = await async_requests.get(ujoin(url, 'env'), **kwargs)
     env = r.json()
-    for expected in ['JUPYTERHUB_USER', 'JUPYTERHUB_BASE_URL', 'JUPYTERHUB_API_TOKEN']:
+    for expected in [
+        'JUPYTERHUB_USER',
+        'JUPYTERHUB_BASE_URL',
+        'JUPYTERHUB_API_TOKEN',
+        'JUPYTERHUB_SERVICE_URL',
+    ]:
         assert expected in env
     if app.subdomain_host:
         assert env['JUPYTERHUB_HOST'] == app.subdomain_host
