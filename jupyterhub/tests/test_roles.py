@@ -1072,7 +1072,7 @@ async def test_user_group_roles(app, create_temp_role):
         roles.grant_role(app.db, group, rolename='student-a')
         group_role = orm.Role.find(app.db, 'student-a')
 
-    # repeat check to ensure group roles don't get added to the user more than once
+    # repeat check to ensure group roles don't get added to the user at all
     # regression test for #3472
     roles_before = list(user.roles)
     for i in range(3):
