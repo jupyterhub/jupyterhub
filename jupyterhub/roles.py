@@ -446,7 +446,6 @@ def assign_default_roles(db, entity):
         db.commit()
     # users and services can have 'user' or 'admin' roles as default
     else:
-        # todo: when we deprecate admin flag: replace with role check
         app_log.debug('Assigning default roles to %s', type(entity).__name__)
         _switch_default_role(db, entity, entity.admin)
 

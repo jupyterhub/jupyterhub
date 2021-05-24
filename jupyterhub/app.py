@@ -329,7 +329,7 @@ class JupyterHub(Application):
             load_roles = [
                             {
                                 'name': 'teacher',
-                                'description': 'Access to users' information, servers and groups',
+                                'description': 'Access to users' information and group membership',
                                 'scopes': ['users', 'groups'],
                                 'users': ['cyclops', 'gandalf'],
                                 'services': [],
@@ -1978,7 +1978,15 @@ class JupyterHub(Application):
         """Load default and predefined roles into the database"""
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
-        for role in default_roles:
+        default_role_names = [r['name'] for r in default_roles]
+        init_roles = default_roles + self.load_roles
+        if not orm.Role.find(self.db, name='admin'):
+            self._rbac_upgrade = True
+        for role in self.db.query(orm.Role):
+            if role.name not in default_role_names:
+                self.db.delete(role)
+        self.db.commit()
+        for role in init_roles:
             roles.create_role(self.db, role)
 
     async def init_role_assignment(self):
@@ -1987,9 +1995,13 @@ class JupyterHub(Application):
 
         db = self.db
         # load predefined roles from config file
+        for entity in self.users + self.services:
+            if entity.admin:
+                roles.grant_role(db, entity, 'admin')
+            else:
+                roles.strip_role(db, entity, 'admin')
         self.log.debug('Loading predefined roles from config file to database')
         for predef_role in self.load_roles:
-            roles.create_role(db, predef_role)
             predef_role_obj = orm.Role.find(db, name=predef_role['name'])
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
@@ -2015,11 +2027,11 @@ class JupyterHub(Application):
                         #     db, entity=orm_obj, rolename=predef_role['name']
                         # )
                 setattr(predef_role_obj, bearer, orm_role_bearers)
-        # make sure that on no admin situation, all roles are reset
-        admin_role = orm.Role.find(db, name='admin')
-        if not admin_role.users:
+        # make sure that on hub upgrade, all roles are reset
+
+        if not getattr(self, '_rbac_upgrade', False):
             app_log.warning(
-                "No admin users found; assuming hub upgrade. Initializing default roles for all entities"
+                "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
             )
             # make sure all users, services and tokens have at least one role (update with default)
             for bearer in role_bearers:
