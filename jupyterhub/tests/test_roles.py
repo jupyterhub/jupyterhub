@@ -434,8 +434,8 @@ async def test_load_roles_users(tmpdir, request):
     db = hub.db
     hub.authenticator.admin_users = ['admin']
     hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
-    await hub.init_users()
     await hub.init_role_creation()
+    await hub.init_users()
     await hub.init_role_assignment()
     admin_role = orm.Role.find(db, 'admin')
     user_role = orm.Role.find(db, 'user')
@@ -570,8 +570,8 @@ async def test_load_roles_groups(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
-    await hub.init_groups()
     await hub.init_role_creation()
+    await hub.init_groups()
     await hub.init_role_assignment()
 
     assist_role = orm.Role.find(db, name='assistant')
@@ -617,9 +617,9 @@ async def test_load_roles_user_tokens(tmpdir, request):
     db = hub.db
     hub.authenticator.admin_users = ['admin']
     hub.authenticator.allowed_users = ['cyclops', 'gandalf']
+    await hub.init_role_creation()
     await hub.init_users()
     await hub.init_api_tokens()
-    await hub.init_role_creation()
     await hub.init_role_assignment()
     # test if all other tokens have default 'user' role
     token_role = orm.Role.find(db, 'token')
@@ -886,32 +886,70 @@ async def test_oauth_allowed_roles(app, create_temp_role):
     assert set(app_service['oauth_roles']) == set(allowed_roles)
 
 
-async def test_config_role_assignment():
+async def test_config_role_list():
+    roles_to_load = [
+        {
+            'name': 'elephant',
+            'description': 'pacing about',
+            'scopes': ['read:hub'],
+        },
+        {
+            'name': 'tiger',
+            'description': 'pouncing stuff',
+            'scopes': ['shutdown'],
+        },
+    ]
+    kwargs = {'load_roles': roles_to_load}
+    hub = MockHub(**kwargs)
+    hub.init_db()
+    hub.authenticator.admin_users = ['admin']
+    await hub.init_role_creation()
+    for role_conf in roles_to_load:
+        assert orm.Role.find(hub.db, name=role_conf['name'])
+    # Now reload and see if user is removed from role list
+    roles_to_load.pop(0)
+    hub.load_roles = roles_to_load
+    await hub.init_role_creation()
+    print(hub.db.query(orm.Role).all())
+    assert orm.Role.find(hub.db, name='tiger')
+    assert not orm.Role.find(hub.db, name='elephant')
+
+
+async def test_config_role_users():
     role_name = 'painter'
     user_name = 'benny'
-    other_users = ['agnetha', 'bjorn', 'anni-frid']
+    user_names = ['agnetha', 'bjorn', 'anni-frid', user_name]
     roles_to_load = [
         {
             'name': role_name,
             'description': 'painting with colors',
             'scopes': ['users', 'groups'],
-            'users': other_users,
+            'users': user_names,
+        },
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': user_names,
         },
     ]
-    for user_in_config in [False, True]:
-        if user_in_config:
-            roles_to_load[0]['users'].append(user_name)
-        kwargs = {'load_roles': roles_to_load}
-        hub = MockHub(**kwargs, clean_db=False)
-        hub.init_db()
-        hub.authenticator.admin_users = ['admin']
-        hub.authenticator.allowed_users = other_users + [user_name]
-        await hub.init_users()
-        await hub.init_role_creation()
-        await hub.init_role_assignment()
-        user = orm.User.find(hub.db, name=user_name)
-        role = orm.Role.find(hub.db, name=role_name)
-        if user_in_config:
-            assert role in user.roles
-        else:
-            assert role not in user.roles
+    kwargs = {'load_roles': roles_to_load}
+    hub = MockHub(**kwargs)
+    hub.init_db()
+    hub.authenticator.admin_users = ['admin']
+    hub.authenticator.allowed_users = user_names
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name=user_name)
+    role = orm.Role.find(hub.db, name=role_name)
+    assert role in user.roles
+    # Now reload and see if user is removed from role list
+    roles_to_load[0]['users'].remove(user_name)
+    hub.load_roles = roles_to_load
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name=user_name)
+    role = orm.Role.find(hub.db, name=role_name)
+    assert role not in user.roles
