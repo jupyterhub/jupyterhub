@@ -1,5 +1,7 @@
+"""General scope definitions and utilities"""
 import functools
 import inspect
+import warnings
 from enum import Enum
 
 from tornado import web
@@ -13,60 +15,85 @@ class Scope(Enum):
     ALL = True
 
 
-def _intersect_scopes(token_scopes, owner_scopes):
-    """Compares the permissions of token and its owner including horizontal filters
-    Returns the intersection of the two sets of scopes
+def _intersect_scopes(scopes_a, scopes_b):
+    """Intersect two sets of scopes
+
+    Compares the permissions of two sets of scopes,
+    including horizontal filters,
+    and returns the intersected scopes.
 
     Note: Intersects correctly with ALL and exact filter matches
           (i.e. users!user=x & read:users:name -> read:users:name!user=x)
 
           Does not currently intersect with containing filters
-          (i.e. users!group=x & users!user=y even if user y is in group x,
-          same for users:servers!user=x & users:servers!server=y)
+          (i.e. users!group=x & users!user=y even if user y is in group x)
     """
-    owner_parsed_scopes = parse_scopes(owner_scopes)
-    token_parsed_scopes = parse_scopes(token_scopes)
+    parsed_scopes_a = parse_scopes(scopes_a)
+    parsed_scopes_b = parse_scopes(scopes_b)
 
-    common_bases = owner_parsed_scopes.keys() & token_parsed_scopes.keys()
+    common_bases = parsed_scopes_a.keys() & parsed_scopes_b.keys()
 
     common_filters = {}
-    warn = False
+    warned = False
     for base in common_bases:
-        if owner_parsed_scopes[base] == Scope.ALL:
-            common_filters[base] = token_parsed_scopes[base]
-        elif token_parsed_scopes[base] == Scope.ALL:
-            common_filters[base] = owner_parsed_scopes[base]
+        filters_a = parsed_scopes_a[base]
+        filters_b = parsed_scopes_b[base]
+        if filters_a == Scope.ALL:
+            common_filters[base] = filters_b
+        elif filters_b == Scope.ALL:
+            common_filters[base] = filters_a
         else:
-            common_entities = (
-                owner_parsed_scopes[base].keys() & token_parsed_scopes[base].keys()
-            )
-            all_entities = (
-                owner_parsed_scopes[base].keys() | token_parsed_scopes[base].keys()
-            )
-            if 'user' in all_entities and ('group' or 'server' in all_entities):
-                warn = True
+            # warn *if* there are non-overlapping user= and group= filters
+            common_entities = filters_a.keys() & filters_b.keys()
+            all_entities = filters_a.keys() | filters_b.keys()
+            if (
+                not warned
+                and 'group' in all_entities
+                and ('user' in all_entities or 'server' in all_entities)
+            ):
+                # this could resolve wrong if there's a user or server only on one side and a group only on the other
+                # check both directions: A has group X not in B group list AND B has user Y not in A user list
+                for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
+                    for b_key in ('user', 'server'):
+                        if (
+                            not warned
+                            and "group" in a
+                            and b_key in b
+                            and set(a["group"]).difference(b.get("group", []))
+                            and set(b[b_key]).difference(a.get(b_key, []))
+                        ):
+                            warnings.warn(
+                                f"{base}[!{b_key}={b[b_key]}, !group={a['group']}] combinations of filters present,"
+                                " intersection between not considered. May result in lower than intended permissions.",
+                                UserWarning,
+                            )
+                            warned = True
 
             common_filters[base] = {
-                entity: set(owner_parsed_scopes[base][entity])
-                & set(token_parsed_scopes[base][entity])
+                entity: set(parsed_scopes_a[base][entity])
+                & set(parsed_scopes_b[base][entity])
                 for entity in common_entities
             }
 
-    if warn:
-        app_log.warning(
-            "[!user=, !group=] or [!user=, !server=] combinations of filters present, intersection between not considered. May result in lower than intended permissions."
-        )
+            if 'server' in all_entities and 'user' in all_entities:
+                if filters_a.get('server') == filters_b.get('server'):
+                    continue
 
-    scopes = set()
-    for base in common_filters:
-        if common_filters[base] == Scope.ALL:
-            scopes.add(base)
-        else:
-            for entity, names_list in common_filters[base].items():
-                for name in names_list:
-                    scopes.add(f'{base}!{entity}={name}')
+                additional_servers = set()
+                # resolve user/server hierarchy in both directions
+                for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
+                    if 'server' in a and 'user' in b:
+                        for server in a['server']:
+                            username, _, servername = server.partition("/")
+                            if username in b['user']:
+                                additional_servers.add(server)
 
-    return scopes
+                if additional_servers:
+                    if "server" not in common_filters[base]:
+                        common_filters[base]["server"] = set()
+                    common_filters[base]["server"].update(additional_servers)
+
+    return unparse_scopes(common_filters)
 
 
 def get_scopes_for(orm_object):
@@ -176,7 +203,7 @@ def parse_scopes(scope_list):
     """
     Parses scopes and filters in something akin to JSON style
 
-    For instance, scope list ["users", "groups!group=foo", "users:servers!server=bar", "users:servers!server=baz"]
+    For instance, scope list ["users", "groups!group=foo", "users:servers!server=user/bar", "users:servers!server=user/baz"]
     would lead to scope model
     {
        "users":scope.ALL,
@@ -187,8 +214,8 @@ def parse_scopes(scope_list):
        },
        "users:servers":{
           "server":[
-             "bar",
-             "baz"
+             "user/bar",
+             "user/baz"
           ]
        }
     }
@@ -206,6 +233,19 @@ def parse_scopes(scope_list):
                 parsed_scopes[base_scope][key] = []
             parsed_scopes[base_scope][key].append(val)
     return parsed_scopes
+
+
+def unparse_scopes(parsed_scopes):
+    """Turn a parsed_scopes dictionary back into a scopes set"""
+    scopes = set()
+    for base, filters in parsed_scopes.items():
+        if filters == Scope.ALL:
+            scopes.add(base)
+        else:
+            for entity, names_list in filters.items():
+                for name in names_list:
+                    scopes.add(f'{base}!{entity}={name}')
+    return scopes
 
 
 def needs_scope(*scopes):

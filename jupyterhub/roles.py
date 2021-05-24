@@ -435,11 +435,11 @@ def assign_default_roles(db, entity):
     """Assigns the default roles to an entity:
     users and services get 'user' role, or admin role if they have admin flag
     Tokens get 'token' role"""
-    default_token_role = orm.Role.find(db, 'token')
     if isinstance(entity, orm.Group):
         pass
     elif isinstance(entity, orm.APIToken):
         app_log.debug('Assigning default roles to tokens')
+        default_token_role = orm.Role.find(db, 'token')
         if not entity.roles and (entity.user or entity.service) is not None:
             default_token_role.tokens.append(entity)
             app_log.info('Added role %s to token %s', default_token_role.name, entity)

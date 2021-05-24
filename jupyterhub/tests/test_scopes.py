@@ -1,5 +1,4 @@
 """Test scopes for API handlers"""
-import json
 from unittest import mock
 
 import pytest
@@ -11,6 +10,7 @@ from .. import orm
 from .. import roles
 from ..handlers import BaseHandler
 from ..scopes import _check_scope
+from ..scopes import _intersect_scopes
 from ..scopes import get_scopes_for
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
@@ -760,3 +760,81 @@ async def test_resolve_token_permissions(
     token_retained_scopes = get_scopes_for(orm_api_token)
 
     assert token_retained_scopes == intersection_scopes
+
+
+@pytest.mark.parametrize(
+    "left, right, expected, should_warn",
+    [
+        (set(), set(), set(), False),
+        (set(), set(["users"]), set(), False),
+        # no warning if users and groups only on the same side
+        (
+            set(["users!user=x", "users!group=y"]),
+            set([]),
+            set([]),
+            False,
+        ),
+        # no warning if users are on both sizes
+        (
+            set(["users!user=x", "users!user=y", "users!group=y"]),
+            set(["users!user=x"]),
+            set(["users!user=x"]),
+            False,
+        ),
+        # no warning if users and groups are both defined
+        # on both sides
+        (
+            set(["users!user=x", "users!group=y"]),
+            set(["users!user=x", "users!group=y", "users!user=z"]),
+            set(["users!user=x", "users!group=y"]),
+            False,
+        ),
+        # warn if there's a user on one side and a group on the other
+        # which *may* intersect
+        (
+            set(["users!group=y", "users!user=z"]),
+            set(["users!user=x"]),
+            set([]),
+            True,
+        ),
+        # same for group->server
+        (
+            set(["users!group=y", "users!user=z"]),
+            set(["users!server=x/y"]),
+            set([]),
+            True,
+        ),
+        # this one actually shouldn't warn because server=x/y is under user=x,
+        # but we don't need to overcomplicate things just for a warning
+        (
+            set(["users!group=y", "users!user=x"]),
+            set(["users!server=x/y"]),
+            set(["users!server=x/y"]),
+            True,
+        ),
+        # resolves server under user, without warning
+        (
+            set(["read:users:servers!user=abc"]),
+            set(["read:users:servers!server=abc/xyz"]),
+            set(["read:users:servers!server=abc/xyz"]),
+            False,
+        ),
+        # user->server, no match
+        (
+            set(["read:users:servers!user=abc"]),
+            set(["read:users:servers!server=abcd/xyz"]),
+            set([]),
+            False,
+        ),
+    ],
+)
+def test_intersect_scopes(left, right, expected, should_warn, recwarn):
+    # run every test in both directions, to ensure symmetry of the inputs
+    for a, b in [(left, right), (right, left)]:
+        intersection = _intersect_scopes(set(left), set(right))
+        assert intersection == set(expected)
+
+    if should_warn:
+        assert len(recwarn) == 1
+    else:
+        assert len(recwarn) == 0
