@@ -164,13 +164,12 @@ def expand_roles_to_scopes(orm_object):
     if not isinstance(orm_object, orm.Base):
         raise TypeError(f"Only orm objects allowed, got {orm_object}")
 
-    pass_roles = orm_object.roles
+    pass_roles = []
+    pass_roles.extend(orm_object.roles)
 
     if isinstance(orm_object, orm.User):
-        groups_roles = []
         for group in orm_object.groups:
-            groups_roles.extend(group.roles)
-        pass_roles.extend(groups_roles)
+            pass_roles.extend(group.roles)
 
     scopes = _get_subscopes(*pass_roles, owner=orm_object)
 

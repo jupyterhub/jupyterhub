@@ -66,7 +66,12 @@ metrics: source/reference/metrics.rst
 source/reference/metrics.rst: generate-metrics.py
 	python3 generate-metrics.py
 
-html: rest-api metrics
+scopes: source/rbac/scope-table.md
+
+source/rbac/scope-table.md: source/rbac/generate-scope-table.py
+	python3 source/rbac/generate-scope-table.py
+
+html: rest-api metrics scopes
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."
