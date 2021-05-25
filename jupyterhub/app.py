@@ -1894,7 +1894,7 @@ class JupyterHub(Application):
             )
 
         # add allowed users to the db
-        for name in allowed_users:  # fixme: Do we add standard roles here?
+        for name in allowed_users:
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name)
@@ -1995,6 +1995,14 @@ class JupyterHub(Application):
 
         db = self.db
         # load predefined roles from config file
+        for role_spec in self.load_roles:
+            if role_spec['name'] == 'admin' and self.admin_users:
+                app_log.info(
+                    "Extending admin role assignment with config admin users: %s",
+                    str(self.admin_users),
+                )
+                role_spec['users'].extend(self.admin_users)
+                role_spec['users'] = set(role_spec['users'])
         self.log.debug('Loading predefined roles from config file to database')
         for predef_role in self.load_roles:
             predef_role_obj = orm.Role.find(db, name=predef_role['name'])
@@ -2018,24 +2026,22 @@ class JupyterHub(Application):
                         Class = orm.get_class(bearer)
                         orm_obj = Class.find(db, bname)
                         orm_role_bearers.append(orm_obj)
-                        # roles.grant_role(
-                        #     db, entity=orm_obj, rolename=predef_role['name']
-                        # )
+                        # Ensure all with admin role have admin flag
+                        if predef_role['name'] == 'admin':
+                            orm_obj.admin = True
                 setattr(predef_role_obj, bearer, orm_role_bearers)
-        for entity in db.query(orm.Service):
-            if entity.admin:
-                roles.grant_role(db, entity, 'admin')
-            else:
-                roles.assign_default_roles(db, entity)
-        for entity in db.query(
-            orm.User
-        ):  # fixme: why can't I combine these expressions?
-            if entity.admin:
-                roles.grant_role(db, entity, 'admin')
-            else:
-                roles.assign_default_roles(db, entity)
-        # make sure that on hub upgrade, all roles are reset
+                db.commit()
+        allowed_users = db.query(orm.User).filter(
+            orm.User.name.in_(self.authenticator.allowed_users)
+        )
+        for user in allowed_users:
+            roles.grant_role(db, user, 'user')
+        for admin_user in db.query(orm.User).filter_by(admin=True):
+            roles.grant_role(db, admin_user, 'admin')
+        for admin_service in db.query(orm.Service).filter_by(admin=True):
+            roles.grant_role(db, admin_service, 'admin')
 
+        # make sure that on hub upgrade, all roles are reset
         if not getattr(self, '_rbac_upgrade', False):
             app_log.warning(
                 "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
@@ -2150,7 +2156,9 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
-                if spec.get('admin', False):
+                if spec.get(
+                    'admin', False
+                ):  # Todo: fix double assignment of admin roles
                     roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)

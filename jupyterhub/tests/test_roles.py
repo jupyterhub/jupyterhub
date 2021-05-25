@@ -446,7 +446,7 @@ async def test_load_roles_users(tmpdir, request):
         assert len(user.roles) == len(set(user.roles))
         if user.admin:
             assert admin_role in user.roles
-            assert user_role not in user.roles
+            assert user_role in user.roles
 
     # test if predefined roles loaded and assigned
     teacher_role = orm.Role.find(db, name='teacher')
@@ -953,3 +953,9 @@ async def test_config_role_users():
     user = orm.User.find(hub.db, name=user_name)
     role = orm.Role.find(hub.db, name=role_name)
     assert role not in user.roles
+
+
+# todo: test admin flag -> admin role and other way around
+# todo: test custom user role reset on startup
+# todo: test removal from config -> removal from database
+# todo: test customizing user scopes -/> membership changes
