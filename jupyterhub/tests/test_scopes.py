@@ -311,7 +311,7 @@ def create_user_with_scopes(app, create_temp_role):
 def create_service_with_scopes(app, create_temp_role):
     """Generate a temporary service with specific scopes.
     Convenience function that provides setup, database handling and teardown"""
-    temp_service = []
+    temp_services = []
     counter = 0
     role_function = create_temp_role
 
@@ -325,11 +325,12 @@ def create_service_with_scopes(app, create_temp_role):
         app.init_services()
         orm_service = orm.Service.find(app.db, name)
         app.db.commit()
+        temp_services.append(orm_service)
         roles.update_roles(app.db, orm_service, roles=[role.name])
         return orm_service
 
     yield temp_service_creator
-    for service in temp_service:
+    for service in temp_services:
         app.db.delete(service)
     app.db.commit()
 
