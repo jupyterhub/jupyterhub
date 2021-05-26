@@ -1995,23 +1995,34 @@ class JupyterHub(Application):
     async def init_role_assignment(self):
         # tokens are added separately
         role_bearers = ['users', 'services', 'groups']
+        admin_role_objects = ['users', 'services']
         config_admin_users = set(self.admin_users) | self.authenticator.admin_users
         db = self.db
         # load predefined roles from config file
-        for role_spec in self.load_roles:
-            if role_spec['name'] == 'admin' and config_admin_users:
-                app_log.info(
-                    "Extending admin role assignment with config admin users: %s",
-                    str(config_admin_users),
-                )
-                role_spec['users'] = set(role_spec.get('users', []))
-                role_spec['users'] |= config_admin_users
+        if config_admin_users:
+            for role_spec in self.load_roles:
+                if role_spec['name'] == 'admin':
+                    app_log.info(
+                        "Extending admin role assignment with config admin users: %s",
+                        str(config_admin_users),
+                    )
+                    role_spec['users'] = set(role_spec.get('users', []))
+                    role_spec['users'] |= config_admin_users
         self.log.debug('Loading predefined roles from config file to database')
-        has_admin_role_spec = False
+        has_admin_role_spec = {role_bearer: False for role_bearer in admin_role_objects}
         for predef_role in self.load_roles:
             predef_role_obj = orm.Role.find(db, name=predef_role['name'])
-            if predef_role['name'] == 'admin':
-                has_admin_role_spec = bool(predef_role.get('users', False))
+            for bearer in admin_role_objects:
+                if predef_role['name'] == 'admin':
+                    has_admin_role_spec[bearer] = bool(predef_role.get(bearer, False))
+                    if has_admin_role_spec[bearer]:
+                        app_log.debug(
+                            f"Admin {bearer} explicitly specified in config, so previous db state is ignored"
+                        )
+                    else:
+                        app_log.debug(
+                            f"Admin {bearer} not specified in config, elevate to admin based on previous db state"
+                        )
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
             for bearer in role_bearers:
@@ -2043,21 +2054,13 @@ class JupyterHub(Application):
         for user in allowed_users:
             roles.grant_role(db, user, 'user')
         admin_role = orm.Role.find(db, 'admin')
-        admin_objs = chain(
-            db.query(orm.User).filter_by(admin=True),
-            db.query(orm.Service).filter_by(admin=True),
-        )
-        for admin_obj in admin_objs:
-            if has_admin_role_spec:
-                app_log.debug(
-                    "Admin users explicitly specified in config, so previous db state is ignored"
-                )
-                admin_obj.admin = admin_role in admin_obj.roles
-            else:
-                app_log.debug(
-                    "Admin users not specified in config, elevate to admin based on previous db state"
-                )
-                roles.grant_role(db, admin_obj, 'admin')
+        for bearer in admin_role_objects:
+            Class = orm.get_class(bearer)
+            for admin_obj in db.query(Class).filter_by(admin=True):
+                if has_admin_role_spec[bearer]:
+                    admin_obj.admin = admin_role in admin_obj.roles
+                else:
+                    roles.grant_role(db, admin_obj, 'admin')
         db.commit()
         # make sure that on hub upgrade, all roles are reset
         if not getattr(self, '_rbac_upgrade', False):
@@ -2174,9 +2177,13 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
-                if spec.get(
-                    'admin', False
-                ):  # Todo: fix double assignment of admin roles
+                if spec.get('admin', False):
+                    self.log.warning(
+                        f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
+                        " You can assign now assign roles via `JupyterHub.load_roles` configuration."
+                        " If you specify services in the admin role configuration, "
+                        "the Service admin flag will be ignored."
+                    )
                     roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
