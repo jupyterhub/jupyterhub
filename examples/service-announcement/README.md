@@ -57,7 +57,7 @@ The time the announcement was posted is recorded in the `timestamp` field and
 the user who posted the announcement is recorded in the `user` field.
 
 To clear the announcement text, send a DELETE request.
-This has the same permissionOnly admin users can do this.
+This has the same permission requirement.
 
     $ curl -X DELETE -H "Authorization: token <token>"                        \
         https://.../services/announcement/
