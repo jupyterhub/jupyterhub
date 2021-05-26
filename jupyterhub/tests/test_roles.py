@@ -967,18 +967,16 @@ async def test_config_role_list():
             'scopes': ['shutdown'],
         },
     ]
-    kwargs = {'load_roles': roles_to_load}
-    hub = MockHub(**kwargs)
+    hub = MockHub(load_roles=roles_to_load)
     hub.init_db()
     hub.authenticator.admin_users = ['admin']
     await hub.init_role_creation()
     for role_conf in roles_to_load:
         assert orm.Role.find(hub.db, name=role_conf['name'])
-    # Now reload and see if user is removed from role list
+    # Now remove elephant from config and see if it is removed from database
     roles_to_load.pop(0)
     hub.load_roles = roles_to_load
     await hub.init_role_creation()
-    print(hub.db.query(orm.Role).all())
     assert orm.Role.find(hub.db, name='tiger')
     assert not orm.Role.find(hub.db, name='elephant')
 
@@ -1001,8 +999,7 @@ async def test_config_role_users():
             'users': user_names,
         },
     ]
-    kwargs = {'load_roles': roles_to_load}
-    hub = MockHub(**kwargs)
+    hub = MockHub(load_roles=roles_to_load)
     hub.init_db()
     hub.authenticator.admin_users = ['admin']
     hub.authenticator.allowed_users = user_names
@@ -1023,7 +1020,119 @@ async def test_config_role_users():
     assert role not in user.roles
 
 
-# todo: test admin flag -> admin role and other way around
-# todo: test custom user role reset on startup
-# todo: test removal from config -> removal from database
-# todo: test customizing user scopes -/> membership changes
+async def test_admin_role_and_flag():
+    admin_role_spec = [
+        {
+            'name': 'admin',
+            'users': ['eddy'],
+        }
+    ]
+    hub = MockHub(load_roles=admin_role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = ['admin']
+    hub.authenticator.allowed_users = ['eddy']
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    admin_role = orm.Role.find(hub.db, name='admin')
+    for user_name in ['eddy', 'admin']:
+        user = orm.User.find(hub.db, name=user_name)
+        assert user.admin
+        assert admin_role in user.roles
+    admin_role_spec[0]['users'].remove('eddy')
+    hub.load_roles = admin_role_spec
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name='eddy')
+    assert not user.admin
+    assert admin_role not in user.roles
+
+
+async def test_custom_role_reset():
+    user_role_spec = [
+        {
+            'name': 'user',
+            'scopes': ['self', 'shutdown'],
+            'users': ['eddy'],
+        }
+    ]
+    hub = MockHub(load_roles=user_role_spec)
+    hub.init_db()
+    hub.authenticator.allowed_users = ['eddy']
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, name='user')
+    user = orm.User.find(hub.db, name='eddy')
+    assert user_role in user.roles
+    assert 'shutdown' in user_role.scopes
+    hub.load_roles = []
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, name='user')
+    user = orm.User.find(hub.db, name='eddy')
+    assert user_role in user.roles
+    assert 'shutdown' not in user_role.scopes
+
+
+async def test_removal_config_to_db():
+    role_spec = [
+        {
+            'name': 'user',
+            'scopes': ['self', 'shutdown'],
+        },
+        {
+            'name': 'wizard',
+            'scopes': ['self', 'read:groups'],
+        },
+    ]
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    await hub.init_role_creation()
+    assert orm.Role.find(hub.db, 'user')
+    assert orm.Role.find(hub.db, 'wizard')
+    hub.load_roles = []
+    await hub.init_role_creation()
+    assert orm.Role.find(hub.db, 'user')
+    assert not orm.Role.find(hub.db, 'wizard')
+
+
+async def test_user_config_respects_memberships():
+    role_spec = [
+        {
+            'name': 'user',
+            'scopes': ['self', 'shutdown'],
+        }
+    ]
+    user_names = ['eddy', 'carol']
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.allowed_users = user_names
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, 'user')
+    for user_name in user_names:
+        user = orm.User.find(hub.db, user_name)
+        assert user in user_role.users
+
+
+async def test_admin_role_respects_config():
+    role_spec = [
+        {
+            'name': 'admin',
+            'scopes': ['self', 'shutdown'],
+        }
+    ]
+    admin_users = ['eddy', 'carol']
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = admin_users
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    admin_role = orm.Role.find(hub.db, 'admin')
+    for user_name in admin_users:
+        user = orm.User.find(hub.db, user_name)
+        assert user in admin_role.users

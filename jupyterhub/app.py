@@ -21,6 +21,7 @@ from datetime import timezone
 from functools import partial
 from getpass import getuser
 from glob import glob
+from itertools import chain
 from operator import itemgetter
 from textwrap import dedent
 from urllib.parse import unquote
@@ -1978,13 +1979,15 @@ class JupyterHub(Application):
         """Load default and predefined roles into the database"""
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
-        default_role_names = [r['name'] for r in default_roles]
-        init_roles = default_roles + self.load_roles
+        config_role_names = [r['name'] for r in self.load_roles]
+        init_roles = self.load_roles.copy()
+        for role_spec in default_roles:
+            if role_spec['name'] not in config_role_names:
+                init_roles.append(role_spec)
         if not orm.Role.find(self.db, name='admin'):
             self._rbac_upgrade = True
-        for role in self.db.query(orm.Role):
-            if role.name not in default_role_names:
-                self.db.delete(role)
+        self.db.query(orm.Role).delete()
+        app_log.info("Deleting all roles in database")
         self.db.commit()
         for role in init_roles:
             roles.create_role(self.db, role)
@@ -1992,20 +1995,23 @@ class JupyterHub(Application):
     async def init_role_assignment(self):
         # tokens are added separately
         role_bearers = ['users', 'services', 'groups']
-
+        config_admin_users = set(self.admin_users) | self.authenticator.admin_users
         db = self.db
         # load predefined roles from config file
         for role_spec in self.load_roles:
-            if role_spec['name'] == 'admin' and self.admin_users:
+            if role_spec['name'] == 'admin' and config_admin_users:
                 app_log.info(
                     "Extending admin role assignment with config admin users: %s",
-                    str(self.admin_users),
+                    str(config_admin_users),
                 )
-                role_spec['users'].extend(self.admin_users)
-                role_spec['users'] = set(role_spec['users'])
+                role_spec['users'] = set(role_spec.get('users', []))
+                role_spec['users'] |= config_admin_users
         self.log.debug('Loading predefined roles from config file to database')
+        has_admin_role_spec = False
         for predef_role in self.load_roles:
             predef_role_obj = orm.Role.find(db, name=predef_role['name'])
+            if predef_role['name'] == 'admin':
+                has_admin_role_spec = bool(predef_role.get('users', False))
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
             for bearer in role_bearers:
@@ -2036,11 +2042,23 @@ class JupyterHub(Application):
         )
         for user in allowed_users:
             roles.grant_role(db, user, 'user')
-        for admin_user in db.query(orm.User).filter_by(admin=True):
-            roles.grant_role(db, admin_user, 'admin')
-        for admin_service in db.query(orm.Service).filter_by(admin=True):
-            roles.grant_role(db, admin_service, 'admin')
-
+        admin_role = orm.Role.find(db, 'admin')
+        admin_objs = chain(
+            db.query(orm.User).filter_by(admin=True),
+            db.query(orm.Service).filter_by(admin=True),
+        )
+        for admin_obj in admin_objs:
+            if has_admin_role_spec:
+                app_log.debug(
+                    "Admin users explicitly specified in config, so previous db state is ignored"
+                )
+                admin_obj.admin = admin_role in admin_obj.roles
+            else:
+                app_log.debug(
+                    "Admin users not specified in config, elevate to admin based on previous db state"
+                )
+                roles.grant_role(db, admin_obj, 'admin')
+        db.commit()
         # make sure that on hub upgrade, all roles are reset
         if not getattr(self, '_rbac_upgrade', False):
             app_log.warning(
