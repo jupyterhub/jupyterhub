@@ -90,8 +90,9 @@ c.JupyterHub.load_roles = [
     {
         "name": "idle-culler",
         "scopes": [
-            "users:servers",
-            # also 'admin:users' if culling idle users as well
+            "read:users:activity", # read user last_activity
+            "users:servers", # start and stop servers
+            # 'admin:users' # needed if culling idle users as well
         ]
     }
 
@@ -283,8 +284,8 @@ If you don't want to use the reference implementation
 (e.g. you find the implementation a poor fit for your Flask app),
 you can implement authentication via the Hub yourself.
 JupyterHub is a standard OAuth2 provider,
-so you can any OAuth 2 implementation appropriate for
-See the [FastAPI example][] for an example of using JupyterHub as an OAuth provider with fastapi,
+so you can use any OAuth 2 client implementation appropriate for your toolkit.
+See the [FastAPI example][] for an example of using JupyterHub as an OAuth provider with [FastAPI][],
 without using any code imported from JupyterHub.
 
 On completion of OAuth, you will have an access token for JupyterHub,
@@ -356,4 +357,5 @@ section on securing the notebook viewer.
 [hubauthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
 [fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi
+[fastapi]: https://fastapi.tiangolo.com
 [jupyterhub_idle_culler]: https://github.com/jupyterhub/jupyterhub-idle-culler
