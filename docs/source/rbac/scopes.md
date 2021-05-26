@@ -1,4 +1,4 @@
-# Scopes
+# Scopes in JupyterHub
 
 A scope has a syntax-based design that reveals which resources it provides access to. Resources are objects with a type, associated data, relationships to other resources, and a set of methods that operate on them (see [RESTful API](https://restful-api-design.readthedocs.io/en/latest/resources.html) documentation for more information).
 
