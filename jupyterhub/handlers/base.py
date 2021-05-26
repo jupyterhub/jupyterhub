@@ -87,7 +87,7 @@ class BaseHandler(RequestHandler):
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
-        self._resolve_scopes()
+        self._resolve_roles_and_scopes()
         return await maybe_future(super().prepare())
 
     @property
@@ -416,7 +416,7 @@ class BaseHandler(RequestHandler):
                 self.log.exception("Error getting current user")
         return self._jupyterhub_user
 
-    def _resolve_scopes(self):
+    def _resolve_roles_and_scopes(self):
         self.raw_scopes = set()
         app_log.debug("Loading and parsing scopes")
         if self.current_user:

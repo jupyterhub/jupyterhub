@@ -336,7 +336,7 @@ class UserTokenListAPIHandler(APIHandler):
             # couldn't identify requester
             raise web.HTTPError(403)
         self._jupyterhub_user = requester
-        self._resolve_scopes()
+        self._resolve_roles_and_scopes()
         user = self.find_user(user_name)
         kind = 'user' if isinstance(requester, User) else 'service'
         scope_filter = self.get_scope_filter('users:tokens')

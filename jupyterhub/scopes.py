@@ -108,7 +108,7 @@ class Scope(Enum):
     ALL = True
 
 
-def _intersect_scopes(scopes_a, scopes_b):
+def _intersect_expanded_scopes(scopes_a, scopes_b):
     """Intersect two sets of expanded scopes by comparing their permissions
 
     Arguments:
@@ -192,7 +192,7 @@ def _intersect_scopes(scopes_a, scopes_b):
 
 
 def get_scopes_for(orm_object):
-    """Find scopes for a given user or token and resolve permissions
+    """Find scopes for a given user or token from their roles and resolve permissions
 
     Arguments:
       orm_object: orm object or User wrapper
@@ -225,7 +225,7 @@ def get_scopes_for(orm_object):
             token_scopes.remove('all')
             token_scopes |= owner_scopes
 
-        intersection = _intersect_scopes(token_scopes, owner_scopes)
+        intersection = _intersect_expanded_scopes(token_scopes, owner_scopes)
         discarded_token_scopes = token_scopes - intersection
 
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
@@ -263,7 +263,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     return bool(set(scope_group_names) & group_names)
 
 
-def _check_scope(api_handler, req_scope, **kwargs):
+def _check_scope_access(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
     Returns True for (potentially restricted) access, False for refused access
     """
@@ -375,7 +375,7 @@ def needs_scope(*scopes):
                     s_kwargs[resource] = resource_value
             for scope in scopes:
                 app_log.debug("Checking access via scope %s", scope)
-                has_access = _check_scope(self, scope, **s_kwargs)
+                has_access = _check_scope_access(self, scope, **s_kwargs)
                 if has_access:
                     return func(self, *args, **kwargs)
             try:
