@@ -8,6 +8,7 @@ from sqlalchemy import func
 from tornado.log import app_log
 
 from . import orm
+from . import scopes
 
 
 def get_default_roles():
@@ -75,35 +76,30 @@ def expand_self_scope(name):
 
 def _get_scope_hierarchy():
     """
-    Returns a dictionary of scopes:
-    scopes.keys() = scopes of highest level and scopes that have their own subscopes
-    scopes.values() = a list of first level subscopes or None
+    Returns:
+      scope hierarchy (dict): dictionary of available scopes and their hierarchy where
+        scopes.keys() = top level scopes and scopes that have their own subscopes
+        scopes.values() = list of immediate subscopes or None
     """
+    subscope_lists = [
+        value['subscopes']
+        for value in scopes.scope_definitions.values()
+        if 'subscopes' in value
+    ]
 
-    scopes = {
-        'self': None,
-        'all': None,
-        'admin:users': ['admin:users:auth_state', 'users'],
-        'users': ['read:users', 'users:activity'],
-        'read:users': [
-            'read:users:name',
-            'read:users:groups',
-            'read:users:activity',
-        ],
-        'users:activity': ['read:users:activity'],
-        'users:tokens': ['read:users:tokens'],
-        'admin:users:servers': ['admin:users:server_state', 'users:servers'],
-        'users:servers': ['read:users:servers'],
-        'read:users:servers': ['read:users:name'],
-        'admin:groups': ['groups'],
-        'groups': ['read:groups'],
-        'read:services': None,
-        'read:hub': None,
-        'proxy': None,
-        'shutdown': None,
-    }
+    scope_hierarchy = {}
+    for scope in scopes.scope_definitions.keys():
 
-    return scopes
+        has_subscopes = scopes.scope_definitions[scope].get('subscopes')
+        is_subscope = any(scope in subscope_list for subscope_list in subscope_lists)
+
+        if has_subscopes:
+            scope_hierarchy[scope] = scopes.scope_definitions[scope]['subscopes']
+        else:
+            if not is_subscope:
+                scope_hierarchy[scope] = None
+
+    return scope_hierarchy
 
 
 def horizontal_filter(func):

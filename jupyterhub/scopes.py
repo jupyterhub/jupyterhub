@@ -36,13 +36,13 @@ scope_definitions = {
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
-            'read:users:roles',
         ],
+        # TODO: add read:users:admin and read:users:roles as subscopes here once implemented
     },
     'read:users:name': {'description': 'Read-only access to users’ names.'},
     'read:users:groups': {'description': 'Read-only access to users’ group names.'},
-    'read:users:roles': {'description': 'Read-only access to users’ role names.'},
     'read:users:activity': {'description': 'Read-only access to users’ last activity.'},
+    # TODO: add read:users:admin and read:users:roles once implemented
     'users:activity': {
         'description': 'Grants access to read and post users’ last activity only.',
         'subscopes': ['read:users:activity'],
@@ -78,10 +78,12 @@ scope_definitions = {
     'read:groups': {'description': 'Read-only access to groups’ models.'},
     'read:services': {
         'description': 'Read-only access to service models.',
-        'subscopes': ['read:services:name', 'read:services:roles'],
+        'subscopes': ['read:services:name'],
+        # TODO: add read:services:admin and read:services:roles as subscopes here once implemented
     },
     'read:services:name': {'description': 'Read-only access to service names.'},
-    'read:services:roles': {'description': 'Read-only access to service role names.'},
+    # TODO: add read:services:admin and read:services:roles once implemented
+    #'read:services:roles': {'description': 'Read-only access to service role names.'},
     'read:hub': {
         'description': 'Read-only access to detailed information about the Hub.'
     },
