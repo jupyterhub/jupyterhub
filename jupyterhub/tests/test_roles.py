@@ -992,12 +992,6 @@ async def test_config_role_users():
             'scopes': ['users', 'groups'],
             'users': user_names,
         },
-        {
-            'name': role_name,
-            'description': 'painting with colors',
-            'scopes': ['users', 'groups'],
-            'users': user_names,
-        },
     ]
     hub = MockHub(load_roles=roles_to_load)
     hub.init_db()
@@ -1018,6 +1012,30 @@ async def test_config_role_users():
     user = orm.User.find(hub.db, name=user_name)
     role = orm.Role.find(hub.db, name=role_name)
     assert role not in user.roles
+
+
+async def test_duplicate_role_users():
+    role_name = 'painter'
+    user_name = 'benny'
+    user_names = ['agnetha', 'bjorn', 'anni-frid', user_name]
+    roles_to_load = [
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': user_names,
+        },
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': user_names,
+        },
+    ]
+    hub = MockHub(load_roles=roles_to_load)
+    hub.init_db()
+    with pytest.raises(AttributeError):
+        await hub.init_role_creation()
 
 
 async def test_admin_role_and_flag():

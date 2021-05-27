@@ -1981,6 +1981,11 @@ class JupyterHub(Application):
         default_roles = roles.get_default_roles()
         config_role_names = [r['name'] for r in self.load_roles]
         init_roles = self.load_roles.copy()
+        for role_name in config_role_names:
+            if config_role_names.count(role_name) > 1:
+                raise AttributeError(
+                    f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
+                )
         for role_spec in default_roles:
             if role_spec['name'] not in config_role_names:
                 init_roles.append(role_spec)
