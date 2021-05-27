@@ -10,6 +10,7 @@ c.JupyterHub.services = [
         'name': 'whoami-oauth',
         'url': 'http://127.0.0.1:10102',
         'command': [sys.executable, './whoami-oauth.py'],
+        'oauth_roles': ['user'],
     },
 ]
 

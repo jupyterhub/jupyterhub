@@ -540,3 +540,71 @@ def check_scope_filter(sub_scope, orm_resource, kind):
         if user_in_group:
             return True
     return False
+
+
+def describe_parsed_scopes(parsed_scopes, username=None):
+    """Return list of descriptions of parsed scopes
+
+    Highly detailed, often redundant descriptions
+    """
+    descriptions = []
+    for scope, filters in parsed_scopes.items():
+        base_text = scope_definitions[scope]["description"]
+        if filters == Scope.ALL:
+            # no filter
+            filter_text = ""
+        else:
+            filter_chunks = []
+            for kind, names in filters.items():
+                if kind == 'user' and names == {username}:
+                    filter_chunks.append("only you")
+                else:
+                    kind_text = kind
+                    if kind == 'group':
+                        kind_text = "users in group"
+                    if len(names) == 1:
+                        filter_chunks.append(f"{kind}: {list(names)[0]}")
+                    else:
+                        filter_chunks.append(f"{kind}s: {', '.join(names)}")
+            filter_text = "; or ".join(filter_chunks)
+        descriptions.append(
+            {
+                "scope": scope,
+                "description": scope_definitions[scope]["description"],
+                "filter": filter_text,
+            }
+        )
+    return descriptions
+
+
+def describe_raw_scopes(raw_scopes, username=None):
+    """Return list of descriptions of raw scopes
+
+    A much shorter list than describe_parsed_scopes
+    """
+    descriptions = []
+    for raw_scope in raw_scopes:
+        scope, _, filter_ = raw_scope.partition("!")
+        base_text = scope_definitions[scope]["description"]
+        if not filter_:
+            # no filter
+            filter_text = ""
+        elif filter_ == "user":
+            filter_text = "only you"
+        else:
+            kind, _, name = filter_.partition("=")
+            if kind == "user" and name == username:
+                filter_text = "only you"
+            else:
+                kind_text = kind
+                if kind == 'group':
+                    kind_text = "users in group"
+                filter_text = f"{kind_text} {name}"
+        descriptions.append(
+            {
+                "scope": scope,
+                "description": scope_definitions[scope]["description"],
+                "filter": filter_text,
+            }
+        )
+    return descriptions
