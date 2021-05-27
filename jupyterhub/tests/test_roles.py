@@ -3,16 +3,15 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import os
-from itertools import chain
 
 import pytest
 from pytest import mark
 from tornado.log import app_log
-from traitlets.config import Config
 
 from .. import orm
 from .. import roles
 from ..scopes import get_scopes_for
+from ..scopes import scope_definitions
 from ..utils import utcnow
 from .mocking import MockHub
 from .utils import add_user
@@ -731,6 +730,11 @@ async def test_self_expansion(app, kind, has_user_scopes):
     # test expansion of user/service scopes
     scopes = roles.expand_roles_to_scopes(orm_obj)
     assert bool(scopes) == has_user_scopes
+    if kind == 'users':
+        for scope in scopes:
+            assert scope.endswith(f"!user={orm_obj.name}")
+            base_scope = scope.split("!", 1)[0]
+            assert base_scope in scope_definitions
 
     # test expansion of token scopes
     orm_obj.new_api_token()
