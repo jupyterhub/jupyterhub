@@ -88,7 +88,7 @@ def _get_scope_hierarchy():
     ]
 
     scope_hierarchy = {}
-    for scope in scopes.scope_definitions.keys():
+    for scope, definition in scopes.scope_definitions.items():
 
         has_subscopes = scopes.scope_definitions[scope].get('subscopes')
         is_subscope = any(scope in subscope_list for subscope_list in subscope_lists)
