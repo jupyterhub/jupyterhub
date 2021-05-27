@@ -3,12 +3,11 @@ import asyncio
 import os
 import sys
 from binascii import hexlify
-from contextlib import contextmanager
 from subprocess import Popen
 
 from async_generator import asynccontextmanager
-from tornado.ioloop import IOLoop
 
+from .. import orm
 from ..roles import update_roles
 from ..utils import maybe_future
 from ..utils import random_port
@@ -86,15 +85,18 @@ async def test_external_service(app):
                 'admin': True,
                 'url': env['JUPYTERHUB_SERVICE_URL'],
                 'api_token': env['JUPYTERHUB_API_TOKEN'],
+                'oauth_roles': ['user'],
             }
         ]
         await maybe_future(app.init_services())
-        await maybe_future(app.init_role_creation())
         await app.init_api_tokens()
         await app.proxy.add_all_services(app._service_map)
         await app.init_role_assignment()
 
         service = app._service_map[name]
+        assert service.oauth_available
+        assert service.oauth_client is not None
+        assert service.oauth_client.allowed_roles == [orm.Role.find(app.db, "user")]
         api_token = service.orm.api_tokens[0]
         update_roles(app.db, api_token, roles=['token'])
         url = public_url(app, service) + '/api/users'
