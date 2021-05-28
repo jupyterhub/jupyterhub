@@ -86,14 +86,14 @@ def test_scope_parse_server_name():
 
 class MockAPIHandler:
     def __init__(self):
-        self.raw_scopes = {'users'}
+        self.expanded_scopes = {'users'}
         self.parsed_scopes = {}
         self.request = mock.Mock(spec=HTTPServerRequest)
         self.request.path = '/path'
 
     def set_scopes(self, *scopes):
-        self.raw_scopes = set(scopes)
-        self.parsed_scopes = parse_scopes(self.raw_scopes)
+        self.expanded_scopes = set(scopes)
+        self.parsed_scopes = parse_scopes(self.expanded_scopes)
 
     @needs_scope('users')
     def user_thing(self, user_name):
@@ -195,7 +195,7 @@ def test_scope_method_access(mock_handler, scopes, method, arguments, is_allowed
 def test_double_scoped_method_succeeds(mock_handler):
     mock_handler.current_user = mock.Mock(name='lucille')
     mock_handler.set_scopes('users', 'read:services')
-    mock_handler.parsed_scopes = parse_scopes(mock_handler.raw_scopes)
+    mock_handler.parsed_scopes = parse_scopes(mock_handler.expanded_scopes)
     assert mock_handler.secret_thing()
 
 

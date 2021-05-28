@@ -35,8 +35,8 @@ class TokenAPIHandler(APIHandler):
         if owner:
             # having a token means we should be able to read the owner's model
             # (this is the only thing this handler is for)
-            self.raw_scopes.update(scopes.identify_scopes(owner))
-            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+            self.expanded_scopes.update(scopes.identify_scopes(owner))
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
         now = orm_token.last_activity = datetime.utcnow()

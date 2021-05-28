@@ -363,8 +363,8 @@ def needs_scope(*scopes):
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
             # Load scopes in case they haven't been loaded yet
-            if not hasattr(self, 'raw_scopes'):
-                self.raw_scopes = {}
+            if not hasattr(self, 'expanded_scopes'):
+                self.expanded_scopes = {}
                 self.parsed_scopes = {}
 
             s_kwargs = {}
@@ -384,7 +384,7 @@ def needs_scope(*scopes):
                 end_point = self.__name__
             app_log.warning(
                 "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
-                    end_point, ", ".join(scopes), ", ".join(self.raw_scopes)
+                    end_point, ", ".join(scopes), ", ".join(self.expanded_scopes)
                 )
             )
             raise web.HTTPError(

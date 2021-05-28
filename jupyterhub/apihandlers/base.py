@@ -254,7 +254,7 @@ class APIHandler(BaseHandler):
         self.log.debug(
             "Asking for user model of %s with scopes [%s]",
             user.name,
-            ", ".join(self.raw_scopes),
+            ", ".join(self.expanded_scopes),
         )
         allowed_keys = set()
         for scope in access_map:

@@ -37,12 +37,13 @@ class SelfAPIHandler(APIHandler):
             raise web.HTTPError(403)
         if isinstance(user, orm.Service):
             # ensure we have the minimal 'identify' scopes for the token owner
-            self.raw_scopes.update(scopes.identify_scopes(user))
-            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+            self.expanded_scopes.update(scopes.identify_scopes(user))
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
             model = self.service_model(user)
         else:
-            self.raw_scopes.update(scopes.identify_scopes(user.orm_user))
-            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+            self.expanded_scopes.update(scopes.identify_scopes(user.orm_user))
+            print('Expanded scopes in selfapihandler')
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
             model = self.user_model(user)
         # validate return, should have at least kind and name,
         # otherwise our filters did something wrong

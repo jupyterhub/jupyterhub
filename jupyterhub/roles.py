@@ -401,21 +401,22 @@ def _token_allowed_role(db, token, role):
     if owner is None:
         raise ValueError(f"Owner not found for {token}")
 
-    token_scopes = _get_subscopes(role, owner=owner)
+    expanded_scopes = _get_subscopes(role, owner=owner)
 
     implicit_permissions = {'all', 'read:all'}
-    explicit_scopes = token_scopes - implicit_permissions
+    explicit_scopes = expanded_scopes - implicit_permissions
     # ignore horizontal filters
-    raw_scopes = {
+    no_filter_scopes = {
         scope.split('!', 1)[0] if '!' in scope else scope for scope in explicit_scopes
     }
     # find the owner's scopes
-    owner_scopes = expand_roles_to_scopes(owner)
+    expanded_owner_scopes = expand_roles_to_scopes(owner)
     # ignore horizontal filters
-    raw_owner_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in owner_scopes
+    no_filter_owner_scopes = {
+        scope.split('!', 1)[0] if '!' in scope else scope
+        for scope in expanded_owner_scopes
     }
-    disallowed_scopes = raw_scopes.difference(raw_owner_scopes)
+    disallowed_scopes = no_filter_scopes.difference(no_filter_owner_scopes)
     if not disallowed_scopes:
         # no scopes requested outside owner's own scopes
         return True
