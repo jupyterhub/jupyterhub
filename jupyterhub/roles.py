@@ -8,6 +8,7 @@ from sqlalchemy import func
 from tornado.log import app_log
 
 from . import orm
+from . import scopes
 
 
 def get_default_roles():
@@ -73,39 +74,6 @@ def expand_self_scope(name):
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
-def _get_scope_hierarchy():
-    """
-    Returns a dictionary of scopes:
-    scopes.keys() = scopes of highest level and scopes that have their own subscopes
-    scopes.values() = a list of first level subscopes or None
-    """
-
-    scopes = {
-        'self': None,
-        'all': None,
-        'admin:users': ['admin:users:auth_state', 'users'],
-        'users': ['read:users', 'users:activity'],
-        'read:users': [
-            'read:users:name',
-            'read:users:groups',
-            'read:users:activity',
-        ],
-        'users:activity': ['read:users:activity'],
-        'users:tokens': ['read:users:tokens'],
-        'admin:users:servers': ['admin:users:server_state', 'users:servers'],
-        'users:servers': ['read:users:servers'],
-        'read:users:servers': ['read:users:name'],
-        'admin:groups': ['groups'],
-        'groups': ['read:groups'],
-        'read:services': None,
-        'read:hub': None,
-        'proxy': None,
-        'shutdown': None,
-    }
-
-    return scopes
-
-
 def horizontal_filter(func):
     """Decorator to account for horizontal filtering in scope syntax"""
 
@@ -133,29 +101,17 @@ def horizontal_filter(func):
 def _expand_scope(scopename):
     """Returns a set of all subscopes"""
 
-    scopes = _get_scope_hierarchy()
-    subscopes = [scopename]
+    expanded_scope = []
 
-    def _expand_subscopes(index):
+    def _add_subscopes(scopename):
+        expanded_scope.append(scopename)
+        if scopes.scope_definitions[scopename].get('subscopes'):
+            for subscope in scopes.scope_definitions[scopename].get('subscopes'):
+                _add_subscopes(subscope)
 
-        more_subscopes = list(
-            filter(lambda scope: scope in scopes.keys(), subscopes[index:])
-        )
-        for scope in more_subscopes:
-            subscopes.extend(scopes[scope])
+    _add_subscopes(scopename)
 
-    if scopename in scopes.keys() and scopes[scopename] is not None:
-        subscopes.extend(scopes[scopename])
-        # record the index from where it should check for "subscopes of sub-subscopes"
-        index_for_sssc = len(subscopes)
-        # check for "subscopes of subscopes"
-        _expand_subscopes(index=1)
-        # check for "subscopes of sub-subscopes"
-        _expand_subscopes(index=index_for_sssc)
-
-    expanded_scope = set(subscopes)
-
-    return expanded_scope
+    return set(expanded_scope)
 
 
 def expand_roles_to_scopes(orm_object):
@@ -209,29 +165,27 @@ def _get_subscopes(*args, owner=None):
     return scopes
 
 
-def _check_scopes(*args):
+def _check_scopes(*args, rolename=None):
     """Check if provided scopes exist"""
 
-    allowed_scopes = _get_scope_hierarchy()
+    allowed_scopes = set(scopes.scope_definitions.keys())
     allowed_filters = ['!user=', '!service=', '!group=', '!server=', '!user']
-    subscopes = set(
-        chain.from_iterable([x for x in allowed_scopes.values() if x is not None])
-    )
+
+    if rolename:
+        log_role = f"for role {rolename}"
+    else:
+        log_role = ""
 
     for scope in args:
-        # check the ! filters
-        if '!' in scope:
-            if any(filter in scope for filter in allowed_filters):
-                scope = scope.split('!', 1)[0]
-            else:
+        scopename, _, filter_ = scope.partition('!')
+        if scopename not in allowed_scopes:
+            raise NameError(f"Scope '{scope}' {log_role} does not exist")
+        if filter_:
+            full_filter = f"!{filter_}"
+            if not any(full_filter in scope for full_filter in allowed_filters):
                 raise NameError(
-                    'Scope filter %r in scope %r does not exist',
-                    scope.split('!', 1)[1],
-                    scope,
+                    f"Scope filter '{full_filter}' in scope '{scope}' {log_role} does not exist"
                 )
-        # check if the actual scope syntax exists
-        if scope not in allowed_scopes.keys() and scope not in subscopes:
-            raise NameError('Scope %r does not exist', scope)
 
 
 def _overwrite_role(role, role_dict):
@@ -288,7 +242,7 @@ def create_role(db, role_dict):
 
     # check if the provided scopes exist
     if scopes:
-        _check_scopes(*scopes)
+        _check_scopes(*scopes, rolename=role_dict['name'])
 
     if role is None:
         if not scopes:
