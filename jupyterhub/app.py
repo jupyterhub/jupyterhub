@@ -1991,10 +1991,10 @@ class JupyterHub(Application):
         if not orm.Role.find(self.db, name='admin'):
             self._rbac_upgrade = True
         for role in self.db.query(orm.Role).filter(
-            orm.Role.name.in_(config_role_names)
+            orm.Role.name.notin_(config_role_names)
         ):
             app_log.info(f"Deleting role {role.name}")
-            role.delete()
+            self.db.delete(role)
         self.db.commit()
         for role in init_roles:
             roles.create_role(self.db, role)
@@ -2010,7 +2010,7 @@ class JupyterHub(Application):
             for role_spec in self.load_roles:
                 if role_spec['name'] == 'admin':
                     app_log.warning(
-                        "Configuration specifies both admin_users and users in the admin role specification"
+                        "Configuration specifies both admin_users and users in the admin role specification. "
                         "If admin role is present in config, it should contain all admin users."
                     )
                     app_log.info(
@@ -2048,20 +2048,19 @@ class JupyterHub(Application):
                                     "Username %r is not in Authenticator.allowed_users"
                                     % bname
                                 )
-                    Class = orm.get_class(bearer)
-                    orm_obj = Class.find(db, bname)
-                    if orm_obj:
-                        orm_role_bearers.append(orm_obj)
-                    else:
-                        app_log.warning(
-                            f"User {bname} not added, only found in role definition"
-                        )
-                        # Todo: Add users to allowed_users
-                    # Ensure all with admin role have admin flag
-                    if predef_role['name'] == 'admin':
-                        orm_obj.admin = True
-            setattr(predef_role_obj, bearer, orm_role_bearers)
-
+                        Class = orm.get_class(bearer)
+                        orm_obj = Class.find(db, bname)
+                        if orm_obj:
+                            orm_role_bearers.append(orm_obj)
+                        else:
+                            app_log.warning(
+                                f"User {bname} not added, only found in role definition"
+                            )
+                            # Todo: Add users to allowed_users
+                        # Ensure all with admin role have admin flag
+                        if predef_role['name'] == 'admin':
+                            orm_obj.admin = True
+                setattr(predef_role_obj, bearer, orm_role_bearers)
         db.commit()
         allowed_users = db.query(orm.User).filter(
             orm.User.name.in_(self.authenticator.allowed_users)
