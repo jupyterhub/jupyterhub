@@ -1173,6 +1173,77 @@ async def test_admin_role_respects_config():
         assert user in admin_role.users
 
 
-# todo: add test for empty user list and for no user list present
-# Todo: Add test for rbac_upgrade behaviour flag
-# Todo: test token roles are not reassigned if they are deleted
+async def test_empty_admin_spec():
+    role_spec = [{'name': 'admin', 'users': []}]
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = []
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    admin_role = orm.Role.find(hub.db, 'admin')
+    assert not admin_role.users
+
+
+async def test_hub_upgrade_detection():
+    role_spec = [{'name': 'admin', 'users': []}]
+    service = {'name': 'sheep_counter', 'api_token': 'some-token'}
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_api_tokens()
+
+    assert hub._rbac_upgrade
+    await hub.init_role_assignment()
+    orm_service = orm.Service.find(hub.db, 'sheep_counter')
+    user_role = orm.Role.find(hub.db, 'user')
+    assert user_role in orm_service.roles
+    # Restart hub, now we are no longer in upgrade mode
+    hub = MockHub(load_roles=role_spec, services=[service])
+    hub.test_clean_db = False
+    hub.init_db()
+    await hub.init_role_creation()
+    assert not getattr(hub, '_rbac_upgrade', False)
+    hub.db.delete(orm_service)
+    hub.db.commit()
+
+
+async def test_token_keep_roles_on_restart():
+    role_spec = [
+        {
+            'name': 'bloop',
+            'scopes': ['read:users'],
+        }
+    ]
+
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = ['ben']
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name='ben')
+    for _ in range(3):
+        user.new_api_token()
+    happy_token, content_token, sad_token = user.api_tokens
+    roles.grant_role(hub.db, happy_token, 'bloop')
+    roles.strip_role(hub.db, sad_token, 'token')
+    assert len(happy_token.roles) == 2
+    assert len(content_token.roles) == 1
+    assert len(sad_token.roles) == 0
+    # Restart hub and see if roles are as expected
+    hub.load_roles = []
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_api_tokens()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name='ben')
+    happy_token, content_token, sad_token = user.api_tokens
+    assert len(happy_token.roles) == 1
+    assert len(content_token.roles) == 1
+    print(sad_token.roles)
+    assert len(sad_token.roles) == 0
+    for token in user.api_tokens:
+        hub.db.delete(token)
+    hub.db.commit()

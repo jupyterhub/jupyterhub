@@ -1980,6 +1980,7 @@ class JupyterHub(Application):
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
         config_role_names = [r['name'] for r in self.load_roles]
+
         init_roles = default_roles
         for role_name in config_role_names:
             if config_role_names.count(role_name) > 1:
@@ -1988,10 +1989,11 @@ class JupyterHub(Application):
                 )
         for role_spec in self.load_roles:
             init_roles.append(role_spec)
+        init_role_names = [r['name'] for r in init_roles]
         if not orm.Role.find(self.db, name='admin'):
             self._rbac_upgrade = True
         for role in self.db.query(orm.Role).filter(
-            orm.Role.name.notin_(config_role_names)
+            orm.Role.name.notin_(init_role_names)
         ):
             app_log.info(f"Deleting role {role.name}")
             self.db.delete(role)
@@ -2011,7 +2013,7 @@ class JupyterHub(Application):
                 if role_spec['name'] == 'admin':
                     app_log.warning(
                         "Configuration specifies both admin_users and users in the admin role specification. "
-                        "If admin role is present in config, it should contain all admin users."
+                        "If admin role is present in config, c.authenticator.admin_users should not be used."
                     )
                     app_log.info(
                         "Merging admin_users set with users list in admin role"
@@ -2076,17 +2078,17 @@ class JupyterHub(Application):
                 else:
                     roles.grant_role(db, admin_obj, 'admin')
         db.commit()
-        # make sure that on hub upgrade, all roles are reset
+        # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
         if getattr(self, '_rbac_upgrade', False):
             app_log.warning(
                 "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
             )
-            # make sure all users, services and tokens have at least one role (update with default)
             for bearer in role_bearers:
                 roles.check_for_default_roles(db, bearer)
 
             # check tokens for default roles
             roles.check_for_default_roles(db, bearer='tokens')
+            self._rbac_upgrade = False
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
