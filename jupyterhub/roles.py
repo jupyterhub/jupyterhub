@@ -239,10 +239,14 @@ def _overwrite_role(role, role_dict):
 
     for attr in role_dict.keys():
         if attr == 'description' or attr == 'scopes':
-            if role.name == 'admin' and role_dict[attr] != getattr(role, attr):
-                raise ValueError(
-                    'admin role description or scopes cannot be overwritten'
-                )
+            if role.name == 'admin':
+                admin_role_spec = [
+                    r for r in get_default_roles() if r['name'] == 'admin'
+                ][0]
+                if role_dict[attr] != admin_role_spec[attr]:
+                    raise ValueError(
+                        'admin role description or scopes cannot be overwritten'
+                    )
             else:
                 if role_dict[attr] != getattr(role, attr):
                     setattr(role, attr, role_dict[attr])

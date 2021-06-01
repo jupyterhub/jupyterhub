@@ -497,12 +497,12 @@ async def test_load_roles_services(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
+    await hub.init_role_creation()
     await hub.init_api_tokens()
     # make 'admin_service' admin
     admin_service = orm.Service.find(db, 'admin_service')
     admin_service.admin = True
     db.commit()
-    await hub.init_role_creation()
     await hub.init_role_assignment()
     # test if every service has a role (and no duplicates)
     admin_role = orm.Role.find(db, name='admin')
@@ -1034,7 +1034,7 @@ async def test_duplicate_role_users():
     ]
     hub = MockHub(load_roles=roles_to_load)
     hub.init_db()
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         await hub.init_role_creation()
 
 
@@ -1116,6 +1116,14 @@ async def test_removal_config_to_db():
     assert not orm.Role.find(hub.db, 'wizard')
 
 
+async def test_no_admin_role_change():
+    role_spec = [{'name': 'admin', 'scopes': ['shutdown']}]
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    with pytest.raises(ValueError):
+        await hub.init_role_creation()
+
+
 async def test_user_config_respects_memberships():
     role_spec = [
         {
@@ -1140,7 +1148,6 @@ async def test_admin_role_respects_config():
     role_spec = [
         {
             'name': 'admin',
-            'scopes': ['self', 'shutdown'],
         }
     ]
     admin_users = ['eddy', 'carol']
@@ -1154,3 +1161,8 @@ async def test_admin_role_respects_config():
     for user_name in admin_users:
         user = orm.User.find(hub.db, user_name)
         assert user in admin_role.users
+
+
+# todo: add test for empty user list and for no user list present
+# Todo: Add test for rbac_upgrade behaviour flag
+# Todo: test token roles are not reassigned if they are deleted

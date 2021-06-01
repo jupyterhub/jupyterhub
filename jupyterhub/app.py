@@ -1980,19 +1980,21 @@ class JupyterHub(Application):
         self.log.debug('Loading default roles to database')
         default_roles = roles.get_default_roles()
         config_role_names = [r['name'] for r in self.load_roles]
-        init_roles = self.load_roles.copy()
+        init_roles = default_roles
         for role_name in config_role_names:
             if config_role_names.count(role_name) > 1:
-                raise AttributeError(
+                raise ValueError(
                     f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
                 )
-        for role_spec in default_roles:
-            if role_spec['name'] not in config_role_names:
-                init_roles.append(role_spec)
+        for role_spec in self.load_roles:
+            init_roles.append(role_spec)
         if not orm.Role.find(self.db, name='admin'):
             self._rbac_upgrade = True
-        self.db.query(orm.Role).delete()
-        app_log.info("Deleting all roles in database")
+        for role in self.db.query(orm.Role).filter(
+            orm.Role.name.in_(config_role_names)
+        ):
+            app_log.info(f"Deleting role {role.name}")
+            role.delete()
         self.db.commit()
         for role in init_roles:
             roles.create_role(self.db, role)
@@ -2001,15 +2003,18 @@ class JupyterHub(Application):
         # tokens are added separately
         role_bearers = ['users', 'services', 'groups']
         admin_role_objects = ['users', 'services']
-        config_admin_users = set(self.admin_users) | self.authenticator.admin_users
+        config_admin_users = set(self.authenticator.admin_users)
         db = self.db
         # load predefined roles from config file
         if config_admin_users:
             for role_spec in self.load_roles:
                 if role_spec['name'] == 'admin':
+                    app_log.warning(
+                        "Configuration specifies both admin_users and users in the admin role specification"
+                        "If admin role is present in config, it should contain all admin users."
+                    )
                     app_log.info(
-                        "Extending admin role assignment with config admin users: %s",
-                        str(config_admin_users),
+                        "Merging admin_users set with users list in admin role"
                     )
                     role_spec['users'] = set(role_spec.get('users', []))
                     role_spec['users'] |= config_admin_users
@@ -2017,16 +2022,14 @@ class JupyterHub(Application):
         has_admin_role_spec = {role_bearer: False for role_bearer in admin_role_objects}
         for predef_role in self.load_roles:
             predef_role_obj = orm.Role.find(db, name=predef_role['name'])
-            for bearer in admin_role_objects:
-                if predef_role['name'] == 'admin':
-                    has_admin_role_spec[bearer] = bool(predef_role.get(bearer, False))
+            if predef_role['name'] == 'admin':
+                for bearer in admin_role_objects:
+                    has_admin_role_spec[bearer] = bearer in predef_role
                     if has_admin_role_spec[bearer]:
-                        app_log.debug(
-                            f"Admin {bearer} explicitly specified in config, so previous db state is ignored"
-                        )
+                        app_log.info(f"Admin role specifies static {bearer} list")
                     else:
-                        app_log.debug(
-                            f"Admin {bearer} not specified in config, elevate to admin based on previous db state"
+                        app_log.info(
+                            f"Admin role does not specify {bearer}, preserving admin membership in database"
                         )
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
@@ -2045,14 +2048,21 @@ class JupyterHub(Application):
                                     "Username %r is not in Authenticator.allowed_users"
                                     % bname
                                 )
-                        Class = orm.get_class(bearer)
-                        orm_obj = Class.find(db, bname)
+                    Class = orm.get_class(bearer)
+                    orm_obj = Class.find(db, bname)
+                    if orm_obj:
                         orm_role_bearers.append(orm_obj)
-                        # Ensure all with admin role have admin flag
-                        if predef_role['name'] == 'admin':
-                            orm_obj.admin = True
-                setattr(predef_role_obj, bearer, orm_role_bearers)
-                db.commit()
+                    else:
+                        app_log.warning(
+                            f"User {bname} not added, only found in role definition"
+                        )
+                        # Todo: Add users to allowed_users
+                    # Ensure all with admin role have admin flag
+                    if predef_role['name'] == 'admin':
+                        orm_obj.admin = True
+            setattr(predef_role_obj, bearer, orm_role_bearers)
+
+        db.commit()
         allowed_users = db.query(orm.User).filter(
             orm.User.name.in_(self.authenticator.allowed_users)
         )
@@ -2068,7 +2078,7 @@ class JupyterHub(Application):
                     roles.grant_role(db, admin_obj, 'admin')
         db.commit()
         # make sure that on hub upgrade, all roles are reset
-        if not getattr(self, '_rbac_upgrade', False):
+        if getattr(self, '_rbac_upgrade', False):
             app_log.warning(
                 "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
             )
