@@ -213,6 +213,16 @@ def test_orm_roles_delete_cascade(db):
         (['read:users:servers'], {'read:users:servers', 'read:users:name'}),
         (['admin:groups'], {'admin:groups', 'groups', 'read:groups'}),
         (
+            ['admin:groups', 'read:users:servers'],
+            {
+                'admin:groups',
+                'groups',
+                'read:groups',
+                'read:users:servers',
+                'read:users:name',
+            },
+        ),
+        (
             ['users:tokens!group=hobbits'],
             {'users:tokens!group=hobbits', 'read:users:tokens!group=hobbits'},
         ),
