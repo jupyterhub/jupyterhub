@@ -1188,23 +1188,20 @@ async def test_empty_admin_spec():
 async def test_hub_upgrade_detection():
     role_spec = [{'name': 'admin', 'users': []}]
     service = {'name': 'sheep_counter', 'api_token': 'some-token'}
-    hub = MockHub(load_roles=role_spec)
-    hub.init_db()
-    await hub.init_role_creation()
-    await hub.init_users()
-    await hub.init_api_tokens()
-
-    assert hub._rbac_upgrade
-    await hub.init_role_assignment()
+    hub = MockHub(load_roles=role_spec, services=[service])
+    await hub.initialize()
     orm_service = orm.Service.find(hub.db, 'sheep_counter')
     user_role = orm.Role.find(hub.db, 'user')
     assert user_role in orm_service.roles
+    orm_service.roles = []
+    hub.db.commit()
     # Restart hub, now we are no longer in upgrade mode
-    hub = MockHub(load_roles=role_spec, services=[service])
-    hub.test_clean_db = False
-    hub.init_db()
-    await hub.init_role_creation()
+    hub = MockHub(load_roles=role_spec, services=[service], db=hub.db)
+    await hub.initialize()
+    # Fixme: How to respect db state?
     assert not getattr(hub, '_rbac_upgrade', False)
+    orm_service = orm.Service.find(hub.db, 'sheep_counter')
+    assert not orm_service.roles
     hub.db.delete(orm_service)
     hub.db.commit()
 
