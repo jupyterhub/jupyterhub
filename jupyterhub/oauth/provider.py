@@ -342,7 +342,7 @@ class JupyterHubRequestValidator(RequestValidator):
         orm_access_token = orm.OAuthAccessToken(
             client=client,
             grant_type=orm.GrantType.authorization_code,
-            expires_at=orm.OAuthAccessToken.now() + token['expires_in'],
+            expires_at=int(orm.OAuthAccessToken.now() + token['expires_in']),
             refresh_token=token['refresh_token'],
             # TODO: save scopes,
             # scopes=scopes,
