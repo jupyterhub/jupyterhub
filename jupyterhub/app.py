@@ -1992,6 +1992,8 @@ class JupyterHub(Application):
         init_role_names = [r['name'] for r in init_roles]
         if not orm.Role.find(self.db, name='admin'):
             self._rbac_upgrade = True
+        else:
+            self._rbac_upgrade = False
         for role in self.db.query(orm.Role).filter(
             orm.Role.name.notin_(init_role_names)
         ):
@@ -2088,7 +2090,6 @@ class JupyterHub(Application):
 
             # check tokens for default roles
             roles.check_for_default_roles(db, bearer='tokens')
-            self._rbac_upgrade = False
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""

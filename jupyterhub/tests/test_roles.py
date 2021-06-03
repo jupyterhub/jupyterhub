@@ -2,11 +2,13 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import os
 from itertools import chain
 
 import pytest
 from pytest import mark
 from tornado.log import app_log
+from traitlets.config import Config
 
 from .. import orm
 from .. import roles
@@ -1185,25 +1187,55 @@ async def test_empty_admin_spec():
     assert not admin_role.users
 
 
-async def test_hub_upgrade_detection():
-    role_spec = [{'name': 'admin', 'users': []}]
-    service = {'name': 'sheep_counter', 'api_token': 'some-token'}
-    hub = MockHub(load_roles=role_spec, services=[service])
+# Todo: Test that services don't get default roles on any startup
+
+
+async def test_hub_upgrade_detection(tmpdir):
+    db_url = f"sqlite:///{tmpdir.join('jupyterhub.sqlite')}"
+    os.environ['JUPYTERHUB_TEST_DB_URL'] = db_url
+    # Create hub with users and tokens
+    hub = MockHub(db_url=db_url)
     await hub.initialize()
-    orm_service = orm.Service.find(hub.db, 'sheep_counter')
+    user_names = ['patricia', 'quentin']
     user_role = orm.Role.find(hub.db, 'user')
-    assert user_role in orm_service.roles
-    orm_service.roles = []
+    for name in user_names:
+        user = add_user(hub.db, name=name)
+        user.new_api_token()
+        assert user_role in user.roles
+    for role in hub.db.query(orm.Role):
+        hub.db.delete(role)
     hub.db.commit()
-    # Restart hub, now we are no longer in upgrade mode
-    hub = MockHub(load_roles=role_spec, services=[service], db=hub.db)
+    # Restart hub in emulated upgrade mode: default roles for all entities
+    hub.test_clean_db = False
     await hub.initialize()
-    # Fixme: How to respect db state?
-    assert not getattr(hub, '_rbac_upgrade', False)
-    orm_service = orm.Service.find(hub.db, 'sheep_counter')
-    assert not orm_service.roles
-    hub.db.delete(orm_service)
+    assert getattr(hub, '_rbac_upgrade', False)
+    user_role = orm.Role.find(hub.db, 'user')
+    token_role = orm.Role.find(hub.db, 'token')
+    for name in user_names:
+        user = orm.User.find(hub.db, name)
+        assert user_role in user.roles
+        assert token_role in user.api_tokens[0].roles
+    # Strip all roles and see if it sticks
+    user_role.users = []
+    token_role.tokens = []
     hub.db.commit()
+
+    hub.init_db()
+    hub.init_hub()
+    await hub.init_role_creation()
+    await hub.init_users()
+    hub.authenticator.allowed_users = ['patricia']
+    await hub.init_api_tokens()
+    await hub.init_role_assignment()
+    assert not getattr(hub, '_rbac_upgrade', False)
+    user_role = orm.Role.find(hub.db, 'user')
+    token_role = orm.Role.find(hub.db, 'token')
+    allowed_user = orm.User.find(hub.db, 'patricia')
+    rem_user = orm.User.find(hub.db, 'quentin')
+    assert user_role in allowed_user.roles
+    assert token_role not in allowed_user.api_tokens[0].roles
+    assert user_role not in rem_user.roles
+    assert token_role not in rem_user.roles
 
 
 async def test_token_keep_roles_on_restart():
