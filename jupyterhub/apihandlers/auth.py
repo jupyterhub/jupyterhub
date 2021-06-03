@@ -222,6 +222,14 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         # default: require confirmation
         return True
 
+    def get_login_url(self):
+        """
+        Support automatically logging in when JupyterHub is used as auth provider
+        """
+        if self.authenticator.auto_login_oauth2_authorize:
+            return self.authenticator.login_url(self.hub.base_url)
+        return super().get_login_url()
+
     @web.authenticated
     async def get(self):
         """GET /oauth/authorization
