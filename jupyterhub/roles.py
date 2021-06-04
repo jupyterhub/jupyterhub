@@ -193,10 +193,14 @@ def _overwrite_role(role, role_dict):
 
     for attr in role_dict.keys():
         if attr == 'description' or attr == 'scopes':
-            if role.name == 'admin' and role_dict[attr] != getattr(role, attr):
-                raise ValueError(
-                    'admin role description or scopes cannot be overwritten'
-                )
+            if role.name == 'admin':
+                admin_role_spec = [
+                    r for r in get_default_roles() if r['name'] == 'admin'
+                ][0]
+                if role_dict[attr] != admin_role_spec[attr]:
+                    raise ValueError(
+                        'admin role description or scopes cannot be overwritten'
+                    )
             else:
                 if role_dict[attr] != getattr(role, attr):
                     setattr(role, attr, role_dict[attr])
@@ -399,7 +403,6 @@ def assign_default_roles(db, entity):
         db.commit()
     # users and services can have 'user' or 'admin' roles as default
     else:
-        # todo: when we deprecate admin flag: replace with role check
         app_log.debug('Assigning default roles to %s', type(entity).__name__)
         _switch_default_role(db, entity, entity.admin)
 
@@ -426,25 +429,6 @@ def update_roles(db, entity, roles):
         else:
             app_log.debug('Assigning default roles to %s', type(entity).__name__)
             grant_role(db, entity=entity, rolename=rolename)
-
-
-def add_predef_roles_tokens(db, predef_roles):
-
-    """Adds tokens to predefined roles in config file
-    if their permissions allow"""
-
-    for predef_role in predef_roles:
-        if 'tokens' in predef_role.keys():
-            token_role = orm.Role.find(db, name=predef_role['name'])
-            for token_name in predef_role['tokens']:
-                token = orm.APIToken.find(db, token_name)
-                if token is None:
-                    raise ValueError(
-                        "Token %r does not exist and cannot assign it to role %r"
-                        % (token_name, token_role.name)
-                    )
-                else:
-                    update_roles(db, token, roles=[token_role.name])
 
 
 def check_for_default_roles(db, bearer):
