@@ -1,4 +1,14 @@
-"""General scope definitions and utilities"""
+"""
+General scope definitions and utilities
+
+Scope variable nomenclature
+---------------------------
+scopes: list of scopes with abbreviations (e.g., in role definition)
+expanded scopes: set of expanded scopes without abbreviations (i.e., resolved metascopes, filters and subscopes)
+parsed scopes: dictionary JSON like format of expanded scopes
+intersection : set of expanded scopes as intersection of 2 expanded scope sets
+identify scopes: set of expanded scopes needed for identify (whoami) endpoints
+"""
 import functools
 import inspect
 import warnings
@@ -98,12 +108,14 @@ class Scope(Enum):
     ALL = True
 
 
-def _intersect_scopes(scopes_a, scopes_b):
-    """Intersect two sets of scopes
+def _intersect_expanded_scopes(scopes_a, scopes_b):
+    """Intersect two sets of expanded scopes by comparing their permissions
 
-    Compares the permissions of two sets of scopes,
-    including horizontal filters,
-    and returns the intersected scopes.
+    Arguments:
+      scopes_a, scopes_b: sets of expanded scopes
+
+    Returns:
+      intersection: set of expanded scopes as intersection of the arguments
 
     Note: Intersects correctly with ALL and exact filter matches
           (i.e. users!user=x & read:users:name -> read:users:name!user=x)
@@ -180,10 +192,19 @@ def _intersect_scopes(scopes_a, scopes_b):
 
 
 def get_scopes_for(orm_object):
-    """Find scopes for a given user or token and resolve permissions"""
-    scopes = set()
+    """Find scopes for a given user or token from their roles and resolve permissions
+
+    Arguments:
+      orm_object: orm object or User wrapper
+
+    Returns:
+      expanded scopes (set) for the orm object
+      or
+      intersection (set) if orm_object == orm.APIToken
+    """
+    expanded_scopes = set()
     if orm_object is None:
-        return scopes
+        return expanded_scopes
 
     if not isinstance(orm_object, orm.Base):
         from .user import User
@@ -204,8 +225,8 @@ def get_scopes_for(orm_object):
             token_scopes.remove('all')
             token_scopes |= owner_scopes
 
-        scopes = _intersect_scopes(token_scopes, owner_scopes)
-        discarded_token_scopes = token_scopes - scopes
+        intersection = _intersect_expanded_scopes(token_scopes, owner_scopes)
+        discarded_token_scopes = token_scopes - intersection
 
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
@@ -213,9 +234,10 @@ def get_scopes_for(orm_object):
                 "discarding scopes [%s], not present in owner roles"
                 % ", ".join(discarded_token_scopes)
             )
+        expanded_scopes = intersection
     else:
-        scopes = roles.expand_roles_to_scopes(orm_object)
-    return scopes
+        expanded_scopes = roles.expand_roles_to_scopes(orm_object)
+    return expanded_scopes
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -241,7 +263,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     return bool(set(scope_group_names) & group_names)
 
 
-def _check_scope(api_handler, req_scope, **kwargs):
+def _check_scope_access(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
     Returns True for (potentially restricted) access, False for refused access
     """
@@ -319,16 +341,16 @@ def parse_scopes(scope_list):
 
 
 def unparse_scopes(parsed_scopes):
-    """Turn a parsed_scopes dictionary back into a scopes set"""
-    scopes = set()
+    """Turn a parsed_scopes dictionary back into a expanded scopes set"""
+    expanded_scopes = set()
     for base, filters in parsed_scopes.items():
         if filters == Scope.ALL:
-            scopes.add(base)
+            expanded_scopes.add(base)
         else:
             for entity, names_list in filters.items():
                 for name in names_list:
-                    scopes.add(f'{base}!{entity}={name}')
-    return scopes
+                    expanded_scopes.add(f'{base}!{entity}={name}')
+    return expanded_scopes
 
 
 def needs_scope(*scopes):
@@ -341,8 +363,8 @@ def needs_scope(*scopes):
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
             # Load scopes in case they haven't been loaded yet
-            if not hasattr(self, 'raw_scopes'):
-                self.raw_scopes = {}
+            if not hasattr(self, 'expanded_scopes'):
+                self.expanded_scopes = {}
                 self.parsed_scopes = {}
 
             s_kwargs = {}
@@ -353,7 +375,7 @@ def needs_scope(*scopes):
                     s_kwargs[resource] = resource_value
             for scope in scopes:
                 app_log.debug("Checking access via scope %s", scope)
-                has_access = _check_scope(self, scope, **s_kwargs)
+                has_access = _check_scope_access(self, scope, **s_kwargs)
                 if has_access:
                     return func(self, *args, **kwargs)
             try:
@@ -362,7 +384,7 @@ def needs_scope(*scopes):
                 end_point = self.__name__
             app_log.warning(
                 "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
-                    end_point, ", ".join(scopes), ", ".join(self.raw_scopes)
+                    end_point, ", ".join(scopes), ", ".join(self.expanded_scopes)
                 )
             )
             raise web.HTTPError(
@@ -384,7 +406,7 @@ def identify_scopes(obj):
       obj: orm.User or orm.Service
 
     Returns:
-      scopes (set): set of scopes needed for 'identify' endpoints
+      identify scopes (set): set of scopes needed for 'identify' endpoints
     """
     if isinstance(obj, orm.User):
         return {

@@ -9,8 +9,8 @@ from tornado.httputil import HTTPServerRequest
 from .. import orm
 from .. import roles
 from ..handlers import BaseHandler
-from ..scopes import _check_scope
-from ..scopes import _intersect_scopes
+from ..scopes import _check_scope_access
+from ..scopes import _intersect_expanded_scopes
 from ..scopes import get_scopes_for
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
@@ -49,49 +49,51 @@ def test_scope_precendence():
 
 def test_scope_check_present():
     handler = get_handler_with_scopes(['read:users'])
-    assert _check_scope(handler, 'read:users')
-    assert _check_scope(handler, 'read:users', user='maeby')
+    assert _check_scope_access(handler, 'read:users')
+    assert _check_scope_access(handler, 'read:users', user='maeby')
 
 
 def test_scope_check_not_present():
     handler = get_handler_with_scopes(['read:users!user=maeby'])
-    assert _check_scope(handler, 'read:users')
+    assert _check_scope_access(handler, 'read:users')
     with pytest.raises(web.HTTPError):
-        _check_scope(handler, 'read:users', user='gob')
+        _check_scope_access(handler, 'read:users', user='gob')
     with pytest.raises(web.HTTPError):
-        _check_scope(handler, 'read:users', user='gob', server='server')
+        _check_scope_access(handler, 'read:users', user='gob', server='server')
 
 
 def test_scope_filters():
     handler = get_handler_with_scopes(
         ['read:users', 'read:users!group=bluths', 'read:users!user=maeby']
     )
-    assert _check_scope(handler, 'read:users', group='bluth')
-    assert _check_scope(handler, 'read:users', user='maeby')
+    assert _check_scope_access(handler, 'read:users', group='bluth')
+    assert _check_scope_access(handler, 'read:users', user='maeby')
 
 
 def test_scope_multiple_filters():
     handler = get_handler_with_scopes(['read:users!user=george_michael'])
-    assert _check_scope(handler, 'read:users', user='george_michael', group='bluths')
+    assert _check_scope_access(
+        handler, 'read:users', user='george_michael', group='bluths'
+    )
 
 
 def test_scope_parse_server_name():
     handler = get_handler_with_scopes(
         ['users:servers!server=maeby/server1', 'read:users!user=maeby']
     )
-    assert _check_scope(handler, 'users:servers', user='maeby', server='server1')
+    assert _check_scope_access(handler, 'users:servers', user='maeby', server='server1')
 
 
 class MockAPIHandler:
     def __init__(self):
-        self.raw_scopes = {'users'}
+        self.expanded_scopes = {'users'}
         self.parsed_scopes = {}
         self.request = mock.Mock(spec=HTTPServerRequest)
         self.request.path = '/path'
 
     def set_scopes(self, *scopes):
-        self.raw_scopes = set(scopes)
-        self.parsed_scopes = parse_scopes(self.raw_scopes)
+        self.expanded_scopes = set(scopes)
+        self.parsed_scopes = parse_scopes(self.expanded_scopes)
 
     @needs_scope('users')
     def user_thing(self, user_name):
@@ -193,7 +195,7 @@ def test_scope_method_access(mock_handler, scopes, method, arguments, is_allowed
 def test_double_scoped_method_succeeds(mock_handler):
     mock_handler.current_user = mock.Mock(name='lucille')
     mock_handler.set_scopes('users', 'read:services')
-    mock_handler.parsed_scopes = parse_scopes(mock_handler.raw_scopes)
+    mock_handler.parsed_scopes = parse_scopes(mock_handler.expanded_scopes)
     assert mock_handler.secret_thing()
 
 
@@ -828,10 +830,10 @@ async def test_resolve_token_permissions(
         ),
     ],
 )
-def test_intersect_scopes(left, right, expected, should_warn, recwarn):
+def test_intersect_expanded_scopes(left, right, expected, should_warn, recwarn):
     # run every test in both directions, to ensure symmetry of the inputs
     for a, b in [(left, right), (right, left)]:
-        intersection = _intersect_scopes(set(left), set(right))
+        intersection = _intersect_expanded_scopes(set(left), set(right))
         assert intersection == set(expected)
 
     if should_warn:

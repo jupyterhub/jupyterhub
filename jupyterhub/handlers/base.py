@@ -81,13 +81,13 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
-        self.raw_scopes = set()
+        self.expanded_scopes = set()
         try:
             await self.get_current_user()
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
-        self._resolve_scopes()
+        self._resolve_roles_and_scopes()
         return await maybe_future(super().prepare())
 
     @property
@@ -416,17 +416,17 @@ class BaseHandler(RequestHandler):
                 self.log.exception("Error getting current user")
         return self._jupyterhub_user
 
-    def _resolve_scopes(self):
-        self.raw_scopes = set()
+    def _resolve_roles_and_scopes(self):
+        self.expanded_scopes = set()
         app_log.debug("Loading and parsing scopes")
         if self.current_user:
             orm_token = self.get_token()
             if orm_token:
-                self.raw_scopes = scopes.get_scopes_for(orm_token)
+                self.expanded_scopes = scopes.get_scopes_for(orm_token)
             else:
-                self.raw_scopes = scopes.get_scopes_for(self.current_user)
-        self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
-        app_log.debug("Found scopes [%s]", ",".join(self.raw_scopes))
+                self.expanded_scopes = scopes.get_scopes_for(self.current_user)
+        self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
+        app_log.debug("Found scopes [%s]", ",".join(self.expanded_scopes))
 
     @property
     def current_user(self):
