@@ -31,7 +31,6 @@ from .utils import AsyncSession
         (["access:users:servers!user=$other"], "named", False),
         (["access:services"], "", False),
         (["self"], "named", False),
-        (["admin"], "", False),
         ([], "", False),
     ],
 )
