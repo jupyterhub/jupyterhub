@@ -35,8 +35,8 @@ class TokenAPIHandler(APIHandler):
         if owner:
             # having a token means we should be able to read the owner's model
             # (this is the only thing this handler is for)
-            self.raw_scopes.update(scopes.identify_scopes(owner))
-            self.parsed_scopes = scopes.parse_scopes(self.raw_scopes)
+            self.expanded_scopes.update(scopes.identify_scopes(owner))
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
         now = orm_token.last_activity = datetime.utcnow()
@@ -216,6 +216,31 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             )
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
+            allowed = False
+
+            # check for access to target resource
+            if client.spawner:
+                scope_filter = self.get_scope_filter("access:users:servers")
+                allowed = scope_filter(client.spawner, kind='server')
+            elif client.service:
+                scope_filter = self.get_scope_filter("access:services")
+                allowed = scope_filter(client.service, kind='service')
+            else:
+                # client is not associated with a service or spawner.
+                # This shouldn't happen, but it might if this is a stale or forged request
+                # from a service or spawner that's since been deleted
+                self.log.error(
+                    f"OAuth client {client} has no service or spawner, cannot resolve scopes."
+                )
+                raise web.HTTPError(500, "OAuth configuration error")
+
+            if not allowed:
+                self.log.error(
+                    f"User {self.current_user} not allowed to access {client.description}"
+                )
+                raise web.HTTPError(
+                    403, f"You do not have permission to access {client.description}"
+                )
             if not self.needs_oauth_confirm(self.current_user, client):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",

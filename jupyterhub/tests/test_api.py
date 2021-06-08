@@ -307,7 +307,7 @@ async def test_get_self(app):
     db.commit()
     oauth_token = orm.APIToken(
         user=u.orm_user,
-        client=oauth_client,
+        oauth_client=oauth_client,
         token=token,
     )
     db.add(oauth_token)

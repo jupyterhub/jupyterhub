@@ -1,9 +1,21 @@
-"""General scope definitions and utilities"""
+"""
+General scope definitions and utilities
+
+Scope variable nomenclature
+---------------------------
+scopes: list of scopes with abbreviations (e.g., in role definition)
+expanded scopes: set of expanded scopes without abbreviations (i.e., resolved metascopes, filters and subscopes)
+parsed scopes: dictionary JSON like format of expanded scopes
+intersection : set of expanded scopes as intersection of 2 expanded scope sets
+identify scopes: set of expanded scopes needed for identify (whoami) endpoints
+"""
 import functools
 import inspect
 import warnings
 from enum import Enum
+from functools import lru_cache
 
+import sqlalchemy as sa
 from tornado import web
 from tornado.log import app_log
 
@@ -11,23 +23,131 @@ from . import orm
 from . import roles
 
 
+scope_definitions = {
+    '(no_scope)': {'description': 'Allows for only identifying the owning entity.'},
+    'self': {
+        'description': 'Metascope, grants access to user’s own resources only; resolves to (no_scope) for services.'
+    },
+    'all': {
+        'description': 'Metascope, valid for tokens only. Grants access to everything that the token’s owning entity can access.'
+    },
+    'admin:users': {
+        'description': 'Grants read, write, create and delete access to users and their authentication state but not their servers or tokens.',
+        'subscopes': ['admin:users:auth_state', 'users'],
+    },
+    'admin:users:auth_state': {
+        'description': 'Grants access to users’ authentication state only.'
+    },
+    'users': {
+        'description': 'Grants read and write permissions to users’ models apart from servers, tokens and authentication state.',
+        'subscopes': ['read:users', 'users:activity'],
+    },
+    'read:users': {
+        'description': 'Read-only access to users’ models apart from servers, tokens and authentication state.',
+        'subscopes': [
+            'read:users:name',
+            'read:users:groups',
+            'read:users:activity',
+        ],
+        # TODO: add read:users:roles as subscopes here once implemented
+    },
+    'read:users:name': {'description': 'Read-only access to users’ names.'},
+    'read:users:groups': {'description': 'Read-only access to users’ group names.'},
+    'read:users:activity': {'description': 'Read-only access to users’ last activity.'},
+    # TODO: add read:users:roles once implemented
+    'users:activity': {
+        'description': 'Grants access to read and post users’ last activity only.',
+        'subscopes': ['read:users:activity'],
+    },
+    'admin:users:servers': {
+        'description': 'Grants read, start/stop, create and delete permissions to users’ servers and their state.',
+        'subscopes': ['admin:users:server_state', 'users:servers'],
+    },
+    'admin:users:server_state': {
+        'description': 'Grants access to servers’ state only.'
+    },
+    'users:servers': {
+        'description': 'Allows for starting/stopping users’ servers in addition to read access to their models. Does not include the server state.',
+        'subscopes': ['read:users:servers'],
+    },
+    'read:users:servers': {
+        'description': 'Read-only access to users’ names and their server models. Does not include the server state.',
+        'subscopes': ['read:users:name'],
+    },
+    'users:tokens': {
+        'description': 'Grants read, write, create and delete permissions to users’ tokens.',
+        'subscopes': ['read:users:tokens'],
+    },
+    'read:users:tokens': {'description': 'Read-only access to users’ tokens.'},
+    'admin:groups': {
+        'description': 'Grants read, write, create and delete access to groups.',
+        'subscopes': ['groups'],
+    },
+    'groups': {
+        'description': 'Grants read and write permissions to groups, including adding/removing users to/from groups.',
+        'subscopes': ['read:groups'],
+    },
+    'read:groups': {'description': 'Read-only access to groups’ models.'},
+    'read:services': {
+        'description': 'Read-only access to service models.',
+        'subscopes': ['read:services:name'],
+        # TODO: add read:services:roles as subscopes here once implemented
+    },
+    'read:services:name': {'description': 'Read-only access to service names.'},
+    # TODO: add read:services:roles once implemented
+    #'read:services:roles': {'description': 'Read-only access to service role names.'},
+    'read:hub': {
+        'description': 'Read-only access to detailed information about the Hub.'
+    },
+    'access:users:servers': {
+        'description': 'Access user servers via API or browser.',
+    },
+    'access:services': {
+        'description': 'Access services via API or browser.',
+    },
+    'proxy': {
+        'description': 'Allows for obtaining information about the proxy’s routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy.'
+    },
+    'shutdown': {'description': 'Grants access to shutdown the hub.'},
+}
+
+
 class Scope(Enum):
     ALL = True
 
 
-def _intersect_scopes(scopes_a, scopes_b):
-    """Intersect two sets of scopes
+def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
+    """Intersect two sets of scopes by comparing their permissions
 
-    Compares the permissions of two sets of scopes,
-    including horizontal filters,
-    and returns the intersected scopes.
+    Arguments:
+      scopes_a, scopes_b: sets of expanded scopes
+      db (optional): db connection for resolving group membership
 
-    Note: Intersects correctly with ALL and exact filter matches
-          (i.e. users!user=x & read:users:name -> read:users:name!user=x)
+    Returns:
+      intersection: set of expanded scopes as intersection of the arguments
 
-          Does not currently intersect with containing filters
-          (i.e. users!group=x & users!user=y even if user y is in group x)
+    If db is given, group membership will be accounted for in intersections,
+    Otherwise, it can result in lower than intended permissions,
+          (i.e. users!group=x & users!user=y will be empty, even if user y is in group x.)
     """
+    empty_set = frozenset()
+
+    # cached lookups for group membership of users and servers
+    @lru_cache()
+    def groups_for_user(username):
+        """Get set of group names for a given username"""
+        user = db.query(orm.User).filter_by(name=username).first()
+        if user is None:
+            return empty_set
+        else:
+            return {group.name for group in user.groups}
+
+    @lru_cache()
+    def groups_for_server(server):
+        """Get set of group names for a given server"""
+        username, _, servername = server.partition("/")
+        return groups_for_user(username)
+
     parsed_scopes_a = parse_scopes(scopes_a)
     parsed_scopes_b = parse_scopes(scopes_b)
 
@@ -43,11 +163,14 @@ def _intersect_scopes(scopes_a, scopes_b):
         elif filters_b == Scope.ALL:
             common_filters[base] = filters_a
         else:
-            # warn *if* there are non-overlapping user= and group= filters
             common_entities = filters_a.keys() & filters_b.keys()
             all_entities = filters_a.keys() | filters_b.keys()
+
+            # if we don't have a db session, we can't check group membership
+            # warn *if* there are non-overlapping user= and group= filters that we can't check
             if (
-                not warned
+                db is None
+                and not warned
                 and 'group' in all_entities
                 and ('user' in all_entities or 'server' in all_entities)
             ):
@@ -59,48 +182,85 @@ def _intersect_scopes(scopes_a, scopes_b):
                             not warned
                             and "group" in a
                             and b_key in b
-                            and set(a["group"]).difference(b.get("group", []))
-                            and set(b[b_key]).difference(a.get(b_key, []))
+                            and a["group"].difference(b.get("group", []))
+                            and b[b_key].difference(a.get(b_key, []))
                         ):
                             warnings.warn(
                                 f"{base}[!{b_key}={b[b_key]}, !group={a['group']}] combinations of filters present,"
-                                " intersection between not considered. May result in lower than intended permissions.",
+                                " without db access. Intersection between not considered."
+                                " May result in lower than intended permissions.",
                                 UserWarning,
                             )
                             warned = True
 
             common_filters[base] = {
-                entity: set(parsed_scopes_a[base][entity])
-                & set(parsed_scopes_b[base][entity])
+                entity: filters_a[entity] & filters_b[entity]
                 for entity in common_entities
             }
 
-            if 'server' in all_entities and 'user' in all_entities:
-                if filters_a.get('server') == filters_b.get('server'):
-                    continue
+            # resolve hierarchies (group/user/server) in both directions
+            common_servers = common_filters[base].get("server", set())
+            common_users = common_filters[base].get("user", set())
 
-                additional_servers = set()
-                # resolve user/server hierarchy in both directions
-                for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
-                    if 'server' in a and 'user' in b:
-                        for server in a['server']:
+            for a, b in [(filters_a, filters_b), (filters_b, filters_a)]:
+                if 'server' in a and b.get('server') != a['server']:
+                    # skip already-added servers (includes overlapping servers)
+                    servers = a['server'].difference(common_servers)
+
+                    # resolve user/server hierarchy
+                    if servers and 'user' in b:
+                        for server in servers:
                             username, _, servername = server.partition("/")
                             if username in b['user']:
-                                additional_servers.add(server)
+                                common_servers.add(server)
 
-                if additional_servers:
-                    if "server" not in common_filters[base]:
-                        common_filters[base]["server"] = set()
-                    common_filters[base]["server"].update(additional_servers)
+                    # resolve group/server hierarchy if db available
+                    servers = servers.difference(common_servers)
+                    if db is not None and servers and 'group' in b:
+                        for server in servers:
+                            server_groups = groups_for_server(server)
+                            if server_groups & b['group']:
+                                common_servers.add(server)
+
+                # resolve group/user hierarchy if db available and user sets aren't identical
+                if (
+                    db is not None
+                    and 'user' in a
+                    and 'group' in b
+                    and b.get('user') != a['user']
+                ):
+                    # skip already-added users (includes overlapping users)
+                    users = a['user'].difference(common_users)
+                    for username in users:
+                        groups = groups_for_user(username)
+                        if groups & b["group"]:
+                            common_users.add(username)
+
+            # add server filter if there wasn't one before
+            if common_servers and "server" not in common_filters[base]:
+                common_filters[base]["server"] = common_servers
+
+            # add user filter if it's non-empty and there wasn't one before
+            if common_users and "user" not in common_filters[base]:
+                common_filters[base]["user"] = common_users
 
     return unparse_scopes(common_filters)
 
 
 def get_scopes_for(orm_object):
-    """Find scopes for a given user or token and resolve permissions"""
-    scopes = set()
+    """Find scopes for a given user or token from their roles and resolve permissions
+
+    Arguments:
+      orm_object: orm object or User wrapper
+
+    Returns:
+      expanded scopes (set) for the orm object
+      or
+      intersection (set) if orm_object == orm.APIToken
+    """
+    expanded_scopes = set()
     if orm_object is None:
-        return scopes
+        return expanded_scopes
 
     if not isinstance(orm_object, orm.Base):
         from .user import User
@@ -116,13 +276,40 @@ def get_scopes_for(orm_object):
         app_log.warning(f"Authenticated with token {orm_object}")
         owner = orm_object.user or orm_object.service
         token_scopes = roles.expand_roles_to_scopes(orm_object)
+        if orm_object.client_id != "jupyterhub":
+            # oauth tokens can be used to access the service issuing the token,
+            # assuming the owner itself still has permission to do so
+            spawner = orm_object.oauth_client.spawner
+            if spawner:
+                token_scopes.add(
+                    f"access:users:servers!server={spawner.user.name}/{spawner.name}"
+                )
+            else:
+                service = orm_object.oauth_client.service
+                if service:
+                    token_scopes.add(f"access:services!service={service.name}")
+                else:
+                    app_log.warning(
+                        f"Token {orm_object} has no associated service or spawner!"
+                    )
+
         owner_scopes = roles.expand_roles_to_scopes(owner)
+
+        if token_scopes == {'all'}:
+            # token_scopes is only 'all', return owner scopes as-is
+            # short-circuit common case where we don't need to compute an intersection
+            return owner_scopes
+
         if 'all' in token_scopes:
             token_scopes.remove('all')
             token_scopes |= owner_scopes
 
-        scopes = _intersect_scopes(token_scopes, owner_scopes)
-        discarded_token_scopes = token_scopes - scopes
+        intersection = _intersect_expanded_scopes(
+            token_scopes,
+            owner_scopes,
+            db=sa.inspect(orm_object).session,
+        )
+        discarded_token_scopes = token_scopes - intersection
 
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
@@ -130,9 +317,10 @@ def get_scopes_for(orm_object):
                 "discarding scopes [%s], not present in owner roles"
                 % ", ".join(discarded_token_scopes)
             )
+        expanded_scopes = intersection
     else:
-        scopes = roles.expand_roles_to_scopes(orm_object)
-    return scopes
+        expanded_scopes = roles.expand_roles_to_scopes(orm_object)
+    return expanded_scopes
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -158,7 +346,7 @@ def _check_user_in_expanded_scope(handler, user_name, scope_group_names):
     return bool(set(scope_group_names) & group_names)
 
 
-def _check_scope(api_handler, req_scope, **kwargs):
+def _check_scope_access(api_handler, req_scope, **kwargs):
     """Check if scopes satisfy requirements
     Returns True for (potentially restricted) access, False for refused access
     """
@@ -227,25 +415,27 @@ def parse_scopes(scope_list):
             parsed_scopes[base_scope] = Scope.ALL
         elif base_scope not in parsed_scopes:
             parsed_scopes[base_scope] = {}
+
         if parsed_scopes[base_scope] != Scope.ALL:
-            key, _, val = filter_.partition('=')
+            key, _, value = filter_.partition('=')
             if key not in parsed_scopes[base_scope]:
-                parsed_scopes[base_scope][key] = []
-            parsed_scopes[base_scope][key].append(val)
+                parsed_scopes[base_scope][key] = set([value])
+            else:
+                parsed_scopes[base_scope][key].add(value)
     return parsed_scopes
 
 
 def unparse_scopes(parsed_scopes):
-    """Turn a parsed_scopes dictionary back into a scopes set"""
-    scopes = set()
+    """Turn a parsed_scopes dictionary back into a expanded scopes set"""
+    expanded_scopes = set()
     for base, filters in parsed_scopes.items():
         if filters == Scope.ALL:
-            scopes.add(base)
+            expanded_scopes.add(base)
         else:
             for entity, names_list in filters.items():
                 for name in names_list:
-                    scopes.add(f'{base}!{entity}={name}')
-    return scopes
+                    expanded_scopes.add(f'{base}!{entity}={name}')
+    return expanded_scopes
 
 
 def needs_scope(*scopes):
@@ -258,8 +448,8 @@ def needs_scope(*scopes):
             bound_sig = sig.bind(self, *args, **kwargs)
             bound_sig.apply_defaults()
             # Load scopes in case they haven't been loaded yet
-            if not hasattr(self, 'raw_scopes'):
-                self.raw_scopes = {}
+            if not hasattr(self, 'expanded_scopes'):
+                self.expanded_scopes = {}
                 self.parsed_scopes = {}
 
             s_kwargs = {}
@@ -270,7 +460,7 @@ def needs_scope(*scopes):
                     s_kwargs[resource] = resource_value
             for scope in scopes:
                 app_log.debug("Checking access via scope %s", scope)
-                has_access = _check_scope(self, scope, **s_kwargs)
+                has_access = _check_scope_access(self, scope, **s_kwargs)
                 if has_access:
                     return func(self, *args, **kwargs)
             try:
@@ -279,7 +469,7 @@ def needs_scope(*scopes):
                 end_point = self.__name__
             app_log.warning(
                 "Not authorizing access to {}. Requires any of [{}], not derived from scopes [{}]".format(
-                    end_point, ", ".join(scopes), ", ".join(self.raw_scopes)
+                    end_point, ", ".join(scopes), ", ".join(self.expanded_scopes)
                 )
             )
             raise web.HTTPError(
@@ -301,7 +491,7 @@ def identify_scopes(obj):
       obj: orm.User or orm.Service
 
     Returns:
-      scopes (set): set of scopes needed for 'identify' endpoints
+      identify scopes (set): set of scopes needed for 'identify' endpoints
     """
     if isinstance(obj, orm.User):
         return {
@@ -317,3 +507,36 @@ def identify_scopes(obj):
         }
     else:
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
+
+
+def check_scope_filter(sub_scope, orm_resource, kind):
+    """Return whether a sub_scope filter applies to a given resource.
+
+    param sub_scope: parsed_scopes filter (i.e. dict or Scope.ALL)
+    param orm_resource: User or Service or Group or Spawner
+    param kind: 'user' or 'service' or 'group' or 'server'.
+
+    Returns True or False
+    """
+    if sub_scope is Scope.ALL:
+        return True
+    elif kind in sub_scope and orm_resource.name in sub_scope[kind]:
+        return True
+
+    if kind == 'server':
+        server_format = f"{orm_resource.user.name}/{orm_resource.name}"
+        if server_format in sub_scope.get(kind, []):
+            return True
+        # Fall back on checking if we have user access
+        if 'user' in sub_scope and orm_resource.user.name in sub_scope['user']:
+            return True
+        # Fall back on checking if we have group access for this user
+        orm_resource = orm_resource.user
+        kind = 'user'
+
+    if kind == 'user' and 'group' in sub_scope:
+        group_names = {group.name for group in orm_resource.groups}
+        user_in_group = bool(group_names & set(sub_scope['group']))
+        if user_in_group:
+            return True
+    return False

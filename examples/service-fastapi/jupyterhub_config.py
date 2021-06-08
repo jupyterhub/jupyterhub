@@ -24,8 +24,21 @@ c.JupyterHub.services = [
         "name": service_name,
         "url": "http://127.0.0.1:10202",
         "command": ["uvicorn", "app:app", "--port", "10202"],
-        "admin": True,
         "oauth_redirect_uri": oauth_redirect_uri,
         "environment": {"PUBLIC_HOST": public_host},
     }
 ]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "user",
+        # grant all users access to services
+        "scopes": ["self", "access:services"],
+    },
+]
+
+
+# dummy for testing, create test-user
+c.Authenticator.allowed_users = {"test-user"}
+c.JupyterHub.authenticator_class = "dummy"
+c.JupyterHub.spawner_class = "simple"

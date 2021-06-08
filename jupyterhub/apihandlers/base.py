@@ -1,19 +1,14 @@
 """Base API handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import functools
 import json
-import re
-from datetime import datetime
 from http.client import responses
 
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
 
 from .. import orm
-from .. import scopes
 from ..handlers import BaseHandler
-from ..user import User
 from ..utils import isoformat
 from ..utils import url_path_join
 
@@ -65,46 +60,6 @@ class APIHandler(BaseHandler):
             )
             return False
         return True
-
-    @functools.lru_cache()
-    def get_scope_filter(self, req_scope):
-        """Produce a filter for `*ListAPIHandlers* so that GET method knows which models to return.
-        Filter is a callable that takes a resource name and outputs true or false"""
-
-        def no_access(orm_resource, kind):
-            return False
-
-        if req_scope not in self.parsed_scopes:
-            return no_access
-        sub_scope = self.parsed_scopes[req_scope]
-
-        def has_access_to(orm_resource, kind):
-            """
-            param orm_resource: User or Service or Group or spawner
-            param kind: 'user' or 'service' or 'group' or 'server'.
-            """
-            if sub_scope == scopes.Scope.ALL:
-                return True
-            elif orm_resource.name in sub_scope.get(kind, []):
-                return True
-            if kind == 'server':
-                server_format = f"{orm_resource.user.name}/{orm_resource.name}"
-                if server_format in sub_scope.get(kind, []):
-                    return True
-                # Fall back on checking if we have user access
-                if orm_resource.user.name in sub_scope.get('user', []):
-                    return True
-                # Fall back on checking if we have group access for this user
-                orm_resource = orm_resource.user
-                kind = 'user'
-            if kind == 'user' and 'group' in sub_scope:
-                group_names = {group.name for group in orm_resource.groups}
-                user_in_group = bool(group_names & set(sub_scope['group']))
-                if user_in_group:
-                    return True
-            return False
-
-        return has_access_to
 
     def get_current_user_cookie(self):
         """Override get_user_cookie to check Referer header"""
@@ -213,7 +168,8 @@ class APIHandler(BaseHandler):
             'last_activity': isoformat(token.last_activity),
             'expires_at': isoformat(token.expires_at),
             'note': token.note,
-            'oauth_client': token.client.description or token.client.client_id,
+            'oauth_client': token.oauth_client.description
+            or token.oauth_client.identifier,
         }
         return model
 
@@ -255,7 +211,7 @@ class APIHandler(BaseHandler):
         self.log.debug(
             "Asking for user model of %s with scopes [%s]",
             user.name,
-            ", ".join(self.raw_scopes),
+            ", ".join(self.expanded_scopes),
         )
         allowed_keys = set()
         for scope in access_map:

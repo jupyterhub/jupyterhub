@@ -2,19 +2,19 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+import os
 from itertools import chain
 
 import pytest
 from pytest import mark
 from tornado.log import app_log
+from traitlets.config import Config
 
 from .. import orm
 from .. import roles
 from ..scopes import get_scopes_for
-from ..utils import maybe_future
 from ..utils import utcnow
 from .mocking import MockHub
-from .test_scopes import create_temp_role
 from .utils import add_user
 from .utils import api_request
 
@@ -216,6 +216,16 @@ def test_orm_roles_delete_cascade(db):
         (['read:users:servers'], {'read:users:servers', 'read:users:name'}),
         (['admin:groups'], {'admin:groups', 'groups', 'read:groups'}),
         (
+            ['admin:groups', 'read:users:servers'],
+            {
+                'admin:groups',
+                'groups',
+                'read:groups',
+                'read:users:servers',
+                'read:users:name',
+            },
+        ),
+        (
             ['users:tokens!group=hobbits'],
             {'users:tokens!group=hobbits', 'read:users:tokens!group=hobbits'},
         ),
@@ -240,7 +250,7 @@ async def test_load_default_roles(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
-    await hub.init_roles()
+    await hub.init_role_creation()
     # test default roles loaded to database
     default_roles = roles.get_default_roles()
     for role in default_roles:
@@ -437,9 +447,9 @@ async def test_load_roles_users(tmpdir, request):
     db = hub.db
     hub.authenticator.admin_users = ['admin']
     hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
+    await hub.init_role_creation()
     await hub.init_users()
-    await hub.init_roles()
-
+    await hub.init_role_assignment()
     admin_role = orm.Role.find(db, 'admin')
     user_role = orm.Role.find(db, 'user')
     # test if every user has a role (and no duplicates)
@@ -449,7 +459,7 @@ async def test_load_roles_users(tmpdir, request):
         assert len(user.roles) == len(set(user.roles))
         if user.admin:
             assert admin_role in user.roles
-            assert user_role not in user.roles
+            assert user_role in user.roles
 
     # test if predefined roles loaded and assigned
     teacher_role = orm.Role.find(db, name='teacher')
@@ -500,13 +510,13 @@ async def test_load_roles_services(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
+    await hub.init_role_creation()
     await hub.init_api_tokens()
     # make 'admin_service' admin
     admin_service = orm.Service.find(db, 'admin_service')
     admin_service.admin = True
     db.commit()
-    await hub.init_roles()
-
+    await hub.init_role_assignment()
     # test if every service has a role (and no duplicates)
     admin_role = orm.Role.find(db, name='admin')
     user_role = orm.Role.find(db, name='user')
@@ -573,8 +583,9 @@ async def test_load_roles_groups(tmpdir, request):
     hub = MockHub(**kwargs)
     hub.init_db()
     db = hub.db
+    await hub.init_role_creation()
     await hub.init_groups()
-    await hub.init_roles()
+    await hub.init_role_assignment()
 
     assist_role = orm.Role.find(db, name='assistant')
     head_role = orm.Role.find(db, name='head')
@@ -605,7 +616,6 @@ async def test_load_roles_user_tokens(tmpdir, request):
             'name': 'reader',
             'description': 'Read all users models',
             'scopes': ['read:users'],
-            'tokens': ['super-secret-token'],
         },
     ]
     kwargs = {
@@ -620,178 +630,16 @@ async def test_load_roles_user_tokens(tmpdir, request):
     db = hub.db
     hub.authenticator.admin_users = ['admin']
     hub.authenticator.allowed_users = ['cyclops', 'gandalf']
+    await hub.init_role_creation()
     await hub.init_users()
     await hub.init_api_tokens()
-    await hub.init_roles()
-
-    # test if gandalf's token has the 'reader' role
-    reader_role = orm.Role.find(db, 'reader')
-    token = orm.APIToken.find(db, 'super-secret-token')
-    assert reader_role in token.roles
-
+    await hub.init_role_assignment()
     # test if all other tokens have default 'user' role
     token_role = orm.Role.find(db, 'token')
     secret_token = orm.APIToken.find(db, 'secret-token')
     assert token_role in secret_token.roles
     secrety_token = orm.APIToken.find(db, 'secrety-token')
     assert token_role in secrety_token.roles
-
-    # delete the test tokens
-    for token in db.query(orm.APIToken):
-        db.delete(token)
-    db.commit()
-
-    # delete the test roles
-    for role in roles_to_load:
-        roles.delete_role(db, role['name'])
-
-
-@mark.role
-async def test_load_roles_user_tokens_not_allowed(tmpdir, request):
-    user_tokens = {
-        'secret-token': 'bilbo',
-    }
-    roles_to_load = [
-        {
-            'name': 'user-creator',
-            'description': 'Creates/deletes any user',
-            'scopes': ['admin:users'],
-            'tokens': ['secret-token'],
-        },
-    ]
-    kwargs = {
-        'load_roles': roles_to_load,
-        'api_tokens': user_tokens,
-    }
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
-    hub.authenticator.allowed_users = ['bilbo']
-    await hub.init_users()
-    await hub.init_api_tokens()
-
-    response = 'allowed'
-    # bilbo has only default 'user' role
-    # while bilbo's token is requesting role with higher permissions
-    with pytest.raises(ValueError):
-        await hub.init_roles()
-
-    # delete the test tokens
-    for token in db.query(orm.APIToken):
-        db.delete(token)
-    db.commit()
-
-    # delete the test roles
-    for role in roles_to_load:
-        roles.delete_role(db, role['name'])
-
-
-@mark.role
-async def test_load_roles_service_tokens(tmpdir, request):
-    services = [
-        {'name': 'idle-culler', 'api_token': 'another-secret-token'},
-    ]
-    service_tokens = {
-        'another-secret-token': 'idle-culler',
-    }
-    roles_to_load = [
-        {
-            'name': 'idle-culler',
-            'description': 'Cull idle servers',
-            'scopes': [
-                'read:users:name',
-                'read:users:activity',
-                'read:users:servers',
-                'users:servers',
-            ],
-            'services': ['idle-culler'],
-            'tokens': ['another-secret-token'],
-        },
-    ]
-    kwargs = {
-        'load_roles': roles_to_load,
-        'services': services,
-        'service_tokens': service_tokens,
-    }
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
-    await hub.init_api_tokens()
-    await hub.init_roles()
-
-    # test if another-secret-token has idle-culler role
-    service = orm.Service.find(db, 'idle-culler')
-    culler_role = orm.Role.find(db, 'idle-culler')
-    token = orm.APIToken.find(db, 'another-secret-token')
-    assert len(token.roles) == 1
-    assert culler_role in token.roles
-
-    # delete the test services
-    for service in db.query(orm.Service):
-        db.delete(service)
-    db.commit()
-
-    # delete the test tokens
-    for token in db.query(orm.APIToken):
-        db.delete(token)
-    db.commit()
-
-    # delete the test roles
-    for role in roles_to_load:
-        roles.delete_role(db, role['name'])
-
-
-@mark.role
-async def test_load_roles_service_tokens_not_allowed(tmpdir, request):
-    services = [{'name': 'some-service', 'api_token': 'secret-token'}]
-    service_tokens = {
-        'secret-token': 'some-service',
-    }
-    roles_to_load = [
-        {
-            'name': 'user-reader',
-            'description': 'Read-only user models',
-            'scopes': ['read:users'],
-            'services': ['some-service'],
-        },
-        # 'idle-culler' role has higher permissions that the token's owner 'some-service'
-        {
-            'name': 'idle-culler',
-            'description': 'Cull idle servers',
-            'scopes': [
-                'read:users:name',
-                'read:users:activity',
-                'read:users:servers',
-                'users:servers',
-            ],
-            'tokens': ['secret-token'],
-        },
-    ]
-    kwargs = {
-        'load_roles': roles_to_load,
-        'services': services,
-        'service_tokens': service_tokens,
-    }
-    ssl_enabled = getattr(request.module, "ssl_enabled", False)
-    if ssl_enabled:
-        kwargs['internal_certs_location'] = str(tmpdir)
-    hub = MockHub(**kwargs)
-    hub.init_db()
-    db = hub.db
-    await hub.init_api_tokens()
-    with pytest.raises(ValueError):
-        await hub.init_roles()
-
-    # delete the test services
-    for service in db.query(orm.Service):
-        db.delete(service)
-    db.commit()
 
     # delete the test tokens
     for token in db.query(orm.APIToken):
@@ -1049,3 +897,383 @@ async def test_oauth_allowed_roles(app, create_temp_role):
     app_service = app.services[0]
     assert app_service['name'] == 'oas1'
     assert set(app_service['oauth_roles']) == set(allowed_roles)
+
+
+async def test_user_group_roles(app, create_temp_role):
+    user = add_user(app.db, app, name='jack')
+    another_user = add_user(app.db, app, name='jill')
+
+    group = orm.Group.find(app.db, name='A')
+    if not group:
+        group = orm.Group(name='A')
+        app.db.add(group)
+        app.db.commit()
+
+    if group not in user.groups:
+        user.groups.append(group)
+        app.db.commit()
+
+    if group not in another_user.groups:
+        another_user.groups.append(group)
+        app.db.commit()
+
+    group_role = orm.Role.find(app.db, 'student-a')
+    if not group_role:
+        create_temp_role(['read:groups!group=A'], 'student-a')
+        roles.grant_role(app.db, group, rolename='student-a')
+        group_role = orm.Role.find(app.db, 'student-a')
+
+    # repeat check to ensure group roles don't get added to the user at all
+    # regression test for #3472
+    roles_before = list(user.roles)
+    for i in range(3):
+        roles.expand_roles_to_scopes(user.orm_user)
+        user_roles = list(user.roles)
+        assert user_roles == roles_before
+
+    # jack's API token
+    token = user.new_api_token()
+
+    headers = {'Authorization': 'token %s' % token}
+    r = await api_request(app, 'users', method='get', headers=headers)
+    assert r.status_code == 200
+    r.raise_for_status()
+    reply = r.json()
+
+    print(reply)
+
+    assert len(reply[0]['roles']) == 1
+    assert reply[0]['name'] == 'jack'
+    assert group_role.name not in reply[0]['roles']
+
+    headers = {'Authorization': 'token %s' % token}
+    r = await api_request(app, 'groups', method='get', headers=headers)
+    assert r.status_code == 200
+    r.raise_for_status()
+    reply = r.json()
+
+    print(reply)
+
+    headers = {'Authorization': 'token %s' % token}
+    r = await api_request(app, 'users', method='get', headers=headers)
+    assert r.status_code == 200
+    r.raise_for_status()
+    reply = r.json()
+
+    print(reply)
+
+    assert len(reply[0]['roles']) == 1
+    assert reply[0]['name'] == 'jack'
+    assert group_role.name not in reply[0]['roles']
+
+
+async def test_config_role_list():
+    roles_to_load = [
+        {
+            'name': 'elephant',
+            'description': 'pacing about',
+            'scopes': ['read:hub'],
+        },
+        {
+            'name': 'tiger',
+            'description': 'pouncing stuff',
+            'scopes': ['shutdown'],
+        },
+    ]
+    hub = MockHub(load_roles=roles_to_load)
+    hub.init_db()
+    hub.authenticator.admin_users = ['admin']
+    await hub.init_role_creation()
+    for role_conf in roles_to_load:
+        assert orm.Role.find(hub.db, name=role_conf['name'])
+    # Now remove elephant from config and see if it is removed from database
+    roles_to_load.pop(0)
+    hub.load_roles = roles_to_load
+    await hub.init_role_creation()
+    assert orm.Role.find(hub.db, name='tiger')
+    assert not orm.Role.find(hub.db, name='elephant')
+
+
+async def test_config_role_users():
+    role_name = 'painter'
+    user_name = 'benny'
+    user_names = ['agnetha', 'bjorn', 'anni-frid', user_name]
+    roles_to_load = [
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': user_names,
+        },
+    ]
+    hub = MockHub(load_roles=roles_to_load)
+    hub.init_db()
+    hub.authenticator.admin_users = ['admin']
+    hub.authenticator.allowed_users = user_names
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name=user_name)
+    role = orm.Role.find(hub.db, name=role_name)
+    assert role in user.roles
+    # Now reload and see if user is removed from role list
+    roles_to_load[0]['users'].remove(user_name)
+    hub.load_roles = roles_to_load
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name=user_name)
+    role = orm.Role.find(hub.db, name=role_name)
+    assert role not in user.roles
+
+
+async def test_duplicate_role_users():
+    role_name = 'painter'
+    user_name = 'benny'
+    user_names = ['agnetha', 'bjorn', 'anni-frid', user_name]
+    roles_to_load = [
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': user_names,
+        },
+        {
+            'name': role_name,
+            'description': 'painting with colors',
+            'scopes': ['users', 'groups'],
+            'users': user_names,
+        },
+    ]
+    hub = MockHub(load_roles=roles_to_load)
+    hub.init_db()
+    with pytest.raises(ValueError):
+        await hub.init_role_creation()
+
+
+async def test_admin_role_and_flag():
+    admin_role_spec = [
+        {
+            'name': 'admin',
+            'users': ['eddy'],
+        }
+    ]
+    hub = MockHub(load_roles=admin_role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = ['admin']
+    hub.authenticator.allowed_users = ['eddy']
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    admin_role = orm.Role.find(hub.db, name='admin')
+    for user_name in ['eddy', 'admin']:
+        user = orm.User.find(hub.db, name=user_name)
+        assert user.admin
+        assert admin_role in user.roles
+    admin_role_spec[0]['users'].remove('eddy')
+    hub.load_roles = admin_role_spec
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name='eddy')
+    assert not user.admin
+    assert admin_role not in user.roles
+
+
+async def test_custom_role_reset():
+    user_role_spec = [
+        {
+            'name': 'user',
+            'scopes': ['self', 'shutdown'],
+            'users': ['eddy'],
+        }
+    ]
+    hub = MockHub(load_roles=user_role_spec)
+    hub.init_db()
+    hub.authenticator.allowed_users = ['eddy']
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, name='user')
+    user = orm.User.find(hub.db, name='eddy')
+    assert user_role in user.roles
+    assert 'shutdown' in user_role.scopes
+    hub.load_roles = []
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, name='user')
+    user = orm.User.find(hub.db, name='eddy')
+    assert user_role in user.roles
+    assert 'shutdown' not in user_role.scopes
+
+
+async def test_removal_config_to_db():
+    role_spec = [
+        {
+            'name': 'user',
+            'scopes': ['self', 'shutdown'],
+        },
+        {
+            'name': 'wizard',
+            'scopes': ['self', 'read:groups'],
+        },
+    ]
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    await hub.init_role_creation()
+    assert orm.Role.find(hub.db, 'user')
+    assert orm.Role.find(hub.db, 'wizard')
+    hub.load_roles = []
+    await hub.init_role_creation()
+    assert orm.Role.find(hub.db, 'user')
+    assert not orm.Role.find(hub.db, 'wizard')
+
+
+async def test_no_admin_role_change():
+    role_spec = [{'name': 'admin', 'scopes': ['shutdown']}]
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    with pytest.raises(ValueError):
+        await hub.init_role_creation()
+
+
+async def test_user_config_respects_memberships():
+    role_spec = [
+        {
+            'name': 'user',
+            'scopes': ['self', 'shutdown'],
+        }
+    ]
+    user_names = ['eddy', 'carol']
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.allowed_users = user_names
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, 'user')
+    for user_name in user_names:
+        user = orm.User.find(hub.db, user_name)
+        assert user in user_role.users
+
+
+async def test_admin_role_respects_config():
+    role_spec = [
+        {
+            'name': 'admin',
+        }
+    ]
+    admin_users = ['eddy', 'carol']
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = admin_users
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    admin_role = orm.Role.find(hub.db, 'admin')
+    for user_name in admin_users:
+        user = orm.User.find(hub.db, user_name)
+        assert user in admin_role.users
+
+
+async def test_empty_admin_spec():
+    role_spec = [{'name': 'admin', 'users': []}]
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = []
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    admin_role = orm.Role.find(hub.db, 'admin')
+    assert not admin_role.users
+
+
+# Todo: Test that services don't get default roles on any startup
+
+
+async def test_hub_upgrade_detection(tmpdir):
+    db_url = f"sqlite:///{tmpdir.join('jupyterhub.sqlite')}"
+    os.environ['JUPYTERHUB_TEST_DB_URL'] = db_url
+    # Create hub with users and tokens
+    hub = MockHub(db_url=db_url)
+    await hub.initialize()
+    user_names = ['patricia', 'quentin']
+    user_role = orm.Role.find(hub.db, 'user')
+    for name in user_names:
+        user = add_user(hub.db, name=name)
+        user.new_api_token()
+        assert user_role in user.roles
+    for role in hub.db.query(orm.Role):
+        hub.db.delete(role)
+    hub.db.commit()
+    # Restart hub in emulated upgrade mode: default roles for all entities
+    hub.test_clean_db = False
+    await hub.initialize()
+    assert getattr(hub, '_rbac_upgrade', False)
+    user_role = orm.Role.find(hub.db, 'user')
+    token_role = orm.Role.find(hub.db, 'token')
+    for name in user_names:
+        user = orm.User.find(hub.db, name)
+        assert user_role in user.roles
+        assert token_role in user.api_tokens[0].roles
+    # Strip all roles and see if it sticks
+    user_role.users = []
+    token_role.tokens = []
+    hub.db.commit()
+
+    hub.init_db()
+    hub.init_hub()
+    await hub.init_role_creation()
+    await hub.init_users()
+    hub.authenticator.allowed_users = ['patricia']
+    await hub.init_api_tokens()
+    await hub.init_role_assignment()
+    assert not getattr(hub, '_rbac_upgrade', False)
+    user_role = orm.Role.find(hub.db, 'user')
+    token_role = orm.Role.find(hub.db, 'token')
+    allowed_user = orm.User.find(hub.db, 'patricia')
+    rem_user = orm.User.find(hub.db, 'quentin')
+    assert user_role in allowed_user.roles
+    assert token_role not in allowed_user.api_tokens[0].roles
+    assert user_role not in rem_user.roles
+    assert token_role not in rem_user.roles
+
+
+async def test_token_keep_roles_on_restart():
+    role_spec = [
+        {
+            'name': 'bloop',
+            'scopes': ['read:users'],
+        }
+    ]
+
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.admin_users = ['ben']
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name='ben')
+    for _ in range(3):
+        user.new_api_token()
+    happy_token, content_token, sad_token = user.api_tokens
+    roles.grant_role(hub.db, happy_token, 'bloop')
+    roles.strip_role(hub.db, sad_token, 'token')
+    assert len(happy_token.roles) == 2
+    assert len(content_token.roles) == 1
+    assert len(sad_token.roles) == 0
+    # Restart hub and see if roles are as expected
+    hub.load_roles = []
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_api_tokens()
+    await hub.init_role_assignment()
+    user = orm.User.find(hub.db, name='ben')
+    happy_token, content_token, sad_token = user.api_tokens
+    assert len(happy_token.roles) == 1
+    assert len(content_token.roles) == 1
+    print(sad_token.roles)
+    assert len(sad_token.roles) == 0
+    for token in user.api_tokens:
+        hub.db.delete(token)
+    hub.db.commit()
