@@ -706,14 +706,14 @@ async def test_resolve_token_permissions(
                 'roles',
             },
         ),
-        ({'read:services:roles', 'read:users:names'}, {'name', 'kind', 'roles'}),
+        ({'read:services:roles', 'read:users:name'}, {'name', 'kind', 'roles'}),
         ({'read:services:name'}, {'name', 'kind'}),
     ],
 )
 async def test_service_model_filtering(
     app, scopes, model_keys, create_user_with_scopes, create_service_with_scopes
 ):
-    user = create_user_with_scopes(*scopes, 'teddy')
+    user = create_user_with_scopes(*scopes, name='teddy')
     service = create_service_with_scopes()
     r = await api_request(
         app, 'services', service.name, headers=auth_header(app.db, user.name)
