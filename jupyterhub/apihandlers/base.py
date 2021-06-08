@@ -298,10 +298,17 @@ class APIHandler(BaseHandler):
             'name': service.name,
             'roles': [r.name for r in service.roles],
             'admin': service.admin,
+            'url': getattr(service, 'url', ''),
+            'prefix': service.server.base_url if getattr(service, 'server', '') else '',
+            'command': getattr(service, 'command', ''),
+            'pid': service.proc.pid if getattr(service, 'proc', '') else 0,
+            'info': getattr(service, 'info', ''),
+            'display': getattr(service, 'display', ''),
         }
         # todo: remove admin key now we have roles?
+        # todo: More default keys present?
         access_map = {
-            'read:services': {'kind', 'name', 'roles', 'admin'},
+            'read:services': set(model.keys()),
             'read:services:name': {'kind', 'name'},
             'read:services:roles': {'kind', 'name', 'roles'},
         }

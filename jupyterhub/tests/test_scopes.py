@@ -763,13 +763,39 @@ async def test_resolve_token_permissions(
     assert token_retained_scopes == intersection_scopes
 
 
+@mark.parametrize(
+    "scopes, model_keys",
+    [
+        (
+            {'read:services'},
+            {
+                'command',
+                'name',
+                'kind',
+                'info',
+                'display',
+                'pid',
+                'admin',
+                'prefix',
+                'url',
+                'roles',
+            },
+        ),
+        ({'read:services:roles', 'read:users:names'}, {'name', 'kind', 'roles'}),
+        ({'read:services:name'}, {'name', 'kind'}),
+    ],
+)
+async def test_service_model_filtering(
+    app, scopes, model_keys, create_user_with_scopes, create_service_with_scopes
+):
+    user = create_user_with_scopes(*scopes, 'teddy')
+    service = create_service_with_scopes()
+    r = await api_request(
+        app, 'services', service.name, headers=auth_header(app.db, user.name)
+    )
+    assert r.status_code == 200
+    assert model_keys == r.json().keys()
+
+
 async def test_roles_access(app, create_user_with_scopes):
-    pass
-
-
-async def test_service_model_filtering(app, create_user_with_scopes):
-    pass
-
-
-async def test_group_model_filtering(app, create_user_with_scopes):
     pass
