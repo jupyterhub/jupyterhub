@@ -67,6 +67,7 @@ def expand_self_scope(name):
         'users:activity',
         'users:servers',
         'users:tokens',
+        'users:roles',
     ]
     read_scope_list = ['read:' + scope for scope in scope_list]
     scope_list.extend(read_scope_list)

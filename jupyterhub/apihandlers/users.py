@@ -62,6 +62,7 @@ class UserListAPIHandler(APIHandler):
         'read:users:servers',
         'read:users:groups',
         'read:users:activity',
+        'read:users:roles',
     )
     def get(self):
         state_filter = self.get_argument("state", None)
@@ -176,6 +177,7 @@ class UserAPIHandler(APIHandler):
         'read:users:servers',
         'read:users:groups',
         'read:users:activity',
+        'read:users:roles',
     )
     async def get(self, user_name):
         user = self.find_user(user_name)

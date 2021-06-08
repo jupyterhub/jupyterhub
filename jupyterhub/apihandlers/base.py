@@ -293,16 +293,24 @@ class APIHandler(BaseHandler):
 
     def service_model(self, service):
         """Get the JSON model for a Service object"""
-        model = {}
-        scope_filter = self.get_scope_filter('read:services')
-        if scope_filter(service, kind='service'):
-            model = {
-                'kind': 'service',
-                'name': service.name,
-                'roles': [r.name for r in service.roles],
-                'admin': service.admin,
-            }
-            # todo: Remove once we replace admin flag with role check
+        model = {
+            'kind': 'service',
+            'name': service.name,
+            'roles': [r.name for r in service.roles],
+            'admin': service.admin,
+        }
+        # todo: remove admin key now we have roles?
+        access_map = {
+            'read:services': {'kind', 'name', 'roles', 'admin'},
+            'read:services:name': {'kind', 'name'},
+            'read:services:roles': {'kind', 'name', 'roles'},
+        }
+        allowed_keys = set()
+        for scope in access_map:
+            scope_filter = self.get_scope_filter(scope)
+            if scope_filter(service, kind='service'):
+                allowed_keys |= access_map[scope]
+        model = {key: model[key] for key in allowed_keys}
         return model
 
     _user_model_types = {
