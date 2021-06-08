@@ -30,7 +30,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### University of California Davis
 
-- [Spinning up multiple Jupyter Notebooks on AWS for a tutorial](https://github.com/mblmicdiv/course2017/blob/master/exercises/sourmash-setup.md)
+- [Spinning up multiple Jupyter Notebooks on AWS for a tutorial](https://github.com/mblmicdiv/course2017/blob/HEAD/exercises/sourmash-setup.md)
 
 Although not technically a JupyterHub deployment, this tutorial setup
 may be helpful to others in the Jupyter community.

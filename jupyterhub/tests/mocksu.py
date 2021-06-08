@@ -11,10 +11,10 @@ Handlers and their purpose include:
 - ArgsHandler: allowing retrieval of `sys.argv`.
 
 """
-import argparse
 import json
 import os
 import sys
+from urllib.parse import urlparse
 
 from tornado import httpserver
 from tornado import ioloop
@@ -36,7 +36,8 @@ class ArgsHandler(web.RequestHandler):
         self.write(json.dumps(sys.argv))
 
 
-def main(args):
+def main():
+    url = urlparse(os.environ["JUPYTERHUB_SERVICE_URL"])
     options.logging = 'debug'
     log.enable_pretty_logging()
     app = web.Application(
@@ -50,10 +51,11 @@ def main(args):
 
     if key and cert and ca:
         ssl_context = make_ssl_context(key, cert, cafile=ca, check_hostname=False)
+        assert url.scheme == "https"
 
     server = httpserver.HTTPServer(app, ssl_options=ssl_context)
-    log.app_log.info("Starting mock singleuser server at 127.0.0.1:%s", args.port)
-    server.listen(args.port, '127.0.0.1')
+    log.app_log.info(f"Starting mock singleuser server at {url.hostname}:{url.port}")
+    server.listen(url.port, url.hostname)
     try:
         ioloop.IOLoop.instance().start()
     except KeyboardInterrupt:
@@ -61,7 +63,4 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--port', type=int)
-    args, extra = parser.parse_known_args()
-    main(args)
+    main()

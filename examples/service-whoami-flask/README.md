@@ -1,6 +1,6 @@
 # Authenticating a flask service with JupyterHub
 
-Uses `jupyterhub.services.HubAuth` to authenticate requests with the Hub in a [flask][] application.
+Uses `jupyterhub.services.HubOAuth` to authenticate requests with the Hub in a [flask][] application.
 
 ## Run
 
@@ -8,7 +8,7 @@ Uses `jupyterhub.services.HubAuth` to authenticate requests with the Hub in a [f
 
         jupyterhub --ip=127.0.0.1
 
-2.  Visit http://127.0.0.1:8000/services/whoami/ or http://127.0.0.1:8000/services/whoami-oauth/
+2.  Visit http://127.0.0.1:8000/services/whoami/
 
 After logging in with your local-system credentials, you should see a JSON dump of your user info:
 

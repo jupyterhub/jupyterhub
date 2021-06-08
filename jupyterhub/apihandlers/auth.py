@@ -14,7 +14,6 @@ from tornado import web
 
 from .. import orm
 from .. import scopes
-from ..user import User
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -24,7 +23,7 @@ class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
         # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
-        # TODO: require specific scope for this deprecated API, applied to oauth client secrets only?
+        # TODO: require specific scope for this deprecated API, applied to service tokens only?
         self.log.warning(
             "/authorizations/token/:token endpoint is deprecated in JupyterHub 2.0. Use /api/user"
         )
@@ -55,53 +54,20 @@ class TokenAPIHandler(APIHandler):
         self.write(json.dumps(model))
 
     async def post(self):
-        warn_msg = (
-            "Using deprecated token creation endpoint %s."
-            " Use /hub/api/users/:user/tokens instead."
-        ) % self.request.uri
-        self.log.warning(warn_msg)
-        requester = user = self.current_user
-        if user is None:
-            # allow requesting a token with username and password
-            # for authenticators where that's possible
-            data = self.get_json_body()
-            try:
-                requester = user = await self.login_user(data)
-            except Exception as e:
-                self.log.error("Failure trying to authenticate with form data: %s" % e)
-                user = None
-            if user is None:
-                raise web.HTTPError(403)
-        else:
-            data = self.get_json_body()
-            # admin users can request tokens for other users
-            if data and data.get('username'):
-                user = self.find_user(data['username'])
-                if user is not requester and not requester.admin:
-                    raise web.HTTPError(
-                        403, "Only admins can request tokens for other users."
-                    )
-                if requester.admin and user is None:
-                    raise web.HTTPError(400, "No such user '%s'" % data['username'])
-
-        note = (data or {}).get('note')
-        if not note:
-            note = "Requested via deprecated api"
-            if requester is not user:
-                kind = 'user' if isinstance(user, User) else 'service'
-                note += " by %s %s" % (kind, requester.name)
-
-        api_token = user.new_api_token(note=note)
-        self.write(
-            json.dumps(
-                {'token': api_token, 'warning': warn_msg, 'user': self.user_model(user)}
-            )
+        raise web.HTTPError(
+            404,
+            "Deprecated endpoint /hub/api/authorizations/token is removed in JupyterHub 2.0."
+            " Use /hub/api/users/:user/tokens instead.",
         )
 
 
 class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name, cookie_value=None):
+        self.log.warning(
+            "/authorizations/cookie endpoint is deprecated in JupyterHub 2.0. Use /api/user with OAuth tokens."
+        )
+
         cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
             self.log.warning(
