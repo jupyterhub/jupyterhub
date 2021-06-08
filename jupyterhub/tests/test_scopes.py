@@ -797,5 +797,12 @@ async def test_service_model_filtering(
     assert model_keys == r.json().keys()
 
 
-async def test_roles_access(app, create_user_with_scopes):
-    pass
+async def test_roles_access(app, create_service_with_scopes, create_user_with_scopes):
+    user = add_user(app.db, name='miranda')
+    read_user = create_user_with_scopes('read:users:roles')
+    r = await api_request(
+        app, 'users', user.name, headers=auth_header(app.db, read_user.name)
+    )
+    assert r.status_code == 200
+    model_keys = {'kind', 'name', 'roles'}
+    assert model_keys == r.json().keys()
