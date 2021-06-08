@@ -13,9 +13,6 @@ from jupyterhub.services.auth import HubAuthenticated
 class AnnouncementRequestHandler(HubAuthenticated, web.RequestHandler):
     """Dynamically manage page announcements"""
 
-    hub_users = []
-    allow_admin = True
-
     def initialize(self, storage):
         """Create storage for announcement text"""
         self.storage = storage

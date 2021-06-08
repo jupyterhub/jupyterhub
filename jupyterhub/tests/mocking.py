@@ -388,6 +388,10 @@ class MockSingleUserServer(SingleUserNotebookApp):
     def init_signal(self):
         pass
 
+    @default("log_level")
+    def _default_log_level(self):
+        return 10
+
 
 class StubSingleUserSpawner(MockSpawner):
     """Spawner that starts a MockSingleUserServer in a thread."""
@@ -425,6 +429,7 @@ class StubSingleUserSpawner(MockSpawner):
                 app.initialize(args)
                 assert app.hub_auth.oauth_client_id
                 assert app.hub_auth.api_token
+                assert app.hub_auth.oauth_scopes
                 app.start()
 
         self._thread = threading.Thread(target=_run)

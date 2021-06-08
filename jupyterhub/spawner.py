@@ -216,6 +216,16 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
+
+    oauth_scopes = List(Unicode())
+
+    @default("oauth_scopes")
+    def _default_oauth_scopes(self):
+        return [
+            f"access:users:servers!server={self.user.name}/{self.name}",
+            f"access:users:servers!user={self.user.name}",
+        ]
+
     handler = Any()
 
     oauth_roles = Union(
@@ -802,6 +812,8 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = url_path_join(
             self.user.url, self.name, 'oauth_callback'
         )
+
+        env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_scopes)
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name

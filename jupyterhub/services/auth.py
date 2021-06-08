@@ -33,11 +33,48 @@ from traitlets import Dict
 from traitlets import Instance
 from traitlets import Integer
 from traitlets import observe
+from traitlets import Set
 from traitlets import Unicode
 from traitlets import validate
 from traitlets.config import SingletonConfigurable
 
+from ..scopes import _intersect_expanded_scopes
 from ..utils import url_path_join
+
+
+def check_scopes(required_scopes, scopes):
+    """Check that required_scope(s) are in scopes
+
+    Returns the subset of scopes matching required_scopes,
+    which is truthy if any scopes match any required scopes.
+
+    Correctly resolves scope filters *except* for groups -> user,
+    e.g. require: access:server!user=x, have: access:server!group=y
+    will not grant access to user x even if user x is in group y.
+
+    Parameters
+    ----------
+
+    required_scopes: set
+        The set of scopes required.
+    scopes: set
+        The set (or list) of scopes to check against required_scopes
+
+    Returns
+    -------
+    relevant_scopes: set
+        The set of scopes in required_scopes that are present in scopes,
+        which is truthy if any required scopes are present,
+        and falsy otherwise.
+    """
+    if isinstance(required_scopes, str):
+        required_scopes = {required_scopes}
+
+    intersection = _intersect_expanded_scopes(required_scopes, scopes)
+    # re-intersect with required_scopes in case the intersection
+    # applies stricter filters than required_scopes declares
+    # e.g. required_scopes = {'read:users'} and intersection has only {'read:users!user=x'}
+    return set(required_scopes) & intersection
 
 
 class _ExpiringDict(dict):
@@ -285,6 +322,24 @@ class HubAuth(SingletonConfigurable):
     def _default_cache(self):
         return _ExpiringDict(self.cache_max_age)
 
+    oauth_scopes = Set(
+        Unicode(),
+        help="""OAuth scopes to use for allowing access.
+
+        Get from $JUPYTERHUB_OAUTH_SCOPES by default.
+        """,
+    ).tag(config=True)
+
+    @default('oauth_scopes')
+    def _default_scopes(self):
+        env_scopes = os.getenv('JUPYTERHUB_OAUTH_SCOPES')
+        if env_scopes:
+            return set(json.loads(env_scopes))
+        service_name = os.getenv("JUPYTERHUB_SERVICE_NAME")
+        if service_name:
+            return {f'access:services!service={service_name}'}
+        return set()
+
     def _check_hub_authorization(self, url, api_token, cache_key=None, use_cache=True):
         """Identify a user with the Hub
 
@@ -494,6 +549,10 @@ class HubAuth(SingletonConfigurable):
         if not user_model:
             app_log.debug("No user identified")
         return user_model
+
+    def check_scopes(self, required_scopes, user):
+        """Check whether the user has required scope(s)"""
+        return check_scopes(required_scopes, set(user["scopes"]))
 
 
 class HubOAuth(HubAuth):
@@ -765,12 +824,26 @@ class UserNotAllowed(Exception):
         )
 
 
-class HubAuthenticated(object):
+class HubAuthenticated:
     """Mixin for tornado handlers that are authenticated with JupyterHub
 
     A handler that mixes this in must have the following attributes/properties:
 
     - .hub_auth: A HubAuth instance
+    - .hub_scopes: A set of JupyterHub 2.0 OAuth scopes to allow.
+      Default comes from .hub_auth.oauth_scopes,
+      which in turn is set by $JUPYTERHUB_OAUTH_SCOPES
+      Default values include:
+      - 'access:services', 'access:services!service={service_name}' for services
+      - 'access:users:servers', 'access:users:servers!user={user}',
+        'access:users:servers!server={user}/{server_name}'
+        for single-user servers
+
+    If hub_scopes is not used (e.g. JupyterHub 1.x),
+    these additional properties can be used:
+
+    - .allow_admin: If True, allow any admin user.
+      Default: False.
     - .hub_users: A set of usernames to allow.
       If left unspecified or None, username will not be checked.
     - .hub_groups: A set of group names to allow.
@@ -796,12 +869,18 @@ class HubAuthenticated(object):
     allow_admin = False  # allow any admin user access
 
     @property
+    def hub_scopes(self):
+        """Set of allowed scopes (use hub_auth.oauth_scopes by default)"""
+        return self.hub_auth.oauth_scopes or None
+
+    @property
     def allow_all(self):
         """Property indicating that all successfully identified user
         or service should be allowed.
         """
         return (
-            self.hub_services is None
+            self.hub_scopes is None
+            and self.hub_services is None
             and self.hub_users is None
             and self.hub_groups is None
         )
@@ -842,21 +921,42 @@ class HubAuthenticated(object):
 
         Returns the input if the user should be allowed, None otherwise.
 
-        Override if you want to check anything other than the username's presence in hub_users list.
+        Override for custom logic in authenticating users.
 
         Args:
-            model (dict): the user or service model returned from :class:`HubAuth`
+            user_model (dict): the user or service model returned from :class:`HubAuth`
         Returns:
             user_model (dict): The user model if the user should be allowed, None otherwise.
         """
 
         name = model['name']
         kind = model.setdefault('kind', 'user')
+
         if self.allow_all:
             app_log.debug(
                 "Allowing Hub %s %s (all Hub users and services allowed)", kind, name
             )
             return model
+
+        if self.hub_scopes:
+            scopes = self.hub_auth.check_scopes(self.hub_scopes, model)
+            if scopes:
+                app_log.debug(
+                    f"Allowing Hub {kind} {name} based on oauth scopes {scopes}"
+                )
+                return model
+            else:
+                app_log.warning(
+                    f"Not allowing Hub {kind} {name}: missing required scopes"
+                )
+                app_log.debug(
+                    f"Hub {kind} {name} needs scope(s) {self.hub_scopes}, has scope(s) {model['scopes']}"
+                )
+                # if hub_scopes are used, *only* hub_scopes are used
+                # note: this means successful authentication, but insufficient permission
+                raise UserNotAllowed(model)
+
+        # proceed with the pre-2.0 way if hub_scopes is not set
 
         if self.allow_admin and model.get('admin', False):
             app_log.debug("Allowing Hub admin %s", name)

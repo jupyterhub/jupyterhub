@@ -364,7 +364,7 @@ def test_user_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.APIToken(
-        client=oauth_client,
+        oauth_client=oauth_client,
         user=user,
     )
     db.add(oauth_token)
@@ -401,7 +401,7 @@ def test_oauth_client_delete_cascade(db):
     oauth_code = orm.OAuthCode(client=oauth_client, user=user)
     db.add(oauth_code)
     oauth_token = orm.APIToken(
-        client=oauth_client,
+        oauth_client=oauth_client,
         user=user,
     )
     db.add(oauth_token)
@@ -525,7 +525,7 @@ def test_expiring_oauth_token(app, user):
     db.add(client)
     orm_token = orm.APIToken(
         token=token,
-        client=client,
+        oauth_client=client,
         user=user,
         expires_at=now() + timedelta(seconds=30),
     )

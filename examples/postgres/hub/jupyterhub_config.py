@@ -1,10 +1,10 @@
 # Configuration file for jupyterhub (postgres example).
 
-c = get_config()
+c = get_config()  # noqa
 
 # Add some users.
 c.JupyterHub.admin_users = {'rhea'}
-c.Authenticator.whitelist = {'ganymede', 'io', 'rhea'}
+c.Authenticator.allowed_users = {'ganymede', 'io', 'rhea'}
 
 # These environment variables are automatically supplied by the linked postgres
 # container.

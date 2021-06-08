@@ -16,12 +16,12 @@ from sqlalchemy import Boolean
 from sqlalchemy import Column
 from sqlalchemy import create_engine
 from sqlalchemy import DateTime
-from sqlalchemy import Enum
 from sqlalchemy import event
 from sqlalchemy import exc
 from sqlalchemy import ForeignKey
 from sqlalchemy import inspect
 from sqlalchemy import Integer
+from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import Table
@@ -115,7 +115,17 @@ class JSONList(JSONDict):
         return value
 
 
-Base = declarative_base()
+meta = MetaData(
+    naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s",
+    }
+)
+
+Base = declarative_base(metadata=meta)
 Base.log = app_log
 
 
@@ -264,7 +274,7 @@ class User(Base):
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
 
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, nullable=True)
 
@@ -326,6 +336,21 @@ class Spawner(Base):
     last_activity = Column(DateTime, nullable=True)
     user_options = Column(JSONDict)
 
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("spawner", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
+
     # properties on the spawner wrapper
     # some APIs get these low-level objects
     # when the spawner isn't running,
@@ -361,7 +386,7 @@ class Service(Base):
 
     # common user interface:
     name = Column(Unicode(255), unique=True)
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
 
     api_tokens = relationship(
         "APIToken", backref="service", cascade="all, delete-orphan"
@@ -376,6 +401,21 @@ class Service(Base):
         cascade="all, delete-orphan",
     )
     pid = Column(Integer)
+
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("service", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
@@ -474,9 +514,7 @@ class Hashed(Expiring):
     @classmethod
     def check_token(cls, db, token):
         """Check if a token is acceptable"""
-        print("checking", cls, token, len(token), cls.min_length)
         if len(token) < cls.min_length:
-            print("raising")
             raise ValueError(
                 "Tokens must be at least %i characters, got %r"
                 % (cls.min_length, token)
@@ -567,6 +605,7 @@ class APIToken(Hashed, Base):
             ondelete='CASCADE',
         ),
     )
+
     # FIXME: refresh_tokens not implemented
     # should be a relation to another token table
     # refresh_token = Column(
@@ -732,6 +771,11 @@ class OAuthCode(Expiring, Base):
             .first()
         )
 
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}(id={self.id}, client_id={self.client_id!r})>"
+        )
+
 
 class OAuthClient(Base):
     __tablename__ = 'oauth_clients'
@@ -746,13 +790,16 @@ class OAuthClient(Base):
         return self.identifier
 
     access_tokens = relationship(
-        APIToken, backref='client', cascade='all, delete-orphan'
+        APIToken, backref='oauth_client', cascade='all, delete-orphan'
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
 
     # these are the roles an oauth client is allowed to request
     # *not* the roles of the client itself
     allowed_roles = relationship('Role', secondary='oauth_client_role_map')
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}(identifier={self.identifier!r})>"
 
 
 # General database utilities

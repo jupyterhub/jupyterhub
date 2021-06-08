@@ -27,7 +27,6 @@ Fixtures to add functionality or spawning behavior
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import inspect
-import logging
 import os
 import sys
 from getpass import getuser
@@ -50,7 +49,6 @@ from ..utils import random_port
 from .mocking import MockHub
 from .test_services import mockservice_cmd
 from .utils import add_user
-from .utils import ssl_setup
 
 # global db session object
 _db = None
@@ -339,3 +337,79 @@ def slow_bad_spawn(app):
         app.tornado_settings, {'spawner_class': mocking.SlowBadSpawner}
     ):
         yield
+
+
+@fixture
+def create_temp_role(app):
+    """Generate a temporary role with certain scopes.
+    Convenience function that provides setup, database handling and teardown"""
+    temp_roles = []
+    index = [1]
+
+    def temp_role_creator(scopes, role_name=None):
+        if not role_name:
+            role_name = f'temp_role_{index[0]}'
+            index[0] += 1
+        temp_role = orm.Role(name=role_name, scopes=list(scopes))
+        temp_roles.append(temp_role)
+        app.db.add(temp_role)
+        app.db.commit()
+        return temp_role
+
+    yield temp_role_creator
+    for role in temp_roles:
+        app.db.delete(role)
+    app.db.commit()
+
+
+@fixture
+def create_user_with_scopes(app, create_temp_role):
+    """Generate a temporary user with specific scopes.
+    Convenience function that provides setup, database handling and teardown"""
+    temp_users = []
+    counter = 0
+    get_role = create_temp_role
+
+    def temp_user_creator(*scopes, name=None):
+        nonlocal counter
+        if name is None:
+            counter += 1
+            name = f"temp_user_{counter}"
+        role = get_role(scopes)
+        orm_user = orm.User(name=name)
+        app.db.add(orm_user)
+        app.db.commit()
+        temp_users.append(orm_user)
+        update_roles(app.db, orm_user, roles=[role.name])
+        return app.users[orm_user.id]
+
+    yield temp_user_creator
+    for user in temp_users:
+        app.users.delete(user)
+
+
+@fixture
+def create_service_with_scopes(app, create_temp_role):
+    """Generate a temporary service with specific scopes.
+    Convenience function that provides setup, database handling and teardown"""
+    temp_service = []
+    counter = 0
+    role_function = create_temp_role
+
+    def temp_service_creator(*scopes, name=None):
+        nonlocal counter
+        if name is None:
+            counter += 1
+            name = f"temp_service_{counter}"
+        role = role_function(scopes)
+        app.services.append({'name': name})
+        app.init_services()
+        orm_service = orm.Service.find(app.db, name)
+        app.db.commit()
+        update_roles(app.db, orm_service, roles=[role.name])
+        return orm_service
+
+    yield temp_service_creator
+    for service in temp_service:
+        app.db.delete(service)
+    app.db.commit()
