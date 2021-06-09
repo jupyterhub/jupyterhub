@@ -25,8 +25,11 @@ Roles can be assigned to the following entities:
 
 An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added to or removed from entities at any time.
 
-**Users and services** \
-When a new user or service gets created, they are assigned their default role ( `user` or `admin`) if no custom role is requested, currently based on their admin status.
+**Users** \
+When a new user gets created, they are assigned their default role ( `user` or `admin`) if no custom role is requested, currently based on their admin status.
+
+**Services** \
+Services do not have a default role. Services without roles have no access to the guarded API end-points, so most services will require assignment of a role in order to function.
 
 **Groups** \
 A group does not require any role, and has no roles by default. If a user is a member of a group, they automatically inherit any of the group's permissions (see {ref}`resolving-roles-scopes-target` for more details). This is useful for assigning a set of common permissions to several users.
