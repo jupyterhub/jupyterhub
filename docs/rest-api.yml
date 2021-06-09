@@ -923,7 +923,7 @@ definitions:
         description: The user that owns a token (undefined if owned by a service)
       service:
         type: string
-        description: The service that owns the token (undefined of owned by a user)
+        description: The service that owns the token (undefined if owned by a user)
       note:
         type: string
         description: A note about the token, typically describing what it was created for.
