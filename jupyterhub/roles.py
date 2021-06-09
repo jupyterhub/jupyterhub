@@ -488,7 +488,7 @@ def check_for_default_roles(db, bearer):
     Groups can be without a role
     """
     Class = orm.get_class(bearer)
-    if Class == orm.Group:
+    if Class in {orm.Group, orm.Service}:
         pass
     else:
         for obj in (
