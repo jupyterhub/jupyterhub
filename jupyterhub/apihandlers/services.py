@@ -13,12 +13,11 @@ from .base import APIHandler
 class ServiceListAPIHandler(APIHandler):
     @needs_scope('read:services', 'read:services:name', 'read:services:roles')
     def get(self):
-        scope_filter = self.get_scope_filter('read:services')
-        data = {
-            name: self.service_model(service)
-            for name, service in self.services.items()
-            if scope_filter(service, kind='service')
-        }
+        data = {}
+        for name, service in self.services.items():
+            model = self.service_model(service)
+            if model:
+                data[name] = model
         self.write(json.dumps(data))
 
 

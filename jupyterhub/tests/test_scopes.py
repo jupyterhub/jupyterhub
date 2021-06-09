@@ -415,7 +415,7 @@ async def test_vertical_filter(app, create_user_with_scopes):
     user = create_user_with_scopes('read:users:name')
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    allowed_keys = {'name', 'kind'}
+    allowed_keys = {'name', 'kind', 'admin'}
     assert set([key for user in r.json() for key in user.keys()]) == allowed_keys
 
 
@@ -647,7 +647,6 @@ async def test_server_state_access(
                 'read:users!user=y',
                 'read:users:name!user=y',
                 'read:users:groups!user=y',
-                'read:users:roles!user=y',
                 'read:users:activity!user=y',
             },
         ),
@@ -659,7 +658,6 @@ async def test_server_state_access(
                 'read:users!user=y',
                 'read:users:name!user=y',
                 'read:users:groups!user=y',
-                'read:users:roles!user=y',
                 'read:users:activity!user=y',
             },
         ),
@@ -703,11 +701,13 @@ async def test_resolve_token_permissions(
                 'admin',
                 'prefix',
                 'url',
-                'roles',
             },
         ),
-        ({'read:services:roles', 'read:users:name'}, {'name', 'kind', 'roles'}),
-        ({'read:services:name'}, {'name', 'kind'}),
+        (
+            {'read:services:roles', 'read:users:name'},
+            {'name', 'kind', 'roles', 'admin'},
+        ),
+        ({'read:services:name'}, {'name', 'kind', 'admin'}),
     ],
 )
 async def test_service_model_filtering(
@@ -729,7 +729,7 @@ async def test_roles_access(app, create_service_with_scopes, create_user_with_sc
         app, 'users', user.name, headers=auth_header(app.db, read_user.name)
     )
     assert r.status_code == 200
-    model_keys = {'kind', 'name', 'roles'}
+    model_keys = {'kind', 'name', 'roles', 'admin'}
     assert model_keys == r.json().keys()
 
 

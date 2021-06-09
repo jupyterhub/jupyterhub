@@ -173,6 +173,21 @@ class APIHandler(BaseHandler):
         }
         return model
 
+    def _filter_model(self, model, access_map, entity, kind, keys=None):
+        """
+        Filter the model based on the available scopes and the entity requested for.
+        If keys is a dictionary, update it with the allowed keys for the model.
+        """
+        allowed_keys = set()
+        for scope in access_map:
+            scope_filter = self.get_scope_filter(scope)
+            if scope_filter(entity, kind=kind):
+                allowed_keys |= access_map[scope]
+        model = {key: model[key] for key in allowed_keys if key in model}
+        if isinstance(keys, set):
+            keys.update(allowed_keys)
+        return model
+
     def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
@@ -201,11 +216,11 @@ class APIHandler(BaseHandler):
                 'created',
                 'last_activity',
             },
-            'read:users:name': {'kind', 'name'},
+            'read:users:name': {'kind', 'name', 'admin'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
             'read:users:servers': {'kind', 'name', 'servers'},
-            'read:users:roles': {'kind', 'name', 'roles'},
+            'read:users:roles': {'kind', 'name', 'roles', 'admin'},
             'admin:users:auth_state': {'kind', 'name', 'auth_state'},
         }
         self.log.debug(
@@ -214,11 +229,9 @@ class APIHandler(BaseHandler):
             ", ".join(self.expanded_scopes),
         )
         allowed_keys = set()
-        for scope in access_map:
-            scope_filter = self.get_scope_filter(scope)
-            if scope_filter(user, kind='user'):
-                allowed_keys |= access_map[scope]
-        model = {key: model[key] for key in allowed_keys if key in model}
+        model = self._filter_model(
+            model, access_map, user, kind='user', keys=allowed_keys
+        )
         if model:
             if '' in user.spawners and 'pending' in allowed_keys:
                 model['pending'] = user.spawners[''].pending
@@ -236,15 +249,18 @@ class APIHandler(BaseHandler):
 
     def group_model(self, group):
         """Get the JSON model for a Group object"""
-        model = {}
-        scope_filter = self.get_scope_filter('read:groups')
-        if scope_filter(group, kind='group'):
-            model = {
-                'kind': 'group',
-                'name': group.name,
-                'roles': [r.name for r in group.roles],
-                'users': [u.name for u in group.users],
-            }
+        model = {
+            'kind': 'group',
+            'name': group.name,
+            'roles': [r.name for r in group.roles],
+            'users': [u.name for u in group.users],
+        }
+        access_map = {
+            'read:groups': {'kind', 'name', 'users'},
+            'read:groups:name': {'kind', 'name'},
+            'read:groups:roles': {'kind', 'name', 'roles'},
+        }
+        model = self._filter_model(model, access_map, group, 'group')
         return model
 
     def service_model(self, service):
@@ -261,19 +277,22 @@ class APIHandler(BaseHandler):
             'info': getattr(service, 'info', ''),
             'display': getattr(service, 'display', ''),
         }
-        # todo: remove admin key now we have roles?
-        # todo: More default keys present?
         access_map = {
-            'read:services': set(model.keys()),
-            'read:services:name': {'kind', 'name'},
-            'read:services:roles': {'kind', 'name', 'roles'},
+            'read:services': {
+                'kind',
+                'name',
+                'admin',
+                'url',
+                'prefix',
+                'command',
+                'pid',
+                'info',
+                'display',
+            },
+            'read:services:name': {'kind', 'name', 'admin'},
+            'read:services:roles': {'kind', 'name', 'roles', 'admin'},
         }
-        allowed_keys = set()
-        for scope in access_map:
-            scope_filter = self.get_scope_filter(scope)
-            if scope_filter(service, kind='service'):
-                allowed_keys |= access_map[scope]
-        model = {key: model[key] for key in allowed_keys}
+        model = self._filter_model(model, access_map, service, 'service')
         return model
 
     _user_model_types = {

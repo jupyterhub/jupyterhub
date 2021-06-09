@@ -83,7 +83,7 @@ async def test_hubauth_token(app, mockservice_url, create_user_with_scopes):
     r.raise_for_status()
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': u.name, 'admin': 'missing'}
+    assert sub_reply == {'name': u.name, 'admin': False}
 
     # token in ?token parameter
     r = await async_requests.get(
@@ -92,7 +92,7 @@ async def test_hubauth_token(app, mockservice_url, create_user_with_scopes):
     r.raise_for_status()
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': u.name, 'admin': 'missing'}
+    assert sub_reply == {'name': u.name, 'admin': False}
 
     r = await async_requests.get(
         public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
@@ -168,7 +168,6 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
         'kind': 'service',
         'name': name,
         'admin': False,
-        'roles': [role_name],
         'scopes': scopes,
     }
     if allowed:
