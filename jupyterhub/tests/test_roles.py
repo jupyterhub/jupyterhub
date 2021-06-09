@@ -521,20 +521,10 @@ async def test_load_roles_services(tmpdir, request):
     # test if predefined roles loaded and assigned
     culler_role = orm.Role.find(db, name='idle-culler')
     culler_service = orm.Service.find(db, name='idle-culler')
-    assert culler_role in culler_service.roles
-
-    # test if every service has a role (and no duplicates)
-    for service in db.query(orm.Service):
-        assert len(service.roles) > 0
-        assert len(service.roles) == len(set(service.roles))
-
-        # test default role assignment
-        if service.admin:
-            assert admin_role in service.roles
-            assert user_role not in service.roles
-        elif culler_role not in service.roles:
-            assert user_role in service.roles
-            assert admin_role not in service.roles
+    assert culler_service.roles == [culler_role]
+    user_service = orm.Service.find(db, name='user_service')
+    assert not user_service.roles
+    assert admin_service.roles == [admin_role]
 
     # delete the test services
     for service in db.query(orm.Service):
