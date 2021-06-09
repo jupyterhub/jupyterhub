@@ -140,6 +140,7 @@ jobs:
         run: |
           npm install
           npm install -g configurable-http-proxy
+          npm install -g yarn
           npm list
 
       # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
@@ -219,6 +220,9 @@ jobs:
         #        https://github.com/actions/runner/issues/241
         run: |
           pytest -v --maxfail=2 --color=yes --cov=jupyterhub jupyterhub/tests
+      - name: Run yarn jest test
+        run: |
+          cd jsx && yarn && yarn test
       - name: Submit codecov report
         run: |
           codecov

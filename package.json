@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "description": "JupyterHub nodejs dependencies",
   "author": "Jupyter Developers",
-  "license": "BSD",
+  "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
     "url": "https://github.com/jupyter/jupyterhub.git"
