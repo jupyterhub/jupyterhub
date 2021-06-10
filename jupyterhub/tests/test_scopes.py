@@ -704,7 +704,7 @@ async def test_resolve_token_permissions(
             },
         ),
         (
-            {'read:services:roles', 'read:users:name'},
+            {'read:services:roles', 'read:services:name'},
             {'name', 'kind', 'roles', 'admin'},
         ),
         ({'read:services:name'}, {'name', 'kind', 'admin'}),
@@ -720,6 +720,43 @@ async def test_service_model_filtering(
     )
     assert r.status_code == 200
     assert model_keys == r.json().keys()
+
+
+@mark.parametrize(
+    "scopes, model_keys",
+    [
+        (
+            {'read:groups'},
+            {
+                'name',
+                'kind',
+                'users',
+            },
+        ),
+        (
+            {'read:groups:roles', 'read:groups:name'},
+            {'name', 'kind', 'roles'},
+        ),
+        ({'read:groups:name'}, {'name', 'kind'}),
+    ],
+)
+async def test_group_model_filtering(
+    app, scopes, model_keys, create_user_with_scopes, create_service_with_scopes
+):
+    user = create_user_with_scopes(*scopes, name='teddy')
+    group_name = 'baker_street'
+    group = orm.Group.find(app.db, name=group_name)
+    if not group:
+        group = orm.Group(name=group_name)
+        app.db.add(group)
+        app.db.commit()
+    r = await api_request(
+        app, 'groups', group_name, headers=auth_header(app.db, user.name)
+    )
+    assert r.status_code == 200
+    assert model_keys == r.json().keys()
+    app.db.delete(group)
+    app.db.commit()
 
 
 async def test_roles_access(app, create_service_with_scopes, create_user_with_scopes):
