@@ -1611,6 +1611,7 @@ async def test_get_services(app, mockservice_url):
     services = r.json()
     assert services == {
         mockservice.name: {
+            'kind': 'service',
             'name': mockservice.name,
             'admin': True,
             'roles': ['admin'],
@@ -1636,6 +1637,7 @@ async def test_get_service(app, mockservice_url):
 
     service = r.json()
     assert service == {
+        'kind': 'service',
         'name': mockservice.name,
         'admin': True,
         'roles': ['admin'],

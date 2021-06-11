@@ -34,7 +34,7 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @needs_scope('read:groups')
+    @needs_scope('read:groups', 'read:groups:name', 'read:groups:roles')
     def get(self):
         """List groups"""
         query = self.db.query(orm.Group)
@@ -77,7 +77,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
 class GroupAPIHandler(_GroupAPIHandler):
     """View and modify groups by name"""
 
-    @needs_scope('read:groups')
+    @needs_scope('read:groups', 'read:groups:name', 'read:groups:roles')
     def get(self, group_name):
         group = self.find_group(group_name)
         self.write(json.dumps(self.group_model(group)))
