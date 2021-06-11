@@ -21,7 +21,7 @@
     {% endif %}
   </p>
 
-  <h3>The application will be able to:</h3>
+  <h3>This will grant the application permission to:</h3>
   <div>
     <form method="POST" action="">
       {# these are the 'real' inputs to the form -#}
@@ -38,7 +38,7 @@
           <span>
             {{ scope_info['description'] }}
             {% if scope_info['filter'] %}
-            For {{ scope_info['filter'] }}.
+            Applies to {{ scope_info['filter'] }}.
             {% endif %}
           </span>
         </label>

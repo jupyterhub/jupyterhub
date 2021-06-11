@@ -23,82 +23,79 @@ from . import orm
 from . import roles
 
 scope_definitions = {
-    '(no_scope)': {'description': 'Allows for only identifying the owning entity.'},
+    '(no_scope)': {'description': 'Identify the owner of this entity.'},
     'self': {
-        'description': 'Metascope, grants access to user’s own resources only; resolves to (no_scope) for services.'
+        'description': 'The user’s own resources.',
+        'metadescription': 'metascope for users, resolves to (no_scope) for services',
     },
     'all': {
-        'description': 'Metascope, valid for tokens only. Grants access to everything that the token-owning entity can access.'
+        'description': 'Everything that the token-owning entity can access.',
+        'metadescription': 'metascope for tokens',
     },
     'admin:users': {
-        'description': 'Grants read, write, create and delete access to users and their authentication state, not including their servers or tokens.',
+        'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
         'subscopes': ['admin:users:auth_state', 'users', 'read:users:roles'],
     },
-    'admin:users:auth_state': {
-        'description': 'Grants access to user authentication state.'
-    },
+    'admin:users:auth_state': {'description': 'Read a user’s authentication state.'},
     'users': {
-        'description': 'Grants read and write permissions to user models, not including servers, tokens and authentication state.',
+        'description': 'Read and write permissions to user models, e servers, tokens and authentication state.',
         'subscopes': ['read:users', 'users:activity'],
     },
     'read:users': {
-        'description': 'Read-only access to user models, not including servers, tokens and authentication state.',
+        'description': 'Read user models, (exluding including servers, tokens and authentication state).',
         'subscopes': [
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
         ],
     },
-    'read:users:name': {'description': 'Read-only access to users’ names.'},
-    'read:users:groups': {'description': 'Read-only access to users’ group names.'},
-    'read:users:activity': {'description': 'Read-only access to users’ last activity.'},
-    # todo: describe that it only specifies timestamp of activity
-    'read:users:roles': {'description': 'Read-only access to user roles.'},
+    'read:users:name': {'description': 'Read names of users.'},
+    'read:users:groups': {'description': 'Read names of users’ groups.'},
+    'read:users:activity': {'description': 'Read time of last user activity'},
+    'read:users:roles': {'description': 'Read names of users’ roles.'},
     'users:activity': {
-        'description': 'Grants access to read and update user activity.',
+        'description': 'Update time of last user activity.',
         'subscopes': ['read:users:activity'],
     },
     'admin:users:servers': {
-        'description': 'Grants read, start/stop, create and delete permissions to user servers and their state.',
+        'description': 'Read, start, stop, create and delete user servers and their state.',
         'subscopes': ['admin:users:server_state', 'users:servers'],
     },
-    'admin:users:server_state': {'description': 'Grants access to server state only.'},
+    'admin:users:server_state': {'description': 'Read and write users’ server state.'},
     'users:servers': {
-        'description': 'Allows for starting/stopping user servers. Does not include the server state.',
+        'description': 'Start and stop user servers.',
         'subscopes': ['read:users:servers'],
     },
     'read:users:servers': {
-        'description': 'Read-only access to users’ names and their server models. Does not include the server state.',
+        'description': 'Read users’ names and their server models. Does not include the server state.',
         'subscopes': ['read:users:name'],
     },
     'users:tokens': {
-        'description': 'Grants read, write, create and delete permissions for user tokens.',
+        'description': 'Read, write, create and delete user tokens.',
         'subscopes': ['read:users:tokens'],
     },
-    'read:users:tokens': {'description': 'Read-only access to user tokens.'},
+    'read:users:tokens': {'description': 'Read user tokens.'},
     'admin:groups': {
-        'description': 'Grants read, write, create and delete access to groups.',
+        'description': 'Read and write group information, create and delete groups.',
         'subscopes': ['groups', 'read:groups:roles'],
     },
     'groups': {
-        'description': 'Grants read and write permissions to groups, including adding/removing users to/from groups.',
+        'description': 'Read and write group information, including adding/removing users to/from groups.',
         'subscopes': ['read:groups'],
     },
     'read:groups': {
-        'description': 'Read-only access to group models.',
+        'description': 'Read group models.',
         'subscopes': ['read:groups:name'],
     },
-    'read:groups:name': {'description': 'Read-only access to group names.'},
-    'read:groups:roles': {'description': 'Read-only access to group role names.'},
+    'read:groups:name': {'description': 'Read group names.'},
+    'read:groups:roles': {'description': 'Read group role names.'},
     'read:services': {
-        'description': 'Read-only access to service models.',
+        'description': 'Read service models.',
         'subscopes': ['read:services:name'],
     },
-    'read:services:name': {'description': 'Read-only access to service names.'},
-    'read:services:roles': {'description': 'Read-only access to service role names.'},
-    'read:hub': {
-        'description': 'Read-only access to detailed information about the Hub.'
-    },
+    'read:services:name': {'description': 'Read service names.'},
+    'read:services:roles': {'description': 'Read service role names.'},
+    'read:hub': {'description': 'Read detailed information about the Hub.'},
     'access:users:servers': {
         'description': 'Access user servers via API or browser.',
     },
@@ -106,9 +103,9 @@ scope_definitions = {
         'description': 'Access services via API or browser.',
     },
     'proxy': {
-        'description': 'Allows for obtaining information about the proxy’s routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy.'
+        'description': 'Read information about the proxy’s routing table, sync the Hub with the proxy and notify the Hub about a new proxy.'
     },
-    'shutdown': {'description': 'Grants access to shutdown the hub.'},
+    'shutdown': {'description': 'Shutdown the hub.'},
 }
 
 

@@ -61,6 +61,9 @@ class ScopeTableGenerator:
 
         def _add_subscopes(table_rows, scopename, depth=0):
             description = self.scopes[scopename]['description']
+            meta_description = self.scopes[scopename].get('metadescription', '')
+            if meta_description:
+                description = description.rstrip('.') + f" ({meta_description})."
             table_row = [f"{md_indent*depth}`{scopename}`", description]
             table_rows.append(table_row)
             for subscope in scope_pairs[scopename]:
@@ -76,7 +79,7 @@ class ScopeTableGenerator:
         """Generates the scope table in markdown format and writes it into scope-table.md file"""
         filename = f"{HERE}/scope-table.md"
         table_name = ""
-        headers = ["Scope", "Description"]
+        headers = ["Scope", "Grants permission to:"]
         values = self._parse_scopes()
         writer = self.create_writer(table_name, headers, values)
 
