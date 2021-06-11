@@ -5,6 +5,8 @@ name: Release
 # but only publish to PyPI on tags
 on:
   push:
+    branches:
+      - "!dependabot/**"
   pull_request:
 
 jobs:
