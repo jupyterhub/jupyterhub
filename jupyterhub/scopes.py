@@ -25,12 +25,12 @@ from . import roles
 scope_definitions = {
     '(no_scope)': {'description': 'Identify the owner of this entity.'},
     'self': {
-        'description': 'The user’s own resources.',
-        'metadescription': 'metascope for users, resolves to (no_scope) for services',
+        'description': 'Your own resources',
+        'doc_description': 'The user’s own resources _(metascope for users, resolves to (no_scope) for services)_',
     },
     'all': {
-        'description': 'Everything that the token-owning entity can access.',
-        'metadescription': 'metascope for tokens',
+        'description': 'Anything you have access to',
+        'doc_description': 'Everything that the token-owning entity can access _(metascope for tokens)_',
     },
     'admin:users': {
         'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
@@ -50,9 +50,9 @@ scope_definitions = {
         ],
     },
     'read:users:name': {'description': 'Read names of users.'},
-    'read:users:groups': {'description': 'Read names of users’ groups.'},
+    'read:users:groups': {'description': 'Read users’ group membership.'},
     'read:users:activity': {'description': 'Read time of last user activity.'},
-    'read:users:roles': {'description': 'Read names of users’ roles.'},
+    'read:users:roles': {'description': 'Read users’ role assignments.'},
     'users:activity': {
         'description': 'Update time of last user activity.',
         'subscopes': ['read:users:activity'],
@@ -88,13 +88,13 @@ scope_definitions = {
         'subscopes': ['read:groups:name'],
     },
     'read:groups:name': {'description': 'Read group names.'},
-    'read:groups:roles': {'description': 'Read group role names.'},
+    'read:groups:roles': {'description': 'Read group role assignments.'},
     'read:services': {
         'description': 'Read service models.',
         'subscopes': ['read:services:name'],
     },
     'read:services:name': {'description': 'Read service names.'},
-    'read:services:roles': {'description': 'Read service role names.'},
+    'read:services:roles': {'description': 'Read service role assignments.'},
     'read:hub': {'description': 'Read detailed information about the Hub.'},
     'access:users:servers': {
         'description': 'Access user servers via API or browser.',

@@ -61,9 +61,9 @@ class ScopeTableGenerator:
 
         def _add_subscopes(table_rows, scopename, depth=0):
             description = self.scopes[scopename]['description']
-            meta_description = self.scopes[scopename].get('metadescription', '')
-            if meta_description:
-                description = description.rstrip('.') + f" _({meta_description})_."
+            doc_description = self.scopes[scopename].get('doc_description', '')
+            if doc_description:
+                description = doc_description
             table_row = [f"{md_indent*depth}`{scopename}`", description]
             table_rows.append(table_row)
             for subscope in scope_pairs[scopename]:
