@@ -23,7 +23,7 @@ from . import orm
 from . import roles
 
 scope_definitions = {
-    '(no_scope)': {'description': 'Identify the owner of this entity.'},
+    '(no_scope)': {'description': 'Identify the owner of the requesting entity.'},
     'self': {
         'description': 'Your own resources',
         'doc_description': 'The user’s own resources _(metascope for users, resolves to (no_scope) for services)_',

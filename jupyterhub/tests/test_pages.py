@@ -946,6 +946,13 @@ async def test_bad_oauth_get(app, params):
     assert r.status_code == 400
 
 
+async def test_oauth_page_scope_appearance(app):
+    # Test scopes presence
+    # test subscopes presence
+    # test filter presence
+    pass
+
+
 async def test_token_page(app):
     name = "cake"
     cookies = await app.login_user(name)

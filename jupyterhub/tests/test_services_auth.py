@@ -372,6 +372,30 @@ async def test_oauth_access_scopes(
     assert r.status_code == 403
 
 
+async def test_oauth_page_memory(app):
+    pass
+    # add service
+    # Login
+    # go to service oauth page
+    # hit auth page
+    # go to service oauth page again
+    # don't hit auth page
+    # clear authorization
+    # go to service oauth page
+    # hit auth page
+
+
+async def test_oauth_page_role_expansion(app):
+    pass
+    # add service
+    # login
+    # go to service oauth page
+    # hit auth page
+    # expand service roles
+    # go to service oauth page
+    # hit auth page again
+
+
 async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_scopes):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/')
