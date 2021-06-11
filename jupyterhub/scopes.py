@@ -22,52 +22,49 @@ from tornado.log import app_log
 from . import orm
 from . import roles
 
-
 scope_definitions = {
     '(no_scope)': {'description': 'Allows for only identifying the owning entity.'},
     'self': {
         'description': 'Metascope, grants access to user’s own resources only; resolves to (no_scope) for services.'
     },
     'all': {
-        'description': 'Metascope, valid for tokens only. Grants access to everything that the token’s owning entity can access.'
+        'description': 'Metascope, valid for tokens only. Grants access to everything that the token-owning entity can access.'
     },
     'admin:users': {
-        'description': 'Grants read, write, create and delete access to users and their authentication state but not their servers or tokens.',
-        'subscopes': ['admin:users:auth_state', 'users'],
+        'description': 'Grants read, write, create and delete access to users and their authentication state, not including their servers or tokens.',
+        'subscopes': ['admin:users:auth_state', 'users', 'read:users:roles'],
     },
     'admin:users:auth_state': {
-        'description': 'Grants access to users’ authentication state only.'
+        'description': 'Grants access to user authentication state.'
     },
     'users': {
-        'description': 'Grants read and write permissions to users’ models apart from servers, tokens and authentication state.',
+        'description': 'Grants read and write permissions to user models, not including servers, tokens and authentication state.',
         'subscopes': ['read:users', 'users:activity'],
     },
     'read:users': {
-        'description': 'Read-only access to users’ models apart from servers, tokens and authentication state.',
+        'description': 'Read-only access to user models, not including servers, tokens and authentication state.',
         'subscopes': [
             'read:users:name',
             'read:users:groups',
             'read:users:activity',
         ],
-        # TODO: add read:users:roles as subscopes here once implemented
     },
     'read:users:name': {'description': 'Read-only access to users’ names.'},
     'read:users:groups': {'description': 'Read-only access to users’ group names.'},
     'read:users:activity': {'description': 'Read-only access to users’ last activity.'},
-    # TODO: add read:users:roles once implemented
+    # todo: describe that it only specifies timestamp of activity
+    'read:users:roles': {'description': 'Read-only access to user roles.'},
     'users:activity': {
-        'description': 'Grants access to read and post users’ last activity only.',
+        'description': 'Grants access to read and update user activity.',
         'subscopes': ['read:users:activity'],
     },
     'admin:users:servers': {
-        'description': 'Grants read, start/stop, create and delete permissions to users’ servers and their state.',
+        'description': 'Grants read, start/stop, create and delete permissions to user servers and their state.',
         'subscopes': ['admin:users:server_state', 'users:servers'],
     },
-    'admin:users:server_state': {
-        'description': 'Grants access to servers’ state only.'
-    },
+    'admin:users:server_state': {'description': 'Grants access to server state only.'},
     'users:servers': {
-        'description': 'Allows for starting/stopping users’ servers in addition to read access to their models. Does not include the server state.',
+        'description': 'Allows for starting/stopping user servers. Does not include the server state.',
         'subscopes': ['read:users:servers'],
     },
     'read:users:servers': {
@@ -75,27 +72,30 @@ scope_definitions = {
         'subscopes': ['read:users:name'],
     },
     'users:tokens': {
-        'description': 'Grants read, write, create and delete permissions to users’ tokens.',
+        'description': 'Grants read, write, create and delete permissions for user tokens.',
         'subscopes': ['read:users:tokens'],
     },
-    'read:users:tokens': {'description': 'Read-only access to users’ tokens.'},
+    'read:users:tokens': {'description': 'Read-only access to user tokens.'},
     'admin:groups': {
         'description': 'Grants read, write, create and delete access to groups.',
-        'subscopes': ['groups'],
+        'subscopes': ['groups', 'read:groups:roles'],
     },
     'groups': {
         'description': 'Grants read and write permissions to groups, including adding/removing users to/from groups.',
         'subscopes': ['read:groups'],
     },
-    'read:groups': {'description': 'Read-only access to groups’ models.'},
+    'read:groups': {
+        'description': 'Read-only access to group models.',
+        'subscopes': ['read:groups:name'],
+    },
+    'read:groups:name': {'description': 'Read-only access to group names.'},
+    'read:groups:roles': {'description': 'Read-only access to group role names.'},
     'read:services': {
         'description': 'Read-only access to service models.',
         'subscopes': ['read:services:name'],
-        # TODO: add read:services:roles as subscopes here once implemented
     },
     'read:services:name': {'description': 'Read-only access to service names.'},
-    # TODO: add read:services:roles once implemented
-    #'read:services:roles': {'description': 'Read-only access to service role names.'},
+    'read:services:roles': {'description': 'Read-only access to service role names.'},
     'read:hub': {
         'description': 'Read-only access to detailed information about the Hub.'
     },
@@ -494,17 +494,9 @@ def identify_scopes(obj):
       identify scopes (set): set of scopes needed for 'identify' endpoints
     """
     if isinstance(obj, orm.User):
-        return {
-            f"read:users:{field}!user={obj.name}"
-            for field in {"name", "admin", "groups"}
-        }
+        return {f"read:users:{field}!user={obj.name}" for field in {"name", "groups"}}
     elif isinstance(obj, orm.Service):
-        # FIXME: need sub-scopes for services
-        # until then, we have just one service scope:
-        return {f"read:services!service={obj.name}"}
-        return {
-            f"read:services:{field}!service={obj.name}" for field in {"name", "admin"}
-        }
+        return {f"read:services:{field}!service={obj.name}" for field in {"name"}}
     else:
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
 

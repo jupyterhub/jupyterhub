@@ -30,7 +30,7 @@ def get_default_roles():
         },
         {
             'name': 'admin',
-            'description': 'Admin privileges (can do everything)',
+            'description': 'Elevated privileges (can do anything)',
             'scopes': [
                 'admin:users',
                 'admin:users:servers',
@@ -42,6 +42,7 @@ def get_default_roles():
                 'shutdown',
                 'access:services',
                 'access:users:servers',
+                'read:services:roles',
             ],
         },
         {
@@ -54,7 +55,7 @@ def get_default_roles():
         },
         {
             'name': 'token',
-            'description': 'Token with same rights as token owner',
+            'description': 'Token with same permissions as its owner',
             'scopes': ['all'],
         },
     ]
