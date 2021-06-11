@@ -38,11 +38,11 @@ scope_definitions = {
     },
     'admin:users:auth_state': {'description': 'Read a user’s authentication state.'},
     'users': {
-        'description': 'Read and write permissions to user models, e servers, tokens and authentication state.',
+        'description': 'Read and write permissions to user models (excluding servers, tokens and authentication state).',
         'subscopes': ['read:users', 'users:activity'],
     },
     'read:users': {
-        'description': 'Read user models, (exluding including servers, tokens and authentication state).',
+        'description': 'Read user models (excluding including servers, tokens and authentication state).',
         'subscopes': [
             'read:users:name',
             'read:users:groups',
@@ -51,7 +51,7 @@ scope_definitions = {
     },
     'read:users:name': {'description': 'Read names of users.'},
     'read:users:groups': {'description': 'Read names of users’ groups.'},
-    'read:users:activity': {'description': 'Read time of last user activity'},
+    'read:users:activity': {'description': 'Read time of last user activity.'},
     'read:users:roles': {'description': 'Read names of users’ roles.'},
     'users:activity': {
         'description': 'Update time of last user activity.',
@@ -67,7 +67,7 @@ scope_definitions = {
         'subscopes': ['read:users:servers'],
     },
     'read:users:servers': {
-        'description': 'Read users’ names and their server models. Does not include the server state.',
+        'description': 'Read users’ names and their server models (excluding the server state).',
         'subscopes': ['read:users:name'],
     },
     'users:tokens': {
