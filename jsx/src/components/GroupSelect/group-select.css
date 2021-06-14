@@ -1,0 +1,40 @@
+@import url(../../style/root.css);
+
+.users-container {
+  width: 100%;
+  position: relative;
+  padding: 5px;
+  overflow-x: scroll;
+}
+
+.users-container div {
+  display: inline-block;
+}
+
+.users-container .item {
+  padding: 3px;
+  padding-left: 6px;
+  padding-right: 6px;
+  border-radius: 3px;
+  font-size: 14px;
+  margin-left: 4px;
+  margin-right: 4px;
+  transition: 30ms ease-in all;
+  cursor: pointer;
+  user-select: none;
+  border: solid 1px #dfdfdf;
+}
+
+.users-container .item.unselected {
+  background-color: #f7f7f7;
+  color: #777;
+}
+
+.users-container .item.selected {
+  background-color: orange;
+  color: white;
+}
+
+.users-container .item:hover {
+  opacity: 0.7;
+}

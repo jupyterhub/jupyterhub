@@ -5,6 +5,8 @@ name: Release
 # but only publish to PyPI on tags
 on:
   push:
+    branches:
+      - "!dependabot/**"
   pull_request:
 
 jobs:
@@ -130,6 +132,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub:noref"
+          branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub
         uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
@@ -150,6 +153,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:"
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-onbuild:noref"
+          branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-onbuild
         uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
@@ -170,6 +174,7 @@ jobs:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:"
           defaultTag: "${{ env.REGISTRY }}jupyterhub/jupyterhub-demo:noref"
+          branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-demo
         uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
