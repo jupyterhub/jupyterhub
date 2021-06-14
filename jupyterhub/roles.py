@@ -82,16 +82,17 @@ def expand_self_scope(name):
     """
     scope_list = [
         'users',
-        'users:name',
-        'users:groups',
+        'read:users',
+        'read:users:name',
+        'read:users:groups',
         'users:activity',
+        'read:users:activity',
         'users:servers',
+        'read:users:servers',
         'users:tokens',
+        'read:users:tokens',
+        'access:users:servers',
     ]
-    read_scope_list = ['read:' + scope for scope in scope_list]
-    # access doesn't want the 'read:' prefix
-    scope_list.append('access:users:servers')
-    scope_list.extend(read_scope_list)
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 
 
