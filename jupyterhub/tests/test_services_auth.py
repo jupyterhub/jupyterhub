@@ -372,28 +372,54 @@ async def test_oauth_access_scopes(
     assert r.status_code == 403
 
 
-async def test_oauth_page_memory(app):
-    pass
-    # add service
-    # Login
-    # go to service oauth page
-    # hit auth page
-    # go to service oauth page again
-    # don't hit auth page
-    # clear authorization
-    # go to service oauth page
-    # hit auth page
+@pytest.mark.parametrize(
+    "token_roles, hits_page",
+    [([], True), (['writer'], True), (['writer', 'reader'], False)],
+)
+async def test_oauth_page_hit(
+    app,
+    mockservice_url,
+    create_user_with_scopes,
+    create_temp_role,
+    token_roles,
+    hits_page,
+):
+    test_roles = {
+        'reader': create_temp_role(['read:users'], role_name='reader'),
+        'writer': create_temp_role(['users:activity'], role_name='writer'),
+    }
+    service = mockservice_url
+    user = create_user_with_scopes("access:services", "self")
+    user.new_api_token()
+    token = user.api_tokens[0]
+    token.roles = [test_roles[t] for t in token_roles]
+
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_roles = list(test_roles.values())
+    token.client_id = service.oauth_client_id
+    app.db.commit()
+    s = AsyncSession()
+    s.cookies = await app.login_user(user.name)
+    url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    r = await s.get(url)
+    r.raise_for_status()
+    if hits_page:
+        # hit auth page to confirm permissions
+        assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
+    else:
+        # skip auth page, permissions are granted
+        assert r.status_code == 200
+        assert r.url == url
 
 
-async def test_oauth_page_role_expansion(app):
+async def test_scope_expansion_revokes_tokens(app):
+    # todo: test when new scopes are added to roles, all api_tokens for services with those roles are deleted
+    # and auth will be hit again
     pass
-    # add service
-    # login
-    # go to service oauth page
-    # hit auth page
-    # expand service roles
-    # go to service oauth page
-    # hit auth page again
 
 
 async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_scopes):
