@@ -2260,14 +2260,18 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
-                self.oauth_provider.add_client(
+                oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
-                    allowed_roles=service.oauth_roles,
+                    allowed_roles=list(
+                        self.db.query(orm.Role).filter(
+                            orm.Role.name.in_(service.oauth_roles)
+                        )
+                    ),
                     description="JupyterHub service %s" % service.name,
                 )
-                service.orm.oauth_client_id = service.oauth_client_id
+                service.orm.oauth_client = oauth_client
             else:
                 if service.oauth_client:
                     self.db.delete(service.oauth_client)
