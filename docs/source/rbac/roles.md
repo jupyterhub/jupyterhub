@@ -55,7 +55,7 @@ c.JupyterHub.load_roles = [
  {
    'name': 'server-rights',
    'description': 'Allows parties to start and stop user servers',
-   'scopes': ['users:servers'],
+   'scopes': ['servers'],
    'users': ['alice', 'bob'],
    'services': ['idle-culler'],
    'groups': ['admin-group'],

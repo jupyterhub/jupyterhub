@@ -17,35 +17,37 @@ securityDefinitions:
     flow: accessCode
     authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
     tokenUrl: "/hub/api/oauth2/token"
-    scopes:
+    scopes: # Todo: Generate based on scope table
+      (noscope): Allows only to identify the requesting entity
       self: Metascope, grants access to user's own resources; resolves to (no scope) for services.
-      all: Metascope, valid for tokens only. Grants access to everything that the token's owning entity can do.
+      all: Metascope, valid for tokens only. Grants access to all resources of the token-owning entity.
       admin:users: Grants read, write, create and delete access to users and their authentication state but not their servers or tokens.
-      admin:users:auth_state: Grants access to users' authentication state only.
+      admin:auth_state: Grants access to users' authentication state only.
       users: Grants read and write permissions to users' models apart from servers, tokens and authentication state.
       users:activity: Grants access to read and post users' activity only.
       users:activity!user=username: Update a single user's activity (example horizontal filter).
       read:users: Read-only access to users' models apart from servers, tokens and authentication state.
       read:users!user=username: As above limited to a specific user (example horizontal filter).
-      read:users:name: Read-only access to users' names.
-      read:users:roles: Read-only access to a list of users' roles names.
+      read:users:name: Read-only access to user names.
+      read:roles:users: Read-only access to user role assignments.
       read:users:groups: Read-only access to a list of users' group names.
       read:users:activity: Read-only access to users' activity.
       read:users:activity!group=groupname: Read-only access to specific group's users' activity (example horizontal filter).
-      admin:users:servers: Grants read, start/stop, create and delete permissions to users' servers and their state.
-      admin:users:server_state: Grants access to servers' state only.
-      users:servers: Allows for starting/stopping users' servers in addition to read access to their models. Does not include the server state.
-      users:servers!server=servername: Limits the above to a specific server (example horizontal filter).
-      read:users:servers: Read-only access to users' server models. Does not include the server state.
-      users:tokens: Grants read, write, create and delete permissions to users' tokens.
-      read:users:tokens: Read-only access to users' tokens.
+      admin:servers: Grants read, start/stop, create and delete permissions to users' servers and their state.
+      admin:server_state: Grants access to servers' state only.
+      servers: Allows for starting/stopping users' servers in addition to read access to their models. Does not include the server state.
+      servers!server=servername: Limits the above to a specific server (example horizontal filter).
+      read:servers: Read-only access to users' server models. Does not include the server state.
+      tokens: Grants read, write, create and delete permissions to users' tokens.
+      read:tokens: Read-only access to users' tokens.
       admin:groups: Grants read, write, create and delete access to groups.
       groups: Grants read and write permissions to groups, including adding/removing users to/from groups.
+      read:roles:groups: Read-only access to group roles assignments
       groups!group=groupname: As above limited to a specific group only (example horizontal filter)
       read:groups: Read-only access to groups.
       read:services: Read-only access to service models.
       read:services:name: Read-only access to service names.
-      read:services:roles: Read-only access to a list of service roles names.
+      read:roles:services: Read-only access to a list of service roles names.
       read:hub: Read-only access to detailed information about JupyterHub.
       proxy: Allows for obtaining information about the proxy's routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy.
       shutdown: Grants access to shutdown the Hub.
@@ -126,8 +128,10 @@ paths:
             - read:users:name
             - read:users:groups
             - read:users:activity
-            - read:users:servers
-            #TODO: add admin:users:auth_state/server_state?
+            - read:servers
+            - read:roles:users
+            - admin:auth_state
+            - admin:server_state
       parameters:
         - name: state
           in: query
@@ -203,9 +207,10 @@ paths:
             - read:users:name
             - read:users:groups
             - read:users:activity
-            - read:users:servers
-            - admin:users:auth_state
-            - admin:users:server_state
+            - read:servers
+            - read:roles:users
+            - admin:auth_state
+            - admin:server_state
       parameters:
         - name: name
           description: username
@@ -340,7 +345,7 @@ paths:
       summary: Start a user's single-user notebook server
       security:
         - oauth2:
-            - users:servers
+            - servers
       parameters:
         - name: name
           description: username
@@ -369,7 +374,7 @@ paths:
       summary: Stop a user's server
       security:
         - oauth2:
-            - users:servers
+            - servers
       parameters:
         - name: name
           description: username
@@ -386,7 +391,7 @@ paths:
       summary: Start a user's single-user named-server notebook server
       security:
         - oauth2:
-            - users:servers
+            - servers
       parameters:
         - name: name
           description: username
@@ -420,7 +425,7 @@ paths:
       summary: Stop a user's named-server
       security:
         - oauth2:
-            - users:servers
+            - servers
       parameters:
         - name: name
           description: username
@@ -460,7 +465,7 @@ paths:
       summary: List tokens for the user
       security:
         - oauth2:
-            - read:users:tokens
+            - read:tokens
       responses:
         "200":
           description: The list of tokens
@@ -476,7 +481,7 @@ paths:
       summary: Create a new token for the user
       security:
         - oauth2:
-            - users:tokens
+            - tokens
       parameters:
         - name: token_params
           in: body
@@ -519,7 +524,7 @@ paths:
       summary: Get the model for a token by id
       security:
         - oauth2:
-            - read:users:tokens
+            - read:tokens
       responses:
         "200":
           description: The info for the new token
@@ -529,7 +534,7 @@ paths:
       summary: Delete (revoke) a token by id
       security:
         - oauth2:
-            - users:tokens
+            - tokens
       responses:
         "204":
           description: The token has been deleted
@@ -542,9 +547,10 @@ paths:
             - read:users:name
             - read:users:groups
             - read:users:activity
-            - read:users:servers
-            - admin:users:auth_state
-            - admin:users:server_state
+            - read:servers
+            - read:roles:users
+            - admin:auth_state
+            - admin:server_state
       responses:
         "200":
           description: The authenticated user's model is returned.
@@ -556,6 +562,8 @@ paths:
       security:
         - oauth2:
             - read:groups
+            - read:groups:name
+            - read:roles:groups
       parameters:
         - name: offset
           in: query
@@ -586,6 +594,8 @@ paths:
       security:
         - oauth2:
             - read:groups
+            - read:groups:name
+            - read:roles:groups
       parameters:
         - name: name
           description: group name
@@ -688,6 +698,8 @@ paths:
       security:
         - oauth2:
             - read:services
+            - read:services:name
+            - read:roles:services
       responses:
         "200":
           description: The service list
@@ -701,6 +713,8 @@ paths:
       security:
         - oauth2:
             - read:services
+              - read:services:name
+              - read:roles:services
       parameters:
         - name: name
           description: service name
@@ -790,7 +804,7 @@ paths:
         accepts passwords (e.g. not OAuth).
       security:
         - oauth2:
-            - users:tokens # minrk: this is a deprecated alias to POST /users/{name}/tokens, either remove it or use the same scope
+            - tokens
       parameters:
         - name: credentials
           in: body
@@ -817,7 +831,7 @@ paths:
       summary: Identify a user or service from an API token
       security:
         - oauth2:
-            - read:users:tokens # minrk: is it really necessary to have a scope for this, or use self handler for token whoami?
+            - (noscope)
       parameters:
         - name: token
           in: path

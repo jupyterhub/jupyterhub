@@ -956,7 +956,7 @@ async def test_oauth_page_scope_appearance(
         [
             'self',
             'read:users!user=gawain',
-            'read:users:tokens',
+            'read:tokens',
             'read:groups!group=mythos',
         ]
     )

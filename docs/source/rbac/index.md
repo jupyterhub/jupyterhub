@@ -17,7 +17,7 @@ To remedy situations like this, JupyterHub is transitioning to an RBAC system. B
 
 ## Definitions
 
-**Scopes** are specific permissions used to evaluate API requests. For example: the API endpoint `users/servers`, which enables starting or stopping user servers, is guarded by the scope `users:servers`.
+**Scopes** are specific permissions used to evaluate API requests. For example: the API endpoint `users/servers`, which enables starting or stopping user servers, is guarded by the scope `servers`.
 
 Scopes are not directly assigned to requesters. Rather, when a client performs an API call, their access will be evaluated based on their assigned roles.
 

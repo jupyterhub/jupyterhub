@@ -7,7 +7,7 @@ A scope has a syntax-based design that reveals which resources it provides acces
 ## Scope conventions
 
 - `<resource>` \
-  The `<resource>` scopes, such as `users` or `groups`, grant read and write permissions to the resource itself and all its sub-resources. E.g., the scope `users:servers` is included within the scope `users`.
+  The top-level `<resource>` scopes, such as `users` or `groups`, grant read and write permissions to the resource itself as well as its sub-resources. For example, the scope `users:activity` is included in the scope `users`.
   +++
 
 - `read:<resource>` \
@@ -19,7 +19,7 @@ A scope has a syntax-based design that reveals which resources it provides acces
   +++
 
 - `<resource>:<subresource>` \
-  The {ref}`vertically filtered <vertical-filtering-target>` scopes provide access to a subset of the information granted by the `<resource>` scope. E.g., the scope `users:servers` allows for accessing user servers only.
+  The {ref}`vertically filtered <vertical-filtering-target>` scopes provide access to a subset of the information granted by the `<resource>` scope. E.g., the scope `users:activity` only provides permission to post user activity.
   +++
 
 - `<resource>!<object>=<objectname>` \
@@ -42,8 +42,8 @@ Metascopes do not follow the general scope syntax. Instead, a metascope resolves
 Access to the user's own resources and subresources is covered by metascope `self`. This metascope includes the user's model, activity, servers and tokens. For example, `self` for a user named "gerard" includes:
 
 - `users!user=gerard` where the `users` scope provides access to the full user model and activity. The filter restricts this access to the user's own resources.
-- `users:servers!user=gerard` which grants the user access to their own servers without being able to create/delete any.
-- `users:tokens!user=gerard` which allows the user to access, request and delete their own tokens.
+- `servers!user=gerard` which grants the user access to their own servers without being able to create/delete any.
+- `tokens!user=gerard` which allows the user to access, request and delete their own tokens.
 
 The `self` scope is only valid for user entities. In other cases (e.g., for services) it resolves to an empty set of scopes.
 

@@ -143,7 +143,7 @@ class APIHandler(BaseHandler):
             'user_options': spawner.user_options,
             'progress_url': spawner._progress_url,
         }
-        scope_filter = self.get_scope_filter('admin:users:server_state')
+        scope_filter = self.get_scope_filter('admin:server_state')
         if scope_filter(spawner, kind='server'):
             model['state'] = spawner.get_state()
         return model
@@ -219,9 +219,9 @@ class APIHandler(BaseHandler):
             'read:users:name': {'kind', 'name', 'admin'},
             'read:users:groups': {'kind', 'name', 'groups'},
             'read:users:activity': {'kind', 'name', 'last_activity'},
-            'read:users:servers': {'kind', 'name', 'servers'},
-            'read:users:roles': {'kind', 'name', 'roles', 'admin'},
-            'admin:users:auth_state': {'kind', 'name', 'auth_state'},
+            'read:servers': {'kind', 'name', 'servers'},
+            'read:roles:users': {'kind', 'name', 'roles', 'admin'},
+            'admin:auth_state': {'kind', 'name', 'auth_state'},
         }
         self.log.debug(
             "Asking for user model of %s with scopes [%s]",
@@ -237,7 +237,7 @@ class APIHandler(BaseHandler):
                 model['pending'] = user.spawners[''].pending
 
             servers = model['servers'] = {}
-            scope_filter = self.get_scope_filter('read:users:servers')
+            scope_filter = self.get_scope_filter('read:servers')
             for name, spawner in user.spawners.items():
                 # include 'active' servers, not just ready
                 # (this includes pending events)
@@ -258,7 +258,7 @@ class APIHandler(BaseHandler):
         access_map = {
             'read:groups': {'kind', 'name', 'users'},
             'read:groups:name': {'kind', 'name'},
-            'read:groups:roles': {'kind', 'name', 'roles'},
+            'read:roles:groups': {'kind', 'name', 'roles'},
         }
         model = self._filter_model(model, access_map, group, 'group')
         return model
@@ -290,7 +290,7 @@ class APIHandler(BaseHandler):
                 'display',
             },
             'read:services:name': {'kind', 'name', 'admin'},
-            'read:services:roles': {'kind', 'name', 'roles', 'admin'},
+            'read:roles:services': {'kind', 'name', 'roles', 'admin'},
         }
         model = self._filter_model(model, access_map, service, 'service')
         return model

@@ -45,7 +45,7 @@ $ curl -X GET http://127.0.0.1:8000/services/fastapi/me \
   "servers": null,
   "scopes": [
     "access:services",
-    "access:users:servers!user=test-user",
+    "access:servers!user=test-user",
     "...",
   ]
 }

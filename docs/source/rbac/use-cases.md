@@ -38,7 +38,7 @@ Below follows a short tutorial on how to add a cull-idle service in the RBAC sys
        {
            "name": "idle-culler",
            "description": "Culls idle servers",
-           "scopes": ["read:users:name", "read:users:activity", "users:servers"],
+           "scopes": ["read:users:name", "read:users:activity", "servers"],
            "services": ["idle-culler"],
        }
    ]
@@ -48,7 +48,7 @@ Below follows a short tutorial on how to add a cull-idle service in the RBAC sys
    Note that in the RBAC system the `admin` field in the `idle-culler` service definition is omitted. Instead, the `idle-culler` role provides the service with only the permissions it needs.
 
    If the optional actions of deleting the idle servers and/or removing inactive users are desired, **change the following scopes** in the `idle-culler` role definition:
-   - `users:servers` to `admin:users:servers` for deleting servers
+   - `servers` to `admin:servers` for deleting servers
    - `read:users:name`, `read:users:activity` to `admin:users` for deleting users.
    ```
 
@@ -65,8 +65,8 @@ A service capable of creating/removing users and launching multiple servers shou
 The scopes required to access the API enpoints:
 
 1. `admin:users`
-2. `users:servers`
-3. `admin:users:servers`
+2. `servers`
+3. `admin:servers`
 
 From the above, the role definition is:
 
@@ -77,7 +77,7 @@ c.JupyterHub.load_roles = [
     {
         "name": "api-launcher",
         "description": "Manages servers",
-        "scopes": ["admin:users", "admin:users:servers"],
+        "scopes": ["admin:users", "admin:servers"],
         "services": [<service_name>]
     }
 ]
@@ -117,7 +117,7 @@ c.JupyterHub.load_roles = [
     {
         'name': 'teacher',
         'description': 'Allows for accessing information about teacher group members and starting/stopping their servers',
-        'scopes': [ 'read:users!group=class-B', 'users:servers!group=class-B'],
+        'scopes': [ 'read:users!group=class-B', 'servers!group=class-B'],
         'users': ['johan']
     }
 ]

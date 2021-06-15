@@ -128,7 +128,7 @@ async def test_hubauth_token(app, mockservice_url, create_user_with_scopes):
         ),
         (
             [
-                "access:users:servers!user=$service",
+                "access:servers!user=$service",
             ],
             False,
         ),
