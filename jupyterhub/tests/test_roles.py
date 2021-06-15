@@ -848,6 +848,7 @@ async def test_server_role_api_calls(
     app, token_role, api_method, api_endpoint, for_user, response
 ):
     user = add_user(app.db, app, name='test_user')
+    roles.grant_role(app.db, user, 'user')
     if token_role == 'no_role':
         api_token = user.new_api_token(roles=[])
     else:

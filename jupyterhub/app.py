@@ -2204,7 +2204,6 @@ class JupyterHub(Application):
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
 
-        # purge all OAuth tokens that gained extra permissions due to role definition changes
         pc = PeriodicCallback(
             self.purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
         )
