@@ -1,6 +1,7 @@
 """Authorization handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import itertools
 import json
 from datetime import datetime
 from urllib.parse import parse_qsl
@@ -13,6 +14,7 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm
+from .. import roles
 from .. import scopes
 from ..utils import token_authenticated
 from .base import APIHandler
@@ -174,12 +176,16 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             raise
         self.send_oauth_response(headers, body, status)
 
-    def needs_oauth_confirm(self, user, oauth_client):
+    def needs_oauth_confirm(self, user, oauth_client, roles):
         """Return whether the given oauth client needs to prompt for access for the given user
 
         Checks list for oauth clients that don't need confirmation
 
-        (i.e. the user's own server)
+        Sources:
+
+        - the user's own servers
+        - Clients which already have authorization for the same roles
+        - Explicit oauth_no_confirm_list configuration (e.g. admin-operated services)
 
         .. versionadded: 1.1
         """
@@ -195,6 +201,27 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             in self.settings.get('oauth_no_confirm_list', set())
         ):
             return False
+
+        # Check existing authorization
+        existing_tokens = self.db.query(orm.APIToken).filter_by(
+            user_id=user.id,
+            client_id=oauth_client.identifier,
+        )
+        authorized_roles = set()
+        for token in existing_tokens:
+            authorized_roles.update({role.name for role in token.roles})
+
+        if authorized_roles:
+            if set(roles).issubset(authorized_roles):
+                self.log.debug(
+                    f"User {user.name} has already authorized {oauth_client.identifier} for roles {roles}"
+                )
+                return False
+            else:
+                self.log.debug(
+                    f"User {user.name} has authorized {oauth_client.identifier}"
+                    f" for roles {authorized_roles}, confirming additonal roles {roles}"
+                )
         # default: require confirmation
         return True
 
@@ -219,7 +246,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
         uri, http_method, body, headers = self.extract_oauth_params()
         try:
-            scopes, credentials = self.oauth_provider.validate_authorization_request(
+            (
+                role_names,
+                credentials,
+            ) = self.oauth_provider.validate_authorization_request(
                 uri, http_method, body, headers
             )
             credentials = self.add_credentials(credentials)
@@ -249,23 +279,53 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 raise web.HTTPError(
                     403, f"You do not have permission to access {client.description}"
                 )
-            if not self.needs_oauth_confirm(self.current_user, client):
+            if not self.needs_oauth_confirm(self.current_user, client, role_names):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
                     self.current_user,
                     client.description,
                 )
                 # this is the pre-1.0 behavior for all oauth
-                self._complete_login(uri, headers, scopes, credentials)
+                self._complete_login(uri, headers, role_names, credentials)
                 return
 
+            # resolve roles to scopes for authorization page
+            role_objects = (
+                self.db.query(orm.Role).filter(orm.Role.name.in_(role_names)).all()
+            )
+            raw_scopes = set(itertools.chain(*(role.scopes for role in role_objects)))
+            if not raw_scopes:
+                scope_descriptions = [
+                    {
+                        "scope": None,
+                        "description": scopes.scope_definitions['(no_scope)'][
+                            'description'
+                        ],
+                        "filter": "",
+                    }
+                ]
+            elif 'all' in raw_scopes:
+                raw_scopes = ['all']
+                scope_descriptions = [
+                    {
+                        "scope": "all",
+                        "description": scopes.scope_definitions['all']['description'],
+                        "filter": "",
+                    }
+                ]
+            else:
+                scope_descriptions = scopes.describe_raw_scopes(
+                    raw_scopes,
+                    username=self.current_user.name,
+                )
             # Render oauth 'Authorize application...' page
             auth_state = await self.current_user.get_auth_state()
             self.write(
                 await self.render_template(
                     "oauth.html",
                     auth_state=auth_state,
-                    scopes=scopes,
+                    role_names=role_names,
+                    scope_descriptions=scope_descriptions,
                     oauth_client=client,
                 )
             )

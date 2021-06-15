@@ -166,24 +166,22 @@ def expand_roles_to_scopes(orm_object):
     return expanded_scopes
 
 
-def _get_subscopes(*args, owner=None):
+def _get_subscopes(*roles, owner=None):
     """Returns a set of all available subscopes for a specified role or list of roles
 
     Arguments:
-      role (obj): orm.Role
-      or
-      roles (list): list of orm.Roles
+      roles (obj): orm.Roles
       owner (obj, optional): orm.User or orm.Service as owner of orm.APIToken
 
     Returns:
       expanded scopes (set): set of all expanded scopes for the role(s)
     """
-    scope_list = []
+    scopes = set()
 
-    for role in args:
-        scope_list.extend(role.scopes)
+    for role in roles:
+        scopes.update(role.scopes)
 
-    expanded_scopes = set(chain.from_iterable(list(map(_expand_scope, scope_list))))
+    expanded_scopes = set(chain.from_iterable(list(map(_expand_scope, scopes))))
 
     # transform !user filter to !user=ownername
     for scope in expanded_scopes:
