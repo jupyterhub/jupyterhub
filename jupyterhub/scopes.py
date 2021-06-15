@@ -22,6 +22,8 @@ from tornado.log import app_log
 from . import orm
 from . import roles
 
+"""when modifying the scope definitions, make sure that `docs/source/rbac/generate-scope-table.py` is run
+   so that changes are reflected in the documentation and REST API description."""
 scope_definitions = {
     '(no_scope)': {'description': 'Identify the owner of the requesting entity.'},
     'self': {

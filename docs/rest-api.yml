@@ -17,40 +17,53 @@ securityDefinitions:
     flow: accessCode
     authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
     tokenUrl: "/hub/api/oauth2/token"
-    scopes: # Todo: Generate based on scope table
-      (noscope): Allows only to identify the requesting entity
-      self: Metascope, grants access to user's own resources; resolves to (no scope) for services.
-      all: Metascope, valid for tokens only. Grants access to all resources of the token-owning entity.
-      admin:users: Grants read, write, create and delete access to users and their authentication state but not their servers or tokens.
-      admin:auth_state: Grants access to users' authentication state only.
-      users: Grants read and write permissions to users' models apart from servers, tokens and authentication state.
-      users:activity: Grants access to read and post users' activity only.
-      users:activity!user=username: Update a single user's activity (example horizontal filter).
-      read:users: Read-only access to users' models apart from servers, tokens and authentication state.
-      read:users!user=username: As above limited to a specific user (example horizontal filter).
-      read:users:name: Read-only access to user names.
-      read:roles:users: Read-only access to user role assignments.
-      read:users:groups: Read-only access to a list of users' group names.
-      read:users:activity: Read-only access to users' activity.
-      read:users:activity!group=groupname: Read-only access to specific group's users' activity (example horizontal filter).
-      admin:servers: Grants read, start/stop, create and delete permissions to users' servers and their state.
-      admin:server_state: Grants access to servers' state only.
-      servers: Allows for starting/stopping users' servers in addition to read access to their models. Does not include the server state.
-      servers!server=servername: Limits the above to a specific server (example horizontal filter).
-      read:servers: Read-only access to users' server models. Does not include the server state.
-      tokens: Grants read, write, create and delete permissions to users' tokens.
-      read:tokens: Read-only access to users' tokens.
-      admin:groups: Grants read, write, create and delete access to groups.
-      groups: Grants read and write permissions to groups, including adding/removing users to/from groups.
-      read:roles:groups: Read-only access to group roles assignments
-      groups!group=groupname: As above limited to a specific group only (example horizontal filter)
-      read:groups: Read-only access to groups.
-      read:services: Read-only access to service models.
-      read:services:name: Read-only access to service names.
-      read:roles:services: Read-only access to a list of service roles names.
-      read:hub: Read-only access to detailed information about JupyterHub.
-      proxy: Allows for obtaining information about the proxy's routing table, for syncing the Hub with proxy and notifying the Hub about a new proxy.
-      shutdown: Grants access to shutdown the Hub.
+    scopes: # Generated based on scope table in jupyterhub/scopes.py
+      (no_scope): Identify the owner of the requesting entity.
+      self:
+        The user’s own resources _(metascope for users, resolves to (no_scope)
+        for services)_
+      all: Everything that the token-owning entity can access _(metascope for tokens)_
+      admin:users:
+        Read, write, create and delete users and their authentication state,
+        not including their servers or tokens.
+      admin:auth_state: Read a user’s authentication state.
+      users:
+        Read and write permissions to user models (excluding servers, tokens
+        and authentication state).
+      read:users:
+        Read user models (excluding including servers, tokens and authentication
+        state).
+      read:users:name: Read names of users.
+      read:users:groups: Read users’ group membership.
+      read:users:activity: Read time of last user activity.
+      read:roles: Read role assignments.
+      read:roles:users: Read user role assignments.
+      read:roles:services: Read service role assignments.
+      read:roles:groups: Read group role assignments.
+      users:activity: Update time of last user activity.
+      admin:servers: Read, start, stop, create and delete user servers and their state.
+      admin:server_state: Read and write users’ server state.
+      servers: Start and stop user servers.
+      read:servers:
+        Read users’ names and their server models (excluding the server
+        state).
+      tokens: Read, write, create and delete user tokens.
+      read:tokens: Read user tokens.
+      admin:groups: Read and write group information, create and delete groups.
+      groups:
+        Read and write group information, including adding/removing users to/from
+        groups.
+      read:groups: Read group models.
+      read:groups:name: Read group names.
+      read:services: Read service models.
+      read:services:name: Read service names.
+      read:hub: Read detailed information about the Hub.
+      access:servers: Access user servers via API or browser.
+      access:services: Access services via API or browser.
+      proxy:
+        Read information about the proxy’s routing table, sync the Hub with the
+        proxy and notify the Hub about a new proxy.
+      shutdown: Shutdown the hub.
 security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope self) or have both (either can be used)?
   - token: []
   - oauth2:
@@ -106,7 +119,9 @@ paths:
                 properties:
                   class:
                     type: string
-                    description: The Python class currently active for JupyterHub Authentication
+                    description:
+                      The Python class currently active for JupyterHub
+                      Authentication
                   version:
                     type: string
                     description: The version of the currently active Authenticator
@@ -115,7 +130,9 @@ paths:
                 properties:
                   class:
                     type: string
-                    description: The Python class currently active for spawning single-user notebook servers
+                    description:
+                      The Python class currently active for spawning single-user
+                      notebook servers
                   version:
                     type: string
                     description: The version of the currently active Spawner
@@ -253,16 +270,22 @@ paths:
         - name: body
           in: body
           required: true
-          description: Updated user info. At least one key to be updated (name or admin) is required.
+          description:
+            Updated user info. At least one key to be updated (name or admin)
+            is required.
           schema:
             type: object
             properties:
               name:
                 type: string
-                description: the new name (optional, if another key is updated i.e. admin)
+                description:
+                  the new name (optional, if another key is updated i.e.
+                  admin)
               admin:
                 type: boolean
-                description: update admin (optional, if another key is updated i.e. name)
+                description:
+                  update admin (optional, if another key is updated i.e.
+                  name)
       responses:
         "200":
           description: The updated user info
@@ -285,9 +308,9 @@ paths:
   /users/{name}/activity:
     post:
       summary: Notify Hub of activity for a given user.
-      description: Notify the Hub of activity by the user,
-        e.g. accessing a service or (more likely)
-        actively using a server.
+      description:
+        Notify the Hub of activity by the user, e.g. accessing a service
+        or (more likely) actively using a server.
       security:
         - oauth2:
             - users:activity
@@ -369,7 +392,9 @@ paths:
         "201":
           description: The user's notebook server has started
         "202":
-          description: The user's notebook server has not yet started, but has been requested
+          description:
+            The user's notebook server has not yet started, but has been
+            requested
     delete:
       summary: Stop a user's server
       security:
@@ -385,7 +410,9 @@ paths:
         "204":
           description: The user's notebook server has stopped
         "202":
-          description: The user's notebook server has not yet stopped as it is taking a while to stop
+          description:
+            The user's notebook server has not yet stopped as it is taking
+            a while to stop
   /users/{name}/servers/{server_name}:
     post:
       summary: Start a user's single-user named-server notebook server
@@ -420,7 +447,9 @@ paths:
         "201":
           description: The user's notebook named-server has started
         "202":
-          description: The user's notebook named-server has not yet started, but has been requested
+          description:
+            The user's notebook named-server has not yet started, but has
+            been requested
     delete:
       summary: Stop a user's named-server
       security:
@@ -453,7 +482,9 @@ paths:
         "204":
           description: The user's notebook named-server has stopped
         "202":
-          description: The user's notebook named-server has not yet stopped as it is taking a while to stop
+          description:
+            The user's notebook named-server has not yet stopped as it
+            is taking a while to stop
   /users/{name}/tokens:
     parameters:
       - name: name
@@ -491,7 +522,9 @@ paths:
             properties:
               expires_in:
                 type: number
-                description: lifetime (in seconds) after which the requested token will expire.
+                description:
+                  lifetime (in seconds) after which the requested token will
+                  expire.
               note:
                 type: string
                 description: A note attached to the token for future bookkeeping
@@ -712,9 +745,7 @@ paths:
       summary: Get a service by name
       security:
         - oauth2:
-            - read:services
-              - read:services:name
-              - read:roles:services
+            - read:services - read:services:name - read:roles:services
       parameters:
         - name: name
           description: service name
@@ -729,7 +760,9 @@ paths:
   /proxy:
     get:
       summary: Get the proxy's routing table
-      description: A convenience alias for getting the routing table directly from the proxy
+      description:
+        A convenience alias for getting the routing table directly from
+        the proxy
       security:
         - oauth2:
             - proxy
@@ -755,7 +788,9 @@ paths:
           description: Routing table
           schema:
             type: object
-            description: configurable-http-proxy routing table (see configurable-http-proxy docs for details)
+            description:
+              configurable-http-proxy routing table (see configurable-http-proxy
+              docs for details)
     post:
       summary: Force the Hub to sync with the proxy
       security:
@@ -774,7 +809,9 @@ paths:
         - name: body
           in: body
           required: true
-          description: Any values that have changed for the new proxy. All keys are optional.
+          description:
+            Any values that have changed for the new proxy. All keys are
+            optional.
           schema:
             type: object
             properties:
@@ -845,7 +882,9 @@ paths:
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
       summary: Identify a user from a cookie
-      description: Used by single-user notebook servers to hand off cookie authentication to the Hub
+      description:
+        Used by single-user notebook servers to hand off cookie authentication
+        to the Hub
       parameters:
         - name: cookie_name
           in: path
@@ -955,10 +994,14 @@ paths:
             properties:
               proxy:
                 type: boolean
-                description: Whether the proxy should be shutdown as well (default from Hub config)
+                description:
+                  Whether the proxy should be shutdown as well (default from
+                  Hub config)
               servers:
                 type: boolean
-                description: Whether users' notebook servers should be shutdown as well (default from Hub config)
+                description:
+                  Whether users' notebook servers should be shutdown as well
+                  (default from Hub config)
       responses:
         "202":
           description: Shutdown successful
@@ -1009,13 +1052,17 @@ definitions:
       auth_state:
         type: string
         #TODO: will there be predefined states? Should it rather be object instead of string?
-        description: Authentication state of the user. Only available with admin:users:auth_state scope. None otherwise.
+        description:
+          Authentication state of the user. Only available with admin:users:auth_state
+          scope. None otherwise.
   Server:
     type: object
     properties:
       name:
         type: string
-        description: The server's name. The user's default server has an empty name ('')
+        description:
+          The server's name. The user's default server has an empty name
+          ('')
       ready:
         type: boolean
         description: |
@@ -1046,10 +1093,15 @@ definitions:
         description: UTC timestamp last-seen activity on this server.
       state:
         type: object
-        description: Arbitrary internal state from this server's spawner. Only available on the hub's users list or get-user-by-name method, and only with admin:users:server_state scope. None otherwise.
+        description:
+          Arbitrary internal state from this server's spawner. Only available
+          on the hub's users list or get-user-by-name method, and only with admin:users:server_state
+          scope. None otherwise.
       user_options:
         type: object
-        description: User specified options for the user's spawned instance of a single-user server.
+        description:
+          User specified options for the user's spawned instance of a single-user
+          server.
   Group:
     type: object
     properties:
@@ -1104,7 +1156,9 @@ definitions:
     properties:
       token:
         type: string
-        description: The token itself. Only present in responses to requests for a new token.
+        description:
+          The token itself. Only present in responses to requests for a
+          new token.
       id:
         type: string
         description: The id of the API token. Used for modifying or deleting the token.
@@ -1121,7 +1175,9 @@ definitions:
           type: string
       note:
         type: string
-        description: A note about the token, typically describing what it was created for.
+        description:
+          A note about the token, typically describing what it was created
+          for.
       created:
         type: string
         format: date-time
