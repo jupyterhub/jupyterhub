@@ -456,7 +456,7 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     @needs_scope('users')
     @needs_scope('admin:users')
-    @needs_scope('admin:users:servers')
+    @needs_scope('admin:servers')
     async def get(self):
         auth_state = await self.current_user.get_auth_state()
         html = await self.render_template(

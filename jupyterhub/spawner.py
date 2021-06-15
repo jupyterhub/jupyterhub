@@ -222,8 +222,8 @@ class Spawner(LoggingConfigurable):
     @default("oauth_scopes")
     def _default_oauth_scopes(self):
         return [
-            f"access:users:servers!server={self.user.name}/{self.name}",
-            f"access:users:servers!user={self.user.name}",
+            f"access:servers!server={self.user.name}/{self.name}",
+            f"access:servers!user={self.user.name}",
         ]
 
     handler = Any()

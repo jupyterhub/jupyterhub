@@ -1,11 +1,14 @@
 import os
 from collections import defaultdict
+from pathlib import Path
 
 from pytablewriter import MarkdownTableWriter
+from ruamel.yaml import YAML
 
 from jupyterhub.scopes import scope_definitions
 
 HERE = os.path.abspath(os.path.dirname(__file__))
+PARENT = Path(HERE).parent.parent.absolute()
 
 
 class ScopeTableGenerator:
@@ -64,7 +67,7 @@ class ScopeTableGenerator:
             doc_description = self.scopes[scopename].get('doc_description', '')
             if doc_description:
                 description = doc_description
-            table_row = [f"{md_indent*depth}`{scopename}`", description]
+            table_row = [f"{md_indent * depth}`{scopename}`", description]
             table_rows.append(table_row)
             for subscope in scope_pairs[scopename]:
                 if subscope:
@@ -76,7 +79,7 @@ class ScopeTableGenerator:
         return table_rows
 
     def write_table(self):
-        """Generates the scope table in markdown format and writes it into scope-table.md file"""
+        """Generates the scope table in markdown format and writes it into `scope-table.md`"""
         filename = f"{HERE}/scope-table.md"
         table_name = ""
         headers = ["Scope", "Grants permission to:"]
@@ -92,10 +95,30 @@ class ScopeTableGenerator:
             "Run 'make clean' before 'make html' to ensure the built scopes.html contains latest scope table changes."
         )
 
+    def write_api(self):
+        """Generates the API description in markdown format and writes it into `rest-api.yml`"""
+        filename = f"{PARENT}/rest-api.yml"
+        yaml = YAML(typ='rt')
+        yaml.preserve_quotes = True
+        scope_dict = {}
+        with open(filename, 'r+') as f:
+            content = yaml.load(f.read())
+            f.seek(0)
+            for scope in self.scopes:
+                description = self.scopes[scope]['description']
+                doc_description = self.scopes[scope].get('doc_description', '')
+                if doc_description:
+                    description = doc_description
+                scope_dict[scope] = description
+            content['securityDefinitions']['oauth2']['scopes'] = scope_dict
+            yaml.dump(content, f)
+            f.truncate()
+
 
 def main():
     table_generator = ScopeTableGenerator()
     table_generator.write_table()
+    table_generator.write_api()
 
 
 if __name__ == "__main__":

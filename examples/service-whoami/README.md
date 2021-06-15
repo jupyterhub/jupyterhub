@@ -43,19 +43,19 @@ $ curl -H "Authorization: token 8630bbd8ef064c48b22c7f122f0cd8ad" http://127.0.0
   ],
   "scopes": [
     "access:services",
-    "access:users:servers!user=test",
+    "access:servers!user=test",
     "read:users!user=test",
     "read:users:activity!user=test",
     "read:users:groups!user=test",
     "read:users:name!user=test",
-    "read:users:servers!user=test",
-    "read:users:tokens!user=test",
+    "read:servers!user=test",
+    "read:tokens!user=test",
     "users!user=test",
     "users:activity!user=test",
     "users:groups!user=test",
     "users:name!user=test",
-    "users:servers!user=test",
-    "users:tokens!user=test"
+    "servers!user=test",
+    "tokens!user=test"
   ],
   "server": null
 }

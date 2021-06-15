@@ -75,10 +75,10 @@ class UserListAPIHandler(APIHandler):
     @needs_scope(
         'read:users',
         'read:users:name',
-        'read:users:servers',
+        'read:servers',
         'read:users:groups',
         'read:users:activity',
-        'read:users:roles',
+        'read:roles:users',
     )
     def get(self):
         state_filter = self.get_argument("state", None)
@@ -195,10 +195,10 @@ class UserAPIHandler(APIHandler):
     @needs_scope(
         'read:users',
         'read:users:name',
-        'read:users:servers',
+        'read:servers',
         'read:users:groups',
         'read:users:activity',
-        'read:users:roles',
+        'read:roles:users',
     )
     async def get(self, user_name):
         user = self.find_user(user_name)
@@ -297,7 +297,7 @@ class UserAPIHandler(APIHandler):
 class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
 
-    @needs_scope('read:users:tokens')
+    @needs_scope('read:tokens')
     def get(self, user_name):
         """Get tokens for a given user"""
         user = self.find_user(user_name)
@@ -352,7 +352,7 @@ class UserTokenListAPIHandler(APIHandler):
         self._resolve_roles_and_scopes()
         user = self.find_user(user_name)
         kind = 'user' if isinstance(requester, User) else 'service'
-        scope_filter = self.get_scope_filter('users:tokens')
+        scope_filter = self.get_scope_filter('tokens')
         if user is None or not scope_filter(user, kind):
             raise web.HTTPError(
                 403,
@@ -417,7 +417,7 @@ class UserTokenAPIHandler(APIHandler):
             raise web.HTTPError(404, "Token not found %s", orm_token)
         return orm_token
 
-    @needs_scope('read:users:tokens')
+    @needs_scope('read:tokens')
     def get(self, user_name, token_id):
         """"""
         user = self.find_user(user_name)
@@ -426,7 +426,7 @@ class UserTokenAPIHandler(APIHandler):
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
-    @needs_scope('users:tokens')
+    @needs_scope('tokens')
     def delete(self, user_name, token_id):
         """Delete a token"""
         user = self.find_user(user_name)
@@ -451,7 +451,7 @@ class UserTokenAPIHandler(APIHandler):
 class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
-    @needs_scope('users:servers')
+    @needs_scope('servers')
     async def post(self, user_name, server_name=''):
         user = self.find_user(user_name)
         if server_name:
@@ -496,7 +496,7 @@ class UserServerAPIHandler(APIHandler):
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
 
-    @needs_scope('users:servers')
+    @needs_scope('servers')
     async def delete(self, user_name, server_name=''):
         user = self.find_user(user_name)
         options = self.get_json_body()
@@ -569,7 +569,7 @@ class UserAdminAccessAPIHandler(APIHandler):
     This handler sets the necessary cookie for an admin to login to a single-user server.
     """
 
-    @needs_scope('users:servers')
+    @needs_scope('servers')
     def post(self, user_name):
         self.log.warning(
             "Deprecated in JupyterHub 0.8."
@@ -625,7 +625,7 @@ class SpawnProgressAPIHandler(APIHandler):
 
             await asyncio.wait([self._finish_future], timeout=self.keepalive_interval)
 
-    @needs_scope('read:users:servers')
+    @needs_scope('read:servers')
     async def get(self, user_name, server_name=''):
         self.set_header('Cache-Control', 'no-cache')
         if server_name is None:

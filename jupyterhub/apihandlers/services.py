@@ -11,7 +11,7 @@ from .base import APIHandler
 
 
 class ServiceListAPIHandler(APIHandler):
-    @needs_scope('read:services', 'read:services:name', 'read:services:roles')
+    @needs_scope('read:services', 'read:services:name', 'read:roles:services')
     def get(self):
         data = {}
         for name, service in self.services.items():
@@ -22,7 +22,7 @@ class ServiceListAPIHandler(APIHandler):
 
 
 class ServiceAPIHandler(APIHandler):
-    @needs_scope('read:services', 'read:services:name', 'read:services:roles')
+    @needs_scope('read:services', 'read:services:name', 'read:roles:services')
     def get(self, service_name):
         service = self.services[service_name]
         self.write(json.dumps(self.service_model(service)))

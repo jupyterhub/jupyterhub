@@ -79,9 +79,9 @@ def test_scope_multiple_filters():
 
 def test_scope_parse_server_name():
     handler = get_handler_with_scopes(
-        ['users:servers!server=maeby/server1', 'read:users!user=maeby']
+        ['servers!server=maeby/server1', 'read:users!user=maeby']
     )
-    assert _check_scope_access(handler, 'users:servers', user='maeby', server='server1')
+    assert _check_scope_access(handler, 'servers', user='maeby', server='server1')
 
 
 class MockAPIHandler:
@@ -99,7 +99,7 @@ class MockAPIHandler:
     def user_thing(self, user_name):
         return True
 
-    @needs_scope('users:servers')
+    @needs_scope('servers')
     def server_thing(self, user_name, server_name):
         return True
 
@@ -140,18 +140,18 @@ def mock_handler():
         (['users!user=george'], 'user_thing', ('fake_user',), False),
         (['users!user=george'], 'user_thing', ('oscar',), False),
         (['users!user=george', 'users!user=oscar'], 'user_thing', ('oscar',), True),
-        (['users:servers'], 'server_thing', ('user1', 'server_1'), True),
-        (['users:servers'], 'server_thing', ('user1', ''), True),
-        (['users:servers'], 'server_thing', ('user1', None), True),
+        (['servers'], 'server_thing', ('user1', 'server_1'), True),
+        (['servers'], 'server_thing', ('user1', ''), True),
+        (['servers'], 'server_thing', ('user1', None), True),
         (
-            ['users:servers!server=maeby/bluth'],
+            ['servers!server=maeby/bluth'],
             'server_thing',
             ('maeby', 'bluth'),
             True,
         ),
-        (['users:servers!server=maeby/bluth'], 'server_thing', ('gob', 'bluth'), False),
+        (['servers!server=maeby/bluth'], 'server_thing', ('gob', 'bluth'), False),
         (
-            ['users:servers!server=maeby/bluth'],
+            ['servers!server=maeby/bluth'],
             'server_thing',
             ('maybe', 'bluth2'),
             False,
@@ -488,17 +488,17 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
 @mark.parametrize(
     "scopes, can_stop ,num_servers, keys_in, keys_out",
     [
-        (['read:users:servers!user=almond'], False, 2, {'name'}, {'state'}),
+        (['read:servers!user=almond'], False, 2, {'name'}, {'state'}),
         (['admin:users', 'read:users'], False, 0, set(), set()),
         (
-            ['read:users:servers!group=nuts', 'users:servers'],
+            ['read:servers!group=nuts', 'servers'],
             True,
             2,
             {'name'},
             {'state'},
         ),
         (
-            ['admin:users:server_state', 'read:users:servers'],
+            ['admin:server_state', 'read:servers'],
             False,
             2,
             {'name', 'state'},
@@ -506,8 +506,8 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
         ),
         (
             [
-                'read:users:servers!server=almond/bianca',
-                'admin:users:server_state!server=almond/bianca',
+                'read:servers!server=almond/bianca',
+                'admin:server_state!server=almond/bianca',
             ],
             False,
             1,
@@ -634,8 +634,8 @@ async def test_server_state_access(
         ),
         (
             'no_intersection_user_server',
-            ['users:servers!user=y'],
-            ['users:servers!server=x'],
+            ['servers!user=y'],
+            ['servers!server=x'],
             set(),
         ),
         (
@@ -704,7 +704,7 @@ async def test_resolve_token_permissions(
             },
         ),
         (
-            {'read:services:roles', 'read:services:name'},
+            {'read:roles:services', 'read:services:name'},
             {'name', 'kind', 'roles', 'admin'},
         ),
         ({'read:services:name'}, {'name', 'kind', 'admin'}),
@@ -734,7 +734,7 @@ async def test_service_model_filtering(
             },
         ),
         (
-            {'read:groups:roles', 'read:groups:name'},
+            {'read:roles:groups', 'read:groups:name'},
             {'name', 'kind', 'roles'},
         ),
         ({'read:groups:name'}, {'name', 'kind'}),
@@ -761,7 +761,7 @@ async def test_group_model_filtering(
 
 async def test_roles_access(app, create_service_with_scopes, create_user_with_scopes):
     user = add_user(app.db, name='miranda')
-    read_user = create_user_with_scopes('read:users:roles')
+    read_user = create_user_with_scopes('read:roles:users')
     r = await api_request(
         app, 'users', user.name, headers=auth_header(app.db, read_user.name)
     )
@@ -822,15 +822,15 @@ async def test_roles_access(app, create_service_with_scopes, create_user_with_sc
         ),
         # resolves server under user, without warning
         (
-            set(["read:users:servers!user=abc"]),
-            set(["read:users:servers!server=abc/xyz"]),
-            set(["read:users:servers!server=abc/xyz"]),
+            set(["read:servers!user=abc"]),
+            set(["read:servers!server=abc/xyz"]),
+            set(["read:servers!server=abc/xyz"]),
             False,
         ),
         # user->server, no match
         (
-            set(["read:users:servers!user=abc"]),
-            set(["read:users:servers!server=abcd/xyz"]),
+            set(["read:servers!user=abc"]),
+            set(["read:servers!server=abcd/xyz"]),
             set([]),
             False,
         ),

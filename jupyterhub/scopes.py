@@ -22,6 +22,8 @@ from tornado.log import app_log
 from . import orm
 from . import roles
 
+"""when modifying the scope definitions, make sure that `docs/source/rbac/generate-scope-table.py` is run
+   so that changes are reflected in the documentation and REST API description."""
 scope_definitions = {
     '(no_scope)': {'description': 'Identify the owner of the requesting entity.'},
     'self': {
@@ -34,9 +36,9 @@ scope_definitions = {
     },
     'admin:users': {
         'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
-        'subscopes': ['admin:users:auth_state', 'users', 'read:users:roles'],
+        'subscopes': ['admin:auth_state', 'users', 'read:roles:users'],
     },
-    'admin:users:auth_state': {'description': 'Read a user’s authentication state.'},
+    'admin:auth_state': {'description': 'Read a user’s authentication state.'},
     'users': {
         'description': 'Read and write permissions to user models (excluding servers, tokens and authentication state).',
         'subscopes': ['read:users', 'users:activity'],
@@ -52,32 +54,38 @@ scope_definitions = {
     'read:users:name': {'description': 'Read names of users.'},
     'read:users:groups': {'description': 'Read users’ group membership.'},
     'read:users:activity': {'description': 'Read time of last user activity.'},
-    'read:users:roles': {'description': 'Read users’ role assignments.'},
+    'read:roles': {
+        'description': 'Read role assignments.',
+        'subscopes': ['read:roles:users', 'read:roles:services', 'read:roles:groups'],
+    },
+    'read:roles:users': {'description': 'Read user role assignments.'},
+    'read:roles:services': {'description': 'Read service role assignments.'},
+    'read:roles:groups': {'description': 'Read group role assignments.'},
     'users:activity': {
         'description': 'Update time of last user activity.',
         'subscopes': ['read:users:activity'],
     },
-    'admin:users:servers': {
+    'admin:servers': {
         'description': 'Read, start, stop, create and delete user servers and their state.',
-        'subscopes': ['admin:users:server_state', 'users:servers'],
+        'subscopes': ['admin:server_state', 'servers'],
     },
-    'admin:users:server_state': {'description': 'Read and write users’ server state.'},
-    'users:servers': {
+    'admin:server_state': {'description': 'Read and write users’ server state.'},
+    'servers': {
         'description': 'Start and stop user servers.',
-        'subscopes': ['read:users:servers'],
+        'subscopes': ['read:servers'],
     },
-    'read:users:servers': {
+    'read:servers': {
         'description': 'Read users’ names and their server models (excluding the server state).',
         'subscopes': ['read:users:name'],
     },
-    'users:tokens': {
+    'tokens': {
         'description': 'Read, write, create and delete user tokens.',
-        'subscopes': ['read:users:tokens'],
+        'subscopes': ['read:tokens'],
     },
-    'read:users:tokens': {'description': 'Read user tokens.'},
+    'read:tokens': {'description': 'Read user tokens.'},
     'admin:groups': {
         'description': 'Read and write group information, create and delete groups.',
-        'subscopes': ['groups', 'read:groups:roles'],
+        'subscopes': ['groups', 'read:roles:groups'],
     },
     'groups': {
         'description': 'Read and write group information, including adding/removing users to/from groups.',
@@ -88,15 +96,13 @@ scope_definitions = {
         'subscopes': ['read:groups:name'],
     },
     'read:groups:name': {'description': 'Read group names.'},
-    'read:groups:roles': {'description': 'Read group role assignments.'},
     'read:services': {
         'description': 'Read service models.',
         'subscopes': ['read:services:name'],
     },
     'read:services:name': {'description': 'Read service names.'},
-    'read:services:roles': {'description': 'Read service role assignments.'},
     'read:hub': {'description': 'Read detailed information about the Hub.'},
-    'access:users:servers': {
+    'access:servers': {
         'description': 'Access user servers via API or browser.',
     },
     'access:services': {
@@ -279,7 +285,7 @@ def get_scopes_for(orm_object):
             spawner = orm_object.oauth_client.spawner
             if spawner:
                 token_scopes.add(
-                    f"access:users:servers!server={spawner.user.name}/{spawner.name}"
+                    f"access:servers!server={spawner.user.name}/{spawner.name}"
                 )
             else:
                 service = orm_object.oauth_client.service
@@ -388,7 +394,7 @@ def parse_scopes(scope_list):
     """
     Parses scopes and filters in something akin to JSON style
 
-    For instance, scope list ["users", "groups!group=foo", "users:servers!server=user/bar", "users:servers!server=user/baz"]
+    For instance, scope list ["users", "groups!group=foo", "servers!server=user/bar", "servers!server=user/baz"]
     would lead to scope model
     {
        "users":scope.ALL,
@@ -397,7 +403,7 @@ def parse_scopes(scope_list):
              "alice"
           ]
        },
-       "users:servers":{
+       "servers":{
           "server":[
              "user/bar",
              "user/baz"

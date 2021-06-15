@@ -91,7 +91,7 @@ c.JupyterHub.load_roles = [
         "name": "idle-culler",
         "scopes": [
             "read:users:activity", # read user last_activity
-            "users:servers", # start and stop servers
+            "servers", # start and stop servers
             # 'admin:users' # needed if culling idle users as well
         ]
     }

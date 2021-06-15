@@ -33,16 +33,16 @@ def get_default_roles():
             'description': 'Elevated privileges (can do anything)',
             'scopes': [
                 'admin:users',
-                'admin:users:servers',
-                'users:tokens',
+                'admin:servers',
+                'tokens',
                 'admin:groups',
                 'read:services',
                 'read:hub',
                 'proxy',
                 'shutdown',
                 'access:services',
-                'access:users:servers',
-                'read:services:roles',
+                'access:servers',
+                'read:roles',
             ],
         },
         {
@@ -50,7 +50,7 @@ def get_default_roles():
             'description': 'Post activity only',
             'scopes': [
                 'users:activity!user',
-                'access:users:servers!user',
+                'access:servers!user',
             ],
         },
         {
@@ -70,9 +70,10 @@ def expand_self_scope(name):
     users:name
     users:groups
     users:activity
-    users:servers
-    users:tokens
-    access:users:servers
+    tokens
+    servers
+    access:servers
+
 
     Arguments:
       name (str): user name
@@ -87,11 +88,11 @@ def expand_self_scope(name):
         'read:users:groups',
         'users:activity',
         'read:users:activity',
-        'users:servers',
-        'read:users:servers',
-        'users:tokens',
-        'read:users:tokens',
-        'access:users:servers',
+        'servers',
+        'read:servers',
+        'tokens',
+        'read:tokens',
+        'access:servers',
     ]
     return {"{}!user={}".format(scope, name) for scope in scope_list}
 

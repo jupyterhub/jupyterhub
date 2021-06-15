@@ -258,7 +258,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
             # check for access to target resource
             if client.spawner:
-                scope_filter = self.get_scope_filter("access:users:servers")
+                scope_filter = self.get_scope_filter("access:servers")
                 allowed = scope_filter(client.spawner, kind='server')
             elif client.service:
                 scope_filter = self.get_scope_filter("access:services")
