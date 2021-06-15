@@ -416,12 +416,6 @@ async def test_oauth_page_hit(
         assert r.url == url
 
 
-async def test_scope_expansion_revokes_tokens(app):
-    # todo: test when new scopes are added to roles, all api_tokens for services with those roles are deleted
-    # and auth will be hit again
-    pass
-
-
 async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_scopes):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/')

@@ -290,10 +290,14 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 return
 
             # resolve roles to scopes for authorization page
-            role_objects = (
-                self.db.query(orm.Role).filter(orm.Role.name.in_(role_names)).all()
-            )
-            raw_scopes = set(itertools.chain(*(role.scopes for role in role_objects)))
+            raw_scopes = set()
+            if role_names:
+                role_objects = (
+                    self.db.query(orm.Role).filter(orm.Role.name.in_(role_names)).all()
+                )
+                raw_scopes = set(
+                    itertools.chain(*(role.scopes for role in role_objects))
+                )
             if not raw_scopes:
                 scope_descriptions = [
                     {
