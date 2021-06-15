@@ -29,6 +29,7 @@ import asyncio
 import inspect
 import os
 import sys
+from functools import partial
 from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
@@ -263,7 +264,7 @@ def _mockservice(request, app, url=False):
         async def start():
             # wait for proxy to be updated before starting the service
             await app.proxy.add_all_services(app._service_map)
-            service.start()
+            await service.start()
 
         io_loop.run_sync(start)
 
@@ -277,7 +278,7 @@ def _mockservice(request, app, url=False):
         with raises(TimeoutExpired):
             service.proc.wait(1)
         if url:
-            io_loop.run_sync(service.server.wait_up)
+            io_loop.run_sync(partial(service.server.wait_up, http=True))
     return service
 
 

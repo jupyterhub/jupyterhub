@@ -38,6 +38,7 @@ A hub-managed service with no URL::
     }
 
 """
+import asyncio
 import copy
 import os
 import pipes
@@ -369,7 +370,7 @@ class Service(LoggingConfigurable):
             managed=' managed' if self.managed else '',
         )
 
-    def start(self):
+    async def start(self):
         """Start a managed service"""
         if not self.managed:
             raise RuntimeError("Cannot start unmanaged service %s" % self)
@@ -407,6 +408,8 @@ class Service(LoggingConfigurable):
             internal_certs_location=self.app.internal_certs_location,
             internal_trust_bundles=self.app.internal_trust_bundles,
         )
+        if self.spawner.internal_ssl:
+            self.spawner.cert_paths = await self.spawner.create_certs()
         self.spawner.start()
         self.proc = self.spawner.proc
         self.spawner.add_poll_callback(self._proc_stopped)
@@ -417,7 +420,8 @@ class Service(LoggingConfigurable):
         self.log.error(
             "Service %s exited with status %i", self.name, self.proc.returncode
         )
-        self.start()
+        # schedule start
+        asyncio.ensure_future(self.start())
 
     async def stop(self):
         """Stop a managed service"""

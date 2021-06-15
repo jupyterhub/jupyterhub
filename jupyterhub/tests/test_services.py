@@ -9,6 +9,7 @@ from async_generator import asynccontextmanager
 
 from .. import orm
 from ..roles import update_roles
+from ..utils import exponential_backoff
 from ..utils import maybe_future
 from ..utils import random_port
 from ..utils import url_path_join
@@ -51,11 +52,11 @@ async def test_managed_service(mockservice):
     assert proc.poll() is not None
 
     # ensure Hub notices service is down and brings it back up:
-    for i in range(20):
-        if service.proc is not proc:
-            break
-        else:
-            await asyncio.sleep(0.2)
+    await exponential_backoff(
+        lambda: service.proc is not proc,
+        "Process was never replaced",
+        timeout=20,
+    )
 
     assert service.proc.pid != first_pid
     assert service.proc.poll() is None
