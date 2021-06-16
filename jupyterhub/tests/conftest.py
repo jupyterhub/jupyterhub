@@ -44,6 +44,8 @@ import jupyterhub.services.service
 from . import mocking
 from .. import crypto
 from .. import orm
+from ..roles import create_role
+from ..roles import get_default_roles
 from ..roles import mock_roles
 from ..roles import update_roles
 from ..utils import random_port
@@ -129,6 +131,8 @@ def db():
         app = MockHub(db_url='sqlite:///:memory:')
         app.init_db()
         _db = app.db
+        for role in get_default_roles():
+            create_role(_db, role)
         user = orm.User(name=getuser())
         _db.add(user)
         _db.commit()

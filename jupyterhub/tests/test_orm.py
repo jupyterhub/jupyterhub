@@ -221,9 +221,6 @@ async def test_spawn_fails(db):
     orm_user = orm.User(name='aeofel')
     db.add(orm_user)
     db.commit()
-
-    # TODO: default roles should be assigned to users anytime a user is added to database (in orm?)
-    # the user added here has no role while the server token gets the default server role
     def_roles = roles.get_default_roles()
     for role in def_roles:
         roles.create_role(db, role)

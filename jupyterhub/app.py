@@ -214,11 +214,12 @@ class NewToken(Application):
         hub.load_config_file(hub.config_file)
         hub.init_db()
 
-        def init_users():
+        def init_roles_and_users():
             loop = asyncio.new_event_loop()
+            loop.run_until_complete(hub.init_role_creation())
             loop.run_until_complete(hub.init_users())
 
-        ThreadPoolExecutor(1).submit(init_users).result()
+        ThreadPoolExecutor(1).submit(init_roles_and_users).result()
         user = orm.User.find(hub.db, self.name)
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)
