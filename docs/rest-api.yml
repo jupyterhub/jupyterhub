@@ -745,7 +745,9 @@ paths:
       summary: Get a service by name
       security:
         - oauth2:
-            - read:services - read:services:name - read:roles:services
+            - read:services
+            - read:services:name
+            - read:roles:services
       parameters:
         - name: name
           description: service name
