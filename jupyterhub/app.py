@@ -2320,7 +2320,7 @@ class JupyterHub(Application):
             if not service.url:
                 continue
             try:
-                await Server.from_orm(service.orm.server).wait_up(timeout=1)
+                await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
             except TimeoutError:
                 self.log.warning(
                     "Cannot connect to %s service %s at %s",
@@ -3013,7 +3013,7 @@ class JupyterHub(Application):
             if service.managed:
                 self.log.info("Starting managed service %s", msg)
                 try:
-                    service.start()
+                    await service.start()
                 except Exception as e:
                     self.log.critical(
                         "Failed to start service %s", service_name, exc_info=True
@@ -3026,11 +3026,6 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        ssl_context = make_ssl_context(
-                            self.internal_ssl_key,
-                            self.internal_ssl_cert,
-                            cafile=self.internal_ssl_ca,
-                        )
                         await Server.from_orm(service.orm.server).wait_up(
                             http=True, timeout=1, ssl_context=ssl_context
                         )
