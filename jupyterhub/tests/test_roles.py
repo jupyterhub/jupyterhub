@@ -1219,7 +1219,17 @@ async def test_empty_admin_spec():
     assert not admin_role.users
 
 
-# Todo: Test that services don't get default roles on any startup
+async def test_no_default_service_role():
+    services = [
+        {
+            'name': 'minesweeper',
+            'api_token': 'some-token',
+        }
+    ]
+    hub = MockHub(services=services)
+    await hub.initialize()
+    service = orm.Service.find(hub.db, 'minesweeper')
+    assert not service.roles
 
 
 async def test_hub_upgrade_detection(tmpdir):
