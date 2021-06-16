@@ -949,6 +949,24 @@ async def test_bad_oauth_get(app, params):
     assert r.status_code == 400
 
 
+@pytest.mark.parametrize(
+    "scopes, has_access",
+    [
+        (["users"], False),
+        (["admin:users"], False),
+        (["users", "admin:users", "admin:servers"], True),
+    ],
+)
+async def test_admin_page_access(app, scopes, has_access, create_user_with_scopes):
+    user = create_user_with_scopes(*scopes)
+    cookies = await app.login_user(user.name)
+    r = await get_page("/admin", app, cookies=cookies)
+    if has_access:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
+
+
 async def test_oauth_page_scope_appearance(
     app, mockservice_url, create_user_with_scopes, create_temp_role
 ):
