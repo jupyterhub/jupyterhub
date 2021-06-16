@@ -1951,6 +1951,22 @@ class JupyterHub(Application):
 
         TOTAL_USERS.set(total_users)
 
+    async def _get_or_create_user(self, username):
+        """Create user if username is found in config but user does not exist"""
+        if not (await maybe_future(self.authenticator.check_allowed(username, None))):
+            raise ValueError(
+                "Username %r is not in Authenticator.allowed_users" % username
+            )
+        user = orm.User.find(self.db, name=username)
+        if user is None:
+            if not self.authenticator.validate_username(username):
+                raise ValueError("Group username %r is not valid" % username)
+            self.log.info(f"Creating user {username}")
+            user = orm.User(name=username)
+            self.db.add(user)
+            self.db.commit()
+        return user
+
     async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
@@ -1962,19 +1978,7 @@ class JupyterHub(Application):
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (
-                    await maybe_future(self.authenticator.check_allowed(username, None))
-                ):
-                    raise ValueError(
-                        "Username %r is not in Authenticator.allowed_users" % username
-                    )
-                user = orm.User.find(db, name=username)
-                if user is None:
-                    if not self.authenticator.validate_username(username):
-                        raise ValueError("Group username %r is not valid" % username)
-                    self.log.info(f"Creating user {username} for group {name}")
-                    user = orm.User(name=username)
-                    db.add(user)
+                user = await self._get_or_create_user(username)
                 self.log.debug(f"Adding user {username} to group {name}")
                 group.users.append(user)
         db.commit()
@@ -2093,10 +2097,12 @@ class JupyterHub(Application):
                                 f"Found unexisting {kind} {bname} in role definition {predef_role['name']}"
                             )
                             if kind == 'users':
-                                # todo: check allowed or add to list+db?
-                                app_log.info(f"Adding user {bname} to allowed users")
+                                orm_obj = await self._get_or_create_user(bname)
+                                orm_role_bearers.append(orm_obj)
                             else:
-                                app_log.warning(f"{kind} {bname} not created")
+                                raise ValueError(
+                                    f"{kind} {bname} defined in config role definition {predef_role['name']} but not present in database"
+                                )
                         # Ensure all with admin role have admin flag
                         if predef_role['name'] == 'admin':
                             orm_obj.admin = True
