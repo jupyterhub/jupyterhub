@@ -1985,13 +1985,41 @@ class JupyterHub(Application):
         config_role_names = [r['name'] for r in self.load_roles]
 
         init_roles = default_roles
-        for role_name in config_role_names:
+        roles_with_new_permissions = []
+        for role_spec in self.load_roles:
+            role_name = role_spec['name']
+            # Check for duplicates
             if config_role_names.count(role_name) > 1:
                 raise ValueError(
                     f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
                 )
-        for role_spec in self.load_roles:
             init_roles.append(role_spec)
+            # Check if some roles have obtained new permissions (to avoid 'scope creep')
+            old_role = orm.Role.find(self.db, name=role_name)
+            if old_role:
+                if not set(role_spec['scopes']).issubset(old_role.scopes):
+                    app_log.warning(
+                        "Role %s has obtained extra permissions" % role_name
+                    )
+                    roles_with_new_permissions.append(role_name)
+        if roles_with_new_permissions:
+            unauthorized_oauth_tokens = (
+                self.db.query(orm.APIToken)
+                .filter(
+                    orm.APIToken.roles.any(
+                        orm.Role.name.in_(roles_with_new_permissions)
+                    )
+                )
+                .filter(orm.APIToken.client_id != 'jupyterhub')
+            )
+            for token in unauthorized_oauth_tokens:
+                app_log.warning(
+                    "Deleting OAuth token %s; one of its roles obtained new permissions that were not authorized by user"
+                    % token
+                )
+                self.db.delete(token)
+            self.db.commit()
+
         init_role_names = [r['name'] for r in init_roles]
         if not orm.Role.find(self.db, name='admin'):
             self._rbac_upgrade = True
@@ -2069,11 +2097,12 @@ class JupyterHub(Application):
                             orm_obj.admin = True
                 setattr(predef_role_obj, bearer, orm_role_bearers)
         db.commit()
-        allowed_users = db.query(orm.User).filter(
-            orm.User.name.in_(self.authenticator.allowed_users)
-        )
-        for user in allowed_users:
-            roles.grant_role(db, user, 'user')
+        if self.authenticator.allowed_users:
+            allowed_users = db.query(orm.User).filter(
+                orm.User.name.in_(self.authenticator.allowed_users)
+            )
+            for user in allowed_users:
+                roles.grant_role(db, user, 'user')
         admin_role = orm.Role.find(db, 'admin')
         for bearer in admin_role_objects:
             Class = orm.get_class(bearer)
@@ -2174,6 +2203,7 @@ class JupyterHub(Application):
         # purge expired tokens hourly
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
+
         pc = PeriodicCallback(
             self.purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
         )

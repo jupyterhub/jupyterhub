@@ -848,6 +848,7 @@ async def test_server_role_api_calls(
     app, token_role, api_method, api_endpoint, for_user, response
 ):
     user = add_user(app.db, app, name='test_user')
+    roles.grant_role(app.db, user, 'user')
     if token_role == 'no_role':
         api_token = user.new_api_token(roles=[])
     else:
@@ -1028,6 +1029,33 @@ async def test_config_role_users():
     user = orm.User.find(hub.db, name=user_name)
     role = orm.Role.find(hub.db, name=role_name)
     assert role not in user.roles
+
+
+async def test_scope_expansion_revokes_tokens(app, mockservice_url):
+    role_name = 'morpheus'
+    roles_to_load = [
+        {
+            'name': role_name,
+            'description': 'wears sunglasses',
+            'scopes': ['users', 'groups'],
+        },
+    ]
+    app.load_roles = roles_to_load
+    await app.init_role_creation()
+    user = add_user(app.db, name='laurence')
+    for _ in range(2):
+        user.new_api_token()
+    red_token, blue_token = user.api_tokens
+    roles.grant_role(app.db, red_token, role_name)
+    service = mockservice_url
+    red_token.client_id = service.oauth_client_id
+    app.db.commit()
+    # Restart hub and see if token is revoked
+    app.load_roles[0]['scopes'].append('proxy')
+    await app.init_role_creation()
+    user = orm.User.find(app.db, name='laurence')
+    assert red_token not in user.api_tokens
+    assert blue_token in user.api_tokens
 
 
 async def test_duplicate_role_users():
@@ -1249,7 +1277,6 @@ async def test_token_keep_roles_on_restart():
             'scopes': ['read:users'],
         }
     ]
-
     hub = MockHub(load_roles=role_spec)
     hub.init_db()
     hub.authenticator.admin_users = ['ben']
