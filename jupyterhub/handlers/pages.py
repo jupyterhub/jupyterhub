@@ -454,7 +454,7 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
-    @needs_scope('users')
+    @needs_scope('users')  # stacked decorators: all scopes must be present
     @needs_scope('admin:users')
     @needs_scope('admin:servers')
     async def get(self):

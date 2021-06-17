@@ -143,7 +143,7 @@ async def test_delete_named_server(app, named_servers):
     username = 'donaar'
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
-    cookies = app.login_user(username)
+    cookies = await app.login_user(username)
     servername = 'splugoth'
     r = await api_request(app, 'users', username, 'servers', servername, method='post')
     r.raise_for_status()

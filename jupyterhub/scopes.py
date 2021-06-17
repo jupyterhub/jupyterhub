@@ -444,6 +444,10 @@ def unparse_scopes(parsed_scopes):
 def needs_scope(*scopes):
     """Decorator to restrict access to users or services with the required scope"""
 
+    for scope in scopes:
+        if scope not in scope_definitions:
+            raise ValueError(f"Scope {scope} is not a valid scope")
+
     def scope_decorator(func):
         @functools.wraps(func)
         def _auth_func(self, *args, **kwargs):

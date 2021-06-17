@@ -788,6 +788,19 @@ async def test_user_filter_expansion(app, scope_list, kind, test_for_token):
     app.db.delete(test_role)
 
 
+async def test_large_filter_expansion(app, create_temp_role, create_user_with_scopes):
+    scope_list = roles.expand_self_scope('==')
+    # Mimic the role 'self' based on '!user' filter for tokens
+    scope_list = [scope.rstrip("=") for scope in scope_list]
+    filtered_role = create_temp_role(scope_list)
+    user = create_user_with_scopes('self')
+    user.new_api_token(roles=[filtered_role.name])
+    user.new_api_token(roles=['token'])
+    manual_scope_set = get_scopes_for(user.api_tokens[0])
+    auto_scope_set = get_scopes_for(user.api_tokens[1])
+    assert manual_scope_set == auto_scope_set
+
+
 @mark.role
 @mark.parametrize(
     "name, valid",
@@ -849,6 +862,8 @@ async def test_server_role_api_calls(
 ):
     user = add_user(app.db, app, name='test_user')
     roles.grant_role(app.db, user, 'user')
+    app_log.debug(user.roles)
+    app_log.debug(roles.expand_roles_to_scopes(user.orm_user))
     if token_role == 'no_role':
         api_token = user.new_api_token(roles=[])
     else:
@@ -1219,7 +1234,17 @@ async def test_empty_admin_spec():
     assert not admin_role.users
 
 
-# Todo: Test that services don't get default roles on any startup
+async def test_no_default_service_role():
+    services = [
+        {
+            'name': 'minesweeper',
+            'api_token': 'some-token',
+        }
+    ]
+    hub = MockHub(services=services)
+    await hub.initialize()
+    service = orm.Service.find(hub.db, 'minesweeper')
+    assert not service.roles
 
 
 async def test_hub_upgrade_detection(tmpdir):

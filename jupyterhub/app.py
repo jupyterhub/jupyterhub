@@ -214,11 +214,12 @@ class NewToken(Application):
         hub.load_config_file(hub.config_file)
         hub.init_db()
 
-        def init_users():
+        def init_roles_and_users():
             loop = asyncio.new_event_loop()
+            loop.run_until_complete(hub.init_role_creation())
             loop.run_until_complete(hub.init_users())
 
-        ThreadPoolExecutor(1).submit(init_users).result()
+        ThreadPoolExecutor(1).submit(init_roles_and_users).result()
         user = orm.User.find(hub.db, self.name)
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)
@@ -1950,6 +1951,22 @@ class JupyterHub(Application):
 
         TOTAL_USERS.set(total_users)
 
+    async def _get_or_create_user(self, username):
+        """Create user if username is found in config but user does not exist"""
+        if not (await maybe_future(self.authenticator.check_allowed(username, None))):
+            raise ValueError(
+                "Username %r is not in Authenticator.allowed_users" % username
+            )
+        user = orm.User.find(self.db, name=username)
+        if user is None:
+            if not self.authenticator.validate_username(username):
+                raise ValueError("Username %r is not valid" % username)
+            self.log.info(f"Creating user {username}")
+            user = orm.User(name=username)
+            self.db.add(user)
+            self.db.commit()
+        return user
+
     async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
@@ -1961,19 +1978,7 @@ class JupyterHub(Application):
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (
-                    await maybe_future(self.authenticator.check_allowed(username, None))
-                ):
-                    raise ValueError(
-                        "Username %r is not in Authenticator.allowed_users" % username
-                    )
-                user = orm.User.find(db, name=username)
-                if user is None:
-                    if not self.authenticator.validate_username(username):
-                        raise ValueError("Group username %r is not valid" % username)
-                    self.log.info(f"Creating user {username} for group {name}")
-                    user = orm.User(name=username)
-                    db.add(user)
+                user = await self._get_or_create_user(username)
                 self.log.debug(f"Adding user {username} to group {name}")
                 group.users.append(user)
         db.commit()
@@ -2036,7 +2041,7 @@ class JupyterHub(Application):
 
     async def init_role_assignment(self):
         # tokens are added separately
-        role_bearers = ['users', 'services', 'groups']
+        kinds = ['users', 'services', 'groups']
         admin_role_objects = ['users', 'services']
         config_admin_users = set(self.authenticator.admin_users)
         db = self.db
@@ -2058,21 +2063,21 @@ class JupyterHub(Application):
         for predef_role in self.load_roles:
             predef_role_obj = orm.Role.find(db, name=predef_role['name'])
             if predef_role['name'] == 'admin':
-                for bearer in admin_role_objects:
-                    has_admin_role_spec[bearer] = bearer in predef_role
-                    if has_admin_role_spec[bearer]:
-                        app_log.info(f"Admin role specifies static {bearer} list")
+                for kind in admin_role_objects:
+                    has_admin_role_spec[kind] = kind in predef_role
+                    if has_admin_role_spec[kind]:
+                        app_log.info(f"Admin role specifies static {kind} list")
                     else:
                         app_log.info(
-                            f"Admin role does not specify {bearer}, preserving admin membership in database"
+                            f"Admin role does not specify {kind}, preserving admin membership in database"
                         )
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
-            for bearer in role_bearers:
+            for kind in kinds:
                 orm_role_bearers = []
-                if bearer in predef_role.keys():
-                    for bname in predef_role[bearer]:
-                        if bearer == 'users':
+                if kind in predef_role.keys():
+                    for bname in predef_role[kind]:
+                        if kind == 'users':
                             bname = self.authenticator.normalize_username(bname)
                             if not (
                                 await maybe_future(
@@ -2083,19 +2088,25 @@ class JupyterHub(Application):
                                     "Username %r is not in Authenticator.allowed_users"
                                     % bname
                                 )
-                        Class = orm.get_class(bearer)
+                        Class = orm.get_class(kind)
                         orm_obj = Class.find(db, bname)
                         if orm_obj:
                             orm_role_bearers.append(orm_obj)
                         else:
-                            app_log.warning(
-                                f"User {bname} not added, only found in role definition"
+                            app_log.info(
+                                f"Found unexisting {kind} {bname} in role definition {predef_role['name']}"
                             )
-                            # Todo: Add users to allowed_users
+                            if kind == 'users':
+                                orm_obj = await self._get_or_create_user(bname)
+                                orm_role_bearers.append(orm_obj)
+                            else:
+                                raise ValueError(
+                                    f"{kind} {bname} defined in config role definition {predef_role['name']} but not present in database"
+                                )
                         # Ensure all with admin role have admin flag
                         if predef_role['name'] == 'admin':
                             orm_obj.admin = True
-                setattr(predef_role_obj, bearer, orm_role_bearers)
+                setattr(predef_role_obj, kind, orm_role_bearers)
         db.commit()
         if self.authenticator.allowed_users:
             allowed_users = db.query(orm.User).filter(
@@ -2104,10 +2115,10 @@ class JupyterHub(Application):
             for user in allowed_users:
                 roles.grant_role(db, user, 'user')
         admin_role = orm.Role.find(db, 'admin')
-        for bearer in admin_role_objects:
-            Class = orm.get_class(bearer)
+        for kind in admin_role_objects:
+            Class = orm.get_class(kind)
             for admin_obj in db.query(Class).filter_by(admin=True):
-                if has_admin_role_spec[bearer]:
+                if has_admin_role_spec[kind]:
                     admin_obj.admin = admin_role in admin_obj.roles
                 else:
                     roles.grant_role(db, admin_obj, 'admin')
@@ -2117,8 +2128,8 @@ class JupyterHub(Application):
             app_log.warning(
                 "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
             )
-            for bearer in role_bearers:
-                roles.check_for_default_roles(db, bearer)
+            for kind in kinds:
+                roles.check_for_default_roles(db, kind)
 
             # check tokens for default roles
             roles.check_for_default_roles(db, bearer='tokens')
@@ -2290,15 +2301,18 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
+                allowed_roles = []
+                if service.oauth_roles:
+                    allowed_roles = list(
+                        self.db.query(orm.Role).filter(
+                            orm.Role.name.in_(service.oauth_roles)
+                        )
+                    )
                 oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
-                    allowed_roles=list(
-                        self.db.query(orm.Role).filter(
-                            orm.Role.name.in_(service.oauth_roles)
-                        )
-                    ),
+                    allowed_roles=allowed_roles,
                     description="JupyterHub service %s" % service.name,
                 )
                 service.orm.oauth_client = oauth_client

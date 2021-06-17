@@ -716,18 +716,8 @@ class APIToken(Hashed, Base):
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
 
         db.add(orm_token)
-        token_role = Role.find(db, 'token')
-        if not token_role:
-            # FIXME: remove this.
-            # Creating a token before the db has roles defined should raise an error.
-            # PR #3460 should let us fix it by ensuring default roles are defined
-
-            warnings.warn(
-                "Token created before default roles!", RuntimeWarning, stacklevel=2
-            )
-            default_roles = get_default_roles()
-            for role in default_roles:
-                create_role(db, role)
+        if not Role.find(db, 'token'):
+            raise RuntimeError("Default token role has not been created")
         try:
             if roles is not None:
                 update_roles(db, entity=orm_token, roles=roles)
