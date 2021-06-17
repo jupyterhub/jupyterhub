@@ -717,7 +717,7 @@ class APIToken(Hashed, Base):
 
         db.add(orm_token)
         if not Role.find(db, 'token'):
-            raise AttributeError("Default token role has not been created")
+            raise RuntimeError("Default token role has not been created")
         try:
             if roles is not None:
                 update_roles(db, entity=orm_token, roles=roles)

@@ -183,9 +183,8 @@ def _get_subscopes(*roles, owner=None):
         scopes.update(role.scopes)
 
     expanded_scopes = set(chain.from_iterable(list(map(_expand_scope, scopes))))
-
     # transform !user filter to !user=ownername
-    for scope in expanded_scopes:
+    for scope in expanded_scopes.copy():
         base_scope, _, filter = scope.partition('!')
         if filter == 'user':
             expanded_scopes.remove(scope)
@@ -198,7 +197,6 @@ def _get_subscopes(*roles, owner=None):
                 name = owner.name
             trans_scope = f'{base_scope}!user={name}'
             expanded_scopes.add(trans_scope)
-
     if 'self' in expanded_scopes:
         expanded_scopes.remove('self')
         if owner and isinstance(owner, orm.User):
@@ -232,7 +230,7 @@ def _check_scopes(*args, rolename=None):
             raise NameError(f"Scope '{scope}' {log_role} does not exist")
         if filter_:
             full_filter = f"!{filter_}"
-            if not any(full_filter in scope for full_filter in allowed_filters):
+            if not any(f in scope for f in allowed_filters):
                 raise NameError(
                     f"Scope filter '{full_filter}' in scope '{scope}' {log_role} does not exist"
                 )
@@ -454,7 +452,8 @@ def assign_default_roles(db, entity):
         db.commit()
     # users and services can have 'user' or 'admin' roles as default
     else:
-        app_log.debug('Assigning default roles to %s', type(entity).__name__)
+        kind = type(entity).__name__
+        app_log.debug(f'Assigning default roles to {kind} {entity.name}')
         _switch_default_role(db, entity, entity.admin)
 
 

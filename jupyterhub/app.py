@@ -1960,7 +1960,7 @@ class JupyterHub(Application):
         user = orm.User.find(self.db, name=username)
         if user is None:
             if not self.authenticator.validate_username(username):
-                raise ValueError("Group username %r is not valid" % username)
+                raise ValueError("Username %r is not valid" % username)
             self.log.info(f"Creating user {username}")
             user = orm.User(name=username)
             self.db.add(user)
@@ -2301,15 +2301,18 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
+                allowed_roles = []
+                if service.oauth_roles:
+                    allowed_roles = list(
+                        self.db.query(orm.Role).filter(
+                            orm.Role.name.in_(service.oauth_roles)
+                        )
+                    )
                 oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
-                    allowed_roles=list(
-                        self.db.query(orm.Role).filter(
-                            orm.Role.name.in_(service.oauth_roles)
-                        )
-                    ),
+                    allowed_roles=allowed_roles,
                     description="JupyterHub service %s" % service.name,
                 )
                 service.orm.oauth_client = oauth_client
