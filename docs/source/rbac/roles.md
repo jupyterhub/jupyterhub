@@ -26,7 +26,7 @@ Roles can be assigned to the following entities:
 An entity can have zero, one, or multiple roles, and there are no restrictions on which roles can be assigned to which entity. Roles can be added to or removed from entities at any time.
 
 **Users** \
-When a new user gets created, they are assigned their default role (`user` or `admin`) based on their admin status. If existing user's admin status changes via API or `jupyterhub_config.py`, their default role will be updated accordingly (after next startup for the latter).
+When a new user gets created, they are assigned their default role `user`. Additionaly, if the user is created with admin privileges (via `c.Authenticator.admin_users` in `jupyterhub_config.py` or `admin: true` via API), they will be also granted `admin` role. If existing user's admin status changes via API or `jupyterhub_config.py`, their default role will be updated accordingly (after next startup for the latter).
 
 **Services** \
 Services do not have a default role. Services without roles have no access to the guarded API end-points, so most services will require assignment of a role in order to function.
