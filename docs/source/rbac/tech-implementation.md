@@ -14,6 +14,8 @@ Roles' and scopes' utilities can be found in `roles.py` and `scopes.py` modules.
 
 Roles and scopes are resolved on several occasions, for example when requesting an API token with specific roles or making an API request. The following sections provide more details.
 
+(requesting-api-token-target)=
+
 ### Requesting API token with specific roles
 
 API tokens grant access to JupyterHub's APIs. The RBAC framework allows for requesting tokens with specific existing roles. To date, it is only possible to add roles to a token in two ways:
