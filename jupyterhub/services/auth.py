@@ -836,8 +836,8 @@ class HubAuthenticated:
       Default values include:
       - 'access:services', 'access:services!service={service_name}' for services
       - 'access:servers', 'access:servers!user={user}',
-        'access:servers!server={user}/{server_name}'
-        for single-user servers
+      'access:servers!server={user}/{server_name}'
+      for single-user servers
 
     If hub_scopes is not used (e.g. JupyterHub 1.x),
     these additional properties can be used:
