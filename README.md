@@ -215,7 +215,7 @@ These accounts will be used for authentication in JupyterHub's default configura
 ## Contributing
 
 If you would like to contribute to the project, please read our
-[contributor documentation](http://jupyter.readthedocs.io/en/latest/contributor/content-contributor.html)
+[contributor documentation](https://jupyter.readthedocs.io/en/latest/contributing/content-contributor.html)
 and the [`CONTRIBUTING.md`](CONTRIBUTING.md). The `CONTRIBUTING.md` file
 explains how to set up a development installation, how to run the test suite,
 and how to contribute to documentation.
