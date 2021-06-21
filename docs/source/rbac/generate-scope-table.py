@@ -32,9 +32,10 @@ class ScopeTableGenerator:
         used for creating hierarchical scope table in _parse_scopes()
         """
         pairs = []
-        for scope in self.scopes.keys():
-            if self.scopes[scope].get('subscopes'):
-                for subscope in self.scopes[scope]['subscopes']:
+        for scope, data in self.scopes.items():
+            subscopes = data.get('subscopes')
+            if subscopes is not None:
+                for subscope in subscopes:
                     pairs.append((scope, subscope))
             else:
                 pairs.append((scope, None))
