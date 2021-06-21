@@ -140,14 +140,21 @@ class UserListAPIHandler(APIHandler):
             else:
                 query = query.filter(or_(*filters))
 
+        full_query = query
         query = query.offset(offset).limit(limit)
 
-        data = []
+        user_list = []
         for u in query:
             if post_filter is None or post_filter(u):
                 user_model = self.user_model(u)
                 if user_model:
-                    data.append(user_model)
+                    user_list.append(user_model)
+
+        if self.accepts_pagination:
+            total_count = full_query.count()
+            data = self.paginated_model(user_list, offset, limit, total_count)
+        else:
+            data = user_list
 
         self.write(json.dumps(data))
 
