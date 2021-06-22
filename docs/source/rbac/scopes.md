@@ -68,6 +68,14 @@ Requested resources are filtered based on the filter of the corresponding scope.
 
 In case a user resource is being accessed, any scopes with _group_ filters will be expanded to filters for each _user_ in those groups.
 
+### `!user` filter
+
+The `!user` filter is a special horizontal filter that strictly refers to the **"owner only"** scopes, where _owner_ is a user entity. The filter resolves internally into `!user=<ownerusername>` ensuring that only the owner's resources may be accessed through the associated scopes.
+
+For example, the `server` role assigned by default to server tokens contains `access:servers!user` and `users:activity!user` scopes. This allows the token to access and post activity of only the servers owned by the token owner.
+
+The filter can be applied to any scope.
+
 (vertical-filtering-target)=
 
 ## Vertical filtering
