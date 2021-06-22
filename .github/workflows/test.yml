@@ -11,17 +11,6 @@ on:
   push:
   workflow_dispatch:
 
-defaults:
-  run:
-    # Declare bash be used by default in this workflow's "run" steps.
-    #
-    # NOTE: bash will by default run with:
-    #   --noprofile: Ignore ~/.profile etc.
-    #   --norc:      Ignore ~/.bashrc etc.
-    #   -e:          Exit directly on errors
-    #   -o pipefail: Don't mask errors from a command piped into another command
-    shell: bash
-
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
