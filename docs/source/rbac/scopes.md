@@ -4,23 +4,24 @@ A scope has a syntax-based design that reveals which resources it provides acces
 
 `<resource>` in the RBAC scope design refers to the resource name in the [JupyterHub's API](../reference/rest-api.rst) endpoints in most cases. For instance, `<resource>` equal to `users` corresponds to JupyterHub's API endpoints beginning with _/users_.
 
+(scope-conventions-target)=
+
 ## Scope conventions
 
 - `<resource>` \
   The top-level `<resource>` scopes, such as `users` or `groups`, grant read and write permissions to the resource itself as well as its sub-resources. For example, the scope `users:activity` is included in the scope `users`.
-  +++
 
 - `read:<resource>` \
   Limits permissions to read-only operations on the resource.
-  +++
 
 - `admin:<resource>` \
   Grants additional permissions such as create/delete on the corresponding resource in addition to read and write permissions.
-  +++
+
+- `access:<resource>` \
+  Grants access permissions to the `<resource>` via API or browser.
 
 - `<resource>:<subresource>` \
   The {ref}`vertically filtered <vertical-filtering-target>` scopes provide access to a subset of the information granted by the `<resource>` scope. E.g., the scope `users:activity` only provides permission to post user activity.
-  +++
 
 - `<resource>!<object>=<objectname>` \
   {ref}`horizontal-filtering-target` is implemented by the `!<object>=<objectname>`scope structure. A resource (or sub-resource) can be filtered based on `user`, `server`, `group` or `service` name. For instance, `<resource>!user=charlie` limits access to only return resources of user `charlie`. \
@@ -44,6 +45,7 @@ Access to the user's own resources and subresources is covered by metascope `sel
 - `users!user=gerard` where the `users` scope provides access to the full user model and activity. The filter restricts this access to the user's own resources.
 - `servers!user=gerard` which grants the user access to their own servers without being able to create/delete any.
 - `tokens!user=gerard` which allows the user to access, request and delete their own tokens.
+- `access:servers!user=gerard` which allows the user to access their own servers via API or browser.
 
 The `self` scope is only valid for user entities. In other cases (e.g., for services) it resolves to an empty set of scopes.
 
@@ -82,13 +84,27 @@ The payload of an API call can be filtered both horizontally and vertically simu
 
 Table below lists all available scopes and illustrates their hierarchy. Indented scopes indicate subscopes of the scope(s) above them.
 
+There are four exceptions to the general {ref}`scope conventions <scope-conventions-target>`:
+
+- `read:users:name` is a subscope of both `read:users` and `read:servers`. \
+  The `read:servers` scope requires access to the user name (server owner) due to named servers distinguished internally in the form `!server=username/servername`.
+
+- `read:users:activity` is a subscope of both `read:users` and `users:activity`. \
+  Posting activity via the `users:activity`, which is not included in `users` scope, needs to check the last valid activity of the user.
+
+- `read:roles:users` is a subscope of both `read:roles` and `admin:users`. \
+  Admin privileges to the _users_ resource include the information about user roles.
+
+- `read:roles:groups` is a subscope of both `read:roles` and `admin:groups`. \
+  Similar to the `read:roles:users` above.
+
 ```{include} scope-table.md
 
 ```
 
 ```{Caution}
 Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can be added to scopes to customize them. \
-Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>` and `admin:<resource>` scopes are predefined and cannot be changed otherwise.
+Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>`, `admin:<resource>`, and `access:<resource>` scopes are predefined and cannot be changed otherwise.
 ```
 
 ### Scopes and APIs
