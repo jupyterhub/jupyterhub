@@ -25,10 +25,10 @@ Once all the {ref}`upgrade steps <rbac-upgrade-steps-target>` above are complete
 
 We recommended the following procedure to start with RBAC:
 
-1. Identify which admin users and services you would like to grant only the permissions they need through the new roles
+1. Identify which admin users and services you would like to grant only the permissions they need through the new roles.
 2. Strip these users and services of their admin status via API or UI. This will change their roles from `admin` to `user`.
    ```{note}
-   Stripping entities of their roles is currently under development and will be available only via API/UI.
+   Stripping entities of their roles is currently available only via `jupyterhub_config.py` (see {ref}`removing-roles-target`).
    ```
 3. Define new roles that you would like to start using with appropriate scopes and assign them to these entities in `jupyterhub_config.py`.
 4. Restart the JupyterHub for the new roles to take effect.

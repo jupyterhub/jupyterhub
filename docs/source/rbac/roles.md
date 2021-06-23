@@ -106,6 +106,10 @@ If no scopes are defined for _new role_, JupyterHub will raise a warning. Provid
 
 In case the role with a certain name already exists in the database, its definition and scopes will be overwritten. This holds true for all roles except the `admin` role, which cannot be overwritten; an error will be raised if trying to do so. All the role bearers permissions present in the definition will change accordingly.
 
+(removing-roles-target)=
+
+## Removing roles
+
 Only the entities present in the role definition in the `jupyterhub_config.py` remain the role bearers. If a user, service or group is removed from the role definition, they will lose the role on the next startup.
 
 Once a role is loaded, it remains in the database until removing it from the `jupyterhub_config.py` and restarting the Hub. All previously defined role bearers will lose the role and associated permissions. Default roles, even if previously redefined through the config file and removed, will not be deleted from the database.
