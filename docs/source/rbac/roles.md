@@ -15,7 +15,7 @@ The `user`, `admin`, and `token` roles by default all preserve the permissions p
 Only the `server` role is changed from pre-2.0, to reduce its permissions to activity-only
 instead of the default of a full access token.
 
-Additional custom roles can also be defined (see {ref}`define_role_target`).
+Additional custom roles can also be defined (see {ref}`define-role-target`).
 Roles can be assigned to the following entities:
 
 - Users
@@ -37,7 +37,7 @@ A group does not require any role, and has no roles by default. If a user is a m
 **Tokens** \
 A token’s permissions are evaluated based on their owning entity. Since a token is always issued for a user or service, it can never have more permissions than its owner. If no specific role is requested for a new token, the token is assigned the `token` role.
 
-(define_role_target)=
+(define-role-target)=
 
 ## Defining Roles
 
