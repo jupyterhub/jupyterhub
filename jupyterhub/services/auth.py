@@ -782,6 +782,8 @@ class HubAuthenticated(object):
       If left unspecified or None, username will not be checked.
     - .hub_groups: A set of group names to allow.
       If left unspecified or None, groups will not be checked.
+    - .allow_admin: Is admin user access allowed or not
+      If left unspecified or False, admin user won't have an access.
 
     Examples::
 
@@ -811,6 +813,7 @@ class HubAuthenticated(object):
             self.hub_services is None
             and self.hub_users is None
             and self.hub_groups is None
+            and not self.allow_admin
         )
 
     # self.hub_auth must be a HubAuth instance.
