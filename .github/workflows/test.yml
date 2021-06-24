@@ -11,46 +11,11 @@ on:
   push:
   workflow_dispatch:
 
-defaults:
-  run:
-    # Declare bash be used by default in this workflow's "run" steps.
-    #
-    # NOTE: bash will by default run with:
-    #   --noprofile: Ignore ~/.profile etc.
-    #   --norc:      Ignore ~/.bashrc etc.
-    #   -e:          Exit directly on errors
-    #   -o pipefail: Don't mask errors from a command piped into another command
-    shell: bash
-
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
 
 jobs:
-  # Run "pre-commit run --all-files"
-  pre-commit:
-    runs-on: ubuntu-20.04
-    timeout-minutes: 2
-
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-
-      # ref: https://github.com/pre-commit/action
-      - uses: pre-commit/action@v2.0.0
-      - name: Help message if pre-commit fail
-        if: ${{ failure() }}
-        run: |
-          echo "You can install pre-commit hooks to automatically run formatting"
-          echo "on each commit with:"
-          echo "    pre-commit install"
-          echo "or you can run by hand on staged files with"
-          echo "    pre-commit run"
-          echo "or after-the-fact on already committed files with"
-          echo "    pre-commit run --all-files"
-
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04
