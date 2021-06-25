@@ -161,7 +161,6 @@ class OAuthCallbackHandlerMixin(HubOAuthCallbackHandler):
 aliases = {
     'user': 'SingleUserNotebookApp.user',
     'group': 'SingleUserNotebookApp.group',
-    'cookie-name': 'HubAuth.cookie_name',
     'hub-prefix': 'SingleUserNotebookApp.hub_prefix',
     'hub-host': 'SingleUserNotebookApp.hub_host',
     'hub-api-url': 'SingleUserNotebookApp.hub_api_url',

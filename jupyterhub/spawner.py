@@ -216,7 +216,31 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
+
+    oauth_scopes = List(Unicode())
+
+    @default("oauth_scopes")
+    def _default_oauth_scopes(self):
+        return [
+            f"access:servers!server={self.user.name}/{self.name}",
+            f"access:servers!user={self.user.name}",
+        ]
+
     handler = Any()
+
+    oauth_roles = Union(
+        [Callable(), List()],
+        help="""Allowed roles for oauth tokens.
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued by a single-user server's
+        oauth client (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the server can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+    """,
+    ).tag(config=True)
 
     will_resume = Bool(
         False,
@@ -788,6 +812,8 @@ class Spawner(LoggingConfigurable):
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = url_path_join(
             self.user.url, self.name, 'oauth_callback'
         )
+
+        env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_scopes)
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name

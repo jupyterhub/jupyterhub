@@ -25,6 +25,7 @@ from .utils import async_requests
 from .utils import auth_header
 from .utils import find_user
 
+
 # --------------------
 # Authentication tests
 # --------------------
@@ -63,6 +64,7 @@ async def test_auth_api(app):
 async def test_referer_check(app):
     url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
+    # add admin user
     user = find_user(app.db, 'admin')
     if user is None:
         user = add_user(app.db, name='admin', admin=True)
@@ -149,13 +151,14 @@ def fill_user(model):
     """
     model.setdefault('server', None)
     model.setdefault('kind', 'user')
+    model.setdefault('roles', [])
     model.setdefault('groups', [])
     model.setdefault('admin', False)
     model.setdefault('server', None)
     model.setdefault('pending', None)
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
-    model.setdefault('servers', {})
+    # model.setdefault('servers', {})
     return model
 
 
@@ -163,20 +166,31 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 
 
 @mark.user
+@mark.role
 async def test_get_users(app):
     db = app.db
-    r = await api_request(app, 'users')
+    r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
+    user_model = {
+        'name': 'user',
+        'admin': False,
+        'roles': ['user'],
+        'last_activity': None,
+        'auth_state': None,
+    }
     assert users == [
-        fill_user({'name': 'admin', 'admin': True}),
-        fill_user({'name': 'user', 'admin': False, 'last_activity': None}),
+        fill_user(
+            {'name': 'admin', 'admin': True, 'roles': ['admin'], 'auth_state': None}
+        ),
+        fill_user(user_model),
     ]
-
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
-    assert r.status_code == 403
+    assert r.status_code == 200
+    r_user_model = r.json()[0]
+    assert r_user_model['name'] == user_model['name']
 
     # Tests offset for pagination
     r = await api_request(app, 'users?offset=1')
@@ -184,7 +198,11 @@ async def test_get_users(app):
 
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
-    assert users == [fill_user({'name': 'user', 'admin': False})]
+    assert users == [
+        fill_user(
+            {'name': 'user', 'admin': False, 'auth_state': None, 'roles': ['user']}
+        )
+    ]
 
     r = await api_request(app, 'users?offset=20')
     assert r.status_code == 200
@@ -196,7 +214,11 @@ async def test_get_users(app):
 
     users = sorted(r.json(), key=lambda d: d['name'])
     users = [normalize_user(u) for u in users]
-    assert users == [fill_user({'name': 'admin', 'admin': True})]
+    assert users == [
+        fill_user(
+            {'name': 'admin', 'admin': True, 'auth_state': None, 'roles': ['admin']}
+        )
+    ]
 
     r = await api_request(app, 'users?limit=0')
     assert r.status_code == 200
@@ -283,21 +305,28 @@ async def test_get_self(app):
     oauth_client = orm.OAuthClient(identifier='eurydice')
     db.add(oauth_client)
     db.commit()
-    oauth_token = orm.OAuthAccessToken(
+    oauth_token = orm.APIToken(
         user=u.orm_user,
-        client=oauth_client,
+        oauth_client=oauth_client,
         token=token,
-        grant_type=orm.GrantType.authorization_code,
     )
     db.add(oauth_token)
     db.commit()
-    r = await api_request(app, 'user', headers={'Authorization': 'token ' + token})
+    r = await api_request(
+        app,
+        'user',
+        headers={'Authorization': 'token ' + token},
+    )
     r.raise_for_status()
     model = r.json()
     assert model['name'] == u.name
 
     # invalid auth gets 403
-    r = await api_request(app, 'user', headers={'Authorization': 'token notvalid'})
+    r = await api_request(
+        app,
+        'user',
+        headers={'Authorization': 'token notvalid'},
+    )
     assert r.status_code == 403
 
 
@@ -313,6 +342,7 @@ async def test_get_self_service(app, mockservice):
 
 
 @mark.user
+@mark.role
 async def test_add_user(app):
     db = app.db
     name = 'newuser'
@@ -322,16 +352,25 @@ async def test_add_user(app):
     assert user is not None
     assert user.name == name
     assert not user.admin
+    # assert newuser has default 'user' role
+    assert orm.Role.find(db, 'user') in user.roles
+    assert orm.Role.find(db, 'admin') not in user.roles
 
 
 @mark.user
+@mark.role
 async def test_get_user(app):
     name = 'user'
-    r = await api_request(app, 'users', name)
+    _ = await api_request(app, 'users', name, headers=auth_header(app.db, name))
+    r = await api_request(
+        app,
+        'users',
+        name,
+    )
     assert r.status_code == 200
 
     user = normalize_user(r.json())
-    assert user == fill_user({'name': name, 'auth_state': None})
+    assert user == fill_user({'name': name, 'roles': ['user'], 'auth_state': None})
 
 
 @mark.user
@@ -359,6 +398,7 @@ async def test_add_multi_user_invalid(app):
 
 
 @mark.user
+@mark.role
 async def test_add_multi_user(app):
     db = app.db
     names = ['a', 'b']
@@ -375,6 +415,9 @@ async def test_add_multi_user(app):
         assert user is not None
         assert user.name == name
         assert not user.admin
+        # assert default 'user' role added
+        assert orm.Role.find(db, 'user') in user.roles
+        assert orm.Role.find(db, 'admin') not in user.roles
 
     # try to create the same users again
     r = await api_request(
@@ -395,6 +438,7 @@ async def test_add_multi_user(app):
 
 
 @mark.user
+@mark.role
 async def test_add_multi_user_admin(app):
     db = app.db
     names = ['c', 'd']
@@ -414,6 +458,8 @@ async def test_add_multi_user_admin(app):
         assert user is not None
         assert user.name == name
         assert user.admin
+        assert orm.Role.find(db, 'user') not in user.roles
+        assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -439,6 +485,7 @@ async def test_add_user_duplicate(app):
 
 
 @mark.user
+@mark.role
 async def test_add_admin(app):
     db = app.db
     name = 'newadmin'
@@ -450,6 +497,9 @@ async def test_add_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
+    # assert newadmin has default 'admin' role
+    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -461,6 +511,7 @@ async def test_delete_user(app):
 
 
 @mark.user
+@mark.role
 async def test_make_admin(app):
     db = app.db
     name = 'admin2'
@@ -470,15 +521,20 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert not user.admin
+    assert orm.Role.find(db, 'user') in user.roles
+    assert orm.Role.find(db, 'admin') not in user.roles
 
     r = await api_request(
         app, 'users', name, method='patch', data=json.dumps({'admin': True})
     )
+
     assert r.status_code == 200
     user = find_user(db, name)
     assert user is not None
     assert user.name == name
     assert user.admin
+    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'admin') in user.roles
 
 
 @mark.user
@@ -509,7 +565,6 @@ async def test_user_set_auth_state(app, auth_state_enabled):
     assert user.name == name
     user_auth_state = await user.get_auth_state()
     assert user_auth_state is None
-
     r = await api_request(
         app,
         'users',
@@ -518,7 +573,6 @@ async def test_user_set_auth_state(app, auth_state_enabled):
         data=json.dumps({'auth_state': auth_state}),
         headers=auth_header(app.db, name),
     )
-
     assert r.status_code == 403
     user_auth_state = await user.get_auth_state()
     assert user_auth_state is None
@@ -1161,76 +1215,13 @@ async def test_check_token(app):
     assert r.status_code == 404
 
 
-@mark.parametrize("headers, status", [({}, 200), ({'Authorization': 'token bad'}, 403)])
+@mark.parametrize("headers, status", [({}, 404), ({'Authorization': 'token bad'}, 404)])
 async def test_get_new_token_deprecated(app, headers, status):
     # request a new token
     r = await api_request(
         app, 'authorizations', 'token', method='post', headers=headers
     )
     assert r.status_code == status
-    if status != 200:
-        return
-    reply = r.json()
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == 'admin'
-
-
-async def test_token_formdata_deprecated(app):
-    """Create a token for a user with formdata and no auth header"""
-    data = {'username': 'fake', 'password': 'fake'}
-    r = await api_request(
-        app,
-        'authorizations',
-        'token',
-        method='post',
-        data=json.dumps(data) if data else None,
-        noauth=True,
-    )
-    assert r.status_code == 200
-    reply = r.json()
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == data['username']
-
-
-@mark.parametrize(
-    "as_user, for_user, status",
-    [
-        ('admin', 'other', 200),
-        ('admin', 'missing', 400),
-        ('user', 'other', 403),
-        ('user', 'user', 200),
-    ],
-)
-async def test_token_as_user_deprecated(app, as_user, for_user, status):
-    # ensure both users exist
-    u = add_user(app.db, app, name=as_user)
-    if for_user != 'missing':
-        add_user(app.db, app, name=for_user)
-    data = {'username': for_user}
-    headers = {'Authorization': 'token %s' % u.new_api_token()}
-    r = await api_request(
-        app,
-        'authorizations',
-        'token',
-        method='post',
-        data=json.dumps(data),
-        headers=headers,
-    )
-    assert r.status_code == status
-    reply = r.json()
-    if status != 200:
-        return
-    assert 'token' in reply
-    r = await api_request(app, 'authorizations', 'token', reply['token'])
-    r.raise_for_status()
-    reply = r.json()
-    assert reply['name'] == data['username']
 
 
 @mark.parametrize(
@@ -1295,7 +1286,7 @@ async def test_get_new_token(app, headers, status, note, expires_in):
     "as_user, for_user, status",
     [
         ('admin', 'other', 200),
-        ('admin', 'missing', 404),
+        ('admin', 'missing', 403),
         ('user', 'other', 403),
         ('user', 'user', 200),
     ],
@@ -1304,7 +1295,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     # ensure both users exist
     u = add_user(app.db, app, name=as_user)
     if for_user != 'missing':
-        add_user(app.db, app, name=for_user)
+        for_user_obj = add_user(app.db, app, name=for_user)
     data = {'username': for_user}
     headers = {'Authorization': 'token %s' % u.new_api_token()}
     r = await api_request(
@@ -1321,6 +1312,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     if status != 200:
         return
     assert 'token' in reply
+
     token_id = reply['id']
     r = await api_request(app, 'users', for_user, 'tokens', token_id, headers=headers)
     r.raise_for_status()
@@ -1392,7 +1384,7 @@ async def test_token_authenticator_dict_noauth(app):
     [
         ('admin', 'other', 200),
         ('admin', 'missing', 404),
-        ('user', 'other', 403),
+        ('user', 'other', 404),
         ('user', 'user', 200),
     ],
 )
@@ -1406,12 +1398,11 @@ async def test_token_list(app, as_user, for_user, status):
     if status != 200:
         return
     reply = r.json()
-    assert sorted(reply) == ['api_tokens', 'oauth_tokens']
+    assert sorted(reply) == ['api_tokens']
     assert len(reply['api_tokens']) == len(for_user_obj.api_tokens)
     assert all(token['user'] == for_user for token in reply['api_tokens'])
-    assert all(token['user'] == for_user for token in reply['oauth_tokens'])
     # validate individual token ids
-    for token in reply['api_tokens'] + reply['oauth_tokens']:
+    for token in reply['api_tokens']:
         r = await api_request(
             app, 'users', for_user, 'tokens', token['id'], headers=headers
         )
@@ -1443,8 +1434,8 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert reply == [
-        {'kind': 'group', 'name': 'alphaflight', 'users': []},
-        {'kind': 'group', 'name': 'betaflight', 'users': []},
+        {'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []},
+        {'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []},
     ]
 
     # Test offset for pagination
@@ -1452,7 +1443,7 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert r.status_code == 200
-    assert reply == [{'kind': 'group', 'name': 'betaflight', 'users': []}]
+    assert reply == [{'kind': 'group', 'name': 'betaflight', 'users': [], 'roles': []}]
 
     r = await api_request(app, "groups?offset=10")
     r.raise_for_status()
@@ -1464,7 +1455,7 @@ async def test_groups_list(app):
     r.raise_for_status()
     reply = r.json()
     assert r.status_code == 200
-    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': []}]
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
     r = await api_request(app, "groups?limit=0")
     r.raise_for_status()
@@ -1508,6 +1499,7 @@ async def test_group_get(app):
         'kind': 'group',
         'name': 'alphaflight',
         'users': ['sasquatch'],
+        'roles': [],
     }
 
 
@@ -1619,8 +1611,10 @@ async def test_get_services(app, mockservice_url):
     services = r.json()
     assert services == {
         mockservice.name: {
+            'kind': 'service',
             'name': mockservice.name,
             'admin': True,
+            'roles': ['admin'],
             'command': mockservice.command,
             'pid': mockservice.proc.pid,
             'prefix': mockservice.server.base_url,
@@ -1629,7 +1623,6 @@ async def test_get_services(app, mockservice_url):
             'display': True,
         }
     }
-
     r = await api_request(app, 'services', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
@@ -1644,8 +1637,10 @@ async def test_get_service(app, mockservice_url):
 
     service = r.json()
     assert service == {
+        'kind': 'service',
         'name': mockservice.name,
         'admin': True,
+        'roles': ['admin'],
         'command': mockservice.command,
         'pid': mockservice.proc.pid,
         'prefix': mockservice.server.base_url,
@@ -1653,7 +1648,6 @@ async def test_get_service(app, mockservice_url):
         'info': {},
         'display': True,
     }
-
     r = await api_request(
         app,
         'services/%s' % mockservice.name,
@@ -1673,7 +1667,7 @@ async def test_root_api(app):
     if app.internal_ssl:
         kwargs['cert'] = (app.internal_ssl_cert, app.internal_ssl_key)
         kwargs["verify"] = app.internal_ssl_ca
-    r = await async_requests.get(url, **kwargs)
+    r = await api_request(app, bypass_proxy=True)
     r.raise_for_status()
     expected = {'version': jupyterhub.__version__}
     assert r.json() == expected
@@ -1717,11 +1711,11 @@ async def test_update_activity_403(app, user, admin_user):
         data="{}",
         method="post",
     )
-    assert r.status_code == 403
+    assert r.status_code == 404
 
 
 async def test_update_activity_admin(app, user, admin_user):
-    token = admin_user.new_api_token()
+    token = admin_user.new_api_token(roles=['admin'])
     r = await api_request(
         app,
         "users/{}/activity".format(user.name),

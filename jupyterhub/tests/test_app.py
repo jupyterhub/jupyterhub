@@ -51,7 +51,7 @@ def test_raise_error_on_missing_specified_config():
     process = Popen(
         [sys.executable, '-m', 'jupyterhub', '--config', 'not-available.py']
     )
-    # wait inpatiently for the process to exit like we want it to
+    # wait impatiently for the process to exit like we want it to
     for i in range(100):
         time.sleep(0.1)
         returncode = process.poll()

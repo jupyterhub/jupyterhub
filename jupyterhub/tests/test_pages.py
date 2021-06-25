@@ -12,8 +12,10 @@ from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
 from .. import orm
+from .. import scopes
 from ..auth import Authenticator
 from ..handlers import BaseHandler
+from ..utils import url_path_join
 from ..utils import url_path_join as ujoin
 from .mocking import FalsyCallableFormSpawner
 from .mocking import FormSpawner
@@ -21,6 +23,7 @@ from .test_api import next_event
 from .utils import add_user
 from .utils import api_request
 from .utils import async_requests
+from .utils import AsyncSession
 from .utils import get_page
 from .utils import public_host
 from .utils import public_url
@@ -869,8 +872,9 @@ async def test_oauth_token_page(app):
     user = app.users[orm.User.find(app.db, name)]
     client = orm.OAuthClient(identifier='token')
     app.db.add(client)
-    oauth_token = orm.OAuthAccessToken(
-        client=client, user=user, grant_type=orm.GrantType.authorization_code
+    oauth_token = orm.APIToken(
+        oauth_client=client,
+        user=user,
     )
     app.db.add(oauth_token)
     app.db.commit()
@@ -943,6 +947,62 @@ async def test_bad_oauth_get(app, params):
         "hub/api/oauth2/authorize?" + params, app, hub=False, cookies=cookies
     )
     assert r.status_code == 400
+
+
+@pytest.mark.parametrize(
+    "scopes, has_access",
+    [
+        (["users"], False),
+        (["admin:users"], False),
+        (["users", "admin:users", "admin:servers"], True),
+    ],
+)
+async def test_admin_page_access(app, scopes, has_access, create_user_with_scopes):
+    user = create_user_with_scopes(*scopes)
+    cookies = await app.login_user(user.name)
+    r = await get_page("/admin", app, cookies=cookies)
+    if has_access:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 403
+
+
+async def test_oauth_page_scope_appearance(
+    app, mockservice_url, create_user_with_scopes, create_temp_role
+):
+    service_role = create_temp_role(
+        [
+            'self',
+            'read:users!user=gawain',
+            'read:tokens',
+            'read:groups!group=mythos',
+        ]
+    )
+    service = mockservice_url
+    user = create_user_with_scopes("access:services")
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_roles = [service_role]
+    app.db.commit()
+
+    s = AsyncSession()
+    s.cookies = await app.login_user(user.name)
+    url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    r = await s.get(url)
+    r.raise_for_status()
+    soup = BeautifulSoup(r.text, "html.parser")
+    scopes_block = soup.find('form')
+    for scope in service_role.scopes:
+        base_scope, _, filter_ = scope.partition('!')
+        scope_def = scopes.scope_definitions[base_scope]
+        assert scope_def['description'] in scopes_block.text
+        if filter_:
+            kind, _, name = filter_.partition('=')
+            assert kind in scopes_block.text
+            assert name in scopes_block.text
 
 
 async def test_token_page(app):

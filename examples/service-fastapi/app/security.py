@@ -1,3 +1,4 @@
+import json
 import os
 
 from fastapi import HTTPException
@@ -26,6 +27,12 @@ auth_by_header = OAuth2AuthorizationCodeBearer(
 ### with the auth code.  That endpoint POST's to Hub /oauth2/token with
 ### our client_secret (JUPYTERHUB_API_TOKEN) and that code to get an
 ### access_token, which it returns to browser, which places in Authorization header.
+
+if os.environ.get("JUPYTERHUB_OAUTH_SCOPES"):
+    # typically ["access:services", "access:services!service=$service_name"]
+    access_scopes = json.loads(os.environ["JUPYTERHUB_OAUTH_SCOPES"])
+else:
+    access_scopes = ["access:services"]
 
 ### For consideration: optimize performance with a cache instead of
 ### always hitting the Hub api?
@@ -58,4 +65,15 @@ async def get_current_user(
                 },
             )
     user = User(**resp.json())
-    return user
+    if any(scope in user.scopes for scope in access_scopes):
+        return user
+    else:
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            detail={
+                "msg": f"User not authorized: {user.name}",
+                "request_url": str(resp.request.url),
+                "token": token,
+                "user": resp.json(),
+            },
+        )

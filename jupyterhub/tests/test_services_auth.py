@@ -1,33 +1,20 @@
 """Tests for service authentication"""
-import asyncio
 import copy
-import json
 import os
 import sys
 from binascii import hexlify
-from functools import partial
-from queue import Queue
-from threading import Thread
 from unittest import mock
+from urllib.parse import parse_qs
 from urllib.parse import urlparse
 
-import requests
-import requests_mock
+import pytest
 from pytest import raises
-from tornado.httpserver import HTTPServer
 from tornado.httputil import url_concat
-from tornado.ioloop import IOLoop
-from tornado.web import Application
-from tornado.web import authenticated
-from tornado.web import HTTPError
-from tornado.web import RequestHandler
 
 from .. import orm
+from .. import roles
 from ..services.auth import _ExpiringDict
-from ..services.auth import HubAuth
-from ..services.auth import HubAuthenticated
 from ..utils import url_path_join
-from .mocking import public_host
 from .mocking import public_url
 from .test_api import add_user
 from .utils import async_requests
@@ -74,192 +61,29 @@ def test_expiring_dict():
         assert cache.get('key', 'default') == 'cached value'
 
 
-def test_hub_auth():
-    auth = HubAuth(cookie_name='foo')
-    mock_model = {'name': 'onyxia'}
-    url = url_path_join(auth.api_url, "authorizations/cookie/foo/bar")
-    with requests_mock.Mocker() as m:
-        m.get(url, text=json.dumps(mock_model))
-        user_model = auth.user_for_cookie('bar')
-    assert user_model == mock_model
-    # check cache
-    user_model = auth.user_for_cookie('bar')
-    assert user_model == mock_model
-
-    with requests_mock.Mocker() as m:
-        m.get(url, status_code=404)
-        user_model = auth.user_for_cookie('bar', use_cache=False)
-    assert user_model is None
-
-    # invalidate cache with timer
-    mock_model = {'name': 'willow'}
-    with monotonic_future, requests_mock.Mocker() as m:
-        m.get(url, text=json.dumps(mock_model))
-        user_model = auth.user_for_cookie('bar')
-    assert user_model == mock_model
-
-    with requests_mock.Mocker() as m:
-        m.get(url, status_code=500)
-        with raises(HTTPError) as exc_info:
-            user_model = auth.user_for_cookie('bar', use_cache=False)
-    assert exc_info.value.status_code == 502
-
-    with requests_mock.Mocker() as m:
-        m.get(url, status_code=400)
-        with raises(HTTPError) as exc_info:
-            user_model = auth.user_for_cookie('bar', use_cache=False)
-    assert exc_info.value.status_code == 500
-
-
-def test_hub_authenticated(request):
-    auth = HubAuth(cookie_name='jubal')
-    mock_model = {'name': 'jubalearly', 'groups': ['lions']}
-    cookie_url = url_path_join(auth.api_url, "authorizations/cookie", auth.cookie_name)
-    good_url = url_path_join(cookie_url, "early")
-    bad_url = url_path_join(cookie_url, "late")
-
-    class TestHandler(HubAuthenticated, RequestHandler):
-        hub_auth = auth
-
-        @authenticated
-        def get(self):
-            self.finish(self.get_current_user())
-
-    # start hub-authenticated service in a thread:
-    port = 50505
-    q = Queue()
-
-    def run():
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        app = Application([('/*', TestHandler)], login_url=auth.login_url)
-
-        http_server = HTTPServer(app)
-        http_server.listen(port)
-        loop = IOLoop.current()
-        loop.add_callback(lambda: q.put(loop))
-        loop.start()
-
-    t = Thread(target=run)
-    t.start()
-
-    def finish_thread():
-        loop.add_callback(loop.stop)
-        t.join(timeout=30)
-        assert not t.is_alive()
-
-    request.addfinalizer(finish_thread)
-
-    # wait for thread to start
-    loop = q.get(timeout=10)
-
-    with requests_mock.Mocker(real_http=True) as m:
-        # no cookie
-        r = requests.get('http://127.0.0.1:%i' % port, allow_redirects=False)
-        r.raise_for_status()
-        assert r.status_code == 302
-        assert auth.login_url in r.headers['Location']
-
-        # wrong cookie
-        m.get(bad_url, status_code=404)
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'late'},
-            allow_redirects=False,
-        )
-        r.raise_for_status()
-        assert r.status_code == 302
-        assert auth.login_url in r.headers['Location']
-
-        # clear the cache because we are going to request
-        # the same url again with a different result
-        auth.cache.clear()
-
-        # upstream 403
-        m.get(bad_url, status_code=403)
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'late'},
-            allow_redirects=False,
-        )
-        assert r.status_code == 500
-
-        m.get(good_url, text=json.dumps(mock_model))
-
-        # no specific allowed user
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'early'},
-            allow_redirects=False,
-        )
-        r.raise_for_status()
-        assert r.status_code == 200
-
-        # pass allowed user
-        TestHandler.hub_users = {'jubalearly'}
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'early'},
-            allow_redirects=False,
-        )
-        r.raise_for_status()
-        assert r.status_code == 200
-
-        # no pass allowed ser
-        TestHandler.hub_users = {'kaylee'}
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'early'},
-            allow_redirects=False,
-        )
-        assert r.status_code == 403
-
-        # pass allowed group
-        TestHandler.hub_groups = {'lions'}
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'early'},
-            allow_redirects=False,
-        )
-        r.raise_for_status()
-        assert r.status_code == 200
-
-        # no pass allowed group
-        TestHandler.hub_groups = {'tigers'}
-        r = requests.get(
-            'http://127.0.0.1:%i' % port,
-            cookies={'jubal': 'early'},
-            allow_redirects=False,
-        )
-        assert r.status_code == 403
-
-
-async def test_hubauth_cookie(app, mockservice_url):
-    """Test HubAuthenticated service with user cookies"""
-    cookies = await app.login_user('badger')
-    r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/', cookies=cookies
-    )
-    r.raise_for_status()
-    print(r.text)
-    reply = r.json()
-    sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': 'badger', 'admin': False}
-
-
-async def test_hubauth_token(app, mockservice_url):
+async def test_hubauth_token(app, mockservice_url, create_user_with_scopes):
     """Test HubAuthenticated service with user API tokens"""
-    u = add_user(app.db, name='river')
+    u = create_user_with_scopes("access:services")
     token = u.new_api_token()
+    no_access_token = u.new_api_token(roles=[])
     app.db.commit()
+
+    # token without sufficient permission in Authorization header
+    r = await async_requests.get(
+        public_url(app, mockservice_url) + '/whoami/',
+        headers={'Authorization': f'token {no_access_token}'},
+    )
+    assert r.status_code == 403
 
     # token in Authorization header
     r = await async_requests.get(
         public_url(app, mockservice_url) + '/whoami/',
-        headers={'Authorization': 'token %s' % token},
+        headers={'Authorization': f'token {token}'},
     )
+    r.raise_for_status()
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': 'river', 'admin': False}
+    assert sub_reply == {'name': u.name, 'admin': False}
 
     # token in ?token parameter
     r = await async_requests.get(
@@ -268,7 +92,7 @@ async def test_hubauth_token(app, mockservice_url):
     r.raise_for_status()
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ['name', 'admin']}
-    assert sub_reply == {'name': 'river', 'admin': False}
+    assert sub_reply == {'name': u.name, 'admin': False}
 
     r = await async_requests.get(
         public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
@@ -281,34 +105,95 @@ async def test_hubauth_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-async def test_hubauth_service_token(app, mockservice_url):
+@pytest.mark.parametrize(
+    "scopes, allowed",
+    [
+        (
+            [
+                "access:services",
+            ],
+            True,
+        ),
+        (
+            [
+                "access:services!service=$service",
+            ],
+            True,
+        ),
+        (
+            [
+                "access:services!service=other-service",
+            ],
+            False,
+        ),
+        (
+            [
+                "access:servers!user=$service",
+            ],
+            False,
+        ),
+    ],
+)
+async def test_hubauth_service_token(request, app, mockservice_url, scopes, allowed):
     """Test HubAuthenticated service with service API tokens"""
+
+    scopes = [scope.replace('$service', mockservice_url.name) for scope in scopes]
 
     token = hexlify(os.urandom(5)).decode('utf8')
     name = 'test-api-service'
     app.service_tokens[token] = name
     await app.init_api_tokens()
 
+    orm_service = app.db.query(orm.Service).filter_by(name=name).one()
+    role_name = "test-hubauth-service-token"
+
+    roles.create_role(
+        app.db,
+        {
+            "name": role_name,
+            "description": "role for test",
+            "scopes": scopes,
+        },
+    )
+    request.addfinalizer(lambda: roles.delete_role(app.db, role_name))
+    roles.grant_role(app.db, orm_service, role_name)
+
     # token in Authorization header
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/',
+        public_url(app, mockservice_url) + 'whoami/',
         headers={'Authorization': 'token %s' % token},
+        allow_redirects=False,
     )
-    r.raise_for_status()
-    reply = r.json()
-    assert reply == {'kind': 'service', 'name': name, 'admin': False}
-    assert not r.cookies
+    service_model = {
+        'kind': 'service',
+        'name': name,
+        'admin': False,
+        'scopes': scopes,
+    }
+    if allowed:
+        r.raise_for_status()
+        assert r.status_code == 200
+        reply = r.json()
+        assert service_model.items() <= reply.items()
+        assert not r.cookies
+    else:
+        assert r.status_code == 403
 
     # token in ?token parameter
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/?token=%s' % token
+        public_url(app, mockservice_url) + 'whoami/?token=%s' % token
     )
-    r.raise_for_status()
-    reply = r.json()
-    assert reply == {'kind': 'service', 'name': name, 'admin': False}
+    if allowed:
+        r.raise_for_status()
+        assert r.status_code == 200
+        reply = r.json()
+        assert service_model.items() <= reply.items()
+        assert not r.cookies
+    else:
+        assert r.status_code == 403
 
     r = await async_requests.get(
-        public_url(app, mockservice_url) + '/whoami/?token=no-such-token',
+        public_url(app, mockservice_url) + 'whoami/?token=no-such-token',
         allow_redirects=False,
     )
     assert r.status_code == 302
@@ -318,12 +203,55 @@ async def test_hubauth_service_token(app, mockservice_url):
     assert path.endswith('/hub/login')
 
 
-async def test_oauth_service(app, mockservice_url):
+@pytest.mark.parametrize(
+    "client_allowed_roles, request_roles, expected_roles",
+    [
+        # allow empty roles
+        ([], [], []),
+        # allow original 'identify' scope to map to no role
+        ([], ["identify"], []),
+        # requesting roles outside client list doesn't work
+        ([], ["admin"], None),
+        ([], ["token"], None),
+        # requesting nonexistent roles fails in the same way (no server error)
+        ([], ["nosuchrole"], None),
+        # requesting exactly client allow list works
+        (["user"], ["user"], ["user"]),
+        # no explicit request, defaults to all
+        (["token", "user"], [], ["token", "user"]),
+        # explicit 'identify' maps to none
+        (["token", "user"], ["identify"], []),
+        # any item outside the list isn't allowed
+        (["token", "user"], ["token", "server"], None),
+        # requesting subset
+        (["admin", "user"], ["user"], ["user"]),
+        (["user", "token", "server"], ["token", "user"], ["token", "user"]),
+    ],
+)
+async def test_oauth_service_roles(
+    app,
+    mockservice_url,
+    create_user_with_scopes,
+    client_allowed_roles,
+    request_roles,
+    expected_roles,
+):
     service = mockservice_url
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_roles = [
+        orm.Role.find(app.db, role_name) for role_name in client_allowed_roles
+    ]
+    app.db.commit()
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
     # first request is only going to login and get us to the oauth form page
     s = AsyncSession()
-    name = 'link'
+    user = create_user_with_scopes("access:services")
+    roles.grant_role(app.db, user, "user")
+    name = user.name
     s.cookies = await app.login_user(name)
 
     r = await s.get(url)
@@ -334,7 +262,18 @@ async def test_oauth_service(app, mockservice_url):
     assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
 
     # submit the oauth form to complete authorization
-    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    data = {}
+    if request_roles:
+        data["scopes"] = request_roles
+    r = await s.post(r.url, data=data, headers={'Referer': r.url})
+    if expected_roles is None:
+        # expected failed auth, stop here
+        # verify expected 'invalid scope' error, not server error
+        dest_url, _, query = r.url.partition("?")
+        assert dest_url == public_url(app, mockservice_url) + "oauth_callback"
+        assert parse_qs(query).get("error") == ["invalid_scope"]
+        assert r.status_code == 400
+        return
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
@@ -348,7 +287,7 @@ async def test_oauth_service(app, mockservice_url):
     assert r.status_code == 200
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ('kind', 'name')}
-    assert sub_reply == {'name': 'link', 'kind': 'user'}
+    assert sub_reply == {'name': user.name, 'kind': 'user'}
 
     # token-authenticated request to HubOAuth
     token = app.users[name].new_api_token()
@@ -368,12 +307,122 @@ async def test_oauth_service(app, mockservice_url):
     assert reply['name'] == name
 
 
-async def test_oauth_cookie_collision(app, mockservice_url):
+@pytest.mark.parametrize(
+    "access_scopes, expect_success",
+    [
+        (["access:services"], True),
+        (["access:services!service=$service"], True),
+        (["access:services!service=other-service"], False),
+        (["self"], False),
+        ([], False),
+    ],
+)
+async def test_oauth_access_scopes(
+    app,
+    mockservice_url,
+    create_user_with_scopes,
+    access_scopes,
+    expect_success,
+):
+    """Check that oauth/authorize validates access scopes"""
+    service = mockservice_url
+    access_scopes = [s.replace("$service", service.name) for s in access_scopes]
+    url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
+    # first request is only going to login and get us to the oauth form page
+    s = AsyncSession()
+    user = create_user_with_scopes(*access_scopes)
+    name = user.name
+    s.cookies = await app.login_user(name)
+
+    r = await s.get(url)
+    if not expect_success:
+        assert r.status_code == 403
+        return
+    r.raise_for_status()
+    # we should be looking at the oauth confirmation page
+    assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
+    # verify oauth state cookie was set at some point
+    assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
+
+    # submit the oauth form to complete authorization
+    r = await s.post(r.url, headers={'Referer': r.url})
+    r.raise_for_status()
+    assert r.url == url
+    # verify oauth cookie is set
+    assert 'service-%s' % service.name in set(s.cookies.keys())
+    # verify oauth state cookie has been consumed
+    assert 'service-%s-oauth-state' % service.name not in set(s.cookies.keys())
+
+    # second request should be authenticated, which means no redirects
+    r = await s.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 200
+    reply = r.json()
+    sub_reply = {key: reply.get(key, 'missing') for key in ('kind', 'name')}
+    assert sub_reply == {'name': name, 'kind': 'user'}
+
+    # revoke user access, should result in 403
+    user.roles = []
+    app.db.commit()
+
+    # reset session id to avoid cached response
+    s.cookies.pop('jupyterhub-session-id')
+
+    r = await s.get(url, allow_redirects=False)
+    assert r.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "token_roles, hits_page",
+    [([], True), (['writer'], True), (['writer', 'reader'], False)],
+)
+async def test_oauth_page_hit(
+    app,
+    mockservice_url,
+    create_user_with_scopes,
+    create_temp_role,
+    token_roles,
+    hits_page,
+):
+    test_roles = {
+        'reader': create_temp_role(['read:users'], role_name='reader'),
+        'writer': create_temp_role(['users:activity'], role_name='writer'),
+    }
+    service = mockservice_url
+    user = create_user_with_scopes("access:services", "self")
+    user.new_api_token()
+    token = user.api_tokens[0]
+    token.roles = [test_roles[t] for t in token_roles]
+
+    oauth_client = (
+        app.db.query(orm.OAuthClient)
+        .filter_by(identifier=service.oauth_client_id)
+        .one()
+    )
+    oauth_client.allowed_roles = list(test_roles.values())
+    token.client_id = service.oauth_client_id
+    app.db.commit()
+    s = AsyncSession()
+    s.cookies = await app.login_user(user.name)
+    url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
+    r = await s.get(url)
+    r.raise_for_status()
+    if hits_page:
+        # hit auth page to confirm permissions
+        assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
+    else:
+        # skip auth page, permissions are granted
+        assert r.status_code == 200
+        assert r.url == url
+
+
+async def test_oauth_cookie_collision(app, mockservice_url, create_user_with_scopes):
     service = mockservice_url
     url = url_path_join(public_url(app, mockservice_url), 'owhoami/')
     print(url)
     s = AsyncSession()
     name = 'mypha'
+    user = create_user_with_scopes("access:services", name=name)
     s.cookies = await app.login_user(name)
     state_cookie_name = 'service-%s-oauth-state' % service.name
     service_cookie_name = 'service-%s' % service.name
@@ -426,7 +475,7 @@ async def test_oauth_cookie_collision(app, mockservice_url):
     assert state_cookies == []
 
 
-async def test_oauth_logout(app, mockservice_url):
+async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     """Verify that logout via the Hub triggers logout for oauth services
 
     1. clears session id cookie
@@ -440,15 +489,11 @@ async def test_oauth_logout(app, mockservice_url):
     # first request is only going to set login cookie
     s = AsyncSession()
     name = 'propha'
-    app_user = add_user(app.db, app=app, name=name)
+    user = create_user_with_scopes("access:services", name=name)
 
     def auth_tokens():
         """Return list of OAuth access tokens for the user"""
-        return list(
-            app.db.query(orm.OAuthAccessToken).filter(
-                orm.OAuthAccessToken.user_id == app_user.id
-            )
-        )
+        return list(app.db.query(orm.APIToken).filter_by(user_id=user.id))
 
     # ensure we start empty
     assert auth_tokens() == []

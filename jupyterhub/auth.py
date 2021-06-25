@@ -112,7 +112,7 @@ class Authenticator(LoggingConfigurable):
 
         Use this with supported authenticators to restrict which users can log in. This is an
         additional list that further restricts users, beyond whatever restrictions the
-        authenticator has in place.
+        authenticator has in place. Any user in this list is granted the 'user' role on hub startup.
 
         If empty, does not perform any additional restriction.
 

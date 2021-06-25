@@ -5,12 +5,12 @@ import json
 
 from tornado import web
 
-from ..utils import admin_only
+from ..scopes import needs_scope
 from .base import APIHandler
 
 
 class ProxyAPIHandler(APIHandler):
-    @admin_only
+    @needs_scope('proxy')
     async def get(self):
         """GET /api/proxy fetches the routing table
 
@@ -29,7 +29,7 @@ class ProxyAPIHandler(APIHandler):
 
         self.write(json.dumps(routes))
 
-    @admin_only
+    @needs_scope('proxy')
     async def post(self):
         """POST checks the proxy to ensure that it's up to date.
 
@@ -38,7 +38,7 @@ class ProxyAPIHandler(APIHandler):
         """
         await self.proxy.check_routes(self.users, self.services)
 
-    @admin_only
+    @needs_scope('proxy')
     async def patch(self):
         """PATCH updates the location of the proxy
 

@@ -1,6 +1,6 @@
 # Frequently asked questions
 
-### How do I share links to notebooks?
+## How do I share links to notebooks?
 
 In short, where you see `/user/name/notebooks/foo.ipynb` use `/hub/user-redirect/notebooks/foo.ipynb` (replace `/user/name` with `/hub/user-redirect`).
 

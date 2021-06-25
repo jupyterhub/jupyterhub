@@ -3,12 +3,13 @@ import asyncio
 import os
 import sys
 from binascii import hexlify
-from contextlib import contextmanager
 from subprocess import Popen
 
 from async_generator import asynccontextmanager
-from tornado.ioloop import IOLoop
 
+from .. import orm
+from ..roles import update_roles
+from ..utils import exponential_backoff
 from ..utils import maybe_future
 from ..utils import random_port
 from ..utils import url_path_join
@@ -51,11 +52,11 @@ async def test_managed_service(mockservice):
     assert proc.poll() is not None
 
     # ensure Hub notices service is down and brings it back up:
-    for i in range(20):
-        if service.proc is not proc:
-            break
-        else:
-            await asyncio.sleep(0.2)
+    await exponential_backoff(
+        lambda: service.proc is not proc,
+        "Process was never replaced",
+        timeout=20,
+    )
 
     assert service.proc.pid != first_pid
     assert service.proc.poll() is None
@@ -85,13 +86,20 @@ async def test_external_service(app):
                 'admin': True,
                 'url': env['JUPYTERHUB_SERVICE_URL'],
                 'api_token': env['JUPYTERHUB_API_TOKEN'],
+                'oauth_roles': ['user'],
             }
         ]
         await maybe_future(app.init_services())
         await app.init_api_tokens()
         await app.proxy.add_all_services(app._service_map)
+        await app.init_role_assignment()
 
         service = app._service_map[name]
+        assert service.oauth_available
+        assert service.oauth_client is not None
+        assert service.oauth_client.allowed_roles == [orm.Role.find(app.db, "user")]
+        api_token = service.orm.api_tokens[0]
+        update_roles(app.db, api_token, roles=['token'])
         url = public_url(app, service) + '/api/users'
         r = await async_requests.get(url, allow_redirects=False)
         r.raise_for_status()

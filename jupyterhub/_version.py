@@ -3,8 +3,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 version_info = (
-    1,
-    5,
+    2,
+    0,
     0,
     "",  # release (b1, rc1, or "" for final or dev)
     "dev",  # dev or nothing for beta/rc/stable releases

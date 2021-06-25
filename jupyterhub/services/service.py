@@ -38,6 +38,7 @@ A hub-managed service with no URL::
     }
 
 """
+import asyncio
 import copy
 import os
 import pipes
@@ -50,7 +51,9 @@ from traitlets import default
 from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
+from traitlets import List
 from traitlets import Unicode
+from traitlets import validate
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
@@ -96,6 +99,14 @@ class _ServiceSpawner(LocalProcessSpawner):
 
     cwd = Unicode()
     cmd = Command(minlen=0)
+    _service_name = Unicode()
+
+    @default("oauth_scopes")
+    def _default_oauth_scopes(self):
+        return [
+            "access:services",
+            f"access:services!service={self._service_name}",
+        ]
 
     def make_preexec_fn(self, name):
         if not name:
@@ -188,6 +199,19 @@ class Service(LoggingConfigurable):
         """
     ).tag(input=True)
 
+    oauth_roles = List(
+        help="""OAuth allowed roles.
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued for this service
+        (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the service can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+      """
+    ).tag(input=True)
+
     api_token = Unicode(
         help="""The API token to use for the service.
 
@@ -267,6 +291,7 @@ class Service(LoggingConfigurable):
     base_url = Unicode()
     db = Any()
     orm = Any()
+    roles = Any()
     cookie_options = Dict()
 
     oauth_provider = Any()
@@ -282,6 +307,15 @@ class Service(LoggingConfigurable):
     @default('oauth_client_id')
     def _default_client_id(self):
         return 'service-%s' % self.name
+
+    @validate("oauth_client_id")
+    def _validate_client_id(self, proposal):
+        if not proposal.value.startswith("service-"):
+            raise ValueError(
+                f"service {self.name} has oauth_client_id='{proposal.value}'."
+                " Service oauth client ids must start with 'service-'"
+            )
+        return proposal.value
 
     oauth_redirect_uri = Unicode(
         help="""OAuth redirect URI for this service.
@@ -304,6 +338,10 @@ class Service(LoggingConfigurable):
         Returns True if a server is defined or oauth_redirect_uri is specified manually
         """
         return bool(self.server is not None or self.oauth_redirect_uri)
+
+    @property
+    def oauth_client(self):
+        return self.orm.oauth_client
 
     @property
     def server(self):
@@ -332,7 +370,7 @@ class Service(LoggingConfigurable):
             managed=' managed' if self.managed else '',
         )
 
-    def start(self):
+    async def start(self):
         """Start a managed service"""
         if not self.managed:
             raise RuntimeError("Cannot start unmanaged service %s" % self)
@@ -359,6 +397,7 @@ class Service(LoggingConfigurable):
             environment=env,
             api_token=self.api_token,
             oauth_client_id=self.oauth_client_id,
+            _service_name=self.name,
             cookie_options=self.cookie_options,
             cwd=self.cwd,
             hub=self.hub,
@@ -369,6 +408,8 @@ class Service(LoggingConfigurable):
             internal_certs_location=self.app.internal_certs_location,
             internal_trust_bundles=self.app.internal_trust_bundles,
         )
+        if self.spawner.internal_ssl:
+            self.spawner.cert_paths = await self.spawner.create_certs()
         self.spawner.start()
         self.proc = self.spawner.proc
         self.spawner.add_poll_callback(self._proc_stopped)
@@ -379,7 +420,8 @@ class Service(LoggingConfigurable):
         self.log.error(
             "Service %s exited with status %i", self.name, self.proc.returncode
         )
-        self.start()
+        # schedule start
+        asyncio.ensure_future(self.start())
 
     async def stop(self):
         """Stop a managed service"""
