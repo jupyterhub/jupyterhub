@@ -10,7 +10,7 @@ from jupyter_client.localinterfaces import public_ips
 
 
 def create_dir_hook(spawner):
-    """ Create directory """
+    """Create directory"""
     username = spawner.user.name  # get the username
     volume_path = os.path.join('/volumes/jupyterhub', username)
     if not os.path.exists(volume_path):
@@ -20,7 +20,7 @@ def create_dir_hook(spawner):
 
 
 def clean_dir_hook(spawner):
-    """ Delete directory """
+    """Delete directory"""
     username = spawner.user.name  # get the username
     temp_path = os.path.join('/volumes/jupyterhub', username, 'temp')
     if os.path.exists(temp_path) and os.path.isdir(temp_path):
