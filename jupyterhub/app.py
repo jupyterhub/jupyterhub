@@ -2267,18 +2267,14 @@ class JupyterHub(Application):
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
 
-            if service.managed:
-                if not service.api_token:
-                    # generate new token
-                    # TODO: revoke old tokens?
-                    service.api_token = service.orm.new_api_token(
-                        note="generated at startup"
-                    )
-                else:
-                    # ensure provided token is registered
-                    self.service_tokens[service.api_token] = service.name
-            else:
+            if service.api_token:
                 self.service_tokens[service.api_token] = service.name
+            elif service.managed:
+                # generate new token
+                # TODO: revoke old tokens?
+                service.api_token = service.orm.new_api_token(
+                    note="generated at startup"
+                )
 
             if service.url:
                 parsed = urlparse(service.url)

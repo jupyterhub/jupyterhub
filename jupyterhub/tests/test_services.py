@@ -110,3 +110,51 @@ async def test_external_service(app):
         assert len(resp) >= 1
         assert isinstance(resp[0], dict)
         assert 'name' in resp[0]
+
+
+async def test_external_services_without_api_token_set(app):
+    """
+    This test was made to reproduce an error like this:
+
+        ValueError: Tokens must be at least 8 characters, got ''
+
+    The error had the following stack trace in 1.4.1:
+
+        jupyterhub/app.py:2213: in init_api_tokens
+            await self._add_tokens(self.service_tokens, kind='service')
+        jupyterhub/app.py:2182: in _add_tokens
+            obj.new_api_token(
+        jupyterhub/orm.py:424: in new_api_token
+            return APIToken.new(token=token, service=self, **kwargs)
+        jupyterhub/orm.py:699: in new
+            cls.check_token(db, token)
+
+    This test also make _add_tokens receive a token_dict that is buggy:
+
+        {"": "external_2"}
+
+    It turned out that whatever passes token_dict to _add_tokens failed to
+    ignore service's api_tokens that were None, and instead passes them as blank
+    strings.
+
+    It turned out that init_api_tokens was passing self.service_tokens, and that
+    self.service_tokens had been populated with blank string tokens for external
+    services registered with JupyterHub.
+    """
+    name_1 = 'external_1'
+    name_2 = 'external_2'
+    async with external_service(app, name=name_1) as env_1, external_service(
+        app, name=name_2
+    ) as env_2:
+        app.services = [
+            {
+                'name': name_1,
+                'url': "http://irrelevant",
+            },
+            {
+                'name': name_2,
+                'url': "http://irrelevant",
+            },
+        ]
+        await maybe_future(app.init_services())
+        await app.init_api_tokens()
