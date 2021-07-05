@@ -16,6 +16,7 @@ jupyterhub --ip=127.0.0.1
 ```
 
 2. Visit http://127.0.0.1:8000/services/fastapi or http://127.0.0.1:8000/services/fastapi/docs
+   Login with username 'test-user' and any password.
 
 3. Try interacting programmatically. If you create a new token in your control panel or pull out the `JUPYTERHUB_API_TOKEN` in the single user environment, you can skip the third step here.
 
@@ -24,10 +25,10 @@ $ curl -X GET http://127.0.0.1:8000/services/fastapi/
 {"Hello":"World"}
 
 $ curl -X GET http://127.0.0.1:8000/services/fastapi/me
-{"detail":"Must login with token parameter, cookie, or header"}
+{"detail":"Must login with token parameter, or Authorization bearer header"}
 
-$ curl -X POST http://127.0.0.1:8000/hub/api/authorizations/token \
-       -d '{"username": "myname", "password": "mypasswd!"}' \
+$ curl -X POST http://127.0.0.1:8000/hub/api/users/test-user/tokens \
+       -d '{"auth": {"username": "test-user", "password": "mypasswd!"}}' \
        | jq '.token'
 "3fee13ce6d2845da9bd5f2c2170d3428"
 
@@ -35,13 +36,18 @@ $ curl -X GET http://127.0.0.1:8000/services/fastapi/me \
        -H "Authorization: Bearer 3fee13ce6d2845da9bd5f2c2170d3428" \
        | jq .
 {
-  "name": "myname",
+  "name": "test-user",
   "admin": false,
   "groups": [],
   "server": null,
   "pending": null,
-  "last_activity": "2021-04-07T18:05:11.587638+00:00",
-  "servers": null
+  "last_activity": "2021-05-21T09:13:00.514309+00:00",
+  "servers": null,
+  "scopes": [
+    "access:services",
+    "access:servers!user=test-user",
+    "...",
+  ]
 }
 ```
 

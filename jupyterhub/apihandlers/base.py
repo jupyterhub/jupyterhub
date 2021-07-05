@@ -2,7 +2,6 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
-from datetime import datetime
 from http.client import responses
 
 from sqlalchemy.exc import SQLAlchemyError
@@ -131,36 +130,26 @@ class APIHandler(BaseHandler):
             json.dumps({'status': status_code, 'message': message or status_message})
         )
 
-    def server_model(self, spawner, include_state=False):
-        """Get the JSON model for a Spawner"""
-        return {
+    def server_model(self, spawner):
+        """Get the JSON model for a Spawner
+        Assume server permission already granted"""
+        model = {
             'name': spawner.name,
             'last_activity': isoformat(spawner.orm_spawner.last_activity),
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
-            'state': spawner.get_state() if include_state else None,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
             'user_options': spawner.user_options,
             'progress_url': spawner._progress_url,
         }
+        scope_filter = self.get_scope_filter('admin:server_state')
+        if scope_filter(spawner, kind='server'):
+            model['state'] = spawner.get_state()
+        return model
 
     def token_model(self, token):
         """Get the JSON model for an APIToken"""
-        expires_at = None
-        if isinstance(token, orm.APIToken):
-            kind = 'api_token'
-            extra = {'note': token.note}
-            expires_at = token.expires_at
-        elif isinstance(token, orm.OAuthAccessToken):
-            kind = 'oauth'
-            extra = {'oauth_client': token.client.description or token.client.client_id}
-            if token.expires_at:
-                expires_at = datetime.fromtimestamp(token.expires_at)
-        else:
-            raise TypeError(
-                "token must be an APIToken or OAuthAccessToken, not %s" % type(token)
-            )
 
         if token.user:
             owner_key = 'user'
@@ -173,59 +162,148 @@ class APIHandler(BaseHandler):
         model = {
             owner_key: owner,
             'id': token.api_id,
-            'kind': kind,
+            'kind': 'api_token',
+            'roles': [r.name for r in token.roles],
             'created': isoformat(token.created),
             'last_activity': isoformat(token.last_activity),
-            'expires_at': isoformat(expires_at),
+            'expires_at': isoformat(token.expires_at),
+            'note': token.note,
+            'oauth_client': token.oauth_client.description
+            or token.oauth_client.identifier,
         }
-        model.update(extra)
         return model
 
-    def user_model(self, user, include_servers=False, include_state=False):
+    def _filter_model(self, model, access_map, entity, kind, keys=None):
+        """
+        Filter the model based on the available scopes and the entity requested for.
+        If keys is a dictionary, update it with the allowed keys for the model.
+        """
+        allowed_keys = set()
+        for scope in access_map:
+            scope_filter = self.get_scope_filter(scope)
+            if scope_filter(entity, kind=kind):
+                allowed_keys |= access_map[scope]
+        model = {key: model[key] for key in allowed_keys if key in model}
+        if isinstance(keys, set):
+            keys.update(allowed_keys)
+        return model
+
+    def user_model(self, user):
         """Get the JSON model for a User object"""
         if isinstance(user, orm.User):
             user = self.users[user.id]
-
         model = {
             'kind': 'user',
             'name': user.name,
             'admin': user.admin,
+            'roles': [r.name for r in user.roles],
             'groups': [g.name for g in user.groups],
             'server': user.url if user.running else None,
             'pending': None,
             'created': isoformat(user.created),
             'last_activity': isoformat(user.last_activity),
+            'auth_state': None,  # placeholder, filled in later
         }
-        if '' in user.spawners:
-            model['pending'] = user.spawners[''].pending
+        access_map = {
+            'read:users': {
+                'kind',
+                'name',
+                'admin',
+                'roles',
+                'groups',
+                'server',
+                'pending',
+                'created',
+                'last_activity',
+            },
+            'read:users:name': {'kind', 'name', 'admin'},
+            'read:users:groups': {'kind', 'name', 'groups'},
+            'read:users:activity': {'kind', 'name', 'last_activity'},
+            'read:servers': {'kind', 'name', 'servers'},
+            'read:roles:users': {'kind', 'name', 'roles', 'admin'},
+            'admin:auth_state': {'kind', 'name', 'auth_state'},
+        }
+        self.log.debug(
+            "Asking for user model of %s with scopes [%s]",
+            user.name,
+            ", ".join(self.expanded_scopes),
+        )
+        allowed_keys = set()
+        model = self._filter_model(
+            model, access_map, user, kind='user', keys=allowed_keys
+        )
+        if model:
+            if '' in user.spawners and 'pending' in allowed_keys:
+                model['pending'] = user.spawners[''].pending
 
-        if not include_servers:
-            model['servers'] = None
-            return model
-
-        servers = model['servers'] = {}
-        for name, spawner in user.spawners.items():
-            # include 'active' servers, not just ready
-            # (this includes pending events)
-            if spawner.active:
-                servers[name] = self.server_model(spawner, include_state=include_state)
+            servers = model['servers'] = {}
+            scope_filter = self.get_scope_filter('read:servers')
+            for name, spawner in user.spawners.items():
+                # include 'active' servers, not just ready
+                # (this includes pending events)
+                if spawner.active and scope_filter(spawner, kind='server'):
+                    servers[name] = self.server_model(spawner)
+            if not servers:
+                model.pop('servers')
         return model
 
     def group_model(self, group):
         """Get the JSON model for a Group object"""
-        return {
+        model = {
             'kind': 'group',
             'name': group.name,
+            'roles': [r.name for r in group.roles],
             'users': [u.name for u in group.users],
         }
+        access_map = {
+            'read:groups': {'kind', 'name', 'users'},
+            'read:groups:name': {'kind', 'name'},
+            'read:roles:groups': {'kind', 'name', 'roles'},
+        }
+        model = self._filter_model(model, access_map, group, 'group')
+        return model
 
     def service_model(self, service):
         """Get the JSON model for a Service object"""
-        return {'kind': 'service', 'name': service.name, 'admin': service.admin}
+        model = {
+            'kind': 'service',
+            'name': service.name,
+            'roles': [r.name for r in service.roles],
+            'admin': service.admin,
+            'url': getattr(service, 'url', ''),
+            'prefix': service.server.base_url if getattr(service, 'server', '') else '',
+            'command': getattr(service, 'command', ''),
+            'pid': service.proc.pid if getattr(service, 'proc', '') else 0,
+            'info': getattr(service, 'info', ''),
+            'display': getattr(service, 'display', ''),
+        }
+        access_map = {
+            'read:services': {
+                'kind',
+                'name',
+                'admin',
+                'url',
+                'prefix',
+                'command',
+                'pid',
+                'info',
+                'display',
+            },
+            'read:services:name': {'kind', 'name', 'admin'},
+            'read:roles:services': {'kind', 'name', 'roles', 'admin'},
+        }
+        model = self._filter_model(model, access_map, service, 'service')
+        return model
 
-    _user_model_types = {'name': str, 'admin': bool, 'groups': list, 'auth_state': dict}
+    _user_model_types = {
+        'name': str,
+        'admin': bool,
+        'groups': list,
+        'roles': list,
+        'auth_state': dict,
+    }
 
-    _group_model_types = {'name': str, 'users': list}
+    _group_model_types = {'name': str, 'users': list, 'roles': list}
 
     def _check_model(self, model, model_types, name):
         """Check a model provided by a REST API request

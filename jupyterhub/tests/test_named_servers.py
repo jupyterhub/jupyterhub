@@ -52,10 +52,10 @@ async def test_default_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
-    print(user_model)
     assert user_model == fill_user(
         {
             'name': username,
+            'roles': ['user'],
             'auth_state': None,
             'server': user.url,
             'servers': {
@@ -86,7 +86,7 @@ async def test_default_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
-        {'name': username, 'servers': {}, 'auth_state': None}
+        {'name': username, 'roles': ['user'], 'auth_state': None}
     )
 
 
@@ -117,6 +117,7 @@ async def test_create_named_server(app, named_servers):
     assert user_model == fill_user(
         {
             'name': username,
+            'roles': ['user'],
             'auth_state': None,
             'servers': {
                 servername: {
@@ -142,7 +143,7 @@ async def test_delete_named_server(app, named_servers):
     username = 'donaar'
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
-    cookies = app.login_user(username)
+    cookies = await app.login_user(username)
     servername = 'splugoth'
     r = await api_request(app, 'users', username, 'servers', servername, method='post')
     r.raise_for_status()
@@ -159,7 +160,7 @@ async def test_delete_named_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
-        {'name': username, 'auth_state': None, 'servers': {}}
+        {'name': username, 'roles': ['user'], 'auth_state': None}
     )
     # wrapper Spawner is gone
     assert servername not in user.spawners

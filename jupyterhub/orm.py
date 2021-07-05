@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
+import warnings
 from base64 import decodebytes
 from base64 import encodebytes
 from datetime import datetime
@@ -15,12 +16,12 @@ from sqlalchemy import Boolean
 from sqlalchemy import Column
 from sqlalchemy import create_engine
 from sqlalchemy import DateTime
-from sqlalchemy import Enum
 from sqlalchemy import event
 from sqlalchemy import exc
 from sqlalchemy import ForeignKey
 from sqlalchemy import inspect
 from sqlalchemy import Integer
+from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy import select
 from sqlalchemy import Table
@@ -39,6 +40,10 @@ from sqlalchemy.types import Text
 from sqlalchemy.types import TypeDecorator
 from tornado.log import app_log
 
+from .roles import assign_default_roles
+from .roles import create_role
+from .roles import get_default_roles
+from .roles import update_roles
 from .utils import compare_token
 from .utils import hash_token
 from .utils import new_token
@@ -90,7 +95,37 @@ class JSONDict(TypeDecorator):
         return value
 
 
-Base = declarative_base()
+class JSONList(JSONDict):
+    """Represents an immutable structure as a json-encoded string (to be used for list type columns).
+
+    Usage::
+
+        JSONList(JSONDict)
+
+    """
+
+    def process_bind_param(self, value, dialect):
+        if isinstance(value, list) and value is not None:
+            value = json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            value = json.loads(value)
+        return value
+
+
+meta = MetaData(
+    naming_convention={
+        "ix": "ix_%(column_0_label)s",
+        "uq": "uq_%(table_name)s_%(column_0_name)s",
+        "ck": "ck_%(table_name)s_%(constraint_name)s",
+        "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+        "pk": "pk_%(table_name)s",
+    }
+)
+
+Base = declarative_base(metadata=meta)
 Base.log = app_log
 
 
@@ -111,6 +146,65 @@ class Server(Base):
 
     def __repr__(self):
         return "<Server(%s:%s)>" % (self.ip, self.port)
+
+
+# lots of things have roles
+# mapping tables are the same for all of them
+
+_role_map_tables = []
+
+for has_role in (
+    'user',
+    'group',
+    'service',
+    'api_token',
+    'oauth_client',
+    'oauth_code',
+):
+    role_map = Table(
+        f'{has_role}_role_map',
+        Base.metadata,
+        Column(
+            f'{has_role}_id',
+            ForeignKey(f'{has_role}s.id', ondelete='CASCADE'),
+            primary_key=True,
+        ),
+        Column(
+            'role_id',
+            ForeignKey('roles.id', ondelete='CASCADE'),
+            primary_key=True,
+        ),
+    )
+    _role_map_tables.append(role_map)
+
+
+class Role(Base):
+    """User Roles"""
+
+    __tablename__ = 'roles'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(Unicode(255), unique=True)
+    description = Column(Unicode(1023))
+    scopes = Column(JSONList)
+    users = relationship('User', secondary='user_role_map', backref='roles')
+    services = relationship('Service', secondary='service_role_map', backref='roles')
+    tokens = relationship('APIToken', secondary='api_token_role_map', backref='roles')
+    groups = relationship('Group', secondary='group_role_map', backref='roles')
+
+    def __repr__(self):
+        return "<%s %s (%s) - scopes: %s>" % (
+            self.__class__.__name__,
+            self.name,
+            self.description,
+            self.scopes,
+        )
+
+    @classmethod
+    def find(cls, db, name):
+        """Find a role by name.
+        Returns None if not found.
+        """
+        return db.query(cls).filter(cls.name == name).first()
 
 
 # user:group many:many mapping table
@@ -180,14 +274,11 @@ class User(Base):
     def orm_spawners(self):
         return {s.name: s for s in self._orm_spawners}
 
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
     created = Column(DateTime, default=datetime.utcnow)
     last_activity = Column(DateTime, nullable=True)
 
     api_tokens = relationship("APIToken", backref="user", cascade="all, delete-orphan")
-    oauth_tokens = relationship(
-        "OAuthAccessToken", backref="user", cascade="all, delete-orphan"
-    )
     oauth_codes = relationship(
         "OAuthCode", backref="user", cascade="all, delete-orphan"
     )
@@ -223,7 +314,7 @@ class User(Base):
 
 
 class Spawner(Base):
-    """"State about a Spawner"""
+    """ "State about a Spawner"""
 
     __tablename__ = 'spawners'
 
@@ -244,6 +335,21 @@ class Spawner(Base):
     started = Column(DateTime)
     last_activity = Column(DateTime, nullable=True)
     user_options = Column(JSONDict)
+
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("spawner", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     # properties on the spawner wrapper
     # some APIs get these low-level objects
@@ -280,7 +386,7 @@ class Service(Base):
 
     # common user interface:
     name = Column(Unicode(255), unique=True)
-    admin = Column(Boolean, default=False)
+    admin = Column(Boolean(create_constraint=False), default=False)
 
     api_tokens = relationship(
         "APIToken", backref="service", cascade="all, delete-orphan"
@@ -295,6 +401,21 @@ class Service(Base):
         cascade="all, delete-orphan",
     )
     pid = Column(Integer)
+
+    # added in 2.0
+    oauth_client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='SET NULL',
+        ),
+    )
+    oauth_client = relationship(
+        'OAuthClient',
+        backref=backref("service", uselist=False),
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
 
     def new_api_token(self, token=None, **kwargs):
         """Create a new API token
@@ -438,14 +559,34 @@ class Hashed(Expiring):
                 return orm_token
 
 
+# ------------------------------------
+# OAuth tables
+# ------------------------------------
+
+
+class GrantType(enum.Enum):
+    # we only use authorization_code for now
+    authorization_code = 'authorization_code'
+    implicit = 'implicit'
+    password = 'password'
+    client_credentials = 'client_credentials'
+    refresh_token = 'refresh_token'
+
+
 class APIToken(Hashed, Base):
     """An API token"""
 
     __tablename__ = 'api_tokens'
 
-    user_id = Column(Integer, ForeignKey('users.id', ondelete="CASCADE"), nullable=True)
+    user_id = Column(
+        Integer,
+        ForeignKey('users.id', ondelete="CASCADE"),
+        nullable=True,
+    )
     service_id = Column(
-        Integer, ForeignKey('services.id', ondelete="CASCADE"), nullable=True
+        Integer,
+        ForeignKey('services.id', ondelete="CASCADE"),
+        nullable=True,
     )
 
     id = Column(Integer, primary_key=True)
@@ -455,6 +596,27 @@ class APIToken(Hashed, Base):
     @property
     def api_id(self):
         return 'a%i' % self.id
+
+    # added in 2.0
+    client_id = Column(
+        Unicode(255),
+        ForeignKey(
+            'oauth_clients.identifier',
+            ondelete='CASCADE',
+        ),
+    )
+
+    # FIXME: refresh_tokens not implemented
+    # should be a relation to another token table
+    # refresh_token = Column(
+    #     Integer,
+    #     ForeignKey('refresh_tokens.id', ondelete="CASCADE"),
+    #     nullable=True,
+    # )
+
+    # the browser session id associated with a given token,
+    # if issued during oauth to be stored in a cookie
+    session_id = Column(Unicode(255), nullable=True)
 
     # token metadata for bookkeeping
     now = datetime.utcnow  # for expiry
@@ -474,8 +636,12 @@ class APIToken(Hashed, Base):
             # this shouldn't happen
             kind = 'owner'
             name = 'unknown'
-        return "<{cls}('{pre}...', {kind}='{name}')>".format(
-            cls=self.__class__.__name__, pre=self.prefix, kind=kind, name=name
+        return "<{cls}('{pre}...', {kind}='{name}', client_id={client_id!r})>".format(
+            cls=self.__class__.__name__,
+            pre=self.prefix,
+            kind=kind,
+            name=name,
+            client_id=self.client_id,
         )
 
     @classmethod
@@ -496,6 +662,14 @@ class APIToken(Hashed, Base):
             raise ValueError("kind must be 'user', 'service', or None, not %r" % kind)
         for orm_token in prefix_match:
             if orm_token.match(token):
+                if not orm_token.client_id:
+                    app_log.warning(
+                        "Deleting stale oauth token for %s with no client",
+                        orm_token.user and orm_token.user.name,
+                    )
+                    db.delete(orm_token)
+                    db.commit()
+                    return
                 return orm_token
 
     @classmethod
@@ -504,9 +678,13 @@ class APIToken(Hashed, Base):
         token=None,
         user=None,
         service=None,
+        roles=None,
         note='',
         generated=True,
+        session_id=None,
         expires_in=None,
+        client_id='jupyterhub',
+        return_orm=False,
     ):
         """Generate a new API token for a user or service"""
         assert user or service
@@ -521,7 +699,12 @@ class APIToken(Hashed, Base):
             cls.check_token(db, token)
         # two stages to ensure orm_token.generated has been set
         # before token setter is called
-        orm_token = cls(generated=generated, note=note or '')
+        orm_token = cls(
+            generated=generated,
+            note=note or '',
+            client_id=client_id,
+            session_id=session_id,
+        )
         orm_token.token = token
         if user:
             assert user.id is not None
@@ -531,79 +714,22 @@ class APIToken(Hashed, Base):
             orm_token.service = service
         if expires_in is not None:
             orm_token.expires_at = cls.now() + timedelta(seconds=expires_in)
+
         db.add(orm_token)
-        db.commit()
-        return token
-
-
-# ------------------------------------
-# OAuth tables
-# ------------------------------------
-
-
-class GrantType(enum.Enum):
-    # we only use authorization_code for now
-    authorization_code = 'authorization_code'
-    implicit = 'implicit'
-    password = 'password'
-    client_credentials = 'client_credentials'
-    refresh_token = 'refresh_token'
-
-
-class OAuthAccessToken(Hashed, Base):
-    __tablename__ = 'oauth_access_tokens'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    @staticmethod
-    def now():
-        return datetime.utcnow().timestamp()
-
-    @property
-    def api_id(self):
-        return 'o%i' % self.id
-
-    client_id = Column(
-        Unicode(255), ForeignKey('oauth_clients.identifier', ondelete='CASCADE')
-    )
-    grant_type = Column(Enum(GrantType), nullable=False)
-    expires_at = Column(Integer)
-    refresh_token = Column(Unicode(255))
-    # TODO: drop refresh_expires_at. Refresh tokens shouldn't expire
-    refresh_expires_at = Column(Integer)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
-    service = None  # for API-equivalence with APIToken
-
-    # the browser session id associated with a given token
-    session_id = Column(Unicode(255))
-
-    # from Hashed
-    hashed = Column(Unicode(255), unique=True)
-    prefix = Column(Unicode(16), index=True)
-
-    created = Column(DateTime, default=datetime.utcnow)
-    last_activity = Column(DateTime, nullable=True)
-
-    def __repr__(self):
-        return "<{cls}('{prefix}...', client_id={client_id!r}, user={user!r}, expires_in={expires_in}>".format(
-            cls=self.__class__.__name__,
-            client_id=self.client_id,
-            user=self.user and self.user.name,
-            prefix=self.prefix,
-            expires_in=self.expires_in,
-        )
-
-    @classmethod
-    def find(cls, db, token):
-        orm_token = super().find(db, token)
-        if orm_token and not orm_token.client_id:
-            app_log.warning(
-                "Deleting stale oauth token for %s with no client",
-                orm_token.user and orm_token.user.name,
-            )
+        if not Role.find(db, 'token'):
+            raise RuntimeError("Default token role has not been created")
+        try:
+            if roles is not None:
+                update_roles(db, entity=orm_token, roles=roles)
+            else:
+                assign_default_roles(db, entity=orm_token)
+        except Exception:
             db.delete(orm_token)
             db.commit()
-            return
-        return orm_token
+            raise
+
+        db.commit()
+        return token
 
 
 class OAuthCode(Expiring, Base):
@@ -620,6 +746,8 @@ class OAuthCode(Expiring, Base):
     # state = Column(Unicode(1023))
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'))
 
+    roles = relationship('Role', secondary='oauth_code_role_map')
+
     @staticmethod
     def now():
         return datetime.utcnow().timestamp()
@@ -631,6 +759,11 @@ class OAuthCode(Expiring, Base):
             .filter(cls.code == code)
             .filter(or_(cls.expires_at == None, cls.expires_at >= cls.now()))
             .first()
+        )
+
+    def __repr__(self):
+        return (
+            f"<{self.__class__.__name__}(id={self.id}, client_id={self.client_id!r})>"
         )
 
 
@@ -647,9 +780,16 @@ class OAuthClient(Base):
         return self.identifier
 
     access_tokens = relationship(
-        OAuthAccessToken, backref='client', cascade='all, delete-orphan'
+        APIToken, backref='oauth_client', cascade='all, delete-orphan'
     )
     codes = relationship(OAuthCode, backref='client', cascade='all, delete-orphan')
+
+    # these are the roles an oauth client is allowed to request
+    # *not* the roles of the client itself
+    allowed_roles = relationship('Role', secondary='oauth_client_role_map')
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}(identifier={self.identifier!r})>"
 
 
 # General database utilities
@@ -887,3 +1027,18 @@ def new_session_factory(
     # this off gives us a major performance boost
     session_factory = sessionmaker(bind=engine, expire_on_commit=expire_on_commit)
     return session_factory
+
+
+def get_class(resource_name):
+    """Translates resource string names to ORM classes"""
+    class_dict = {
+        'users': User,
+        'services': Service,
+        'tokens': APIToken,
+        'groups': Group,
+    }
+    if resource_name not in class_dict:
+        raise ValueError(
+            "Kind must be one of %s, not %s" % (", ".join(class_dict), resource_name)
+        )
+    return class_dict[resource_name]

@@ -253,9 +253,10 @@ def auth_decorator(check_auth):
 
     def decorator(method):
         def decorated(self, *args, **kwargs):
-            check_auth(self)
+            check_auth(self, **kwargs)
             return method(self, *args, **kwargs)
 
+        # Perhaps replace with functools.wrap
         decorated.__name__ = method.__name__
         decorated.__doc__ = method.__doc__
         return decorated
@@ -283,14 +284,6 @@ def authenticated_403(self):
     instead of redirecting to login.
     """
     if self.current_user is None:
-        raise web.HTTPError(403)
-
-
-@auth_decorator
-def admin_only(self):
-    """Decorator for restricting access to admin users"""
-    user = self.current_user
-    if user is None or not user.admin:
         raise web.HTTPError(403)
 
 

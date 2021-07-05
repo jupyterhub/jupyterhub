@@ -19,7 +19,7 @@ extensions = [
     'autodoc_traits',
     'sphinx_copybutton',
     'sphinx-jsonschema',
-    'recommonmark',
+    'myst_parser',
 ]
 
 # The master toctree document.
@@ -51,11 +51,6 @@ todo_include_todos = False
 
 # Set the default role so we can use `foo` instead of ``foo``
 default_role = 'literal'
-
-# -- Source -------------------------------------------------------------
-
-import recommonmark
-from recommonmark.transform import AutoStructify
 
 # -- Config -------------------------------------------------------------
 from jupyterhub.app import JupyterHub
@@ -111,9 +106,7 @@ class HelpAllDirective(SphinxDirective):
 
 
 def setup(app):
-    app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
     app.add_css_file('custom.css')
-    app.add_transform(AutoStructify)
     app.add_directive('jupyterhub-generate-config', ConfigDirective)
     app.add_directive('jupyterhub-help-all', HelpAllDirective)
 
@@ -219,7 +212,7 @@ if on_rtd:
     # build both metrics and rest-api, since RTD doesn't run make
     from subprocess import check_call as sh
 
-    sh(['make', 'metrics', 'rest-api'], cwd=docs)
+    sh(['make', 'metrics', 'rest-api', 'scopes'], cwd=docs)
 
 # -- Spell checking -------------------------------------------------------
 

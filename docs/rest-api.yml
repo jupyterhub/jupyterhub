@@ -12,8 +12,62 @@ securityDefinitions:
     type: apiKey
     name: Authorization
     in: header
-security:
+  oauth2:
+    type: oauth2
+    flow: accessCode
+    authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
+    tokenUrl: "/hub/api/oauth2/token"
+    scopes: # Generated based on scope table in jupyterhub/scopes.py
+      (no_scope): Identify the owner of the requesting entity.
+      self:
+        The user’s own resources _(metascope for users, resolves to (no_scope)
+        for services)_
+      all: Everything that the token-owning entity can access _(metascope for tokens)_
+      admin:users:
+        Read, write, create and delete users and their authentication state,
+        not including their servers or tokens.
+      admin:auth_state: Read a user’s authentication state.
+      users:
+        Read and write permissions to user models (excluding servers, tokens
+        and authentication state).
+      read:users:
+        Read user models (excluding including servers, tokens and authentication
+        state).
+      read:users:name: Read names of users.
+      read:users:groups: Read users’ group membership.
+      read:users:activity: Read time of last user activity.
+      read:roles: Read role assignments.
+      read:roles:users: Read user role assignments.
+      read:roles:services: Read service role assignments.
+      read:roles:groups: Read group role assignments.
+      users:activity: Update time of last user activity.
+      admin:servers: Read, start, stop, create and delete user servers and their state.
+      admin:server_state: Read and write users’ server state.
+      servers: Start and stop user servers.
+      read:servers:
+        Read users’ names and their server models (excluding the server
+        state).
+      tokens: Read, write, create and delete user tokens.
+      read:tokens: Read user tokens.
+      admin:groups: Read and write group information, create and delete groups.
+      groups:
+        Read and write group information, including adding/removing users to/from
+        groups.
+      read:groups: Read group models.
+      read:groups:name: Read group names.
+      read:services: Read service models.
+      read:services:name: Read service names.
+      read:hub: Read detailed information about the Hub.
+      access:servers: Access user servers via API or browser.
+      access:services: Access services via API or browser.
+      proxy:
+        Read information about the proxy’s routing table, sync the Hub with the
+        proxy and notify the Hub about a new proxy.
+      shutdown: Shutdown the hub.
+security: # global security, do we want to keep only the apiKey (token: []), change to only oauth2 (with scope self) or have both (either can be used)?
   - token: []
+  - oauth2:
+      - self
 basePath: /hub/api
 produces:
   - application/json
@@ -38,6 +92,9 @@ paths:
   /info:
     get:
       summary: Get detailed info about JupyterHub
+      security:
+        - oauth2:
+            - read:hub
       description: |
         Detailed JupyterHub information, including Python version,
         JupyterHub's version and executable path,
@@ -62,7 +119,9 @@ paths:
                 properties:
                   class:
                     type: string
-                    description: The Python class currently active for JupyterHub Authentication
+                    description:
+                      The Python class currently active for JupyterHub
+                      Authentication
                   version:
                     type: string
                     description: The version of the currently active Authenticator
@@ -71,13 +130,25 @@ paths:
                 properties:
                   class:
                     type: string
-                    description: The Python class currently active for spawning single-user notebook servers
+                    description:
+                      The Python class currently active for spawning single-user
+                      notebook servers
                   version:
                     type: string
                     description: The version of the currently active Spawner
   /users:
     get:
       summary: List users
+      security:
+        - oauth2:
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:servers
+            - read:roles:users
+            - admin:auth_state
+            - admin:server_state
       parameters:
         - name: state
           in: query
@@ -118,6 +189,9 @@ paths:
               $ref: "#/definitions/User"
     post:
       summary: Create multiple users
+      security:
+        - oauth2:
+            - admin:users
       parameters:
         - name: body
           in: body
@@ -144,6 +218,16 @@ paths:
   /users/{name}:
     get:
       summary: Get a user by name
+      security:
+        - oauth2:
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:servers
+            - read:roles:users
+            - admin:auth_state
+            - admin:server_state
       parameters:
         - name: name
           description: username
@@ -157,6 +241,9 @@ paths:
             $ref: "#/definitions/User"
     post:
       summary: Create a single user
+      security:
+        - oauth2:
+            - admin:users
       parameters:
         - name: name
           description: username
@@ -171,6 +258,9 @@ paths:
     patch:
       summary: Modify a user
       description: Change a user's name or admin status
+      security:
+        - oauth2:
+            - admin:users
       parameters:
         - name: name
           description: username
@@ -180,16 +270,22 @@ paths:
         - name: body
           in: body
           required: true
-          description: Updated user info. At least one key to be updated (name or admin) is required.
+          description:
+            Updated user info. At least one key to be updated (name or admin)
+            is required.
           schema:
             type: object
             properties:
               name:
                 type: string
-                description: the new name (optional, if another key is updated i.e. admin)
+                description:
+                  the new name (optional, if another key is updated i.e.
+                  admin)
               admin:
                 type: boolean
-                description: update admin (optional, if another key is updated i.e. name)
+                description:
+                  update admin (optional, if another key is updated i.e.
+                  name)
       responses:
         "200":
           description: The updated user info
@@ -197,6 +293,9 @@ paths:
             $ref: "#/definitions/User"
     delete:
       summary: Delete a user
+      security:
+        - oauth2:
+            - admin:users
       parameters:
         - name: name
           description: username
@@ -209,9 +308,12 @@ paths:
   /users/{name}/activity:
     post:
       summary: Notify Hub of activity for a given user.
-      description: Notify the Hub of activity by the user,
-        e.g. accessing a service or (more likely)
-        actively using a server.
+      description:
+        Notify the Hub of activity by the user, e.g. accessing a service
+        or (more likely) actively using a server.
+      security:
+        - oauth2:
+            - users:activity
       parameters:
         - name: name
           description: username
@@ -264,6 +366,9 @@ paths:
   /users/{name}/server:
     post:
       summary: Start a user's single-user notebook server
+      security:
+        - oauth2:
+            - servers
       parameters:
         - name: name
           description: username
@@ -287,9 +392,14 @@ paths:
         "201":
           description: The user's notebook server has started
         "202":
-          description: The user's notebook server has not yet started, but has been requested
+          description:
+            The user's notebook server has not yet started, but has been
+            requested
     delete:
       summary: Stop a user's server
+      security:
+        - oauth2:
+            - servers
       parameters:
         - name: name
           description: username
@@ -300,10 +410,15 @@ paths:
         "204":
           description: The user's notebook server has stopped
         "202":
-          description: The user's notebook server has not yet stopped as it is taking a while to stop
+          description:
+            The user's notebook server has not yet stopped as it is taking
+            a while to stop
   /users/{name}/servers/{server_name}:
     post:
       summary: Start a user's single-user named-server notebook server
+      security:
+        - oauth2:
+            - servers
       parameters:
         - name: name
           description: username
@@ -332,9 +447,14 @@ paths:
         "201":
           description: The user's notebook named-server has started
         "202":
-          description: The user's notebook named-server has not yet started, but has been requested
+          description:
+            The user's notebook named-server has not yet started, but has
+            been requested
     delete:
       summary: Stop a user's named-server
+      security:
+        - oauth2:
+            - servers
       parameters:
         - name: name
           description: username
@@ -362,7 +482,9 @@ paths:
         "204":
           description: The user's notebook named-server has stopped
         "202":
-          description: The user's notebook named-server has not yet stopped as it is taking a while to stop
+          description:
+            The user's notebook named-server has not yet stopped as it
+            is taking a while to stop
   /users/{name}/tokens:
     parameters:
       - name: name
@@ -372,6 +494,9 @@ paths:
         type: string
     get:
       summary: List tokens for the user
+      security:
+        - oauth2:
+            - read:tokens
       responses:
         "200":
           description: The list of tokens
@@ -385,6 +510,9 @@ paths:
           description: No such user
     post:
       summary: Create a new token for the user
+      security:
+        - oauth2:
+            - tokens
       parameters:
         - name: token_params
           in: body
@@ -394,10 +522,17 @@ paths:
             properties:
               expires_in:
                 type: number
-                description: lifetime (in seconds) after which the requested token will expire.
+                description:
+                  lifetime (in seconds) after which the requested token will
+                  expire.
               note:
                 type: string
                 description: A note attached to the token for future bookkeeping
+              roles:
+                type: array
+                items:
+                  type: string
+                description: A list of role names that the token should have
       responses:
         "201":
           description: The newly created token
@@ -405,6 +540,8 @@ paths:
             $ref: "#/definitions/Token"
         "400":
           description: Body must be a JSON dict or empty
+        "403":
+          description: Requested role does not exist
   /users/{name}/tokens/{token_id}:
     parameters:
       - name: name
@@ -418,6 +555,9 @@ paths:
         type: string
     get:
       summary: Get the model for a token by id
+      security:
+        - oauth2:
+            - read:tokens
       responses:
         "200":
           description: The info for the new token
@@ -425,12 +565,25 @@ paths:
             $ref: "#/definitions/Token"
     delete:
       summary: Delete (revoke) a token by id
+      security:
+        - oauth2:
+            - tokens
       responses:
         "204":
           description: The token has been deleted
   /user:
     get:
       summary: Return authenticated user's model
+      security:
+        - oauth2:
+            - read:users
+            - read:users:name
+            - read:users:groups
+            - read:users:activity
+            - read:servers
+            - read:roles:users
+            - admin:auth_state
+            - admin:server_state
       responses:
         "200":
           description: The authenticated user's model is returned.
@@ -439,6 +592,11 @@ paths:
   /groups:
     get:
       summary: List groups
+      security:
+        - oauth2:
+            - read:groups
+            - read:groups:name
+            - read:roles:groups
       parameters:
         - name: offset
           in: query
@@ -466,6 +624,11 @@ paths:
   /groups/{name}:
     get:
       summary: Get a group by name
+      security:
+        - oauth2:
+            - read:groups
+            - read:groups:name
+            - read:roles:groups
       parameters:
         - name: name
           description: group name
@@ -479,6 +642,9 @@ paths:
             $ref: "#/definitions/Group"
     post:
       summary: Create a group
+      security:
+        - oauth2:
+            - admin:groups
       parameters:
         - name: name
           description: group name
@@ -492,6 +658,9 @@ paths:
             $ref: "#/definitions/Group"
     delete:
       summary: Delete a group
+      security:
+        - oauth2:
+            - admin:groups
       parameters:
         - name: name
           description: group name
@@ -504,6 +673,9 @@ paths:
   /groups/{name}/users:
     post:
       summary: Add users to a group
+      security:
+        - oauth2:
+            - groups
       parameters:
         - name: name
           description: group name
@@ -529,6 +701,9 @@ paths:
             $ref: "#/definitions/Group"
     delete:
       summary: Remove users from a group
+      security:
+        - oauth2:
+            - groups
       parameters:
         - name: name
           description: group name
@@ -553,6 +728,11 @@ paths:
   /services:
     get:
       summary: List services
+      security:
+        - oauth2:
+            - read:services
+            - read:services:name
+            - read:roles:services
       responses:
         "200":
           description: The service list
@@ -563,6 +743,11 @@ paths:
   /services/{name}:
     get:
       summary: Get a service by name
+      security:
+        - oauth2:
+            - read:services
+            - read:services:name
+            - read:roles:services
       parameters:
         - name: name
           description: service name
@@ -577,7 +762,12 @@ paths:
   /proxy:
     get:
       summary: Get the proxy's routing table
-      description: A convenience alias for getting the routing table directly from the proxy
+      description:
+        A convenience alias for getting the routing table directly from
+        the proxy
+      security:
+        - oauth2:
+            - proxy
       parameters:
         - name: offset
           in: query
@@ -600,20 +790,30 @@ paths:
           description: Routing table
           schema:
             type: object
-            description: configurable-http-proxy routing table (see configurable-http-proxy docs for details)
+            description:
+              configurable-http-proxy routing table (see configurable-http-proxy
+              docs for details)
     post:
       summary: Force the Hub to sync with the proxy
+      security:
+        - oauth2:
+            - proxy
       responses:
         "200":
           description: Success
     patch:
       summary: Notify the Hub about a new proxy
       description: Notifies the Hub of a new proxy to use.
+      security:
+        - oauth2:
+            - proxy
       parameters:
         - name: body
           in: body
           required: true
-          description: Any values that have changed for the new proxy. All keys are optional.
+          description:
+            Any values that have changed for the new proxy. All keys are
+            optional.
           schema:
             type: object
             properties:
@@ -641,6 +841,9 @@ paths:
         in the JSON request body.
         Logging in via this method is only available when the active Authenticator
         accepts passwords (e.g. not OAuth).
+      security:
+        - oauth2:
+            - tokens
       parameters:
         - name: credentials
           in: body
@@ -665,6 +868,9 @@ paths:
   /authorizations/token/{token}:
     get:
       summary: Identify a user or service from an API token
+      security:
+        - oauth2:
+            - (noscope)
       parameters:
         - name: token
           in: path
@@ -678,7 +884,9 @@ paths:
   /authorizations/cookie/{cookie_name}/{cookie_value}:
     get:
       summary: Identify a user from a cookie
-      description: Used by single-user notebook servers to hand off cookie authentication to the Hub
+      description:
+        Used by single-user notebook servers to hand off cookie authentication
+        to the Hub
       parameters:
         - name: cookie_name
           in: path
@@ -695,6 +903,7 @@ paths:
             $ref: "#/definitions/User"
         "404":
           description: A user is not found.
+      deprecated: true # minrk: let’s not add a scope for this, let’s remove it
   /oauth2/authorize:
     get:
       summary: "OAuth 2.0 authorize endpoint"
@@ -776,6 +985,9 @@ paths:
   /shutdown:
     post:
       summary: Shutdown the Hub
+      security:
+        - oauth2:
+            - shutdown
       parameters:
         - name: body
           in: body
@@ -784,10 +996,14 @@ paths:
             properties:
               proxy:
                 type: boolean
-                description: Whether the proxy should be shutdown as well (default from Hub config)
+                description:
+                  Whether the proxy should be shutdown as well (default from
+                  Hub config)
               servers:
                 type: boolean
-                description: Whether users' notebook servers should be shutdown as well (default from Hub config)
+                description:
+                  Whether users' notebook servers should be shutdown as well
+                  (default from Hub config)
       responses:
         "202":
           description: Shutdown successful
@@ -809,6 +1025,11 @@ definitions:
       admin:
         type: boolean
         description: Whether the user is an admin
+      roles:
+        type: array
+        description: The names of roles this user has
+        items:
+          type: string
       groups:
         type: array
         description: The names of groups where this user is a member
@@ -830,12 +1051,20 @@ definitions:
         description: The active servers for this user.
         items:
           $ref: "#/definitions/Server"
+      auth_state:
+        type: string
+        #TODO: will there be predefined states? Should it rather be object instead of string?
+        description:
+          Authentication state of the user. Only available with admin:users:auth_state
+          scope. None otherwise.
   Server:
     type: object
     properties:
       name:
         type: string
-        description: The server's name. The user's default server has an empty name ('')
+        description:
+          The server's name. The user's default server has an empty name
+          ('')
       ready:
         type: boolean
         description: |
@@ -866,10 +1095,15 @@ definitions:
         description: UTC timestamp last-seen activity on this server.
       state:
         type: object
-        description: Arbitrary internal state from this server's spawner.  Only available on the hub's users list or get-user-by-name method, and only if a hub admin.  None otherwise.
+        description:
+          Arbitrary internal state from this server's spawner. Only available
+          on the hub's users list or get-user-by-name method, and only with admin:users:server_state
+          scope. None otherwise.
       user_options:
         type: object
-        description: User specified options for the user's spawned instance of a single-user server.
+        description:
+          User specified options for the user's spawned instance of a single-user
+          server.
   Group:
     type: object
     properties:
@@ -881,6 +1115,11 @@ definitions:
         description: The names of users who are members of this group
         items:
           type: string
+      roles:
+        type: array
+        description: The names of roles this group has
+        items:
+          type: string
   Service:
     type: object
     properties:
@@ -890,6 +1129,11 @@ definitions:
       admin:
         type: boolean
         description: Whether the service is an admin
+      roles:
+        type: array
+        description: The names of roles this service has
+        items:
+          type: string
       url:
         type: string
         description: The internal url where the service is running
@@ -914,7 +1158,9 @@ definitions:
     properties:
       token:
         type: string
-        description: The token itself. Only present in responses to requests for a new token.
+        description:
+          The token itself. Only present in responses to requests for a
+          new token.
       id:
         type: string
         description: The id of the API token. Used for modifying or deleting the token.
@@ -923,10 +1169,17 @@ definitions:
         description: The user that owns a token (undefined if owned by a service)
       service:
         type: string
-        description: The service that owns the token (undefined if owned by a user)
+        description: The service that owns the token (undefined of owned by a user)
+      roles:
+        type: array
+        description: The names of roles this token has
+        items:
+          type: string
       note:
         type: string
-        description: A note about the token, typically describing what it was created for.
+        description:
+          A note about the token, typically describing what it was created
+          for.
       created:
         type: string
         format: date-time

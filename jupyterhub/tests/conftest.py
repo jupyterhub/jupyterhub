@@ -27,9 +27,9 @@ Fixtures to add functionality or spawning behavior
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import inspect
-import logging
 import os
 import sys
+from functools import partial
 from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
@@ -44,11 +44,14 @@ import jupyterhub.services.service
 from . import mocking
 from .. import crypto
 from .. import orm
+from ..roles import create_role
+from ..roles import get_default_roles
+from ..roles import mock_roles
+from ..roles import update_roles
 from ..utils import random_port
 from .mocking import MockHub
 from .test_services import mockservice_cmd
 from .utils import add_user
-from .utils import ssl_setup
 
 # global db session object
 _db = None
@@ -123,7 +126,13 @@ def db():
     """Get a db session"""
     global _db
     if _db is None:
-        _db = orm.new_session_factory('sqlite:///:memory:')()
+        # make sure some initial db contents are filled out
+        # specifically, the 'default' jupyterhub oauth client
+        app = MockHub(db_url='sqlite:///:memory:')
+        app.init_db()
+        _db = app.db
+        for role in get_default_roles():
+            create_role(_db, role)
         user = orm.User(name=getuser())
         _db.add(user)
         _db.commit()
@@ -162,9 +171,14 @@ def cleanup_after(request, io_loop):
     allows cleanup of servers between tests
     without having to launch a whole new app
     """
+
     try:
         yield
     finally:
+        if _db is not None:
+            # cleanup after failed transactions
+            _db.rollback()
+
         if not MockHub.initialized():
             return
         app = MockHub.instance()
@@ -245,13 +259,16 @@ def _mockservice(request, app, url=False):
     ):
         app.services = [spec]
         app.init_services()
+        mock_roles(app, name, 'services')
         assert name in app._service_map
         service = app._service_map[name]
+        token = service.orm.api_tokens[0]
+        update_roles(app.db, token, roles=['token'])
 
         async def start():
             # wait for proxy to be updated before starting the service
             await app.proxy.add_all_services(app._service_map)
-            service.start()
+            await service.start()
 
         io_loop.run_sync(start)
 
@@ -265,7 +282,7 @@ def _mockservice(request, app, url=False):
         with raises(TimeoutExpired):
             service.proc.wait(1)
         if url:
-            io_loop.run_sync(service.server.wait_up)
+            io_loop.run_sync(partial(service.server.wait_up, http=True))
     return service
 
 
@@ -325,3 +342,79 @@ def slow_bad_spawn(app):
         app.tornado_settings, {'spawner_class': mocking.SlowBadSpawner}
     ):
         yield
+
+
+@fixture
+def create_temp_role(app):
+    """Generate a temporary role with certain scopes.
+    Convenience function that provides setup, database handling and teardown"""
+    temp_roles = []
+    index = [1]
+
+    def temp_role_creator(scopes, role_name=None):
+        if not role_name:
+            role_name = f'temp_role_{index[0]}'
+            index[0] += 1
+        temp_role = orm.Role(name=role_name, scopes=list(scopes))
+        temp_roles.append(temp_role)
+        app.db.add(temp_role)
+        app.db.commit()
+        return temp_role
+
+    yield temp_role_creator
+    for role in temp_roles:
+        app.db.delete(role)
+    app.db.commit()
+
+
+@fixture
+def create_user_with_scopes(app, create_temp_role):
+    """Generate a temporary user with specific scopes.
+    Convenience function that provides setup, database handling and teardown"""
+    temp_users = []
+    counter = 0
+    get_role = create_temp_role
+
+    def temp_user_creator(*scopes, name=None):
+        nonlocal counter
+        if name is None:
+            counter += 1
+            name = f"temp_user_{counter}"
+        role = get_role(scopes)
+        orm_user = orm.User(name=name)
+        app.db.add(orm_user)
+        app.db.commit()
+        temp_users.append(orm_user)
+        update_roles(app.db, orm_user, roles=[role.name])
+        return app.users[orm_user.id]
+
+    yield temp_user_creator
+    for user in temp_users:
+        app.users.delete(user)
+
+
+@fixture
+def create_service_with_scopes(app, create_temp_role):
+    """Generate a temporary service with specific scopes.
+    Convenience function that provides setup, database handling and teardown"""
+    temp_service = []
+    counter = 0
+    role_function = create_temp_role
+
+    def temp_service_creator(*scopes, name=None):
+        nonlocal counter
+        if name is None:
+            counter += 1
+            name = f"temp_service_{counter}"
+        role = role_function(scopes)
+        app.services.append({'name': name})
+        app.init_services()
+        orm_service = orm.Service.find(app.db, name)
+        app.db.commit()
+        update_roles(app.db, orm_service, roles=[role.name])
+        return orm_service
+
+    yield temp_service_creator
+    for service in temp_service:
+        app.db.delete(service)
+    app.db.commit()

@@ -1,6 +1,7 @@
 """Authorization handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+import itertools
 import json
 from datetime import datetime
 from urllib.parse import parse_qsl
@@ -13,8 +14,8 @@ from oauthlib import oauth2
 from tornado import web
 
 from .. import orm
-from ..user import User
-from ..utils import compare_token
+from .. import roles
+from .. import scopes
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -23,11 +24,21 @@ from .base import BaseHandler
 class TokenAPIHandler(APIHandler):
     @token_authenticated
     def get(self, token):
+        # FIXME: deprecate this API for oauth token resolution, in favor of using /api/user
+        # TODO: require specific scope for this deprecated API, applied to service tokens only?
+        self.log.warning(
+            "/authorizations/token/:token endpoint is deprecated in JupyterHub 2.0. Use /api/user"
+        )
         orm_token = orm.APIToken.find(self.db, token)
         if orm_token is None:
-            orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None:
             raise web.HTTPError(404)
+
+        owner = orm_token.user or orm_token.service
+        if owner:
+            # having a token means we should be able to read the owner's model
+            # (this is the only thing this handler is for)
+            self.expanded_scopes.update(scopes.identify_scopes(owner))
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
         now = orm_token.last_activity = datetime.utcnow()
@@ -45,53 +56,20 @@ class TokenAPIHandler(APIHandler):
         self.write(json.dumps(model))
 
     async def post(self):
-        warn_msg = (
-            "Using deprecated token creation endpoint %s."
-            " Use /hub/api/users/:user/tokens instead."
-        ) % self.request.uri
-        self.log.warning(warn_msg)
-        requester = user = self.current_user
-        if user is None:
-            # allow requesting a token with username and password
-            # for authenticators where that's possible
-            data = self.get_json_body()
-            try:
-                requester = user = await self.login_user(data)
-            except Exception as e:
-                self.log.error("Failure trying to authenticate with form data: %s" % e)
-                user = None
-            if user is None:
-                raise web.HTTPError(403)
-        else:
-            data = self.get_json_body()
-            # admin users can request tokens for other users
-            if data and data.get('username'):
-                user = self.find_user(data['username'])
-                if user is not requester and not requester.admin:
-                    raise web.HTTPError(
-                        403, "Only admins can request tokens for other users."
-                    )
-                if requester.admin and user is None:
-                    raise web.HTTPError(400, "No such user '%s'" % data['username'])
-
-        note = (data or {}).get('note')
-        if not note:
-            note = "Requested via deprecated api"
-            if requester is not user:
-                kind = 'user' if isinstance(user, User) else 'service'
-                note += " by %s %s" % (kind, requester.name)
-
-        api_token = user.new_api_token(note=note)
-        self.write(
-            json.dumps(
-                {'token': api_token, 'warning': warn_msg, 'user': self.user_model(user)}
-            )
+        raise web.HTTPError(
+            404,
+            "Deprecated endpoint /hub/api/authorizations/token is removed in JupyterHub 2.0."
+            " Use /hub/api/users/:user/tokens instead.",
         )
 
 
 class CookieAPIHandler(APIHandler):
     @token_authenticated
     def get(self, cookie_name, cookie_value=None):
+        self.log.warning(
+            "/authorizations/cookie endpoint is deprecated in JupyterHub 2.0. Use /api/user with OAuth tokens."
+        )
+
         cookie_name = quote(cookie_name, safe='')
         if cookie_value is None:
             self.log.warning(
@@ -198,12 +176,16 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             raise
         self.send_oauth_response(headers, body, status)
 
-    def needs_oauth_confirm(self, user, oauth_client):
+    def needs_oauth_confirm(self, user, oauth_client, roles):
         """Return whether the given oauth client needs to prompt for access for the given user
 
         Checks list for oauth clients that don't need confirmation
 
-        (i.e. the user's own server)
+        Sources:
+
+        - the user's own servers
+        - Clients which already have authorization for the same roles
+        - Explicit oauth_no_confirm_list configuration (e.g. admin-operated services)
 
         .. versionadded: 1.1
         """
@@ -219,6 +201,27 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             in self.settings.get('oauth_no_confirm_list', set())
         ):
             return False
+
+        # Check existing authorization
+        existing_tokens = self.db.query(orm.APIToken).filter_by(
+            user_id=user.id,
+            client_id=oauth_client.identifier,
+        )
+        authorized_roles = set()
+        for token in existing_tokens:
+            authorized_roles.update({role.name for role in token.roles})
+
+        if authorized_roles:
+            if set(roles).issubset(authorized_roles):
+                self.log.debug(
+                    f"User {user.name} has already authorized {oauth_client.identifier} for roles {roles}"
+                )
+                return False
+            else:
+                self.log.debug(
+                    f"User {user.name} has authorized {oauth_client.identifier}"
+                    f" for roles {authorized_roles}, confirming additonal roles {roles}"
+                )
         # default: require confirmation
         return True
 
@@ -243,28 +246,90 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
 
         uri, http_method, body, headers = self.extract_oauth_params()
         try:
-            scopes, credentials = self.oauth_provider.validate_authorization_request(
+            (
+                role_names,
+                credentials,
+            ) = self.oauth_provider.validate_authorization_request(
                 uri, http_method, body, headers
             )
             credentials = self.add_credentials(credentials)
             client = self.oauth_provider.fetch_by_client_id(credentials['client_id'])
-            if not self.needs_oauth_confirm(self.current_user, client):
+            allowed = False
+
+            # check for access to target resource
+            if client.spawner:
+                scope_filter = self.get_scope_filter("access:servers")
+                allowed = scope_filter(client.spawner, kind='server')
+            elif client.service:
+                scope_filter = self.get_scope_filter("access:services")
+                allowed = scope_filter(client.service, kind='service')
+            else:
+                # client is not associated with a service or spawner.
+                # This shouldn't happen, but it might if this is a stale or forged request
+                # from a service or spawner that's since been deleted
+                self.log.error(
+                    f"OAuth client {client} has no service or spawner, cannot resolve scopes."
+                )
+                raise web.HTTPError(500, "OAuth configuration error")
+
+            if not allowed:
+                self.log.error(
+                    f"User {self.current_user} not allowed to access {client.description}"
+                )
+                raise web.HTTPError(
+                    403, f"You do not have permission to access {client.description}"
+                )
+            if not self.needs_oauth_confirm(self.current_user, client, role_names):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
                     self.current_user,
                     client.description,
                 )
                 # this is the pre-1.0 behavior for all oauth
-                self._complete_login(uri, headers, scopes, credentials)
+                self._complete_login(uri, headers, role_names, credentials)
                 return
 
+            # resolve roles to scopes for authorization page
+            raw_scopes = set()
+            if role_names:
+                role_objects = (
+                    self.db.query(orm.Role).filter(orm.Role.name.in_(role_names)).all()
+                )
+                raw_scopes = set(
+                    itertools.chain(*(role.scopes for role in role_objects))
+                )
+            if not raw_scopes:
+                scope_descriptions = [
+                    {
+                        "scope": None,
+                        "description": scopes.scope_definitions['(no_scope)'][
+                            'description'
+                        ],
+                        "filter": "",
+                    }
+                ]
+            elif 'all' in raw_scopes:
+                raw_scopes = ['all']
+                scope_descriptions = [
+                    {
+                        "scope": "all",
+                        "description": scopes.scope_definitions['all']['description'],
+                        "filter": "",
+                    }
+                ]
+            else:
+                scope_descriptions = scopes.describe_raw_scopes(
+                    raw_scopes,
+                    username=self.current_user.name,
+                )
             # Render oauth 'Authorize application...' page
             auth_state = await self.current_user.get_auth_state()
             self.write(
                 await self.render_template(
                     "oauth.html",
                     auth_state=auth_state,
-                    scopes=scopes,
+                    role_names=role_names,
+                    scope_descriptions=scope_descriptions,
                     oauth_client=client,
                 )
             )

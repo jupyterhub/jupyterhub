@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
+import functools
 import json
 import math
 import random
@@ -30,6 +31,8 @@ from tornado.web import RequestHandler
 
 from .. import __version__
 from .. import orm
+from .. import roles
+from .. import scopes
 from ..metrics import PROXY_ADD_DURATION_SECONDS
 from ..metrics import PROXY_DELETE_DURATION_SECONDS
 from ..metrics import ProxyDeleteStatus
@@ -79,12 +82,13 @@ class BaseHandler(RequestHandler):
         The current user (None if not logged in) may be accessed
         via the `self.current_user` property during the handling of any request.
         """
+        self.expanded_scopes = set()
         try:
             await self.get_current_user()
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
-
+        self._resolve_roles_and_scopes()
         return await maybe_future(super().prepare())
 
     @property
@@ -244,26 +248,6 @@ class BaseHandler(RequestHandler):
             return None
         return match.group(1)
 
-    def get_current_user_oauth_token(self):
-        """Get the current user identified by OAuth access token
-
-        Separate from API token because OAuth access tokens
-        can only be used for identifying users,
-        not using the API.
-        """
-        token = self.get_auth_token()
-        if token is None:
-            return None
-        orm_token = orm.OAuthAccessToken.find(self.db, token)
-        if orm_token is None:
-            return None
-
-        now = datetime.utcnow()
-        recorded = self._record_activity(orm_token, now)
-        if self._record_activity(orm_token.user, now) or recorded:
-            self.db.commit()
-        return self._user_from_orm(orm_token.user)
-
     def _record_activity(self, obj, timestamp=None):
         """record activity on an ORM object
 
@@ -350,23 +334,27 @@ class BaseHandler(RequestHandler):
             auth_info['auth_state'] = await user.get_auth_state()
         return await self.auth_to_user(auth_info, user)
 
-    def get_current_user_token(self):
-        """get_current_user from Authorization header token"""
+    def get_token(self):
+        """get token from authorization header"""
         token = self.get_auth_token()
         if token is None:
             return None
         orm_token = orm.APIToken.find(self.db, token)
+        return orm_token
+
+    def get_current_user_token(self):
+        """get_current_user from Authorization header token"""
+        # record token activity
+        orm_token = self.get_token()
         if orm_token is None:
             return None
-
-        # record token activity
         now = datetime.utcnow()
         recorded = self._record_activity(orm_token, now)
         if orm_token.user:
             # FIXME: scopes should give us better control than this
             # don't consider API requests originating from a server
             # to be activity from the user
-            if not orm_token.note.startswith("Server at "):
+            if not orm_token.note or not orm_token.note.startswith("Server at "):
                 recorded = self._record_activity(orm_token.user, now) or recorded
         if recorded:
             self.db.commit()
@@ -429,6 +417,36 @@ class BaseHandler(RequestHandler):
                 self.log.exception("Error getting current user")
         return self._jupyterhub_user
 
+    def _resolve_roles_and_scopes(self):
+        self.expanded_scopes = set()
+        app_log.debug("Loading and parsing scopes")
+        if self.current_user:
+            orm_token = self.get_token()
+            if orm_token:
+                self.expanded_scopes = scopes.get_scopes_for(orm_token)
+            else:
+                self.expanded_scopes = scopes.get_scopes_for(self.current_user)
+        self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
+        app_log.debug("Found scopes [%s]", ",".join(self.expanded_scopes))
+
+    @functools.lru_cache()
+    def get_scope_filter(self, req_scope):
+        """Produce a filter function for req_scope on resources
+
+        Returns `has_access_to(orm_resource, kind)` which returns True or False
+        for whether the current request has access to req_scope on the given resource.
+        """
+
+        def no_access(orm_resource, kind):
+            return False
+
+        if req_scope not in self.parsed_scopes:
+            return no_access
+
+        sub_scope = self.parsed_scopes[req_scope]
+
+        return functools.partial(scopes.check_scope_filter, sub_scope)
+
     @property
     def current_user(self):
         """Override .current_user accessor from tornado
@@ -454,6 +472,7 @@ class BaseHandler(RequestHandler):
             # not found, create and register user
             u = orm.User(name=username)
             self.db.add(u)
+            roles.assign_default_roles(self.db, entity=u)
             TOTAL_USERS.inc()
             self.db.commit()
             user = self._user_from_orm(u)
@@ -474,10 +493,8 @@ class BaseHandler(RequestHandler):
                 # don't clear session tokens if not logged in,
                 # because that could be a malicious logout request!
                 count = 0
-                for access_token in (
-                    self.db.query(orm.OAuthAccessToken)
-                    .filter(orm.OAuthAccessToken.user_id == user.id)
-                    .filter(orm.OAuthAccessToken.session_id == session_id)
+                for access_token in self.db.query(orm.APIToken).filter_by(
+                    user_id=user.id, session_id=session_id
                 ):
                     self.db.delete(access_token)
                     count += 1
@@ -738,6 +755,7 @@ class BaseHandler(RequestHandler):
         # Only set `admin` if the authenticator returned an explicit value.
         if admin is not None and admin != user.admin:
             user.admin = admin
+            roles.assign_default_roles(self.db, entity=user)
             self.db.commit()
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values
@@ -983,6 +1001,7 @@ class BaseHandler(RequestHandler):
                 self.log.critical(
                     "Aborting due to %i consecutive spawn failures", failure_count
                 )
+
                 # abort in 2 seconds to allow pending handlers to resolve
                 # mostly propagating errors for the current failures
                 def abort():

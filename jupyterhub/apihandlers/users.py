@@ -14,8 +14,10 @@ from tornado import web
 from tornado.iostream import StreamClosedError
 
 from .. import orm
+from .. import scopes
+from ..roles import assign_default_roles
+from ..scopes import needs_scope
 from ..user import User
-from ..utils import admin_only
 from ..utils import isoformat
 from ..utils import iterate_until
 from ..utils import maybe_future
@@ -32,14 +34,32 @@ class SelfAPIHandler(APIHandler):
     async def get(self):
         user = self.current_user
         if user is None:
-            # whoami can be accessed via oauth token
-            user = self.get_current_user_oauth_token()
-        if user is None:
             raise web.HTTPError(403)
+
+        _added_scopes = set()
         if isinstance(user, orm.Service):
-            model = self.service_model(user)
+            # ensure we have the minimal 'identify' scopes for the token owner
+            identify_scopes = scopes.identify_scopes(user)
+            get_model = self.service_model
         else:
-            model = self.user_model(user)
+            identify_scopes = scopes.identify_scopes(user.orm_user)
+            get_model = self.user_model
+
+        # ensure we have permission to identify ourselves
+        # all tokens can do this on this endpoint
+        for scope in identify_scopes:
+            if scope not in self.expanded_scopes:
+                _added_scopes.add(scope)
+                self.expanded_scopes.add(scope)
+        if _added_scopes:
+            # re-parse with new scopes
+            self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
+
+        model = get_model(user)
+
+        # add scopes to identify model,
+        # but not the scopes we added to ensure we could read our own model
+        model["scopes"] = sorted(self.expanded_scopes.difference(_added_scopes))
         self.write(json.dumps(model))
 
 
@@ -52,7 +72,14 @@ class UserListAPIHandler(APIHandler):
         user = self.users[orm_user]
         return any(spawner.ready for spawner in user.spawners.values())
 
-    @admin_only
+    @needs_scope(
+        'read:users',
+        'read:users:name',
+        'read:servers',
+        'read:users:groups',
+        'read:users:activity',
+        'read:roles:users',
+    )
     def get(self):
         state_filter = self.get_argument("state", None)
         offset, limit = self.get_api_pagination()
@@ -98,15 +125,16 @@ class UserListAPIHandler(APIHandler):
 
         query = query.offset(offset).limit(limit)
 
-        data = [
-            self.user_model(u, include_servers=True, include_state=True)
-            for u in query
-            if (post_filter is None or post_filter(u))
-        ]
+        data = []
+        for u in query:
+            if post_filter is None or post_filter(u):
+                user_model = self.user_model(u)
+                if user_model:
+                    data.append(user_model)
 
         self.write(json.dumps(data))
 
-    @admin_only
+    @needs_scope('admin:users')
     async def post(self):
         data = self.get_json_body()
         if not data or not isinstance(data, dict) or not data.get('usernames'):
@@ -146,7 +174,8 @@ class UserListAPIHandler(APIHandler):
             user = self.user_from_username(name)
             if admin:
                 user.admin = True
-                self.db.commit()
+            assign_default_roles(self.db, entity=user)
+            self.db.commit()
             try:
                 await maybe_future(self.authenticator.add_user(user))
             except Exception as e:
@@ -162,82 +191,71 @@ class UserListAPIHandler(APIHandler):
         self.set_status(201)
 
 
-def admin_or_self(method):
-    """Decorator for restricting access to either the target user or admin"""
-
-    def m(self, name, *args, **kwargs):
-        current = self.current_user
-        if current is None:
-            raise web.HTTPError(403)
-        if not (current.name == name or current.admin):
-            raise web.HTTPError(403)
-
-        # raise 404 if not found
-        if not self.find_user(name):
-            raise web.HTTPError(404)
-        return method(self, name, *args, **kwargs)
-
-    return m
-
-
 class UserAPIHandler(APIHandler):
-    @admin_or_self
-    async def get(self, name):
-        user = self.find_user(name)
-        model = self.user_model(
-            user, include_servers=True, include_state=self.current_user.admin
-        )
+    @needs_scope(
+        'read:users',
+        'read:users:name',
+        'read:servers',
+        'read:users:groups',
+        'read:users:activity',
+        'read:roles:users',
+    )
+    async def get(self, user_name):
+        user = self.find_user(user_name)
+        model = self.user_model(user)
         # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they
         # are admins, Hub admins often are also marked as admins so they
         # will see their auth state but normal users won't
-        requester = self.current_user
-        if requester.admin:
+        if 'auth_state' in model:
             model['auth_state'] = await user.get_auth_state()
         self.write(json.dumps(model))
 
-    @admin_only
-    async def post(self, name):
+    @needs_scope('admin:users')
+    async def post(self, user_name):
         data = self.get_json_body()
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if user is not None:
-            raise web.HTTPError(409, "User %s already exists" % name)
+            raise web.HTTPError(409, "User %s already exists" % user_name)
 
-        user = self.user_from_username(name)
+        user = self.user_from_username(user_name)
         if data:
             self._check_user_model(data)
             if 'admin' in data:
                 user.admin = data['admin']
-                self.db.commit()
+                assign_default_roles(self.db, entity=user)
+        self.db.commit()
 
         try:
             await maybe_future(self.authenticator.add_user(user))
         except Exception:
-            self.log.error("Failed to create user: %s" % name, exc_info=True)
+            self.log.error("Failed to create user: %s" % user_name, exc_info=True)
             # remove from registry
             self.users.delete(user)
-            raise web.HTTPError(400, "Failed to create user: %s" % name)
+            raise web.HTTPError(400, "Failed to create user: %s" % user_name)
 
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
 
-    @admin_only
-    async def delete(self, name):
-        user = self.find_user(name)
+    @needs_scope('admin:users')
+    async def delete(self, user_name):
+        user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404)
         if user.name == self.current_user.name:
             raise web.HTTPError(400, "Cannot delete yourself!")
         if user.spawner._stop_pending:
             raise web.HTTPError(
-                400, "%s's server is in the process of stopping, please wait." % name
+                400,
+                "%s's server is in the process of stopping, please wait." % user_name,
             )
         if user.running:
             await self.stop_single_user(user)
             if user.spawner._stop_pending:
                 raise web.HTTPError(
                     400,
-                    "%s's server is in the process of stopping, please wait." % name,
+                    "%s's server is in the process of stopping, please wait."
+                    % user_name,
                 )
 
         await maybe_future(self.authenticator.delete_user(user))
@@ -249,14 +267,14 @@ class UserAPIHandler(APIHandler):
 
         self.set_status(204)
 
-    @admin_only
-    async def patch(self, name):
-        user = self.find_user(name)
+    @needs_scope('admin:users')
+    async def patch(self, user_name):
+        user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404)
         data = self.get_json_body()
         self._check_user_model(data)
-        if 'name' in data and data['name'] != name:
+        if 'name' in data and data['name'] != user_name:
             # check if the new name is already taken inside db
             if self.find_user(data['name']):
                 raise web.HTTPError(
@@ -268,6 +286,8 @@ class UserAPIHandler(APIHandler):
                 await user.save_auth_state(value)
             else:
                 setattr(user, key, value)
+                if key == 'admin':
+                    assign_default_roles(self.db, entity=user)
         self.db.commit()
         user_ = self.user_model(user)
         user_['auth_state'] = await user.get_auth_state()
@@ -277,15 +297,14 @@ class UserAPIHandler(APIHandler):
 class UserTokenListAPIHandler(APIHandler):
     """API endpoint for listing/creating tokens"""
 
-    @admin_or_self
-    def get(self, name):
+    @needs_scope('read:tokens')
+    def get(self, user_name):
         """Get tokens for a given user"""
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
 
         now = datetime.utcnow()
-
         api_tokens = []
 
         def sort_key(token):
@@ -299,19 +318,9 @@ class UserTokenListAPIHandler(APIHandler):
                 continue
             api_tokens.append(self.token_model(token))
 
-        oauth_tokens = []
-        # OAuth tokens use integer timestamps
-        now_timestamp = now.timestamp()
-        for token in sorted(user.oauth_tokens, key=sort_key):
-            if token.expires_at and token.expires_at < now_timestamp:
-                # exclude expired tokens
-                self.db.delete(token)
-                self.db.commit()
-                continue
-            oauth_tokens.append(self.token_model(token))
-        self.write(json.dumps({'api_tokens': api_tokens, 'oauth_tokens': oauth_tokens}))
+        self.write(json.dumps({'api_tokens': api_tokens}))
 
-    async def post(self, name):
+    async def post(self, user_name):
         body = self.get_json_body() or {}
         if not isinstance(body, dict):
             raise web.HTTPError(400, "Body must be a JSON dict or empty")
@@ -339,13 +348,16 @@ class UserTokenListAPIHandler(APIHandler):
         if requester is None:
             # couldn't identify requester
             raise web.HTTPError(403)
-        user = self.find_user(name)
-        if requester is not user and not requester.admin:
-            raise web.HTTPError(403, "Only admins can request tokens for other users")
-        if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
-        if requester is not user:
-            kind = 'user' if isinstance(requester, User) else 'service'
+        self._jupyterhub_user = requester
+        self._resolve_roles_and_scopes()
+        user = self.find_user(user_name)
+        kind = 'user' if isinstance(requester, User) else 'service'
+        scope_filter = self.get_scope_filter('tokens')
+        if user is None or not scope_filter(user, kind):
+            raise web.HTTPError(
+                403,
+                f"{kind.title()} {user_name} not found or no permissions to generate tokens",
+            )
 
         note = body.get('note')
         if not note:
@@ -353,9 +365,19 @@ class UserTokenListAPIHandler(APIHandler):
             if requester is not user:
                 note += " by %s %s" % (kind, requester.name)
 
-        api_token = user.new_api_token(
-            note=note, expires_in=body.get('expires_in', None)
-        )
+        token_roles = body.get('roles')
+        try:
+            api_token = user.new_api_token(
+                note=note, expires_in=body.get('expires_in', None), roles=token_roles
+            )
+        except NameError:
+            raise web.HTTPError(404, "Requested roles %r not found" % token_roles)
+        except ValueError:
+            raise web.HTTPError(
+                403,
+                "Requested roles %r cannot have higher permissions than the token owner"
+                % token_roles,
+            )
         if requester is not user:
             self.log.info(
                 "%s %s requested API token for %s",
@@ -382,44 +404,40 @@ class UserTokenAPIHandler(APIHandler):
         (e.g. wrong owner, invalid key format, etc.)
         """
         not_found = "No such token %s for user %s" % (token_id, user.name)
-        prefix, id = token_id[0], token_id[1:]
-        if prefix == 'a':
-            Token = orm.APIToken
-        elif prefix == 'o':
-            Token = orm.OAuthAccessToken
-        else:
+        prefix, id_ = token_id[:1], token_id[1:]
+        if prefix != 'a':
             raise web.HTTPError(404, not_found)
         try:
-            id = int(id)
+            id_ = int(id_)
         except ValueError:
             raise web.HTTPError(404, not_found)
 
-        orm_token = self.db.query(Token).filter(Token.id == id).first()
+        orm_token = self.db.query(orm.APIToken).filter_by(id=id_).first()
         if orm_token is None or orm_token.user is not user.orm_user:
             raise web.HTTPError(404, "Token not found %s", orm_token)
         return orm_token
 
-    @admin_or_self
-    def get(self, name, token_id):
+    @needs_scope('read:tokens')
+    def get(self, user_name, token_id):
         """"""
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
         token = self.find_token_by_id(user, token_id)
         self.write(json.dumps(self.token_model(token)))
 
-    @admin_or_self
-    def delete(self, name, token_id):
+    @needs_scope('tokens')
+    def delete(self, user_name, token_id):
         """Delete a token"""
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if not user:
-            raise web.HTTPError(404, "No such user: %s" % name)
+            raise web.HTTPError(404, "No such user: %s" % user_name)
         token = self.find_token_by_id(user, token_id)
         # deleting an oauth token deletes *all* oauth tokens for that client
-        if isinstance(token, orm.OAuthAccessToken):
-            client_id = token.client_id
+        client_id = token.client_id
+        if token.client_id != "jupyterhub":
             tokens = [
-                token for token in user.oauth_tokens if token.client_id == client_id
+                token for token in user.api_tokens if token.client_id == client_id
             ]
         else:
             tokens = [token]
@@ -433,9 +451,9 @@ class UserTokenAPIHandler(APIHandler):
 class UserServerAPIHandler(APIHandler):
     """Start and stop single-user servers"""
 
-    @admin_or_self
-    async def post(self, name, server_name=''):
-        user = self.find_user(name)
+    @needs_scope('servers')
+    async def post(self, user_name, server_name=''):
+        user = self.find_user(user_name)
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
@@ -449,7 +467,7 @@ class UserServerAPIHandler(APIHandler):
                         400,
                         "User {} already has the maximum of {} named servers."
                         "  One must be deleted before a new server can be created".format(
-                            name, self.named_server_limit_per_user
+                            user_name, self.named_server_limit_per_user
                         ),
                     )
         spawner = user.spawners[server_name]
@@ -478,9 +496,9 @@ class UserServerAPIHandler(APIHandler):
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
 
-    @admin_or_self
-    async def delete(self, name, server_name=''):
-        user = self.find_user(name)
+    @needs_scope('servers')
+    async def delete(self, user_name, server_name=''):
+        user = self.find_user(user_name)
         options = self.get_json_body()
         remove = (options or {}).get('remove', False)
 
@@ -505,7 +523,7 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(400, "Named servers are not enabled.")
             if server_name not in user.orm_spawners:
                 raise web.HTTPError(
-                    404, "%s has no server named '%s'" % (name, server_name)
+                    404, "%s has no server named '%s'" % (user_name, server_name)
                 )
         elif remove:
             raise web.HTTPError(400, "Cannot delete the default server")
@@ -551,19 +569,19 @@ class UserAdminAccessAPIHandler(APIHandler):
     This handler sets the necessary cookie for an admin to login to a single-user server.
     """
 
-    @admin_only
-    def post(self, name):
+    @needs_scope('servers')
+    def post(self, user_name):
         self.log.warning(
             "Deprecated in JupyterHub 0.8."
             " Admin access API is not needed now that we use OAuth."
         )
         current = self.current_user
         self.log.warning(
-            "Admin user %s has requested access to %s's server", current.name, name
+            "Admin user %s has requested access to %s's server", current.name, user_name
         )
         if not self.settings.get('admin_access', False):
             raise web.HTTPError(403, "admin access to user servers disabled")
-        user = self.find_user(name)
+        user = self.find_user(user_name)
         if user is None:
             raise web.HTTPError(404)
 
@@ -607,12 +625,12 @@ class SpawnProgressAPIHandler(APIHandler):
 
             await asyncio.wait([self._finish_future], timeout=self.keepalive_interval)
 
-    @admin_or_self
-    async def get(self, username, server_name=''):
+    @needs_scope('read:servers')
+    async def get(self, user_name, server_name=''):
         self.set_header('Cache-Control', 'no-cache')
         if server_name is None:
             server_name = ''
-        user = self.find_user(username)
+        user = self.find_user(user_name)
         if user is None:
             # no such user
             raise web.HTTPError(404)
@@ -750,12 +768,12 @@ class ActivityAPIHandler(APIHandler):
             )
         return servers
 
-    @admin_or_self
-    def post(self, username):
-        user = self.find_user(username)
+    @needs_scope('users:activity')
+    def post(self, user_name):
+        user = self.find_user(user_name)
         if user is None:
             # no such user
-            raise web.HTTPError(404, "No such user: %r", username)
+            raise web.HTTPError(404, "No such user: %r", user_name)
 
         body = self.get_json_body()
         if not isinstance(body, dict):

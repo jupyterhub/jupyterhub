@@ -21,6 +21,7 @@ from datetime import timezone
 from functools import partial
 from getpass import getuser
 from glob import glob
+from itertools import chain
 from operator import itemgetter
 from textwrap import dedent
 from urllib.parse import unquote
@@ -82,6 +83,7 @@ from .services.service import Service
 
 from . import crypto
 from . import dbutil, orm
+from . import roles
 from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
@@ -110,14 +112,12 @@ from .objects import Hub, Server
 # For faking stats
 from .emptyclass import EmptyClass
 
-
 common_aliases = {
     'log-level': 'Application.log_level',
     'f': 'JupyterHub.config_file',
     'config': 'JupyterHub.config_file',
     'db': 'JupyterHub.db_url',
 }
-
 
 aliases = {
     'base-url': 'JupyterHub.base_url',
@@ -214,11 +214,12 @@ class NewToken(Application):
         hub.load_config_file(hub.config_file)
         hub.init_db()
 
-        def init_users():
+        def init_roles_and_users():
             loop = asyncio.new_event_loop()
+            loop.run_until_complete(hub.init_role_creation())
             loop.run_until_complete(hub.init_users())
 
-        ThreadPoolExecutor(1).submit(init_users).result()
+        ThreadPoolExecutor(1).submit(init_roles_and_users).result()
         user = orm.User.find(hub.db, self.name)
         if user is None:
             print("No such user: %s" % self.name, file=sys.stderr)
@@ -321,6 +322,31 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
+    load_roles = List(
+        Dict(),
+        help="""List of predefined role dictionaries to load at startup.
+
+        For instance::
+
+            load_roles = [
+                            {
+                                'name': 'teacher',
+                                'description': 'Access to users' information and group membership',
+                                'scopes': ['users', 'groups'],
+                                'users': ['cyclops', 'gandalf'],
+                                'services': [],
+                                'groups': []
+                            }
+                        ]
+
+        All keys apart from 'name' are optional.
+        See all the available scopes in the JupyterHub REST API documentation.
+
+        Default roles are defined in roles.py.
+
+        """,
+    ).tag(config=True)
+
     config_file = Unicode('jupyterhub_config.py', help="The config file to load").tag(
         config=True
     )
@@ -369,7 +395,7 @@ class JupyterHub(Application):
         even if your Hub authentication is still valid.
         If your Hub authentication is valid,
         logging in may be a transparent redirect as you refresh the page.
-        
+
         This does not affect JupyterHub API tokens in general,
         which do not expire by default.
         Only tokens issued during the oauth flow
@@ -862,7 +888,7 @@ class JupyterHub(Application):
         "/",
         help="""
         The routing prefix for the Hub itself.
-        
+
         Override to send only a subset of traffic to the Hub.
         Default is to use the Hub as the default route for all requests.
 
@@ -874,7 +900,7 @@ class JupyterHub(Application):
         may want to handle these events themselves,
         in which case they can register their own default target with the proxy
         and set e.g. `hub_routespec = /hub/` to serve only the hub's own pages, or even `/hub/api/` for api-only operation.
-        
+
         Note: hub_routespec must include the base_url, if any.
 
         .. versionadded:: 1.4
@@ -1419,14 +1445,16 @@ class JupyterHub(Application):
             max(self.log_level, logging.INFO)
         )
 
-        # hook up tornado 3's loggers to our app handlers
         for log in (app_log, access_log, gen_log):
             # ensure all log statements identify the application they come from
             log.name = self.log.name
-        logger = logging.getLogger('tornado')
-        logger.propagate = True
-        logger.parent = self.log
-        logger.setLevel(self.log.level)
+
+        # hook up tornado's and oauthlib's loggers to our own
+        for name in ("tornado", "oauthlib"):
+            logger = logging.getLogger(name)
+            logger.propagate = True
+            logger.parent = self.log
+            logger.setLevel(self.log.level)
 
     @staticmethod
     def add_url_prefix(prefix, handlers):
@@ -1457,7 +1485,7 @@ class JupyterHub(Application):
         Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
 
         ::
-        
+
             def default_url_fn(handler):
                 user = handler.current_user
                 if user and user.admin:
@@ -1734,6 +1762,26 @@ class JupyterHub(Application):
         except orm.DatabaseSchemaMismatch as e:
             self.exit(e)
 
+        # ensure the default oauth client exists
+        if (
+            not self.db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .one_or_none()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            client = orm.OAuthClient(
+                identifier="jupyterhub",
+                secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
+            self.db.add(client)
+            self.db.commit()
+
     def init_hub(self):
         """Load the Hub URL config"""
         hub_args = dict(
@@ -1830,7 +1878,6 @@ class JupyterHub(Application):
                 db.add(user)
             else:
                 user.admin = True
-
         # the admin_users config variable will never be used after this point.
         # only the database values will be referenced.
 
@@ -1904,30 +1951,188 @@ class JupyterHub(Application):
 
         TOTAL_USERS.set(total_users)
 
+    async def _get_or_create_user(self, username):
+        """Create user if username is found in config but user does not exist"""
+        if not (await maybe_future(self.authenticator.check_allowed(username, None))):
+            raise ValueError(
+                "Username %r is not in Authenticator.allowed_users" % username
+            )
+        user = orm.User.find(self.db, name=username)
+        if user is None:
+            if not self.authenticator.validate_username(username):
+                raise ValueError("Username %r is not valid" % username)
+            self.log.info(f"Creating user {username}")
+            user = orm.User(name=username)
+            self.db.add(user)
+            self.db.commit()
+        return user
+
     async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
         for name, usernames in self.load_groups.items():
             group = orm.Group.find(db, name)
             if group is None:
+                self.log.info(f"Creating group {name}")
                 group = orm.Group(name=name)
                 db.add(group)
             for username in usernames:
                 username = self.authenticator.normalize_username(username)
-                if not (
-                    await maybe_future(self.authenticator.check_allowed(username, None))
-                ):
-                    raise ValueError(
-                        "Username %r is not in Authenticator.allowed_users" % username
-                    )
-                user = orm.User.find(db, name=username)
-                if user is None:
-                    if not self.authenticator.validate_username(username):
-                        raise ValueError("Group username %r is not valid" % username)
-                    user = orm.User(name=username)
-                    db.add(user)
+                user = await self._get_or_create_user(username)
+                self.log.debug(f"Adding user {username} to group {name}")
                 group.users.append(user)
         db.commit()
+
+    async def init_role_creation(self):
+        """Load default and predefined roles into the database"""
+        self.log.debug('Loading default roles to database')
+        default_roles = roles.get_default_roles()
+        config_role_names = [r['name'] for r in self.load_roles]
+
+        init_roles = default_roles
+        roles_with_new_permissions = []
+        for role_spec in self.load_roles:
+            role_name = role_spec['name']
+            # Check for duplicates
+            if config_role_names.count(role_name) > 1:
+                raise ValueError(
+                    f"Role {role_name} multiply defined. Please check the `load_roles` configuration"
+                )
+            init_roles.append(role_spec)
+            # Check if some roles have obtained new permissions (to avoid 'scope creep')
+            old_role = orm.Role.find(self.db, name=role_name)
+            if old_role:
+                if not set(role_spec['scopes']).issubset(old_role.scopes):
+                    app_log.warning(
+                        "Role %s has obtained extra permissions" % role_name
+                    )
+                    roles_with_new_permissions.append(role_name)
+        if roles_with_new_permissions:
+            unauthorized_oauth_tokens = (
+                self.db.query(orm.APIToken)
+                .filter(
+                    orm.APIToken.roles.any(
+                        orm.Role.name.in_(roles_with_new_permissions)
+                    )
+                )
+                .filter(orm.APIToken.client_id != 'jupyterhub')
+            )
+            for token in unauthorized_oauth_tokens:
+                app_log.warning(
+                    "Deleting OAuth token %s; one of its roles obtained new permissions that were not authorized by user"
+                    % token
+                )
+                self.db.delete(token)
+            self.db.commit()
+
+        init_role_names = [r['name'] for r in init_roles]
+        if not orm.Role.find(self.db, name='admin'):
+            self._rbac_upgrade = True
+        else:
+            self._rbac_upgrade = False
+        for role in self.db.query(orm.Role).filter(
+            orm.Role.name.notin_(init_role_names)
+        ):
+            app_log.info(f"Deleting role {role.name}")
+            self.db.delete(role)
+        self.db.commit()
+        for role in init_roles:
+            roles.create_role(self.db, role)
+
+    async def init_role_assignment(self):
+        # tokens are added separately
+        kinds = ['users', 'services', 'groups']
+        admin_role_objects = ['users', 'services']
+        config_admin_users = set(self.authenticator.admin_users)
+        db = self.db
+        # load predefined roles from config file
+        if config_admin_users:
+            for role_spec in self.load_roles:
+                if role_spec['name'] == 'admin':
+                    app_log.warning(
+                        "Configuration specifies both admin_users and users in the admin role specification. "
+                        "If admin role is present in config, c.authenticator.admin_users should not be used."
+                    )
+                    app_log.info(
+                        "Merging admin_users set with users list in admin role"
+                    )
+                    role_spec['users'] = set(role_spec.get('users', []))
+                    role_spec['users'] |= config_admin_users
+        self.log.debug('Loading predefined roles from config file to database')
+        has_admin_role_spec = {role_bearer: False for role_bearer in admin_role_objects}
+        for predef_role in self.load_roles:
+            predef_role_obj = orm.Role.find(db, name=predef_role['name'])
+            if predef_role['name'] == 'admin':
+                for kind in admin_role_objects:
+                    has_admin_role_spec[kind] = kind in predef_role
+                    if has_admin_role_spec[kind]:
+                        app_log.info(f"Admin role specifies static {kind} list")
+                    else:
+                        app_log.info(
+                            f"Admin role does not specify {kind}, preserving admin membership in database"
+                        )
+            # add users, services, and/or groups,
+            # tokens need to be checked for permissions
+            for kind in kinds:
+                orm_role_bearers = []
+                if kind in predef_role.keys():
+                    for bname in predef_role[kind]:
+                        if kind == 'users':
+                            bname = self.authenticator.normalize_username(bname)
+                            if not (
+                                await maybe_future(
+                                    self.authenticator.check_allowed(bname, None)
+                                )
+                            ):
+                                raise ValueError(
+                                    "Username %r is not in Authenticator.allowed_users"
+                                    % bname
+                                )
+                        Class = orm.get_class(kind)
+                        orm_obj = Class.find(db, bname)
+                        if orm_obj:
+                            orm_role_bearers.append(orm_obj)
+                        else:
+                            app_log.info(
+                                f"Found unexisting {kind} {bname} in role definition {predef_role['name']}"
+                            )
+                            if kind == 'users':
+                                orm_obj = await self._get_or_create_user(bname)
+                                orm_role_bearers.append(orm_obj)
+                            else:
+                                raise ValueError(
+                                    f"{kind} {bname} defined in config role definition {predef_role['name']} but not present in database"
+                                )
+                        # Ensure all with admin role have admin flag
+                        if predef_role['name'] == 'admin':
+                            orm_obj.admin = True
+                setattr(predef_role_obj, kind, orm_role_bearers)
+        db.commit()
+        if self.authenticator.allowed_users:
+            allowed_users = db.query(orm.User).filter(
+                orm.User.name.in_(self.authenticator.allowed_users)
+            )
+            for user in allowed_users:
+                roles.grant_role(db, user, 'user')
+        admin_role = orm.Role.find(db, 'admin')
+        for kind in admin_role_objects:
+            Class = orm.get_class(kind)
+            for admin_obj in db.query(Class).filter_by(admin=True):
+                if has_admin_role_spec[kind]:
+                    admin_obj.admin = admin_role in admin_obj.roles
+                else:
+                    roles.grant_role(db, admin_obj, 'admin')
+        db.commit()
+        # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
+        if getattr(self, '_rbac_upgrade', False):
+            app_log.warning(
+                "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
+            )
+            for kind in kinds:
+                roles.check_for_default_roles(db, kind)
+
+            # check tokens for default roles
+            roles.check_for_default_roles(db, bearer='tokens')
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""
@@ -1995,12 +2200,13 @@ class JupyterHub(Application):
         run periodically
         """
         # this should be all the subclasses of Expiring
-        for cls in (orm.APIToken, orm.OAuthAccessToken, orm.OAuthCode):
+        for cls in (orm.APIToken, orm.OAuthCode):
             self.log.debug("Purging expired {name}s".format(name=cls.__name__))
             cls.purge_expired(self.db)
 
     async def init_api_tokens(self):
         """Load predefined API tokens (for services) into database"""
+
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
 
@@ -2008,6 +2214,7 @@ class JupyterHub(Application):
         # purge expired tokens hourly
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
+
         pc = PeriodicCallback(
             self.purge_expired_tokens, 1e3 * self.purge_expired_tokens_interval
         )
@@ -2031,6 +2238,14 @@ class JupyterHub(Application):
             if orm_service is None:
                 # not found, create a new one
                 orm_service = orm.Service(name=name)
+                if spec.get('admin', False):
+                    self.log.warning(
+                        f"Service {name} sets `admin: True`, which is deprecated in JupyterHub 2.0."
+                        " You can assign now assign roles via `JupyterHub.load_roles` configuration."
+                        " If you specify services in the admin role configuration, "
+                        "the Service admin flag will be ignored."
+                    )
+                    roles.update_roles(self.db, entity=orm_service, roles=['admin'])
                 self.db.add(orm_service)
             orm_service.admin = spec.get('admin', False)
             self.db.commit()
@@ -2040,6 +2255,7 @@ class JupyterHub(Application):
                 base_url=self.base_url,
                 db=self.db,
                 orm=orm_service,
+                roles=orm_service.roles,
                 domain=domain,
                 host=host,
                 hub=self.hub,
@@ -2051,18 +2267,14 @@ class JupyterHub(Application):
                     raise AttributeError("No such service field: %s" % key)
                 setattr(service, key, value)
 
-            if service.managed:
-                if not service.api_token:
-                    # generate new token
-                    # TODO: revoke old tokens?
-                    service.api_token = service.orm.new_api_token(
-                        note="generated at startup"
-                    )
-                else:
-                    # ensure provided token is registered
-                    self.service_tokens[service.api_token] = service.name
-            else:
+            if service.api_token:
                 self.service_tokens[service.api_token] = service.name
+            elif service.managed:
+                # generate new token
+                # TODO: revoke old tokens?
+                service.api_token = service.orm.new_api_token(
+                    note="generated at startup"
+                )
 
             if service.url:
                 parsed = urlparse(service.url)
@@ -2085,12 +2297,24 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
-                self.oauth_provider.add_client(
+                allowed_roles = []
+                if service.oauth_roles:
+                    allowed_roles = list(
+                        self.db.query(orm.Role).filter(
+                            orm.Role.name.in_(service.oauth_roles)
+                        )
+                    )
+                oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
+                    allowed_roles=allowed_roles,
                     description="JupyterHub service %s" % service.name,
                 )
+                service.orm.oauth_client = oauth_client
+            else:
+                if service.oauth_client:
+                    self.db.delete(service.oauth_client)
 
             self._service_map[name] = service
 
@@ -2106,7 +2330,7 @@ class JupyterHub(Application):
             if not service.url:
                 continue
             try:
-                await Server.from_orm(service.orm.server).wait_up(timeout=1)
+                await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
             except TimeoutError:
                 self.log.warning(
                     "Cannot connect to %s service %s at %s",
@@ -2276,7 +2500,7 @@ class JupyterHub(Application):
 
         This should mainly be services that have been removed from configuration or renamed.
         """
-        oauth_client_ids = set()
+        oauth_client_ids = {"jupyterhub"}
         for service in self._service_map.values():
             if service.oauth_available:
                 oauth_client_ids.add(service.oauth_client_id)
@@ -2511,10 +2735,12 @@ class JupyterHub(Application):
         self.init_hub()
         self.init_proxy()
         self.init_oauth()
+        await self.init_role_creation()
         await self.init_users()
         await self.init_groups()
         self.init_services()
         await self.init_api_tokens()
+        await self.init_role_assignment()
         self.init_tornado_settings()
         self.init_handlers()
         self.init_tornado_application()
@@ -2797,7 +3023,7 @@ class JupyterHub(Application):
             if service.managed:
                 self.log.info("Starting managed service %s", msg)
                 try:
-                    service.start()
+                    await service.start()
                 except Exception as e:
                     self.log.critical(
                         "Failed to start service %s", service_name, exc_info=True
@@ -2810,11 +3036,6 @@ class JupyterHub(Application):
                 tries = 10 if service.managed else 1
                 for i in range(tries):
                     try:
-                        ssl_context = make_ssl_context(
-                            self.internal_ssl_key,
-                            self.internal_ssl_cert,
-                            cafile=self.internal_ssl_ca,
-                        )
                         await Server.from_orm(service.orm.server).wait_up(
                             http=True, timeout=1, ssl_context=ssl_context
                         )

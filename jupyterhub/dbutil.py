@@ -136,7 +136,7 @@ def upgrade_if_needed(db_url, backup=True, log=None):
 
 
 def shell(args=None):
-    """Start an IPython shell hooked up to the jupyerhub database"""
+    """Start an IPython shell hooked up to the jupyterhub database"""
     from .app import JupyterHub
 
     hub = JupyterHub()

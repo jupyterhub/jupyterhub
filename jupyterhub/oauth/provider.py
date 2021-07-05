@@ -7,13 +7,11 @@ from oauthlib.oauth2 import RequestValidator
 from oauthlib.oauth2 import WebApplicationServer
 from oauthlib.oauth2.rfc6749.grant_types import authorization_code
 from oauthlib.oauth2.rfc6749.grant_types import base
-from tornado.escape import url_escape
 from tornado.log import app_log
 
 from .. import orm
 from ..utils import compare_token
 from ..utils import hash_token
-from ..utils import url_path_join
 
 # patch absolute-uri check
 # because we want to allow relative uri oauth
@@ -59,6 +57,9 @@ class JupyterHubRequestValidator(RequestValidator):
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
         )
         if oauth_client is None:
+            return False
+        if not client_secret or not oauth_client.secret:
+            # disallow authentication with no secret
             return False
         if not compare_token(oauth_client.secret, client_secret):
             app_log.warning("Client secret mismatch for %s", client_id)
@@ -146,7 +147,12 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant
             - Client Credentials grant
         """
-        return ['identify']
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        )
+        if orm_client is None:
+            raise ValueError("No such client: %s" % client_id)
+        return [role.name for role in orm_client.allowed_roles]
 
     def get_original_scopes(self, refresh_token, request, *args, **kwargs):
         """Get the list of scopes associated with the refresh token.
@@ -246,8 +252,7 @@ class JupyterHubRequestValidator(RequestValidator):
             code=code['code'],
             # oauth has 5 minutes to complete
             expires_at=int(orm.OAuthCode.now() + 300),
-            # TODO: persist oauth scopes
-            # scopes=request.scopes,
+            roles=request._jupyterhub_roles,
             user=request.user.orm_user,
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
@@ -321,10 +326,6 @@ class JupyterHubRequestValidator(RequestValidator):
         """
         log_token = {}
         log_token.update(token)
-        scopes = token['scope'].split(' ')
-        # TODO:
-        if scopes != ['identify']:
-            raise ValueError("Only 'identify' scope is supported")
         # redact sensitive keys in log
         for key in ('access_token', 'refresh_token', 'state'):
             if key in token:
@@ -332,6 +333,7 @@ class JupyterHubRequestValidator(RequestValidator):
                 if isinstance(value, str):
                     log_token[key] = 'REDACTED'
         app_log.debug("Saving bearer token %s", log_token)
+
         if request.user is None:
             raise ValueError("No user for access token: %s" % request.user)
         client = (
@@ -339,19 +341,19 @@ class JupyterHubRequestValidator(RequestValidator):
             .filter_by(identifier=request.client.client_id)
             .first()
         )
-        orm_access_token = orm.OAuthAccessToken(
-            client=client,
-            grant_type=orm.GrantType.authorization_code,
-            expires_at=int(orm.OAuthAccessToken.now() + token['expires_in']),
-            refresh_token=token['refresh_token'],
-            # TODO: save scopes,
-            # scopes=scopes,
+        # FIXME: support refresh tokens
+        # These should be in a new table
+        token.pop("refresh_token", None)
+
+        # APIToken.new commits the token to the db
+        orm.APIToken.new(
+            client_id=client.identifier,
+            expires_in=token['expires_in'],
+            roles=[rolename for rolename in request.scopes],
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
         )
-        self.db.add(orm_access_token)
-        self.db.commit()
         return client.redirect_uri
 
     def validate_bearer_token(self, token, scopes, request):
@@ -412,6 +414,8 @@ class JupyterHubRequestValidator(RequestValidator):
         )
         if orm_client is None:
             return False
+        if not orm_client.secret:
+            return False
         request.client = orm_client
         return True
 
@@ -447,9 +451,7 @@ class JupyterHubRequestValidator(RequestValidator):
             return False
         request.user = orm_code.user
         request.session_id = orm_code.session_id
-        # TODO: record state on oauth codes
-        # TODO: specify scopes
-        request.scopes = ['identify']
+        request.scopes = [role.name for role in orm_code.roles]
         return True
 
     def validate_grant_type(
@@ -545,6 +547,35 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant
             - Client Credentials Grant
         """
+        orm_client = (
+            self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
+        )
+        if orm_client is None:
+            app_log.warning("No such oauth client %s", client_id)
+            return False
+        client_allowed_roles = {role.name: role for role in orm_client.allowed_roles}
+        # explicitly allow 'identify', which was the only allowed scope previously
+        # requesting 'identify' gets no actual permissions other than self-identification
+        client_allowed_roles.setdefault('identify', None)
+        roles = []
+        requested_roles = set(scopes)
+        disallowed_roles = requested_roles.difference(client_allowed_roles)
+        if disallowed_roles:
+            app_log.error(
+                f"Role(s) not allowed for {client_id}: {','.join(disallowed_roles)}"
+            )
+            return False
+
+        # store resolved roles on request
+        app_log.debug(
+            f"Allowing request for role(s) for {client_id}:  {','.join(requested_roles) or '[]'}"
+        )
+        # these will be stored on the OAuthCode object
+        request._jupyterhub_roles = [
+            client_allowed_roles[name]
+            for name in requested_roles
+            if client_allowed_roles[name] is not None
+        ]
         return True
 
 
@@ -553,7 +584,9 @@ class JupyterHubOAuthServer(WebApplicationServer):
         self.db = db
         super().__init__(validator, *args, **kwargs)
 
-    def add_client(self, client_id, client_secret, redirect_uri, description=''):
+    def add_client(
+        self, client_id, client_secret, redirect_uri, allowed_roles=None, description=''
+    ):
         """Add a client
 
         hash its client_secret before putting it in the database.
@@ -574,14 +607,20 @@ class JupyterHubOAuthServer(WebApplicationServer):
             app_log.info(f'Creating oauth client {client_id}')
         else:
             app_log.info(f'Updating oauth client {client_id}')
-        orm_client.secret = hash_token(client_secret)
+        if allowed_roles == None:
+            allowed_roles = []
+        orm_client.secret = hash_token(client_secret) if client_secret else ""
         orm_client.redirect_uri = redirect_uri
-        orm_client.description = description
+        orm_client.description = description or client_id
+        orm_client.allowed_roles = allowed_roles
         self.db.commit()
+        return orm_client
 
     def fetch_by_client_id(self, client_id):
         """Find a client by its id"""
-        return self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        client = self.db.query(orm.OAuthClient).filter_by(identifier=client_id).first()
+        if client and client.secret:
+            return client
 
 
 def make_provider(session_factory, url_prefix, login_url, **oauth_server_kwargs):
