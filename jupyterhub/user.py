@@ -3,6 +3,7 @@
 import json
 import warnings
 import requests
+import hashlib
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
@@ -198,12 +199,14 @@ class User:
     settings = None
     _auth_refreshed = None
     server_passwd = None
+    server_passwd_hashed = None
 
     def __init__(self, orm_user, settings=None, db=None):
         self.db = db or inspect(orm_user).session
         self.settings = settings or {}
         self.orm_user = orm_user
         self.server_passwd = new_token()
+        self.server_passwd_hashed = hashlib.sha256(self.server_passwd.encode('utf-8')).hexdigest()
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
 

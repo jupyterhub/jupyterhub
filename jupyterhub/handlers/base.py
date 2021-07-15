@@ -531,7 +531,7 @@ class BaseHandler(RequestHandler):
     def set_server_cookie(self, user):
         self.log.debug("Setting cookie for %s's code-server instance.", user.name)
         kwargs = {'Path': user.proxy_spec, 'sameSite': 'Lax'}
-        self._set_cookie('key', user.server_passwd, encrypted=False, **kwargs)
+        self._set_cookie('key', user.server_passwd_hashed, encrypted=False, **kwargs)
 
     def _set_user_cookie(self, user, server):
         self.log.debug("Setting cookie for %s: %s", user.name, server.cookie_name)
