@@ -300,6 +300,16 @@ class Proxy(LoggingConfigurable):
             spawner.server.host,
             {'user': user.name, 'server_name': server_name},
         )
+        await self.add_route(
+            url_path_join('/socket/', spawner.proxy_spec),
+            '{}://{}:3000'.format(spawner.server.proto, spawner.server.ip),
+            {'user': user.name, 'server_name': server_name, 'target': 'socket'},
+        )
+        await self.add_route(
+            url_path_join(spawner.proxy_spec, '/logout'),
+            url_path_join(spawner.public_domain, '/hub/logout'),
+            {'user': user.name, 'server_name': server_name, 'target': 'logout'},
+        )
 
     async def delete_user(self, user, server_name=''):
         """Remove a user's server from the proxy table."""
@@ -307,7 +317,10 @@ class Proxy(LoggingConfigurable):
         if server_name:
             routespec = url_path_join(user.proxy_spec, server_name, '/')
         self.log.info("Removing user %s from proxy (%s)", user.name, routespec)
+        self.log.info("user proxyspec: %s", user.proxy_spec)
         await self.delete_route(routespec)
+        await self.delete_route(url_path_join('/socket/', user.proxy_spec))
+        await self.delete_route(url_path_join(user.proxy_spec, '/logout'))
 
     async def add_all_services(self, service_dict):
         """Update the proxy table from the database.
@@ -366,7 +379,11 @@ class Proxy(LoggingConfigurable):
             for name, spawner in user.spawners.items():
                 if spawner.ready:
                     spec = spawner.proxy_spec
+                    spec2 = url_path_join('/socket/', spawner.proxy_spec)
+                    spec3 = url_path_join(user.proxy_spec, '/logout')
                     good_routes.add(spec)
+                    good_routes.add(spec2)
+                    good_routes.add(spec3)
                     if spec not in user_routes:
                         self.log.warning(
                             "Adding missing route for %s (%s)", spec, spawner.server
@@ -781,6 +798,7 @@ class ConfigurableHTTPProxy(Proxy):
 
     async def check_running(self):
         """Check if the proxy is still running"""
+        await self.get_all_routes()
         if self.proxy_process.poll() is None:
             return
         self.log.error(

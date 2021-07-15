@@ -261,15 +261,6 @@ class HubAuth(SingletonConfigurable):
         else:
             return {}
 
-    cookie_cache_max_age = Integer(help="DEPRECATED. Use cache_max_age")
-
-    @observe('cookie_cache_max_age')
-    def _deprecated_cookie_cache(self, change):
-        warnings.warn(
-            "cookie_cache_max_age is deprecated in JupyterHub 0.8. Use cache_max_age instead."
-        )
-        self.cache_max_age = change.new
-
     cache_max_age = Integer(
         300,
         help="""The maximum time (in seconds) to cache the Hub's responses for authentication.

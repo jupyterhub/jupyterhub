@@ -98,7 +98,7 @@
 </noscript>
 
 {% block nav_bar %}
-  <nav class="navbar navbar-default">
+  <nav class="navbar navbar-inverse">
     <div class="container-fluid">
       <div class="navbar-header">
         {% block logo %}
@@ -121,8 +121,8 @@
         <ul class="nav navbar-nav">
           {% block nav_bar_left_items %}
             <li><a href="{{base_url}}home">Home</a></li>
-            <li><a href="{{base_url}}token">Token</a></li>
             {% if user.admin %}
+            <li><a href="{{base_url}}token">Token</a></li>
             <li><a href="{{base_url}}admin">Admin</a></li>
             {% endif %}
             {% if services %}
@@ -147,7 +147,7 @@
                 <span id="login_widget">
                   {% if user %}
                     <p class="navbar-text">{{user.name}}</p>
-                    <a id="logout" role="button" class="navbar-btn btn-sm btn btn-default" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
+                    <a id="logout" role="button" class="btn-sm btn navbar-btn btn-logout" href="{{logout_url}}"> <i aria-hidden="true" class="fa fa-sign-out"></i> Logout</a>
                   {% else %}
                     <a id="login" role="button" class="btn-sm btn navbar-btn btn-default" href="{{login_url}}">Login</a>
                   {% endif %}

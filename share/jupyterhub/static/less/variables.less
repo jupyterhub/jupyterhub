@@ -4,15 +4,54 @@
 @navbar-height: 40px;
 @grid-float-breakpoint: @screen-xs-min;
 
-@jupyter-orange: #f37524;
-@jupyter-red: #e34f21;
+@eth1: #1f407a;
+@eth3: #1269b0;
+@eth6: #6F6F6F;
 // color blind-friendly alternative to red/green
 // from 5-class RdYlBu via colorbrewer.org
 // eliminate distinction between 'primary' and 'success'
-@brand-primary: #2c7bb6;
+@brand-primary: @eth3;
 @brand-success: @brand-primary;
-@brand-danger: #d7191c;
+@brand-danger: #A8322D;
+@navbar-inverse-color:                      #E2E2E2;
+@navbar-inverse-bg:                         #000000;
+@navbar-inverse-border:                     #6F6F6F;
+
+// Inverted navbar links
+@navbar-inverse-link-color:                 #E2E2E2;
+@navbar-inverse-link-hover-color:           #ffffff;
+@navbar-inverse-link-hover-bg:              transparent;
+@navbar-inverse-link-active-color:          @navbar-inverse-link-hover-color;
+@navbar-inverse-link-active-bg:             #000000;
+@navbar-inverse-link-disabled-color:        #6F6F6F;
+@navbar-inverse-link-disabled-bg:           transparent;
+
+// Inverted navbar brand label
+@navbar-inverse-brand-color:                @navbar-inverse-link-color;
+@navbar-inverse-brand-hover-color:          #ffffff;
+@navbar-inverse-brand-hover-bg:             transparent;
+
+// Inverted navbar toggle
+@navbar-inverse-toggle-hover-bg:            #6F6F6F;
+@navbar-inverse-toggle-icon-bar-bg:         #ffffff;
+@navbar-inverse-toggle-border-color:        #6F6F6F;
+
 
 .btn-jupyter {
-  .button-variant(#fff; @jupyter-orange; @jupyter-red);
+  .button-variant(#ffffff; #000000; @eth6);
+}
+
+.btn-logout {
+  color: #E2E2E2;
+  background-color: #000000;
+  border-color: #E2E2E2;
+}
+
+.btn-logout:hover,
+.btn-logout:active,
+.btn-logout:focus,
+.btn-logout.active {
+  color: #ffffff;
+  background-color: #000000;
+  border-color: #ffffff;
 }

@@ -410,10 +410,6 @@ class JupyterHub(Application):
     last_activity_interval = Integer(
         300, help="Interval (in seconds) at which to update last-activity timestamps."
     ).tag(config=True)
-    proxy_check_interval = Integer(
-        5,
-        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.check_running_interval",
-    ).tag(config=True)
     service_check_interval = Integer(
         60,
         help="Interval (in seconds) at which to check connectivity of services with web endpoints.",
@@ -439,7 +435,6 @@ class JupyterHub(Application):
         config=True
     )
 
-    confirm_no_ssl = Bool(False, help="""DEPRECATED: does nothing""").tag(config=True)
     ssl_key = Unicode(
         '',
         help="""Path to SSL key file for the public facing interface of the proxy
@@ -561,32 +556,6 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    ip = Unicode(
-        '',
-        help="""The public facing ip of the whole JupyterHub application
-        (specifically referred to as the proxy).
-
-        This is the address on which the proxy will listen. The default is to
-        listen on all interfaces. This is the only address through which JupyterHub
-        should be accessed by users.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
-        """,
-    ).tag(config=True)
-
-    port = Integer(
-        8000,
-        help="""The public facing port of the proxy.
-
-        This is the port on which the proxy will listen.
-        This is the only port through which JupyterHub
-        should be accessed by users.
-
-        .. deprecated: 0.9
-            Use JupyterHub.bind_url
-        """,
-    ).tag(config=True)
 
     base_url = URLPrefix(
         '/',
@@ -617,17 +586,7 @@ class JupyterHub(Application):
         urlinfo = urlinfo._replace(path=self.base_url)
         bind_url = urlunparse(urlinfo)
 
-        # Warn if both bind_url and ip/port/base_url are set
-        if bind_url != self.bind_url:
-            if self.bind_url != self._bind_url_default():
-                self.log.warning(
-                    "Both bind_url and ip/port/base_url have been configured. "
-                    "JupyterHub.ip, JupyterHub.port, JupyterHub.base_url are"
-                    " deprecated in JupyterHub 0.9,"
-                    " please use JupyterHub.bind_url instead."
-                )
-            self.bind_url = bind_url
-
+        
     bind_url = Unicode(
         "http://:8000",
         help="""The public facing URL of the whole JupyterHub application.
@@ -691,7 +650,7 @@ class JupyterHub(Application):
     @default('logo_file')
     def _logo_file_default(self):
         return os.path.join(
-            self.data_files_path, 'static', 'images', 'jupyterhub-80.png'
+            self.data_files_path, 'static', 'images', 'eth_logo_kurz_neg.svg'
         )
 
     jinja_environment_options = Dict(
@@ -712,52 +671,6 @@ class JupyterHub(Application):
         """,
     ).tag(config=True)
 
-    proxy_cmd = Command(
-        [],
-        config=True,
-        help="DEPRECATED since version 0.8. Use ConfigurableHTTPProxy.command",
-    ).tag(config=True)
-
-    debug_proxy = Bool(
-        False, help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.debug"
-    ).tag(config=True)
-    proxy_auth_token = Unicode(
-        help="DEPRECATED since version 0.8: Use ConfigurableHTTPProxy.auth_token"
-    ).tag(config=True)
-
-    _proxy_config_map = {
-        'proxy_check_interval': 'check_running_interval',
-        'proxy_cmd': 'command',
-        'debug_proxy': 'debug',
-        'proxy_auth_token': 'auth_token',
-    }
-
-    @observe(*_proxy_config_map)
-    def _deprecated_proxy_config(self, change):
-        dest = self._proxy_config_map[change.name]
-        self.log.warning(
-            "JupyterHub.%s is deprecated in JupyterHub 0.8, use ConfigurableHTTPProxy.%s",
-            change.name,
-            dest,
-        )
-        self.config.ConfigurableHTTPProxy[dest] = change.new
-
-    proxy_api_ip = Unicode(
-        help="DEPRECATED since version 0.8 : Use ConfigurableHTTPProxy.api_url"
-    ).tag(config=True)
-    proxy_api_port = Integer(
-        help="DEPRECATED since version 0.8 : Use ConfigurableHTTPProxy.api_url"
-    ).tag(config=True)
-
-    @observe('proxy_api_port', 'proxy_api_ip')
-    def _deprecated_proxy_api(self, change):
-        self.log.warning(
-            "JupyterHub.%s is deprecated in JupyterHub 0.8, use ConfigurableHTTPProxy.api_url",
-            change.name,
-        )
-        self.config.ConfigurableHTTPProxy.api_url = 'http://{}:{}'.format(
-            self.proxy_api_ip or '127.0.0.1', self.proxy_api_port or self.port + 1
-        )
 
     hub_port = Integer(
         8081,
@@ -836,19 +749,6 @@ class JupyterHub(Application):
         config=True,
     )
 
-    hub_connect_port = Integer(
-        0,
-        help="""
-        DEPRECATED
-
-        Use hub_connect_url
-
-        .. versionadded:: 0.8
-
-        .. deprecated:: 0.9
-            Use hub_connect_url
-        """,
-    ).tag(config=True)
 
     hub_prefix = URLPrefix(
         '/hub/', help="The prefix for the hub server.  Always /base_url/hub/"
@@ -1270,9 +1170,6 @@ class JupyterHub(Application):
         Users should be properly informed if this is enabled.
         """,
     ).tag(config=True)
-    admin_users = Set(
-        help="""DEPRECATED since version 0.7.2, use Authenticator.admin_users instead."""
-    ).tag(config=True)
 
     tornado_settings = Dict(
         help="Extra settings overrides to pass to the tornado application."
@@ -1339,35 +1236,6 @@ class JupyterHub(Application):
         """override default log format to include time"""
         return "%(color)s[%(levelname)1.1s %(asctime)s.%(msecs).03d %(name)s %(module)s:%(lineno)d]%(end_color)s %(message)s"
 
-    extra_log_file = Unicode(
-        help="""
-        DEPRECATED: use output redirection instead, e.g.
-
-        jupyterhub &>> /var/log/jupyterhub.log
-        """
-    ).tag(config=True)
-
-    @observe('extra_log_file')
-    def _log_file_changed(self, change):
-        if change.new:
-            self.log.warning(
-                dedent(
-                    """
-                extra_log_file is DEPRECATED in jupyterhub-0.8.2.
-
-                extra_log_file only redirects logs of the Hub itself,
-                and will discard any other output, such as
-                that of subprocess spawners or the proxy.
-
-                It is STRONGLY recommended that you redirect process
-                output instead, e.g.
-
-                    jupyterhub &>> '{}'
-            """.format(
-                        change.new
-                    )
-                )
-            )
 
     extra_log_handlers = List(
         Instance(logging.Handler), help="Extra log handlers to set on JupyterHub logger"
@@ -1400,11 +1268,6 @@ class JupyterHub(Application):
         # self.log is a child of. The logging module dipatches log messages to a log
         # and all of its ancenstors until propagate is set to False.
         self.log.propagate = False
-
-        if self.extra_log_file:
-            self.extra_log_handlers.append(
-                logging.FileHandler(self.extra_log_file, encoding='utf8')
-            )
 
         _formatter = self._log_formatter_cls(
             fmt=self.log_format, datefmt=self.log_datefmt
@@ -1766,13 +1629,6 @@ class JupyterHub(Application):
 
         if self.hub_connect_ip:
             self.hub.connect_ip = self.hub_connect_ip
-        if self.hub_connect_port:
-            self.hub.connect_port = self.hub_connect_port
-            self.log.warning(
-                "JupyterHub.hub_connect_port is deprecated as of 0.9."
-                " Use JupyterHub.hub_connect_url to fully specify"
-                " the URL for connecting to the Hub."
-            )
 
         if self.hub_connect_url:
             # ensure hub_prefix is on connect_url
@@ -1798,12 +1654,6 @@ class JupyterHub(Application):
                     "auth_state is enabled, but encryption is not available: %s" % e
                 )
 
-        if self.admin_users and not self.authenticator.admin_users:
-            self.log.warning(
-                "\nJupyterHub.admin_users is deprecated since version 0.7.2."
-                "\nUse Authenticator.admin_users instead."
-            )
-            self.authenticator.admin_users = self.admin_users
         admin_users = [
             self.authenticator.normalize_username(name)
             for name in self.authenticator.admin_users

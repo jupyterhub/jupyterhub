@@ -2,6 +2,7 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import warnings
+import requests
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
@@ -29,7 +30,7 @@ from .spawner import LocalProcessSpawner
 from .utils import make_ssl_context
 from .utils import maybe_future
 from .utils import url_path_join
-
+from .utils import new_token
 
 class UserDict(dict):
     """Like defaultdict, but for users
@@ -196,11 +197,13 @@ class User:
     log = app_log
     settings = None
     _auth_refreshed = None
+    server_passwd = None
 
     def __init__(self, orm_user, settings=None, db=None):
         self.db = db or inspect(orm_user).session
         self.settings = settings or {}
         self.orm_user = orm_user
+        self.server_passwd = new_token()
 
         self.allow_named_servers = self.settings.get('allow_named_servers', False)
 
@@ -401,21 +404,6 @@ class User:
             return False
         return any(s.active for s in self.spawners.values())
 
-    @property
-    def spawn_pending(self):
-        warnings.warn(
-            "User.spawn_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
-            DeprecationWarning,
-        )
-        return self.spawner.pending == 'spawn'
-
-    @property
-    def stop_pending(self):
-        warnings.warn(
-            "User.stop_pending is deprecated in JupyterHub 0.8. Use Spawner.pending",
-            DeprecationWarning,
-        )
-        return self.spawner.pending == 'stop'
 
     @property
     def server(self):
@@ -581,6 +569,7 @@ class User:
             db.commit()
 
         spawner.user_options = options
+
         # we are starting a new server, make sure it doesn't restore state
         spawner.clear_state()
 
@@ -610,6 +599,7 @@ class User:
             if authenticator:
                 # pre_spawn_start can thow errors that can lead to a redirect loop
                 # if left uncaught (see https://github.com/jupyterhub/jupyterhub/issues/2683)
+                self.log.debug("Awaiting authenticator.pre_spawn_Start")
                 await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
             # trigger auth_state hook
@@ -747,6 +737,7 @@ class User:
         spawner._waiting_for_response = True
         await self._wait_up(spawner)
 
+
     async def _wait_up(self, spawner):
         """Wait for a server to finish starting.
 
@@ -762,6 +753,7 @@ class User:
             resp = await server.wait_up(
                 http=True, timeout=spawner.http_timeout, ssl_context=ssl_context
             )
+            # resp = requests.get('http://'+spawner.container_name+':8080/')
         except Exception as e:
             if isinstance(e, TimeoutError):
                 self.log.warning(

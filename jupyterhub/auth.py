@@ -101,10 +101,7 @@ class Authenticator(LoggingConfigurable):
         """
     ).tag(config=True)
 
-    whitelist = Set(
-        help="Deprecated, use `Authenticator.allowed_users`",
-        config=True,
-    )
+
 
     allowed_users = Set(
         help="""
@@ -137,31 +134,6 @@ class Authenticator(LoggingConfigurable):
             `Authenticator.blacklist` renamed to `blocked_users`
         """
     ).tag(config=True)
-
-    _deprecated_aliases = {
-        "whitelist": ("allowed_users", "1.2"),
-        "blacklist": ("blocked_users", "1.2"),
-    }
-
-    @observe(*list(_deprecated_aliases))
-    def _deprecated_trait(self, change):
-        """observer for deprecated traits"""
-        old_attr = change.name
-        new_attr, version = self._deprecated_aliases.get(old_attr)
-        new_value = getattr(self, new_attr)
-        if new_value != change.new:
-            # only warn if different
-            # protects backward-compatible config from warnings
-            # if they set the same value under both names
-            self.log.warning(
-                "{cls}.{old} is deprecated in JupyterHub {version}, use {cls}.{new} instead".format(
-                    cls=self.__class__.__name__,
-                    old=old_attr,
-                    new=new_attr,
-                    version=version,
-                )
-            )
-            setattr(self, new_attr, change.new)
 
     @observe('allowed_users')
     def _check_allowed_users(self, change):
@@ -305,74 +277,7 @@ class Authenticator(LoggingConfigurable):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._init_deprecated_methods()
 
-    def _init_deprecated_methods(self):
-        # handles deprecated signature *and* name
-        # with correct subclass override priority!
-        for old_name, new_name in (
-            ('check_whitelist', 'check_allowed'),
-            ('check_blacklist', 'check_blocked_users'),
-            ('check_group_whitelist', 'check_allowed_groups'),
-        ):
-            old_method = getattr(self, old_name, None)
-            if old_method is None:
-                # no such method (check_group_whitelist is optional)
-                continue
-
-            # allow old name to have higher priority
-            # if and only if it's defined in a later subclass
-            # than the new name
-            for cls in self.__class__.mro():
-                has_old_name = old_name in cls.__dict__
-                has_new_name = new_name in cls.__dict__
-                if has_new_name:
-                    break
-                if has_old_name and not has_new_name:
-                    warnings.warn(
-                        "{0}.{1} should be renamed to {0}.{2} for JupyterHub >= 1.2".format(
-                            cls.__name__, old_name, new_name
-                        ),
-                        DeprecationWarning,
-                    )
-                    # use old name instead of new
-                    # if old name is overridden in subclass
-                    def _new_calls_old(old_name, *args, **kwargs):
-                        return getattr(self, old_name)(*args, **kwargs)
-
-                    setattr(self, new_name, partial(_new_calls_old, old_name))
-                    break
-
-            # deprecate pre-1.0 method signatures
-            signature = inspect.signature(old_method)
-            if 'authentication' not in signature.parameters and not any(
-                param.kind == inspect.Parameter.VAR_KEYWORD
-                for param in signature.parameters.values()
-            ):
-                # adapt to pre-1.0 signature for compatibility
-                warnings.warn(
-                    """
-                    {0}.{1} does not support the authentication argument,
-                    added in JupyterHub 1.0. and is renamed to {2} in JupyterHub 1.2.
-
-                    It should have the signature:
-
-                    def {2}(self, username, authentication=None):
-                        ...
-
-                    Adapting for compatibility.
-                    """.format(
-                        self.__class__.__name__, old_name, new_name
-                    ),
-                    DeprecationWarning,
-                )
-
-                def wrapped_method(
-                    original_method, username, authentication=None, **kwargs
-                ):
-                    return original_method(username, **kwargs)
-
-                setattr(self, old_name, partial(wrapped_method, old_method))
 
     async def run_post_auth_hook(self, handler, authentication):
         """
@@ -694,41 +599,9 @@ class Authenticator(LoggingConfigurable):
         return [('/login', LoginHandler)]
 
 
-def _deprecated_method(old_name, new_name, version):
-    """Create a deprecated method wrapper for a deprecated method name"""
-
-    def deprecated(self, *args, **kwargs):
-        warnings.warn(
-            (
-                "{cls}.{old_name} is deprecated in JupyterHub {version}."
-                " Please use {cls}.{new_name} instead."
-            ).format(
-                cls=self.__class__.__name__,
-                old_name=old_name,
-                new_name=new_name,
-                version=version,
-            ),
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        old_method = getattr(self, new_name)
-        return old_method(*args, **kwargs)
-
-    return deprecated
 
 
 import types
-
-# deprecate white/blacklist method names
-for _old_name, _new_name, _version in [
-    ("check_whitelist", "check_allowed", "1.2"),
-    ("check_blacklist", "check_blocked_users", "1.2"),
-]:
-    setattr(
-        Authenticator,
-        _old_name,
-        _deprecated_method(_old_name, _new_name, _version),
-    )
 
 
 class LocalAuthenticator(Authenticator):
@@ -790,9 +663,6 @@ class LocalAuthenticator(Authenticator):
         """
     ).tag(config=True)
 
-    group_whitelist = Set(
-        help="""DEPRECATED: use allowed_groups""",
-    ).tag(config=True)
 
     allowed_groups = Set(
         help="""
@@ -1109,14 +979,6 @@ class PAMAuthenticator(LocalAuthenticator):
             return super().normalize_username(username)
 
 
-for _old_name, _new_name, _version in [
-    ("check_group_whitelist", "check_group_allowed", "1.2"),
-]:
-    setattr(
-        LocalAuthenticator,
-        _old_name,
-        _deprecated_method(_old_name, _new_name, _version),
-    )
 
 
 class DummyAuthenticator(Authenticator):

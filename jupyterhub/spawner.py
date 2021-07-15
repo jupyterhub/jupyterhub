@@ -449,13 +449,6 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
-    env = Dict(
-        help="""Deprecated: use Spawner.get_env or Spawner.environment
-
-    - extend Spawner.get_env for adding required env in Spawner subclasses
-    - Spawner.environment for config-specified env
-    """
-    )
 
     environment = Dict(
         help="""
@@ -704,6 +697,16 @@ class Spawner(LoggingConfigurable):
         """,
     ).tag(config=True)
 
+    public_domain = Unicode(
+        'http://127.0.0.1:8000/',
+        allow_none=False,
+        help="""
+        The domain name the user connects to.
+        
+        This is used to set the url the socket io connection gets established to.
+        """,
+    ).tag(config=True)
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -755,12 +758,7 @@ class Spawner(LoggingConfigurable):
         Use this to access the env in Spawner.start to allow extension in subclasses.
         """
         env = {}
-        if self.env:
-            warnings.warn(
-                "Spawner.env is deprecated, found %s" % self.env, DeprecationWarning
-            )
-            env.update(self.env)
-
+        
         for key in self.env_keep:
             if key in os.environ:
                 env[key] = os.environ[key]

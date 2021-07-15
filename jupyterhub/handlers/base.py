@@ -44,7 +44,7 @@ from ..metrics import TOTAL_USERS
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..user import User
-from ..utils import get_accepted_mimetype
+from ..utils import get_accepted_mimetype, hash_token
 from ..utils import maybe_future
 from ..utils import url_path_join
 
@@ -485,6 +485,8 @@ class BaseHandler(RequestHandler):
                     self.log.debug("Deleted %s access tokens for %s", count, user.name)
                     self.db.commit()
 
+        # clear code-server cookie
+        self.clear_cookie('key', user.proxy_spec, **kwargs)
         # clear hub cookie
         self.clear_cookie(self.hub.cookie_name, path=self.hub.base_url, **kwargs)
         # clear services cookie
@@ -525,6 +527,11 @@ class BaseHandler(RequestHandler):
 
         self.log.debug("Setting cookie %s: %s", key, kwargs)
         set_cookie(key, value, **kwargs)
+
+    def set_server_cookie(self, user):
+        self.log.debug("Setting cookie for %s's code-server instance.", user.name)
+        kwargs = {'Path': user.proxy_spec, 'sameSite': 'Lax'}
+        self._set_cookie('key', user.server_passwd, encrypted=False, **kwargs)
 
     def _set_user_cookie(self, user, server):
         self.log.debug("Setting cookie for %s: %s", user.name, server.cookie_name)
@@ -757,6 +764,7 @@ class BaseHandler(RequestHandler):
         if authenticated:
             user = await self.auth_to_user(authenticated)
             self.set_login_cookie(user)
+            self.set_server_cookie(user)
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
             self.log.info("User logged in: %s", user.name)
@@ -1322,6 +1330,9 @@ class PrefixRedirectHandler(BaseHandler):
             # default / -> /hub/ redirect
             # avoiding extra hop through /hub
             path = '/'
+        #split_path = path.split('/')
+        #if split_path[0] == 'static' and split_path[1] != 'components':
+        #    self.redirect(url_path_join(path))
         self.redirect(url_path_join(self.hub.base_url, path), permanent=False)
 
 

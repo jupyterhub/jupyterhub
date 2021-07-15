@@ -82,6 +82,9 @@ class LogoutHandler(BaseHandler):
         """Log the user out, call the custom action, forward the user
         to the logout page
         """
+        if self.current_user is None:
+            self.log.debug("Got no user after redirect from code-server: redirected to logout url.")
+            self.redirect(self.settings['logout_url'], permanent=True)
         await self.default_handle_logout()
         await self.handle_logout()
         await self.render_logout_page()
@@ -117,6 +120,7 @@ class LoginHandler(BaseHandler):
             # set new login cookie
             # because single-user cookie may have been cleared or incorrect
             self.set_login_cookie(user)
+            self.set_server_cookie(user)
             self.redirect(self.get_next_url(user), permanent=False)
         else:
             if self.authenticator.auto_login:
