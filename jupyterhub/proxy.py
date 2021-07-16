@@ -380,7 +380,7 @@ class Proxy(LoggingConfigurable):
                 if spawner.ready:
                     spec = spawner.proxy_spec
                     spec2 = url_path_join('/socket/', spawner.proxy_spec)
-                    spec3 = url_path_join(user.proxy_spec, '/logout')
+                    spec3 = url_path_join(spawner.proxy_spec, '/logout/')
                     good_routes.add(spec)
                     good_routes.add(spec2)
                     good_routes.add(spec3)
