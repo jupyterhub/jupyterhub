@@ -722,8 +722,9 @@ class ConfigurableHTTPProxy(Proxy):
         def _check_process():
             status = self.proxy_process.poll()
             if status is not None:
-                e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                raise e from None
+                with self.proxy_process:
+                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
+                    raise e from None
 
         for server in (public_server, api_server):
             for i in range(10):
