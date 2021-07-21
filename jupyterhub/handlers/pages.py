@@ -3,7 +3,6 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import time
-import hashlib
 from collections import defaultdict
 from datetime import datetime
 from http.client import responses
@@ -96,20 +95,6 @@ class SpawnHandler(BaseHandler):
     """
 
     default_url = None
-
-    def set_server_cookie(self, user, ip_addr):
-        m = hashlib.sha256()
-        b = user.server_passwd.encode('utf-8')
-        m.update(b)
-        cookie_pwd = m.hexdigest()
-
-        kwargs = {'path': user.base_url, 'secure': False, 'httpOnly': False, 'sameSite': 'Lax'} #'domain': '{}'.format(ip_addr)
-
-
-
-        self.set_cookie('key', cookie_pwd, **kwargs)
-        # self.set_cookie('key', cookie_pwd, path='/', secure=False, httpOnly=False, sameSite='Lax', domain=ip_addr)
-
 
     async def _render_form(self, for_user, spawner_options_form, message=''):
         auth_state = await for_user.get_auth_state()
