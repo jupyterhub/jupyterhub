@@ -220,3 +220,11 @@ previously required.
 Additionally, configurable attributes for your proxy will
 appear in jupyterhub help output and auto-generated configuration files
 via `jupyterhub --generate-config`.
+
+### Index of proxies
+
+A list of the proxies that are currently available for JupyterHub (that we know about).
+
+1. [`jupyterhub/configurable-http-proxy`](https://github.com/jupyterhub/configurable-http-proxy) The default proxy which uses node-http-proxy
+2. [`jupyterhub/traefik-proxy`](https://github.com/jupyterhub/traefik-proxy) The proxy which configures traefik proxy server for jupyterhub
+3. [`AbdealiJK/configurable-http-proxy`](https://github.com/AbdealiJK/configurable-http-proxy) A pure python implementation of the configurable-http-proxy
