@@ -622,6 +622,9 @@ class BaseHandler(RequestHandler):
     def authenticate(self, data):
         return maybe_future(self.authenticator.get_authenticated_user(self, data))
 
+    def load_user_groups(self, user, auth_info):
+        return maybe_future(self.authenticator.load_user_groups(user, auth_info))
+
     def get_next_url(self, user=None, default=None):
         """Get the next_url for login redirect
 
@@ -779,7 +782,15 @@ class BaseHandler(RequestHandler):
         if not self.authenticator.enable_auth_state:
             # auth_state is not enabled. Force None.
             auth_state = None
+
+        if self.authenticator.manage_groups:
+            # Run authenticator user-group reload hook
+            user_groups = await self.load_user_groups(user, authenticated)
+            if user_groups is not None:
+                user.sync_groups(user_groups)
+
         await user.save_auth_state(auth_state)
+
         return user
 
     async def login_user(self, data=None):
@@ -793,6 +804,7 @@ class BaseHandler(RequestHandler):
             self.set_login_cookie(user)
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
+
             self.log.info("User logged in: %s", user.name)
             user._auth_refreshed = time.monotonic()
             return user

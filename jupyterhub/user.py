@@ -253,6 +253,19 @@ class User:
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
+    def sync_groups(self, user_groups):
+        """Syncronize groups with database"""
+
+        if user_groups:
+            groups = (
+                self.db.query(orm.Group).filter(orm.Group.name.in_(user_groups)).all()
+            )
+            groups = {g.name: g for g in groups}
+
+            self.groups = [groups.get(g, orm.Group(name=g)) for g in user_groups]
+        else:
+            self.groups = []
+
     async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""
         if auth_state is None:

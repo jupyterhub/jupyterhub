@@ -2001,6 +2001,9 @@ class JupyterHub(Application):
     async def init_groups(self):
         """Load predefined groups into the database"""
         db = self.db
+
+        if self.authenticator.manage_groups and self.load_groups:
+            raise ValueError("Group management has been offloaded to the authenticator")
         for name, usernames in self.load_groups.items():
             group = orm.Group.find(db, name)
             if group is None:

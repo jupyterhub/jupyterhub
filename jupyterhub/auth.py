@@ -635,6 +635,30 @@ class Authenticator(LoggingConfigurable):
         """
         self.allowed_users.discard(user.name)
 
+    manage_groups = Bool(
+        False,
+        config=True,
+        help="""Let authenticator manage user groups
+        
+        Authenticator must implement get_user_groups for this to be useful.
+        """,
+    )
+
+    def load_user_groups(self, user, auth_state):
+        """Hook called allowing authenticator to read user groups
+
+        Updates user group memberships
+
+        Args:
+            auth_state (dict): Proprietary dict returned by authenticator
+            user(User): the User object associated with the auth-state
+
+        Returns:
+            groups (list):
+                List of user group memberships
+        """
+        return None
+
     auto_login = Bool(
         False,
         config=True,

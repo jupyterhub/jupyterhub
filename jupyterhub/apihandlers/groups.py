@@ -68,6 +68,10 @@ class GroupListAPIHandler(_GroupAPIHandler):
     @needs_scope('admin:groups')
     async def post(self):
         """POST creates Multiple groups"""
+
+        if self.authenticator.manage_groups:
+            raise web.HTTPError(400, "Group management via API is disabled")
+
         model = self.get_json_body()
         if not model or not isinstance(model, dict) or not model.get('groups'):
             raise web.HTTPError(400, "Must specify at least one group to create")
