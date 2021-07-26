@@ -8,7 +8,7 @@
 # 0.1.0b1.dev
 # 0.1.0.dev
 
-__version__ = '1.0.0'
+__version__ = 'rc1-1.1.0'
 
 # Singleton flag to only log the major/minor mismatch warning once per mismatch combo.
 _version_mismatch_warning_logged = {}
