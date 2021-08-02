@@ -20,9 +20,14 @@ require(["jquery", "jhapi", "moment"], function ($, JHAPI, moment) {
     if (!note.length) {
       note = "Requested via token page";
     }
+    var expiration_seconds =
+      parseInt($("#token-expiration-seconds").val()) || null;
     api.request_token(
       user,
-      { note: note },
+      {
+        note: note,
+        expires_in: expiration_seconds,
+      },
       {
         success: function (reply) {
           $("#token-result").text(reply.token);
