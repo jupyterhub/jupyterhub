@@ -24,6 +24,32 @@ This is now also configurable via `JupyterHub.oauth_token_expires_in`.
 The result is that it should be much less likely for auth tokens stored in cookies
 to expire during the lifetime of a server.
 
+### [1.4.2] 2021-06-15
+
+1.4.2 is a small bugfix release for 1.4.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.4.1...d9860aa98cc537cf685022f81b8f725bfef41304))
+
+#### Bugs fixed
+
+- Fix regression where external services api_token became required [#3531](https://github.com/jupyterhub/jupyterhub/pull/3531) ([@consideRatio](https://github.com/consideRatio))
+- Bug: save_bearer_token (provider.py) passes a float value to the expires_at field (int) [#3484](https://github.com/jupyterhub/jupyterhub/pull/3484) ([@weisdd](https://github.com/weisdd))
+
+#### Maintenance and upkeep improvements
+
+- bump autodoc-traits [#3510](https://github.com/jupyterhub/jupyterhub/pull/3510) ([@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- Fix contributor documentation's link [#3521](https://github.com/jupyterhub/jupyterhub/pull/3521) ([@icankeep](https://github.com/icankeep))
+- Fix typo [#3494](https://github.com/jupyterhub/jupyterhub/pull/3494) ([@davidbrochart](https://github.com/davidbrochart))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2021-05-12&to=2021-07-15&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2021-05-12..2021-07-15&type=Issues) | [@davidbrochart](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adavidbrochart+updated%3A2021-05-12..2021-07-15&type=Issues) | [@icankeep](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aicankeep+updated%3A2021-05-12..2021-07-15&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2021-05-12..2021-07-15&type=Issues) | [@weisdd](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aweisdd+updated%3A2021-05-12..2021-07-15&type=Issues)
+
 ### [1.4.1] 2021-05-12
 
 1.4.1 is a small bugfix release for 1.4.
@@ -53,7 +79,7 @@ to expire during the lifetime of a server.
 
 [@0mar](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3A0mar+updated%3A2021-04-19..2021-05-12&type=Issues) | [@betatim](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2021-04-19..2021-05-12&type=Issues) | [@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2021-04-19..2021-05-12&type=Issues) | [@danlester](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adanlester+updated%3A2021-04-19..2021-05-12&type=Issues) | [@davidbrochart](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adavidbrochart+updated%3A2021-04-19..2021-05-12&type=Issues) | [@IvanaH8](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AIvanaH8+updated%3A2021-04-19..2021-05-12&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2021-04-19..2021-05-12&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2021-04-19..2021-05-12&type=Issues) | [@naatebarber](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Anaatebarber+updated%3A2021-04-19..2021-05-12&type=Issues) | [@OrnithOrtion](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AOrnithOrtion+updated%3A2021-04-19..2021-05-12&type=Issues) | [@support](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asupport+updated%3A2021-04-19..2021-05-12&type=Issues) | [@welcome](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awelcome+updated%3A2021-04-19..2021-05-12&type=Issues)
 
-### 1.4.0 2021-04-19
+### [1.4.0] 2021-04-19
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.3.0...1.4.0))
 
@@ -1071,6 +1097,7 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 First preview release
 
 [unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.4.1...HEAD
+[1.4.2]: https://github.com/jupyterhub/jupyterhub/compare/1.4.1...1.4.2
 [1.4.1]: https://github.com/jupyterhub/jupyterhub/compare/1.4.0...1.4.1
 [1.4.0]: https://github.com/jupyterhub/jupyterhub/compare/1.3.0...1.4.0
 [1.3.0]: https://github.com/jupyterhub/jupyterhub/compare/1.2.1...1.3.0
