@@ -187,9 +187,7 @@ async def test_get_users(app):
         fill_user(user_model),
     ]
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
-    assert r.status_code == 200
-    r_user_model = r.json()[0]
-    assert r_user_model['name'] == user_model['name']
+    assert r.status_code == 403
 
     # Tests offset for pagination
     r = await api_request(app, 'users?offset=1')
@@ -1512,6 +1510,9 @@ async def test_add_multi_group(app):
 
 @mark.group
 async def test_group_get(app):
+    group = orm.Group(name='alphaflight')
+    app.db.add(group)
+    app.db.commit()
     group = orm.Group.find(app.db, name='alphaflight')
     user = add_user(app.db, app=app, name='sasquatch')
     group.users.append(user)
@@ -1534,6 +1535,7 @@ async def test_group_get(app):
 @mark.group
 async def test_group_create_delete(app):
     db = app.db
+    user = add_user(app.db, app=app, name='sasquatch')
     r = await api_request(app, 'groups/runaways', method='delete')
     assert r.status_code == 404
 
@@ -1571,16 +1573,17 @@ async def test_group_create_delete(app):
 
 
 @mark.group
-async def test_group_add_users(app):
+async def test_group_add_delete_users(app):
     db = app.db
+    group = orm.Group(name='alphaflight')
+    app.db.add(group)
+    app.db.commit()
     # must specify users
     r = await api_request(app, 'groups/alphaflight/users', method='post', data='{}')
     assert r.status_code == 400
 
     names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
-    users = [
-        find_user(db, name=name) or add_user(db, app=app, name=name) for name in names
-    ]
+    users = [add_user(db, app=app, name=name) for name in names]
     r = await api_request(
         app,
         'groups/alphaflight/users',
@@ -1596,16 +1599,6 @@ async def test_group_add_users(app):
     group = orm.Group.find(db, name='alphaflight')
     assert sorted([u.name for u in group.users]) == sorted(names)
 
-
-@mark.group
-async def test_group_delete_users(app):
-    db = app.db
-    # must specify users
-    r = await api_request(app, 'groups/alphaflight/users', method='delete', data='{}')
-    assert r.status_code == 400
-
-    names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
-    users = [find_user(db, name=name) for name in names]
     r = await api_request(
         app,
         'groups/alphaflight/users',

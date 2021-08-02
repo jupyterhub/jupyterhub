@@ -182,6 +182,7 @@ def test_orm_roles_delete_cascade(db):
                 'admin:users',
                 'admin:auth_state',
                 'users',
+                'list:users',
                 'read:users',
                 'users:activity',
                 'read:users:name',
@@ -194,6 +195,7 @@ def test_orm_roles_delete_cascade(db):
             ['users'],
             {
                 'users',
+                'list:users',
                 'read:users',
                 'users:activity',
                 'read:users:name',
@@ -216,6 +218,7 @@ def test_orm_roles_delete_cascade(db):
             {
                 'admin:groups',
                 'groups',
+                'list:groups',
                 'read:groups',
                 'read:roles:groups',
                 'read:groups:name',
@@ -226,6 +229,7 @@ def test_orm_roles_delete_cascade(db):
             {
                 'admin:groups',
                 'groups',
+                'list:groups',
                 'read:groups',
                 'read:roles:groups',
                 'read:groups:name',
@@ -852,7 +856,7 @@ async def test_server_token_role(app):
     [
         ('server', 'post', 'activity', 'same_user', 200),
         ('server', 'post', 'activity', 'other_user', 404),
-        ('server', 'get', 'users', 'same_user', 200),
+        ('server', 'get', 'users', 'same_user', 403),
         ('token', 'post', 'activity', 'same_user', 200),
         ('no_role', 'post', 'activity', 'same_user', 403),
     ],
@@ -889,17 +893,6 @@ async def test_server_role_api_calls(
         method=api_method,
     )
     assert r.status_code == response
-
-    if api_endpoint == 'users' and token_role == 'server':
-        reply = r.json()
-        assert len(reply) == 1
-
-        user_model = reply[0]
-        assert user_model['name'] == username
-        assert 'last_activity' in user_model.keys()
-        assert (
-            all(key for key in ['groups', 'roles', 'servers']) not in user_model.keys()
-        )
 
 
 async def test_oauth_allowed_roles(app, create_temp_role):
@@ -938,7 +931,7 @@ async def test_user_group_roles(app, create_temp_role):
 
     group_role = orm.Role.find(app.db, 'student-a')
     if not group_role:
-        create_temp_role(['read:groups!group=A'], 'student-a')
+        create_temp_role(['read:groups!group=A', 'list:groups!group=A'], 'student-a')
         roles.grant_role(app.db, group, rolename='student-a')
         group_role = orm.Role.find(app.db, 'student-a')
 
@@ -954,16 +947,16 @@ async def test_user_group_roles(app, create_temp_role):
     token = user.new_api_token()
 
     headers = {'Authorization': 'token %s' % token}
-    r = await api_request(app, 'users', method='get', headers=headers)
+    r = await api_request(app, f'users/{user.name}', method='get', headers=headers)
     assert r.status_code == 200
     r.raise_for_status()
     reply = r.json()
 
     print(reply)
 
-    assert len(reply[0]['roles']) == 1
-    assert reply[0]['name'] == 'jack'
-    assert group_role.name not in reply[0]['roles']
+    assert reply['name'] == 'jack'
+    assert len(reply['roles']) == 1
+    assert group_role.name not in reply['roles']
 
     headers = {'Authorization': 'token %s' % token}
     r = await api_request(app, 'groups', method='get', headers=headers)
@@ -972,18 +965,20 @@ async def test_user_group_roles(app, create_temp_role):
     reply = r.json()
 
     print(reply)
+    assert len(reply) == 1
+    assert reply[0]['name'] == 'A'
 
     headers = {'Authorization': 'token %s' % token}
-    r = await api_request(app, 'users', method='get', headers=headers)
+    r = await api_request(app, f'users/{user.name}', method='get', headers=headers)
     assert r.status_code == 200
     r.raise_for_status()
     reply = r.json()
 
     print(reply)
 
-    assert len(reply[0]['roles']) == 1
-    assert reply[0]['name'] == 'jack'
-    assert group_role.name not in reply[0]['roles']
+    assert reply['name'] == 'jack'
+    assert len(reply['roles']) == 1
+    assert group_role.name not in reply['roles']
 
 
 async def test_config_role_list():

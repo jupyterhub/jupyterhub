@@ -7,6 +7,7 @@ from tornado import web
 
 from .. import orm
 from ..scopes import needs_scope
+from ..scopes import Scope
 from .base import APIHandler
 
 
@@ -34,14 +35,24 @@ class _GroupAPIHandler(APIHandler):
 
 
 class GroupListAPIHandler(_GroupAPIHandler):
-    @needs_scope('read:groups', 'read:groups:name', 'read:roles:groups')
+    @needs_scope('list:groups')
     def get(self):
         """List groups"""
         query = self.db.query(orm.Group)
+        sub_scope = self.parsed_scopes['list:groups']
+        if sub_scope != Scope.ALL:
+            if not set(sub_scope).issubset({'group'}):
+                # the only valid filter is group=...
+                # don't expand invalid !server=x to all groups!
+                self.log.warning(
+                    "Invalid filter on list:group for {self.current_user}: {sub_scope}"
+                )
+                raise web.HTTPError(403)
+            query = query.filter(orm.Group.name.in_(sub_scope['group']))
+
         offset, limit = self.get_api_pagination()
         query = query.offset(offset).limit(limit)
-        scope_filter = self.get_scope_filter('read:groups')
-        data = [self.group_model(g) for g in query if scope_filter(g, kind='group')]
+        data = [self.group_model(g) for g in query]
         self.write(json.dumps(data))
 
     @needs_scope('admin:groups')
