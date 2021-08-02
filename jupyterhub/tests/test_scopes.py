@@ -1,4 +1,5 @@
 """Test scopes for API handlers"""
+from operator import itemgetter
 from unittest import mock
 
 import pytest
@@ -284,10 +285,10 @@ async def test_refuse_exceeding_token_permissions(
 async def test_exceeding_user_permissions(
     app, create_user_with_scopes, create_temp_role
 ):
-    user = create_user_with_scopes('read:users:groups')
+    user = create_user_with_scopes('list:users', 'read:users:groups')
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
-    create_temp_role(['read:users'], 'reader_role')
+    create_temp_role(['list:users', 'read:users'], 'reader_role')
     roles.grant_role(app.db, orm_api_token, rolename='reader_role')
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
@@ -301,8 +302,8 @@ async def test_user_service_separation(app, mockservice_url, create_temp_role):
     name = mockservice_url.name
     user = add_user(app.db, name=name)
 
-    create_temp_role(['read:users'], 'reader_role')
-    create_temp_role(['read:users:groups'], 'subreader_role')
+    create_temp_role(['read:users', 'list:users'], 'reader_role')
+    create_temp_role(['read:users:groups', 'list:users'], 'subreader_role')
     roles.update_roles(app.db, user, roles=['subreader_role'])
     roles.update_roles(app.db, mockservice_url.orm, roles=['reader_role'])
     user.roles.remove(orm.Role.find(app.db, name='user'))
@@ -328,10 +329,10 @@ async def test_request_user_outside_group(app, create_user_with_scopes):
 
 
 async def test_user_filter(app, create_user_with_scopes):
-    user = create_user_with_scopes(
-        'read:users!user=lindsay', 'read:users!user=gob', 'read:users!user=oscar'
-    )
     name_in_scope = {'lindsay', 'oscar', 'gob'}
+    user = create_user_with_scopes(
+        *[f'list:users!user={name}' for name in name_in_scope]
+    )
     outside_scope = {'maeby', 'marta'}
     group_name = 'bluth'
     group = orm.Group.find(app.db, name=group_name)
@@ -359,7 +360,7 @@ async def test_service_filter(app, create_user_with_scopes):
     for service in services:
         app.services.append(service)
     app.init_services()
-    user = create_user_with_scopes('read:services!service=cull_idle')
+    user = create_user_with_scopes('list:services!service=cull_idle')
     r = await api_request(app, 'services', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
     service_names = set(r.json().keys())
@@ -368,7 +369,7 @@ async def test_service_filter(app, create_user_with_scopes):
 
 async def test_user_filter_with_group(app, create_user_with_scopes):
     group_name = 'sitwell'
-    user1 = create_user_with_scopes(f'read:users!group={group_name}')
+    user1 = create_user_with_scopes(f'list:users!group={group_name}')
     user2 = create_user_with_scopes('self')
     external_user = create_user_with_scopes('self')
     name_set = {user1.name, user2.name}
@@ -393,7 +394,7 @@ async def test_group_scope_filter(app, create_user_with_scopes):
     in_groups = {'sitwell', 'bluth'}
     out_groups = {'austero'}
     user = create_user_with_scopes(
-        *(f'read:groups!group={group}' for group in in_groups)
+        *(f'list:groups!group={group}' for group in in_groups)
     )
     for group_name in in_groups | out_groups:
         group = orm.Group.find(app.db, name=group_name)
@@ -412,7 +413,7 @@ async def test_group_scope_filter(app, create_user_with_scopes):
 
 
 async def test_vertical_filter(app, create_user_with_scopes):
-    user = create_user_with_scopes('read:users:name')
+    user = create_user_with_scopes('list:users')
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
     allowed_keys = {'name', 'kind', 'admin'}
@@ -420,23 +421,26 @@ async def test_vertical_filter(app, create_user_with_scopes):
 
 
 async def test_stacked_vertical_filter(app, create_user_with_scopes):
-    user = create_user_with_scopes('read:users:activity', 'read:users:groups')
+    user = create_user_with_scopes(
+        'list:users', 'read:users:activity', 'read:users:groups'
+    )
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    allowed_keys = {'name', 'kind', 'groups', 'last_activity'}
-    result_model = set([key for user in r.json() for key in user.keys()])
-    assert result_model == allowed_keys
+    allowed_keys = {'admin', 'name', 'kind', 'groups', 'last_activity'}
+    for user in r.json():
+        result_model = set(user)
+        assert result_model == allowed_keys
 
 
 async def test_cross_filter(app, create_user_with_scopes):
-    user = create_user_with_scopes('read:users:activity', 'self')
+    user = create_user_with_scopes('read:users:activity', 'self', 'list:users')
     new_users = {'britta', 'jeff', 'annie'}
     for new_user_name in new_users:
         add_user(app.db, name=new_user_name)
     app.db.commit()
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
-    restricted_keys = {'name', 'kind', 'last_activity'}
+    restricted_keys = {'admin', 'name', 'kind', 'last_activity'}
     key_in_full_model = 'created'
     for model_user in r.json():
         if model_user['name'] == user.name:
@@ -924,3 +928,117 @@ def test_intersect_groups(request, db, left, right, expected, groups):
     for a, b in [(left, right), (right, left)]:
         intersection = _intersect_expanded_scopes(set(left), set(right), db)
         assert intersection == set(expected)
+
+
+@mark.user
+@mark.parametrize(
+    "scopes, expected",
+    [
+        ("list:users", ['in-1', 'in-2', 'out-1', 'out-2', 'admin', 'user']),
+        ("read:users", 403),
+        ("list:users!server=irrelevant", 403),
+        ("list:users!user=nosuchuser", []),
+        ("list:users!group=nosuchgroup", []),
+        ("list:users!user=out-2", ['out-2']),
+        ("list:users!group=GROUP", ['in-1', 'in-2']),
+        (
+            ["list:users!group=GROUP", "list:users!user=out-2"],
+            ['in-1', 'in-2', 'out-2'],
+        ),
+    ],
+)
+async def test_list_users_filter(
+    app, group, create_service_with_scopes, scopes, expected
+):
+
+    # create users:
+    for i in (1, 2):
+        user = add_user(app.db, app, name=f'in-{i}')
+        group.users.append(user)
+        add_user(app.db, app, name=f'out-{i}')
+    app.db.commit()
+
+    if isinstance(scopes, str):
+        scopes = [scopes]
+
+    # in-group are in the group
+    # out-group are not in the group
+    scopes = [s.replace("GROUP", group.name).replace("IN", "ingroup") for s in scopes]
+
+    orm_service = create_service_with_scopes(*scopes)
+    token = orm_service.new_api_token()
+    r = await api_request(app, 'users', headers={"Authorization": f"token {token}"})
+    if isinstance(expected, int):
+        assert r.status_code == expected
+        return
+    r.raise_for_status()
+
+    expected_models = [
+        {
+            'name': name,
+            'admin': name == 'admin',
+            'kind': 'user',
+        }
+        for name in sorted(expected)
+    ]
+    assert sorted(r.json(), key=itemgetter('name')) == expected_models
+
+
+@mark.group
+@mark.parametrize(
+    "scopes, expected",
+    [
+        ("list:groups", ['group1', 'group2', 'group3']),
+        ("read:groups", 403),
+        ("list:groups!user=irrelevant", 403),
+        ("list:groups!group=nosuchgroup", []),
+        ("list:groups!group=group1", ['group1']),
+        (
+            ["list:groups!group=group1", "list:groups!group=group2"],
+            ['group1', 'group2'],
+        ),
+        (
+            # prefix match shouldn't match!
+            "list:groups!group=group",
+            [],
+        ),
+    ],
+)
+async def test_list_groups_filter(
+    request, app, create_service_with_scopes, scopes, expected
+):
+
+    # create groups:
+    groups = []
+    for i in (1, 2, 3):
+        group = orm.Group(name=f'group{i}')
+        groups.append(group)
+        app.db.add(group)
+    app.db.commit()
+
+    def cleanup_groups():
+        for g in groups:
+            app.db.delete(g)
+        app.db.commit()
+
+    request.addfinalizer(cleanup_groups)
+
+    if isinstance(scopes, str):
+        scopes = [scopes]
+
+    orm_service = create_service_with_scopes(*scopes)
+    token = orm_service.new_api_token()
+    r = await api_request(app, 'groups', headers={"Authorization": f"token {token}"})
+    if isinstance(expected, int):
+        assert r.status_code == expected
+        return
+    r.raise_for_status()
+
+    expected_models = [
+        {
+            'name': name,
+            'kind': 'group',
+        }
+        for name in sorted(expected)
+    ]
+    assert sorted(r.json(), key=itemgetter('name')) == expected_models

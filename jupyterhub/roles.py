@@ -36,6 +36,7 @@ def get_default_roles():
                 'admin:servers',
                 'tokens',
                 'admin:groups',
+                'list:services',
                 'read:services',
                 'read:hub',
                 'proxy',
@@ -82,7 +83,6 @@ def expand_self_scope(name):
       expanded scopes (set): set of expanded scopes covering standard user privileges
     """
     scope_list = [
-        'users',
         'read:users',
         'read:users:name',
         'read:users:groups',

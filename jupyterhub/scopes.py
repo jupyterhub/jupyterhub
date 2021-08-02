@@ -41,7 +41,11 @@ scope_definitions = {
     'admin:auth_state': {'description': 'Read a user’s authentication state.'},
     'users': {
         'description': 'Read and write permissions to user models (excluding servers, tokens and authentication state).',
-        'subscopes': ['read:users', 'users:activity'],
+        'subscopes': ['read:users', 'list:users', 'users:activity'],
+    },
+    'list:users': {
+        'description': 'List users, including at least their names.',
+        'subscopes': ['read:users:name'],
     },
     'read:users': {
         'description': 'Read user models (excluding including servers, tokens and authentication state).',
@@ -89,13 +93,21 @@ scope_definitions = {
     },
     'groups': {
         'description': 'Read and write group information, including adding/removing users to/from groups.',
-        'subscopes': ['read:groups'],
+        'subscopes': ['read:groups', 'list:groups'],
+    },
+    'list:groups': {
+        'description': 'List groups, including at least their names.',
+        'subscopes': ['read:groups:name'],
     },
     'read:groups': {
         'description': 'Read group models.',
         'subscopes': ['read:groups:name'],
     },
     'read:groups:name': {'description': 'Read group names.'},
+    'list:services': {
+        'description': 'List services.',
+        'subscopes': ['read:services:name'],
+    },
     'read:services': {
         'description': 'Read service models.',
         'subscopes': ['read:services:name'],

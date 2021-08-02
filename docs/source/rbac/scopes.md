@@ -9,10 +9,14 @@ A scope has a syntax-based design that reveals which resources it provides acces
 ## Scope conventions
 
 - `<resource>` \
-  The top-level `<resource>` scopes, such as `users` or `groups`, grant read and write permissions to the resource itself as well as its sub-resources. For example, the scope `users:activity` is included in the scope `users`.
+  The top-level `<resource>` scopes, such as `users` or `groups`, grant read, write, and list permissions to the resource itself as well as its sub-resources. For example, the scope `users:activity` is included in the scope `users`.
 
 - `read:<resource>` \
-  Limits permissions to read-only operations on the resource.
+  Limits permissions to read-only operations on single resources.
+
+- `list:<resource>` \
+  Read-only access to listing endpoints.
+  Use `read:<resource>:<subresource>` to control what fields are returned.
 
 - `admin:<resource>` \
   Grants additional permissions such as create/delete on the corresponding resource in addition to read and write permissions.
