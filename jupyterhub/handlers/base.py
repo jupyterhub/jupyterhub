@@ -81,6 +81,9 @@ class BaseHandler(RequestHandler):
         """
         try:
             await self.get_current_user()
+        except SQLAlchemyError:
+            self.log.exception("Rolling back session due to database error")
+            self.db.rollback()
         except Exception:
             self.log.exception("Failed to get current user")
             self._jupyterhub_user = None
@@ -423,7 +426,9 @@ class BaseHandler(RequestHandler):
                 if user and isinstance(user, User):
                     user = await self.refresh_auth(user)
                 self._jupyterhub_user = user
-            except Exception:
+            except Exception as e:
+                if isinstance(e, SQLAlchemyError):
+                    raise SQLAlchemyError()
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
                 self.log.exception("Error getting current user")
