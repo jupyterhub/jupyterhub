@@ -1,10 +1,12 @@
 """Test the JupyterHub entry point"""
 import binascii
+import json
 import logging
 import os
 import re
 import sys
 import time
+from distutils.version import LooseVersion as V
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
@@ -13,6 +15,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
+import traitlets
 from traitlets.config import Config
 
 from .. import orm
@@ -28,6 +31,27 @@ def test_help_all():
     )
     assert '--ip' in out
     assert '--JupyterHub.ip' in out
+
+
+@pytest.mark.skipif(V(traitlets.__version__) < V('5'), reason="requires traitlets 5")
+def test_show_config(tmpdir):
+    tmpdir.chdir()
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--show-config', '--debug'], stdout=PIPE
+    )
+    p.wait(timeout=10)
+    out = p.stdout.read().decode('utf8', 'replace')
+    assert 'log_level' in out
+
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--show-config-json', '--debug'],
+        stdout=PIPE,
+    )
+    p.wait(timeout=10)
+    out = p.stdout.read().decode('utf8', 'replace')
+    config = json.loads(out)
+    assert 'JupyterHub' in config
+    assert config["JupyterHub"]["log_level"] == 10
 
 
 def test_token_app():
