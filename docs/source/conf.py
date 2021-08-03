@@ -22,6 +22,9 @@ extensions = [
     'myst_parser',
 ]
 
+myst_enable_extensions = [
+    'deflist',
+]
 # The master toctree document.
 master_doc = 'index'
 
