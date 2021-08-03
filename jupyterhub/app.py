@@ -5,6 +5,8 @@
 import asyncio
 import atexit
 import binascii
+import functools
+import inspect
 import json
 import logging
 import os
@@ -1559,6 +1561,23 @@ class JupyterHub(Application):
         if os.path.exists(path) and not os.access(path, os.W_OK):
             self.log.error("%s cannot edit %s", user, path)
 
+    def catch_db_error(f):
+        """Catch and rollback database errors"""
+
+        @functools.wraps(f)
+        async def catching(self, *args, **kwargs):
+            try:
+                r = f(self, *args, **kwargs)
+                if inspect.isawaitable(r):
+                    r = await r
+            except SQLAlchemyError:
+                self.log.exception("Rolling back session due to database error")
+                self.db.rollback()
+            else:
+                return r
+
+        return catching
+
     def init_secrets(self):
         trait_name = 'cookie_secret'
         trait = self.traits()[trait_name]
@@ -2200,6 +2219,7 @@ class JupyterHub(Application):
     # purge expired tokens hourly
     purge_expired_tokens_interval = 3600
 
+    @catch_db_error
     def purge_expired_tokens(self):
         """purge all expiring token objects from the database
 
@@ -2884,6 +2904,7 @@ class JupyterHub(Application):
         with open(self.config_file, mode='w') as f:
             f.write(config_text)
 
+    @catch_db_error
     async def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
         routes = await self.proxy.get_all_routes()
