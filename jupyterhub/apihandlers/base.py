@@ -243,7 +243,10 @@ class APIHandler(BaseHandler):
                 # (this includes pending events)
                 if spawner.active and scope_filter(spawner, kind='server'):
                     servers[name] = self.server_model(spawner)
-            if not servers:
+            if not servers and 'servers' not in allowed_keys:
+                # omit servers if no access
+                # leave present and empty
+                # if request has access to read servers in general
                 model.pop('servers')
         return model
 
