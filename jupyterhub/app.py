@@ -118,6 +118,8 @@ common_aliases = {
     'config': 'JupyterHub.config_file',
     'db': 'JupyterHub.db_url',
 }
+if isinstance(Application.aliases, dict):
+    common_aliases.update(Application.aliases)
 
 aliases = {
     'base-url': 'JupyterHub.base_url',
@@ -134,7 +136,10 @@ token_aliases = {}
 token_aliases.update(common_aliases)
 aliases.update(common_aliases)
 
-flags = {
+flags = {}
+if isinstance(Application.flags, dict):
+    flags.update(Application.flags)
+hub_flags = {
     'debug': (
         {'Application': {'log_level': logging.DEBUG}},
         "set log level to logging.DEBUG (maximize logging output)",
@@ -164,6 +169,7 @@ flags = {
         "[DEPRECATED in 0.7: does nothing]",
     ),
 }
+flags.update(hub_flags)
 
 COOKIE_SECRET_BYTES = (
     32  # the number of bytes to use when generating new cookie secrets
@@ -3190,6 +3196,18 @@ class JupyterHub(Application):
         if self.http_server:
             self.http_server.stop()
         self.io_loop.add_callback(self.io_loop.stop)
+
+    async def start_show_config(self):
+        """Async wrapper around base start_show_config method"""
+        # We need this because of our custom launch_instance_async,
+        # where `start` isn't a blocking call,
+        # it only gets async things going
+        # and `--show-config` replaces `start` with a blocking function.
+        # so our version:
+        # 1. calls the original blocking method
+        # 2. stops the event loop when we are done, so the process exits
+        super().start_show_config()
+        self.exit(0)
 
     async def launch_instance_async(self, argv=None):
         try:
