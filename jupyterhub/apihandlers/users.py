@@ -202,6 +202,8 @@ class UserAPIHandler(APIHandler):
     )
     async def get(self, user_name):
         user = self.find_user(user_name)
+        if user is None:
+            raise web.HTTPError(404)
         model = self.user_model(user)
         # auth state will only be shown if the requester is an admin
         # this means users can't see their own auth state unless they

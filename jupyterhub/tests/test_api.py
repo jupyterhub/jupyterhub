@@ -361,16 +361,45 @@ async def test_add_user(app):
 @mark.role
 async def test_get_user(app):
     name = 'user'
-    _ = await api_request(app, 'users', name, headers=auth_header(app.db, name))
+    # get own model
+    r = await api_request(app, 'users', name, headers=auth_header(app.db, name))
+    r.raise_for_status()
+    # admin request
     r = await api_request(
         app,
         'users',
         name,
     )
-    assert r.status_code == 200
+    r.raise_for_status()
 
     user = normalize_user(r.json())
     assert user == fill_user({'name': name, 'roles': ['user'], 'auth_state': None})
+
+    # admin request, no such user
+    r = await api_request(
+        app,
+        'users',
+        'nosuchuser',
+    )
+    assert r.status_code == 404
+
+    # unauthorized request, no such user
+    r = await api_request(
+        app,
+        'users',
+        'nosuchuser',
+        headers=auth_header(app.db, name),
+    )
+    assert r.status_code == 404
+
+    # unauthorized request for existing user
+    r = await api_request(
+        app,
+        'users',
+        'admin',
+        headers=auth_header(app.db, name),
+    )
+    assert r.status_code == 404
 
 
 @mark.user
