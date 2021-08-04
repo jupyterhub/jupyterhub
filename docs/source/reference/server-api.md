@@ -1,8 +1,11 @@
 # Starting servers with the JupyterHub API
 
-JupyterHub's [REST API][] allows launching servers.
+JupyterHub's [REST API][] allows launching servers on behalf of users
+without ever interacting with the JupyterHub UI.
 This allows you to build services launching Jupyter-based services for users
-without relying on the JupyterHub API at all.
+without relying on the JupyterHub UI at all,
+enabling a variety of user/launch/lifecycle patterns not natively supported by JupyterHub,
+without needing to develop all the server management features of JupyterHub Spawners and/or Authenticators.
 [BinderHub][] is an example of such an application.
 
 [binderhub]: https://binderhub.readthedocs.io
@@ -64,7 +67,7 @@ This is the servers dict when the user's default server is fully running and rea
       "ready": true,
       "url": "/user/test-1/",
       "user_options": {},
-      "progress_url": "/hub/api/users/test-1/server/progress",
+      "progress_url": "/hub/api/users/test-1/server/progress"
     }
   }
 ```
@@ -101,8 +104,7 @@ We've seen the `servers` model with no servers and with one `ready` server.
 Here is what it looks like immediately after requesting a server launch,
 while the server is not ready yet:
 
-```python
-  ...
+```json
   "servers": {
     "": {
       "name": "",
@@ -112,7 +114,7 @@ while the server is not ready yet:
       "ready": false,
       "url": "/user/test-1/",
       "user_options": {},
-      "progress_url": "/hub/api/users/test-1/server/progress",
+      "progress_url": "/hub/api/users/test-1/server/progress"
     }
   }
 ```
@@ -236,8 +238,8 @@ progress events have the form:
 ```python
 {
     "progress": 0-100,
-    "message": ""
-    "ready": true, # or false
+    "message": "",
+    "ready": True, # or False
 
 }
 ```
@@ -351,10 +353,10 @@ tying all this together.
 
 To summarize the steps:
 
-1. get `/user/:name`
+1. get user info from `/user/:name`
 2. the server model includes a `ready` state to tell you if it's ready
-3. if it's not ready, you can use the `progress_url` field to wait
-4. if it is ready, you can use the `url` field to link directly to the running srver
+3. if it's not ready, you can follow up with `progress_url` to wait for it
+4. if it is ready, you can use the `url` field to link directly to the running server
 
 The example demonstrates starting and stopping servers via the JupyterHub API,
 including waiting for them to start via the progress API,
