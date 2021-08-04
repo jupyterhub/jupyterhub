@@ -1,6 +1,6 @@
 # Starting servers with the JupyterHub API
 
-JupyterHub's [REST API][] allows launching.
+JupyterHub's [REST API][] allows launching servers.
 This allows you to build services launching Jupyter-based services for users
 without relying on the JupyterHub API at all.
 [BinderHub][] is an example of such an application.
@@ -9,7 +9,7 @@ without relying on the JupyterHub API at all.
 [rest api]: ../reference/rest.md
 
 This document provides an example of working with the JupyterHub API to
-manager servers for users.
+manage servers for users.
 In particular, we will cover how to:
 
 1. [check status of servers](checking)
@@ -31,7 +31,7 @@ GET /hub/api/users/:username
 
 **Required scope: `read:servers`**
 
-```python
+```json
 {
   "admin": false,
   "groups": [],
@@ -54,7 +54,7 @@ In this case, the servers dict will always have either zero or one elements.
 
 This is the servers dict when the user's default server is fully running and ready:
 
-```python
+```json
   "servers": {
     "": {
       "name": "",
@@ -75,7 +75,7 @@ name
 : the server's name. Always the same as the key in `servers`
 
 ready
-: boolean. If True, the server can be expected to respond to requests at `url`.
+: boolean. If true, the server can be expected to respond to requests at `url`.
 
 pending
 : `null` or a string indicating a transitional state (such as `start` or `stop`).
@@ -97,7 +97,7 @@ last_activity
 started
 : ISO801 timestamp indicating when the server was last started
 
-We've seen the `servers` model with no servers and with one 'ready' server.
+We've seen the `servers` model with no servers and with one `ready` server.
 Here is what it looks like immediately after requesting a server launch,
 while the server is not ready yet:
 
@@ -149,7 +149,7 @@ It should be available at the server's URL immediately.
 202 Accepted
 : This is the more likely response,
 and means that the server has begun launching,
-but wasn't immediately ready.
+but isn't immediately ready.
 The server has `pending: 'spawn'` at this point.
 
 _Aside: how quickly JupyterHub responds with `202 Accepted` is governed by the `slow_spawn_timeout` tornado setting._
@@ -351,7 +351,7 @@ tying all this together.
 
 To summarize the steps:
 
-1. the `/user/:name`
+1. get `/user/:name`
 2. the server model includes a `ready` state to tell you if it's ready
 3. if it's not ready, you can use the `progress_url` field to wait
 4. if it is ready, you can use the `url` field to link directly to the running srver
