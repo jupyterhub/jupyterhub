@@ -683,17 +683,6 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.extend(['--ssl-cert', self.ssl_cert])
         if self.app.internal_ssl:
             cmd.extend(self._get_ssl_options())
-        if self.app.statsd_host:
-            cmd.extend(
-                [
-                    '--statsd-host',
-                    self.app.statsd_host,
-                    '--statsd-port',
-                    str(self.app.statsd_port),
-                    '--statsd-prefix',
-                    self.app.statsd_prefix + '.chp',
-                ]
-            )
         # Warn if SSL is not used
         if ' --ssl' not in ' '.join(cmd):
             self.log.warning(
