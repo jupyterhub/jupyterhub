@@ -5,7 +5,6 @@
 import asyncio
 import atexit
 import binascii
-import json
 import logging
 import os
 import re
@@ -92,6 +91,7 @@ from .pagination import Pagination
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
+    catch_db_error,
     maybe_future,
     url_path_join,
     print_stacks,
@@ -2200,6 +2200,7 @@ class JupyterHub(Application):
     # purge expired tokens hourly
     purge_expired_tokens_interval = 3600
 
+    @catch_db_error
     def purge_expired_tokens(self):
         """purge all expiring token objects from the database
 
@@ -2216,7 +2217,7 @@ class JupyterHub(Application):
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
 
-        self.purge_expired_tokens()
+        await self.purge_expired_tokens()
         # purge expired tokens hourly
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
@@ -2884,6 +2885,7 @@ class JupyterHub(Application):
         with open(self.config_file, mode='w') as f:
             f.write(config_text)
 
+    @catch_db_error
     async def update_last_activity(self):
         """Update User.last_activity timestamps from the proxy"""
         routes = await self.proxy.get_all_routes()

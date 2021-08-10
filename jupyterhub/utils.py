@@ -4,9 +4,9 @@
 import asyncio
 import concurrent.futures
 import errno
+import functools
 import hashlib
 import inspect
-import os
 import random
 import secrets
 import socket
@@ -22,6 +22,7 @@ from hmac import compare_digest
 from operator import itemgetter
 
 from async_generator import aclosing
+from sqlalchemy.exc import SQLAlchemyError
 from tornado import ioloop
 from tornado import web
 from tornado.httpclient import AsyncHTTPClient
@@ -635,3 +636,21 @@ def get_accepted_mimetype(accept_header, choices=None):
         else:
             return mime
     return None
+
+
+def catch_db_error(f):
+    """Catch and rollback database errors"""
+
+    @functools.wraps(f)
+    async def catching(self, *args, **kwargs):
+        try:
+            r = f(self, *args, **kwargs)
+            if inspect.isawaitable(r):
+                r = await r
+        except SQLAlchemyError:
+            self.log.exception("Rolling back session due to database error")
+            self.db.rollback()
+        else:
+            return r
+
+    return catching
