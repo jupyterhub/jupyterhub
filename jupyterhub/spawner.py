@@ -1087,7 +1087,7 @@ class Spawner(LoggingConfigurable):
             try:
                 await maybe_future(self.auth_state_hook(self, auth_state))
             except Exception:
-                self.log.exception("auth_stop_hook failed with exception: %s", self)
+                self.log.exception("auth_state_hook failed with exception: %s", self)
 
     @property
     def _progress_url(self):
