@@ -85,12 +85,14 @@ class BaseHandler(RequestHandler):
         self.expanded_scopes = set()
         try:
             await self.get_current_user()
-        except SQLAlchemyError:
-            self.log.exception("Rolling back session due to database error")
-            self.db.rollback()
-        except Exception:
-            self.log.exception("Failed to get current user")
+        except Exception as e:
+            # ensure get_current_user is never called again for this handler,
+            # since it failed
             self._jupyterhub_user = None
+            self.log.exception("Failed to get current user")
+            if isinstance(e, SQLAlchemyError):
+                self.log.error("Rolling back session due to database error")
+                self.db.rollback()
         self._resolve_roles_and_scopes()
         return await maybe_future(super().prepare())
 
@@ -414,12 +416,11 @@ class BaseHandler(RequestHandler):
                 if user and isinstance(user, User):
                     user = await self.refresh_auth(user)
                 self._jupyterhub_user = user
-            except Exception as e:
-                if isinstance(e, SQLAlchemyError):
-                    raise SQLAlchemyError()
+            except Exception:
                 # don't let errors here raise more than once
                 self._jupyterhub_user = None
-                self.log.exception("Error getting current user")
+                # but still raise, which will get handled in .prepare()
+                raise
         return self._jupyterhub_user
 
     def _resolve_roles_and_scopes(self):

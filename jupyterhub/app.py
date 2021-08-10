@@ -5,9 +5,6 @@
 import asyncio
 import atexit
 import binascii
-import functools
-import inspect
-import json
 import logging
 import os
 import re
@@ -94,6 +91,7 @@ from .pagination import Pagination
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
+    catch_db_error,
     maybe_future,
     url_path_join,
     print_stacks,
@@ -1561,23 +1559,6 @@ class JupyterHub(Application):
         if os.path.exists(path) and not os.access(path, os.W_OK):
             self.log.error("%s cannot edit %s", user, path)
 
-    def catch_db_error(f):
-        """Catch and rollback database errors"""
-
-        @functools.wraps(f)
-        async def catching(self, *args, **kwargs):
-            try:
-                r = f(self, *args, **kwargs)
-                if inspect.isawaitable(r):
-                    r = await r
-            except SQLAlchemyError:
-                self.log.exception("Rolling back session due to database error")
-                self.db.rollback()
-            else:
-                return r
-
-        return catching
-
     def init_secrets(self):
         trait_name = 'cookie_secret'
         trait = self.traits()[trait_name]
@@ -2236,7 +2217,7 @@ class JupyterHub(Application):
         await self._add_tokens(self.service_tokens, kind='service')
         await self._add_tokens(self.api_tokens, kind='user')
 
-        self.purge_expired_tokens()
+        await self.purge_expired_tokens()
         # purge expired tokens hourly
         # we don't need to be prompt about this
         # because expired tokens cannot be used anyway
