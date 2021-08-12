@@ -409,6 +409,10 @@ async def test_add_multi_user_bad(app):
     assert r.status_code == 400
     r = await api_request(app, 'users', method='post', data='[]')
     assert r.status_code == 400
+    r = await api_request(
+        app, 'users', method='post', data='{}', headers={"Content-Type": "text/plain"}
+    )
+    assert r.status_code == 403
 
 
 @mark.user
