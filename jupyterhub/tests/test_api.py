@@ -154,11 +154,10 @@ def fill_user(model):
     model.setdefault('roles', [])
     model.setdefault('groups', [])
     model.setdefault('admin', False)
-    model.setdefault('server', None)
     model.setdefault('pending', None)
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
-    # model.setdefault('servers', {})
+    model.setdefault('servers', {})
     return model
 
 
