@@ -8,12 +8,9 @@
 
 ---
 
-Please note that this repository is participating in a study into sustainability
-of open source projects. Data will be gathered about this repository for
-approximately the next 12 months, starting from 2021-06-11.
+Please note that this repository is participating in a study into the sustainability of open source projects. Data will be gathered about this repository for approximately the next 12 months, starting from 2021-06-11.
 
-Data collected will include number of contributors, number of PRs, time taken to
-close/merge these PRs, and issues closed.
+Data collected will include the number of contributors, number of PRs, time taken to close/merge these PRs, and issues closed.
 
 For more information, please visit
 [our informational page](https://sustainable-open-science-and-software.github.io/) or download our [participant information sheet](https://sustainable-open-science-and-software.github.io/assets/PIS_sustainable_software.pdf).
@@ -34,13 +31,13 @@ For more information, please visit
 [![Gitter](https://img.shields.io/badge/social_chat-gitter-blue?logo=gitter)](https://gitter.im/jupyterhub/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
-**multi-user Hub** which spawns, manages, and proxies multiple instances of the
+**multi-user Hub** that spawns, manages, and proxies multiple instances of the
 single-user [Jupyter notebook](https://jupyter-notebook.readthedocs.io)
 server.
 
 [Project Jupyter](https://jupyter.org) created JupyterHub to support many
 users. The Hub can offer notebook servers to a class of students, a corporate
-data science workgroup, a scientific research project, or a high performance
+data science workgroup, a scientific research project, or a high-performance
 computing group.
 
 ## Technical overview
@@ -54,9 +51,9 @@ Three main actors make up JupyterHub:
 Basic principles for operation are:
 
 - Hub launches a proxy.
-- Proxy forwards all requests to Hub by default.
-- Hub handles login, and spawns single-user servers on demand.
-- Hub configures proxy to forward url prefixes to the single-user notebook
+- The Proxy forwards all requests to Hub by default.
+- Hub handles login and spawns single-user servers on demand.
+- Hub configures proxy to forward URL prefixes to the single-user notebook
   servers.
 
 JupyterHub also provides a
@@ -131,7 +128,7 @@ To start the Hub server, run the command:
 Visit `https://localhost:8000` in your browser, and sign in with your unix
 PAM credentials.
 
-_Note_: To allow multiple users to sign into the server, you will need to
+_Note_: To allow multiple users to sign in to the server, you will need to
 run the `jupyterhub` command as a _privileged user_, such as root.
 The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
 describes how to run the server as a _less privileged user_, which requires
