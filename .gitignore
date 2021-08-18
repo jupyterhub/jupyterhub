@@ -8,6 +8,7 @@ dist
 docs/_build
 docs/build
 docs/source/_static/rest-api
+docs/source/rbac/scope-table.md
 .ipynb_checkpoints
 # ignore config file at the top-level of the repo
 # but not sub-dirs
@@ -30,3 +31,4 @@ pip-wheel-metadata
 docs/source/reference/metrics.rst
 oldest-requirements.txt
 jupyterhub-proxy.pid
+examples/server-api/service-token
