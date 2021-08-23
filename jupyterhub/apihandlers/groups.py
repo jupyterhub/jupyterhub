@@ -53,8 +53,8 @@ class GroupListAPIHandler(_GroupAPIHandler):
         offset, limit = self.get_api_pagination()
         query = query.offset(offset).limit(limit)
         group_list = [self.group_model(g) for g in query]
+        total_count = full_query.count()
         if self.accepts_pagination:
-            total_count = full_query.count()
             data = self.paginated_model(group_list, offset, limit, total_count)
         else:
             query_count = query.count()

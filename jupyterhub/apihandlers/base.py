@@ -361,6 +361,11 @@ class APIHandler(BaseHandler):
     def get_api_pagination(self):
         default_limit = self.settings["app"].api_page_default_limit
         max_limit = self.settings["app"].api_page_max_limit
+        if not self.accepts_pagination:
+            # if new pagination Accept header is not used,
+            # default to the higher max page limit to reduce likelihood
+            # of missing users due to pagination in code that hasn't been updated
+            default_limit = max_limit
         offset = self.get_argument("offset", None)
         limit = self.get_argument("limit", default_limit)
         try:
