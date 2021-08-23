@@ -359,8 +359,8 @@ class APIHandler(BaseHandler):
                 )
 
     def get_api_pagination(self):
-        default_limit = self.settings["app"].api_page_default_limit
-        max_limit = self.settings["app"].api_page_max_limit
+        default_limit = self.settings["api_page_default_limit"]
+        max_limit = self.settings["api_page_max_limit"]
         if not self.accepts_pagination:
             # if new pagination Accept header is not used,
             # default to the higher max page limit to reduce likelihood

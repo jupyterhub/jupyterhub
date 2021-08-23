@@ -10,13 +10,17 @@ from unittest import mock
 from urllib.parse import quote
 from urllib.parse import urlparse
 
+from pytest import fixture
 from pytest import mark
+from tornado.httputil import url_concat
 
 import jupyterhub
 from .. import orm
+from ..apihandlers.base import PAGINATION_MEDIA_TYPE
 from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
+from .conftest import new_username
 from .mocking import public_host
 from .mocking import public_url
 from .utils import add_user
@@ -168,6 +172,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 @mark.role
 async def test_get_users(app):
     db = app.db
+
     r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
@@ -177,7 +182,6 @@ async def test_get_users(app):
         'name': 'user',
         'admin': False,
         'roles': ['user'],
-        'last_activity': None,
         'auth_state': None,
     }
     assert users == [
@@ -189,37 +193,117 @@ async def test_get_users(app):
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
     assert r.status_code == 403
 
-    # Tests offset for pagination
-    r = await api_request(app, 'users?offset=1')
+
+@fixture
+def default_page_limit(app):
+    """Set and return low default page size for testing"""
+    n = 10
+    with mock.patch.dict(app.tornado_settings, {"api_page_default_limit": n}):
+        yield n
+
+
+@fixture
+def max_page_limit(app):
+    """Set and return low max page size for testing"""
+    n = 20
+    with mock.patch.dict(app.tornado_settings, {"api_page_max_limit": n}):
+        yield n
+
+
+@mark.user
+@mark.role
+@mark.parametrize(
+    "n, offset, limit, accepts_pagination, expected_count",
+    [
+        (10, None, None, False, 10),
+        (10, None, None, True, 10),
+        (10, 5, None, True, 5),
+        (10, 5, None, False, 5),
+        (10, 5, 1, True, 1),
+        (10, 10, 10, True, 0),
+        (  # default page limit, pagination expected
+            30,
+            None,
+            None,
+            True,
+            'default',
+        ),
+        (
+            # default max page limit, pagination not expected
+            30,
+            None,
+            None,
+            False,
+            'max',
+        ),
+        (
+            # limit exceeded
+            30,
+            None,
+            500,
+            False,
+            'max',
+        ),
+    ],
+)
+async def test_get_users_pagination(
+    app,
+    n,
+    offset,
+    limit,
+    accepts_pagination,
+    expected_count,
+    default_page_limit,
+    max_page_limit,
+):
+    db = app.db
+
+    if expected_count == 'default':
+        expected_count = default_page_limit
+    elif expected_count == 'max':
+        expected_count = max_page_limit
+    # populate users
+    usernames = []
+
+    existing_users = db.query(orm.User).order_by(orm.User.id.asc())
+    usernames.extend(u.name for u in existing_users)
+
+    for i in range(n - existing_users.count()):
+        name = new_username()
+        usernames.append(name)
+        add_user(db, app, name=name)
+    print(f"{db.query(orm.User).count()} total users")
+
+    url = 'users'
+    params = {}
+    if offset:
+        params['offset'] = offset
+    if limit:
+        params['limit'] = limit
+    url = url_concat(url, params)
+    headers = auth_header(db, 'admin')
+    if accepts_pagination:
+        headers['Accept'] = PAGINATION_MEDIA_TYPE
+    r = await api_request(app, url, headers=headers)
     assert r.status_code == 200
+    response = r.json()
+    if accepts_pagination:
+        assert set(response) == {
+            "items",
+            "_pagination",
+        }
+        pagination = response["_pagination"]
+        users = response["items"]
+    else:
+        users = response
+    assert len(users) == expected_count
+    expected_usernames = usernames
+    if offset:
+        expected_usernames = expected_usernames[offset:]
+    expected_usernames = expected_usernames[:expected_count]
 
-    users = sorted(r.json(), key=lambda d: d['name'])
-    users = [normalize_user(u) for u in users]
-    assert users == [
-        fill_user(
-            {'name': 'user', 'admin': False, 'auth_state': None, 'roles': ['user']}
-        )
-    ]
-
-    r = await api_request(app, 'users?offset=20')
-    assert r.status_code == 200
-    assert r.json() == []
-
-    # Test limit for pagination
-    r = await api_request(app, 'users?limit=1')
-    assert r.status_code == 200
-
-    users = sorted(r.json(), key=lambda d: d['name'])
-    users = [normalize_user(u) for u in users]
-    assert users == [
-        fill_user(
-            {'name': 'admin', 'admin': True, 'auth_state': None, 'roles': ['admin']}
-        )
-    ]
-
-    r = await api_request(app, 'users?limit=0')
-    assert r.status_code == 200
-    assert r.json() == []
+    got_usernames = [u['name'] for u in users]
+    assert got_usernames == expected_usernames
 
 
 @mark.user
