@@ -1558,8 +1558,11 @@ class LocalProcessSpawner(Spawner):
         if self.proc is not None:
             status = self.proc.poll()
             if status is not None:
-                # clear state if the process is done
-                self.clear_state()
+                # handle SIGCHILD to avoid zombie processes
+                # and also close stdout/stderr file descriptors
+                with self.proc:
+                    # clear state if the process is done
+                    self.clear_state()
             return status
 
         # if we resumed from stored state,
