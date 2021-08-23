@@ -57,6 +57,11 @@ class GroupListAPIHandler(_GroupAPIHandler):
             total_count = full_query.count()
             data = self.paginated_model(group_list, offset, limit, total_count)
         else:
+            query_count = query.count()
+            if offset == 0 and total_count > query_count:
+                self.log.warning(
+                    f"Truncated group list in request that does not expect pagination. Replying with {query_count} of {total_count} total groups."
+                )
             data = group_list
         self.write(json.dumps(data))
 

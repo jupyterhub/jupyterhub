@@ -150,10 +150,15 @@ class UserListAPIHandler(APIHandler):
                 if user_model:
                     user_list.append(user_model)
 
+        total_count = full_query.count()
         if self.accepts_pagination:
-            total_count = full_query.count()
             data = self.paginated_model(user_list, offset, limit, total_count)
         else:
+            query_count = query.count()
+            if offset == 0 and total_count > query_count:
+                self.log.warning(
+                    f"Truncated user list in request that does not expect pagination. Processing {query_count} of {total_count} total users."
+                )
             data = user_list
 
         self.write(json.dumps(data))
