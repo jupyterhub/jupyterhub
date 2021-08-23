@@ -646,6 +646,26 @@ class Authenticator(LoggingConfigurable):
         """,
     )
 
+    auto_login_oauth2_authorize = Bool(
+        False,
+        config=True,
+        help="""
+        Automatically begin login process for OAuth2 authorization requests
+
+        When another application is using JupyterHub as OAuth2 provider, it
+        sends users to `/hub/api/oauth2/authorize`. If the user isn't logged
+        in already, and auto_login is not set, the user will be dumped on the
+        hub's home page, without any context on what to do next.
+
+        Setting this to true will automatically redirect users to login if
+        they aren't logged in *only* on the `/hub/api/oauth2/authorize`
+        endpoint.
+
+        .. versionadded:: 1.5
+
+        """,
+    )
+
     def login_url(self, base_url):
         """Override this when registering a custom login handler
 
@@ -952,8 +972,8 @@ class PAMAuthenticator(LocalAuthenticator):
         help="""
         Whether to check the user's account status via PAM during authentication.
 
-        The PAM account stack performs non-authentication based account 
-        management. It is typically used to restrict/permit access to a 
+        The PAM account stack performs non-authentication based account
+        management. It is typically used to restrict/permit access to a
         service and this step is needed to access the host's user access control.
 
         Disabling this can be dangerous as authenticated but unauthorized users may
