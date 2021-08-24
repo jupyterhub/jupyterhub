@@ -141,7 +141,7 @@ class UserListAPIHandler(APIHandler):
                 query = query.filter(or_(*filters))
 
         full_query = query
-        query = query.offset(offset).limit(limit)
+        query = query.order_by(orm.User.id.asc()).offset(offset).limit(limit)
 
         user_list = []
         for u in query:

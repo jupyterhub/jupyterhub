@@ -51,7 +51,7 @@ class GroupListAPIHandler(_GroupAPIHandler):
             query = query.filter(orm.Group.name.in_(sub_scope['group']))
 
         offset, limit = self.get_api_pagination()
-        query = query.offset(offset).limit(limit)
+        query = query.order_by(orm.Group.id.asc()).offset(offset).limit(limit)
         group_list = [self.group_model(g) for g in query]
         total_count = full_query.count()
         if self.accepts_pagination:
