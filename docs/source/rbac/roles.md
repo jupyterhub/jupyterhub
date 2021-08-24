@@ -11,6 +11,10 @@ JupyterHub provides four roles that are available by default:
 **These roles cannot be deleted.**
 ```
 
+These default roles have a default collection of scopes,
+but you can define the scopes associated with each role (excluding admin) to suit your needs,
+as seen [below](overriding-default-roles).
+
 The `user`, `admin`, and `token` roles by default all preserve the permissions prior to RBAC.
 Only the `server` role is changed from pre-2.0, to reduce its permissions to activity-only
 instead of the default of a full access token.
@@ -105,6 +109,47 @@ It is not possible to implicitly add a new user to the database by defining a ne
 If no scopes are defined for _new role_, JupyterHub will raise a warning. Providing non-existing scopes will result in an error.
 
 In case the role with a certain name already exists in the database, its definition and scopes will be overwritten. This holds true for all roles except the `admin` role, which cannot be overwritten; an error will be raised if trying to do so. All the role bearers permissions present in the definition will change accordingly.
+
+(overriding-default-roles)=
+
+### Overriding default roles
+
+Role definitions can include those of the "default" roles listed above (admin excluded),
+if the default scopes associated with those roles do not suit your deployment.
+For example, to specify what permissions the $JUPYTERHUB_API_TOKEN issued to all single-user servers
+has,
+define the `server` role.
+
+To restore the JupyterHub 1.x behavior of servers being able to do anything their owners can do,
+use the scope `all`:
+
+```python
+c.JupyterHub.load_roles = [
+ {
+   'name': 'server',
+   'scopes': ['all'],
+ }
+]
+```
+
+or, better yet, identify the specific [scopes][] you want server environments to have access to.
+
+[scopes]: available-scopes-target
+
+If you don't want to get too detailed,
+one option is the `self` scope,
+which will have no effect on non-admin users,
+but will restrict the token issued to admin user servers to only have access to their own resources,
+instead of being able to take actions on behalf of all other users.
+
+```python
+c.JupyterHub.load_roles = [
+ {
+   'name': 'server',
+   'scopes': ['self'],
+ }
+]
+```
 
 (removing-roles-target)=
 
