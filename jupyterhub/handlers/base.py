@@ -425,7 +425,6 @@ class BaseHandler(RequestHandler):
 
     def _resolve_roles_and_scopes(self):
         self.expanded_scopes = set()
-        app_log.debug("Loading and parsing scopes")
         if self.current_user:
             orm_token = self.get_token()
             if orm_token:
@@ -433,7 +432,6 @@ class BaseHandler(RequestHandler):
             else:
                 self.expanded_scopes = scopes.get_scopes_for(self.current_user)
         self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
-        app_log.debug("Found scopes [%s]", ",".join(self.expanded_scopes))
 
     @functools.lru_cache()
     def get_scope_filter(self, req_scope):
