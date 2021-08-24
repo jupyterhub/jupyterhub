@@ -223,11 +223,6 @@ class APIHandler(BaseHandler):
             'read:roles:users': {'kind', 'name', 'roles', 'admin'},
             'admin:auth_state': {'kind', 'name', 'auth_state'},
         }
-        self.log.debug(
-            "Asking for user model of %s with scopes [%s]",
-            user.name,
-            ", ".join(self.expanded_scopes),
-        )
         allowed_keys = set()
         model = self._filter_model(
             model, access_map, user, kind='user', keys=allowed_keys
