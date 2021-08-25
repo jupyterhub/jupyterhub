@@ -739,7 +739,7 @@ class HubOAuth(HubAuth):
             cookie_suffix = ''.join(
                 random.choice(string.ascii_letters) for i in range(8)
             )
-            cookie_name = '{}-{}'.format(self.state_cookie_name, cookie_suffix)
+            cookie_name = f'{self.state_cookie_name}-{cookie_suffix}'
             extra_state['cookie_name'] = cookie_name
         else:
             cookie_name = self.state_cookie_name

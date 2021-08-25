@@ -200,7 +200,7 @@ def new_username(prefix='testuser'):
     """Return a new unique username"""
     global _username_counter
     _username_counter += 1
-    return '{}-{}'.format(prefix, _username_counter)
+    return f'{prefix}-{_username_counter}'
 
 
 @fixture

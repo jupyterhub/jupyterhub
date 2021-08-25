@@ -2208,7 +2208,7 @@ class JupyterHub(Application):
         """
         # this should be all the subclasses of Expiring
         for cls in (orm.APIToken, orm.OAuthCode):
-            self.log.debug("Purging expired {name}s".format(name=cls.__name__))
+            self.log.debug(f"Purging expired {cls.__name__}s")
             cls.purge_expired(self.db)
 
     async def init_api_tokens(self):
@@ -2232,7 +2232,7 @@ class JupyterHub(Application):
         if self.domain:
             domain = 'services.' + self.domain
             parsed = urlparse(self.subdomain_host)
-            host = '{}://services.{}'.format(parsed.scheme, parsed.netloc)
+            host = f'{parsed.scheme}://services.{parsed.netloc}'
         else:
             domain = host = ''
 
@@ -2359,13 +2359,13 @@ class JupyterHub(Application):
 
         def _user_summary(user):
             """user is an orm.User, not a full user"""
-            parts = ['{: >8}'.format(user.name)]
+            parts = [f'{user.name: >8}']
             if user.admin:
                 parts.append('admin')
             for name, spawner in sorted(user.orm_spawners.items(), key=itemgetter(0)):
                 if spawner.server:
                     parts.append(
-                        '{}:{} running at {}'.format(user.name, name, spawner.server)
+                        f'{user.name}:{name} running at {spawner.server}'
                     )
             return ' '.join(parts)
 
@@ -2701,7 +2701,7 @@ class JupyterHub(Application):
             self.log.warning(
                 "Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
                 '\n'.join(
-                    'JupyterHubApp.{key} = {value!r}'.format(key=key, value=value)
+                    f'JupyterHubApp.{key} = {value!r}'
                     for key, value in self.config.JupyterHubApp.items()
                 ),
             )
@@ -2723,7 +2723,7 @@ class JupyterHub(Application):
                 mod = sys.modules.get(cls.__module__.split('.')[0])
                 version = getattr(mod, '__version__', '')
                 if version:
-                    version = '-{}'.format(version)
+                    version = f'-{version}'
             else:
                 version = ''
             self.log.info(
@@ -3024,7 +3024,7 @@ class JupyterHub(Application):
         # start the service(s)
         for service_name, service in self._service_map.items():
             msg = (
-                '{} at {}'.format(service_name, service.url)
+                f'{service_name} at {service.url}'
                 if service.url
                 else service_name
             )

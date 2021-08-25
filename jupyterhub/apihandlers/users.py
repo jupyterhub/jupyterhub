@@ -182,7 +182,7 @@ class UserListAPIHandler(APIHandler):
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
                 raise web.HTTPError(
-                    400, "Failed to create user {}: {}".format(name, str(e))
+                    400, f"Failed to create user {name}: {str(e)}"
                 )
             else:
                 created.append(user)
@@ -365,7 +365,7 @@ class UserTokenListAPIHandler(APIHandler):
         if not note:
             note = "Requested via api"
             if requester is not user:
-                note += " by {} {}".format(kind, requester.name)
+                note += f" by {kind} {requester.name}"
 
         token_roles = body.get('roles')
         try:
@@ -405,7 +405,7 @@ class UserTokenAPIHandler(APIHandler):
         Raises 404 if not found for any reason
         (e.g. wrong owner, invalid key format, etc.)
         """
-        not_found = "No such token {} for user {}".format(token_id, user.name)
+        not_found = f"No such token {token_id} for user {user.name}"
         prefix, id_ = token_id[:1], token_id[1:]
         if prefix != 'a':
             raise web.HTTPError(404, not_found)
@@ -480,7 +480,7 @@ class UserServerAPIHandler(APIHandler):
             return
         elif pending:
             raise web.HTTPError(
-                400, "{} is pending {}".format(spawner._log_name, pending)
+                400, f"{spawner._log_name} is pending {pending}"
             )
 
         if spawner.ready:
@@ -527,7 +527,7 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(400, "Named servers are not enabled.")
             if server_name not in user.orm_spawners:
                 raise web.HTTPError(
-                    404, "{} has no server named '{}'".format(user_name, server_name)
+                    404, f"{user_name} has no server named '{server_name}'"
                 )
         elif remove:
             raise web.HTTPError(400, "Cannot delete the default server")
@@ -602,7 +602,7 @@ class SpawnProgressAPIHandler(APIHandler):
 
     async def send_event(self, event):
         try:
-            self.write('data: {}\n\n'.format(json.dumps(event)))
+            self.write(f'data: {json.dumps(event)}\n\n')
             await self.flush()
         except StreamClosedError:
             self.log.warning("Stream closed while handling %s", self.request.uri)
@@ -656,7 +656,7 @@ class SpawnProgressAPIHandler(APIHandler):
         ready_event = {
             'progress': 100,
             'ready': True,
-            'message': "Server ready at {}".format(url),
+            'message': f"Server ready at {url}",
             'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
             'url': url,
         }
@@ -759,7 +759,7 @@ class ActivityAPIHandler(APIHandler):
             if server_name not in spawners:
                 raise web.HTTPError(
                     400,
-                    "No such server '{}' for user {}".format(server_name, user.name),
+                    f"No such server '{server_name}' for user {user.name}",
                 )
             # check that each per-server field is a dict
             if not isinstance(server_info, dict):

@@ -31,8 +31,8 @@ def test_scope_constructor():
     user2 = 'michael'
     scope_list = [
         'users',
-        'read:users!user={}'.format(user1),
-        'read:users!user={}'.format(user2),
+        f'read:users!user={user1}',
+        f'read:users!user={user2}',
     ]
     parsed_scopes = parse_scopes(scope_list)
 

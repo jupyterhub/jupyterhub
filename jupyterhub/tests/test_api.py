@@ -282,7 +282,7 @@ async def test_get_users_state_filter(app, state):
     add_spawner(has_one_active, active=True, ready=False)
     add_spawner(has_one_active, "inactive", active=False)
 
-    r = await api_request(app, 'users?state={}'.format(state))
+    r = await api_request(app, f'users?state={state}')
     if state == "invalid":
         assert r.status_code == 400
         return
@@ -910,7 +910,7 @@ async def test_progress(request, app, no_patience, slow_spawn):
     url = app_user.url
     assert evt == {
         'progress': 100,
-        'message': 'Server ready at {}'.format(url),
+        'message': f'Server ready at {url}',
         'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
         'url': url,
         'ready': True,
@@ -1737,8 +1737,8 @@ async def test_update_activity_403(app, user, admin_user):
     token = user.new_api_token()
     r = await api_request(
         app,
-        "users/{}/activity".format(admin_user.name),
-        headers={"Authorization": "token {}".format(token)},
+        f"users/{admin_user.name}/activity",
+        headers={"Authorization": f"token {token}"},
         data="{}",
         method="post",
     )
@@ -1749,8 +1749,8 @@ async def test_update_activity_admin(app, user, admin_user):
     token = admin_user.new_api_token(roles=['admin'])
     r = await api_request(
         app,
-        "users/{}/activity".format(user.name),
-        headers={"Authorization": "token {}".format(token)},
+        f"users/{user.name}/activity",
+        headers={"Authorization": f"token {token}"},
         data=json.dumps({"last_activity": utcnow().isoformat()}),
         method="post",
     )
@@ -1786,8 +1786,8 @@ async def test_update_server_activity(app, user, server_name, fresh):
 
     r = await api_request(
         app,
-        "users/{}/activity".format(user.name),
-        headers={"Authorization": "token {}".format(token)},
+        f"users/{user.name}/activity",
+        headers={"Authorization": f"token {token}"},
         data=json.dumps(
             {"servers": {server_name: {"last_activity": activity.isoformat()}}}
         ),

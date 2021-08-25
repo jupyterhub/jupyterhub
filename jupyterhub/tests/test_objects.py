@@ -48,8 +48,8 @@ _hostname = socket.gethostname()
             {
                 'ip': '',
                 'port': 123,
-                'host': 'http://{}:123'.format(_hostname),
-                'url': 'http://{}:123/x/'.format(_hostname),
+                'host': f'http://{_hostname}:123',
+                'url': f'http://{_hostname}:123/x/',
                 'bind_url': 'http://*:123/x/',
             },
         ),

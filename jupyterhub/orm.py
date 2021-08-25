@@ -145,7 +145,7 @@ class Server(Base):
     cookie_name = Column(Unicode(255), default='cookie')
 
     def __repr__(self):
-        return "<Server({}:{})>".format(self.ip, self.port)
+        return f"<Server({self.ip}:{self.port})>"
 
 
 # lots of things have roles

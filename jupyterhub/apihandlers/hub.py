@@ -75,7 +75,7 @@ class InfoAPIHandler(APIHandler):
         def _class_info(typ):
             """info about a class (Spawner or Authenticator)"""
             info = {
-                'class': '{mod}.{name}'.format(mod=typ.__module__, name=typ.__name__)
+                'class': f'{typ.__module__}.{typ.__name__}'
             }
             pkg = typ.__module__.split('.')[0]
             try:
