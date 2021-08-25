@@ -331,7 +331,7 @@ def existing_only(func):
         role = orm.Role.find(db, rolename)
         if entity is None:
             raise ValueError(
-                "%r of kind %r does not exist" % (entity, type(entity).__name__)
+                "{!r} of kind {!r} does not exist".format(entity, type(entity).__name__)
             )
         elif role is None:
             raise ValueError("Role %r does not exist" % rolename)

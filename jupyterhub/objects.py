@@ -218,4 +218,4 @@ class Hub(Server):
         return url_path_join(self.url, 'api')
 
     def __repr__(self):
-        return "<%s %s:%s>" % (self.__class__.__name__, self.ip, self.port)
+        return "<{} {}:{}>".format(self.__class__.__name__, self.ip, self.port)

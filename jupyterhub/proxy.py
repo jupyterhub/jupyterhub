@@ -845,7 +845,7 @@ class ConfigurableHTTPProxy(Proxy):
                     )
                     return False  # a falsy return value make exponential_backoff retry
                 else:
-                    self.log.error("api_request to proxy failed: {0}".format(e))
+                    self.log.error("api_request to proxy failed: {}".format(e))
                     # An unhandled error here will help the hub invoke cleanup logic
                     raise
 

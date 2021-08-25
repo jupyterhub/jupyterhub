@@ -328,7 +328,7 @@ class User:
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
         client_id = 'jupyterhub-user-%s' % quote(self.name)
         if server_name:
-            client_id = '%s-%s' % (client_id, quote(server_name))
+            client_id = '{}-{}'.format(client_id, quote(server_name))
 
         trusted_alt_names = []
         trusted_alt_names.extend(self.settings.get('trusted_alt_names', []))
@@ -452,7 +452,7 @@ class User:
         """Get the *host* for my server (proto://domain[:port])"""
         # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
         parsed = urlparse(self.settings['subdomain_host'])
-        h = '%s://%s' % (parsed.scheme, self.domain)
+        h = '{}://{}'.format(parsed.scheme, self.domain)
         if parsed.port:
             h += ':%i' % parsed.port
         return h

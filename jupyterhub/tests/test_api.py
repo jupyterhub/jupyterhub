@@ -241,9 +241,9 @@ async def test_get_users_state_filter(app, state):
     # has_zero: no Spawners registered at all
     has_zero = add_user(db, app=app, name='has_zero')
 
-    test_usernames = set(
-        ("has_one_active", "has_two_active", "has_two_inactive", "has_zero")
-    )
+    test_usernames = {
+        "has_one_active", "has_two_active", "has_two_inactive", "has_zero"
+    }
 
     user_states = {
         "inactive": ["has_two_inactive", "has_zero"],
@@ -1594,7 +1594,7 @@ async def test_group_add_users(app):
         assert [g.name for g in user.groups] == ['alphaflight']
 
     group = orm.Group.find(db, name='alphaflight')
-    assert sorted([u.name for u in group.users]) == sorted(names)
+    assert sorted(u.name for u in group.users) == sorted(names)
 
 
 @mark.group
@@ -1620,7 +1620,7 @@ async def test_group_delete_users(app):
         assert [g.name for g in user.groups] == ['alphaflight']
 
     group = orm.Group.find(db, name='alphaflight')
-    assert sorted([u.name for u in group.users]) == sorted(names[2:])
+    assert sorted(u.name for u in group.users) == sorted(names[2:])
 
 
 # -----------------

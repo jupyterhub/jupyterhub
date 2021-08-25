@@ -101,7 +101,7 @@ async def test_external_proxy(request):
     print(app.base_url, user_path)
     host = ''
     if app.subdomain_host:
-        host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
+        host = '{}.{}'.format(name, urlparse(app.subdomain_host).hostname)
     user_spec = host + user_path
     assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 

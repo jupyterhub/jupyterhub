@@ -2232,7 +2232,7 @@ class JupyterHub(Application):
         if self.domain:
             domain = 'services.' + self.domain
             parsed = urlparse(self.subdomain_host)
-            host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
+            host = '{}://services.{}'.format(parsed.scheme, parsed.netloc)
         else:
             domain = host = ''
 
@@ -2359,13 +2359,13 @@ class JupyterHub(Application):
 
         def _user_summary(user):
             """user is an orm.User, not a full user"""
-            parts = ['{0: >8}'.format(user.name)]
+            parts = ['{: >8}'.format(user.name)]
             if user.admin:
                 parts.append('admin')
             for name, spawner in sorted(user.orm_spawners.items(), key=itemgetter(0)):
                 if spawner.server:
                     parts.append(
-                        '%s:%s running at %s' % (user.name, name, spawner.server)
+                        '{}:{} running at {}'.format(user.name, name, spawner.server)
                     )
             return ' '.join(parts)
 
@@ -3024,7 +3024,7 @@ class JupyterHub(Application):
         # start the service(s)
         for service_name, service in self._service_map.items():
             msg = (
-                '%s at %s' % (service_name, service.url)
+                '{} at {}'.format(service_name, service.url)
                 if service.url
                 else service_name
             )

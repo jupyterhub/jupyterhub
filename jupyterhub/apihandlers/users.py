@@ -182,7 +182,7 @@ class UserListAPIHandler(APIHandler):
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
                 raise web.HTTPError(
-                    400, "Failed to create user %s: %s" % (name, str(e))
+                    400, "Failed to create user {}: {}".format(name, str(e))
                 )
             else:
                 created.append(user)
@@ -365,7 +365,7 @@ class UserTokenListAPIHandler(APIHandler):
         if not note:
             note = "Requested via api"
             if requester is not user:
-                note += " by %s %s" % (kind, requester.name)
+                note += " by {} {}".format(kind, requester.name)
 
         token_roles = body.get('roles')
         try:
@@ -405,7 +405,7 @@ class UserTokenAPIHandler(APIHandler):
         Raises 404 if not found for any reason
         (e.g. wrong owner, invalid key format, etc.)
         """
-        not_found = "No such token %s for user %s" % (token_id, user.name)
+        not_found = "No such token {} for user {}".format(token_id, user.name)
         prefix, id_ = token_id[:1], token_id[1:]
         if prefix != 'a':
             raise web.HTTPError(404, not_found)
@@ -479,7 +479,7 @@ class UserServerAPIHandler(APIHandler):
             self.set_status(202)
             return
         elif pending:
-            raise web.HTTPError(400, "%s is pending %s" % (spawner._log_name, pending))
+            raise web.HTTPError(400, "{} is pending {}".format(spawner._log_name, pending))
 
         if spawner.ready:
             # include notify, so that a server that died is noticed immediately
@@ -525,7 +525,7 @@ class UserServerAPIHandler(APIHandler):
                 raise web.HTTPError(400, "Named servers are not enabled.")
             if server_name not in user.orm_spawners:
                 raise web.HTTPError(
-                    404, "%s has no server named '%s'" % (user_name, server_name)
+                    404, "{} has no server named '{}'".format(user_name, server_name)
                 )
         elif remove:
             raise web.HTTPError(400, "Cannot delete the default server")
@@ -543,7 +543,7 @@ class UserServerAPIHandler(APIHandler):
         if spawner.pending:
             raise web.HTTPError(
                 400,
-                "%s is pending %s, please wait" % (spawner._log_name, spawner.pending),
+                "{} is pending {}, please wait".format(spawner._log_name, spawner.pending),
             )
 
         stop_future = None

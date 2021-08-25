@@ -97,7 +97,7 @@ class Spawner(LoggingConfigurable):
         Used in logging for consistency with named servers.
         """
         if self.name:
-            return '%s:%s' % (self.user.name, self.name)
+            return '{}:{}'.format(self.user.name, self.name)
         else:
             return self.user.name
 
@@ -1277,7 +1277,7 @@ def _try_setcwd(path):
             os.chdir(path)
         except OSError as e:
             exc = e  # break exception instance out of except scope
-            print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
+            print("Couldn't set CWD to {} ({})".format(path, e), file=sys.stderr)
             path, _ = os.path.split(path)
         else:
             return

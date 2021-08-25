@@ -239,7 +239,7 @@ class SpawnHandler(BaseHandler):
             raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
         elif spawner.pending:
             raise web.HTTPError(
-                400, "%s is pending %s" % (spawner._log_name, spawner.pending)
+                400, "{} is pending {}".format(spawner._log_name, spawner.pending)
             )
 
         form_options = {}
@@ -349,7 +349,7 @@ class SpawnPendingHandler(BaseHandler):
 
         if server_name and server_name not in user.spawners:
             raise web.HTTPError(
-                404, "%s has no such server %s" % (user.name, server_name)
+                404, "{} has no such server {}".format(user.name, server_name)
             )
 
         spawner = user.spawners[server_name]

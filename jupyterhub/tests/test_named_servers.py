@@ -108,7 +108,7 @@ async def test_create_named_server(app, named_servers):
     env = r.json()
     prefix = env.get('JUPYTERHUB_SERVICE_PREFIX')
     assert prefix == user.spawners[servername].server.base_url
-    assert prefix.endswith('/user/%s/%s/' % (username, servername))
+    assert prefix.endswith('/user/{}/{}/'.format(username, servername))
 
     r = await api_request(app, 'users', username)
     r.raise_for_status()
@@ -255,10 +255,10 @@ async def test_named_server_spawn_form(app, username, named_servers):
     user = app.users[username]
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
         r = await get_page(
-            'spawn/%s/%s' % (username, server_name), app, cookies=cookies
+            'spawn/{}/{}'.format(username, server_name), app, cookies=cookies
         )
         r.raise_for_status()
-        assert r.url.endswith('/spawn/%s/%s' % (username, server_name))
+        assert r.url.endswith('/spawn/{}/{}'.format(username, server_name))
         assert FormSpawner.options_form in r.text
 
         # submit the form
