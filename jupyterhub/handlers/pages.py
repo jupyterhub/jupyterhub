@@ -348,9 +348,7 @@ class SpawnPendingHandler(BaseHandler):
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
         if server_name and server_name not in user.spawners:
-            raise web.HTTPError(
-                404, f"{user.name} has no such server {server_name}"
-            )
+            raise web.HTTPError(404, f"{user.name} has no such server {server_name}")
 
         spawner = user.spawners[server_name]
 

@@ -181,9 +181,7 @@ class UserListAPIHandler(APIHandler):
             except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
-                raise web.HTTPError(
-                    400, f"Failed to create user {name}: {str(e)}"
-                )
+                raise web.HTTPError(400, f"Failed to create user {name}: {str(e)}")
             else:
                 created.append(user)
 
@@ -479,9 +477,7 @@ class UserServerAPIHandler(APIHandler):
             self.set_status(202)
             return
         elif pending:
-            raise web.HTTPError(
-                400, f"{spawner._log_name} is pending {pending}"
-            )
+            raise web.HTTPError(400, f"{spawner._log_name} is pending {pending}")
 
         if spawner.ready:
             # include notify, so that a server that died is noticed immediately

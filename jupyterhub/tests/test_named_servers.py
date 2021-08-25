@@ -254,9 +254,7 @@ async def test_named_server_spawn_form(app, username, named_servers):
     cookies = await app.login_user(username)
     user = app.users[username]
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        r = await get_page(
-            f'spawn/{username}/{server_name}', app, cookies=cookies
-        )
+        r = await get_page(f'spawn/{username}/{server_name}', app, cookies=cookies)
         r.raise_for_status()
         assert r.url.endswith(f'/spawn/{username}/{server_name}')
         assert FormSpawner.options_form in r.text

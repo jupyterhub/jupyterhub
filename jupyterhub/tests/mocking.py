@@ -219,9 +219,7 @@ class MockPAMAuthenticator(PAMAuthenticator):
             close_session=mock_open_session,
             check_account=mock_check_account,
         ):
-            username = await super().authenticate(
-                *args, **kwargs
-            )
+            username = await super().authenticate(*args, **kwargs)
         if username is None:
             return
         elif self.auth_state:

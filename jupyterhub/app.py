@@ -2364,9 +2364,7 @@ class JupyterHub(Application):
                 parts.append('admin')
             for name, spawner in sorted(user.orm_spawners.items(), key=itemgetter(0)):
                 if spawner.server:
-                    parts.append(
-                        f'{user.name}:{name} running at {spawner.server}'
-                    )
+                    parts.append(f'{user.name}:{name} running at {spawner.server}')
             return ' '.join(parts)
 
         async def user_stopped(user, server_name):
@@ -3023,11 +3021,7 @@ class JupyterHub(Application):
 
         # start the service(s)
         for service_name, service in self._service_map.items():
-            msg = (
-                f'{service_name} at {service.url}'
-                if service.url
-                else service_name
-            )
+            msg = f'{service_name} at {service.url}' if service.url else service_name
             if service.managed:
                 self.log.info("Starting managed service %s", msg)
                 try:

@@ -533,9 +533,7 @@ class User:
         else:
             # spawn via POST or on behalf of another user.
             # nothing we can do here but fail
-            raise web.HTTPError(
-                400, f"{self.name}'s authentication has expired"
-            )
+            raise web.HTTPError(400, f"{self.name}'s authentication has expired")
 
     async def spawn(self, server_name='', options=None, handler=None):
         """Start the user's spawner

@@ -748,9 +748,7 @@ class BaseHandler(RequestHandler):
         refreshing = user is not None
 
         if user and username != user.name:
-            raise ValueError(
-                f"Username doesn't match! {username} != {user.name}"
-            )
+            raise ValueError(f"Username doesn't match! {username} != {user.name}")
 
         if user is None:
             user = self.find_user(username)
@@ -1116,9 +1114,7 @@ class BaseHandler(RequestHandler):
             raise KeyError("User %s has no such spawner %r", user.name, server_name)
         spawner = user.spawners[server_name]
         if spawner.pending:
-            raise RuntimeError(
-                f"{spawner._log_name} pending {spawner.pending}"
-            )
+            raise RuntimeError(f"{spawner._log_name} pending {spawner.pending}")
         # set user._stop_pending before doing anything async
         # to avoid races
         spawner._stop_pending = True
