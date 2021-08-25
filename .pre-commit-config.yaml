@@ -1,4 +1,8 @@
 repos:
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.24.0
+    hooks:
+      - id: pyupgrade
   - repo: https://github.com/asottile/reorder_python_imports
     rev: v2.6.0
     hooks:
