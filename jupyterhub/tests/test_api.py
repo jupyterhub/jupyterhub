@@ -242,7 +242,10 @@ async def test_get_users_state_filter(app, state):
     has_zero = add_user(db, app=app, name='has_zero')
 
     test_usernames = {
-        "has_one_active", "has_two_active", "has_two_inactive", "has_zero"
+        "has_one_active",
+        "has_two_active",
+        "has_two_inactive",
+        "has_zero",
     }
 
     user_states = {

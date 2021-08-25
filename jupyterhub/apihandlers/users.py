@@ -479,7 +479,9 @@ class UserServerAPIHandler(APIHandler):
             self.set_status(202)
             return
         elif pending:
-            raise web.HTTPError(400, "{} is pending {}".format(spawner._log_name, pending))
+            raise web.HTTPError(
+                400, "{} is pending {}".format(spawner._log_name, pending)
+            )
 
         if spawner.ready:
             # include notify, so that a server that died is noticed immediately
@@ -543,7 +545,9 @@ class UserServerAPIHandler(APIHandler):
         if spawner.pending:
             raise web.HTTPError(
                 400,
-                "{} is pending {}, please wait".format(spawner._log_name, spawner.pending),
+                "{} is pending {}, please wait".format(
+                    spawner._log_name, spawner.pending
+                ),
             )
 
         stop_future = None

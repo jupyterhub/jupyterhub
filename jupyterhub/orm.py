@@ -1039,6 +1039,8 @@ def get_class(resource_name):
     }
     if resource_name not in class_dict:
         raise ValueError(
-            "Kind must be one of {}, not {}".format(", ".join(class_dict), resource_name)
+            "Kind must be one of {}, not {}".format(
+                ", ".join(class_dict), resource_name
+            )
         )
     return class_dict[resource_name]
