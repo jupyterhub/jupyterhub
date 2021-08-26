@@ -1567,10 +1567,11 @@ async def test_groups_list(app):
     assert r.status_code == 200
     assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
+    # 0 is rounded up to 1
     r = await api_request(app, "groups?limit=0")
     r.raise_for_status()
     reply = r.json()
-    assert reply == []
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
 
 @mark.group

@@ -373,6 +373,8 @@ class APIHandler(BaseHandler):
             limit = abs(int(limit))
             if limit > max_limit:
                 limit = max_limit
+            if limit < 1:
+                limit = 1
         except Exception as e:
             raise web.HTTPError(
                 400, "Invalid argument type, offset and limit must be integers"
