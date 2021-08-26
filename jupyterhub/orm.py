@@ -145,7 +145,7 @@ class Server(Base):
     cookie_name = Column(Unicode(255), default='cookie')
 
     def __repr__(self):
-        return "<Server(%s:%s)>" % (self.ip, self.port)
+        return f"<Server({self.ip}:{self.port})>"
 
 
 # lots of things have roles
@@ -192,7 +192,7 @@ class Role(Base):
     groups = relationship('Group', secondary='group_role_map', backref='roles')
 
     def __repr__(self):
-        return "<%s %s (%s) - scopes: %s>" % (
+        return "<{} {} ({}) - scopes: {}>".format(
             self.__class__.__name__,
             self.name,
             self.description,
@@ -1039,6 +1039,8 @@ def get_class(resource_name):
     }
     if resource_name not in class_dict:
         raise ValueError(
-            "Kind must be one of %s, not %s" % (", ".join(class_dict), resource_name)
+            "Kind must be one of {}, not {}".format(
+                ", ".join(class_dict), resource_name
+            )
         )
     return class_dict[resource_name]

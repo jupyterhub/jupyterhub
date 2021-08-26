@@ -239,7 +239,7 @@ class SpawnHandler(BaseHandler):
             raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
         elif spawner.pending:
             raise web.HTTPError(
-                400, "%s is pending %s" % (spawner._log_name, spawner.pending)
+                400, f"{spawner._log_name} is pending {spawner.pending}"
             )
 
         form_options = {}
@@ -348,9 +348,7 @@ class SpawnPendingHandler(BaseHandler):
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
         if server_name and server_name not in user.spawners:
-            raise web.HTTPError(
-                404, "%s has no such server %s" % (user.name, server_name)
-            )
+            raise web.HTTPError(404, f"{user.name} has no such server {server_name}")
 
         spawner = user.spawners[server_name]
 
@@ -466,7 +464,7 @@ class AdminHandler(BaseHandler):
             admin_access=self.settings.get('admin_access', False),
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
-            server_version='{} {}'.format(__version__, self.version_hash),
+            server_version=f'{__version__} {self.version_hash}',
             api_page_limit=self.settings["api_page_default_limit"],
         )
         self.finish(html)

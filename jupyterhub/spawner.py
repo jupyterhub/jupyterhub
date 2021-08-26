@@ -97,7 +97,7 @@ class Spawner(LoggingConfigurable):
         Used in logging for consistency with named servers.
         """
         if self.name:
-            return '%s:%s' % (self.user.name, self.name)
+            return f'{self.user.name}:{self.name}'
         else:
             return self.user.name
 
@@ -1258,7 +1258,7 @@ class Spawner(LoggingConfigurable):
         try:
             r = await exponential_backoff(
                 _wait_for_death,
-                'Process did not die in {timeout} seconds'.format(timeout=timeout),
+                f'Process did not die in {timeout} seconds',
                 start_wait=self.death_interval,
                 timeout=timeout,
             )
@@ -1277,7 +1277,7 @@ def _try_setcwd(path):
             os.chdir(path)
         except OSError as e:
             exc = e  # break exception instance out of except scope
-            print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
+            print(f"Couldn't set CWD to {path} ({e})", file=sys.stderr)
             path, _ = os.path.split(path)
         else:
             return
@@ -1423,7 +1423,7 @@ class LocalProcessSpawner(Spawner):
 
         Local processes only need the process id.
         """
-        super(LocalProcessSpawner, self).load_state(state)
+        super().load_state(state)
         if 'pid' in state:
             self.pid = state['pid']
 
@@ -1432,14 +1432,14 @@ class LocalProcessSpawner(Spawner):
 
         Local processes only need the process id.
         """
-        state = super(LocalProcessSpawner, self).get_state()
+        state = super().get_state()
         if self.pid:
             state['pid'] = self.pid
         return state
 
     def clear_state(self):
         """Clear stored state about this spawner (pid)"""
-        super(LocalProcessSpawner, self).clear_state()
+        super().clear_state()
         self.pid = 0
 
     def user_env(self, env):
@@ -1488,8 +1488,8 @@ class LocalProcessSpawner(Spawner):
         home = user.pw_dir
 
         # Create dir for user's certs wherever we're starting
-        hub_dir = "{home}/.jupyterhub".format(home=home)
-        out_dir = "{hub_dir}/jupyterhub-certs".format(hub_dir=hub_dir)
+        hub_dir = f"{home}/.jupyterhub"
+        out_dir = f"{hub_dir}/jupyterhub-certs"
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir, 0o700, exist_ok=True)
 

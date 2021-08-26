@@ -622,7 +622,7 @@ class BaseHandler(RequestHandler):
         next_url = next_url.replace('\\', '%5C')
         if (next_url + '/').startswith(
             (
-                '%s://%s/' % (self.request.protocol, self.request.host),
+                f'{self.request.protocol}://{self.request.host}/',
                 '//%s/' % self.request.host,
             )
         ) or (
@@ -748,7 +748,7 @@ class BaseHandler(RequestHandler):
         refreshing = user is not None
 
         if user and username != user.name:
-            raise ValueError("Username doesn't match! %s != %s" % (username, user.name))
+            raise ValueError(f"Username doesn't match! {username} != {user.name}")
 
         if user is None:
             user = self.find_user(username)
@@ -830,14 +830,14 @@ class BaseHandler(RequestHandler):
         user_server_name = user.name
 
         if server_name:
-            user_server_name = '%s:%s' % (user.name, server_name)
+            user_server_name = f'{user.name}:{server_name}'
 
         if server_name in user.spawners and user.spawners[server_name].pending:
             pending = user.spawners[server_name].pending
             SERVER_SPAWN_DURATION_SECONDS.labels(
                 status=ServerSpawnStatus.already_pending
             ).observe(time.perf_counter() - spawn_start_time)
-            raise RuntimeError("%s pending %s" % (user_server_name, pending))
+            raise RuntimeError(f"{user_server_name} pending {pending}")
 
         # count active servers and pending spawns
         # we could do careful bookkeeping to avoid
@@ -1114,7 +1114,7 @@ class BaseHandler(RequestHandler):
             raise KeyError("User %s has no such spawner %r", user.name, server_name)
         spawner = user.spawners[server_name]
         if spawner.pending:
-            raise RuntimeError("%s pending %s" % (spawner._log_name, spawner.pending))
+            raise RuntimeError(f"{spawner._log_name} pending {spawner.pending}")
         # set user._stop_pending before doing anything async
         # to avoid races
         spawner._stop_pending = True

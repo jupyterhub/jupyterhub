@@ -926,7 +926,7 @@ class LocalAuthenticator(Authenticator):
         p.wait()
         if p.returncode:
             err = p.stdout.read().decode('utf8', 'replace')
-            raise RuntimeError("Failed to create system user %s: %s" % (name, err))
+            raise RuntimeError(f"Failed to create system user {name}: {err}")
 
 
 class PAMAuthenticator(LocalAuthenticator):

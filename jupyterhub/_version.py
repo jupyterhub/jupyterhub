@@ -60,7 +60,7 @@ def _check_version(hub_version, singleuser_version, log):
             log_method = log.debug
         else:
             # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
-            key = '%s-%s' % (hub_version, singleuser_version)
+            key = f'{hub_version}-{singleuser_version}'
             global _version_mismatch_warning_logged
             if _version_mismatch_warning_logged.get(key):
                 do_log = False  # We already logged this warning so don't log it again.
