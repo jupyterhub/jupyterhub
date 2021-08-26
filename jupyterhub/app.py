@@ -2596,6 +2596,8 @@ class JupyterHub(Application):
             activity_resolution=self.activity_resolution,
             admin_users=self.authenticator.admin_users,
             admin_access=self.admin_access,
+            api_page_default_limit=self.api_page_default_limit,
+            api_page_max_limit=self.api_page_max_limit,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,

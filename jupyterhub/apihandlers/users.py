@@ -10,6 +10,7 @@ from datetime import timezone
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
 from sqlalchemy import func
+from sqlalchemy import or_
 from tornado import web
 from tornado.iostream import StreamClosedError
 
@@ -72,14 +73,7 @@ class UserListAPIHandler(APIHandler):
         user = self.users[orm_user]
         return any(spawner.ready for spawner in user.spawners.values())
 
-    @needs_scope(
-        'read:users',
-        'read:users:name',
-        'read:servers',
-        'read:users:groups',
-        'read:users:activity',
-        'read:roles:users',
-    )
+    @needs_scope('list:users')
     def get(self):
         state_filter = self.get_argument("state", None)
         offset, limit = self.get_api_pagination()
@@ -123,14 +117,49 @@ class UserListAPIHandler(APIHandler):
             # no filter, return all users
             query = self.db.query(orm.User)
 
-        query = query.offset(offset).limit(limit)
+        sub_scope = self.parsed_scopes['list:users']
+        if sub_scope != scopes.Scope.ALL:
+            if not set(sub_scope).issubset({'group', 'user'}):
+                # don't expand invalid !server=x filter to all users!
+                self.log.warning(
+                    "Invalid filter on list:user for {self.current_user}: {sub_scope}"
+                )
+                raise web.HTTPError(403)
+            filters = []
+            if 'user' in sub_scope:
+                filters.append(orm.User.name.in_(sub_scope['user']))
+            if 'group' in sub_scope:
+                filters.append(
+                    orm.User.groups.any(
+                        orm.Group.name.in_(sub_scope['group']),
+                    )
+                )
 
-        data = []
+            if len(filters) == 1:
+                query = query.filter(filters[0])
+            else:
+                query = query.filter(or_(*filters))
+
+        full_query = query
+        query = query.order_by(orm.User.id.asc()).offset(offset).limit(limit)
+
+        user_list = []
         for u in query:
             if post_filter is None or post_filter(u):
                 user_model = self.user_model(u)
                 if user_model:
-                    data.append(user_model)
+                    user_list.append(user_model)
+
+        total_count = full_query.count()
+        if self.accepts_pagination:
+            data = self.paginated_model(user_list, offset, limit, total_count)
+        else:
+            query_count = query.count()
+            if offset == 0 and total_count > query_count:
+                self.log.warning(
+                    f"Truncated user list in request that does not expect pagination. Processing {query_count} of {total_count} total users."
+                )
+            data = user_list
 
         self.write(json.dumps(data))
 

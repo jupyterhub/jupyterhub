@@ -19,15 +19,26 @@ class ProxyAPIHandler(APIHandler):
         """
         offset, limit = self.get_api_pagination()
 
-        routes = await self.proxy.get_all_routes()
+        all_routes = await self.proxy.get_all_routes()
 
-        routes = {
-            key: routes[key]
-            for key in list(routes.keys())[offset:limit]
-            if key in routes
-        }
+        if offset == 0 and len(all_routes) < limit:
+            routes = all_routes
+        else:
+            routes = {}
+            end = offset + limit
+            for i, key in sorted(all_routes.keys()):
+                if i < offset:
+                    continue
+                elif i >= end:
+                    break
+                routes[key] = all_routes[key]
 
-        self.write(json.dumps(routes))
+        if self.accepts_pagination:
+            data = self.paginated_model(routes, offset, limit, len(all_routes))
+        else:
+            data = routes
+
+        self.write(json.dumps(data))
 
     @needs_scope('proxy')
     async def post(self):

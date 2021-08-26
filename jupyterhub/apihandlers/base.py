@@ -2,7 +2,12 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+from functools import lru_cache
 from http.client import responses
+from urllib.parse import parse_qs
+from urllib.parse import urlencode
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
@@ -11,6 +16,8 @@ from .. import orm
 from ..handlers import BaseHandler
 from ..utils import isoformat
 from ..utils import url_path_join
+
+PAGINATION_MEDIA_TYPE = "application/jupyterhub-pagination+json"
 
 
 class APIHandler(BaseHandler):
@@ -30,6 +37,16 @@ class APIHandler(BaseHandler):
 
     def get_content_type(self):
         return 'application/json'
+
+    @property
+    @lru_cache()
+    def accepts_pagination(self):
+        """Return whether the client accepts the pagination preview media type"""
+        accept_header = self.request.headers.get("Accept", "")
+        if not accept_header:
+            return False
+        accepts = {s.strip().lower() for s in accept_header.strip().split(",")}
+        return PAGINATION_MEDIA_TYPE in accepts
 
     def check_referer(self):
         """Check Origin for cross-site API requests.
@@ -342,8 +359,13 @@ class APIHandler(BaseHandler):
                 )
 
     def get_api_pagination(self):
-        default_limit = self.settings["app"].api_page_default_limit
-        max_limit = self.settings["app"].api_page_max_limit
+        default_limit = self.settings["api_page_default_limit"]
+        max_limit = self.settings["api_page_max_limit"]
+        if not self.accepts_pagination:
+            # if new pagination Accept header is not used,
+            # default to the higher max page limit to reduce likelihood
+            # of missing users due to pagination in code that hasn't been updated
+            default_limit = max_limit
         offset = self.get_argument("offset", None)
         limit = self.get_argument("limit", default_limit)
         try:
@@ -351,11 +373,51 @@ class APIHandler(BaseHandler):
             limit = abs(int(limit))
             if limit > max_limit:
                 limit = max_limit
+            if limit < 1:
+                limit = 1
         except Exception as e:
             raise web.HTTPError(
                 400, "Invalid argument type, offset and limit must be integers"
             )
         return offset, limit
+
+    def paginated_model(self, items, offset, limit, total_count):
+        """Return the paginated form of a collection (list or dict)
+
+        A dict with { items: [], _pagination: {}}
+        instead of a single list (or dict).
+
+        pagination info includes the current offset and limit,
+        the total number of results for the query,
+        and information about how to build the next page request
+        if there is one.
+        """
+        next_offset = offset + limit
+        data = {
+            "items": items,
+            "_pagination": {
+                "offset": offset,
+                "limit": limit,
+                "total": total_count,
+                "next": None,
+            },
+        }
+        if next_offset < total_count:
+            # if there's a next page
+            next_url_parsed = urlparse(self.request.full_url())
+            query = parse_qs(next_url_parsed.query)
+            query['offset'] = [next_offset]
+            query['limit'] = [limit]
+            next_url_parsed = next_url_parsed._replace(
+                query=urlencode(query, doseq=True)
+            )
+            next_url = urlunparse(next_url_parsed)
+            data["_pagination"]["next"] = {
+                "offset": next_offset,
+                "limit": limit,
+                "url": next_url,
+            }
+        return data
 
     def options(self, *args, **kwargs):
         self.finish()
