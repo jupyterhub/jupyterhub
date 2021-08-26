@@ -148,7 +148,9 @@ class Server(HasTraits):
     def host(self):
         if self.connect_url:
             parsed = urlparse(self.connect_url)
-            return f"{parsed.scheme}://{parsed.netloc}"
+            proto = parsed.scheme
+            host = parsed.netloc
+            return f"{proto}://{host}"
 
         if ':' in self._connect_ip:
             fmt = "{proto}://[{ip}]:{port}"

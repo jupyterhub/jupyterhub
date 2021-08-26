@@ -623,7 +623,7 @@ class BaseHandler(RequestHandler):
         if (next_url + '/').startswith(
             (
                 f'{self.request.protocol}://{self.request.host}/',
-                '//%s/' % self.request.host,
+                f'//{self.request.host}/',
             )
         ) or (
             self.subdomain_host

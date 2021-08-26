@@ -210,7 +210,7 @@ class UserListAPIHandler(APIHandler):
             except Exception as e:
                 self.log.error("Failed to create user: %s" % name, exc_info=True)
                 self.users.delete(user)
-                raise web.HTTPError(400, f"Failed to create user {name}: {str(e)}")
+                raise web.HTTPError(400, f"Failed to create user {name}: {e}")
             else:
                 created.append(user)
 
