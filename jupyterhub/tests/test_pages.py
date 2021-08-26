@@ -218,7 +218,7 @@ async def test_spawn_admin_access(app, admin_access):
         r.raise_for_status()
 
     assert (r.url.split('?')[0] + '/').startswith(public_url(app, user))
-    r = await get_page('user/{}/env'.format(name), app, hub=False, cookies=cookies)
+    r = await get_page(f'user/{name}/env', app, hub=False, cookies=cookies)
 
     r.raise_for_status()
     env = r.json()
@@ -255,7 +255,7 @@ async def test_spawn_page_admin(app, admin_access):
         r = await get_page('spawn/' + u.name, app, cookies=cookies)
         assert r.url.endswith('/spawn/' + u.name)
         assert FormSpawner.options_form in r.text
-        assert "Spawning server for {}".format(u.name) in r.text
+        assert f"Spawning server for {u.name}" in r.text
 
 
 async def test_spawn_with_query_arguments(app):
