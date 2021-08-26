@@ -434,7 +434,7 @@ def parse_scopes(scope_list):
         if parsed_scopes[base_scope] != Scope.ALL:
             key, _, value = filter_.partition('=')
             if key not in parsed_scopes[base_scope]:
-                parsed_scopes[base_scope][key] = set([value])
+                parsed_scopes[base_scope][key] = {value}
             else:
                 parsed_scopes[base_scope][key].add(value)
     return parsed_scopes

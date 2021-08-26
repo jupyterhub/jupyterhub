@@ -560,7 +560,7 @@ class SingleUserNotebookAppMixin(Configurable):
                 url=self.hub_activity_url,
                 method='POST',
                 headers={
-                    "Authorization": "token {}".format(self.hub_auth.api_token),
+                    "Authorization": f"token {self.hub_auth.api_token}",
                     "Content-Type": "application/json",
                 },
                 body=json.dumps(
@@ -811,7 +811,7 @@ def _patch_app_base_handlers(app):
             BaseHandler = import_item("notebook.base.handlers.IPythonHandler")
         else:
             raise ValueError(
-                "{}.base_handler_class must be defined".format(app.__class__.__name__)
+                f"{app.__class__.__name__}.base_handler_class must be defined"
             )
         base_handlers.append(BaseHandler)
 

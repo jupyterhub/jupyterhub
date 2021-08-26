@@ -91,7 +91,7 @@ def backup_db_file(db_file, log=None):
     for i in range(1, 10):
         if not os.path.exists(backup_db_file):
             break
-        backup_db_file = '{}.{}.{}'.format(db_file, timestamp, i)
+        backup_db_file = f'{db_file}.{timestamp}.{i}'
     #
     if os.path.exists(backup_db_file):
         raise OSError("backup db file already exists: %s" % backup_db_file)

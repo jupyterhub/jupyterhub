@@ -94,7 +94,7 @@ def expand_self_scope(name):
         'read:tokens',
         'access:servers',
     ]
-    return {"{}!user={}".format(scope, name) for scope in scope_list}
+    return {f"{scope}!user={name}" for scope in scope_list}
 
 
 def horizontal_filter(func):
@@ -331,7 +331,7 @@ def existing_only(func):
         role = orm.Role.find(db, rolename)
         if entity is None:
             raise ValueError(
-                "%r of kind %r does not exist" % (entity, type(entity).__name__)
+                f"{entity!r} of kind {type(entity).__name__!r} does not exist"
             )
         elif role is None:
             raise ValueError("Role %r does not exist" % rolename)

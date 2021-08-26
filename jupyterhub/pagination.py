@@ -170,9 +170,7 @@ class Pagination(Configurable):
 
         if self.page > 1:
             prev_page = self.page - 1
-            links.append(
-                '<li><a href="?page={prev_page}">«</a></li>'.format(prev_page=prev_page)
-            )
+            links.append(f'<li><a href="?page={prev_page}">«</a></li>')
         else:
             links.append(
                 '<li class="disabled"><span><span aria-hidden="true">«</span></span></li>'
@@ -198,9 +196,7 @@ class Pagination(Configurable):
 
         if self.page >= 1 and self.page < self.total_pages:
             next_page = self.page + 1
-            links.append(
-                '<li><a href="?page={next_page}">»</a></li>'.format(next_page=next_page)
-            )
+            links.append(f'<li><a href="?page={next_page}">»</a></li>')
         else:
             links.append(
                 '<li class="disabled"><span><span aria-hidden="true">»</span></span></li>'

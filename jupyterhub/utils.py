@@ -77,7 +77,7 @@ def can_connect(ip, port):
         ip = '127.0.0.1'
     try:
         socket.create_connection((ip, port)).close()
-    except socket.error as e:
+    except OSError as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
         return False
@@ -225,7 +225,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return e.response
-        except (OSError, socket.error) as e:
+        except OSError as e:
             if e.errno not in {
                 errno.ECONNABORTED,
                 errno.ECONNREFUSED,
@@ -602,7 +602,7 @@ def _parse_accept_header(accept):
                 media_params.append(('vendor', vnd))
                 # and re-write media_type to something like application/json so
                 # it can be used usefully when looking up emitters
-                media_type = '{}/{}'.format(typ, extra)
+                media_type = f'{typ}/{extra}'
 
         q = 1.0
         for part in parts:
