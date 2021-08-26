@@ -105,7 +105,7 @@ scope_definitions = {
     },
     'read:groups:name': {'description': 'Read group names.'},
     'list:services': {
-        'description': 'List services.',
+        'description': 'List services, including at least their names.',
         'subscopes': ['read:services:name'],
     },
     'read:services': {
