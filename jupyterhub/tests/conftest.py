@@ -205,7 +205,7 @@ def new_username(prefix='testuser'):
     """Return a new unique username"""
     global _username_counter
     _username_counter += 1
-    return '{}-{}'.format(prefix, _username_counter)
+    return f'{prefix}-{_username_counter}'
 
 
 @fixture
@@ -241,7 +241,7 @@ def new_group_name(prefix='testgroup'):
     """Return a new unique group name"""
     global _groupname_counter
     _groupname_counter += 1
-    return '{}-{}'.format(prefix, _groupname_counter)
+    return f'{prefix}-{_groupname_counter}'
 
 
 @fixture

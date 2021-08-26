@@ -32,8 +32,8 @@ def test_scope_constructor():
     user2 = 'michael'
     scope_list = [
         'users',
-        'read:users!user={}'.format(user1),
-        'read:users!user={}'.format(user2),
+        f'read:users!user={user1}',
+        f'read:users!user={user2}',
     ]
     parsed_scopes = parse_scopes(scope_list)
 
@@ -331,7 +331,7 @@ async def test_request_user_outside_group(app, create_user_with_scopes):
 async def test_user_filter(app, create_user_with_scopes):
     name_in_scope = {'lindsay', 'oscar', 'gob'}
     user = create_user_with_scopes(
-        *[f'list:users!user={name}' for name in name_in_scope]
+        *(f'list:users!user={name}' for name in name_in_scope)
     )
     outside_scope = {'maeby', 'marta'}
     group_name = 'bluth'
@@ -417,7 +417,7 @@ async def test_vertical_filter(app, create_user_with_scopes):
     r = await api_request(app, 'users', headers=auth_header(app.db, user.name))
     assert r.status_code == 200
     allowed_keys = {'name', 'kind', 'admin'}
-    assert set([key for user in r.json() for key in user.keys()]) == allowed_keys
+    assert {key for user in r.json() for key in user.keys()} == allowed_keys
 
 
 async def test_stacked_vertical_filter(app, create_user_with_scopes):
@@ -778,64 +778,64 @@ async def test_roles_access(app, create_service_with_scopes, create_user_with_sc
     "left, right, expected, should_warn",
     [
         (set(), set(), set(), False),
-        (set(), set(["users"]), set(), False),
+        (set(), {"users"}, set(), False),
         # no warning if users and groups only on the same side
         (
-            set(["users!user=x", "users!group=y"]),
-            set([]),
-            set([]),
+            {"users!user=x", "users!group=y"},
+            set(),
+            set(),
             False,
         ),
         # no warning if users are on both sizes
         (
-            set(["users!user=x", "users!user=y", "users!group=y"]),
-            set(["users!user=x"]),
-            set(["users!user=x"]),
+            {"users!user=x", "users!user=y", "users!group=y"},
+            {"users!user=x"},
+            {"users!user=x"},
             False,
         ),
         # no warning if users and groups are both defined
         # on both sides
         (
-            set(["users!user=x", "users!group=y"]),
-            set(["users!user=x", "users!group=y", "users!user=z"]),
-            set(["users!user=x", "users!group=y"]),
+            {"users!user=x", "users!group=y"},
+            {"users!user=x", "users!group=y", "users!user=z"},
+            {"users!user=x", "users!group=y"},
             False,
         ),
         # warn if there's a user on one side and a group on the other
         # which *may* intersect
         (
-            set(["users!group=y", "users!user=z"]),
-            set(["users!user=x"]),
-            set([]),
+            {"users!group=y", "users!user=z"},
+            {"users!user=x"},
+            set(),
             True,
         ),
         # same for group->server
         (
-            set(["users!group=y", "users!user=z"]),
-            set(["users!server=x/y"]),
-            set([]),
+            {"users!group=y", "users!user=z"},
+            {"users!server=x/y"},
+            set(),
             True,
         ),
         # this one actually shouldn't warn because server=x/y is under user=x,
         # but we don't need to overcomplicate things just for a warning
         (
-            set(["users!group=y", "users!user=x"]),
-            set(["users!server=x/y"]),
-            set(["users!server=x/y"]),
+            {"users!group=y", "users!user=x"},
+            {"users!server=x/y"},
+            {"users!server=x/y"},
             True,
         ),
         # resolves server under user, without warning
         (
-            set(["read:servers!user=abc"]),
-            set(["read:servers!server=abc/xyz"]),
-            set(["read:servers!server=abc/xyz"]),
+            {"read:servers!user=abc"},
+            {"read:servers!server=abc/xyz"},
+            {"read:servers!server=abc/xyz"},
             False,
         ),
         # user->server, no match
         (
-            set(["read:servers!user=abc"]),
-            set(["read:servers!server=abcd/xyz"]),
-            set([]),
+            {"read:servers!user=abc"},
+            {"read:servers!server=abcd/xyz"},
+            set(),
             False,
         ),
     ],
@@ -895,9 +895,9 @@ def test_intersect_expanded_scopes(left, right, expected, should_warn, recwarn):
 )
 def test_intersect_groups(request, db, left, right, expected, groups):
     if isinstance(left, str):
-        left = set([left])
+        left = {left}
     if isinstance(right, str):
-        right = set([right])
+        right = {right}
 
     # if we have a db connection, we can actually resolve
     created = []

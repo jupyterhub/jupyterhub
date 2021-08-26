@@ -252,10 +252,10 @@ async def test_load_groups(tmpdir, request):
     db = hub.db
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted([u.name for u in blue.users]) == sorted(to_load['blue'])
+    assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted([u.name for u in gold.users]) == sorted(to_load['gold'])
+    assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
 
 
 async def test_resume_spawners(tmpdir, request):

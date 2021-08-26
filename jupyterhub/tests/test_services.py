@@ -69,7 +69,7 @@ async def test_proxy_service(app, mockservice_url):
     await app.proxy.get_all_routes()
     url = public_url(app, service) + '/foo'
     r = await async_requests.get(url, allow_redirects=False)
-    path = '/services/{}/foo'.format(name)
+    path = f'/services/{name}/foo'
     r.raise_for_status()
 
     assert r.status_code == 200

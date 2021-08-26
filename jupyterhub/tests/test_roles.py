@@ -879,7 +879,7 @@ async def test_server_role_api_calls(
         username = 'otheruser'
 
     if api_endpoint == 'activity':
-        path = "users/{}/activity".format(username)
+        path = f"users/{username}/activity"
         data = json.dumps({"servers": {"": {"last_activity": utcnow().isoformat()}}})
     elif api_endpoint == 'users':
         path = "users"
@@ -888,7 +888,7 @@ async def test_server_role_api_calls(
     r = await api_request(
         app,
         path,
-        headers={"Authorization": "token {}".format(api_token)},
+        headers={"Authorization": f"token {api_token}"},
         data=data,
         method=api_method,
     )
