@@ -78,14 +78,39 @@ class APIHandler(BaseHandler):
             return False
         return True
 
+    def check_post_content_type(self):
+        """Check request content-type, e.g. for cross-site POST requests
+
+        Cross-site POST via form will include content-type
+        """
+        content_type = self.request.headers.get("Content-Type")
+        if not content_type:
+            # not specified, e.g. from a script
+            return True
+
+        # parse content type for application/json
+        fields = content_type.lower().split(";")
+        if not any(f.lstrip().startswith("application/json") for f in fields):
+            self.log.warning(f"Not allowing POST with content-type: {content_type}")
+            return False
+
+        return True
+
     def get_current_user_cookie(self):
-        """Override get_user_cookie to check Referer header"""
+        """Extend get_user_cookie to add checks for CORS"""
         cookie_user = super().get_current_user_cookie()
-        # check referer only if there is a cookie user,
+        # CORS checks for cookie-authentication
+        # check these only if there is a cookie user,
         # avoiding misleading "Blocking Cross Origin" messages
         # when there's no cookie set anyway.
-        if cookie_user and not self.check_referer():
-            return None
+        if cookie_user:
+            if not self.check_referer():
+                return None
+            if (
+                self.request.method.upper() == 'POST'
+                and not self.check_post_content_type()
+            ):
+                return None
         return cookie_user
 
     def get_json_body(self):
