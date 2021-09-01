@@ -136,11 +136,6 @@ class UserListAPIHandler(APIHandler):
 
     @needs_scope('admin:users')
     async def post(self):
-
-        content_type = self.request.headers.get("Content-Type")
-        if content_type and not content_type == "application/json":
-            raise web.HTTPError(403, "Must specify content-type as application/json")
-
         data = self.get_json_body()
         if not data or not isinstance(data, dict) or not data.get('usernames'):
             raise web.HTTPError(400, "Must specify at least one user to create")
@@ -220,11 +215,6 @@ class UserAPIHandler(APIHandler):
 
     @needs_scope('admin:users')
     async def post(self, user_name):
-
-        content_type = self.request.headers.get("Content-Type")
-        if content_type and not content_type == "application/json":
-            raise web.HTTPError(403, "Must specify content-type as application/json")
-
         data = self.get_json_body()
         user = self.find_user(user_name)
         if user is not None:

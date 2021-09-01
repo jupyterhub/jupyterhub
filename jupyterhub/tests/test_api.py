@@ -61,7 +61,7 @@ async def test_auth_api(app):
     assert r.status_code == 403
 
 
-async def test_referer_check(app):
+async def test_cors_checks(app):
     url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
     # add admin user
@@ -105,6 +105,32 @@ async def test_referer_check(app):
         cookies=cookies,
     )
     assert r.status_code == 200
+
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data='{}',
+        headers={
+            "Authorization": "",
+            "Content-Type": "text/plain",
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 403
+
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data='{}',
+        headers={
+            "Authorization": "",
+            "Content-Type": "application/json; charset=UTF-8",
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 400  # accepted, but invalid
 
 
 # --------------
@@ -409,10 +435,6 @@ async def test_add_multi_user_bad(app):
     assert r.status_code == 400
     r = await api_request(app, 'users', method='post', data='[]')
     assert r.status_code == 400
-    r = await api_request(
-        app, 'users', method='post', data='{}', headers={"Content-Type": "text/plain"}
-    )
-    assert r.status_code == 403
 
 
 @mark.user
