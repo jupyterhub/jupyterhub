@@ -24,7 +24,6 @@ For more information, please visit
 [![Documentation build status](https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest/)
 [![GitHub Workflow Status - Test](https://img.shields.io/github/workflow/status/jupyterhub/jupyterhub/Test?logo=github&label=tests)](https://github.com/jupyterhub/jupyterhub/actions)
 [![DockerHub build status](https://img.shields.io/docker/build/jupyterhub/jupyterhub?logo=docker&label=build)](https://hub.docker.com/r/jupyterhub/jupyterhub/tags)
-[![CircleCI build status](https://img.shields.io/circleci/build/github/jupyterhub/jupyterhub?logo=circleci)](https://circleci.com/gh/jupyterhub/jupyterhub)<!-- CircleCI Token: b5b65862eb2617b9a8d39e79340b0a6b816da8cc -->
 [![Test coverage of code](https://codecov.io/gh/jupyterhub/jupyterhub/branch/main/graph/badge.svg)](https://codecov.io/gh/jupyterhub/jupyterhub)
 [![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
 [![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
@@ -65,22 +64,14 @@ for administration of the Hub and its users.
 ### Check prerequisites
 
 - A Linux/Unix based system
-- [Python](https://www.python.org/downloads/) 3.5 or greater
+- [Python](https://www.python.org/downloads/) 3.6 or greater
 - [nodejs/npm](https://www.npmjs.com/)
 
   - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
-  - If you are using **`pip`**, install a recent version of
+  - If you are using **`pip`**, install a recent version (at least 12.0) of
     [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node).
-    For example, install it on Linux (Debian/Ubuntu) using:
-
-    ```
-    sudo apt-get install npm nodejs-legacy
-    ```
-
-    The `nodejs-legacy` package installs the `node` executable and is currently
-    required for npm to work on Debian/Ubuntu.
 
 - If using the default PAM Authenticator, a [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module).
 - TLS certificate and key for HTTPS communication
@@ -96,12 +87,11 @@ To install JupyterHub along with its dependencies including nodejs/npm:
 conda install -c conda-forge jupyterhub
 ```
 
-If you plan to run notebook servers locally, install the Jupyter notebook
-or JupyterLab:
+If you plan to run notebook servers locally, install JupyterLab or Jupyter notebook:
 
 ```bash
-conda install notebook
 conda install jupyterlab
+conda install notebook
 ```
 
 #### Using `pip`
@@ -113,10 +103,10 @@ npm install -g configurable-http-proxy
 python3 -m pip install jupyterhub
 ```
 
-If you plan to run notebook servers locally, you will need to install the
-[Jupyter notebook](https://jupyter.readthedocs.io/en/latest/install.html)
-package:
+If you plan to run notebook servers locally, you will need to install
+[JupyterLab or Jupyter notebook](https://jupyter.readthedocs.io/en/latest/install.html):
 
+    python3 -m pip install --upgrade jupyterlab
     python3 -m pip install --upgrade notebook
 
 ### Run the Hub server
@@ -239,13 +229,12 @@ docker container or Linux VM.
 We use a shared copyright model that enables all contributors to maintain the
 copyright on their contributions.
 
-All code is licensed under the terms of the revised BSD license.
+All code is licensed under the terms of the [revised BSD license](./COPYING.md).
 
 ## Help and resources
 
-We encourage you to ask questions on the [Jupyter mailing list](https://groups.google.com/forum/#!forum/jupyter).
-To participate in development discussions or get help, talk with us on
-our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
+We encourage you to ask questions and share ideas on the [Jupyter community forum](https://discourse.jupyter.org/).
+You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
 
 - [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
