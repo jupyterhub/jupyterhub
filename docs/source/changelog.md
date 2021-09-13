@@ -6,6 +6,52 @@ command line for details.
 
 ## [Unreleased]
 
+## 2.0
+
+JupyterHub 2.0 is a big release!
+
+The most significant change is the addition of [roles and scopes][rbac]
+to the JupyterHub permissions model,
+allowing more fine-grained access control.
+Read more about it [in the docs][rbac].
+
+In particular, the 'admin' level of permissions should not be needed anymore,
+and you can now grant users and services only the permissions they need, not more.
+We encourage you to review permissions, especially any service or user with `admin: true`
+and consider assigning only the necessary roles and scopes.
+
+[rbac]: ./rbac/index.md
+
+**Due to the change in permissions model,
+upgrading to 2.0 requires shutting down all user servers and re-issuing any tokens**.
+
+Other major changes that may require updates to your deployment,
+depending on what features you use:
+
+- List endpoints now support [pagination][], and have a max page size,
+  which means API consumers must be updated to make paginated requests
+  if you have a lot of users and/or groups.
+- Spawners have stopped specifying _any_ command-line options to spawners by default.
+  Previously, `--ip` and `--port` could be specified on the command-line.
+  From 2.0 forward, JupyterHub will only communicate options to Spawners via environment variables,
+  and the command to be launched is configured exclusively via `Spawner.cmd` and `Spawner.args`.
+
+[pagination]: api-pagination
+
+Other new features:
+
+- new Admin page, written in React.
+  With RBAC, it should now be fully possible to implement a custom admin panel
+  as a service via the REST API.
+- Support `jupyterhub --show-config` option to see your current jupyterhub configuration.
+- Add expiration date dropdown to Token page
+
+and major bug fixes:
+
+- Improve database rollback recovery on broken connections
+
+Plus lots of little fixes along the way.
+
 ## 1.4
 
 JupyterHub 1.4 is a small release, with several enhancements, bug fixes,

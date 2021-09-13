@@ -223,7 +223,9 @@ methods, which makes a request of the Hub, and returns:
   {
     "name": "username",
     "groups": ["list", "of", "groups"],
-    "admin": False, # or True
+    "scopes": [
+        "access:users:servers!server=username/",
+    ],
   }
   ```
 
