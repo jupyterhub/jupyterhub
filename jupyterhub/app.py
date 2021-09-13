@@ -1035,7 +1035,7 @@ class JupyterHub(Application):
 
     api_page_max_limit = Integer(
         200, help="The maximum amount of records that can be returned at once"
-    )
+    ).tag(config=True)
 
     authenticate_prometheus = Bool(
         True, help="Authentication for prometheus metrics"
