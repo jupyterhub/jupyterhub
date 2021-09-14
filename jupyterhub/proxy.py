@@ -341,10 +341,8 @@ class Proxy(LoggingConfigurable):
         if not routes:
             self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
-        # log info-level that we are starting the route-checking
-        # this may help diagnose performance issues,
-        # as we are about
-        self.log.info("Checking routes")
+
+        self.log.debug("Checking routes")
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
