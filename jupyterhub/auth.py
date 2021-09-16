@@ -88,6 +88,10 @@ class Authenticator(LoggingConfigurable):
         help="""
         Set of users that will have admin rights on this JupyterHub.
 
+        Note: As of JupyterHub 2.0,
+        full admin rights should not be required,
+        and more precise permissions can be managed via roles.
+
         Admin users have extra privileges:
          - Use the admin panel to see list of users logged in
          - Add / remove users in some authenticators
@@ -987,6 +991,10 @@ class PAMAuthenticator(LocalAuthenticator):
         Users not in these groups can still be granted admin status through admin_users.
 
         allowed/blocked rules still apply.
+
+        Note: As of JupyterHub 2.0,
+        full admin rights should not be required,
+        and more precise permissions can be managed via roles.
         """
     ).tag(config=True)
 

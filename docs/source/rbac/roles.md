@@ -1,3 +1,5 @@
+(roles)=
+
 # Roles
 
 JupyterHub provides four roles that are available by default:
