@@ -10,6 +10,15 @@ command line for details.
 
 JupyterHub 2.0 is a big release!
 
+:::{admonition} testing the beta
+2.0 is a big release and in beta;
+upgrading requires database updates and downtime,
+and may not be easily reversible if you have problems.
+
+Please test the beta if you can and give feedback,
+but **it is not recommended to test in production**!
+:::
+
 The most significant change is the addition of [roles and scopes][rbac]
 to the JupyterHub permissions model,
 allowing more fine-grained access control.
