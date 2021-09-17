@@ -31,8 +31,13 @@ and consider assigning only the necessary roles and scopes.
 
 [rbac]: ./rbac/index.md
 
-**Due to the change in permissions model,
-upgrading to 2.0 requires shutting down all user servers and re-issuing any tokens**.
+:::{admonition} stop all servers before upgrading
+
+Upgrading JupyterHub to 2.0 revokes all tokens issued before the upgrade,
+which means that single-user servers started before the upgrade
+will become inaccessible after the upgrade until they have been stopped and started again.
+To avoid this, it is best to shutdown all servers prior to the upgrade.
+:::
 
 Other major changes that may require updates to your deployment,
 depending on what features you use:
