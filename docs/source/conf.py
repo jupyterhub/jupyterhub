@@ -22,6 +22,7 @@ extensions = [
 ]
 
 myst_enable_extensions = [
+    'colon_fence',
     'deflist',
 ]
 # The master toctree document.

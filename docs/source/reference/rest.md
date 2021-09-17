@@ -17,6 +17,7 @@ such as:
 - adding or removing users
 - stopping or starting single user notebook servers
 - authenticating services
+- communicating with an individual Jupyter server's REST API
 
 A [REST](https://en.wikipedia.org/wiki/Representational_state_transfer)
 API provides a standard way for users to get and send information to the
@@ -27,8 +28,7 @@ Hub.
 To send requests using JupyterHub API, you must pass an API token with
 the request.
 
-As of [version 0.6.0](../changelog.md), the preferred way of
-generating an API token is:
+The preferred way of generating an API token is:
 
 ```bash
 openssl rand -hex 32
@@ -48,33 +48,34 @@ jupyterhub token <username>
 This command generates a random string to use as a token and registers
 it for the given user with the Hub's database.
 
-In [version 0.8.0](../changelog.md), a TOKEN request page for
+In [version 0.8.0](../changelog.md), a token request page for
 generating an API token is available from the JupyterHub user interface:
 
-![Request API TOKEN page](../images/token-request.png)
+![Request API token page](../images/token-request.png)
 
-![API TOKEN success page](../images/token-request-success.png)
+![API token success page](../images/token-request-success.png)
 
-## Add API tokens to the config file
+## Assigning permissions to a token
 
-**This is deprecated. We are in no rush to remove this feature,
-but please consider if service tokens are right for you.**
+Prior to JupyterHub 2.0, there were two levels of permissions:
 
-You may also add a dictionary of API tokens and usernames to the hub's
-configuration file, `jupyterhub_config.py` (note that
-the **key** is the 'secret-token' while the **value** is the 'username'):
+1. user, and
+2. admin
 
-```python
-c.JupyterHub.api_tokens = {
-    'secret-token': 'username',
-}
-```
+where a token would always have full permissions to do whatever its owner could do.
+
+In JupyterHub 2.0,
+specific permissions are now defined as 'scopes',
+and can be assigned both at the user/service level,
+and at the individual token level.
+
+This allows e.g. a user with full admin permissions to request a token with limited permissions.
 
 ### Updating to admin services
 
 The `api_tokens` configuration has been softly deprecated since the introduction of services.
 We have no plans to remove it,
-but users are encouraged to use service configuration instead.
+but deployments are encouraged to use service configuration instead.
 
 If you have been using `api_tokens` to create an admin user
 and a token for that user to perform some automations,
@@ -88,19 +89,40 @@ c.JupyterHub.api_tokens = {
 }
 ```
 
-This can be updated to create an admin service, with the following configuration:
+This can be updated to create a service, with the following configuration:
 
 ```python
 c.JupyterHub.services = [
     {
-        "name": "service-token",
-        "admin": True,
+        # give the token a name
+        "name": "service-admin",
         "api_token": "secret-token",
+        # "admin": True, # if using JupyterHub 1.x
     },
+]
+
+# roles are new in JupyterHub 2.0
+# prior to 2.0, only 'admin': True or False
+# was available
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "service-role",
+        "scopes": [
+            # specify the permissions the token should have
+            "admin:users",
+            "admin:services",
+        ],
+        "services": [
+            # assign the service the above permissions
+            "service-admin",
+        ],
+    }
 ]
 ```
 
-The token will have the same admin permissions,
+The token will have the permissions listed in the role
+(see [scopes][] for a list of available permissions),
 but there will no longer be a user account created to house it.
 The main noticeable difference is that there will be no notebook server associated with the account
 and the service will not show up in the various user list pages and APIs.
@@ -112,7 +134,7 @@ Authorization header.
 
 ### Use requests
 
-Using the popular Python [requests](http://docs.python-requests.org/en/master/)
+Using the popular Python [requests](https://docs.python-requests.org)
 library, here's example code to make an API request for the users of a JupyterHub
 deployment. An API GET request is made, and the request sends an API token for
 authorization. The response contains information about the users:
@@ -124,9 +146,9 @@ api_url = 'http://127.0.0.1:8081/hub/api'
 
 r = requests.get(api_url + '/users',
     headers={
-             'Authorization': 'token %s' % token,
-            }
-    )
+        'Authorization': f'token {token}',
+    }
+)
 
 r.raise_for_status()
 users = r.json()
@@ -144,38 +166,93 @@ data = {'name': 'mygroup', 'users': ['user1', 'user2']}
 
 r = requests.post(api_url + '/groups/formgrade-data301/users',
     headers={
-             'Authorization': 'token %s' % token,
-            },
-    json=data
+        'Authorization': f'token {token}',
+    },
+    json=data,
 )
 r.raise_for_status()
 r.json()
 ```
 
 The same API token can also authorize access to the [Jupyter Notebook REST API][]
-provided by notebook servers managed by JupyterHub if one of the following is true:
+provided by notebook servers managed by JupyterHub if it has the necessary `access:users:servers` scope:
 
-1. The token is for the same user as the owner of the notebook
-2. The token is tied to an admin user or service **and** `c.JupyterHub.admin_access` is set to `True`
+(api-pagination)=
 
 ## Paginating API requests
 
+```{versionadded} 2.0
+
+```
+
 Pagination is available through the `offset` and `limit` query parameters on
-certain endpoints, which can be used to return ideally sized windows of results.
+list endpoints, which can be used to return ideally sized windows of results.
 Here's example code demonstrating pagination on the `GET /users`
 endpoint to fetch the first 20 records.
 
 ```python
+import os
 import requests
 
 api_url = 'http://127.0.0.1:8081/hub/api'
 
-r = requests.get(api_url + '/users?offset=0&limit=20')
+r = requests.get(
+    api_url + '/users?offset=0&limit=20',
+    headers={
+        "Accept": "application/jupyterhub-pagination+json",
+        "Authorization": f"token {token}",
+    },
+)
 r.raise_for_status()
 r.json()
 ```
 
-By default, pagination limit will be specified by the `JupyterHub.api_page_default_limit` config variable.
+For backward-compatibility, the default structure of list responses is unchanged.
+However, this lacks pagination information (e.g. is there a next page),
+so if you have enough users that they won't fit in the first response,
+it is a good idea to opt-in to the new paginated list format.
+There is a new schema for list responses which include pagination information.
+You can request this by including the header:
+
+```
+Accept: application/jupyterhub-pagination+json
+```
+
+with your request, in which case a response will look like:
+
+```python
+{
+  "items": [
+    {
+      "name": "username",
+      "kind": "user",
+      ...
+    },
+  ],
+  "_pagination": {
+    "offset": 0,
+    "limit": 20,
+    "total": 50,
+    "next": {
+      "offset": 20,
+      "limit": 20,
+      "url": "http://127.0.0.1:8081/hub/api/users?limit=20&offset=20"
+    }
+  }
+}
+```
+
+where the list results (same as pre-2.0) will be in `items`,
+and pagination info will be in `_pagination`.
+The `next` field will include the offset, limit, and URL for requesting the next page.
+`next` will be `null` if there is no next page.
+
+Pagination is governed by two configuration options:
+
+- `JupyterHub.api_page_default_limit` - the page size, if `limit` is unspecified in the request
+  and the new pagination API is requested
+  (default: 50)
+- `JupyterHub.api_page_max_limit` - the maximum page size a request can ask for (default: 200)
 
 Pagination is enabled on the `GET /users`, `GET /groups`, and `GET /proxy` REST endpoints.
 

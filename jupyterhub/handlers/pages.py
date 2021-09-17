@@ -12,10 +12,8 @@ from tornado import web
 from tornado.httputil import url_concat
 
 from .. import __version__
-from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
-from ..pagination import Pagination
 from ..scopes import needs_scope
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -452,7 +450,8 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
-    @needs_scope('users')  # stacked decorators: all scopes must be present
+    # stacked decorators: all scopes must be present
+    # note: keep in sync with admin link condition in page.html
     @needs_scope('admin:users')
     @needs_scope('admin:servers')
     async def get(self):

@@ -87,7 +87,6 @@ from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
-from .pagination import Pagination
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
@@ -296,7 +295,7 @@ class JupyterHub(Application):
 
     @default('classes')
     def _load_classes(self):
-        classes = [Spawner, Authenticator, CryptKeeper, Pagination]
+        classes = [Spawner, Authenticator, CryptKeeper]
         for name, trait in self.traits(config=True).items():
             # load entry point groups into configurable class list
             # so that they show up in config files, etc.
@@ -1035,7 +1034,7 @@ class JupyterHub(Application):
 
     api_page_max_limit = Integer(
         200, help="The maximum amount of records that can be returned at once"
-    )
+    ).tag(config=True)
 
     authenticate_prometheus = Bool(
         True, help="Authentication for prometheus metrics"
@@ -1866,12 +1865,6 @@ class JupyterHub(Application):
         for username in admin_users:
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
-
-        if not admin_users:
-            self.log.warning("No admin users, admin interface will be unavailable.")
-            self.log.warning(
-                "Add any administrative users to `c.Authenticator.admin_users` in config."
-            )
 
         new_users = []
 
