@@ -266,7 +266,7 @@ class UserAPIHandler(APIHandler):
         self.write(json.dumps(self.user_model(user)))
         self.set_status(201)
 
-    @needs_scope('admin:users')
+    @needs_scope('delete:users')
     async def delete(self, user_name):
         user = self.find_user(user_name)
         if user is None:
@@ -525,7 +525,7 @@ class UserServerAPIHandler(APIHandler):
         self.set_header('Content-Type', 'text/plain')
         self.set_status(status)
 
-    @needs_scope('servers')
+    @needs_scope('delete:servers')
     async def delete(self, user_name, server_name=''):
         user = self.find_user(user_name)
         options = self.get_json_body()
