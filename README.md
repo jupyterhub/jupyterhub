@@ -8,12 +8,9 @@
 
 ---
 
-Please note that this repository is participating in a study into sustainability
-of open source projects. Data will be gathered about this repository for
-approximately the next 12 months, starting from 2021-06-11.
+Please note that this repository is participating in a study into the sustainability of open source projects. Data will be gathered about this repository for approximately the next 12 months, starting from 2021-06-11.
 
-Data collected will include number of contributors, number of PRs, time taken to
-close/merge these PRs, and issues closed.
+Data collected will include the number of contributors, number of PRs, time taken to close/merge these PRs, and issues closed.
 
 For more information, please visit
 [our informational page](https://sustainable-open-science-and-software.github.io/) or download our [participant information sheet](https://sustainable-open-science-and-software.github.io/assets/PIS_sustainable_software.pdf).
@@ -27,20 +24,19 @@ For more information, please visit
 [![Documentation build status](https://img.shields.io/readthedocs/jupyterhub?logo=read-the-docs)](https://jupyterhub.readthedocs.org/en/latest/)
 [![GitHub Workflow Status - Test](https://img.shields.io/github/workflow/status/jupyterhub/jupyterhub/Test?logo=github&label=tests)](https://github.com/jupyterhub/jupyterhub/actions)
 [![DockerHub build status](https://img.shields.io/docker/build/jupyterhub/jupyterhub?logo=docker&label=build)](https://hub.docker.com/r/jupyterhub/jupyterhub/tags)
-[![CircleCI build status](https://img.shields.io/circleci/build/github/jupyterhub/jupyterhub?logo=circleci)](https://circleci.com/gh/jupyterhub/jupyterhub)<!-- CircleCI Token: b5b65862eb2617b9a8d39e79340b0a6b816da8cc -->
 [![Test coverage of code](https://codecov.io/gh/jupyterhub/jupyterhub/branch/main/graph/badge.svg)](https://codecov.io/gh/jupyterhub/jupyterhub)
 [![GitHub](https://img.shields.io/badge/issue_tracking-github-blue?logo=github)](https://github.com/jupyterhub/jupyterhub/issues)
 [![Discourse](https://img.shields.io/badge/help_forum-discourse-blue?logo=discourse)](https://discourse.jupyter.org/c/jupyterhub)
 [![Gitter](https://img.shields.io/badge/social_chat-gitter-blue?logo=gitter)](https://gitter.im/jupyterhub/jupyterhub)
 
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
-**multi-user Hub** which spawns, manages, and proxies multiple instances of the
+**multi-user Hub** that spawns, manages, and proxies multiple instances of the
 single-user [Jupyter notebook](https://jupyter-notebook.readthedocs.io)
 server.
 
 [Project Jupyter](https://jupyter.org) created JupyterHub to support many
 users. The Hub can offer notebook servers to a class of students, a corporate
-data science workgroup, a scientific research project, or a high performance
+data science workgroup, a scientific research project, or a high-performance
 computing group.
 
 ## Technical overview
@@ -54,9 +50,9 @@ Three main actors make up JupyterHub:
 Basic principles for operation are:
 
 - Hub launches a proxy.
-- Proxy forwards all requests to Hub by default.
-- Hub handles login, and spawns single-user servers on demand.
-- Hub configures proxy to forward url prefixes to the single-user notebook
+- The Proxy forwards all requests to Hub by default.
+- Hub handles login and spawns single-user servers on demand.
+- Hub configures proxy to forward URL prefixes to the single-user notebook
   servers.
 
 JupyterHub also provides a
@@ -68,22 +64,14 @@ for administration of the Hub and its users.
 ### Check prerequisites
 
 - A Linux/Unix based system
-- [Python](https://www.python.org/downloads/) 3.5 or greater
+- [Python](https://www.python.org/downloads/) 3.6 or greater
 - [nodejs/npm](https://www.npmjs.com/)
 
   - If you are using **`conda`**, the nodejs and npm dependencies will be installed for
     you by conda.
 
-  - If you are using **`pip`**, install a recent version of
+  - If you are using **`pip`**, install a recent version (at least 12.0) of
     [nodejs/npm](https://docs.npmjs.com/getting-started/installing-node).
-    For example, install it on Linux (Debian/Ubuntu) using:
-
-    ```
-    sudo apt-get install npm nodejs-legacy
-    ```
-
-    The `nodejs-legacy` package installs the `node` executable and is currently
-    required for npm to work on Debian/Ubuntu.
 
 - If using the default PAM Authenticator, a [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module).
 - TLS certificate and key for HTTPS communication
@@ -99,12 +87,11 @@ To install JupyterHub along with its dependencies including nodejs/npm:
 conda install -c conda-forge jupyterhub
 ```
 
-If you plan to run notebook servers locally, install the Jupyter notebook
-or JupyterLab:
+If you plan to run notebook servers locally, install JupyterLab or Jupyter notebook:
 
 ```bash
-conda install notebook
 conda install jupyterlab
+conda install notebook
 ```
 
 #### Using `pip`
@@ -116,10 +103,10 @@ npm install -g configurable-http-proxy
 python3 -m pip install jupyterhub
 ```
 
-If you plan to run notebook servers locally, you will need to install the
-[Jupyter notebook](https://jupyter.readthedocs.io/en/latest/install.html)
-package:
+If you plan to run notebook servers locally, you will need to install
+[JupyterLab or Jupyter notebook](https://jupyter.readthedocs.io/en/latest/install.html):
 
+    python3 -m pip install --upgrade jupyterlab
     python3 -m pip install --upgrade notebook
 
 ### Run the Hub server
@@ -131,7 +118,7 @@ To start the Hub server, run the command:
 Visit `https://localhost:8000` in your browser, and sign in with your unix
 PAM credentials.
 
-_Note_: To allow multiple users to sign into the server, you will need to
+_Note_: To allow multiple users to sign in to the server, you will need to
 run the `jupyterhub` command as a _privileged user_, such as root.
 The [wiki](https://github.com/jupyterhub/jupyterhub/wiki/Using-sudo-to-run-JupyterHub-without-root-privileges)
 describes how to run the server as a _less privileged user_, which requires
@@ -242,13 +229,12 @@ docker container or Linux VM.
 We use a shared copyright model that enables all contributors to maintain the
 copyright on their contributions.
 
-All code is licensed under the terms of the revised BSD license.
+All code is licensed under the terms of the [revised BSD license](./COPYING.md).
 
 ## Help and resources
 
-We encourage you to ask questions on the [Jupyter mailing list](https://groups.google.com/forum/#!forum/jupyter).
-To participate in development discussions or get help, talk with us on
-our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
+We encourage you to ask questions and share ideas on the [Jupyter community forum](https://discourse.jupyter.org/).
+You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhub/jupyterhub) channel.
 
 - [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)

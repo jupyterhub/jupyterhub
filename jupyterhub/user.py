@@ -328,7 +328,7 @@ class User:
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
         client_id = 'jupyterhub-user-%s' % quote(self.name)
         if server_name:
-            client_id = '%s-%s' % (client_id, quote(server_name))
+            client_id = f'{client_id}-{quote(server_name)}'
 
         trusted_alt_names = []
         trusted_alt_names.extend(self.settings.get('trusted_alt_names', []))
@@ -452,7 +452,7 @@ class User:
         """Get the *host* for my server (proto://domain[:port])"""
         # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
         parsed = urlparse(self.settings['subdomain_host'])
-        h = '%s://%s' % (parsed.scheme, self.domain)
+        h = f'{parsed.scheme}://{self.domain}'
         if parsed.port:
             h += ':%i' % parsed.port
         return h
@@ -464,7 +464,7 @@ class User:
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
         if self.settings.get('subdomain_host'):
-            return '{host}{path}'.format(host=self.host, path=self.base_url)
+            return f'{self.host}{self.base_url}'
         else:
             return self.base_url
 
@@ -533,9 +533,7 @@ class User:
         else:
             # spawn via POST or on behalf of another user.
             # nothing we can do here but fail
-            raise web.HTTPError(
-                400, "{}'s authentication has expired".format(self.name)
-            )
+            raise web.HTTPError(400, f"{self.name}'s authentication has expired")
 
     async def spawn(self, server_name='', options=None, handler=None):
         """Start the user's spawner

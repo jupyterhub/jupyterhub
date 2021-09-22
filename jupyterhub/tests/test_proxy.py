@@ -101,7 +101,7 @@ async def test_external_proxy(request):
     print(app.base_url, user_path)
     host = ''
     if app.subdomain_host:
-        host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
+        host = f'{name}.{urlparse(app.subdomain_host).hostname}'
     user_spec = host + user_path
     assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 
@@ -148,7 +148,7 @@ async def test_external_proxy(request):
     await wait_for_proxy()
 
     # tell the hub where the new proxy is
-    new_api_url = 'http://{}:{}'.format(proxy_ip, proxy_port)
+    new_api_url = f'http://{proxy_ip}:{proxy_port}'
     r = await api_request(
         app,
         'proxy',

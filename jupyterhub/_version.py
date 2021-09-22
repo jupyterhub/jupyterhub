@@ -6,8 +6,8 @@ version_info = (
     2,
     0,
     0,
-    "",  # release (b1, rc1, or "" for final or dev)
-    "dev",  # dev or nothing for beta/rc/stable releases
+    "b1",  # release (b1, rc1, or "" for final or dev)
+    # "dev",  # dev or nothing for beta/rc/stable releases
 )
 
 # pep 440 version: no dot before beta/rc, but before .dev
@@ -60,7 +60,7 @@ def _check_version(hub_version, singleuser_version, log):
             log_method = log.debug
         else:
             # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
-            key = '%s-%s' % (hub_version, singleuser_version)
+            key = f'{hub_version}-{singleuser_version}'
             global _version_mismatch_warning_logged
             if _version_mismatch_warning_logged.get(key):
                 do_log = False  # We already logged this warning so don't log it again.

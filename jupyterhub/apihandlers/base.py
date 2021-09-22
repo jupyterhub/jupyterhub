@@ -2,7 +2,12 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
+from functools import lru_cache
 from http.client import responses
+from urllib.parse import parse_qs
+from urllib.parse import urlencode
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
@@ -11,6 +16,8 @@ from .. import orm
 from ..handlers import BaseHandler
 from ..utils import isoformat
 from ..utils import url_path_join
+
+PAGINATION_MEDIA_TYPE = "application/jupyterhub-pagination+json"
 
 
 class APIHandler(BaseHandler):
@@ -30,6 +37,16 @@ class APIHandler(BaseHandler):
 
     def get_content_type(self):
         return 'application/json'
+
+    @property
+    @lru_cache()
+    def accepts_pagination(self):
+        """Return whether the client accepts the pagination preview media type"""
+        accept_header = self.request.headers.get("Accept", "")
+        if not accept_header:
+            return False
+        accepts = {s.strip().lower() for s in accept_header.strip().split(",")}
+        return PAGINATION_MEDIA_TYPE in accepts
 
     def check_referer(self):
         """Check Origin for cross-site API requests.
@@ -61,14 +78,39 @@ class APIHandler(BaseHandler):
             return False
         return True
 
+    def check_post_content_type(self):
+        """Check request content-type, e.g. for cross-site POST requests
+
+        Cross-site POST via form will include content-type
+        """
+        content_type = self.request.headers.get("Content-Type")
+        if not content_type:
+            # not specified, e.g. from a script
+            return True
+
+        # parse content type for application/json
+        fields = content_type.lower().split(";")
+        if not any(f.lstrip().startswith("application/json") for f in fields):
+            self.log.warning(f"Not allowing POST with content-type: {content_type}")
+            return False
+
+        return True
+
     def get_current_user_cookie(self):
-        """Override get_user_cookie to check Referer header"""
+        """Extend get_user_cookie to add checks for CORS"""
         cookie_user = super().get_current_user_cookie()
-        # check referer only if there is a cookie user,
+        # CORS checks for cookie-authentication
+        # check these only if there is a cookie user,
         # avoiding misleading "Blocking Cross Origin" messages
         # when there's no cookie set anyway.
-        if cookie_user and not self.check_referer():
-            return None
+        if cookie_user:
+            if not self.check_referer():
+                return None
+            if (
+                self.request.method.upper() == 'POST'
+                and not self.check_post_content_type()
+            ):
+                return None
         return cookie_user
 
     def get_json_body(self):
@@ -223,11 +265,6 @@ class APIHandler(BaseHandler):
             'read:roles:users': {'kind', 'name', 'roles', 'admin'},
             'admin:auth_state': {'kind', 'name', 'auth_state'},
         }
-        self.log.debug(
-            "Asking for user model of %s with scopes [%s]",
-            user.name,
-            ", ".join(self.expanded_scopes),
-        )
         allowed_keys = set()
         model = self._filter_model(
             model, access_map, user, kind='user', keys=allowed_keys
@@ -243,7 +280,10 @@ class APIHandler(BaseHandler):
                 # (this includes pending events)
                 if spawner.active and scope_filter(spawner, kind='server'):
                     servers[name] = self.server_model(spawner)
-            if not servers:
+            if not servers and 'servers' not in allowed_keys:
+                # omit servers if no access
+                # leave present and empty
+                # if request has access to read servers in general
                 model.pop('servers')
         return model
 
@@ -344,8 +384,13 @@ class APIHandler(BaseHandler):
                 )
 
     def get_api_pagination(self):
-        default_limit = self.settings["app"].api_page_default_limit
-        max_limit = self.settings["app"].api_page_max_limit
+        default_limit = self.settings["api_page_default_limit"]
+        max_limit = self.settings["api_page_max_limit"]
+        if not self.accepts_pagination:
+            # if new pagination Accept header is not used,
+            # default to the higher max page limit to reduce likelihood
+            # of missing users due to pagination in code that hasn't been updated
+            default_limit = max_limit
         offset = self.get_argument("offset", None)
         limit = self.get_argument("limit", default_limit)
         try:
@@ -353,11 +398,51 @@ class APIHandler(BaseHandler):
             limit = abs(int(limit))
             if limit > max_limit:
                 limit = max_limit
+            if limit < 1:
+                limit = 1
         except Exception as e:
             raise web.HTTPError(
                 400, "Invalid argument type, offset and limit must be integers"
             )
         return offset, limit
+
+    def paginated_model(self, items, offset, limit, total_count):
+        """Return the paginated form of a collection (list or dict)
+
+        A dict with { items: [], _pagination: {}}
+        instead of a single list (or dict).
+
+        pagination info includes the current offset and limit,
+        the total number of results for the query,
+        and information about how to build the next page request
+        if there is one.
+        """
+        next_offset = offset + limit
+        data = {
+            "items": items,
+            "_pagination": {
+                "offset": offset,
+                "limit": limit,
+                "total": total_count,
+                "next": None,
+            },
+        }
+        if next_offset < total_count:
+            # if there's a next page
+            next_url_parsed = urlparse(self.request.full_url())
+            query = parse_qs(next_url_parsed.query)
+            query['offset'] = [next_offset]
+            query['limit'] = [limit]
+            next_url_parsed = next_url_parsed._replace(
+                query=urlencode(query, doseq=True)
+            )
+            next_url = urlunparse(next_url_parsed)
+            data["_pagination"]["next"] = {
+                "offset": next_offset,
+                "limit": limit,
+                "url": next_url,
+            }
+        return data
 
     def options(self, *args, **kwargs):
         self.finish()

@@ -12,10 +12,8 @@ from tornado import web
 from tornado.httputil import url_concat
 
 from .. import __version__
-from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
-from ..pagination import Pagination
 from ..scopes import needs_scope
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -239,7 +237,7 @@ class SpawnHandler(BaseHandler):
             raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
         elif spawner.pending:
             raise web.HTTPError(
-                400, "%s is pending %s" % (spawner._log_name, spawner.pending)
+                400, f"{spawner._log_name} is pending {spawner.pending}"
             )
 
         form_options = {}
@@ -348,9 +346,7 @@ class SpawnPendingHandler(BaseHandler):
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
         if server_name and server_name not in user.spawners:
-            raise web.HTTPError(
-                404, "%s has no such server %s" % (user.name, server_name)
-            )
+            raise web.HTTPError(404, f"{user.name} has no such server {server_name}")
 
         spawner = user.spawners[server_name]
 
@@ -454,7 +450,8 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
-    @needs_scope('users')  # stacked decorators: all scopes must be present
+    # stacked decorators: all scopes must be present
+    # note: keep in sync with admin link condition in page.html
     @needs_scope('admin:users')
     @needs_scope('admin:servers')
     async def get(self):
@@ -466,8 +463,8 @@ class AdminHandler(BaseHandler):
             admin_access=self.settings.get('admin_access', False),
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
-            server_version='{} {}'.format(__version__, self.version_hash),
-            api_page_limit=self.settings["app"].api_page_default_limit,
+            server_version=f'{__version__} {self.version_hash}',
+            api_page_limit=self.settings["api_page_default_limit"],
         )
         self.finish(html)
 

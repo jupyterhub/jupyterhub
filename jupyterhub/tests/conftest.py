@@ -182,7 +182,7 @@ def cleanup_after(request, io_loop):
         if not MockHub.initialized():
             return
         app = MockHub.instance()
-        for uid, user in app.users.items():
+        for uid, user in list(app.users.items()):
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
                     try:
@@ -190,6 +190,11 @@ def cleanup_after(request, io_loop):
                     except HTTPError:
                         pass
                     io_loop.run_sync(lambda: user.stop(name))
+            if user.name not in {'admin', 'user'}:
+                app.users.delete(uid)
+        # delete groups
+        for group in app.db.query(orm.Group):
+            app.db.delete(group)
         app.db.commit()
 
 
@@ -200,7 +205,7 @@ def new_username(prefix='testuser'):
     """Return a new unique username"""
     global _username_counter
     _username_counter += 1
-    return '{}-{}'.format(prefix, _username_counter)
+    return f'{prefix}-{_username_counter}'
 
 
 @fixture
@@ -227,6 +232,39 @@ def admin_user(app, username):
     """Fixture for creating a temporary admin user"""
     user = add_user(app.db, app, name=new_username('testadmin'), admin=True)
     yield user
+
+
+_groupname_counter = 0
+
+
+def new_group_name(prefix='testgroup'):
+    """Return a new unique group name"""
+    global _groupname_counter
+    _groupname_counter += 1
+    return f'{prefix}-{_groupname_counter}'
+
+
+@fixture
+def groupname():
+    """allocate a temporary group name
+
+    unique each time the fixture is used
+    """
+    yield new_group_name()
+
+
+@fixture
+def group(app):
+    """Fixture for creating a temporary group
+
+    Each time the fixture is used, a new group is created
+
+    The group is deleted after the test
+    """
+    group = orm.Group(name=new_group_name())
+    app.db.add(group)
+    app.db.commit()
+    yield group
 
 
 class MockServiceSpawner(jupyterhub.services.service._ServiceSpawner):

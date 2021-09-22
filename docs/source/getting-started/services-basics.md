@@ -93,17 +93,39 @@ In `jupyterhub_config.py`, add the following dictionary for the
 c.JupyterHub.services = [
     {
         'name': 'idle-culler',
-        'admin': True,
         'command': [sys.executable, '-m', 'jupyterhub_idle_culler', '--timeout=3600'],
+    }
+]
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "list-and-cull", # name the role
+        "services": [
+            "idle-culler", # assign the service to this role
+        ],
+        "scopes": [
+            # declare what permissions the service should have
+            "list:users", # list users
+            "read:users:activity", # read user last-activity
+            "admin:servers", # start/stop servers
+        ],
     }
 ]
 ```
 
 where:
 
-- `'admin': True` indicates that the Service has 'admin' permissions, and
-- `'command'` indicates that the Service will be launched as a
+- `command` indicates that the Service will be launched as a
   subprocess, managed by the Hub.
+
+```{versionchanged} 2.0
+Prior to 2.0, the idle-culler required 'admin' permissions.
+It now needs the scopes:
+
+- `list:users` to access the user list endpoint
+- `read:users:activity` to read activity info
+- `admin:servers` to start/stop servers
+```
 
 ## Run `cull-idle` manually as a standalone script
 
@@ -114,7 +136,8 @@ interact with it.
 This will run the idle culler service manually. It can be run as a standalone
 script anywhere with access to the Hub, and will periodically check for idle
 servers and shut them down via the Hub's REST API. In order to shutdown the
-servers, the token given to `cull-idle` must have admin privileges.
+servers, the token given to `cull-idle` must have permission to list users
+and admin their servers.
 
 Generate an API token and store it in the `JUPYTERHUB_API_TOKEN` environment
 variable. Run `jupyterhub_idle_culler` manually.

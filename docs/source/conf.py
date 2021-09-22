@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 import os
 import sys
@@ -22,13 +21,17 @@ extensions = [
     'myst_parser',
 ]
 
+myst_enable_extensions = [
+    'colon_fence',
+    'deflist',
+]
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
-project = u'JupyterHub'
-copyright = u'2016, Project Jupyter team'
-author = u'Project Jupyter team'
+project = 'JupyterHub'
+copyright = '2016, Project Jupyter team'
+author = 'Project Jupyter team'
 
 # Autopopulate version
 from os.path import dirname
@@ -143,8 +146,8 @@ latex_documents = [
     (
         master_doc,
         'JupyterHub.tex',
-        u'JupyterHub Documentation',
-        u'Project Jupyter team',
+        'JupyterHub Documentation',
+        'Project Jupyter team',
         'manual',
     )
 ]
@@ -161,7 +164,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, 'jupyterhub', u'JupyterHub Documentation', [author], 1)]
+man_pages = [(master_doc, 'jupyterhub', 'JupyterHub Documentation', [author], 1)]
 
 # man_show_urls = False
 
@@ -175,7 +178,7 @@ texinfo_documents = [
     (
         master_doc,
         'JupyterHub',
-        u'JupyterHub Documentation',
+        'JupyterHub Documentation',
         author,
         'JupyterHub',
         'One line description of project.',

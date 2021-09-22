@@ -2,9 +2,22 @@
 
 c = get_config()  # noqa
 
-# Add some users.
-c.JupyterHub.admin_users = {'rhea'}
+# Add some users
 c.Authenticator.allowed_users = {'ganymede', 'io', 'rhea'}
+
+c.JupyterHub.load_roles = [
+    {
+        "name": "user-admin",
+        "scopes": [
+            "admin:groups",
+            "admin:users",
+            "admin:servers",
+        ],
+        "users": [
+            "rhea",
+        ],
+    }
+]
 
 # These environment variables are automatically supplied by the linked postgres
 # container.
