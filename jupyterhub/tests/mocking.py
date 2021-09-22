@@ -46,12 +46,10 @@ from .. import orm
 from .. import roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
-from ..objects import Server
 from ..singleuser import SingleUserNotebookApp
-from ..spawner import LocalProcessSpawner
 from ..spawner import SimpleLocalProcessSpawner
 from ..utils import random_port
-from ..utils import url_path_join
+from ..utils import utcnow
 from .utils import async_requests
 from .utils import public_host
 from .utils import public_url
@@ -219,9 +217,7 @@ class MockPAMAuthenticator(PAMAuthenticator):
             close_session=mock_open_session,
             check_account=mock_check_account,
         ):
-            username = await super(MockPAMAuthenticator, self).authenticate(
-                *args, **kwargs
-            )
+            username = await super().authenticate(*args, **kwargs)
         if username is None:
             return
         elif self.auth_state:
@@ -329,6 +325,8 @@ class MockHub(JupyterHub):
         user = self.db.query(orm.User).filter(orm.User.name == 'user').first()
         if user is None:
             user = orm.User(name='user')
+            # avoid initial state inconsistency by setting initial activity
+            user.last_activity = utcnow()
             self.db.add(user)
             self.db.commit()
             metrics.TOTAL_USERS.inc()

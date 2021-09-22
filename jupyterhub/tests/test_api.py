@@ -10,13 +10,17 @@ from unittest import mock
 from urllib.parse import quote
 from urllib.parse import urlparse
 
+from pytest import fixture
 from pytest import mark
+from tornado.httputil import url_concat
 
 import jupyterhub
 from .. import orm
+from ..apihandlers.base import PAGINATION_MEDIA_TYPE
 from ..objects import Server
 from ..utils import url_path_join as ujoin
 from ..utils import utcnow
+from .conftest import new_username
 from .mocking import public_host
 from .mocking import public_url
 from .utils import add_user
@@ -61,7 +65,7 @@ async def test_auth_api(app):
     assert r.status_code == 403
 
 
-async def test_referer_check(app):
+async def test_cors_checks(app):
     url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
     # add admin user
@@ -105,6 +109,32 @@ async def test_referer_check(app):
         cookies=cookies,
     )
     assert r.status_code == 200
+
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data='{}',
+        headers={
+            "Authorization": "",
+            "Content-Type": "text/plain",
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 403
+
+    r = await api_request(
+        app,
+        'users',
+        method='post',
+        data='{}',
+        headers={
+            "Authorization": "",
+            "Content-Type": "application/json; charset=UTF-8",
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 400  # accepted, but invalid
 
 
 # --------------
@@ -154,11 +184,10 @@ def fill_user(model):
     model.setdefault('roles', [])
     model.setdefault('groups', [])
     model.setdefault('admin', False)
-    model.setdefault('server', None)
     model.setdefault('pending', None)
     model.setdefault('created', TIMESTAMP)
     model.setdefault('last_activity', TIMESTAMP)
-    # model.setdefault('servers', {})
+    model.setdefault('servers', {})
     return model
 
 
@@ -169,6 +198,7 @@ TIMESTAMP = normalize_timestamp(datetime.now().isoformat() + 'Z')
 @mark.role
 async def test_get_users(app):
     db = app.db
+
     r = await api_request(app, 'users', headers=auth_header(db, 'admin'))
     assert r.status_code == 200
 
@@ -178,7 +208,6 @@ async def test_get_users(app):
         'name': 'user',
         'admin': False,
         'roles': ['user'],
-        'last_activity': None,
         'auth_state': None,
     }
     assert users == [
@@ -188,41 +217,119 @@ async def test_get_users(app):
         fill_user(user_model),
     ]
     r = await api_request(app, 'users', headers=auth_header(db, 'user'))
+    assert r.status_code == 403
+
+
+@fixture
+def default_page_limit(app):
+    """Set and return low default page size for testing"""
+    n = 10
+    with mock.patch.dict(app.tornado_settings, {"api_page_default_limit": n}):
+        yield n
+
+
+@fixture
+def max_page_limit(app):
+    """Set and return low max page size for testing"""
+    n = 20
+    with mock.patch.dict(app.tornado_settings, {"api_page_max_limit": n}):
+        yield n
+
+
+@mark.user
+@mark.role
+@mark.parametrize(
+    "n, offset, limit, accepts_pagination, expected_count",
+    [
+        (10, None, None, False, 10),
+        (10, None, None, True, 10),
+        (10, 5, None, True, 5),
+        (10, 5, None, False, 5),
+        (10, 5, 1, True, 1),
+        (10, 10, 10, True, 0),
+        (  # default page limit, pagination expected
+            30,
+            None,
+            None,
+            True,
+            'default',
+        ),
+        (
+            # default max page limit, pagination not expected
+            30,
+            None,
+            None,
+            False,
+            'max',
+        ),
+        (
+            # limit exceeded
+            30,
+            None,
+            500,
+            False,
+            'max',
+        ),
+    ],
+)
+async def test_get_users_pagination(
+    app,
+    n,
+    offset,
+    limit,
+    accepts_pagination,
+    expected_count,
+    default_page_limit,
+    max_page_limit,
+):
+    db = app.db
+
+    if expected_count == 'default':
+        expected_count = default_page_limit
+    elif expected_count == 'max':
+        expected_count = max_page_limit
+    # populate users
+    usernames = []
+
+    existing_users = db.query(orm.User).order_by(orm.User.id.asc())
+    usernames.extend(u.name for u in existing_users)
+
+    for i in range(n - existing_users.count()):
+        name = new_username()
+        usernames.append(name)
+        add_user(db, app, name=name)
+    print(f"{db.query(orm.User).count()} total users")
+
+    url = 'users'
+    params = {}
+    if offset:
+        params['offset'] = offset
+    if limit:
+        params['limit'] = limit
+    url = url_concat(url, params)
+    headers = auth_header(db, 'admin')
+    if accepts_pagination:
+        headers['Accept'] = PAGINATION_MEDIA_TYPE
+    r = await api_request(app, url, headers=headers)
     assert r.status_code == 200
-    r_user_model = r.json()[0]
-    assert r_user_model['name'] == user_model['name']
+    response = r.json()
+    if accepts_pagination:
+        assert set(response) == {
+            "items",
+            "_pagination",
+        }
+        pagination = response["_pagination"]
+        users = response["items"]
+    else:
+        users = response
+    assert len(users) == expected_count
+    expected_usernames = usernames
+    if offset:
+        expected_usernames = expected_usernames[offset:]
+    expected_usernames = expected_usernames[:expected_count]
 
-    # Tests offset for pagination
-    r = await api_request(app, 'users?offset=1')
-    assert r.status_code == 200
-
-    users = sorted(r.json(), key=lambda d: d['name'])
-    users = [normalize_user(u) for u in users]
-    assert users == [
-        fill_user(
-            {'name': 'user', 'admin': False, 'auth_state': None, 'roles': ['user']}
-        )
-    ]
-
-    r = await api_request(app, 'users?offset=20')
-    assert r.status_code == 200
-    assert r.json() == []
-
-    # Test limit for pagination
-    r = await api_request(app, 'users?limit=1')
-    assert r.status_code == 200
-
-    users = sorted(r.json(), key=lambda d: d['name'])
-    users = [normalize_user(u) for u in users]
-    assert users == [
-        fill_user(
-            {'name': 'admin', 'admin': True, 'auth_state': None, 'roles': ['admin']}
-        )
-    ]
-
-    r = await api_request(app, 'users?limit=0')
-    assert r.status_code == 200
-    assert r.json() == []
+    got_usernames = [u['name'] for u in users]
+    assert got_usernames == expected_usernames
 
 
 @mark.user
@@ -242,9 +349,12 @@ async def test_get_users_state_filter(app, state):
     # has_zero: no Spawners registered at all
     has_zero = add_user(db, app=app, name='has_zero')
 
-    test_usernames = set(
-        ("has_one_active", "has_two_active", "has_two_inactive", "has_zero")
-    )
+    test_usernames = {
+        "has_one_active",
+        "has_two_active",
+        "has_two_inactive",
+        "has_zero",
+    }
 
     user_states = {
         "inactive": ["has_two_inactive", "has_zero"],
@@ -280,7 +390,7 @@ async def test_get_users_state_filter(app, state):
     add_spawner(has_one_active, active=True, ready=False)
     add_spawner(has_one_active, "inactive", active=False)
 
-    r = await api_request(app, 'users?state={}'.format(state))
+    r = await api_request(app, f'users?state={state}')
     if state == "invalid":
         assert r.status_code == 400
         return
@@ -908,7 +1018,7 @@ async def test_progress(request, app, no_patience, slow_spawn):
     url = app_user.url
     assert evt == {
         'progress': 100,
-        'message': 'Server ready at {}'.format(url),
+        'message': f'Server ready at {url}',
         'html_message': 'Server ready at <a href="{0}">{0}</a>'.format(url),
         'url': url,
         'ready': True,
@@ -1514,10 +1624,11 @@ async def test_groups_list(app):
         }
     ]
 
+    # 0 is rounded up to 1
     r = await api_request(app, "groups?limit=0")
     r.raise_for_status()
     reply = r.json()
-    assert reply == []
+    assert reply == [{'kind': 'group', 'name': 'alphaflight', 'users': [], 'roles': []}]
 
 
 @mark.group
@@ -1541,6 +1652,9 @@ async def test_add_multi_group(app):
 
 @mark.group
 async def test_group_get(app):
+    group = orm.Group(name='alphaflight')
+    app.db.add(group)
+    app.db.commit()
     group = orm.Group.find(app.db, name='alphaflight')
     user = add_user(app.db, app=app, name='sasquatch')
     group.users.append(user)
@@ -1564,6 +1678,7 @@ async def test_group_get(app):
 @mark.group
 async def test_group_create_delete(app):
     db = app.db
+    user = add_user(app.db, app=app, name='sasquatch')
     r = await api_request(app, 'groups/runaways', method='delete')
     assert r.status_code == 404
 
@@ -1601,16 +1716,17 @@ async def test_group_create_delete(app):
 
 
 @mark.group
-async def test_group_add_users(app):
+async def test_group_add_delete_users(app):
     db = app.db
+    group = orm.Group(name='alphaflight')
+    app.db.add(group)
+    app.db.commit()
     # must specify users
     r = await api_request(app, 'groups/alphaflight/users', method='post', data='{}')
     assert r.status_code == 400
 
     names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
-    users = [
-        find_user(db, name=name) or add_user(db, app=app, name=name) for name in names
-    ]
+    users = [add_user(db, app=app, name=name) for name in names]
     r = await api_request(
         app,
         'groups/alphaflight/users',
@@ -1624,18 +1740,8 @@ async def test_group_add_users(app):
         assert [g.name for g in user.groups] == ['alphaflight']
 
     group = orm.Group.find(db, name='alphaflight')
-    assert sorted([u.name for u in group.users]) == sorted(names)
+    assert sorted(u.name for u in group.users) == sorted(names)
 
-
-@mark.group
-async def test_group_delete_users(app):
-    db = app.db
-    # must specify users
-    r = await api_request(app, 'groups/alphaflight/users', method='delete', data='{}')
-    assert r.status_code == 400
-
-    names = ['aurora', 'guardian', 'northstar', 'sasquatch', 'shaman', 'snowbird']
-    users = [find_user(db, name=name) for name in names]
     r = await api_request(
         app,
         'groups/alphaflight/users',
@@ -1650,7 +1756,7 @@ async def test_group_delete_users(app):
         assert [g.name for g in user.groups] == ['alphaflight']
 
     group = orm.Group.find(db, name='alphaflight')
-    assert sorted([u.name for u in group.users]) == sorted(names[2:])
+    assert sorted(u.name for u in group.users) == sorted(names[2:])
 
 
 @mark.group
@@ -1790,8 +1896,8 @@ async def test_update_activity_403(app, user, admin_user):
     token = user.new_api_token()
     r = await api_request(
         app,
-        "users/{}/activity".format(admin_user.name),
-        headers={"Authorization": "token {}".format(token)},
+        f"users/{admin_user.name}/activity",
+        headers={"Authorization": f"token {token}"},
         data="{}",
         method="post",
     )
@@ -1802,8 +1908,8 @@ async def test_update_activity_admin(app, user, admin_user):
     token = admin_user.new_api_token(roles=['admin'])
     r = await api_request(
         app,
-        "users/{}/activity".format(user.name),
-        headers={"Authorization": "token {}".format(token)},
+        f"users/{user.name}/activity",
+        headers={"Authorization": f"token {token}"},
         data=json.dumps({"last_activity": utcnow().isoformat()}),
         method="post",
     )
@@ -1839,8 +1945,8 @@ async def test_update_server_activity(app, user, server_name, fresh):
 
     r = await api_request(
         app,
-        "users/{}/activity".format(user.name),
-        headers={"Authorization": "token {}".format(token)},
+        f"users/{user.name}/activity",
+        headers={"Authorization": f"token {token}"},
         data=json.dumps(
             {"servers": {server_name: {"last_activity": activity.isoformat()}}}
         ),

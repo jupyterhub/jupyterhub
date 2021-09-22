@@ -341,10 +341,8 @@ class Proxy(LoggingConfigurable):
         if not routes:
             self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
-        # log info-level that we are starting the route-checking
-        # this may help diagnose performance issues,
-        # as we are about
-        self.log.info("Checking routes")
+
+        self.log.debug("Checking routes")
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
@@ -509,7 +507,7 @@ class ConfigurableHTTPProxy(Proxy):
         if self.app.internal_ssl:
             proto = 'https'
 
-        return "{proto}://{url}".format(proto=proto, url=url)
+        return f"{proto}://{url}"
 
     command = Command(
         'configurable-http-proxy',
@@ -565,7 +563,7 @@ class ConfigurableHTTPProxy(Proxy):
         pid_file = os.path.abspath(self.pid_file)
         self.log.warning("Found proxy pid file: %s", pid_file)
         try:
-            with open(pid_file, "r") as f:
+            with open(pid_file) as f:
                 pid = int(f.read().strip())
         except ValueError:
             self.log.warning("%s did not appear to contain a pid", pid_file)
@@ -711,8 +709,9 @@ class ConfigurableHTTPProxy(Proxy):
         def _check_process():
             status = self.proxy_process.poll()
             if status is not None:
-                e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                raise e from None
+                with self.proxy_process:
+                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
+                    raise e from None
 
         for server in (public_server, api_server):
             for i in range(10):
@@ -822,7 +821,7 @@ class ConfigurableHTTPProxy(Proxy):
         req = HTTPRequest(
             url,
             method=method,
-            headers={'Authorization': 'token {}'.format(self.auth_token)},
+            headers={'Authorization': f'token {self.auth_token}'},
             body=body,
             connect_timeout=3,  # default: 20s
             request_timeout=10,  # default: 20s
@@ -844,13 +843,13 @@ class ConfigurableHTTPProxy(Proxy):
                     )
                     return False  # a falsy return value make exponential_backoff retry
                 else:
-                    self.log.error("api_request to proxy failed: {0}".format(e))
+                    self.log.error(f"api_request to proxy failed: {e}")
                     # An unhandled error here will help the hub invoke cleanup logic
                     raise
 
         result = await exponential_backoff(
             _wait_for_api_request,
-            'Repeated api_request to proxy path "{}" failed.'.format(path),
+            f'Repeated api_request to proxy path "{path}" failed.',
             timeout=30,
         )
         return result

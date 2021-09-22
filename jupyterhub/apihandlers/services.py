@@ -7,16 +7,18 @@ Currently GET-only, no actions can be taken to modify services.
 import json
 
 from ..scopes import needs_scope
+from ..scopes import Scope
 from .base import APIHandler
 
 
 class ServiceListAPIHandler(APIHandler):
-    @needs_scope('read:services', 'read:services:name', 'read:roles:services')
+    @needs_scope('list:services')
     def get(self):
         data = {}
+        service_scope = self.parsed_scopes['list:services']
         for name, service in self.services.items():
-            model = self.service_model(service)
-            if model:
+            if service_scope == Scope.ALL or name in service_scope.get("service", {}):
+                model = self.service_model(service)
                 data[name] = model
         self.write(json.dumps(data))
 

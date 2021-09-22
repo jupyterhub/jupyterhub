@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-# coding: utf-8
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 # -----------------------------------------------------------------------------
 # Minimal Python version sanity check (from IPython)
 # -----------------------------------------------------------------------------
-from __future__ import print_function
-
 import os
 import shutil
 import sys
@@ -239,8 +236,8 @@ class CSS(BaseCommand):
             'lessc',
             '--',
             '--clean-css',
-            '--source-map-basepath={}'.format(static),
-            '--source-map={}'.format(sourcemap),
+            f'--source-map-basepath={static}',
+            f'--source-map={sourcemap}',
             '--source-map-rootpath=../',
             style_less,
             style_css,

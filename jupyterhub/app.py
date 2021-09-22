@@ -87,7 +87,6 @@ from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
 from .log import CoroutineLogFormatter, log_request
-from .pagination import Pagination
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
@@ -296,7 +295,7 @@ class JupyterHub(Application):
 
     @default('classes')
     def _load_classes(self):
-        classes = [Spawner, Authenticator, CryptKeeper, Pagination]
+        classes = [Spawner, Authenticator, CryptKeeper]
         for name, trait in self.traits(config=True).items():
             # load entry point groups into configurable class list
             # so that they show up in config files, etc.
@@ -1035,7 +1034,7 @@ class JupyterHub(Application):
 
     api_page_max_limit = Integer(
         200, help="The maximum amount of records that can be returned at once"
-    )
+    ).tag(config=True)
 
     authenticate_prometheus = Bool(
         True, help="Authentication for prometheus metrics"
@@ -1867,12 +1866,6 @@ class JupyterHub(Application):
             if not self.authenticator.validate_username(username):
                 raise ValueError("username %r is not valid" % username)
 
-        if not admin_users:
-            self.log.warning("No admin users, admin interface will be unavailable.")
-            self.log.warning(
-                "Add any administrative users to `c.Authenticator.admin_users` in config."
-            )
-
         new_users = []
 
         for name in admin_users:
@@ -2208,7 +2201,7 @@ class JupyterHub(Application):
         """
         # this should be all the subclasses of Expiring
         for cls in (orm.APIToken, orm.OAuthCode):
-            self.log.debug("Purging expired {name}s".format(name=cls.__name__))
+            self.log.debug(f"Purging expired {cls.__name__}s")
             cls.purge_expired(self.db)
 
     async def init_api_tokens(self):
@@ -2232,7 +2225,7 @@ class JupyterHub(Application):
         if self.domain:
             domain = 'services.' + self.domain
             parsed = urlparse(self.subdomain_host)
-            host = '%s://services.%s' % (parsed.scheme, parsed.netloc)
+            host = f'{parsed.scheme}://services.{parsed.netloc}'
         else:
             domain = host = ''
 
@@ -2359,14 +2352,12 @@ class JupyterHub(Application):
 
         def _user_summary(user):
             """user is an orm.User, not a full user"""
-            parts = ['{0: >8}'.format(user.name)]
+            parts = [f'{user.name: >8}']
             if user.admin:
                 parts.append('admin')
             for name, spawner in sorted(user.orm_spawners.items(), key=itemgetter(0)):
                 if spawner.server:
-                    parts.append(
-                        '%s:%s running at %s' % (user.name, name, spawner.server)
-                    )
+                    parts.append(f'{user.name}:{name} running at {spawner.server}')
             return ' '.join(parts)
 
         async def user_stopped(user, server_name):
@@ -2596,6 +2587,8 @@ class JupyterHub(Application):
             activity_resolution=self.activity_resolution,
             admin_users=self.authenticator.admin_users,
             admin_access=self.admin_access,
+            api_page_default_limit=self.api_page_default_limit,
+            api_page_max_limit=self.api_page_max_limit,
             authenticator=self.authenticator,
             spawner_class=self.spawner_class,
             base_url=self.base_url,
@@ -2701,7 +2694,7 @@ class JupyterHub(Application):
             self.log.warning(
                 "Use JupyterHub in config, not JupyterHubApp. Outdated config:\n%s",
                 '\n'.join(
-                    'JupyterHubApp.{key} = {value!r}'.format(key=key, value=value)
+                    f'JupyterHubApp.{key} = {value!r}'
                     for key, value in self.config.JupyterHubApp.items()
                 ),
             )
@@ -2723,7 +2716,7 @@ class JupyterHub(Application):
                 mod = sys.modules.get(cls.__module__.split('.')[0])
                 version = getattr(mod, '__version__', '')
                 if version:
-                    version = '-{}'.format(version)
+                    version = f'-{version}'
             else:
                 version = ''
             self.log.info(
@@ -3023,11 +3016,7 @@ class JupyterHub(Application):
 
         # start the service(s)
         for service_name, service in self._service_map.items():
-            msg = (
-                '%s at %s' % (service_name, service.url)
-                if service.url
-                else service_name
-            )
+            msg = f'{service_name} at {service.url}' if service.url else service_name
             if service.managed:
                 self.log.info("Starting managed service %s", msg)
                 try:
