@@ -1,16 +1,7 @@
-"""Null Authenticator for JupyterHub
-
-For cases where authentication should be disabled,
-e.g. only allowing access via API tokens.
-"""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from jupyterhub.auth import Authenticator
-from jupyterhub.handlers.base import BaseHandler
-
-__version__ = '1.0.0.dev'
+from .auth import Authenticator
+from .handlers.base import BaseHandler
 
 
 class NullLoginHandler(BaseHandler):
@@ -19,6 +10,13 @@ class NullLoginHandler(BaseHandler):
 
 
 class NullAuthenticator(Authenticator):
+    """Null Authenticator for JupyterHub
+
+    For cases where authentication should be disabled,
+    e.g. only allowing access via API tokens.
+
+    .. versionadded:: 2.0
+    """
 
     # auto_login skips 'Login with...' page on Hub 0.8
     auto_login = True
