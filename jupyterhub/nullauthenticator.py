@@ -1,5 +1,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
+from tornado import web
+
 from .auth import Authenticator
 from .handlers.base import BaseHandler
 
