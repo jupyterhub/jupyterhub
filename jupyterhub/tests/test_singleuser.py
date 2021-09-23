@@ -1,6 +1,10 @@
 """Tests for jupyterhub.singleuser"""
+import os
 import sys
+from contextlib import contextmanager
+from subprocess import CalledProcessError
 from subprocess import check_output
+from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
@@ -12,6 +16,12 @@ from .mocking import public_url
 from .mocking import StubSingleUserSpawner
 from .utils import async_requests
 from .utils import AsyncSession
+
+
+@contextmanager
+def nullcontext():
+    """Python 3.7+ contextlib.nullcontext, backport for 3.6"""
+    yield
 
 
 @pytest.mark.parametrize(
@@ -171,3 +181,47 @@ def test_version():
         [sys.executable, '-m', 'jupyterhub.singleuser', '--version']
     ).decode('utf8', 'replace')
     assert jupyterhub.__version__ in out
+
+
+@pytest.mark.parametrize(
+    "JUPYTERHUB_SINGLEUSER_APP",
+    [
+        "",
+        "notebook.notebookapp.NotebookApp",
+        "jupyter_server.serverapp.ServerApp",
+    ],
+)
+def test_singleuser_app_class(JUPYTERHUB_SINGLEUSER_APP):
+    try:
+        import jupyter_server  # noqa
+    except ImportError:
+        have_server = False
+        expect_error = "jupyter_server" in JUPYTERHUB_SINGLEUSER_APP
+    else:
+        have_server = True
+        expect_error = False
+
+    if expect_error:
+        ctx = pytest.raises(CalledProcessError)
+    else:
+        ctx = nullcontext()
+
+    with mock.patch.dict(
+        os.environ,
+        {
+            "JUPYTERHUB_SINGLEUSER_APP": JUPYTERHUB_SINGLEUSER_APP,
+        },
+    ):
+        with ctx:
+            out = check_output(
+                [sys.executable, '-m', 'jupyterhub.singleuser', '--help-all']
+            ).decode('utf8', 'replace')
+    if expect_error:
+        return
+    # use help-all output to check inheritance
+    if 'NotebookApp' in JUPYTERHUB_SINGLEUSER_APP or not have_server:
+        assert '--NotebookApp.' in out
+        assert '--ServerApp.' not in out
+    else:
+        assert '--ServerApp.' in out
+        assert '--NotebookApp.' not in out
