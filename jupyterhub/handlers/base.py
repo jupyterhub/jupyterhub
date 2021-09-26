@@ -490,7 +490,7 @@ class BaseHandler(RequestHandler):
         session_id = self.get_session_cookie()
         if session_id:
             # clear session id
-            self.clear_cookie(SESSION_COOKIE_NAME, **kwargs)
+            self.clear_cookie(SESSION_COOKIE_NAME, path=self.base_url, **kwargs)
 
             if user:
                 # user is logged in, clear any tokens associated with the current session
@@ -569,7 +569,7 @@ class BaseHandler(RequestHandler):
         so other services on this domain can read it.
         """
         session_id = uuid.uuid4().hex
-        self._set_cookie(SESSION_COOKIE_NAME, session_id, encrypted=False)
+        self._set_cookie(SESSION_COOKIE_NAME, session_id, encrypted=False, path=self.base_url)
         return session_id
 
     def set_service_cookie(self, user):
