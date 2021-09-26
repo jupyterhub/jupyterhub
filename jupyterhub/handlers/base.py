@@ -569,7 +569,9 @@ class BaseHandler(RequestHandler):
         so other services on this domain can read it.
         """
         session_id = uuid.uuid4().hex
-        self._set_cookie(SESSION_COOKIE_NAME, session_id, encrypted=False, path=self.base_url)
+        self._set_cookie(
+            SESSION_COOKIE_NAME, session_id, encrypted=False, path=self.base_url
+        )
         return session_id
 
     def set_service_cookie(self, user):
