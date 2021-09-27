@@ -301,7 +301,7 @@ class develop_js_css(develop):
         if not self.uninstall:
             self.distribution.run_command('js')
             self.distribution.run_command('css')
-        develop.run(self)
+        super().run()
 
 
 setup_args['cmdclass']['develop'] = develop_js_css
