@@ -29,7 +29,7 @@ def get_token():
     token_file = here.joinpath("service-token")
     log.info(f"Loading token from {token_file}")
     with token_file.open("r") as f:
-        token = f.read()
+        token = f.read().strip()
     return token
 
 
