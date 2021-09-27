@@ -36,12 +36,15 @@ scope_definitions = {
     },
     'admin:users': {
         'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
-        'subscopes': ['admin:auth_state', 'users', 'read:roles:users'],
+        'subscopes': ['admin:auth_state', 'users', 'read:roles:users', 'delete:users'],
     },
     'admin:auth_state': {'description': 'Read a user’s authentication state.'},
     'users': {
         'description': 'Read and write permissions to user models (excluding servers, tokens and authentication state).',
         'subscopes': ['read:users', 'list:users', 'users:activity'],
+    },
+    'delete:users': {
+        'description': "Delete users.",
     },
     'list:users': {
         'description': 'List users, including at least their names.',
@@ -76,12 +79,13 @@ scope_definitions = {
     'admin:server_state': {'description': 'Read and write users’ server state.'},
     'servers': {
         'description': 'Start and stop user servers.',
-        'subscopes': ['read:servers'],
+        'subscopes': ['read:servers', 'delete:servers'],
     },
     'read:servers': {
         'description': 'Read users’ names and their server models (excluding the server state).',
         'subscopes': ['read:users:name'],
     },
+    'delete:servers': {'description': "Stop and delete users' servers."},
     'tokens': {
         'description': 'Read, write, create and delete user tokens.',
         'subscopes': ['read:tokens'],
@@ -89,7 +93,7 @@ scope_definitions = {
     'read:tokens': {'description': 'Read user tokens.'},
     'admin:groups': {
         'description': 'Read and write group information, create and delete groups.',
-        'subscopes': ['groups', 'read:roles:groups'],
+        'subscopes': ['groups', 'read:roles:groups', 'delete:groups'],
     },
     'groups': {
         'description': 'Read and write group information, including adding/removing users to/from groups.',
@@ -104,6 +108,9 @@ scope_definitions = {
         'subscopes': ['read:groups:name'],
     },
     'read:groups:name': {'description': 'Read group names.'},
+    'delete:groups': {
+        'description': "Delete groups.",
+    },
     'list:services': {
         'description': 'List services, including at least their names.',
         'subscopes': ['read:services:name'],

@@ -89,6 +89,7 @@ def expand_self_scope(name):
         'users:activity',
         'read:users:activity',
         'servers',
+        'delete:servers',
         'read:servers',
         'tokens',
         'read:tokens',

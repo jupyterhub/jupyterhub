@@ -182,6 +182,7 @@ def test_orm_roles_delete_cascade(db):
                 'admin:users',
                 'admin:auth_state',
                 'users',
+                'delete:users',
                 'list:users',
                 'read:users',
                 'users:activity',
@@ -218,6 +219,7 @@ def test_orm_roles_delete_cascade(db):
             {
                 'admin:groups',
                 'groups',
+                'delete:groups',
                 'list:groups',
                 'read:groups',
                 'read:roles:groups',
@@ -229,6 +231,7 @@ def test_orm_roles_delete_cascade(db):
             {
                 'admin:groups',
                 'groups',
+                'delete:groups',
                 'list:groups',
                 'read:groups',
                 'read:roles:groups',
