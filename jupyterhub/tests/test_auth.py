@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import logging
 from unittest import mock
+from urllib.parse import urlparse
 
 import pytest
 from requests import HTTPError
@@ -12,6 +13,8 @@ from .mocking import MockPAMAuthenticator
 from .mocking import MockStructGroup
 from .mocking import MockStructPasswd
 from .utils import add_user
+from .utils import async_requests
+from .utils import public_url
 from jupyterhub import auth
 from jupyterhub import crypto
 from jupyterhub import orm
@@ -515,3 +518,12 @@ def test_deprecated_methods_subclass():
     assert authenticator.check_whitelist("subclass-allowed")
     assert not authenticator.check_allowed("otheruser")
     assert not authenticator.check_whitelist("otheruser")
+
+
+async def test_nullauthenticator(app):
+    with mock.patch.dict(
+        app.tornado_settings, {"authenticator": auth.NullAuthenticator(parent=app)}
+    ):
+        r = await async_requests.get(public_url(app))
+    assert urlparse(r.url).path.endswith("/hub/login")
+    assert r.status_code == 403

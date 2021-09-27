@@ -1173,3 +1173,22 @@ class DummyAuthenticator(Authenticator):
                 return data['username']
             return None
         return data['username']
+
+
+class NullAuthenticator(Authenticator):
+    """Null Authenticator for JupyterHub
+
+    For cases where authentication should be disabled,
+    e.g. only allowing access via API tokens.
+
+    .. versionadded:: 2.0
+    """
+
+    # auto_login skips 'Login with...' page on Hub 0.8
+    auto_login = True
+
+    # for Hub 0.7, show 'login with...'
+    login_service = 'null'
+
+    def get_handlers(self, app):
+        return []

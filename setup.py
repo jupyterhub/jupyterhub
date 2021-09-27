@@ -100,7 +100,7 @@ setup_args = dict(
             'default = jupyterhub.auth:PAMAuthenticator',
             'pam = jupyterhub.auth:PAMAuthenticator',
             'dummy = jupyterhub.auth:DummyAuthenticator',
-            "null = jupyterhub.nullauthenticator:NullAuthenticator",
+            'null = jupyterhub.auth:NullAuthenticator',
         ],
         'jupyterhub.proxies': [
             'default = jupyterhub.proxy:ConfigurableHTTPProxy',
