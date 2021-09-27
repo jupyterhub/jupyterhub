@@ -7,8 +7,8 @@ codecov
 coverage
 cryptography
 html5lib  # needed for beautifulsoup
+jupyterlab >=3
 mock
-notebook
 pre-commit
 pytest>=3.3
 pytest-asyncio
