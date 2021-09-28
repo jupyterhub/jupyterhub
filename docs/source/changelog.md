@@ -57,6 +57,14 @@ Other new features:
 - new Admin page, written in React.
   With RBAC, it should now be fully possible to implement a custom admin panel
   as a service via the REST API.
+- JupyterLab is the default UI for single-user servers,
+  if available in the user environment.
+  See [more info](classic-notebook-ui)
+  in the docs about switching back to the classic notebook,
+  if you are not ready to switch to JupyterLab.
+- NullAuthenticator is now bundled with JupyterHub,
+  so you no longer need to install the `nullauthenticator` package to disable login,
+  you can set `c.JupyterHub.authenticator_class = 'null'`.
 - Support `jupyterhub --show-config` option to see your current jupyterhub configuration.
 - Add expiration date dropdown to Token page
 
