@@ -84,7 +84,7 @@ class UserDict(dict):
                 if user.name == key:
                     key = user.id
                     break
-        return dict.__contains__(self, key)
+        return super().__contains__(key)
 
     def __getitem__(self, key):
         """UserDict allows retrieval of user by any of:
@@ -108,7 +108,7 @@ class UserDict(dict):
             if orm_user.id not in self:
                 user = self[orm_user.id] = User(orm_user, self.settings)
                 return user
-            user = dict.__getitem__(self, orm_user.id)
+            user = super().__getitem__(orm_user.id)
             user.db = self.db
             return user
         elif isinstance(key, int):
@@ -119,7 +119,7 @@ class UserDict(dict):
                     raise KeyError("No such user: %s" % id)
                 user = self.add(orm_user)
             else:
-                user = dict.__getitem__(self, id)
+                user = super().__getitem__(id)
             return user
         else:
             raise KeyError(repr(key))
@@ -145,7 +145,7 @@ class UserDict(dict):
                 self.db.expunge(orm_spawner)
         if user.orm_user in self.db:
             self.db.expunge(user.orm_user)
-        dict.__delitem__(self, user.id)
+        super().__delitem__(user.id)
 
     def delete(self, key):
         """Delete a user from the cache and the database"""
