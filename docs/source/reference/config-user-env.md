@@ -189,6 +189,8 @@ The number of named servers per user can be limited by setting
 c.JupyterHub.named_server_limit_per_user = 5
 ```
 
+(classic-notebook-ui)=
+
 ## Switching back to classic notebook
 
 By default the single-user server launches JupyterLab,
