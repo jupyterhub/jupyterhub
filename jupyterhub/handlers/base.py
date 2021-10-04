@@ -1349,7 +1349,7 @@ class UserUrlHandler(BaseHandler):
         self.log.warning(
             "Failing suspected API request to not-running server: %s", self.request.path
         )
-        self.set_status(503)
+        self.set_status(404)
         self.set_header("Content-Type", "application/json")
 
         spawn_url = urlparse(self.request.full_url())._replace(query="")
