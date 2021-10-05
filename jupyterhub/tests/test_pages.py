@@ -1001,11 +1001,18 @@ async def test_token_page(app):
 async def test_server_not_running_api_request(app):
     cookies = await app.login_user("bees")
     r = await get_page("user/bees/api/status", app, hub=False, cookies=cookies)
-    assert r.status_code == 404
+    assert r.status_code == 424
     assert r.headers["content-type"] == "application/json"
     message = r.json()['message']
     assert ujoin(app.base_url, "hub/spawn/bees") in message
     assert " /user/bees" in message
+
+
+async def test_server_not_running_api_request_legacy_status(app):
+    app.use_legacy_stopped_server_status_code = True
+    cookies = await app.login_user("bees")
+    r = await get_page("user/bees/api/status", app, hub=False, cookies=cookies)
+    assert r.status_code == 503
 
 
 async def test_metrics_no_auth(app):
