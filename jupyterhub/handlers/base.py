@@ -1353,7 +1353,10 @@ class UserUrlHandler(BaseHandler):
         # If we got here, the server is not running. To differentiate
         # that the *server* itself is not running, rather than just the particular
         # resource *in* the server is not found, we return a 424 instead of a 404.
-        self.set_status(424)
+        # We allow retaining the old behavior to support older JupyterLab versions
+        self.set_status(
+            424 if not self.app.use_legacy_stopped_server_status_code else 503
+        )
         self.set_header("Content-Type", "application/json")
 
         spawn_url = urlparse(self.request.full_url())._replace(query="")
@@ -1521,11 +1524,14 @@ class UserUrlHandler(BaseHandler):
         # If we got here, the server is not running. To differentiate
         # that the *server* itself is not running, rather than just the particular
         # page *in* the server is not found, we return a 424 instead of a 404.
+        # We allow retaining the old behavior to support older JupyterLab versions
         spawn_url = url_concat(
             url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
-        self.set_status(424)
+        self.set_status(
+            424 if not self.app.use_legacy_stopped_server_status_code else 503
+        )
 
         auth_state = await user.get_auth_state()
         html = await self.render_template(

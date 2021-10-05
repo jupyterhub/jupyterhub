@@ -369,7 +369,7 @@ class JupyterHub(Application):
         even if your Hub authentication is still valid.
         If your Hub authentication is valid,
         logging in may be a transparent redirect as you refresh the page.
-        
+
         This does not affect JupyterHub API tokens in general,
         which do not expire by default.
         Only tokens issued during the oauth flow
@@ -862,7 +862,7 @@ class JupyterHub(Application):
         "/",
         help="""
         The routing prefix for the Hub itself.
-        
+
         Override to send only a subset of traffic to the Hub.
         Default is to use the Hub as the default route for all requests.
 
@@ -874,7 +874,7 @@ class JupyterHub(Application):
         may want to handle these events themselves,
         in which case they can register their own default target with the proxy
         and set e.g. `hub_routespec = /hub/` to serve only the hub's own pages, or even `/hub/api/` for api-only operation.
-        
+
         Note: hub_routespec must include the base_url, if any.
 
         .. versionadded:: 1.4
@@ -1457,7 +1457,7 @@ class JupyterHub(Application):
         Can be a Unicode string (e.g. '/hub/home') or a callable based on the handler object:
 
         ::
-        
+
             def default_url_fn(handler):
                 user = handler.current_user
                 if user and user.admin:
@@ -1484,6 +1484,25 @@ class JupyterHub(Application):
         current behavior.
         """,
     ).tag(config=True)
+
+    use_legacy_stopped_server_status_code = Bool(
+        False,
+        help="""
+        Return 503 rather than 424 when request comes in for a non-running server.
+
+        Prior to JupyterHub 2.0, we returned a 503 when any request came in for
+        a user server that was currently not running. By default, JupyterHub 2.0
+        will return a 424 - this makes operational metric dashboards more useful.
+
+        JupyterLab < 3.2 expected the 503 to know if the user server is no longer
+        running, and prompted the user to start their server. Set this config to
+        true to retain the old behavior, so JupyterLab < 3.2 can continue to show
+        the appropriate UI when the user server is stopped.
+
+        This option will be removed in a future release.
+        """,
+        config=True,
+    )
 
     def init_handlers(self):
         h = []
