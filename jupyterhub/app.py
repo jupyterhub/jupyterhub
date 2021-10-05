@@ -1477,7 +1477,7 @@ class JupyterHub(Application):
     ).tag(config=True)
 
     use_legacy_stopped_server_status_code = Bool(
-        False,
+        True,
         help="""
         Return 503 rather than 424 when request comes in for a non-running server.
 
@@ -1490,7 +1490,8 @@ class JupyterHub(Application):
         true to retain the old behavior, so JupyterLab < 3.2 can continue to show
         the appropriate UI when the user server is stopped.
 
-        This option will be removed in a future release.
+        This option will default to True in JupyterHub 2.0, and be removed in a
+        future release.
         """,
         config=True,
     )
