@@ -1,3 +1,5 @@
+(rest-api)=
+
 # Using JupyterHub's REST API
 
 This section will give you information on:
