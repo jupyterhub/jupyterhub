@@ -1008,6 +1008,13 @@ async def test_server_not_running_api_request(app):
     assert " /user/bees" in message
 
 
+async def test_server_not_running_api_request_legacy_status(app):
+    app.use_legacy_stopped_server_status_code = False
+    cookies = await app.login_user("bees")
+    r = await get_page("user/bees/api/status", app, hub=False, cookies=cookies)
+    assert r.status_code == 424
+
+
 async def test_metrics_no_auth(app):
     r = await get_page("metrics", app)
     assert r.status_code == 403
