@@ -38,9 +38,9 @@ jobs:
         #   Tests everything when JupyterHub works against a dedicated mysql or
         #   postgresql server.
         #
-        # jupyter_server:
+        # nbclassic:
         #   Tests everything when the user instances are started with
-        #   jupyter_server instead of notebook.
+        #   notebook instead of jupyter_server.
         #
         # ssl:
         #   Tests everything using internal SSL connections instead of
@@ -48,7 +48,7 @@ jobs:
         #
         # main_dependencies:
         #   Tests everything when the we use the latest available dependencies
-        #   from: ipytraitlets.
+        #   from: traitlets.
         #
         # NOTE: Since only the value of these parameters are presented in the
         #       GitHub UI when the workflow run, we avoid using true/false as
@@ -56,6 +56,7 @@ jobs:
         include:
           - python: "3.6"
             oldest_dependencies: oldest_dependencies
+            nbclassic: nbclassic
           - python: "3.6"
             subdomain: subdomain
           - python: "3.7"
@@ -65,7 +66,7 @@ jobs:
           - python: "3.8"
             db: postgres
           - python: "3.8"
-            jupyter_server: jupyter_server
+            nbclassic: nbclassic
           - python: "3.9"
             main_dependencies: main_dependencies
 
@@ -130,9 +131,9 @@ jobs:
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
           fi
-          if [ "${{ matrix.jupyter_server }}" != "" ]; then
-              pip uninstall notebook --yes
-              pip install jupyter_server
+          if [ "${{ matrix.nbclassic }}" != "" ]; then
+              pip uninstall jupyter_server --yes
+              pip install notebook
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysql-connector-python
@@ -194,7 +195,7 @@ jobs:
 
   docker-build:
     runs-on: ubuntu-20.04
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v2

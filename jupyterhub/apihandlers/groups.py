@@ -129,7 +129,7 @@ class GroupAPIHandler(_GroupAPIHandler):
         self.write(json.dumps(self.group_model(group)))
         self.set_status(201)
 
-    @needs_scope('admin:groups')
+    @needs_scope('delete:groups')
     def delete(self, group_name):
         """Delete a group by name"""
         group = self.find_group(group_name)

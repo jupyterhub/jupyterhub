@@ -76,13 +76,26 @@ c.InteractiveShellApp.extensions.append("cython")
 
 ### Example: Enable a Jupyter notebook configuration setting for all users
 
+:::{note}
+These examples configure the Jupyter ServerApp,
+which is used by JupyterLab, the default in JupyterHub 2.0.
+
+If you are using the classing Jupyter Notebook server,
+the same things should work,
+with the following substitutions:
+
+- Where you see `jupyter_server_config`, use `jupyter_notebook_config`
+- Where you see `NotebookApp`, use `ServerApp`
+
+:::
+
 To enable Jupyter notebook's internal idle-shutdown behavior (requires
-notebook ≥ 5.4), set the following in the `/etc/jupyter/jupyter_notebook_config.py`
+notebook ≥ 5.4), set the following in the `/etc/jupyter/jupyter_server_config.py`
 file:
 
 ```python
 # shutdown the server after no activity for an hour
-c.NotebookApp.shutdown_no_activity_timeout = 60 * 60
+c.ServerApp.shutdown_no_activity_timeout = 60 * 60
 # shutdown kernels after no activity for 20 minutes
 c.MappingKernelManager.cull_idle_timeout = 20 * 60
 # check for idle kernels every two minutes
@@ -112,8 +125,8 @@ Assuming I have a Python 2 and Python 3 environment that I want to make
 sure are available, I can install their specs system-wide (in /usr/local) with:
 
 ```bash
-/path/to/python3 -m IPython kernel install --prefix=/usr/local
-/path/to/python2 -m IPython kernel install --prefix=/usr/local
+/path/to/python3 -m ipykernel install --prefix=/usr/local
+/path/to/python2 -m ipykernel install --prefix=/usr/local
 ```
 
 ## Multi-user hosts vs. Containers
@@ -176,12 +189,40 @@ The number of named servers per user can be limited by setting
 c.JupyterHub.named_server_limit_per_user = 5
 ```
 
-## Switching to Jupyter Server
+(classic-notebook-ui)=
 
-[Jupyter Server](https://jupyter-server.readthedocs.io/en/latest/) is a new Tornado Server backend for Jupyter web applications (e.g. JupyterLab 3.0 uses this package as its default backend).
+## Switching back to classic notebook
 
-By default, the single-user notebook server uses the (old) `NotebookApp` from the [notebook](https://github.com/jupyter/notebook) package. You can switch to using Jupyter Server's `ServerApp` backend (this will likely become the default in future releases) by setting the `JUPYTERHUB_SINGLEUSER_APP` environment variable to:
+By default the single-user server launches JupyterLab,
+which is based on [Jupyter Server][].
+This is the default server when running JupyterHub ≥ 2.0.
+You can switch to using the legacy Jupyter Notebook server by setting the `JUPYTERHUB_SINGLEUSER_APP` environment variable
+(in the single-user environment) to:
+
+```bash
+export JUPYTERHUB_SINGLEUSER_APP='notebook.notebookapp.NotebookApp'
+```
+
+[jupyter server]: https://jupyter-server.readthedocs.io
+[jupyter notebook]: https://jupyter-notebook.readthedocs.io
+
+:::{versionchanged} 2.0
+JupyterLab is now the default singleuser UI, if available,
+which is based on the [Jupyter Server][],
+no longer the legacy [Jupyter Notebook][] server.
+JupyterHub prior to 2.0 launched the legacy notebook server (`jupyter notebook`),
+and Jupyter server could be selected by specifying
+
+```python
+# jupyterhub_config.py
+c.Spawner.cmd = ["jupyter-labhub"]
+```
+
+or for an otherwise customized Jupyter Server app,
+set the environment variable:
 
 ```bash
 export JUPYTERHUB_SINGLEUSER_APP='jupyter_server.serverapp.ServerApp'
 ```
+
+:::

@@ -490,7 +490,7 @@ class BaseHandler(RequestHandler):
         session_id = self.get_session_cookie()
         if session_id:
             # clear session id
-            self.clear_cookie(SESSION_COOKIE_NAME, **kwargs)
+            self.clear_cookie(SESSION_COOKIE_NAME, path=self.base_url, **kwargs)
 
             if user:
                 # user is logged in, clear any tokens associated with the current session
@@ -569,7 +569,9 @@ class BaseHandler(RequestHandler):
         so other services on this domain can read it.
         """
         session_id = uuid.uuid4().hex
-        self._set_cookie(SESSION_COOKIE_NAME, session_id, encrypted=False)
+        self._set_cookie(
+            SESSION_COOKIE_NAME, session_id, encrypted=False, path=self.base_url
+        )
         return session_id
 
     def set_service_cookie(self, user):
@@ -1355,7 +1357,7 @@ class UserUrlHandler(BaseHandler):
 
     **Changed Behavior as of 1.0** This handler no longer triggers a spawn. Instead, it checks if:
 
-    1. server is not active, serve page prompting for spawn (status: 503)
+    1. server is not active, serve page prompting for spawn (status: 424)
     2. server is ready (This shouldn't happen! Proxy isn't updated yet. Wait a bit and redirect.)
     3. server is active, redirect to /hub/spawn-pending to monitor launch progress
        (will redirect back when finished)
@@ -1374,7 +1376,14 @@ class UserUrlHandler(BaseHandler):
         self.log.warning(
             "Failing suspected API request to not-running server: %s", self.request.path
         )
-        self.set_status(503)
+
+        # If we got here, the server is not running. To differentiate
+        # that the *server* itself is not running, rather than just the particular
+        # resource *in* the server is not found, we return a 424 instead of a 404.
+        # We allow retaining the old behavior to support older JupyterLab versions
+        self.set_status(
+            424 if not self.app.use_legacy_stopped_server_status_code else 503
+        )
         self.set_header("Content-Type", "application/json")
 
         spawn_url = urlparse(self.request.full_url())._replace(query="")
@@ -1539,15 +1548,17 @@ class UserUrlHandler(BaseHandler):
             self.redirect(pending_url, status=303)
             return
 
-        # if we got here, the server is not running
-        # serve a page prompting for spawn and 503 error
-        # visiting /user/:name no longer triggers implicit spawn
-        # without explicit user action
+        # If we got here, the server is not running. To differentiate
+        # that the *server* itself is not running, rather than just the particular
+        # page *in* the server is not found, we return a 424 instead of a 404.
+        # We allow retaining the old behavior to support older JupyterLab versions
         spawn_url = url_concat(
             url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
             {"next": self.request.uri},
         )
-        self.set_status(503)
+        self.set_status(
+            424 if not self.app.use_legacy_stopped_server_status_code else 503
+        )
 
         auth_state = await user.get_auth_state()
         html = await self.render_template(

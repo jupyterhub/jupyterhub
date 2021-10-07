@@ -100,6 +100,7 @@ setup_args = dict(
             'default = jupyterhub.auth:PAMAuthenticator',
             'pam = jupyterhub.auth:PAMAuthenticator',
             'dummy = jupyterhub.auth:DummyAuthenticator',
+            'null = jupyterhub.auth:NullAuthenticator',
         ],
         'jupyterhub.proxies': [
             'default = jupyterhub.proxy:ConfigurableHTTPProxy',
@@ -301,7 +302,7 @@ class develop_js_css(develop):
         if not self.uninstall:
             self.distribution.run_command('js')
             self.distribution.run_command('css')
-        develop.run(self)
+        super().run()
 
 
 setup_args['cmdclass']['develop'] = develop_js_css
