@@ -18,7 +18,7 @@ FROM jupyter/base-notebook:5ded1de07260
 RUN pip3 install jupyterhub==0.7.2
 ```
 
-The dockerfile that builds this image exposes `BASE_IMAGE` and `JUPYTERHUB_VERSION` as build args, so you can do:
+The dockerfile that builds this image exposes `BASE_IMAGE` and `JUPYTERHUB_VERSION` as build cls, so you can do:
 
     docker build -t singleuser \
       --build-arg BASE_IMAGE=jupyter/scipy-notebook \

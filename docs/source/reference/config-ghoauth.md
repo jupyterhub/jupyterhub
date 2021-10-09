@@ -66,7 +66,7 @@ c.Authenticator.admin_users = {'jhamrick', 'rgbkrk'}
 # this config could also be put in
 # /etc/jupyter/jupyter_notebook_config.py
 c.Spawner.notebook_dir = '~/assignments'
-c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
+c.Spawner.cls = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
 Using the GitHub Authenticator requires a few additional

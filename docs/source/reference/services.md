@@ -260,7 +260,7 @@ app = Flask(__name__)
 def authenticated(f):
     """Decorator for authenticating with the Hub"""
     @wraps(f)
-    def decorated(*args, **kwargs):
+    def decorated(*cls, **kwargs):
         cookie = request.cookies.get(auth.cookie_name)
         token = request.headers.get(auth.auth_header_name)
         if cookie:
@@ -270,7 +270,7 @@ def authenticated(f):
         else:
             user = None
         if user:
-            return f(user, *args, **kwargs)
+            return f(user, *cls, **kwargs)
         else:
             # redirect to login url on failed auth
             return redirect(auth.login_url + '?next=%s' % quote(request.path))

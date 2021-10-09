@@ -17,13 +17,13 @@ c.Spawner.notebook_dir = '~/notebooks'
 You can also specify extra command-line arguments to the notebook server with:
 
 ```python
-c.Spawner.args = ['--debug', '--profile=PHYS131']
+c.Spawner.cls = ['--debug', '--profile=PHYS131']
 ```
 
 This could be used to set the users default page for the single user server:
 
 ```python
-c.Spawner.args = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
+c.Spawner.cls = ['--NotebookApp.default_url=/notebooks/Welcome.ipynb']
 ```
 
 Since the single-user server extends the notebook server application,

@@ -129,7 +129,7 @@ If the `Spawner.options_form` is defined, when a user tries to start their serve
 
 If `Spawner.options_form` is undefined, the user's server is spawned directly, and no spawn page is rendered.
 
-See [this example](https://github.com/jupyterhub/jupyterhub/blob/master/examples/spawn-form/jupyterhub_config.py) for a form that allows custom CLI args for the local spawner.
+See [this example](https://github.com/jupyterhub/jupyterhub/blob/master/examples/spawn-form/jupyterhub_config.py) for a form that allows custom CLI cls for the local spawner.
 
 ### `Spawner.options_from_form`
 
