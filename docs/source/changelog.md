@@ -72,6 +72,16 @@ and major bug fixes:
 
 - Improve database rollback recovery on broken connections
 
+and other changes:
+
+- Requests to a not-running server (e.g. visiting `/user/someuser/`)
+  will return an HTTP 424 error instead of 503,
+  making it easier to monitor for real deployment problems.
+  JupyterLab in the user environment should be at least version 3.1.16
+  to recognize this error code as a stopped server.
+  You can temporarily opt-in to the older behavior (e.g. if older JupyterLab is required)
+  by setting `c.JupyterHub.use_legacy_stopped_server_status_code = True`.
+
 Plus lots of little fixes along the way.
 
 ## 1.4

@@ -1366,8 +1366,8 @@ async def test_get_new_token_deprecated(app, headers, status):
 @mark.parametrize(
     "headers, status, note, expires_in",
     [
-        ({}, 200, 'test note', None),
-        ({}, 200, '', 100),
+        ({}, 201, 'test note', None),
+        ({}, 201, '', 100),
         ({'Authorization': 'token bad'}, 403, '', None),
     ],
 )
@@ -1386,7 +1386,7 @@ async def test_get_new_token(app, headers, status, note, expires_in):
         app, 'users/admin/tokens', method='post', headers=headers, data=body
     )
     assert r.status_code == status
-    if status != 200:
+    if status != 201:
         return
     # check the new-token reply
     reply = r.json()
@@ -1424,10 +1424,10 @@ async def test_get_new_token(app, headers, status, note, expires_in):
 @mark.parametrize(
     "as_user, for_user, status",
     [
-        ('admin', 'other', 200),
+        ('admin', 'other', 201),
         ('admin', 'missing', 403),
         ('user', 'other', 403),
-        ('user', 'user', 200),
+        ('user', 'user', 201),
     ],
 )
 async def test_token_for_user(app, as_user, for_user, status):
@@ -1448,7 +1448,7 @@ async def test_token_for_user(app, as_user, for_user, status):
     )
     assert r.status_code == status
     reply = r.json()
-    if status != 200:
+    if status != 201:
         return
     assert 'token' in reply
 
@@ -1486,7 +1486,7 @@ async def test_token_authenticator_noauth(app):
         data=json.dumps(data) if data else None,
         noauth=True,
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
     reply = r.json()
     assert 'token' in reply
     r = await api_request(app, 'authorizations', 'token', reply['token'])
@@ -1509,7 +1509,7 @@ async def test_token_authenticator_dict_noauth(app):
         data=json.dumps(data) if data else None,
         noauth=True,
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
     reply = r.json()
     assert 'token' in reply
     r = await api_request(app, 'authorizations', 'token', reply['token'])

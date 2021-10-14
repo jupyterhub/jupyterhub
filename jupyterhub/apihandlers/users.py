@@ -421,6 +421,7 @@ class UserTokenListAPIHandler(APIHandler):
         token_model = self.token_model(orm.APIToken.find(self.db, api_token))
         token_model['token'] = api_token
         self.write(json.dumps(token_model))
+        self.set_status(201)
 
 
 class UserTokenAPIHandler(APIHandler):
