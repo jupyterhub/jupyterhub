@@ -223,7 +223,7 @@ class Group(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
     users = relationship('User', secondary='user_group_map', backref='groups')
-    properties = Column(JSONDict, default= {}) 
+    properties = Column(JSONDict, default={})
 
     def __repr__(self):
         return "<%s %s (%i users)>" % (
