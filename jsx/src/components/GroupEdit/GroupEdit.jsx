@@ -79,19 +79,19 @@ const GroupEdit = (props) => {
           <div className="alert alert-info">Manage group properties</div>
         </div>
       </div>
-      <div className="row">  
+      <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <DynamicTable
-          current_propobject={group_data.properties}
-          setProp={setProp}
-          setPropKeys={setPropKeys}
-          setPropValues={setPropValues}
-          setChanged ={setChanged}
-          //Add keys
+            current_propobject={group_data.properties}
+            setProp={setProp}
+            setPropKeys={setPropKeys}
+            setPropValues={setPropValues}
+            setChanged={setChanged}
+            //Add keys
           />
         </div>
       </div>
-      
+
       <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <button id="return" className="btn btn-light">
