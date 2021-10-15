@@ -125,7 +125,7 @@ const GroupEdit = (props) => {
                 error.textContent = "Duplicate key found!";
                 error.style.color = "red";
               } else {
-                error.textContent = "";
+                //error.textContent = "";
                 propkeys.forEach((key, i) => (propobject[key] = propvalues[i]));
               }
               if (
