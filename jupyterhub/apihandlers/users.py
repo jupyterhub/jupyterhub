@@ -484,6 +484,11 @@ class UserServerAPIHandler(APIHandler):
     @needs_scope('servers')
     async def post(self, user_name, server_name=''):
         user = self.find_user(user_name)
+        if user is None:
+            # this can be reached if a token has `servers`
+            # permission on *all* users
+            raise web.HTTPError(404)
+
         if server_name:
             if not self.allow_named_servers:
                 raise web.HTTPError(400, "Named servers are not enabled.")
