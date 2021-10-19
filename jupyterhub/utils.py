@@ -23,12 +23,12 @@ from operator import itemgetter
 
 from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
+from tornado import gen
 from tornado import ioloop
 from tornado import web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
 from tornado.log import app_log
-from tornado.platform.asyncio import to_asyncio_future
 
 # For compatibility with python versions 3.6 or earlier.
 # asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
@@ -95,6 +95,10 @@ def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname
     ssl_context.load_cert_chain(certfile, keyfile)
     ssl_context.check_hostname = check_hostname
     return ssl_context
+
+
+# AnyTimeoutError catches TimeoutErrors coming from asyncio, tornado, stdlib
+AnyTimeoutError = (gen.TimeoutError, asyncio.TimeoutError, TimeoutError)
 
 
 async def exponential_backoff(
@@ -182,7 +186,7 @@ async def exponential_backoff(
         if dt < max_wait:
             scale *= scale_factor
         await asyncio.sleep(dt)
-    raise TimeoutError(fail_message)
+    raise asyncio.TimeoutError(fail_message)
 
 
 async def wait_for_server(ip, port, timeout=10):

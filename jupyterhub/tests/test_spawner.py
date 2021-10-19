@@ -21,6 +21,7 @@ from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..spawner import Spawner
 from ..user import User
+from ..utils import AnyTimeoutError
 from ..utils import new_token
 from ..utils import url_path_join
 from .mocking import public_url
@@ -95,7 +96,7 @@ async def wait_for_spawner(spawner, timeout=10):
         assert status is None
         try:
             await wait()
-        except TimeoutError:
+        except AnyTimeoutError:
             continue
         else:
             break

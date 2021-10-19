@@ -26,6 +26,7 @@ from .metrics import RUNNING_SERVERS
 from .metrics import TOTAL_USERS
 from .objects import Server
 from .spawner import LocalProcessSpawner
+from .utils import AnyTimeoutError
 from .utils import make_ssl_context
 from .utils import maybe_future
 from .utils import url_path_join
@@ -707,7 +708,7 @@ class User:
                     db.commit()
 
         except Exception as e:
-            if isinstance(e, gen.TimeoutError):
+            if isinstance(e, AnyTimeoutError):
                 self.log.warning(
                     "{user}'s server failed to start in {s} seconds, giving up".format(
                         user=self.name, s=spawner.start_timeout
@@ -764,7 +765,7 @@ class User:
                 http=True, timeout=spawner.http_timeout, ssl_context=ssl_context
             )
         except Exception as e:
-            if isinstance(e, TimeoutError):
+            if isinstance(e, AnyTimeoutError):
                 self.log.warning(
                     "{user}'s server never showed up at {url} "
                     "after {http_timeout} seconds. Giving up".format(

@@ -90,6 +90,7 @@ from .log import CoroutineLogFormatter, log_request
 from .proxy import Proxy, ConfigurableHTTPProxy
 from .traitlets import URLPrefix, Command, EntryPointType, Callable
 from .utils import (
+    AnyTimeoutError,
     catch_db_error,
     maybe_future,
     url_path_join,
@@ -2350,7 +2351,7 @@ class JupyterHub(Application):
                 continue
             try:
                 await Server.from_orm(service.orm.server).wait_up(timeout=1, http=True)
-            except TimeoutError:
+            except AnyTimeoutError:
                 self.log.warning(
                     "Cannot connect to %s service %s at %s",
                     service.kind,
@@ -2428,7 +2429,7 @@ class JupyterHub(Application):
                 )
                 try:
                     await user._wait_up(spawner)
-                except TimeoutError:
+                except AnyTimeoutError:
                     self.log.error(
                         "%s does not appear to be running at %s, shutting it down.",
                         spawner._log_name,
@@ -2792,7 +2793,7 @@ class JupyterHub(Application):
             await gen.with_timeout(
                 timedelta(seconds=max(init_spawners_timeout, 1)), init_spawners_future
             )
-        except gen.TimeoutError:
+        except AnyTimeoutError:
             self.log.warning(
                 "init_spawners did not complete within %i seconds. "
                 "Allowing to complete in the background.",
@@ -3055,7 +3056,7 @@ class JupyterHub(Application):
                         await Server.from_orm(service.orm.server).wait_up(
                             http=True, timeout=1, ssl_context=ssl_context
                         )
-                    except TimeoutError:
+                    except AnyTimeoutError:
                         if service.managed:
                             status = await service.spawner.poll()
                             if status is not None:
