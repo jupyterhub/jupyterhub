@@ -32,6 +32,35 @@ from .utils import maybe_future
 from .utils import url_path_join
 
 
+# detailed messages about the most common failure-to-start errors,
+# which manifest timeouts during start
+start_timeout_message = """
+Common causes of this timeout, and debugging tips:
+
+1. Everything is working, but it took too long.
+   To fix: increase `Spawner.start_timeout` configuration
+   to a number of seconds that is enough for spawners to finish starting.
+2. The server didn't finish starting,
+   or it crashed due to a configuration issue.
+   Check the single-user server's logs for hints at what needs fixing.
+"""
+
+http_timeout_message = """
+Common causes of this timeout, and debugging tips:
+
+1. The server didn't finish starting,
+   or it crashed due to a configuration issue.
+   Check the single-user server's logs for hints at what needs fixing.
+2. The server started, but is not accessible at the specified URL.
+   This may be a configuration issue specific to your chosen Spawner.
+   Check the single-user server logs and resource to make sure the URL
+   is correct and accessible from the Hub.
+3. (unlikely) Everything is working, but the server took too long to respond.
+   To fix: increase `Spawner.http_timeout` configuration
+   to a number of seconds that is enough for servers to become responsive.
+"""
+
+
 class UserDict(dict):
     """Like defaultdict, but for users
 
@@ -710,9 +739,9 @@ class User:
         except Exception as e:
             if isinstance(e, AnyTimeoutError):
                 self.log.warning(
-                    "{user}'s server failed to start in {s} seconds, giving up".format(
-                        user=self.name, s=spawner.start_timeout
-                    )
+                    f"{self.name}'s server failed to start"
+                    f" in {spawner.start_timeout} seconds, giving up."
+                    f"\n{start_timeout_message}"
                 )
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.timeout')
@@ -767,12 +796,9 @@ class User:
         except Exception as e:
             if isinstance(e, AnyTimeoutError):
                 self.log.warning(
-                    "{user}'s server never showed up at {url} "
-                    "after {http_timeout} seconds. Giving up".format(
-                        user=self.name,
-                        url=server.url,
-                        http_timeout=spawner.http_timeout,
-                    )
+                    f"{self.name}'s server never showed up at {server.url}"
+                    f" after {spawner.http_timeout} seconds. Giving up."
+                    f"\n{http_timeout_message}"
                 )
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.http_timeout')
