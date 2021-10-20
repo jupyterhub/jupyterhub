@@ -47,6 +47,7 @@ from ..metrics import TOTAL_USERS
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..user import User
+from ..utils import AnyTimeoutError
 from ..utils import get_accepted_mimetype
 from ..utils import maybe_future
 from ..utils import url_path_join
@@ -1021,7 +1022,7 @@ class BaseHandler(RequestHandler):
             await gen.with_timeout(
                 timedelta(seconds=self.slow_spawn_timeout), finish_spawn_future
             )
-        except gen.TimeoutError:
+        except AnyTimeoutError:
             # waiting_for_response indicates server process has started,
             # but is yet to become responsive.
             if spawner._spawn_pending and not spawner._waiting_for_response:
@@ -1168,7 +1169,7 @@ class BaseHandler(RequestHandler):
 
         try:
             await gen.with_timeout(timedelta(seconds=self.slow_stop_timeout), future)
-        except gen.TimeoutError:
+        except AnyTimeoutError:
             # hit timeout, but stop is still pending
             self.log.warning(
                 "User %s:%s server is slow to stop (timeout=%s)",

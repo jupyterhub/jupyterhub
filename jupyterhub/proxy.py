@@ -44,6 +44,7 @@ from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
+from .utils import AnyTimeoutError
 from .utils import exponential_backoff
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
@@ -718,7 +719,7 @@ class ConfigurableHTTPProxy(Proxy):
                 _check_process()
                 try:
                     await server.wait_up(1)
-                except TimeoutError:
+                except AnyTimeoutError:
                     continue
                 else:
                     break

@@ -15,8 +15,6 @@ from subprocess import Popen
 from tempfile import mkdtemp
 from urllib.parse import urlparse
 
-if os.name == 'nt':
-    import psutil
 from async_generator import aclosing
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
@@ -38,12 +36,14 @@ from .objects import Server
 from .traitlets import ByteSpecification
 from .traitlets import Callable
 from .traitlets import Command
+from .utils import AnyTimeoutError
 from .utils import exponential_backoff
 from .utils import maybe_future
 from .utils import random_port
 from .utils import url_path_join
 
-# FIXME: remove when we drop Python 3.5 support
+if os.name == 'nt':
+    import psutil
 
 
 def _quote_safe(s):
@@ -1263,7 +1263,7 @@ class Spawner(LoggingConfigurable):
                 timeout=timeout,
             )
             return r
-        except TimeoutError:
+        except AnyTimeoutError:
             return False
 
 
