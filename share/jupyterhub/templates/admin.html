@@ -1,6 +1,7 @@
 {% extends "page.html" %}
 
 {% macro th(label, key='', colspan=1) %}
+<!--suppress ALL -->
 <th data-sort="{{key}}" colspan="{{colspan}}">{{label}}
   {% if key %}
   <a href="#"><i class="fa {% if sort.get(key) == 'asc' -%}
