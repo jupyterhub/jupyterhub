@@ -219,7 +219,7 @@ In case of the need to run the jupyterhub under /jhub/ or other location please 
 httpd.conf amendments:
 
 ```bash
- RewriteRule /jhub/(.*) ws://127.0.0.1:8000/jhub/$1 [NE.P,L]
+ RewriteRule /jhub/(.*) ws://127.0.0.1:8000/jhub/$1 [NE,P,L]
  RewriteRule /jhub/(.*) http://127.0.0.1:8000/jhub/$1 [NE,P,L]
 
  ProxyPass /jhub/ http://127.0.0.1:8000/jhub/

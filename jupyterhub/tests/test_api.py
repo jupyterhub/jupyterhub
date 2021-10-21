@@ -972,6 +972,11 @@ async def test_bad_spawn(app, bad_spawn):
     assert app.users.count_active_users()['pending'] == 0
 
 
+async def test_spawn_nosuch_user(app):
+    r = await api_request(app, 'users', "nosuchuser", 'server', method='post')
+    assert r.status_code == 404
+
+
 async def test_slow_bad_spawn(app, no_patience, slow_bad_spawn):
     db = app.db
     name = 'zaphod'
