@@ -397,9 +397,11 @@ class UserTokenListAPIHandler(APIHandler):
         token_roles = body.get('roles')
         try:
             api_token = user.new_api_token(
-                note=note, expires_in=body.get('expires_in', None), roles=token_roles
+                note=note,
+                expires_in=body.get('expires_in', None),
+                roles=token_roles,
             )
-        except NameError:
+        except KeyError:
             raise web.HTTPError(404, "Requested roles %r not found" % token_roles)
         except ValueError:
             raise web.HTTPError(

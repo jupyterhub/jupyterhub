@@ -57,7 +57,7 @@ def get_default_roles():
         {
             'name': 'token',
             'description': 'Token with same permissions as its owner',
-            'scopes': ['all'],
+            'scopes': ['inherit'],
         },
     ]
     return default_roles
@@ -214,7 +214,7 @@ def _check_scopes(*args, rolename=None):
       or
       scopes (list): list of scopes to check
 
-    Raises NameError if scope does not exist
+    Raises KeyError if scope does not exist
     """
 
     allowed_scopes = set(scopes.scope_definitions.keys())
@@ -228,11 +228,13 @@ def _check_scopes(*args, rolename=None):
     for scope in args:
         scopename, _, filter_ = scope.partition('!')
         if scopename not in allowed_scopes:
-            raise NameError(f"Scope '{scope}' {log_role} does not exist")
+            if scopename == "all":
+                raise KeyError("Draft scope 'all' is now called 'inherit'")
+            raise KeyError(f"Scope '{scope}' {log_role} does not exist")
         if filter_:
             full_filter = f"!{filter_}"
             if not any(f in scope for f in allowed_filters):
-                raise NameError(
+                raise KeyError(
                     f"Scope filter '{full_filter}' in scope '{scope}' {log_role} does not exist"
                 )
 
@@ -322,7 +324,7 @@ def delete_role(db, rolename):
         db.commit()
         app_log.info('Role %s has been deleted', rolename)
     else:
-        raise NameError('Cannot remove role %r that does not exist', rolename)
+        raise KeyError('Cannot remove role %r that does not exist', rolename)
 
 
 def existing_only(func):
@@ -413,7 +415,7 @@ def _token_allowed_role(db, token, role):
 
     expanded_scopes = _get_subscopes(role, owner=owner)
 
-    implicit_permissions = {'all', 'read:all'}
+    implicit_permissions = {'inherit', 'read:inherit'}
     explicit_scopes = expanded_scopes - implicit_permissions
     # ignore horizontal filters
     no_filter_scopes = {
@@ -462,7 +464,7 @@ def update_roles(db, entity, roles):
     """Updates object's roles checking for requested permissions
     if object is orm.APIToken
     """
-    standard_permissions = {'all', 'read:all'}
+    standard_permissions = {'inherit', 'read:inherit'}
     for rolename in roles:
         if isinstance(entity, orm.APIToken):
             role = orm.Role.find(db, rolename)
@@ -478,7 +480,7 @@ def update_roles(db, entity, roles):
                         f'Requested token role {rolename} of {entity} has more permissions than the token owner'
                     )
             else:
-                raise NameError('Role %r does not exist' % rolename)
+                raise KeyError(f'Role {rolename} does not exist')
         else:
             app_log.debug('Assigning default roles to %s', type(entity).__name__)
             grant_role(db, entity=entity, rolename=rolename)

@@ -308,12 +308,12 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                         "filter": "",
                     }
                 ]
-            elif 'all' in raw_scopes:
-                raw_scopes = ['all']
+            elif 'inherit' in raw_scopes:
+                raw_scopes = ['inherit']
                 scope_descriptions = [
                     {
-                        "scope": "all",
-                        "description": scopes.scope_definitions['all']['description'],
+                        "scope": "inherit",
+                        "description": scopes.scope_definitions['inherit']['description'],
                         "filter": "",
                     }
                 ]
