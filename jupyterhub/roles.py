@@ -432,7 +432,7 @@ def _token_allowed_role(db, token, role):
         return True
     else:
         app_log.warning(
-            f"Token requesting scopes exceeding owner {owner.name}: {disallowed_scopes}"
+            f"Token requesting role {role.name} with scopes not held by owner {owner.name}: {disallowed_scopes}"
         )
         return False
 
