@@ -28,7 +28,7 @@ def test_orm_roles(db):
         user_role = orm.Role(name='user', scopes=['self'])
         db.add(user_role)
     if not token_role:
-        token_role = orm.Role(name='token', scopes=['all'])
+        token_role = orm.Role(name='token', scopes=['inherit'])
         db.add(token_role)
     if not service_role:
         service_role = orm.Role(name='service', scopes=[])
@@ -369,7 +369,7 @@ async def test_creating_roles(app, role, role_def, response_type, response):
             'info',
             app_log.info('Role user scopes attribute has been changed'),
         ),
-        ('non-existing', 'test-role2', 'error', NameError),
+        ('non-existing', 'test-role2', 'error', KeyError),
         ('default', 'user', 'error', ValueError),
     ],
 )
@@ -410,9 +410,9 @@ async def test_delete_roles(db, role_type, rolename, response_type, response):
             },
             'existing',
         ),
-        ({'name': 'test-scopes-2', 'scopes': ['uses']}, NameError),
-        ({'name': 'test-scopes-3', 'scopes': ['users:activities']}, NameError),
-        ({'name': 'test-scopes-4', 'scopes': ['groups!goup=class-A']}, NameError),
+        ({'name': 'test-scopes-2', 'scopes': ['uses']}, KeyError),
+        ({'name': 'test-scopes-3', 'scopes': ['users:activities']}, KeyError),
+        ({'name': 'test-scopes-4', 'scopes': ['groups!goup=class-A']}, KeyError),
     ],
 )
 async def test_scope_existence(tmpdir, request, role, response):
@@ -431,7 +431,7 @@ async def test_scope_existence(tmpdir, request, role, response):
         assert added_role is not None
         assert added_role.scopes == role['scopes']
 
-    elif response == NameError:
+    elif response == KeyError:
         with pytest.raises(response):
             roles.create_role(db, role)
         added_role = orm.Role.find(db, role['name'])

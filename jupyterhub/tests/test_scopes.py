@@ -477,7 +477,7 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     user = create_user_with_scopes('self')
     user.new_api_token()
     token = user.api_tokens[0]
-    # Check 'all' expansion
+    # Check 'inherit' expansion
     token_scope_set = get_scopes_for(token)
     user_scope_set = get_scopes_for(user)
     assert user_scope_set == token_scope_set
