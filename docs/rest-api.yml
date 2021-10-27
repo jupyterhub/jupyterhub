@@ -15,14 +15,17 @@ securityDefinitions:
   oauth2:
     type: oauth2
     flow: accessCode
-    authorizationUrl: "/hub/api/oauth2/authorize" # what are the absolute URIs here? is oauth2 correct here or shall we use just authorizations?
-    tokenUrl: "/hub/api/oauth2/token"
+    # these must be absolute until we update to openapi 3
+    authorizationUrl: "https://hub.example/hub/api/oauth2/authorize"
+    tokenUrl: "https://hub.example/hub/api/oauth2/token"
     scopes: # Generated based on scope table in jupyterhub/scopes.py
       (no_scope): Identify the owner of the requesting entity.
       self:
         The user’s own resources _(metascope for users, resolves to (no_scope)
         for services)_
-      all: Everything that the token-owning entity can access _(metascope for tokens)_
+      inherit:
+        Everything that the token-owning entity can access _(metascope for
+        tokens)_
       admin:users:
         Read, write, create and delete users and their authentication state,
         not including their servers or tokens.
@@ -30,6 +33,8 @@ securityDefinitions:
       users:
         Read and write permissions to user models (excluding servers, tokens
         and authentication state).
+      delete:users: Delete users.
+      list:users: List users, including at least their names.
       read:users:
         Read user models (excluding including servers, tokens and authentication
         state).
@@ -47,14 +52,18 @@ securityDefinitions:
       read:servers:
         Read users’ names and their server models (excluding the server
         state).
+      delete:servers: Stop and delete users' servers.
       tokens: Read, write, create and delete user tokens.
       read:tokens: Read user tokens.
       admin:groups: Read and write group information, create and delete groups.
       groups:
         Read and write group information, including adding/removing users to/from
         groups.
+      list:groups: List groups, including at least their names.
       read:groups: Read group models.
       read:groups:name: Read group names.
+      delete:groups: Delete groups.
+      list:services: List services, including at least their names.
       read:services: Read service models.
       read:services:name: Read service names.
       read:hub: Read detailed information about the Hub.
@@ -174,7 +183,7 @@ paths:
             If unspecified, return all users.
         - name: limit
           in: query
-          requred: false
+          required: false
           type: number
           description: |
             Return a finite number of users.
@@ -779,7 +788,7 @@ paths:
             If unspecified, return all routes.
         - name: limit
           in: query
-          requred: false
+          required: false
           type: number
           description: |
             Return a finite number of routes.
@@ -870,7 +879,7 @@ paths:
       summary: Identify a user or service from an API token
       security:
         - oauth2:
-            - (noscope)
+            - (no_scope)
       parameters:
         - name: token
           in: path
