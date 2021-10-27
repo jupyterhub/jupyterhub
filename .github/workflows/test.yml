@@ -16,6 +16,23 @@ env:
   LANG: C.UTF-8
 
 jobs:
+  rest-api:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Validate REST API
+        uses: char0n/swagger-editor-validate@182d1a5d26ff5c2f4f452c43bd55e2c7d8064003
+        with:
+          definition-file: docs/rest-api.yml
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+      - run: |
+          pip install -r docs/requirements.txt pytest
+      - run: |
+          pytest docs/
+
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04

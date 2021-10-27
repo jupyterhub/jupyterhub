@@ -1,13 +1,13 @@
 """JupyterHub version info"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 version_info = (
     2,
     0,
     0,
     "b3",  # release (b1, rc1, or "" for final or dev)
     # "dev",  # dev or nothing for beta/rc/stable releases
+    # when updating, make sure to update version in docs/rest-api.yaml as well
 )
 
 # pep 440 version: no dot before beta/rc, but before .dev
