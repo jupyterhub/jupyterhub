@@ -313,7 +313,9 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 scope_descriptions = [
                     {
                         "scope": "inherit",
-                        "description": scopes.scope_definitions['inherit']['description'],
+                        "description": scopes.scope_definitions['inherit'][
+                            'description'
+                        ],
                         "filter": "",
                     }
                 ]
