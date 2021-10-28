@@ -578,7 +578,7 @@ async def test_load_roles_groups(tmpdir, request):
             'name': 'head',
             'description': 'Whole user access',
             'scopes': ['users', 'admin:users'],
-            'groups': ['group3'],
+            'groups': ['group3', "group4"],
         },
     ]
     kwargs = {'load_groups': groups_to_load, 'load_roles': roles_to_load}
@@ -598,11 +598,13 @@ async def test_load_roles_groups(tmpdir, request):
     group1 = orm.Group.find(db, name='group1')
     group2 = orm.Group.find(db, name='group2')
     group3 = orm.Group.find(db, name='group3')
+    group4 = orm.Group.find(db, name='group4')
 
     # test group roles
     assert group1.roles == []
     assert group2 in assist_role.groups
     assert group3 in head_role.groups
+    assert group4 in head_role.groups
 
     # delete the test roles
     for role in roles_to_load:
