@@ -9,7 +9,8 @@ import jupyterhub
 from jupyterhub.scopes import scope_definitions
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-PARENT = Path(HERE).parent.parent.absolute()
+DOCS = Path(HERE).parent.parent.absolute()
+REST_API_YAML = DOCS.joinpath("source", "_static", "rest-api.yml")
 
 
 class ScopeTableGenerator:
@@ -99,7 +100,7 @@ class ScopeTableGenerator:
 
     def write_api(self):
         """Generates the API description in markdown format and writes it into `rest-api.yml`"""
-        filename = f"{PARENT}/rest-api.yml"
+        filename = REST_API_YAML
         yaml = YAML(typ='rt')
         yaml.preserve_quotes = True
         scope_dict = {}

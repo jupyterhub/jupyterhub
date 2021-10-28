@@ -23,7 +23,7 @@ jobs:
       - name: Validate REST API
         uses: char0n/swagger-editor-validate@182d1a5d26ff5c2f4f452c43bd55e2c7d8064003
         with:
-          definition-file: docs/rest-api.yml
+          definition-file: docs/source/_static/rest-api.yml
 
       - uses: actions/setup-python@v2
         with:
