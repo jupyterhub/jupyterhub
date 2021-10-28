@@ -14,6 +14,7 @@ on:
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
+  PYTEST_ADDOPTS: "--verbose --color=yes"
 
 jobs:
   rest-api:
@@ -28,8 +29,10 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: "3.9"
+      # in addition to the doc requirements
+      # the docs *tests* require pre-commit and pytest
       - run: |
-          pip install -r docs/requirements.txt pytest -e .
+          pip install -r docs/requirements.txt pytest pre-commit -e .
       - run: |
           pytest docs/
 
@@ -199,10 +202,8 @@ jobs:
           fi
 
       - name: Run pytest
-        # FIXME: --color=yes explicitly set because:
-        #        https://github.com/actions/runner/issues/241
         run: |
-          pytest -v --maxfail=2 --color=yes --cov=jupyterhub jupyterhub/tests
+          pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
       - name: Run yarn jest test
         run: |
           cd jsx && yarn && yarn test

@@ -12,7 +12,7 @@ root = here.parent
 
 def test_rest_api_version():
     version_py = root.joinpath("jupyterhub", "_version.py")
-    rest_api_yaml = root.joinpath("docs", "rest-api.yml")
+    rest_api_yaml = root.joinpath("docs", "source", "_static", "rest-api.yml")
     ns = {}
     with version_py.open() as f:
         exec(f.read(), {}, ns)
@@ -28,12 +28,18 @@ def test_rest_api_version():
 def test_restapi_scopes():
     run([sys.executable, "source/rbac/generate-scope-table.py"], cwd=here, check=True)
     run(
-        ['pre-commit', 'run', 'prettier', '--files', 'rest-api.yml'],
+        ['pre-commit', 'run', 'prettier', '--files', 'source/_static/rest-api.yml'],
         cwd=here,
         check=False,
     )
     run(
-        ["git", "diff", "--exit-code", str(here.joinpath("rest-api.yml"))],
+        [
+            "git",
+            "diff",
+            "--no-pager",
+            "--exit-code",
+            str(here.joinpath("source", "_static", "rest-api.yml")),
+        ],
         cwd=here,
         check=True,
     )
