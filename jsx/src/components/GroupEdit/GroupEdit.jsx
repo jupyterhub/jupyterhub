@@ -86,7 +86,7 @@ const GroupEdit = (props) => {
             setProp={setProp}
             setPropKeys={setPropKeys}
             setPropValues={setPropValues}
-            
+
             //Add keys
           />
         </div>
@@ -102,7 +102,6 @@ const GroupEdit = (props) => {
             id="submit"
             className="btn btn-primary"
             onClick={() => {
-              
               let new_users = selected.filter(
                 (e) => !group_data.users.includes(e)
               );
@@ -112,7 +111,6 @@ const GroupEdit = (props) => {
               let promiseQueue = [];
               // check for changes
               if (changed) {
-                
                 if (new_users.length > 0)
                   promiseQueue.push(addToGroup(new_users, group_data.name));
                 if (removed_users.length > 0)
@@ -121,7 +119,6 @@ const GroupEdit = (props) => {
                   );
               }
 
-              
               if (hasDuplicates(propkeys) == true) {
                 error.textContent = "Duplicate key found!";
                 error.style.color = "red";
