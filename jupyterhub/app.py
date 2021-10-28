@@ -2070,7 +2070,7 @@ class JupyterHub(Application):
                 if role_spec['name'] == 'admin':
                     app_log.warning(
                         "Configuration specifies both admin_users and users in the admin role specification. "
-                        "If admin role is present in config, c.authenticator.admin_users should not be used."
+                        "If admin role is present in config, c.Authenticator.admin_users should not be used."
                     )
                     app_log.info(
                         "Merging admin_users set with users list in admin role"
@@ -2109,7 +2109,7 @@ class JupyterHub(Application):
                                 )
                         Class = orm.get_class(kind)
                         orm_obj = Class.find(db, bname)
-                        if orm_obj:
+                        if orm_obj is not None:
                             orm_role_bearers.append(orm_obj)
                         else:
                             app_log.info(
@@ -2118,6 +2118,11 @@ class JupyterHub(Application):
                             if kind == 'users':
                                 orm_obj = await self._get_or_create_user(bname)
                                 orm_role_bearers.append(orm_obj)
+                            elif kind == 'groups':
+                                group = orm.Group(name=bname)
+                                db.add(group)
+                                db.commit()
+                                orm_role_bearers.append(group)
                             else:
                                 raise ValueError(
                                     f"{kind} {bname} defined in config role definition {predef_role['name']} but not present in database"

@@ -30,7 +30,7 @@ scope_definitions = {
         'description': 'Your own resources',
         'doc_description': 'The user’s own resources _(metascope for users, resolves to (no_scope) for services)_',
     },
-    'all': {
+    'inherit': {
         'description': 'Anything you have access to',
         'doc_description': 'Everything that the token-owning entity can access _(metascope for tokens)_',
     },
@@ -317,13 +317,13 @@ def get_scopes_for(orm_object):
 
         owner_scopes = roles.expand_roles_to_scopes(owner)
 
-        if token_scopes == {'all'}:
-            # token_scopes is only 'all', return owner scopes as-is
+        if token_scopes == {'inherit'}:
+            # token_scopes is only 'inherit', return scopes inherited from owner as-is
             # short-circuit common case where we don't need to compute an intersection
             return owner_scopes
 
-        if 'all' in token_scopes:
-            token_scopes.remove('all')
+        if 'inherit' in token_scopes:
+            token_scopes.remove('inherit')
             token_scopes |= owner_scopes
 
         intersection = _intersect_expanded_scopes(

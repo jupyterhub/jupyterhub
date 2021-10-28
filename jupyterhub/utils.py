@@ -292,6 +292,31 @@ def authenticated_403(self):
         raise web.HTTPError(403)
 
 
+def admin_only(f):
+    """Deprecated!"""
+    # write it this way to trigger deprecation warning at decoration time,
+    # not on the method call
+    warnings.warn(
+        """@jupyterhub.utils.admin_only is deprecated in JupyterHub 2.0.
+
+        Use the new `@jupyterhub.scopes.needs_scope` decorator to resolve permissions,
+        or check against `self.current_user.parsed_scopes`.
+        """,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    # the original decorator
+    @auth_decorator
+    def admin_only(self):
+        """Decorator for restricting access to admin users"""
+        user = self.current_user
+        if user is None or not user.admin:
+            raise web.HTTPError(403)
+
+    return admin_only(f)
+
+
 @auth_decorator
 def metrics_authentication(self):
     """Decorator for restricting access to metrics"""
