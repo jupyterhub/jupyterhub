@@ -1,9 +1,7 @@
 -r ../requirements.txt
 
 alabaster_jupyterhub
-# Temporary fix of #3021. Revert back to released autodoc-traits when
-# 0.1.0 released.
-https://github.com/jupyterhub/autodoc-traits/archive/d22282c1c18c6865436e06d8b329c06fe12a07f8.zip
+autodoc-traits
 myst-parser
 pydata-sphinx-theme
 pytablewriter>=0.56
