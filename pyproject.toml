@@ -5,3 +5,41 @@ target_version = [
     "py37",
     "py38",
 ]
+
+[tool.tbump]
+# Uncomment this if your project is hosted on GitHub:
+github_url = "https://github.com/jupyterhub/jupyterhub"
+
+[tool.tbump.version]
+current = "2.0.0b3"
+
+# Example of a semver regexp.
+# Make sure this matches current_version before
+# using tbump
+regex = '''
+  (?P<major>\d+)
+  \.
+  (?P<minor>\d+)
+  \.
+  (?P<patch>\d+)
+  (?P<pre>((a|b|rc)\d+)|)
+  \.?
+  (?P<dev>(?<=\.)dev\d*|)
+  '''
+
+[tool.tbump.git]
+message_template = "Bump to {new_version}"
+tag_template = "{new_version}"
+
+# For each file to patch, add a [[tool.tbump.file]] config
+# section containing the path of the file, relative to the
+# pyproject.toml location.
+
+[[tool.tbump.file]]
+src = "jupyterhub/_version.py"
+version_template = '({major}, {minor}, {patch}, "{pre}", "{dev}")'
+search = "version_info = {current_version}"
+
+[[tool.tbump.file]]
+src = "docs/source/_static/rest-api.yml"
+search = "version: {current_version}"

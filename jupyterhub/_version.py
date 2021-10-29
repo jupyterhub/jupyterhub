@@ -1,15 +1,8 @@
 """JupyterHub version info"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-version_info = (
-    2,
-    0,
-    0,
-    "b3",  # release (b1, rc1, or "" for final or dev)
-    # "dev",  # dev or nothing for beta/rc/stable releases
-    # when updating, make sure to update version in docs/source/_static/rest-api.yml as well
-    # `cd docs; make scopes` will do this
-)
+# version_info updated by running `tbump`
+version_info = (2, 0, 0, "b3", "")
 
 # pep 440 version: no dot before beta/rc, but before .dev
 # 0.1.0rc1
@@ -17,7 +10,9 @@ version_info = (
 # 0.1.0b1.dev
 # 0.1.0.dev
 
-__version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:])
+__version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:]).rstrip(
+    "."
+)
 
 # Singleton flag to only log the major/minor mismatch warning once per mismatch combo.
 _version_mismatch_warning_logged = {}
