@@ -440,31 +440,34 @@ def _token_allowed_role(db, token, role):
 
 
 def assign_default_roles(db, entity):
-    """Assigns default role to an entity:
+    """Assigns default role(s) to an entity:
     users and services get 'user' role, or admin role if they have admin flag
     tokens get 'token' role
     """
     if isinstance(entity, orm.Group):
         pass
     elif isinstance(entity, orm.APIToken):
-        app_log.debug('Assigning default roles to tokens')
+        app_log.debug('Assigning default role to token')
         default_token_role = orm.Role.find(db, 'token')
         if not entity.roles and (entity.user or entity.service) is not None:
             default_token_role.tokens.append(entity)
             app_log.info('Added role %s to token %s', default_token_role.name, entity)
-        db.commit()
+            db.commit()
     # users and services can have 'user' or 'admin' roles as default
     else:
         kind = type(entity).__name__
-        app_log.debug(f'Assigning default roles to {kind} {entity.name}')
+        app_log.debug(f'Assigning default role to {kind} {entity.name}')
         _switch_default_role(db, entity, entity.admin)
 
 
 def update_roles(db, entity, roles):
-    """Updates object's roles checking for requested permissions
-    if object is orm.APIToken
+    """Add roles to an entity (token, user, etc.)
+
+    If it is an API token, check role permissions against token owner
+    prior to assignment to avoid permission expansion.
+
+    Otherwise, it just calls `grant_role` for each role.
     """
-    standard_permissions = {'inherit', 'read:inherit'}
     for rolename in roles:
         if isinstance(entity, orm.APIToken):
             role = orm.Role.find(db, rolename)
@@ -477,12 +480,11 @@ def update_roles(db, entity, roles):
                     app_log.info('Adding role %s to token: %s', role.name, entity)
                 else:
                     raise ValueError(
-                        f'Requested token role {rolename} of {entity} has more permissions than the token owner'
+                        f'Requested token role {rolename} for {entity} has more permissions than the token owner'
                     )
             else:
                 raise KeyError(f'Role {rolename} does not exist')
         else:
-            app_log.debug('Assigning default roles to %s', type(entity).__name__)
             grant_role(db, entity=entity, rolename=rolename)
 
 
