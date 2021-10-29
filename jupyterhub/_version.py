@@ -7,7 +7,8 @@ version_info = (
     0,
     "b3",  # release (b1, rc1, or "" for final or dev)
     # "dev",  # dev or nothing for beta/rc/stable releases
-    # when updating, make sure to update version in docs/rest-api.yaml as well
+    # when updating, make sure to update version in docs/source/_static/rest-api.yml as well
+    # `cd docs; make scopes` will do this
 )
 
 # pep 440 version: no dot before beta/rc, but before .dev
