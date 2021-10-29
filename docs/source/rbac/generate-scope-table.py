@@ -5,10 +5,12 @@ from pathlib import Path
 from pytablewriter import MarkdownTableWriter
 from ruamel.yaml import YAML
 
+import jupyterhub
 from jupyterhub.scopes import scope_definitions
 
 HERE = os.path.abspath(os.path.dirname(__file__))
-PARENT = Path(HERE).parent.parent.absolute()
+DOCS = Path(HERE).parent.parent.absolute()
+REST_API_YAML = DOCS.joinpath("source", "_static", "rest-api.yml")
 
 
 class ScopeTableGenerator:
@@ -98,22 +100,24 @@ class ScopeTableGenerator:
 
     def write_api(self):
         """Generates the API description in markdown format and writes it into `rest-api.yml`"""
-        filename = f"{PARENT}/rest-api.yml"
+        filename = REST_API_YAML
         yaml = YAML(typ='rt')
         yaml.preserve_quotes = True
         scope_dict = {}
-        with open(filename, 'r+') as f:
+        with open(filename) as f:
             content = yaml.load(f.read())
-            f.seek(0)
-            for scope in self.scopes:
-                description = self.scopes[scope]['description']
-                doc_description = self.scopes[scope].get('doc_description', '')
-                if doc_description:
-                    description = doc_description
-                scope_dict[scope] = description
-            content['securityDefinitions']['oauth2']['scopes'] = scope_dict
+
+        content["info"]["version"] = jupyterhub.__version__
+        for scope in self.scopes:
+            description = self.scopes[scope]['description']
+            doc_description = self.scopes[scope].get('doc_description', '')
+            if doc_description:
+                description = doc_description
+            scope_dict[scope] = description
+        content['securityDefinitions']['oauth2']['scopes'] = scope_dict
+
+        with open(filename, 'w') as f:
             yaml.dump(content, f)
-            f.truncate()
 
 
 def main():

@@ -56,8 +56,10 @@ Basic principles for operation are:
   servers.
 
 JupyterHub also provides a
-[REST API](https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/HEAD/docs/rest-api.yml#/default)
+[REST API][]
 for administration of the Hub and its users.
+
+[rest api]: https://juptyerhub.readthedocs.io/en/latest/reference/rest-api.html
 
 ## Installation
 
@@ -239,7 +241,7 @@ You can also talk with us on our JupyterHub [Gitter](https://gitter.im/jupyterhu
 - [Reporting Issues](https://github.com/jupyterhub/jupyterhub/issues)
 - [JupyterHub tutorial](https://github.com/jupyterhub/jupyterhub-tutorial)
 - [Documentation for JupyterHub](https://jupyterhub.readthedocs.io/en/latest/) | [PDF (latest)](https://media.readthedocs.org/pdf/jupyterhub/latest/jupyterhub.pdf) | [PDF (stable)](https://media.readthedocs.org/pdf/jupyterhub/stable/jupyterhub.pdf)
-- [Documentation for JupyterHub's REST API](https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/jupyterhub/HEAD/docs/rest-api.yml#/default)
+- [Documentation for JupyterHub's REST API][rest api]
 - [Documentation for Project Jupyter](http://jupyter.readthedocs.io/en/latest/index.html) | [PDF](https://media.readthedocs.org/pdf/jupyter/latest/jupyter.pdf)
 - [Project Jupyter website](https://jupyter.org)
 - [Project Jupyter community](https://jupyter.org/community)

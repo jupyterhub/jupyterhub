@@ -43,7 +43,7 @@ JupyterHub performs the following functions:
   notebook servers
 
 For convenient administration of the Hub, its users, and services,
-JupyterHub also provides a `REST API`_.
+JupyterHub also provides a :doc:`REST API <reference/rest-api>`.
 
 The JupyterHub team and Project Jupyter value our community, and JupyterHub
 follows the Jupyter `Community Guides <https://jupyter.readthedocs.io/en/latest/community/content-community.html>`_.
@@ -155,4 +155,3 @@ Questions? Suggestions?
 
 .. _JupyterHub: https://github.com/jupyterhub/jupyterhub
 .. _Jupyter notebook: https://jupyter-notebook.readthedocs.io/en/latest/
-.. _REST API: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/HEAD/docs/rest-api.yml#!/default
