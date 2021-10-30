@@ -129,7 +129,7 @@ jobs:
       # If GITHUB_TOKEN isn't available (e.g. in PRs) returns no tags [].
       - name: Get list of jupyterhub tags
         id: jupyterhubtags
-        uses: jupyterhub/action-major-minor-tag-calculator@v1
+        uses: jupyterhub/action-major-minor-tag-calculator@v2
         with:
           githubToken: ${{ secrets.GITHUB_TOKEN }}
           prefix: "${{ env.REGISTRY }}jupyterhub/jupyterhub:"
