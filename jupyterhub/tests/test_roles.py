@@ -1332,3 +1332,19 @@ async def test_token_keep_roles_on_restart():
     for token in user.api_tokens:
         hub.db.delete(token)
     hub.db.commit()
+
+
+async def test_login_default_role(app, username):
+    cookies = await app.login_user(username)
+    user = app.users[username]
+    # assert login new user gets 'user' role
+    assert [role.name for role in user.roles] == ["user"]
+
+    # clear roles, keep user
+    user.roles = []
+    app.db.commit()
+
+    # login *again*; user exists, shouldn't trigger change in roles
+    cookies = await app.login_user(username)
+    user = app.users[username]
+    assert user.roles == []
