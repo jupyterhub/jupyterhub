@@ -5,7 +5,7 @@ info:
   description: The REST API for JupyterHub
   # version should match jupyterhub/_version.py
   # `make scopes` ensures this is in sync
-  version: 2.0.0b3
+  version: 2.0.0rc1
   license:
     name: BSD-3-Clause
 schemes: [http, https]
