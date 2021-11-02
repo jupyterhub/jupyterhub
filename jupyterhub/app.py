@@ -1481,8 +1481,8 @@ class JupyterHub(Application):
         help="""
         Return 503 rather than 424 when request comes in for a non-running server.
 
-        Prior to JupyterHub 2.0, we returned a 503 when any request came in for
-        a user server that was currently not running. By default, JupyterHub 2.0
+        Prior to JupyterHub 2.0, this returns a 503 when any request comes in for
+        a user server that is currently not running. By default, JupyterHub 2.0
         will return a 424 - this makes operational metric dashboards more useful.
 
         JupyterLab < 3.2 expected the 503 to know if the user server is no longer
@@ -1490,7 +1490,7 @@ class JupyterHub(Application):
         true to retain the old behavior, so JupyterLab < 3.2 can continue to show
         the appropriate UI when the user server is stopped.
 
-        This option will default to True in JupyterHub 2.0, and be removed in a
+        This option will default to False in JupyterHub 2.0, and be removed in a
         future release.
         """,
         config=True,
