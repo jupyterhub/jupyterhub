@@ -10,7 +10,7 @@ repos:
     hooks:
       - id: reorder-python-imports
   - repo: https://github.com/psf/black
-    rev: 21.9b0
+    rev: 21.10b0
     hooks:
       - id: black
   - repo: https://github.com/pre-commit/mirrors-prettier
