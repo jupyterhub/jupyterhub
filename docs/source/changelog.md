@@ -6,6 +6,41 @@ command line for details.
 
 ## [Unreleased]
 
+## 1.5
+
+JupyterHub 1.5 is a **security release**,
+fixing a vulnerability [ghsa-cw7p-q79f-m2v7][] where JupyterLab users
+with multiple tabs open could fail to logout completely,
+leaving their browser with valid credentials until they logout again.
+
+A few fully backward-compatible features have been backported from 2.0.
+
+[ghsa-cw7p-q79f-m2v7]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-cw7p-q79f-m2v7
+
+### 1.4.2...1.5.0
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.4.2...1.5.0))
+
+#### New features added
+
+- Backport #3636 to 1.4.x (opt-in support for JupyterHub.use_legacy_stopped_server_status_code) [#3639](https://github.com/jupyterhub/jupyterhub/pull/3639) ([@yuvipanda](https://github.com/yuvipanda))
+- Backport PR #3552 on branch 1.4.x (Add expiration date dropdown to Token page) [#3580](https://github.com/jupyterhub/jupyterhub/pull/3580) ([@meeseeksmachine](https://github.com/meeseeksmachine))
+- Backport PR #3488 on branch 1.4.x (Support auto login when used as a OAuth2 provider) [#3579](https://github.com/jupyterhub/jupyterhub/pull/3579) ([@meeseeksmachine](https://github.com/meeseeksmachine))
+
+#### Maintenance and upkeep improvements
+
+- 1.4.x: update doc requirements [#3677](https://github.com/jupyterhub/jupyterhub/pull/3677) ([@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- use_legacy_stopped_server_status_code: use 1.\* language [#3676](https://github.com/jupyterhub/jupyterhub/pull/3676) ([@manics](https://github.com/manics))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2021-07-16&to=2021-11-03&type=c))
+
+[@choldgraf](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2021-07-16..2021-11-03&type=Issues) | [@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2021-07-16..2021-11-03&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2021-07-16..2021-11-03&type=Issues) | [@meeseeksmachine](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ameeseeksmachine+updated%3A2021-07-16..2021-11-03&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2021-07-16..2021-11-03&type=Issues) | [@support](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asupport+updated%3A2021-07-16..2021-11-03&type=Issues) | [@welcome](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awelcome+updated%3A2021-07-16..2021-11-03&type=Issues) | [@yuvipanda](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2021-07-16..2021-11-03&type=Issues)
+
 ## 1.4
 
 JupyterHub 1.4 is a small release, with several enhancements, bug fixes,
@@ -1097,7 +1132,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 
 First preview release
 
-[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.4.1...HEAD
+[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/1.5.0...HEAD
+[1.5.0]: https://github.com/jupyterhub/jupyterhub/compare/1.4.2...1.5.0
 [1.4.2]: https://github.com/jupyterhub/jupyterhub/compare/1.4.1...1.4.2
 [1.4.1]: https://github.com/jupyterhub/jupyterhub/compare/1.4.0...1.4.1
 [1.4.0]: https://github.com/jupyterhub/jupyterhub/compare/1.3.0...1.4.0
