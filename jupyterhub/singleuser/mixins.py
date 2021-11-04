@@ -715,6 +715,18 @@ class SingleUserNotebookAppMixin(Configurable):
         orig_loader = env.loader
         env.loader = ChoiceLoader([FunctionLoader(get_page), orig_loader])
 
+    def load_server_extensions(self):
+        # Loading LabApp sets $JUPYTERHUB_API_TOKEN on load, which is incorrect
+        r = super().load_server_extensions()
+        # clear the token in PageConfig at this step
+        # so that cookie auth is used
+        # FIXME: in the future,
+        # it would probably make sense to set page_config.token to the token
+        # from the current request.
+        if 'page_config_data' in self.web_app.settings:
+            self.web_app.settings['page_config_data']['token'] = ''
+        return r
+
 
 def detect_base_package(App):
     """Detect the base package for an App class
