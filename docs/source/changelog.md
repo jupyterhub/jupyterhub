@@ -17,7 +17,7 @@ A few fully backward-compatible features have been backported from 2.0.
 
 [ghsa-cw7p-q79f-m2v7]: https://github.com/jupyterhub/jupyterhub/security/advisories/GHSA-cw7p-q79f-m2v7
 
-### 1.4.2...1.5.0
+### [1.5.0] 2021-11-04
 
 ([full changelog](https://github.com/jupyterhub/jupyterhub/compare/1.4.2...1.5.0))
 
