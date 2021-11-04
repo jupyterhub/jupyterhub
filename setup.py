@@ -12,8 +12,11 @@ import shutil
 import sys
 from subprocess import check_call
 
+from setuptools import Command
 from setuptools import setup
 from setuptools.command.bdist_egg import bdist_egg
+from setuptools.command.build_py import build_py
+from setuptools.command.sdist import sdist
 
 
 v = sys.version_info
@@ -132,13 +135,8 @@ setup_args = dict(
 )
 
 # ---------------------------------------------------------------------------
-# custom distutils commands
+# custom setuptools commands
 # ---------------------------------------------------------------------------
-
-# imports here, so they are after setuptools import if there was one
-from distutils.cmd import Command
-from distutils.command.build_py import build_py
-from distutils.command.sdist import sdist
 
 
 def mtime(path):
