@@ -302,12 +302,8 @@ or kubernetes pods.
 
 ## Learn more about the API
 
-You can see the full [JupyterHub REST API][] for details. This REST API Spec can
-be viewed in a more [interactive style on swagger's petstore][].
-Both resources contain the same information and differ only in its display.
-Note: The Swagger specification is being renamed the [OpenAPI Initiative][].
+You can see the full [JupyterHub REST API][] for details.
 
-[interactive style on swagger's petstore]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/HEAD/docs/rest-api.yml#!/default
 [openapi initiative]: https://www.openapis.org/
 [jupyterhub rest api]: ./rest-api
 [jupyter notebook rest api]: https://petstore3.swagger.io/?url=https://raw.githubusercontent.com/jupyter/notebook/HEAD/notebook/services/api/api.yaml

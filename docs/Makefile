@@ -53,14 +53,6 @@ help:
 clean:
 	rm -rf $(BUILDDIR)/*
 
-node_modules: package.json
-	npm install && touch node_modules
-
-rest-api: source/_static/rest-api/index.html
-
-source/_static/rest-api/index.html: rest-api.yml node_modules
-	npm run rest-api
-
 metrics: source/reference/metrics.rst
 
 source/reference/metrics.rst: generate-metrics.py
@@ -71,7 +63,7 @@ scopes: source/rbac/scope-table.md
 source/rbac/scope-table.md: source/rbac/generate-scope-table.py
 	python3 source/rbac/generate-scope-table.py
 
-html: rest-api metrics scopes
+html: metrics scopes
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)/html."

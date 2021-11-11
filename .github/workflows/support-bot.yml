@@ -1,0 +1,31 @@
+# https://github.com/dessant/support-requests
+name: "Support Requests"
+
+on:
+  issues:
+    types: [labeled, unlabeled, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dessant/support-requests@v2
+        with:
+          github-token: ${{ github.token }}
+          support-label: "support"
+          issue-comment: |
+            Hi there @{issue-author} :wave:!
+
+            I closed this issue because it was labelled as a support question.
+
+            Please help us organize discussion by posting this on the http://discourse.jupyter.org/ forum.
+
+            Our goal is to sustain a positive experience for both users and developers. We use GitHub issues for specific discussions related to changing a repository's content, and let the forum be where we can more generally help and inspire each other.
+
+            Thanks you for being an active member of our community! :heart:
+          close-issue: true
+          lock-issue: false
+          issue-lock-reason: "off-topic"
