@@ -18,6 +18,7 @@ import sys
 import warnings
 from datetime import datetime
 from datetime import timezone
+from importlib import import_module
 from textwrap import dedent
 from urllib.parse import urlparse
 
@@ -606,10 +607,34 @@ class SingleUserNotebookAppMixin(Configurable):
             t = self.hub_activity_interval * (1 + 0.2 * (random.random() - 0.5))
             await asyncio.sleep(t)
 
+    def _log_app_versions(self):
+        """Log application versions at startup
+
+        Logs versions of jupyterhub and singleuser-server base versions (jupyterlab, jupyter_server, notebook)
+        """
+        self.log.info(f"Starting jupyterhub single-user server version {__version__}")
+
+        # don't log these package versions
+        seen = {"jupyterhub", "traitlets", "jupyter_core", "builtins"}
+
+        for cls in self.__class__.mro():
+            module_name = cls.__module__.partition(".")[0]
+            if module_name not in seen:
+                seen.add(module_name)
+                try:
+                    mod = import_module(module_name)
+                    mod_version = getattr(mod, "__version__")
+                except Exception:
+                    mod_version = ""
+                self.log.info(
+                    f"Extending {cls.__module__}.{cls.__name__} from {module_name} {mod_version}"
+                )
+
     def initialize(self, argv=None):
         # disable trash by default
         # this can be re-enabled by config
         self.config.FileContentsManager.delete_to_trash = False
+        self._log_app_versions()
         return super().initialize(argv)
 
     def start(self):
