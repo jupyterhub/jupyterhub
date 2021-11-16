@@ -28,6 +28,7 @@ from tornado.httputil import url_concat
 from tornado.log import app_log
 from tornado.web import HTTPError
 from tornado.web import RequestHandler
+from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 from traitlets import Instance
@@ -487,7 +488,6 @@ class HubAuth(SingletonConfigurable):
         - in URL parameters: ?token=<token>
         - in header: Authorization: token <token>
         """
-
         user_token = handler.get_argument('token', '')
         if not user_token:
             # get it from Authorization header
@@ -598,14 +598,53 @@ class HubOAuth(HubAuth):
         token = handler.get_secure_cookie(self.cookie_name)
         session_id = self.get_session_id(handler)
         if token:
+            if self.strict_session_id and not session_id:
+                app_log.warning("Rejecting token in cookie with no session id")
+                handler.clear_cookie(self.cookie_name)
+                return
             token = token.decode('ascii', 'replace')
             user_model = self.user_for_token(token, session_id=session_id)
             if user_model is None:
                 app_log.warning("Token stored in cookie may have expired")
                 handler.clear_cookie(self.cookie_name)
+            # _after_ identifying the user, check the session id
+            elif self.strict_session_id:
+                # user identified, check session id
+                log_user = f"{user_model['kind']}: {user_model['name']}"
+                # check session_id against user model field
+                token_session_id = user_model.get("session_id")
+                if session_id != token_session_id:
+                    app_log.warning(
+                        f"Strict session id mismatch for {log_user} {session_id} != {token_session_id}"
+                    )
+                    handler.clear_cookie(self.cookie_name)
+                    user_model = None
             return user_model
 
     # HubOAuth API
+
+    strict_session_id = Bool(
+        True,
+        help="""Strict session-id checking.
+
+        Requires session-id to match the token in a cookie.
+
+        If a session-id cookie is not set, no cookie-based auth will be accepted.
+        Additionally, the token in the cookie must be associated with the session id to be accepted.
+
+        Can be disabled via JUPYTERHUB_STRICT_SESSION_ID=0 to preserve JupyterHub 1.x behavior.
+
+        .. versionadded:: 2.0
+        """,
+    ).tag(config=True)
+
+    @default("strict_session_id")
+    def _default_strict_session_id(self):
+        env_session_id = os.environ.get("JUPYTERHUB_STRICT_SESSION_ID", None)
+        if env_session_id:
+            return self.traits()["strict_session_id"].from_string(env_session_id)
+        else:
+            return True
 
     oauth_client_id = Unicode(
         help="""The OAuth client ID for this application.

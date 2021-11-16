@@ -555,3 +555,66 @@ async def test_oauth_logout(app, mockservice_url, create_user_with_scopes):
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ('kind', 'name')}
     assert sub_reply == {'name': name, 'kind': 'user'}
+
+
+async def test_strict_session_id(app, mockservice_url, create_user_with_scopes):
+    """Verify that strict_session_id rejects
+
+    1. clears session id cookie
+    2. revokes oauth tokens
+    3. cleared session id ensures cached auth miss
+    4. cache hit
+    """
+    service = mockservice_url
+    service_cookie_name = 'service-%s' % service.name
+    url = url_path_join(public_url(app, mockservice_url), 'owhoami/?foo=bar')
+    # first request is only going to set login cookie
+    s = AsyncSession()
+    name = 'propha'
+    user = create_user_with_scopes("access:services", name=name)
+
+    def auth_tokens():
+        """Return list of OAuth access tokens for the user"""
+        return list(app.db.query(orm.APIToken).filter_by(user_id=user.id))
+
+    # ensure we start empty
+    assert auth_tokens() == []
+
+    s.cookies = await app.login_user(name)
+    assert 'jupyterhub-session-id' in s.cookies
+    r = await s.get(url)
+    r.raise_for_status()
+    assert urlparse(r.url).path.endswith('oauth2/authorize')
+    # submit the oauth form to complete authorization
+    r = await s.post(r.url, data={'scopes': ['identify']}, headers={'Referer': r.url})
+    r.raise_for_status()
+    assert r.url == url
+
+    # second request should be authenticated
+    r = await s.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 200
+    reply = r.json()
+    sub_reply = {key: reply.get(key, 'missing') for key in ('kind', 'name')}
+    assert sub_reply == {'name': name, 'kind': 'user'}
+
+    # save cookies
+    cookies = copy.deepcopy(s.cookies)
+    # clear session id, should reject request
+    session_id = s.cookies.pop('jupyterhub-session-id')
+    r = await s.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 302
+
+    # session id mismatch, should reject request
+    s.cookies = copy.deepcopy(cookies)
+    s.cookies['jupyterhub-session-id'] = "new-session-id"
+    r = await s.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 302
+
+    # original session id, still allowed, didn't mess anything up
+    s.cookies = copy.deepcopy(cookies)
+    r = await s.get(url, allow_redirects=False)
+    r.raise_for_status()
+    assert r.status_code == 200
