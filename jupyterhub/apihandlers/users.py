@@ -58,6 +58,14 @@ class SelfAPIHandler(APIHandler):
 
         model = get_model(user)
 
+        # add session_id associated with token
+        # added in 2.0
+        token = self.get_token()
+        if token:
+            model["session_id"] = token.session_id
+        else:
+            model["session_id"] = None
+
         # add scopes to identify model,
         # but not the scopes we added to ensure we could read our own model
         model["scopes"] = sorted(self.expanded_scopes.difference(_added_scopes))

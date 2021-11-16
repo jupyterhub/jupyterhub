@@ -1336,6 +1336,14 @@ components:
             Timestamp of last-seen activity using this token.
             Can be null if token has never been used.
           format: date-time
+        session_id:
+          type: string
+          nullable: true
+          description: |
+            The session id associated with the token, if any.
+            Only used for tokens set during oauth flows.
+
+            Added in 2.0.
   responses:
     NotFound:
       description: The specified resource was not found

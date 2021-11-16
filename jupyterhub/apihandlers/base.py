@@ -210,6 +210,7 @@ class APIHandler(BaseHandler):
             'last_activity': isoformat(token.last_activity),
             'expires_at': isoformat(token.expires_at),
             'note': token.note,
+            'session_id': token.session_id,
             'oauth_client': token.oauth_client.description
             or token.oauth_client.identifier,
         }
