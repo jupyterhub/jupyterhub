@@ -5,7 +5,7 @@ Below is an interactive view of JupyterHub's OpenAPI specification.
 <!-- client-rendered openapi UI copied from FastAPI -->
 
 <link type="text/css" rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui.css">
-<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@4.1/swagger-ui-bundle.js"></script>
 <!-- `SwaggerUIBundle` is now available on the page -->
 
 <!-- render the ui here -->
