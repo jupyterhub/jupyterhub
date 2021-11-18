@@ -295,7 +295,7 @@ def get_scopes_for(orm_object):
             )
 
     if isinstance(orm_object, orm.APIToken):
-        app_log.warning(f"Authenticated with token {orm_object}")
+        app_log.debug(f"Authenticated with token {orm_object}")
         owner = orm_object.user or orm_object.service
         token_scopes = roles.expand_roles_to_scopes(orm_object)
         if orm_object.client_id != "jupyterhub":

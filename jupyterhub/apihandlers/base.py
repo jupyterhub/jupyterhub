@@ -31,6 +31,9 @@ class APIHandler(BaseHandler):
     - methods for REST API models
     """
 
+    # accept token-based authentication for API requests
+    _accept_token_auth = True
+
     @property
     def content_security_policy(self):
         return '; '.join([super().content_security_policy, "default-src 'none'"])

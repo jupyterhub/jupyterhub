@@ -71,6 +71,12 @@ SESSION_COOKIE_NAME = 'jupyterhub-session-id'
 class BaseHandler(RequestHandler):
     """Base Handler class with access to common methods and properties."""
 
+    # by default, only accept cookie-based authentication
+    # The APIHandler base class enables token auth
+    # versionadded: 2.0
+    _accept_cookie_auth = True
+    _accept_token_auth = False
+
     async def prepare(self):
         """Identify the user during the prepare stage of each request
 
@@ -410,9 +416,11 @@ class BaseHandler(RequestHandler):
     async def get_current_user(self):
         """get current username"""
         if not hasattr(self, '_jupyterhub_user'):
+            user = None
             try:
-                user = self.get_current_user_token()
-                if user is None:
+                if self._accept_token_auth:
+                    user = self.get_current_user_token()
+                if user is None and self._accept_cookie_auth:
                     user = self.get_current_user_cookie()
                 if user and isinstance(user, User):
                     user = await self.refresh_auth(user)
