@@ -114,7 +114,9 @@ class ScopeTableGenerator:
             if doc_description:
                 description = doc_description
             scope_dict[scope] = description
-        content['securityDefinitions']['oauth2']['scopes'] = scope_dict
+        content['components']['securitySchemes']['oauth2']['flows'][
+            'authorizationCode'
+        ]['scopes'] = scope_dict
 
         with open(filename, 'w') as f:
             yaml.dump(content, f)

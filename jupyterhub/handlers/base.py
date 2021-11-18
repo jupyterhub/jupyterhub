@@ -346,6 +346,7 @@ class BaseHandler(RequestHandler):
             auth_info['auth_state'] = await user.get_auth_state()
         return await self.auth_to_user(auth_info, user)
 
+    @functools.lru_cache()
     def get_token(self):
         """get token from authorization header"""
         token = self.get_auth_token()
