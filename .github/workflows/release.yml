@@ -190,3 +190,23 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ join(fromJson(steps.demotags.outputs.tags)) }}
+
+      # jupyterhub/singleuser
+      - name: Get list of jupyterhub/singleuser tags
+        id: singleusertags
+        uses: jupyterhub/action-major-minor-tag-calculator@v2
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          prefix: "${{ env.REGISTRY }}jupyterhub/singleuser:"
+          defaultTag: "${{ env.REGISTRY }}jupyterhub/singleuser:noref"
+          branchRegex: ^\w[\w-.]*$
+
+      - name: Build and push jupyterhub/singleuser
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        with:
+          build-args: |
+            JUPYTERHUB_VERSION=${{ github.ref_type == 'tag' && github.ref_name || format('git:{0}', github.sha) }}
+          context: singleuser
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ join(fromJson(steps.singleusertags.outputs.tags)) }}
