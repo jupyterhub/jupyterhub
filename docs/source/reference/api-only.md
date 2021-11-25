@@ -16,12 +16,14 @@ Previously, some admin UI functionality could only be achieved via admin pages,
 such as paginated requests.
 
 ## Limited UI customization via templates
+
 The JupyterHub UI is customizable via extensible HTML [templates](templates),
 but this has some limited scope to what can be customized.
 Adding some content and messages to existing pages is well supported,
 but changing the page flow and what pages are available are beyond the scope of what is customizable.
 
 ## Rich UI customization with REST API based apps
+
 Increasingly, JupyterHub is used purely as an API for managing Jupyter servers
 for other Jupyter-based applications that might want to present a different user experience.
 If you want a fully customized user experience,
