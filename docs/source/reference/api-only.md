@@ -2,24 +2,26 @@
 
 # Deploying JupyterHub in "API only mode"
 
-JupyterHub is a service for deploying and managing Jupyter servers for users.
-This functionality is exposed _primarily_ via a [REST API](rest).
-JupyterHub also ships with a _basic_ web UI built on that API,
-enabling users to click a button to quickly start and stop their servers,
-and admins to perform some basic user and server management tasks.
+As a service for deploying and managing Jupyter servers for users, JupyterHub
+exposes this functionality _primarily_ via a [REST API](rest).
+For convenience, JupyterHub also ships with a _basic_ web UI built using that REST API.
+The basic web UI enables users to click a button to quickly start and stop their servers,
+and it lets admins perform some basic user and server management tasks.
 
-The REST API has always provided functionality not available in the UI,
-and we try to avoid having any functionality only available in the UI and not the API.
-With JupyterHub 2.0, this should be fully the case -
-no UI pages should rely on information not available via the REST API.
+The REST API has always provided additional functionality beyond what is available in the basic web UI.
+Similarly, we avoid implementing UI functionality that is also not available via the API.
+With JupyterHub 2.0, the basic web UI will **always** be composed using the REST API.
+In other words, no UI pages should rely on information not available via the REST API.
 Previously, some admin UI functionality could only be achieved via admin pages,
 such as paginated requests.
 
+## Limited UI customization via templates
 The JupyterHub UI is customizable via extensible HTML [templates](templates),
 but this has some limited scope to what can be customized.
 Adding some content and messages to existing pages is well supported,
 but changing the page flow and what pages are available are beyond the scope of what is customizable.
 
+## Rich UI customization with REST API based apps
 Increasingly, JupyterHub is used purely as an API for managing Jupyter servers
 for other Jupyter-based applications that might want to present a different user experience.
 If you want a fully customized user experience,
