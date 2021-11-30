@@ -1,17 +1,5 @@
 # Services
 
-With version 0.7, JupyterHub adds support for **Services**.
-
-This section provides the following information about Services:
-
-- [Definition of a Service](#definition-of-a-service)
-- [Properties of a Service](#properties-of-a-service)
-- [Hub-Managed Services](#hub-managed-services)
-- [Launching a Hub-Managed Service](#launching-a-hub-managed-service)
-- [Externally-Managed Services](#externally-managed-services)
-- [Writing your own Services](#writing-your-own-services)
-- [Hub Authentication and Services](#hub-authentication-and-services)
-
 ## Definition of a Service
 
 When working with JupyterHub, a **Service** is defined as a process that interacts
