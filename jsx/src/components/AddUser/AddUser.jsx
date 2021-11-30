@@ -29,7 +29,16 @@ const AddUser = (props) => {
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">{errorAlert}</div>
+              <div className="alert alert-danger">
+                {errorAlert}
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setErrorAlert(null)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -94,7 +103,7 @@ const AddUser = (props) => {
                               .then(() => history.push("/"))
                               .catch((err) => console.log(err))
                           : setErrorAlert(
-                              `[${data.status}] Failed to create user. ${
+                              `Failed to create user. ${
                                 data.status == 409 ? "User already exists." : ""
                               }`
                             )

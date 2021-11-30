@@ -7,6 +7,7 @@ import GroupSelect from "../GroupSelect/GroupSelect";
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
+    [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
@@ -42,6 +43,24 @@ const GroupEdit = (props) => {
 
   return (
     <div className="container">
+      {errorAlert != null ? (
+        <div className="row">
+          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+            <div className="alert alert-danger">
+              {errorAlert}
+              <button
+                type="button"
+                className="close"
+                onClick={() => setErrorAlert(null)}
+              >
+                <span>&times;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <></>
+      )}
       <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <h3>Editing Group {group_data.name}</h3>
@@ -89,12 +108,13 @@ const GroupEdit = (props) => {
                 );
 
               Promise.all(promiseQueue)
+                // TODO add error if res not ok
                 .then(() => {
                   updateGroups(0, limit)
                     .then((data) => dispatchPageUpdate(data, 0))
                     .then(() => history.push("/groups"));
                 })
-                .catch((err) => console.log(err));
+                .catch((err) => setErrorAlert(`Could not edit group.`));
             }}
           >
             Apply
@@ -106,12 +126,13 @@ const GroupEdit = (props) => {
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
+                // TODO add error if res not ok
                 .then(() => {
                   updateGroups(0, limit)
                     .then((data) => dispatchPageUpdate(data, 0))
                     .then(() => history.push("/groups"));
                 })
-                .catch((err) => console.log(err));
+                .catch((err) => setErrorAlert(`Could not delete group.`));
             }}
           >
             Delete Group

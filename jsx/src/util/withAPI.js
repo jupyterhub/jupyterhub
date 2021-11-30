@@ -7,9 +7,10 @@ const withAPI = withProps(() => ({
       data.json()
     ),
   updateGroups: (offset, limit) =>
-    jhapiRequest(`/groups?offset=${offset}&limit=${limit}`, "GET").then(
-      (data) => data.json()
-    ),
+    jhapiRequest(
+      `/groups?offset=${offset}&limit=${limit}`,
+      "GET"
+    ).then((data) => data.json()),
   shutdownHub: () => jhapiRequest("/shutdown", "POST"),
   startServer: (name) => jhapiRequest("/users/" + name + "/server", "POST"),
   stopServer: (name) => jhapiRequest("/users/" + name + "/server", "DELETE"),
@@ -36,13 +37,8 @@ const withAPI = withProps(() => ({
     jhapiRequest("/users/" + username, "GET")
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
-  failRegexEvent: () =>
-    alert(
-      "Cannot change username - either contains special characters or is too short."
-    ),
-  noChangeEvent: () => {
-    returns;
-  },
+  failRegexEvent: () => {},
+  noChangeEvent: () => {},
   refreshGroupsData: () =>
     jhapiRequest("/groups", "GET").then((data) => data.json()),
   refreshUserData: () =>

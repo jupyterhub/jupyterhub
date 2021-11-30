@@ -44,7 +44,16 @@ const EditUser = (props) => {
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">{errorAlert}</div>
+              <div className="alert alert-danger">
+                {errorAlert}
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setErrorAlert(null)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -89,12 +98,16 @@ const EditUser = (props) => {
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
                                   .then(() => history.push("/"))
-                                  .catch((err) => console.log(err))
-                              : setErrorAlert(
-                                  `[${data.status}] Failed to edit user.`
-                                );
+                                  .catch((err) =>
+                                    setErrorAlert(
+                                      `Could not update users list.`
+                                    )
+                                  )
+                              : setErrorAlert(`Failed to edit user.`);
                           })
-                          .catch((err) => console.log(err));
+                          .catch((err) => {
+                            setErrorAlert(`Failed to edit user.`);
+                          });
                       }}
                     >
                       Delete user
@@ -129,17 +142,20 @@ const EditUser = (props) => {
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
                                   .then(() => history.push("/"))
-                                  .catch((err) => console.log(err))
-                              : setErrorAlert(
-                                  `[${data.status}] Failed to edit user.`
-                                );
+                                  .catch((err) =>
+                                    setErrorAlert(
+                                      `Could not update users list.`
+                                    )
+                                  )
+                              : setErrorAlert(`Failed to edit user.`);
                           })
                           .catch((err) => {
-                            console.log(err);
+                            setErrorAlert(`Failed to edit user.`);
                           });
                       } else {
-                        setUpdatedUsername("");
-                        failRegexEvent();
+                        setErrorAlert(
+                          `Failed to edit user. Make sure the username does not contain special characters.`
+                        );
                       }
                     } else {
                       editUser(username, username, admin)
@@ -148,13 +164,13 @@ const EditUser = (props) => {
                             ? updateUsers(0, limit)
                                 .then((data) => dispatchPageChange(data, 0))
                                 .then(() => history.push("/"))
-                                .catch((err) => console.log(err))
-                            : setErrorAlert(
-                                `[${data.status}] Failed to edit user.`
-                              );
+                                .catch((err) =>
+                                  setErrorAlert(`Could not update users list.`)
+                                )
+                            : setErrorAlert(`Failed to edit user.`);
                         })
                         .catch((err) => {
-                          console.log(err);
+                          setErrorAlert(`Failed to edit user.`);
                         });
                     }
                   }}

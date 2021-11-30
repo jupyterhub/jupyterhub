@@ -27,6 +27,7 @@ const ServerDashboard = (props) => {
     runningAsc = (e) => e.sort((a) => (a.server == null ? -1 : 1)),
     runningDesc = (e) => e.sort((a) => (a.server == null ? 1 : -1));
 
+  var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
 
   var user_data = useSelector((state) => state.user_data),
@@ -73,6 +74,24 @@ const ServerDashboard = (props) => {
 
   return (
     <div className="container">
+      {errorAlert != null ? (
+        <div className="row">
+          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+            <div className="alert alert-danger">
+              {errorAlert}
+              <button
+                type="button"
+                className="close"
+                onClick={() => setErrorAlert(null)}
+              >
+                <span>&times;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <></>
+      )}
       <div className="manage-groups" style={{ float: "right", margin: "20px" }}>
         <Link to="/groups">{"> Manage Groups"}</Link>
       </div>
@@ -128,14 +147,31 @@ const ServerDashboard = (props) => {
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
+                        let failedServers = res.filter((e) => !e.ok);
+                        if (failedServers.length > 0) {
+                          setErrorAlert(
+                            `Could not start ${failedServers.length} ${
+                              failedServers.length > 1 ? "servers" : "server"
+                            }. ${
+                              failedServers.length > 1 ? "Are they " : "Is it "
+                            } already running?`
+                          );
+                        }
+                        return res;
+                      })
+                      .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
                             dispatchPageUpdate(data, page);
                           })
-                          .catch((err) => console.log(err));
+                          .catch((err) =>
+                            setErrorAlert(`Could not update users list.`)
+                          );
                         return res;
                       })
-                      .catch((err) => console.log(err));
+                      .catch((err) =>
+                        setErrorAlert(`Could not start servers.`)
+                      );
                   }}
                 >
                   Start All
@@ -148,14 +184,31 @@ const ServerDashboard = (props) => {
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
+                        let failedServers = res.filter((e) => !e.ok);
+                        if (failedServers.length > 0) {
+                          setErrorAlert(
+                            `Could not stop ${failedServers.length} ${
+                              failedServers.length > 1 ? "servers" : "server"
+                            }. ${
+                              failedServers.length > 1 ? "Are they " : "Is it "
+                            } already stopped?`
+                          );
+                        }
+                        return res;
+                      })
+                      .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
                             dispatchPageUpdate(data, page);
                           })
-                          .catch((err) => console.log(err));
+                          .catch((err) =>
+                            setErrorAlert(`Could not update users list.`)
+                          );
                         return res;
                       })
-                      .catch((err) => console.log(err));
+                      .catch((err) =>
+                        setErrorAlert(`Could not stop all servers.`)
+                      );
                   }}
                 >
                   Stop All
@@ -187,12 +240,22 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         stopServer(e.name)
                           .then((res) => {
-                            updateUsers(...slice).then((data) => {
-                              dispatchPageUpdate(data, page);
-                            });
+                            if (res.ok) return res;
+                            throw new Error(res.status);
+                          })
+                          .then((res) => {
+                            updateUsers(...slice)
+                              .then((data) => {
+                                dispatchPageUpdate(data, page);
+                              })
+                              .catch((err) =>
+                                setErrorAlert(`Could not update users list.`)
+                              );
                             return res;
                           })
-                          .catch((err) => console.log(err))
+                          .catch((err) =>
+                            setErrorAlert(`Could not stop server.`)
+                          )
                       }
                     >
                       Stop Server
@@ -204,12 +267,22 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         startServer(e.name)
                           .then((res) => {
-                            updateUsers(...slice).then((data) => {
-                              dispatchPageUpdate(data, page);
-                            });
+                            if (res.ok) return res;
+                            throw new Error(res.status);
+                          })
+                          .then((res) => {
+                            updateUsers(...slice)
+                              .then((data) => {
+                                dispatchPageUpdate(data, page);
+                              })
+                              .catch((err) =>
+                                setErrorAlert(`Could not update users list.`)
+                              );
                             return res;
                           })
-                          .catch((err) => console.log(err))
+                          .catch((err) => {
+                            setErrorAlert(`Could not start server.`);
+                          })
                       }
                     >
                       Start Server
