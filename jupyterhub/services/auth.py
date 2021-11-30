@@ -3,10 +3,24 @@
 Tokens are sent to the Hub for verification.
 The Hub replies with a JSON model describing the authenticated user.
 
-``HubAuth`` can be used in any application, even outside tornado.
+This contains two levels of authentication:
 
-``HubAuthenticated`` is a mixin class for tornado handlers that should
-authenticate with the Hub.
+- :class:`HubOAuth` - Use OAuth 2 to authenticate browsers with the Hub.
+  This should be used for any service that should respond to browser requests
+  (i.e. most services).
+
+- :class:`HubAuth` - token-only authentication, for a service that only need to handle token-authenticated API requests
+
+The ``Auth`` classes (:class:`HubAuth`, :class:`HubOAuth`)
+can be used in any application, even outside tornado.
+They contain reference implementations of talking to the Hub API
+to resolve a token to a user.
+
+The ``Authenticated`` classes (:class:`HubAuthenticated`, :class:`HubOAuthenticated`)
+are mixins for tornado handlers that should authenticate with the Hub.
+
+If you are using OAuth, you will also need to register an oauth callback handler to complete the oauth process.
+A tornado implementation is provided in :class:`HubOAuthCallbackHandler`.
 
 """
 import base64
@@ -212,6 +226,7 @@ class HubAuth(SingletonConfigurable):
         help="""The base API URL of the Hub.
 
         Typically `http://hub-ip:hub-port/hub/api`
+        Default: $JUPYTERHUB_API_URL
         """,
     ).tag(config=True)
 
@@ -227,7 +242,10 @@ class HubAuth(SingletonConfigurable):
         os.getenv('JUPYTERHUB_API_TOKEN', ''),
         help="""API key for accessing Hub API.
 
-        Generate with `jupyterhub token [username]` or add to JupyterHub.services config.
+        Default: $JUPYTERHUB_API_TOKEN
+
+        Loaded from services configuration in jupyterhub_config.
+        Will be auto-generated for hub-managed services.
         """,
     ).tag(config=True)
 
@@ -236,6 +254,7 @@ class HubAuth(SingletonConfigurable):
         help="""The URL prefix for the Hub itself.
 
         Typically /hub/
+        Default: $JUPYTERHUB_BASE_URL
         """,
     ).tag(config=True)
 
@@ -854,8 +873,6 @@ class HubAuthenticated:
     Examples::
 
         class MyHandler(HubAuthenticated, web.RequestHandler):
-            hub_users = {'inara', 'mal'}
-
             def initialize(self, hub_auth):
                 self.hub_auth = hub_auth
 
@@ -865,6 +882,7 @@ class HubAuthenticated:
 
     """
 
+    # deprecated, pre-2.0 allow sets
     hub_services = None  # set of allowed services
     hub_users = None  # set of allowed users
     hub_groups = None  # set of allowed groups
@@ -960,6 +978,10 @@ class HubAuthenticated:
                 raise UserNotAllowed(model)
 
         # proceed with the pre-2.0 way if hub_scopes is not set
+        warnings.warn(
+            "hub_scopes ($JUPYTERHUB not set, proceeding with pre-2.0 authentication",
+            DeprecationWarning,
+        )
 
         if self.allow_admin and model.get('admin', False):
             app_log.debug("Allowing Hub admin %s", name)
