@@ -108,7 +108,7 @@ const AddUser = (props) => {
                               }`
                             )
                       )
-                      .catch((err) => console.log(err));
+                      .catch((err) => setErrorAlert(`Failed to create user.`));
                   }}
                 >
                   Add Users
