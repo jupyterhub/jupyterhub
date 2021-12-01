@@ -1,5 +1,3 @@
-.. _admin/upgrading:
-
 ====================
 Upgrading JupyterHub
 ====================
