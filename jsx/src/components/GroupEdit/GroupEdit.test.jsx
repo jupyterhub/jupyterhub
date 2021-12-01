@@ -1,100 +1,228 @@
 import React from "react";
-import Enzyme, { mount } from "enzyme";
-import GroupEdit from "./GroupEdit";
-import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
+import "@testing-library/jest-dom";
+import { act } from "react-dom/test-utils";
+import { render, screen, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
-import { act } from "react-dom/test-utils";
-import regeneratorRuntime from "regenerator-runtime"; // eslint-disable-line
+// eslint-disable-next-line
+import regeneratorRuntime from "regenerator-runtime"; 
 
-Enzyme.configure({ adapter: new Adapter() });
+import GroupEdit from "./GroupEdit";
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
   useSelector: jest.fn(),
 }));
 
-describe("GroupEdit Component: ", () => {
-  var mockAsync = () => jest.fn().mockImplementation(() => Promise.resolve());
+var mockAsync = (data) =>
+  jest.fn().mockImplementation(() => Promise.resolve(data));
 
-  var okPacket = new Promise((resolve) => resolve(true));
+var mockAsyncRejection = () =>
+  jest.fn().mockImplementation(() => Promise.reject());
 
-  var groupEditJsx = (callbackSpy) => (
-    <Provider store={createStore(() => {}, {})}>
-      <HashRouter>
-        <GroupEdit
-          location={{
-            state: {
-              group_data: { users: ["foo"], name: "group" },
-              callback: () => {},
-            },
-          }}
-          addToGroup={callbackSpy}
-          removeFromGroup={callbackSpy}
-          deleteGroup={callbackSpy}
-          history={{ push: () => callbackSpy }}
-          updateGroups={callbackSpy}
-          validateUser={jest.fn().mockImplementation(() => okPacket)}
-        />
-      </HashRouter>
-    </Provider>
-  );
+var okPacket = new Promise((resolve) => resolve(true));
 
-  var mockAppState = () => ({
-    limit: 3,
+var groupEditJsx = (callbackSpy) => (
+  <Provider store={createStore(() => {}, {})}>
+    <HashRouter>
+      <GroupEdit
+        location={{
+          state: {
+            group_data: { users: ["foo"], name: "group" },
+            callback: () => {},
+          },
+        }}
+        addToGroup={callbackSpy}
+        removeFromGroup={callbackSpy}
+        deleteGroup={callbackSpy}
+        history={{ push: () => callbackSpy }}
+        updateGroups={callbackSpy}
+        validateUser={jest.fn().mockImplementation(() => okPacket)}
+      />
+    </HashRouter>
+  </Provider>
+);
+
+var mockAppState = () => ({
+  limit: 3,
+});
+
+beforeEach(() => {
+  useSelector.mockImplementation((callback) => {
+    return callback(mockAppState());
+  });
+});
+
+afterEach(() => {
+  useSelector.mockClear();
+});
+
+test("Renders", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
   });
 
-  beforeEach(() => {
-    useSelector.mockImplementation((callback) => {
-      return callback(mockAppState());
-    });
+  expect(screen.getByTestId("container")).toBeVisible();
+});
+
+test("Adds user from input to user selectables on button click", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
   });
 
-  afterEach(() => {
-    useSelector.mockClear();
+  let input = screen.getByTestId("username-input");
+  let validateUser = screen.getByTestId("validate-user");
+  let submit = screen.getByTestId("submit");
+
+  userEvent.type(input, "bar");
+  fireEvent.click(validateUser);
+  await act(async () => okPacket);
+
+  await act(async () => {
+    fireEvent.click(submit);
   });
 
-  it("Adds user from input to user selectables on button click", async () => {
-    let callbackSpy = mockAsync(),
-      component = mount(groupEditJsx(callbackSpy)),
-      input = component.find("#username-input"),
-      validateUser = component.find("#validate-user"),
-      submit = component.find("#submit");
+  expect(callbackSpy).toHaveBeenNthCalledWith(1, ["bar"], "group");
+});
 
-    input.simulate("change", { target: { value: "bar" } });
-    validateUser.simulate("click");
-    await act(() => okPacket);
-    submit.simulate("click");
-    expect(callbackSpy).toHaveBeenNthCalledWith(1, ["bar"], "group");
+test("Removes a user recently added from input from the selectables list", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
   });
 
-  it("Removes a user recently added from input from the selectables list", () => {
-    let callbackSpy = mockAsync(),
-      component = mount(groupEditJsx(callbackSpy)),
-      unsubmittedUser = component.find(".item.selected").last();
-    unsubmittedUser.simulate("click");
-    expect(component.find(".item").length).toBe(1);
+  let selectedUser = screen.getByText("foo");
+  fireEvent.click(selectedUser);
+
+  let unselectedUser = screen.getByText("foo");
+
+  expect(unselectedUser.className).toBe("item unselected");
+});
+
+test("Grays out a user, already in the group, when unselected and calls deleteUser on submit", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
   });
 
-  it("Grays out a user, already in the group, when unselected and calls deleteUser on submit", () => {
-    let callbackSpy = mockAsync(),
-      component = mount(groupEditJsx(callbackSpy)),
-      groupUser = component.find(".item.selected").first();
-    groupUser.simulate("click");
-    expect(component.find(".item.unselected").length).toBe(1);
-    expect(component.find(".item").length).toBe(1);
-    // test deleteUser call
-    let submit = component.find("#submit");
-    submit.simulate("click");
-    expect(callbackSpy).toHaveBeenNthCalledWith(1, ["foo"], "group");
+  let submit = screen.getByTestId("submit");
+
+  let groupUser = screen.getByText("foo");
+  fireEvent.click(groupUser);
+
+  let unselectedUser = screen.getByText("foo");
+  expect(unselectedUser.className).toBe("item unselected");
+
+  // test deleteUser call
+  await act(async () => {
+    fireEvent.click(submit);
   });
 
-  it("Calls deleteGroup on button click", () => {
-    let callbackSpy = mockAsync(),
-      component = mount(groupEditJsx(callbackSpy)),
-      deleteGroup = component.find("#delete-group").first();
-    deleteGroup.simulate("click");
-    expect(callbackSpy).toHaveBeenNthCalledWith(1, "group");
+  expect(callbackSpy).toHaveBeenNthCalledWith(1, ["foo"], "group");
+});
+
+test("Calls deleteGroup on button click", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
   });
+
+  let deleteGroup = screen.getByTestId("delete-group");
+
+  await act(async () => {
+    fireEvent.click(deleteGroup);
+  });
+
+  expect(callbackSpy).toHaveBeenNthCalledWith(1, "group");
+});
+
+test("Shows a UI error dialogue when group edit fails", async () => {
+  let callbackSpy = mockAsyncRejection();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
+  });
+
+  let groupUser = screen.getByText("foo");
+  fireEvent.click(groupUser);
+
+  let submit = screen.getByTestId("submit");
+
+  await act(async () => {
+    fireEvent.click(submit);
+  });
+
+  let errorDialog = screen.getByText("Failed to edit group.");
+
+  expect(errorDialog).toBeVisible();
+  expect(callbackSpy).toHaveBeenCalled();
+});
+
+test("Shows a UI error dialogue when group edit returns an improper status code", async () => {
+  let callbackSpy = mockAsync({ status: 403 });
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
+  });
+
+  let groupUser = screen.getByText("foo");
+  fireEvent.click(groupUser);
+
+  let submit = screen.getByTestId("submit");
+
+  await act(async () => {
+    fireEvent.click(submit);
+  });
+
+  let errorDialog = screen.getByText("Failed to edit group.");
+
+  expect(errorDialog).toBeVisible();
+  expect(callbackSpy).toHaveBeenCalled();
+});
+
+test("Shows a UI error dialogue when group delete fails", async () => {
+  let callbackSpy = mockAsyncRejection();
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
+  });
+
+  let deleteGroup = screen.getByTestId("delete-group");
+
+  await act(async () => {
+    fireEvent.click(deleteGroup);
+  });
+
+  let errorDialog = screen.getByText("Failed to delete group.");
+
+  expect(errorDialog).toBeVisible();
+  expect(callbackSpy).toHaveBeenCalled();
+});
+
+test("Shows a UI error dialogue when group delete returns an improper status code", async () => {
+  let callbackSpy = mockAsync({ status: 403 });
+
+  await act(async () => {
+    render(groupEditJsx(callbackSpy));
+  });
+
+  let deleteGroup = screen.getByTestId("delete-group");
+
+  await act(async () => {
+    fireEvent.click(deleteGroup);
+  });
+
+  let errorDialog = screen.getByText("Failed to delete group.");
+
+  expect(errorDialog).toBeVisible();
+  expect(callbackSpy).toHaveBeenCalled();
 });

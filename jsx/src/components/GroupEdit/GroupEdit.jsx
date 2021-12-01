@@ -42,7 +42,7 @@ const GroupEdit = (props) => {
   if (!group_data) return <div></div>;
 
   return (
-    <div className="container">
+    <div className="container" data-testid="container">
       {errorAlert != null ? (
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
@@ -84,6 +84,7 @@ const GroupEdit = (props) => {
           <span> </span>
           <button
             id="submit"
+            data-testid="submit"
             className="btn btn-primary"
             onClick={() => {
               // check for changes
@@ -108,31 +109,35 @@ const GroupEdit = (props) => {
                 );
 
               Promise.all(promiseQueue)
-                // TODO add error if res not ok
-                .then(() => {
-                  updateGroups(0, limit)
-                    .then((data) => dispatchPageUpdate(data, 0))
-                    .then(() => history.push("/groups"));
+                .then((data) => {
+                  data.status < 300
+                    ? updateGroups(0, limit)
+                        .then((data) => dispatchPageUpdate(data, 0))
+                        .then(() => history.push("/groups"))
+                    : setErrorAlert(`Failed to edit group.`);
                 })
-                .catch((err) => setErrorAlert(`Could not edit group.`));
+                .catch((err) => setErrorAlert(`Failed to edit group.`));
             }}
           >
             Apply
           </button>
           <button
             id="delete-group"
+            data-testid="delete-group"
             className="btn btn-danger"
             style={{ float: "right" }}
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
                 // TODO add error if res not ok
-                .then(() => {
-                  updateGroups(0, limit)
-                    .then((data) => dispatchPageUpdate(data, 0))
-                    .then(() => history.push("/groups"));
+                .then((data) => {
+                  data.status < 300
+                    ? updateGroups(0, limit)
+                        .then((data) => dispatchPageUpdate(data, 0))
+                        .then(() => history.push("/groups"))
+                    : setErrorAlert(`Failed to delete group.`);
                 })
-                .catch((err) => setErrorAlert(`Could not delete group.`));
+                .catch((err) => setErrorAlert(`Failed to delete group.`));
             }}
           >
             Delete Group

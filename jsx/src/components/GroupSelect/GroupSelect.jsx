@@ -24,6 +24,7 @@ const GroupSelect = (props) => {
         <div className="input-group">
           <input
             id="username-input"
+            data-testid="username-input"
             type="text"
             className="form-control"
             placeholder="Add by username"
@@ -35,6 +36,7 @@ const GroupSelect = (props) => {
           <span className="input-group-btn">
             <button
               id="validate-user"
+              data-testid="validate-user"
               className="btn btn-default"
               type="button"
               onClick={() => {
