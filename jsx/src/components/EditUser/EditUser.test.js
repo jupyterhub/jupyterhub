@@ -6,7 +6,7 @@ import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
 // eslint-disable-next-line
-import regeneratorRuntime from 'regenerator-runtime'
+import regeneratorRuntime from "regenerator-runtime";
 
 import EditUser from "./EditUser";
 

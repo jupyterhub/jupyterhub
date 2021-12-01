@@ -6,7 +6,7 @@ import { HashRouter, Switch } from "react-router-dom";
 import { Provider, useSelector } from "react-redux";
 import { createStore } from "redux";
 // eslint-disable-next-line
-import regeneratorRuntime from 'regenerator-runtime'
+import regeneratorRuntime from "regenerator-runtime";
 
 import ServerDashboard from "./ServerDashboard";
 
