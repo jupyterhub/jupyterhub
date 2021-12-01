@@ -24,7 +24,7 @@ const CreateGroup = (props) => {
 
   return (
     <>
-      <div className="container">
+      <div className="container" data-testid="container">
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
@@ -53,6 +53,7 @@ const CreateGroup = (props) => {
                 <div className="input-group">
                   <input
                     className="group-name-input"
+                    data-testid="group-input"
                     type="text"
                     id="group-name"
                     value={groupName}
@@ -70,6 +71,7 @@ const CreateGroup = (props) => {
                 <span> </span>
                 <button
                   id="submit"
+                  data-testid="submit"
                   className="btn btn-primary"
                   onClick={() => {
                     createGroup(groupName)
@@ -89,7 +91,7 @@ const CreateGroup = (props) => {
                               }`
                             );
                       })
-                      .catch((err) => setErrorAlert(`Could not create group.`));
+                      .catch((err) => setErrorAlert(`Failed to create group.`));
                   }}
                 >
                   Create

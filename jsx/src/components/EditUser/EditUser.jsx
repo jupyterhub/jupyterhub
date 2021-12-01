@@ -40,7 +40,7 @@ const EditUser = (props) => {
 
   return (
     <>
-      <div className="container">
+      <div className="container" data-testid="container">
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
@@ -70,6 +70,7 @@ const EditUser = (props) => {
                   <div className="form-group">
                     <textarea
                       className="form-control"
+                      data-testid="edit-username-input"
                       id="exampleFormControlTextarea1"
                       rows="3"
                       placeholder="updated username"
@@ -90,8 +91,10 @@ const EditUser = (props) => {
                     <br></br>
                     <button
                       id="delete-user"
+                      data-testid="delete-user"
                       className="btn btn-danger btn-sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         deleteUser(username)
                           .then((data) => {
                             data.status < 300
@@ -122,8 +125,10 @@ const EditUser = (props) => {
                 <span> </span>
                 <button
                   id="submit"
+                  data-testid="submit"
                   className="btn btn-primary"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     if (updatedUsername == "" && admin == has_admin) {
                       noChangeEvent();
                       return;
