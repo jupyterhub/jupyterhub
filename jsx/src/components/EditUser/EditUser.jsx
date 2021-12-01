@@ -19,14 +19,7 @@ const EditUser = (props) => {
     });
   };
 
-  var {
-    editUser,
-    deleteUser,
-    failRegexEvent,
-    noChangeEvent,
-    updateUsers,
-    history,
-  } = props;
+  var { editUser, deleteUser, noChangeEvent, updateUsers, history } = props;
 
   if (props.location.state == undefined) {
     props.history.push("/");
@@ -101,14 +94,14 @@ const EditUser = (props) => {
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
                                   .then(() => history.push("/"))
-                                  .catch((err) =>
+                                  .catch(() =>
                                     setErrorAlert(
                                       `Could not update users list.`
                                     )
                                   )
                               : setErrorAlert(`Failed to edit user.`);
                           })
-                          .catch((err) => {
+                          .catch(() => {
                             setErrorAlert(`Failed to edit user.`);
                           });
                       }}
@@ -147,14 +140,14 @@ const EditUser = (props) => {
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
                                   .then(() => history.push("/"))
-                                  .catch((err) =>
+                                  .catch(() =>
                                     setErrorAlert(
                                       `Could not update users list.`
                                     )
                                   )
                               : setErrorAlert(`Failed to edit user.`);
                           })
-                          .catch((err) => {
+                          .catch(() => {
                             setErrorAlert(`Failed to edit user.`);
                           });
                       } else {
@@ -169,12 +162,12 @@ const EditUser = (props) => {
                             ? updateUsers(0, limit)
                                 .then((data) => dispatchPageChange(data, 0))
                                 .then(() => history.push("/"))
-                                .catch((err) =>
+                                .catch(() =>
                                   setErrorAlert(`Could not update users list.`)
                                 )
                             : setErrorAlert(`Failed to edit user.`);
                         })
-                        .catch((err) => {
+                        .catch(() => {
                           setErrorAlert(`Failed to edit user.`);
                         });
                     }

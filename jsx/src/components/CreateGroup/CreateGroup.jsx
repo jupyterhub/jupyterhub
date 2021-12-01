@@ -80,7 +80,7 @@ const CreateGroup = (props) => {
                           ? updateGroups(0, limit)
                               .then((data) => dispatchPageUpdate(data, 0))
                               .then(() => history.push("/groups"))
-                              .catch((err) =>
+                              .catch(() =>
                                 setErrorAlert(`Could not update groups list.`)
                               )
                           : setErrorAlert(
@@ -91,7 +91,7 @@ const CreateGroup = (props) => {
                               }`
                             );
                       })
-                      .catch((err) => setErrorAlert(`Failed to create group.`));
+                      .catch(() => setErrorAlert(`Failed to create group.`));
                   }}
                 >
                   Create

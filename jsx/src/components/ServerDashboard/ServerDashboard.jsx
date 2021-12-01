@@ -169,14 +169,12 @@ const ServerDashboard = (props) => {
                           .then((data) => {
                             dispatchPageUpdate(data, page);
                           })
-                          .catch((err) =>
+                          .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
                           );
                         return res;
                       })
-                      .catch((err) =>
-                        setErrorAlert(`Failed to start servers.`)
-                      );
+                      .catch(() => setErrorAlert(`Failed to start servers.`));
                   }}
                 >
                   Start All
@@ -207,12 +205,12 @@ const ServerDashboard = (props) => {
                           .then((data) => {
                             dispatchPageUpdate(data, page);
                           })
-                          .catch((err) =>
+                          .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
                           );
                         return res;
                       })
-                      .catch((err) => setErrorAlert(`Failed to stop servers.`));
+                      .catch(() => setErrorAlert(`Failed to stop servers.`));
                   }}
                 >
                   Stop All
@@ -249,7 +247,7 @@ const ServerDashboard = (props) => {
                                   .then((data) => {
                                     dispatchPageUpdate(data, page);
                                   })
-                                  .catch((err) =>
+                                  .catch(() =>
                                     setErrorAlert(
                                       `Failed to update users list.`
                                     )
@@ -257,9 +255,7 @@ const ServerDashboard = (props) => {
                               : setErrorAlert(`Failed to stop server`);
                             return res;
                           })
-                          .catch((err) =>
-                            setErrorAlert(`Failed to stop server.`)
-                          )
+                          .catch(() => setErrorAlert(`Failed to stop server.`))
                       }
                     >
                       Stop Server
@@ -276,7 +272,7 @@ const ServerDashboard = (props) => {
                                   .then((data) => {
                                     dispatchPageUpdate(data, page);
                                   })
-                                  .catch((err) =>
+                                  .catch(() =>
                                     setErrorAlert(
                                       `Failed to update users list.`
                                     )
@@ -284,7 +280,7 @@ const ServerDashboard = (props) => {
                               : setErrorAlert(`Failed to start server`);
                             return res;
                           })
-                          .catch((err) => {
+                          .catch(() => {
                             setErrorAlert(`Failed to start server.`);
                           })
                       }

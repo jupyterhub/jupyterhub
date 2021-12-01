@@ -116,7 +116,7 @@ const GroupEdit = (props) => {
                         .then(() => history.push("/groups"))
                     : setErrorAlert(`Failed to edit group.`);
                 })
-                .catch((err) => setErrorAlert(`Failed to edit group.`));
+                .catch(() => setErrorAlert(`Failed to edit group.`));
             }}
           >
             Apply
@@ -137,7 +137,7 @@ const GroupEdit = (props) => {
                         .then(() => history.push("/groups"))
                     : setErrorAlert(`Failed to delete group.`);
                 })
-                .catch((err) => setErrorAlert(`Failed to delete group.`));
+                .catch(() => setErrorAlert(`Failed to delete group.`));
             }}
           >
             Delete Group

@@ -71,7 +71,7 @@ const AddUser = (props) => {
                       type="checkbox"
                       id="admin-check"
                       checked={admin}
-                      onChange={(e) => setAdmin(!admin)}
+                      onChange={() => setAdmin(!admin)}
                     />
                     <span> </span>
                     <label className="form-check-label">Admin</label>
@@ -104,14 +104,16 @@ const AddUser = (props) => {
                           ? updateUsers(0, limit)
                               .then((data) => dispatchPageChange(data, 0))
                               .then(() => history.push("/"))
-                              .catch((err) => console.log(err))
+                              .catch(() =>
+                                setErrorAlert(`Failed to update users.`)
+                              )
                           : setErrorAlert(
                               `Failed to create user. ${
                                 data.status == 409 ? "User already exists." : ""
                               }`
                             )
                       )
-                      .catch((err) => setErrorAlert(`Failed to create user.`));
+                      .catch(() => setErrorAlert(`Failed to create user.`));
                   }}
                 >
                   Add Users

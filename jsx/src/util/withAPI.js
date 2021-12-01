@@ -37,8 +37,14 @@ const withAPI = withProps(() => ({
     jhapiRequest("/users/" + username, "GET")
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
-  failRegexEvent: () => {},
-  noChangeEvent: () => {},
+  // Temporarily Unused
+  failRegexEvent: () => {
+    return null;
+  },
+  noChangeEvent: () => {
+    return null;
+  },
+  //
   refreshGroupsData: () =>
     jhapiRequest("/groups", "GET").then((data) => data.json()),
   refreshUserData: () =>
