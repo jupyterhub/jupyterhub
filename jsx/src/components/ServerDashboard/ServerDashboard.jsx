@@ -61,7 +61,7 @@ const ServerDashboard = (props) => {
   };
 
   if (!user_data) {
-    return <div></div>;
+    return <div data-testid="no-show"></div>;
   }
 
   if (page != user_page) {
@@ -73,7 +73,7 @@ const ServerDashboard = (props) => {
   }
 
   return (
-    <div className="container">
+    <div className="container" data-testid="container">
       {errorAlert != null ? (
         <div className="row">
           <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
@@ -104,6 +104,7 @@ const ServerDashboard = (props) => {
                 <SortHandler
                   sorts={{ asc: usernameAsc, desc: usernameDesc }}
                   callback={(method) => setSortMethod(() => method)}
+                  testid="user-sort"
                 />
               </th>
               <th id="admin-header">
@@ -111,6 +112,7 @@ const ServerDashboard = (props) => {
                 <SortHandler
                   sorts={{ asc: adminAsc, desc: adminDesc }}
                   callback={(method) => setSortMethod(() => method)}
+                  testid="admin-sort"
                 />
               </th>
               <th id="last-activity-header">
@@ -118,6 +120,7 @@ const ServerDashboard = (props) => {
                 <SortHandler
                   sorts={{ asc: dateAsc, desc: dateDesc }}
                   callback={(method) => setSortMethod(() => method)}
+                  testid="last-activity-sort"
                 />
               </th>
               <th id="running-status-header">
@@ -125,6 +128,7 @@ const ServerDashboard = (props) => {
                 <SortHandler
                   sorts={{ asc: runningAsc, desc: runningDesc }}
                   callback={(method) => setSortMethod(() => method)}
+                  testid="running-status-sort"
                 />
               </th>
               <th id="actions-header">Actions</th>
@@ -144,13 +148,14 @@ const ServerDashboard = (props) => {
                 <Button
                   variant="primary"
                   className="start-all"
+                  data-testid="start-all"
                   onClick={() => {
                     Promise.all(startAll(user_data.map((e) => e.name)))
                       .then((res) => {
                         let failedServers = res.filter((e) => !e.ok);
                         if (failedServers.length > 0) {
                           setErrorAlert(
-                            `Could not start ${failedServers.length} ${
+                            `Failed to start ${failedServers.length} ${
                               failedServers.length > 1 ? "servers" : "server"
                             }. ${
                               failedServers.length > 1 ? "Are they " : "Is it "
@@ -165,12 +170,12 @@ const ServerDashboard = (props) => {
                             dispatchPageUpdate(data, page);
                           })
                           .catch((err) =>
-                            setErrorAlert(`Could not update users list.`)
+                            setErrorAlert(`Failed to update users list.`)
                           );
                         return res;
                       })
                       .catch((err) =>
-                        setErrorAlert(`Could not start servers.`)
+                        setErrorAlert(`Failed to start servers.`)
                       );
                   }}
                 >
@@ -181,13 +186,14 @@ const ServerDashboard = (props) => {
                 <Button
                   variant="danger"
                   className="stop-all"
+                  data-testid="stop-all"
                   onClick={() => {
                     Promise.all(stopAll(user_data.map((e) => e.name)))
                       .then((res) => {
                         let failedServers = res.filter((e) => !e.ok);
                         if (failedServers.length > 0) {
                           setErrorAlert(
-                            `Could not stop ${failedServers.length} ${
+                            `Failed to stop ${failedServers.length} ${
                               failedServers.length > 1 ? "servers" : "server"
                             }. ${
                               failedServers.length > 1 ? "Are they " : "Is it "
@@ -202,13 +208,11 @@ const ServerDashboard = (props) => {
                             dispatchPageUpdate(data, page);
                           })
                           .catch((err) =>
-                            setErrorAlert(`Could not update users list.`)
+                            setErrorAlert(`Failed to update users list.`)
                           );
                         return res;
                       })
-                      .catch((err) =>
-                        setErrorAlert(`Could not stop all servers.`)
-                      );
+                      .catch((err) => setErrorAlert(`Failed to stop servers.`));
                   }}
                 >
                   Stop All
@@ -227,12 +231,12 @@ const ServerDashboard = (props) => {
             </tr>
             {user_data.map((e, i) => (
               <tr key={i + "row"} className="user-row">
-                <td>{e.name}</td>
-                <td>{e.admin ? "admin" : ""}</td>
-                <td>
+                <td data-testid="user-row-name">{e.name}</td>
+                <td data-testid="user-row-admin">{e.admin ? "admin" : ""}</td>
+                <td data-testid="user-row-last-activity">
                   {e.last_activity ? timeSince(e.last_activity) : "Never"}
                 </td>
-                <td>
+                <td data-testid="user-row-server-activity">
                   {e.server != null ? (
                     // Stop Single-user server
                     <button
@@ -240,21 +244,21 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         stopServer(e.name)
                           .then((res) => {
-                            if (res.ok) return res;
-                            throw new Error(res.status);
-                          })
-                          .then((res) => {
-                            updateUsers(...slice)
-                              .then((data) => {
-                                dispatchPageUpdate(data, page);
-                              })
-                              .catch((err) =>
-                                setErrorAlert(`Could not update users list.`)
-                              );
+                            data < 300
+                              ? updateUsers(...slice)
+                                  .then((data) => {
+                                    dispatchPageUpdate(data, page);
+                                  })
+                                  .catch((err) =>
+                                    setErrorAlert(
+                                      `Failed to update users list.`
+                                    )
+                                  )
+                              : setErrorAlert(`Failed to stop server`);
                             return res;
                           })
                           .catch((err) =>
-                            setErrorAlert(`Could not stop server.`)
+                            setErrorAlert(`Failed to stop server.`)
                           )
                       }
                     >
@@ -267,21 +271,21 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         startServer(e.name)
                           .then((res) => {
-                            if (res.ok) return res;
-                            throw new Error(res.status);
-                          })
-                          .then((res) => {
-                            updateUsers(...slice)
-                              .then((data) => {
-                                dispatchPageUpdate(data, page);
-                              })
-                              .catch((err) =>
-                                setErrorAlert(`Could not update users list.`)
-                              );
+                            data < 300
+                              ? updateUsers(...slice)
+                                  .then((data) => {
+                                    dispatchPageUpdate(data, page);
+                                  })
+                                  .catch((err) =>
+                                    setErrorAlert(
+                                      `Failed to update users list.`
+                                    )
+                                  )
+                              : setErrorAlert(`Failed to start server`);
                             return res;
                           })
                           .catch((err) => {
-                            setErrorAlert(`Could not start server.`);
+                            setErrorAlert(`Failed to start server.`);
                           })
                       }
                     >
@@ -342,13 +346,14 @@ ServerDashboard.propTypes = {
 };
 
 const SortHandler = (props) => {
-  var { sorts, callback } = props;
+  var { sorts, callback, testid } = props;
 
   var [direction, setDirection] = useState(undefined);
 
   return (
     <div
       className="sort-icon"
+      data-testid={testid}
       onClick={() => {
         if (!direction) {
           callback(sorts.desc);
@@ -376,6 +381,7 @@ const SortHandler = (props) => {
 SortHandler.propTypes = {
   sorts: PropTypes.object,
   callback: PropTypes.func,
+  testid: PropTypes.string,
 };
 
 export default ServerDashboard;
