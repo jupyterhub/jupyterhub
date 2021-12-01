@@ -22,8 +22,11 @@ and consider assigning only the necessary roles and scopes.
 
 [rbac]: ./rbac/index.md
 
-:::{admonition} stop all servers before upgrading
+JupyterHub 2.0 requires an update to the database schema,
+so **make sure to [read the upgrade documentation and backup your database](admin/upgrading)
+before upgrading**.
 
+:::{admonition} stop all servers before upgrading
 Upgrading JupyterHub to 2.0 revokes all tokens issued before the upgrade,
 which means that single-user servers started before the upgrade
 will become inaccessible after the upgrade until they have been stopped and started again.
