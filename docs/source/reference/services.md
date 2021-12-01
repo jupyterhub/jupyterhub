@@ -1,17 +1,5 @@
 # Services
 
-With version 0.7, JupyterHub adds support for **Services**.
-
-This section provides the following information about Services:
-
-- [Definition of a Service](#definition-of-a-service)
-- [Properties of a Service](#properties-of-a-service)
-- [Hub-Managed Services](#hub-managed-services)
-- [Launching a Hub-Managed Service](#launching-a-hub-managed-service)
-- [Externally-Managed Services](#externally-managed-services)
-- [Writing your own Services](#writing-your-own-services)
-- [Hub Authentication and Services](#hub-authentication-and-services)
-
 ## Definition of a Service
 
 When working with JupyterHub, a **Service** is defined as a process that interacts
@@ -115,6 +103,8 @@ parameters, which describe the environment needed to start the Service process:
 
 The Hub will pass the following environment variables to launch the Service:
 
+(service-env)=
+
 ```bash
 JUPYTERHUB_SERVICE_NAME:   The name of the service
 JUPYTERHUB_API_TOKEN:      API token assigned to the service
@@ -196,18 +186,38 @@ extra slash you might get unexpected behavior. For example if your service has a
 
 ## Hub Authentication and Services
 
-JupyterHub 0.7 introduces some utilities for using the Hub's authentication
-mechanism to govern access to your service. When a user logs into JupyterHub,
-the Hub sets a **cookie (`jupyterhub-services`)**. The service can use this
-cookie to authenticate requests.
+JupyterHub provides some utilities for using the Hub's authentication
+mechanism to govern access to your service.
 
-JupyterHub ships with a reference implementation of Hub authentication that
+Requests to all JupyterHub services are made with OAuth tokens.
+These can either be requests with a token in the `Authorization` header,
+or url parameter `?token=...`,
+or browser requests which must complete the OAuth authorization code flow,
+which results in a token that should be persisted for future requests
+(persistence is up to the service,
+but an encrypted cookie confined to the service path is appropriate,
+and provided by default).
+
+:::{versionchanged} 2.0
+The shared `jupyterhub-services` cookie is removed.
+OAuth must be used to authenticate browser requests with services.
+:::
+
+JupyterHub includes a reference implementation of Hub authentication that
 can be used by services. You may go beyond this reference implementation and
 create custom hub-authenticating clients and services. We describe the process
 below.
 
 The reference, or base, implementation is the [`HubAuth`][hubauth] class,
-which implements the requests to the Hub.
+which implements the API requests to the Hub that resolve a token to a User model.
+
+There are two levels of authentication with the Hub:
+
+- [`HubAuth`][hubauth] - the most basic authentication,
+  for services that should only accept API requests authorized with a token.
+
+- [`HubOAuth`][huboauth] - For services that should use oauth to authenticate with the Hub.
+  This should be used for any service that serves pages that should be visited with a browser.
 
 To use HubAuth, you must set the `.api_token`, either programmatically when constructing the class,
 or via the `JUPYTERHUB_API_TOKEN` environment variable.
@@ -250,18 +260,17 @@ for more details.
 ### Authenticating tornado services with JupyterHub
 
 Since most Jupyter services are written with tornado,
-we include a mixin class, [`HubAuthenticated`][hubauthenticated],
+we include a mixin class, [`HubOAuthenticated`][huboauthenticated],
 for quickly authenticating your own tornado services with JupyterHub.
 
-Tornado's `@web.authenticated` method calls a Handler's `.get_current_user`
-method to identify the user. Mixing in `HubAuthenticated` defines
-`get_current_user` to use HubAuth. If you want to configure the HubAuth
-instance beyond the default, you'll want to define an `initialize` method,
+Tornado's {py:func}`~.tornado.web.authenticated` decorator calls a Handler's {py:meth}`~.tornado.web.RequestHandler.get_current_user`
+method to identify the user. Mixing in {class}`.HubAuthenticated` defines
+{meth}`~.HubAuthenticated.get_current_user` to use HubAuth. If you want to configure the HubAuth
+instance beyond the default, you'll want to define an {py:meth}`~.tornado.web.RequestHandler.initialize` method,
 such as:
 
 ```python
-class MyHandler(HubAuthenticated, web.RequestHandler):
-    hub_users = {'inara', 'mal'}
+class MyHandler(HubOAuthenticated, web.RequestHandler):
 
     def initialize(self, hub_auth):
         self.hub_auth = hub_auth
@@ -271,14 +280,21 @@ class MyHandler(HubAuthenticated, web.RequestHandler):
         ...
 ```
 
-The HubAuth will automatically load the desired configuration from the Service
-environment variables.
+The HubAuth class will automatically load the desired configuration from the Service
+[environment variables](service-env).
 
-If you want to limit user access, you can specify allowed users through either the
-`.hub_users` attribute or `.hub_groups`. These are sets that check against the
-username and user group list, respectively. If a user matches neither the user
-list nor the group list, they will not be allowed access. If both are left
-undefined, then any user will be allowed.
+:::{versionchanged} 2.0
+
+Access scopes are used to govern access to services.
+Prior to 2.0,
+sets of users and groups could be used to grant access
+by defining `.hub_groups` or `.hub_users` on the authenticated handler.
+These are ignored if the 2.0 `.hub_scopes` is defined.
+:::
+
+:::{seealso}
+{meth}`.HubAuth.check_scopes`
+:::
 
 ### Implementing your own Authentication with JupyterHub
 
@@ -328,7 +344,7 @@ and taking note of the following process:
    ```python
    {
      "name": "inara",
-     # groups  may be omitted, depending on permissions
+     # groups may be omitted, depending on permissions
      "groups": ["serenity", "guild"],
      # scopes is new in JupyterHub 2.0
      "scopes": [
@@ -354,9 +370,11 @@ section on securing the notebook viewer.
 
 [requests]: http://docs.python-requests.org/en/master/
 [services_auth]: ../api/services.auth.html
+[hubauth]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth
 [huboauth]: ../api/services.auth.html#jupyterhub.services.auth.HubOAuth
 [hubauth.user_for_token]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_token
 [hubauthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
+[huboauthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubOAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
 [fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi
 [fastapi]: https://fastapi.tiangolo.com
