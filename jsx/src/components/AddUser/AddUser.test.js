@@ -1,15 +1,15 @@
 import React from "react";
+import "@testing-library/jest-dom";
 import { act } from "react-dom/test-utils";
-import Enzyme, { mount } from "enzyme";
-import AddUser from "./AddUser";
-import Adapter from "@wojtekmaj/enzyme-adapter-react-17";
+import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Provider, useDispatch, useSelector } from "react-redux";
 import { createStore } from "redux";
 import { HashRouter } from "react-router-dom";
+
+import AddUser from "./AddUser";
 // eslint-disable-next-line
 import regeneratorRuntime from 'regenerator-runtime'
-
-Enzyme.configure({ adapter: new Adapter() });
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
@@ -17,11 +17,11 @@ jest.mock("react-redux", () => ({
   useSelector: jest.fn(),
 }));
 
-var mockAsync = (statusCode) =>
+var mockAsync = (result) =>
   jest
     .fn()
     .mockImplementation(() =>
-      Promise.resolve({ key: "value", status: statusCode ? statusCode : 200 })
+      Promise.resolve(result)
     );
 
 var mockAsyncRejection = () =>
@@ -57,60 +57,85 @@ afterEach(() => {
   useDispatch.mockClear();
 });
 
-test("Renders", () => {
-  let component = mount(addUserJsx(mockAsync()));
-  expect(component.find(".container").length).toBe(1);
+test("Renders", async () => {
+  await act(async () => {
+    render(addUserJsx())
+  })
+  expect(screen.getByTestId("container")).toBeVisible()
 });
 
-test("Removes users when they fail Regex", () => {
-  let callbackSpy = mockAsync(),
-    component = mount(addUserJsx(callbackSpy)),
-    textarea = component.find("textarea").first();
-  textarea.simulate("blur", { target: { value: "foo\nbar\n!!*&*" } });
-  let submit = component.find("#submit");
-  submit.simulate("click");
+test("Removes users when they fail Regex", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(addUserJsx(callbackSpy))
+  })
+
+  let textarea = screen.getByTestId("user-textarea")
+  let submit = screen.getByTestId("submit")
+
+  fireEvent.blur(textarea, { target: { value: "foo\nbar\n!!*&*" }})
+  await act(async () => {
+    fireEvent.click(submit)
+  })
+
   expect(callbackSpy).toHaveBeenCalledWith(["foo", "bar"], false);
 });
 
-test("Correctly submits admin", () => {
-  let callbackSpy = mockAsync(),
-    component = mount(addUserJsx(callbackSpy)),
-    input = component.find("input").first();
-  input.simulate("change", { target: { checked: true } });
-  let submit = component.find("#submit");
-  submit.simulate("click");
-  expect(callbackSpy).toHaveBeenCalledWith([], true);
+test("Correctly submits admin", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(addUserJsx(callbackSpy))
+  })
+
+  let textarea = screen.getByTestId("user-textarea")
+  let submit = screen.getByTestId("submit")
+  let check = screen.getByTestId("check")
+
+  userEvent.click(check)
+  fireEvent.blur(textarea, { target: { value: "foo" }})
+  await act(async () => {
+    fireEvent.click(submit)
+  })
+
+  expect(callbackSpy).toHaveBeenCalledWith(["foo"], true);
 });
 
 test("Shows a UI error dialogue when user creation fails", async () => {
-  let callbackSpy = mockAsyncRejection(),
-    component = mount(addUserJsx(callbackSpy));
-  let submit = component.find("#submit");
+  let callbackSpy = mockAsyncRejection();
 
   await act(async () => {
-    submit.simulate("click");
-  });
+    render(addUserJsx(callbackSpy))
+  })
 
-  component.update();
-  let errorDialog = component.find("div.alert.alert-danger").first();
+  let submit = screen.getByTestId("submit")
 
+  await act(async () => {
+    fireEvent.click(submit)
+  })
+
+  let errorDialog = screen.getByText("Failed to create user.")
+
+  expect(errorDialog).toBeVisible()
   expect(callbackSpy).toHaveBeenCalled();
-  expect(errorDialog.text()).toContain("Failed to create user.");
 });
 
 test("Shows a more specific UI error dialogue when user creation returns an improper status code", async () => {
-  let callbackSpy = mockAsync(409),
-    component = mount(addUserJsx(callbackSpy));
-  let submit = component.find("#submit");
+  let callbackSpy = mockAsync({status: 409});
 
   await act(async () => {
-    submit.simulate("click");
-  });
+    render(addUserJsx(callbackSpy))
+  })
 
-  component.update();
-  let errorDialog = component.find("div.alert.alert-danger").first();
+  let submit = screen.getByTestId("submit")
 
-  expect(errorDialog.text()).toContain(
-    "Failed to create user. User already exists."
-  );
+  await act(async () => {
+    fireEvent.click(submit)
+  })
+
+  let errorDialog = screen.getByText("Failed to create user. User already exists.")
+
+  expect(errorDialog).toBeVisible()
+  expect(callbackSpy).toHaveBeenCalled();
 });

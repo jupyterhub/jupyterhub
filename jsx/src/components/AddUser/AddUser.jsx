@@ -25,7 +25,7 @@ const AddUser = (props) => {
 
   return (
     <>
-      <div className="container">
+      <div className="container" data-testid="container">
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
@@ -58,6 +58,7 @@ const AddUser = (props) => {
                       id="add-user-textarea"
                       rows="3"
                       placeholder="usernames separated by line"
+                      data-testid="user-textarea"
                       onBlur={(e) => {
                         let split_users = e.target.value.split("\n");
                         setUsers(split_users);
@@ -66,10 +67,11 @@ const AddUser = (props) => {
                     <br></br>
                     <input
                       className="form-check-input"
+                      data-testid="check"
                       type="checkbox"
-                      value=""
                       id="admin-check"
-                      onChange={(e) => setAdmin(e.target.checked)}
+                      checked={admin}
+                      onChange={(e) => setAdmin(!admin)}
                     />
                     <span> </span>
                     <label className="form-check-label">Admin</label>
@@ -83,6 +85,7 @@ const AddUser = (props) => {
                 <span> </span>
                 <button
                   id="submit"
+                  data-testid="submit"
                   className="btn btn-primary"
                   onClick={() => {
                     let filtered_users = users.filter(
