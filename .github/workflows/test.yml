@@ -36,6 +36,33 @@ jobs:
       - run: |
           pytest docs/
 
+  jstest:
+    # Run javascript tests
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
+      - name: Install Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+
+      - name: Install Node dependencies
+        run: |
+          npm install -g yarn
+
+      - name: Run yarn
+        run: |
+          cd jsx
+          yarn
+
+      - name: yarn test
+        run: |
+          cd jsx
+          yarn test
+
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04
@@ -126,7 +153,6 @@ jobs:
         run: |
           npm install
           npm install -g configurable-http-proxy
-          npm install -g yarn
           npm list
 
       # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
@@ -204,9 +230,6 @@ jobs:
       - name: Run pytest
         run: |
           pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
-      - name: Run yarn jest test
-        run: |
-          cd jsx && yarn && yarn test
       - name: Submit codecov report
         run: |
           codecov
