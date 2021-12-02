@@ -155,7 +155,7 @@ export default class DynamicTable extends React.Component {
         <tr key={"item-" + i}>
           <td>
             <input
-              className="properties-table-keyvalues"
+              className="form-control"
               type="text"
               value={o}
               id={o + i}
@@ -174,7 +174,7 @@ export default class DynamicTable extends React.Component {
         <tr key={"item-" + i}>
           <td>
             <input
-              className="properties-table-keyvalues"
+              className="form-control"
               type="text"
               value={o}
               onChange={context.handleValueChanged.bind(context, i)}
@@ -225,7 +225,7 @@ export default class DynamicTable extends React.Component {
           <tr>
             <td>
               <input
-                className="properties-table"
+                className="form-control"
                 type="text"
                 value={this.state.message}
                 onChange={this.updateMessageKey.bind(this)}
@@ -233,7 +233,7 @@ export default class DynamicTable extends React.Component {
             </td>
             <td>
               <input
-                className="properties-table"
+                className="form-control"
                 type="text"
                 value={this.state.message2}
                 onChange={this.updateMessageValue.bind(this)}
