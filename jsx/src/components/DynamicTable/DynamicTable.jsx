@@ -1,18 +1,6 @@
 import React, { useState } from "react";
 import "./table-select.css";
 
-function hasDuplicates(array) {
-  var valuesSoFar = Object.create(null);
-  for (var i = 0; i < array.length; ++i) {
-    var value = array[i];
-    if (value in valuesSoFar) {
-      return true;
-    }
-    valuesSoFar[value] = true;
-  }
-  return false;
-}
-
 export default class DynamicTable extends React.Component {
   constructor(props) {
     super(props);
