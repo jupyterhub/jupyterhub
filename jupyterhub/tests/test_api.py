@@ -65,7 +65,7 @@ async def test_auth_api(app):
     assert r.status_code == 403
 
 
-async def test_cors_checks(app):
+async def test_cors_checks(request, app):
     url = ujoin(public_host(app), app.hub.base_url)
     host = urlparse(url).netloc
     # add admin user
@@ -135,6 +135,41 @@ async def test_cors_checks(app):
         cookies=cookies,
     )
     assert r.status_code == 400  # accepted, but invalid
+
+    # test custom forwarded_host_header behavior
+    app.forwarded_host_header = 'X-Forwarded-Host'
+
+    # reset the config after the test to avoid leaking state
+    def reset_header():
+        app.forwarded_host_header = ""
+
+    request.addfinalizer(reset_header)
+
+    r = await api_request(
+        app,
+        'users',
+        headers={
+            'Authorization': '',
+            'Referer': url,
+            'Host': host,
+            'X-Forwarded-Host': 'example.com',
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 403
+
+    r = await api_request(
+        app,
+        'users',
+        headers={
+            'Authorization': '',
+            'Referer': url,
+            'Host': host,
+            'X-Forwarded-Host': host,
+        },
+        cookies=cookies,
+    )
+    assert r.status_code == 200
 
 
 # --------------
