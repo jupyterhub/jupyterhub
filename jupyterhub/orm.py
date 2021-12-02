@@ -222,6 +222,8 @@ class Group(Base):
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
+    # The properties column contains key:value pairs that represent group settings and their values. Example: {"ram": 8, "cpu": 4}
+    properties = Column(JSONDict, default={})
     users = relationship('User', secondary='user_group_map', backref='groups')
 
     def __repr__(self):
