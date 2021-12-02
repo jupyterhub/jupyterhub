@@ -58,7 +58,8 @@ class APIHandler(BaseHandler):
 
         - allow unspecified host/referer (e.g. scripts)
         """
-        host = self.request.headers.get(self.app.forwarded_host_header or "Host")
+        host_header = self.app.forwarded_host_header or "Host"
+        host = self.request.headers.get(host_header)
         referer = self.request.headers.get("Referer")
 
         # If no header is provided, assume it comes from a script/curl.
@@ -70,13 +71,24 @@ class APIHandler(BaseHandler):
             self.log.warning("Blocking API request with no referer")
             return False
 
-        host_path = url_path_join(host, self.hub.base_url)
-        referer_path = referer.split('://', 1)[-1]
-        if not (referer_path + '/').startswith(host_path):
+        proto = self.request.protocol
+        full_host = f"{proto}://{host}{self.hub.base_url}"
+        host_url = urlparse(full_host)
+        referer_url = urlparse(referer)
+        # resolve default ports for http[s]
+        referer_port = referer_url.port or (
+            443 if referer_url.scheme == 'https' else 80
+        )
+        host_port = host_url.port or (443 if host_url.scheme == 'https' else 80)
+        if (
+            referer_url.scheme != host_url.scheme
+            or referer_url.hostname != host_url.hostname
+            or referer_port != host_port
+            or not (referer_url.path + "/").startswith(host_url.path)
+        ):
             self.log.warning(
-                "Blocking Cross Origin API request.  Referer: %s, Host: %s",
-                referer,
-                host_path,
+                f"Blocking Cross Origin API request.  Referer: {referer},"
+                " {host_header}: {host}, Host URL: {full_host}",
             )
             return False
         return True
