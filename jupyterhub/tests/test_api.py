@@ -1817,11 +1817,9 @@ async def test_group_add_properties(app):
     r.raise_for_status()
     group = orm.Group.find(db, name='alphaflight')
 
-    assert sorted([k for k in group.properties]) == sorted(
-        [k for k in properties_object]
-    )
-    assert sorted([group.properties[k] for k in group.properties]) == sorted(
-        [properties_object[k] for k in properties_object]
+    assert sorted(k for k in group.properties) == sorted(k for k in properties_object)
+    assert sorted(group.properties[k] for k in group.properties) == sorted(
+        properties_object[k] for k in properties_object
     )
 
 
