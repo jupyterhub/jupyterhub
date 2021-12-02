@@ -301,7 +301,7 @@ class APIHandler(BaseHandler):
             'properties': group.properties,
         }
         access_map = {
-            'read:groups': {'kind', 'name', 'properties','users'},
+            'read:groups': {'kind', 'name', 'properties', 'users'},
             'read:groups:name': {'kind', 'name'},
             'read:roles:groups': {'kind', 'name', 'roles'},
         }
