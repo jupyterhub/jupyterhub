@@ -298,9 +298,10 @@ class APIHandler(BaseHandler):
             'name': group.name,
             'roles': [r.name for r in group.roles],
             'users': [u.name for u in group.users],
+            'properties': group.properties
         }
         access_map = {
-            'read:groups': {'kind', 'name', 'users'},
+            'read:groups': {'kind', 'name', 'users','properties'},
             'read:groups:name': {'kind', 'name'},
             'read:roles:groups': {'kind', 'name', 'roles'},
         }
