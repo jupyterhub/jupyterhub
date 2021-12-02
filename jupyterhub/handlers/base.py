@@ -770,6 +770,7 @@ class BaseHandler(RequestHandler):
         if not self.authenticator.enable_auth_state:
             # auth_state is not enabled. Force None.
             auth_state = None
+        await user.add_user_to_groups(auth_state)
         await user.save_auth_state(auth_state)
         return user
 

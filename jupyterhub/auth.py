@@ -876,6 +876,26 @@ class LocalAuthenticator(Authenticator):
 
         await maybe_future(super().add_user(user))
 
+
+    async def add_user_to_groups(self, user):
+        """Hook called whenever a new user is added
+
+        If self.create_system_users, the user will attempt to be created if it doesn't exist.
+        """
+        user_exists = await maybe_future(self.system_user_exists(user))
+        if user_exists:
+            print("!!!!!!!!!!!!!!!!!!!!!",user,"!!!!!!!!!!!!!!!!!!!!!!!!!")
+            else:
+                raise KeyError(
+                    "User {} does not exist on the system."
+                    " Set LocalAuthenticator.create_system_users=True"
+                    " to automatically create system users from jupyterhub users.".format(
+                        user.name
+                    )
+                )
+
+        await maybe_future(super().add_user_to_groups(user))
+
     @staticmethod
     def _getgrnam(name):
         """Wrapper function to protect against `grp` not being available
