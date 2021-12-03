@@ -28,6 +28,32 @@ from .handlers.login import LoginHandler
 from .utils import maybe_future, url_path_join
 from .traitlets import Command
 
+import requests
+from requests.structures import CaseInsensitiveDict
+
+
+def requestsObtainGroupName(access_token):
+        headers = CaseInsensitiveDict()
+        headers["Authorization"] = "Bearer {}".format(access_token)
+        r = requests.get('https://kc.wu.ac.at/auth/realms/wu/broker/azure-aad-wu/token', headers = headers)
+        #print(r.status_code)
+        #print(r.json()["access_token"])
+        headers["Authorization"] = "Bearer {}".format(r.json()["access_token"])
+        r2 = requests.get('https://graph.microsoft.com/v1.0/me/joinedTeams', headers = headers)
+        #print(r2.status_code)
+        return r2.json()
+
+def getDBconnection():
+    from jupyterhub.app import JupyterHub
+    from jupyterhub import orm
+    print('### DBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
+    hub = JupyterHub()
+    hub.load_config_file(hub.config_file)
+    db_url = hub.db_url
+    db = orm.new_session_factory(db_url, **hub.db_kwargs)()
+    ns = {'db': db, 'db_url': db_url, 'orm': orm}
+    return db
+
 
 class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
@@ -624,6 +650,93 @@ class Authenticator(LoggingConfigurable):
         if self.allowed_users:
             self.allowed_users.add(user.name)
 
+    
+
+    def add_user_to_groups(self, user, authentication):
+        """Hook called when a user is added to JupyterHub
+
+        This is called:
+         - When a user first authenticates
+         - When the hub restarts, for all users.
+
+        This method may be a coroutine.
+
+        By default, this just adds the user to the allowed_users set.
+
+        Subclasses may do more extensive things, such as adding actual unix users,
+        but they should call super to ensure the allowed_users set is updated.
+
+        Note that this should be idempotent, since it is called whenever the hub restarts
+        for all users.
+
+        Args:
+            user (User): The User wrapper object
+        """
+        
+        print("111111111111111",user,"AYYYYYYYYY")
+        from jupyterhub import orm
+        groupname_list = []
+        groupid_list = []
+        groupname_and_id = []
+        try:
+            print("userdict ", user.__dict__.keys())
+        except Exception as e:
+            print(e)
+        try: 
+            teams_query =requestsObtainGroupName(authentication['auth_state']["access_token"])
+        except Exception as e:
+            print("ERROR ",e)
+
+        try:
+            for i in range(0,len(teams_query["value"])):
+                groupname_list.append(teams_query["value"][i]["displayName"])
+                groupid_list.append(teams_query["value"][i]["id"])
+            for i in range(0,len(groupname_list)):
+                groupname_and_id.append(groupname_list[i] + " - " + groupid_list[i])
+        except Exception as e:
+                print("ERROR",e)
+                pass
+        try:
+            
+            db = getDBconnection()
+            oauth= authentication['auth_state']["oauth_user"]
+            username = oauth["preferred_username"]
+            orm_user= orm.User.find(db,username)
+        except Exception as e:
+            print(e)
+        try:
+        ##print("number of groups:", len(oauth["groups"]))
+            for groupname in groupname_and_id:
+                print("Checking if group already exists: ", groupname)
+                
+                orm_group= orm.Group.find(db,groupname)
+                if orm.Group.find(db, groupname) == None:
+                    group = orm.Group()
+                    group.name = groupname
+                    if orm_user not in group.users:
+                        print("user missing")
+                        group.users.append(orm_user)
+                        print("Added user to group.")
+                    db.add(group) 
+                    print("added")
+                else:
+                    group = orm.Group.find(db, groupname)
+                    if orm_user not in group.users:
+                        print("user missing")
+                        group.users.append(orm_user)
+                        print("Added user to group.")
+
+
+        #groupfind all groups, except create group
+        #add user to all groups if not already there
+        except Exception as e:
+            print(e)
+            pass
+        
+        db.commit()
+        print("111111111111111 END     AYYYYYYYYY")
+
+
     def delete_user(self, user):
         """Hook called when a user is deleted
 
@@ -877,24 +990,7 @@ class LocalAuthenticator(Authenticator):
         await maybe_future(super().add_user(user))
 
 
-    async def add_user_to_groups(self, user):
-        """Hook called whenever a new user is added
-
-        If self.create_system_users, the user will attempt to be created if it doesn't exist.
-        """
-        user_exists = await maybe_future(self.system_user_exists(user))
-        if user_exists:
-            print("!!!!!!!!!!!!!!!!!!!!!",user,"!!!!!!!!!!!!!!!!!!!!!!!!!")
-            else:
-                raise KeyError(
-                    "User {} does not exist on the system."
-                    " Set LocalAuthenticator.create_system_users=True"
-                    " to automatically create system users from jupyterhub users.".format(
-                        user.name
-                    )
-                )
-
-        await maybe_future(super().add_user_to_groups(user))
+    
 
     @staticmethod
     def _getgrnam(name):
