@@ -7,6 +7,7 @@ import GroupSelect from "../GroupSelect/GroupSelect";
 const GroupEdit = (props) => {
   var [selected, setSelected] = useState([]),
     [changed, setChanged] = useState(false),
+    [errorAlert, setErrorAlert] = useState(null),
     limit = useSelector((state) => state.limit);
 
   var dispatch = useDispatch();
@@ -41,7 +42,25 @@ const GroupEdit = (props) => {
   if (!group_data) return <div></div>;
 
   return (
-    <div className="container">
+    <div className="container" data-testid="container">
+      {errorAlert != null ? (
+        <div className="row">
+          <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
+            <div className="alert alert-danger">
+              {errorAlert}
+              <button
+                type="button"
+                className="close"
+                onClick={() => setErrorAlert(null)}
+              >
+                <span>&times;</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <></>
+      )}
       <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
           <h3>Editing Group {group_data.name}</h3>
@@ -65,6 +84,7 @@ const GroupEdit = (props) => {
           <span> </span>
           <button
             id="submit"
+            data-testid="submit"
             className="btn btn-primary"
             onClick={() => {
               // check for changes
@@ -89,29 +109,35 @@ const GroupEdit = (props) => {
                 );
 
               Promise.all(promiseQueue)
-                .then(() => {
-                  updateGroups(0, limit)
-                    .then((data) => dispatchPageUpdate(data, 0))
-                    .then(() => history.push("/groups"));
+                .then((data) => {
+                  data.status < 300
+                    ? updateGroups(0, limit)
+                        .then((data) => dispatchPageUpdate(data, 0))
+                        .then(() => history.push("/groups"))
+                    : setErrorAlert(`Failed to edit group.`);
                 })
-                .catch((err) => console.log(err));
+                .catch(() => setErrorAlert(`Failed to edit group.`));
             }}
           >
             Apply
           </button>
           <button
             id="delete-group"
+            data-testid="delete-group"
             className="btn btn-danger"
             style={{ float: "right" }}
             onClick={() => {
               var groupName = group_data.name;
               deleteGroup(groupName)
-                .then(() => {
-                  updateGroups(0, limit)
-                    .then((data) => dispatchPageUpdate(data, 0))
-                    .then(() => history.push("/groups"));
+                // TODO add error if res not ok
+                .then((data) => {
+                  data.status < 300
+                    ? updateGroups(0, limit)
+                        .then((data) => dispatchPageUpdate(data, 0))
+                        .then(() => history.push("/groups"))
+                    : setErrorAlert(`Failed to delete group.`);
                 })
-                .catch((err) => console.log(err));
+                .catch(() => setErrorAlert(`Failed to delete group.`));
             }}
           >
             Delete Group

@@ -24,11 +24,20 @@ const CreateGroup = (props) => {
 
   return (
     <>
-      <div className="container">
+      <div className="container" data-testid="container">
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">{errorAlert}</div>
+              <div className="alert alert-danger">
+                {errorAlert}
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setErrorAlert(null)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -44,6 +53,7 @@ const CreateGroup = (props) => {
                 <div className="input-group">
                   <input
                     className="group-name-input"
+                    data-testid="group-input"
                     type="text"
                     id="group-name"
                     value={groupName}
@@ -61,6 +71,7 @@ const CreateGroup = (props) => {
                 <span> </span>
                 <button
                   id="submit"
+                  data-testid="submit"
                   className="btn btn-primary"
                   onClick={() => {
                     createGroup(groupName)
@@ -69,16 +80,18 @@ const CreateGroup = (props) => {
                           ? updateGroups(0, limit)
                               .then((data) => dispatchPageUpdate(data, 0))
                               .then(() => history.push("/groups"))
-                              .catch((err) => console.log(err))
+                              .catch(() =>
+                                setErrorAlert(`Could not update groups list.`)
+                              )
                           : setErrorAlert(
-                              `[${data.status}] Failed to create group. ${
+                              `Failed to create group. ${
                                 data.status == 409
                                   ? "Group already exists."
                                   : ""
                               }`
                             );
                       })
-                      .catch((err) => console.log(err));
+                      .catch(() => setErrorAlert(`Failed to create group.`));
                   }}
                 >
                   Create

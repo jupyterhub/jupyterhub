@@ -19,14 +19,7 @@ const EditUser = (props) => {
     });
   };
 
-  var {
-    editUser,
-    deleteUser,
-    failRegexEvent,
-    noChangeEvent,
-    updateUsers,
-    history,
-  } = props;
+  var { editUser, deleteUser, noChangeEvent, updateUsers, history } = props;
 
   if (props.location.state == undefined) {
     props.history.push("/");
@@ -40,11 +33,20 @@ const EditUser = (props) => {
 
   return (
     <>
-      <div className="container">
+      <div className="container" data-testid="container">
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">{errorAlert}</div>
+              <div className="alert alert-danger">
+                {errorAlert}
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setErrorAlert(null)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -61,6 +63,7 @@ const EditUser = (props) => {
                   <div className="form-group">
                     <textarea
                       className="form-control"
+                      data-testid="edit-username-input"
                       id="exampleFormControlTextarea1"
                       rows="3"
                       placeholder="updated username"
@@ -81,20 +84,26 @@ const EditUser = (props) => {
                     <br></br>
                     <button
                       id="delete-user"
+                      data-testid="delete-user"
                       className="btn btn-danger btn-sm"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         deleteUser(username)
                           .then((data) => {
                             data.status < 300
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
                                   .then(() => history.push("/"))
-                                  .catch((err) => console.log(err))
-                              : setErrorAlert(
-                                  `[${data.status}] Failed to edit user.`
-                                );
+                                  .catch(() =>
+                                    setErrorAlert(
+                                      `Could not update users list.`
+                                    )
+                                  )
+                              : setErrorAlert(`Failed to edit user.`);
                           })
-                          .catch((err) => console.log(err));
+                          .catch(() => {
+                            setErrorAlert(`Failed to edit user.`);
+                          });
                       }}
                     >
                       Delete user
@@ -109,8 +118,10 @@ const EditUser = (props) => {
                 <span> </span>
                 <button
                   id="submit"
+                  data-testid="submit"
                   className="btn btn-primary"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     if (updatedUsername == "" && admin == has_admin) {
                       noChangeEvent();
                       return;
@@ -129,17 +140,20 @@ const EditUser = (props) => {
                               ? updateUsers(0, limit)
                                   .then((data) => dispatchPageChange(data, 0))
                                   .then(() => history.push("/"))
-                                  .catch((err) => console.log(err))
-                              : setErrorAlert(
-                                  `[${data.status}] Failed to edit user.`
-                                );
+                                  .catch(() =>
+                                    setErrorAlert(
+                                      `Could not update users list.`
+                                    )
+                                  )
+                              : setErrorAlert(`Failed to edit user.`);
                           })
-                          .catch((err) => {
-                            console.log(err);
+                          .catch(() => {
+                            setErrorAlert(`Failed to edit user.`);
                           });
                       } else {
-                        setUpdatedUsername("");
-                        failRegexEvent();
+                        setErrorAlert(
+                          `Failed to edit user. Make sure the username does not contain special characters.`
+                        );
                       }
                     } else {
                       editUser(username, username, admin)
@@ -148,13 +162,13 @@ const EditUser = (props) => {
                             ? updateUsers(0, limit)
                                 .then((data) => dispatchPageChange(data, 0))
                                 .then(() => history.push("/"))
-                                .catch((err) => console.log(err))
-                            : setErrorAlert(
-                                `[${data.status}] Failed to edit user.`
-                              );
+                                .catch(() =>
+                                  setErrorAlert(`Could not update users list.`)
+                                )
+                            : setErrorAlert(`Failed to edit user.`);
                         })
-                        .catch((err) => {
-                          console.log(err);
+                        .catch(() => {
+                          setErrorAlert(`Failed to edit user.`);
                         });
                     }
                   }}
