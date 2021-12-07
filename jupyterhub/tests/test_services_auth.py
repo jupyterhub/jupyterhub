@@ -385,8 +385,8 @@ async def test_oauth_page_hit(
     hits_page,
 ):
     test_roles = {
-        'reader': create_temp_role(['read:users'], role_name='reader'),
-        'writer': create_temp_role(['users:activity'], role_name='writer'),
+        'reader': create_temp_role(['read:users!user'], role_name='reader'),
+        'writer': create_temp_role(['users:activity!user'], role_name='writer'),
     }
     service = mockservice_url
     user = create_user_with_scopes("access:services", "self")

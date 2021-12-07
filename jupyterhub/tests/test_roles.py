@@ -665,7 +665,11 @@ async def test_load_roles_user_tokens(tmpdir, request):
         # no role requested - gets default 'token' role
         ({}, None, None, 201),
         # role scopes within the user's default 'user' role
-        ({}, 'self-reader', ['read:users'], 201),
+        ({}, 'self-reader', ['read:users!user'], 201),
+        # role scopes within the user's default 'user' role, but with disjoint filter
+        ({}, 'other-reader', ['read:users!user=other'], 403),
+        # role scopes within the user's default 'user' role, without filter
+        ({}, 'other-reader', ['read:users'], 403),
         # role scopes outside of the user's role but within the group's role scopes of which the user is a member
         ({}, 'groups-reader', ['read:groups'], 201),
         # non-existing role request

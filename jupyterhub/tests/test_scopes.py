@@ -677,9 +677,14 @@ async def test_resolve_token_permissions(
     intersection_scopes,
 ):
     orm_user = create_user_with_scopes(*user_scopes).orm_user
+    # ensure user has full permissions when token is created
+    # to create tokens with permissions exceeding their owner
+    roles.grant_role(app.db, orm_user, "admin")
     create_temp_role(token_scopes, 'active-posting')
     api_token = orm_user.new_api_token(roles=['active-posting'])
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
+    # drop admin so that filtering can be applied
+    roles.strip_role(app.db, orm_user, "admin")
 
     # get expanded !user filter scopes for check
     user_scopes = roles.expand_roles_to_scopes(orm_user)
