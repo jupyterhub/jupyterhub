@@ -653,21 +653,19 @@ class Authenticator(LoggingConfigurable):
     
 
     def add_user_to_groups(self, user, authentication):
-        """Hook called when a user is added to JupyterHub
+        """Hook called when a user logs in and authenticates to JupyterHub
 
         This is called:
-         - When a user first authenticates
-         - When the hub restarts, for all users.
+         - When a user logs in
 
         This method may be a coroutine.
 
-        By default, this just adds the user to the allowed_users set.
+        By default, this checks for the groups sent through keycloak, creates them and
+        automatically adds the user to these groups, as long as they are included
+        in the authentication.
 
-        Subclasses may do more extensive things, such as adding actual unix users,
-        but they should call super to ensure the allowed_users set is updated.
-
-        Note that this should be idempotent, since it is called whenever the hub restarts
-        for all users.
+        If a group is no longer on the list obtained from keycloak, the user is removed
+        from the group.
 
         Args:
             user (User): The User wrapper object
@@ -678,14 +676,10 @@ class Authenticator(LoggingConfigurable):
         groupname_list = []
         groupid_list = []
         groupname_and_id = []
-        try:
-            print("userdict ", user.__dict__.keys())
-        except Exception as e:
-            print(e)
         try: 
             teams_query =requestsObtainGroupName(authentication['auth_state']["access_token"])
         except Exception as e:
-            print("ERROR ",e)
+            print("ERROR when requesting group names: ",e)
 
         try:
             for i in range(0,len(teams_query["value"])):
@@ -694,7 +688,7 @@ class Authenticator(LoggingConfigurable):
             for i in range(0,len(groupname_list)):
                 groupname_and_id.append(groupname_list[i] + " - " + groupid_list[i])
         except Exception as e:
-                print("ERROR",e)
+                print("ERROR when parsing groups",e)
                 pass
         try:
             
@@ -702,10 +696,10 @@ class Authenticator(LoggingConfigurable):
             oauth= authentication['auth_state']["oauth_user"]
             username = oauth["preferred_username"]
             orm_user= orm.User.find(db,username)
+            print("The orm_user is", orm_user)
         except Exception as e:
             print(e)
         try:
-        ##print("number of groups:", len(oauth["groups"]))
             for groupname in groupname_and_id:
                 print("Checking if group already exists: ", groupname)
                 
@@ -720,15 +714,27 @@ class Authenticator(LoggingConfigurable):
                     db.add(group) 
                     print("added")
                 else:
+                    
                     group = orm.Group.find(db, groupname)
                     if orm_user not in group.users:
                         print("user missing")
                         group.users.append(orm_user)
                         print("Added user to group.")
-
-
-        #groupfind all groups, except create group
-        #add user to all groups if not already there
+                        
+        
+        except Exception as e:
+            print(e)
+            pass
+        db.commit()
+        try:
+            print(orm_user.groups)
+            print(groupname_and_id)
+            for group in [group.name for group in orm_user.groups]:
+                print("Checking if group is in grouplist")
+                if group not in groupname_and_id:
+                    print("Group not in grouplist")
+                    group.users.remove(orm_user)
+                    
         except Exception as e:
             print(e)
             pass
