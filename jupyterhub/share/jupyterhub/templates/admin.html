@@ -1,0 +1,40 @@
+{% extends "page.html" %}
+
+{% macro th(label, key='', colspan=1) %}
+<th data-sort="{{key}}" colspan="{{colspan}}">{{label}}
+  {% if key %}
+  <a href="#"><i class="fa {% if sort.get(key) == 'asc' -%}
+                               fa-sort-asc
+                           {%- elif sort.get(key) == 'desc' -%}
+                               fa-sort-desc
+                           {%- else -%}
+                               fa-sort
+                           {%- endif %} sort-icon">
+  </i></a>
+  {% endif %}
+</th>
+{% endmacro %}
+
+{% block main %}
+<div id="react-admin-hook">
+  <script id="jupyterhub-admin-config">
+    window.api_page_limit = parseInt("{{ api_page_limit|safe }}")
+  </script>
+  <script src="static/js/admin-react.js"></script>
+</div>
+{% endblock %}
+
+{% block footer %}
+<div class="container-fluid navbar-default small version_footer">
+  <div class="navbar-text">
+    JupyterHub {{ server_version }}
+  </div>
+</div>
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script type="text/javascript">
+require(["admin"]);
+</script>
+{% endblock %}

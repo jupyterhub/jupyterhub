@@ -1,0 +1,38 @@
+include README.md
+include COPYING.md
+include setupegg.py
+include bower-lite
+include package.json
+include package-lock.json
+include *requirements.txt
+include Dockerfile
+
+graft onbuild
+graft jupyterhub
+graft scripts
+graft share
+graft singleuser
+graft ci
+
+# Documentation
+graft docs
+prune docs/node_modules
+
+# prune some large unused files from components
+prune share/jupyterhub/static/components/bootstrap/dist/css
+exclude share/jupyterhub/static/components/bootstrap/dist/fonts/*.svg
+prune share/jupyterhub/static/components/font-awesome/css
+prune share/jupyterhub/static/components/font-awesome/scss
+exclude share/jupyterhub/static/components/font-awesome/fonts/*.svg
+prune share/jupyterhub/static/components/jquery/external
+prune share/jupyterhub/static/components/jquery/src
+prune share/jupyterhub/static/components/moment/lang
+prune share/jupyterhub/static/components/moment/min
+
+# Patterns to exclude from any directory
+global-exclude *~
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .git
+global-exclude .ipynb_checkpoints
+global-exclude .bower.json

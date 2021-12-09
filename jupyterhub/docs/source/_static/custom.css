@@ -1,0 +1,10 @@
+/* Added to avoid logo being too squeezed */
+.navbar-brand {
+  height: 4rem !important;
+}
+
+/* hide redundant funky-formatted swagger-ui version */
+
+.swagger-ui .info .title small {
+  display: none !important;
+}

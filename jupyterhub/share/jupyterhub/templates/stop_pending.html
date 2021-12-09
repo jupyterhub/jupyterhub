@@ -1,0 +1,32 @@
+{% extends "page.html" %}
+
+{% block main %}
+
+<div class="container">
+  <div class="row">
+    <div class="text-center">
+      {% block message %}
+        <p>Your server is stopping.</p>
+        <p>You will be able to start it again once it has finished stopping.</p>
+      {% endblock message %}
+      <p><i class="fa fa-spinner fa-pulse fa-fw fa-3x" aria-hidden="true"></i></p>
+      <a role="button" id="refresh" class="btn btn-lg btn-primary" href="#">refresh</a>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script type="text/javascript">
+require(["jquery"], function ($) {
+  $("#refresh").click(function () {
+    window.location.reload();
+  });
+  setTimeout(function () {
+    window.location.reload();
+  }, 5000);
+});
+</script>
+{% endblock %}

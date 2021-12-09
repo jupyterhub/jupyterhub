@@ -1,0 +1,49 @@
+{% extends "page.html" %}
+{% if announcement_spawn %}
+  {% set announcement = announcement_spawn %}
+{% endif %}
+
+{% block main %}
+
+<div class="container">
+  {% block heading %}
+  <div class="row text-center">
+    <h1>Server Options</h1>
+  </div>
+  {% endblock %}
+  <div class="row col-sm-offset-2 col-sm-8">
+    {% if for_user and user.name != for_user.name -%}
+      <p>Spawning server for {{ for_user.name }}</p>
+    {% endif -%}
+    {% if error_message -%}
+      <p class="spawn-error-msg text-danger">
+        Error: {{error_message}}
+      </p>
+    {% endif %}
+    <form enctype="multipart/form-data" id="spawn_form" action="{{url}}" method="post" role="form">
+      {{spawner_options_form | safe}}
+      <br>
+      <div class="feedback-container">
+        <input type="submit" value="Start" class="btn btn-jupyter form-control">
+        <div class="feedback-widget hidden">
+          <i class="fa fa-spinner"></i>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+{{ super() }}
+<script>
+// setup onSubmit feedback
+$('form').submit((e) => {
+  var form = $(e.target);
+  form.find('.feedback-container>input').attr('disabled', true);
+  form.find('.feedback-container>*').toggleClass('hidden');
+  form.find('.feedback-widget>*').toggleClass('fa-pulse');
+});
+</script>
+{% endblock %}

@@ -1,0 +1,4 @@
+#!/bin/bash
+set -ex
+
+docker build --build-arg JUPYTERHUB_VERSION=$DOCKER_TAG -t $DOCKER_REPO:$DOCKER_TAG .

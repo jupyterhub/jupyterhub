@@ -1,0 +1,18 @@
+version: 2
+
+sphinx:
+  configuration: docs/source/conf.py
+
+build:
+  image: latest
+
+python:
+  version: 3.7
+  install:
+    - method: pip
+      path: .
+    - requirements: docs/requirements.txt
+
+formats:
+  - htmlzip
+  - epub

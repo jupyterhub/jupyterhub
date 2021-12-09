@@ -1,0 +1,69 @@
+{% extends "page.html" %}
+
+{% block main %}
+
+<div class="container">
+  <div class="row">
+    <div class="text-center">
+      {% block heading %}
+      <h1>
+      {% if failed %}
+      Spawn failed
+      {% else %}
+      Server not running
+      {% endif %}
+      </h1>
+      {% endblock %}
+      {% block message %}
+      <p>
+        {% if failed %}
+        The latest attempt to start your server {{ server_name }} has failed.
+        {% if failed_message %}
+          {{ failed_message }}
+        {% endif %}
+        Would you like to retry starting it?
+        {% else %}
+        Your server {{ server_name }} is not running.
+          {% if implicit_spawn_seconds %}
+          It will be restarted automatically.
+          If you are not redirected in a few seconds,
+          click below to launch your server.
+          {% else %}
+          Would you like to start it?
+          {% endif %}
+        {% endif %}
+      </p>
+      {% endblock %}
+      {% block start_button %}
+      <a id="start" role="button" class="btn btn-lg btn-primary" href="{{ spawn_url }}">
+        {% if failed %}
+        Relaunch
+        {% else %}
+        Launch
+        {% endif %}
+        Server {{ server_name }}
+      </a>
+      {% endblock %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block script %}
+{{ super () }}
+{% if implicit_spawn_seconds %}
+<script type="text/javascript">
+  var spawn_url = "{{ spawn_url }}";
+  var implicit_spawn_seconds = {{ implicit_spawn_seconds }};
+  setTimeout(function () {
+      console.log("redirecting to spawn at", spawn_url);
+      window.location = spawn_url;
+    },
+    1000 * implicit_spawn_seconds
+  );
+</script>
+{% endif %}
+<script type="text/javascript">
+require(["not_running"]);
+</script>
+{% endblock script %}
