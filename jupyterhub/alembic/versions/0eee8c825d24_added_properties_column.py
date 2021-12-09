@@ -17,26 +17,12 @@ from jupyterhub.orm import JSONDict
 
 
 def upgrade():
-
-    try:
-        op.add_column("groups", sa.Column("properties", JSONDict))
-        print("Added column!")
-    except:
-        print(
-            "The properties column could not have been added. Perhaps because it is already existing."
-        )
-
-    print("Alembic Upgrade took place!")
+    engine = op.get_bind().engine
+    tables = sa.inspect(engine).get_table_names()
+    if 'groups' in tables:
+        op.add_column('groups', sa.Column('properties', JSONDict))
+        print('Added column!')
 
 
 def downgrade():
-
-    try:
-        op.drop_column("groups", "properties")
-        print("Removed column!")
-    except:
-        print(
-            "The properties column could not have been removed. Perhaps because it is not existing."
-        )
-
-    print("Alembic downgrade took place!")
+    op.drop_column('groups', sa.Column('properties'))
