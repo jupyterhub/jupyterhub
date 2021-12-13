@@ -13,10 +13,10 @@ from tornado.httputil import url_concat
 
 from .. import orm
 from .. import roles
+from .. import scopes
 from ..services.auth import _ExpiringDict
 from ..utils import url_path_join
 from .mocking import public_url
-from .test_api import add_user
 from .utils import async_requests
 from .utils import AsyncSession
 
@@ -226,6 +226,7 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
         # requesting subset
         (["admin", "user"], ["user"], ["user"]),
         (["user", "token", "server"], ["token", "user"], ["token", "user"]),
+        (["admin", "user", "read-only"], ["read-only"], ["read-only"]),
     ],
 )
 async def test_oauth_service_roles(
@@ -235,12 +236,31 @@ async def test_oauth_service_roles(
     client_allowed_roles,
     request_roles,
     expected_roles,
+    preserve_scopes,
 ):
     service = mockservice_url
     oauth_client = (
         app.db.query(orm.OAuthClient)
         .filter_by(identifier=service.oauth_client_id)
         .one()
+    )
+    scopes.define_custom_scopes(
+        {
+            "custom:jupyter_server:read:*": {
+                "description": "read-only access to jupyter server",
+            },
+        },
+    )
+    roles.create_role(
+        app.db,
+        {
+            "name": "read-only",
+            "description": "read-only access to servers",
+            "scopes": [
+                "access:servers",
+                "custom:jupyter_server:read:*",
+            ],
+        },
     )
     oauth_client.allowed_roles = [
         orm.Role.find(app.db, role_name) for role_name in client_allowed_roles
@@ -251,6 +271,7 @@ async def test_oauth_service_roles(
     s = AsyncSession()
     user = create_user_with_scopes("access:services")
     roles.grant_role(app.db, user, "user")
+    roles.grant_role(app.db, user, "read-only")
     name = user.name
     s.cookies = await app.login_user(name)
 

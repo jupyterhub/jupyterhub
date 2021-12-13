@@ -119,6 +119,119 @@ Note that only the {ref}`horizontal filtering <horizontal-filtering-target>` can
 Metascopes `self` and `all`, `<resource>`, `<resource>:<subresource>`, `read:<resource>`, `admin:<resource>`, and `access:<resource>` scopes are predefined and cannot be changed otherwise.
 ```
 
+### Custom scopes
+
+:::{versionadded} 2.3
+:::
+
+JupyterHub 2.3 introduces support for custom scopes.
+Services that use JupyterHub for authentication and want to implement their own granular access may define additional _custom_ scopes and assign them to users with JupyterHub roles.
+
+% Note: keep in sync with pattern/description in jupyterhub/scopes.py
+
+Custom scope names must start with `custom:`
+and contain only lowercase ascii letters, numbers, hyphen, underscore, colon, and asterisk (`-_:*`).
+The part after `custom:` must start with a letter or number.
+Scopes may not end with a hyphen or colon.
+
+The only strict requirement is that a custom scope definition must have a `description`.
+It _may_ also have `subscopes` if you are defining multiple scopes that have a natural hierarchy,
+
+For example:
+
+```python
+c.JupyterHub.custom_scopes = {
+    "custom:myservice:read": {
+        "description": "read-only access to myservice",
+    },
+    "custom:myservice:write": {
+        "description": "write access to myservice",
+        # write permission implies read permission
+        "subscopes": [
+            "custom:myservice:read",
+        ],
+    },
+}
+
+c.JupyterHub.load_roles = [
+    # graders have read-only access to the service
+    {
+        "name": "service-user",
+        "groups": ["graders"],
+        "scopes": [
+            "custom:myservice:read",
+            access:service!service=myservice,
+        ],
+    },
+    # instructors have read and write access to the service
+    {
+        "name": "service-admin",
+        "groups": ["instructors"],
+        "scopes": [
+            "custom:myservice:write",
+            access:service!service=myservice,
+        ],
+    },
+]
+```
+
+In the above configuration, two scopes are defined:
+
+- `custom:myservice:read` grants read-only access to the service, and
+- `custom:myservice:write` grants write access to the service
+- write access _implies_ read access via the `subscope`
+
+These custom scopes are assigned to two groups via `roles`:
+
+- users in the group `graders` are granted read access to the service
+- users in the group `instructors` are
+- both are granted _access_ to the service via `access:service!service=myservice`
+
+When the service completes OAuth, it will retrieve the user model from `/hub/api/user`.
+This model includes a `scopes` field which is a list of authorized scope for the request,
+which can be used.
+
+```python
+def require_scope(scope):
+    """decorator to require a scope to perform an action"""
+    def wrapper(func):
+        @functools.wraps(func)
+        def wrapped_func(request):
+            user = fetch_hub_api_user(request.token)
+            if scope not in user["scopes"]:
+                raise HTTP403(f"Requires scope {scope}")
+            else:
+                return func()
+    return wrapper
+
+@require_scope("custom:myservice:read")
+async def read_something(request):
+    ...
+
+@require_scope("custom:myservice:write")
+async def write_something(request):
+    ...
+```
+
+If you use {class}`~.HubOAuthenticated`, this check is performed automatically
+against the `.hub_scopes` attribute of each Handler
+(the default is populated from `$JUPYTERHUB_OAUTH_SCOPES` and usually `access:services!service=myservice`).
+
+```python
+from tornado import web
+from jupyterhub.services.auth import HubOAuthenticated
+
+class MyHandler(HubOAuthenticated, BaseHandler):
+    hub_scopes = ["custom:myservice:read"]
+
+    @web.authenticated
+    def get(self):
+        ...
+```
+
+Existing scope filters (`!user=`, etc.) may be applied to custom scopes.
+Custom scope _filters_ are NOT supported.
+
 ### Scopes and APIs
 
 The scopes are also listed in the [](../reference/rest-api.rst) documentation. Each API endpoint has a list of scopes which can be used to access the API; if no scopes are listed, the API is not authenticated and can be accessed without any permissions (i.e., no scopes).
