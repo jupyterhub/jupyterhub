@@ -428,7 +428,22 @@ async def test_hub_connect_url(db):
     )
 
 
-async def test_spawner_oauth_roles(app):
-    allowed_roles = ['lotsa', 'roles']
-    spawner = new_spawner(app.db, oauth_roles=allowed_roles)
-    assert spawner.oauth_roles == allowed_roles
+async def test_spawner_oauth_roles(app, user):
+    allowed_roles = ["admin", "user"]
+    spawner = user.spawners['']
+    spawner.oauth_roles = allowed_roles
+    # exercise start/stop which assign roles to oauth client
+    await spawner.user.spawn()
+    oauth_client = spawner.orm_spawner.oauth_client
+    assert sorted(role.name for role in oauth_client.allowed_roles) == allowed_roles
+    await spawner.user.stop()
+
+
+async def test_spawner_oauth_roles_bad(app, user):
+    allowed_roles = ["user", "nosuchrole"]
+    spawner = user.spawners['']
+    spawner.oauth_roles = allowed_roles
+    # exercise start/stop which assign roles
+    # raises ValueError if we try to assign a role that doesn't exist
+    with pytest.raises(ValueError):
+        await spawner.user.spawn()
