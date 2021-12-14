@@ -33,11 +33,7 @@ var serverDashboardJsx = (spy) => (
 );
 
 var mockAsync = (data) =>
-  jest
-    .fn()
-    .mockImplementation(() =>
-      Promise.resolve({ json: () => Promise.resolve(data ? data : { k: "v" }) })
-    );
+  jest.fn().mockImplementation(() => Promise.resolve(data ? data : { k: "v" }));
 
 var mockAsyncRejection = () =>
   jest.fn().mockImplementation(() => Promise.reject());
