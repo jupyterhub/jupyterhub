@@ -308,10 +308,13 @@ class SpawnHandler(BaseHandler):
         # otherwise it may cause a redirect loop
         if f.done() and f.exception():
             exc = f.exception()
+            self.log.exception(f"Error starting server {spawner._log_name}: {exc}")
+            if isinstance(exc, web.HTTPError):
+                # allow custom HTTPErrors to pass through
+                raise exc
             raise web.HTTPError(
                 500,
-                "Error in Authenticator.pre_spawn_start: %s %s"
-                % (type(exc).__name__, str(exc)),
+                f"Unhandled error starting server {spawner._log_name}",
             )
         return self.redirect(pending_url)
 
