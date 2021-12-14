@@ -622,6 +622,19 @@ class User:
             if callable(allowed_roles):
                 allowed_roles = allowed_roles(spawner)
 
+            # allowed_roles config is a list of strings
+            # oauth provider.allowed_roles is a list of orm.Roles
+            if allowed_roles:
+                allowed_role_names = allowed_roles
+                allowed_roles = list(
+                    self.db.query(orm.Role).filter(orm.Role.name.in_(allowed_roles))
+                )
+                if len(allowed_roles) != len(allowed_role_names):
+                    missing_roles = set(allowed_role_names).difference(
+                        {role.name for role in allowed_roles}
+                    )
+                    raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
+
             oauth_client = oauth_provider.add_client(
                 client_id,
                 api_token,
