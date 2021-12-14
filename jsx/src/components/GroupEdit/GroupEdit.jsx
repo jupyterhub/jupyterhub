@@ -110,13 +110,21 @@ const GroupEdit = (props) => {
 
               Promise.all(promiseQueue)
                 .then((data) => {
-                  data.status < 300
+                  // ensure status of all requests are < 300
+                  let allPassed =
+                    data.map((e) => e.status).filter((e) => e >= 300).length ==
+                    0;
+
+                  allPassed
                     ? updateGroups(0, limit)
                         .then((data) => dispatchPageUpdate(data, 0))
                         .then(() => history.push("/groups"))
                     : setErrorAlert(`Failed to edit group.`);
                 })
-                .catch(() => setErrorAlert(`Failed to edit group.`));
+                .catch(() => {
+                  console.log("outer");
+                  setErrorAlert(`Failed to edit group.`);
+                });
             }}
           >
             Apply

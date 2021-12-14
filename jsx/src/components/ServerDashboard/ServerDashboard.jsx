@@ -242,17 +242,17 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         stopServer(e.name)
                           .then((res) => {
-                            data < 300
-                              ? updateUsers(...slice)
-                                  .then((data) => {
-                                    dispatchPageUpdate(data, page);
-                                  })
-                                  .catch(() =>
-                                    setErrorAlert(
-                                      `Failed to update users list.`
-                                    )
-                                  )
-                              : setErrorAlert(`Failed to stop server`);
+                            if (res.status < 300) {
+                              updateUsers(...slice)
+                                .then((data) => {
+                                  dispatchPageUpdate(data, page);
+                                })
+                                .catch(() =>
+                                  setErrorAlert(`Failed to update users list.`)
+                                );
+                            } else {
+                              setErrorAlert(`Failed to stop server.`);
+                            }
                             return res;
                           })
                           .catch(() => setErrorAlert(`Failed to stop server.`))
@@ -267,17 +267,17 @@ const ServerDashboard = (props) => {
                       onClick={() =>
                         startServer(e.name)
                           .then((res) => {
-                            data < 300
-                              ? updateUsers(...slice)
-                                  .then((data) => {
-                                    dispatchPageUpdate(data, page);
-                                  })
-                                  .catch(() =>
-                                    setErrorAlert(
-                                      `Failed to update users list.`
-                                    )
-                                  )
-                              : setErrorAlert(`Failed to start server`);
+                            if (res.status < 300) {
+                              updateUsers(...slice)
+                                .then((data) => {
+                                  dispatchPageUpdate(data, page);
+                                })
+                                .catch(() =>
+                                  setErrorAlert(`Failed to update users list.`)
+                                );
+                            } else {
+                              setErrorAlert(`Failed to start server.`);
+                            }
                             return res;
                           })
                           .catch(() => {
