@@ -381,24 +381,6 @@ def strip_role(db, entity, rolename):
         )
 
 
-def _switch_default_role(db, obj, admin):
-    """Switch between default user/service and admin roles for users/services"""
-    user_role = orm.Role.find(db, 'user')
-    admin_role = orm.Role.find(db, 'admin')
-
-    def add_and_remove(db, obj, current_role, new_role):
-        if current_role in obj.roles:
-            strip_role(db, entity=obj, rolename=current_role.name)
-        # only add new default role if the user has no other roles
-        if len(obj.roles) < 1:
-            grant_role(db, entity=obj, rolename=new_role.name)
-
-    if admin:
-        add_and_remove(db, obj, user_role, admin_role)
-    else:
-        add_and_remove(db, obj, admin_role, user_role)
-
-
 def _token_allowed_role(db, token, role):
     """Checks if requested role for token does not grant the token
     higher permissions than the token's owner has
@@ -441,23 +423,36 @@ def _token_allowed_role(db, token, role):
 
 def assign_default_roles(db, entity):
     """Assigns default role(s) to an entity:
-    users and services get 'user' role, or admin role if they have admin flag
+
     tokens get 'token' role
+
+    users and services get 'admin' role if they are admin (removed if they are not)
+
+    users always get 'user' role
     """
     if isinstance(entity, orm.Group):
-        pass
-    elif isinstance(entity, orm.APIToken):
+        return
+
+    if isinstance(entity, orm.APIToken):
         app_log.debug('Assigning default role to token')
         default_token_role = orm.Role.find(db, 'token')
         if not entity.roles and (entity.user or entity.service) is not None:
             default_token_role.tokens.append(entity)
             app_log.info('Added role %s to token %s', default_token_role.name, entity)
             db.commit()
-    # users and services can have 'user' or 'admin' roles as default
+    # users and services all have 'user' role by default
+    # and optionally 'admin' as well
     else:
         kind = type(entity).__name__
         app_log.debug(f'Assigning default role to {kind} {entity.name}')
-        _switch_default_role(db, entity, entity.admin)
+        if entity.admin:
+            grant_role(db, entity=entity, rolename="admin")
+        else:
+            admin_role = orm.Role.find(db, 'admin')
+            if admin_role in entity.roles:
+                strip_role(db, entity=entity, rolename="admin")
+        if kind == "User":
+            grant_role(db, entity=entity, rolename="user")
 
 
 def update_roles(db, entity, roles):

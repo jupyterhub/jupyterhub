@@ -625,7 +625,7 @@ async def test_add_multi_user_admin(app):
         assert user is not None
         assert user.name == name
         assert user.admin
-        assert orm.Role.find(db, 'user') not in user.roles
+        assert orm.Role.find(db, 'user') in user.roles
         assert orm.Role.find(db, 'admin') in user.roles
 
 
@@ -665,7 +665,7 @@ async def test_add_admin(app):
     assert user.name == name
     assert user.admin
     # assert newadmin has default 'admin' role
-    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'user') in user.roles
     assert orm.Role.find(db, 'admin') in user.roles
 
 
@@ -700,7 +700,7 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
-    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'user') in user.roles
     assert orm.Role.find(db, 'admin') in user.roles
 
 
