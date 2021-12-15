@@ -1129,7 +1129,7 @@ async def test_health_check_request(app):
 
 
 async def test_pre_spawn_start_exc_no_form(app):
-    exc = "pre_spawn_start error"
+    exc = "Unhandled error starting server"
 
     # throw exception from pre_spawn_start
     async def mock_pre_spawn_start(user, spawner):
