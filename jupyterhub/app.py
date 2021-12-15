@@ -1993,6 +1993,7 @@ class JupyterHub(Application):
             self.log.info(f"Creating user {username}")
             user = orm.User(name=username)
             self.db.add(user)
+            roles.grant_role(self.db, user, 'user')
             self.db.commit()
         return user
 
@@ -2128,7 +2129,6 @@ class JupyterHub(Application):
                             if kind == 'users':
                                 orm_obj = await self._get_or_create_user(bname)
                                 orm_role_bearers.append(orm_obj)
-                                roles.grant_role(db, orm_obj, 'user')
                             elif kind == 'groups':
                                 group = orm.Group(name=bname)
                                 db.add(group)

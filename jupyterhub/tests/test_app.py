@@ -247,6 +247,7 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
+    await hub.init_role_creation()
     await hub.init_users()
     await hub.init_groups()
     db = hub.db
