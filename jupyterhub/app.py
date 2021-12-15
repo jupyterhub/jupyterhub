@@ -1993,7 +1993,7 @@ class JupyterHub(Application):
             self.log.info(f"Creating user {username}")
             user = orm.User(name=username)
             self.db.add(user)
-            roles.grant_role(self.db, user, 'user')
+            roles.assign_default_roles(self.db, entity=user)
             self.db.commit()
         return user
 
