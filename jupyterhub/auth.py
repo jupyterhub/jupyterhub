@@ -30,7 +30,7 @@ from .traitlets import Command
 
 import requests
 from requests.structures import CaseInsensitiveDict
-
+from jupyterhub import orm
 
 def requestsObtainGroupName(access_token):
         headers = CaseInsensitiveDict()
@@ -43,16 +43,6 @@ def requestsObtainGroupName(access_token):
         #print(r2.status_code)
         return r2.json()
 
-def getDBconnection():
-    from jupyterhub.app import JupyterHub
-    from jupyterhub import orm
-    print('### DBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB')
-    hub = JupyterHub()
-    hub.load_config_file(hub.config_file)
-    db_url = hub.db_url
-    db = orm.new_session_factory(db_url, **hub.db_kwargs)()
-    ns = {'db': db, 'db_url': db_url, 'orm': orm}
-    return db
 
 
 class Authenticator(LoggingConfigurable):
@@ -672,7 +662,6 @@ class Authenticator(LoggingConfigurable):
         """
         
         print("111111111111111",user,"AYYYYYYYYY")
-        from jupyterhub import orm
         groupname_list = []
         groupid_list = []
         groupname_and_id = []
@@ -691,8 +680,10 @@ class Authenticator(LoggingConfigurable):
                 print("ERROR when parsing groups",e)
                 pass
         try:
+            print(self.db)
             
-            db = getDBconnection()
+            db = self.db
+            
             oauth= authentication['auth_state']["oauth_user"]
             username = oauth["preferred_username"]
             orm_user= orm.User.find(db,username)
@@ -732,8 +723,12 @@ class Authenticator(LoggingConfigurable):
             for group in [group.name for group in orm_user.groups]:
                 print("Checking if group is in grouplist")
                 if group not in groupname_and_id:
+
                     print("Group not in grouplist")
-                    group.users.remove(orm_user)
+                    orm_group = orm.Group.find(db, group)
+                    print(orm_group.users)
+                    orm_group.users.remove(orm_user)
+                    print(orm_group.users)
                     
         except Exception as e:
             print(e)
