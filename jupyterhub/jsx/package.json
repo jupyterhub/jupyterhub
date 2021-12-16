@@ -1,0 +1,67 @@
+{
+  "name": "jupyterhub-admin-react",
+  "version": "1.0.0",
+  "description": "React application for the Jupyter Hub admin dashboard service",
+  "main": "index.js",
+  "author": "nabarber",
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "build": "yarn && webpack",
+    "hot": "webpack && webpack-dev-server",
+    "place": "cp -r build/admin-react.js ../share/jupyterhub/static/js/admin-react.js",
+    "test": "jest --verbose",
+    "snap": "jest --updateSnapshot",
+    "lint": "eslint --ext .jsx --ext .js src/",
+    "lint:fix": "eslint --ext .jsx --ext .js src/ --fix"
+  },
+  "babel": {
+    "presets": [
+      "@babel/preset-env",
+      "@babel/preset-react"
+    ],
+    "plugins": []
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "<rootDir>/__mocks__/fileMock.js",
+      "\\.(css|less)$": "identity-obj-proxy"
+    }
+  },
+  "dependencies": {
+    "@babel/core": "^7.12.3",
+    "@babel/preset-env": "^7.12.11",
+    "@babel/preset-react": "^7.12.10",
+    "babel-loader": "^8.2.1",
+    "bootstrap": "^4.5.3",
+    "css-loader": "^5.0.1",
+    "eslint-plugin-unused-imports": "^1.1.1",
+    "file-loader": "^6.2.0",
+    "history": "^5.0.0",
+    "prop-types": "^15.7.2",
+    "react": "^17.0.1",
+    "react-bootstrap": "^1.4.0",
+    "react-dom": "^17.0.1",
+    "react-icons": "^4.1.0",
+    "react-multi-select-component": "^3.0.7",
+    "react-redux": "^7.2.2",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
+    "recompose": "^0.30.0",
+    "redux": "^4.0.5",
+    "style-loader": "^2.0.0",
+    "webpack": "^5.6.0",
+    "webpack-cli": "^3.3.4",
+    "webpack-dev-server": "^3.11.0"
+  },
+  "devDependencies": {
+    "@wojtekmaj/enzyme-adapter-react-17": "^0.4.1",
+    "babel-jest": "^26.6.3",
+    "enzyme": "^3.11.0",
+    "eslint": "^7.18.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "eslint-plugin-react": "^7.22.0",
+    "identity-obj-proxy": "^3.0.0",
+    "jest": "^26.6.3",
+    "prettier": "^2.2.1"
+  }
+}

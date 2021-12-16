@@ -38,13 +38,14 @@ const withAPI = withProps(() => ({
     jhapiRequest("/users/" + username, "GET")
       .then((data) => data.status)
       .then((data) => (data > 200 ? false : true)),
-  failRegexEvent: () =>
-    alert(
-      "Cannot change username - either contains special characters or is too short."
-    ),
-  noChangeEvent: () => {
-    returns;
+  // Temporarily Unused
+  failRegexEvent: () => {
+    return null;
   },
+  noChangeEvent: () => {
+    return null;
+  },
+  //
   refreshGroupsData: () =>
     jhapiRequest("/groups", "GET").then((data) => data.json()),
   refreshUserData: () =>

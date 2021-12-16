@@ -36,10 +36,37 @@ jobs:
       - run: |
           pytest docs/
 
+  jstest:
+    # Run javascript tests
+    runs-on: ubuntu-20.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v2
+      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
+      - name: Install Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: "14"
+
+      - name: Install Node dependencies
+        run: |
+          npm install -g yarn
+
+      - name: Run yarn
+        run: |
+          cd jsx
+          yarn
+
+      - name: yarn test
+        run: |
+          cd jsx
+          yarn test
+
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     strategy:
       # Keep running even if one variation of the job fail
@@ -126,7 +153,6 @@ jobs:
         run: |
           npm install
           npm install -g configurable-http-proxy
-          npm install -g yarn
           npm list
 
       # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
@@ -189,14 +215,18 @@ jobs:
         if: ${{ matrix.db }}
         run: |
           if [ "${{ matrix.db }}" == "mysql" ]; then
+            if [[ -z "$(which mysql)" ]]; then
               sudo apt-get update
               sudo apt-get install -y mysql-client
+            fi
               DB=mysql bash ci/docker-db.sh
               DB=mysql bash ci/init-db.sh
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
+            if [[ -z "$(which psql)" ]]; then
               sudo apt-get update
               sudo apt-get install -y postgresql-client
+            fi
               DB=postgres bash ci/docker-db.sh
               DB=postgres bash ci/init-db.sh
           fi
@@ -204,9 +234,6 @@ jobs:
       - name: Run pytest
         run: |
           pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
-      - name: Run yarn jest test
-        run: |
-          cd jsx && yarn && yarn test
       - name: Submit codecov report
         run: |
           codecov

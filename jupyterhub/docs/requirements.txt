@@ -1,0 +1,10 @@
+-r ../requirements.txt
+
+alabaster_jupyterhub
+autodoc-traits
+myst-parser
+pydata-sphinx-theme
+pytablewriter>=0.56
+sphinx>=1.7
+sphinx-copybutton
+sphinx-jsonschema

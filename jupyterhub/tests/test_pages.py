@@ -578,6 +578,41 @@ async def test_login_page(app, url, params, redirected_url, form_action):
     assert action.endswith(form_action)
 
 
+@pytest.mark.parametrize(
+    "url, token_in",
+    [
+        ("/home", "url"),
+        ("/home", "header"),
+        ("/login", "url"),
+        ("/login", "header"),
+    ],
+)
+async def test_page_with_token(app, user, url, token_in):
+    cookies = await app.login_user(user.name)
+    token = user.new_api_token()
+    if token_in == "url":
+        url = url_concat(url, {"token": token})
+        headers = None
+    elif token_in == "header":
+        headers = {
+            "Authorization": f"token {token}",
+        }
+
+    # request a page with ?token= in URL shouldn't be allowed
+    r = await get_page(
+        url,
+        app,
+        headers=headers,
+        allow_redirects=False,
+    )
+    if "/hub/login" in r.url:
+        assert r.status_code == 200
+    else:
+        assert r.status_code == 302
+        assert r.headers["location"].partition("?")[0].endswith("/hub/login")
+    assert not r.cookies
+
+
 async def test_login_fail(app):
     name = 'wash'
     base_url = public_url(app)
@@ -1094,7 +1129,7 @@ async def test_health_check_request(app):
 
 
 async def test_pre_spawn_start_exc_no_form(app):
-    exc = "pre_spawn_start error"
+    exc = "Unhandled error starting server"
 
     # throw exception from pre_spawn_start
     async def mock_pre_spawn_start(user, spawner):

@@ -19,7 +19,7 @@ const Groups = (props) => {
   var { updateGroups, history } = props;
 
   if (!groups_data || !user_data) {
-    return <div></div>;
+    return <div data-testid="no-show"></div>;
   }
 
   const dispatchPageChange = (data, page) => {
@@ -39,7 +39,7 @@ const Groups = (props) => {
   }
 
   return (
-    <div className="container">
+    <div className="container" data-testid="container">
       <div className="row">
         <div className="col-md-12 col-lg-10 col-lg-offset-1">
           <div className="panel panel-default">

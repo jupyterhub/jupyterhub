@@ -1,0 +1,14 @@
+@import url(../../style/root.css);
+
+.pagination-footer * button {
+  margin-right: 10px;
+}
+
+.pagination-footer * .inactive-pagination {
+  color: gray;
+  cursor: not-allowed;
+}
+
+.pagination-footer * button.spaced {
+  color: var(--blue);
+}

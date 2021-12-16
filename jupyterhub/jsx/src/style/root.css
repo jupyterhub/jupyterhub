@@ -1,0 +1,35 @@
+:root {
+  --red: #d7191e;
+  --orange: #f1ad4e;
+  --blue: #2e7ab6;
+  --white: #ffffff;
+  --gray: #f7f7f7;
+}
+
+/* Color Classes */
+.red {
+  background-color: var(--red);
+}
+.orange {
+  background-color: var(--orange);
+}
+.blue {
+  background-color: var(--blue);
+}
+.white {
+  background-color: var(--white);
+}
+
+/* Resets */
+
+.resets .modal {
+  display: block;
+  visibility: visible;
+  z-index: 2000;
+}
+
+/* Global Util Classes */
+.adjacent-span-spacing {
+  margin-right: 5px;
+  margin-left: 5px;
+}

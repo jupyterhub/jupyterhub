@@ -1,0 +1,18 @@
+[run]
+parallel = True
+branch = False
+omit =
+    jupyterhub/tests/*
+    jupyterhub/alembic/*
+
+[report]
+exclude_lines =
+    if self.debug:
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+ignore_errors = True
+omit =
+    jupyterhub/tests/*
+    jupyterhub/alembic/*
+    */site-packages/*

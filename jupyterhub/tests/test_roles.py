@@ -1203,6 +1203,27 @@ async def test_user_config_respects_memberships():
         assert user in user_role.users
 
 
+async def test_user_config_creates_default_role():
+    role_spec = [
+        {
+            'name': 'new-role',
+            'scopes': ['read:users'],
+            'users': ['not-yet-created-user'],
+        }
+    ]
+    user_names = []
+    hub = MockHub(load_roles=role_spec)
+    hub.init_db()
+    hub.authenticator.allowed_users = user_names
+    await hub.init_role_creation()
+    await hub.init_users()
+    await hub.init_role_assignment()
+    user_role = orm.Role.find(hub.db, 'user')
+    new_role = orm.Role.find(hub.db, 'new-role')
+    assert orm.User.find(hub.db, 'not-yet-created-user') in new_role.users
+    assert orm.User.find(hub.db, 'not-yet-created-user') in user_role.users
+
+
 async def test_admin_role_respects_config():
     role_spec = [
         {

@@ -1,5 +1,7 @@
 export const jhapiRequest = (endpoint, method, data) => {
-  return fetch("/hub/api" + endpoint, {
+  let base_url = window.base_url,
+    api_url = `${base_url}hub/api`;
+  return fetch(api_url + endpoint, {
     method: method,
     json: true,
     headers: {

@@ -21,6 +21,7 @@ what happens under-the-hood when you deploy and configure your JupyterHub.
    monitoring
    database
    templates
+   api-only
    ../events/index
    config-user-env
    config-examples
