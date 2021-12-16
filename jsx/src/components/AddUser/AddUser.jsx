@@ -25,11 +25,20 @@ const AddUser = (props) => {
 
   return (
     <>
-      <div className="container">
+      <div className="container" data-testid="container">
         {errorAlert != null ? (
           <div className="row">
             <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-              <div className="alert alert-danger">{errorAlert}</div>
+              <div className="alert alert-danger">
+                {errorAlert}
+                <button
+                  type="button"
+                  className="close"
+                  onClick={() => setErrorAlert(null)}
+                >
+                  <span>&times;</span>
+                </button>
+              </div>
             </div>
           </div>
         ) : (
@@ -49,6 +58,7 @@ const AddUser = (props) => {
                       id="add-user-textarea"
                       rows="3"
                       placeholder="usernames separated by line"
+                      data-testid="user-textarea"
                       onBlur={(e) => {
                         let split_users = e.target.value.split("\n");
                         setUsers(split_users);
@@ -57,10 +67,11 @@ const AddUser = (props) => {
                     <br></br>
                     <input
                       className="form-check-input"
+                      data-testid="check"
                       type="checkbox"
-                      value=""
                       id="admin-check"
-                      onChange={(e) => setAdmin(e.target.checked)}
+                      checked={admin}
+                      onChange={() => setAdmin(!admin)}
                     />
                     <span> </span>
                     <label className="form-check-label">Admin</label>
@@ -74,6 +85,7 @@ const AddUser = (props) => {
                 <span> </span>
                 <button
                   id="submit"
+                  data-testid="submit"
                   className="btn btn-primary"
                   onClick={() => {
                     let filtered_users = users.filter(
@@ -92,14 +104,16 @@ const AddUser = (props) => {
                           ? updateUsers(0, limit)
                               .then((data) => dispatchPageChange(data, 0))
                               .then(() => history.push("/"))
-                              .catch((err) => console.log(err))
+                              .catch(() =>
+                                setErrorAlert(`Failed to update users.`)
+                              )
                           : setErrorAlert(
-                              `[${data.status}] Failed to create user. ${
+                              `Failed to create user. ${
                                 data.status == 409 ? "User already exists." : ""
                               }`
                             )
                       )
-                      .catch((err) => console.log(err));
+                      .catch(() => setErrorAlert(`Failed to create user.`));
                   }}
                 >
                   Add Users
