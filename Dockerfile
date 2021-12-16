@@ -19,10 +19,10 @@
 # NOTE
 # If you base on jupyterhub/jupyterhub-onbuild
 # your jupyterhub_config.py will be added automatically
-# from your docker directory.
+# from your docker directory...
 
-ARG BASE_IMAGE=ubuntu:focal-20200729
-FROM $BASE_IMAGE AS builder
+ARG BASE_IMAGE=jupyterhub/k8s-hub:1.1.3
+FROM $BASE_IMAGE as builder
 
 USER root
 
@@ -46,10 +46,14 @@ RUN python3 -m pip install --upgrade setuptools pip wheel
 # compromise between needing to rebuild and maintaining
 # what needs to be part of the build
 COPY . /src/jupyterhub/
-WORKDIR /src/jupyterhub
+WORKDIR /src/jupyterhub/jsx
 
 # Build client component packages (they will be copied into ./share and
 # packaged with the built wheel.)
+RUN npm install --global yarn
+RUN npm run build
+RUN npm run place
+WORKDIR /src/jupyterhub
 RUN python3 setup.py bdist_wheel
 RUN python3 -m pip wheel --wheel-dir wheelhouse dist/*.whl
 
