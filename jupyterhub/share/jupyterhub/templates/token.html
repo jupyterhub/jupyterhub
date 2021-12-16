@@ -1,6 +1,4 @@
-{% extends "page.html" %}
-
-{% block main %}
+{% extends "page.html" %} {% block main %}
 
 <div class="container">
   <div class="row">
@@ -15,15 +13,15 @@
         <input
           id="token-note"
           class="form-control"
-          placeholder="note to identify your new token">
+          placeholder="note to identify your new token"
+        />
         <small id="note-note" class="form-text text-muted">
           This note will help you keep track of what your tokens are for.
         </small>
-        <br><br>
+        <br /><br />
         <label for="token-expiration-seconds">Token expires</label>
         {% block expiration_options %}
-        <select id="token-expiration-seconds"
-                class="form-control">
+        <select id="token-expiration-seconds" class="form-control">
           <option value="3600">1 Day</option>
           <option value="86400">1 Week</option>
           <option value="604800">1 Month</option>
@@ -38,31 +36,29 @@
   </div>
 
   <div class="row">
-      <div id="token-area" class="col-md-6 col-md-offset-3" style="display: none;">
-        <div class="panel panel-default">
-          <div class="panel-heading">
-            Your new API Token
-          </div>
-          <div class="panel-body">
-            <p class="lead text-center">
-              <span id="token-result"></span>
-            </p>
-            <p>
-              Copy this token. You won't be able to see it again,
-              but you can always come back here to get a new one.
-            </p>
-          </div>
+    <div id="token-area" class="col-md-6 col-md-offset-3" style="display: none">
+      <div class="panel panel-default">
+        <div class="panel-heading">Your new API Token</div>
+        <div class="panel-body">
+          <p class="lead text-center">
+            <span id="token-result"></span>
+          </p>
+          <p>
+            Copy this token. You won't be able to see it again, but you can
+            always come back here to get a new one.
+          </p>
         </div>
       </div>
+    </div>
   </div>
 
   {% if api_tokens %}
   <div class="row">
     <h2>API Tokens</h2>
     <p>
-      These are tokens with full access to the JupyterHub API.
-      Anything you can do with JupyterHub can be done with these tokens.
-      Revoking the API token for a running server will require restarting that server.
+      These are tokens with full access to the JupyterHub API. Anything you can
+      do with JupyterHub can be done with these tokens. Revoking the API token
+      for a running server will require restarting that server.
     </p>
     <table class="table table-striped">
       <thead>
@@ -79,28 +75,21 @@
           {% block token_row scoped %}
           <td class="note-col col-sm-5">{{token.note}}</td>
           <td class="time-col col-sm-3">
-            {%- if token.last_activity -%}
-            {{ token.last_activity.isoformat() + 'Z' }}
-            {%- else -%}
-            Never
-            {%- endif -%}
+            {%- if token.last_activity -%} {{ token.last_activity.isoformat() +
+            'Z' }} {%- else -%} Never {%- endif -%}
           </td>
           <td class="time-col col-sm-3">
-            {%- if token.created -%}
-            {{ token.created.isoformat() + 'Z' }}
-            {%- else -%}
-            N/A
-            {%- endif -%}
+            {%- if token.created -%} {{ token.created.isoformat() + 'Z' }} {%-
+            else -%} N/A {%- endif -%}
           </td>
           <td class="time-col col-sm-3">
-            {%- if token.expires_at -%}
-            {{ token.expires_at.isoformat() + 'Z' }}
-            {%- else -%}
-            Never
-            {%- endif -%}
+            {%- if token.expires_at -%} {{ token.expires_at.isoformat() + 'Z' }}
+            {%- else -%} Never {%- endif -%}
           </td>
           <td class="col-sm-1 text-center">
-            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
+            <button class="revoke-token-btn btn btn-xs btn-danger">
+              revoke
+            </button>
           </td>
           {% endblock token_row %}
         </tr>
@@ -108,17 +97,13 @@
       </tbody>
     </table>
   </div>
-  {% endif %}
-
-  {% if oauth_clients %}
+  {% endif %} {% if oauth_clients %}
   <div class="row">
     <h2>Authorized Applications</h2>
     <p>
-      These are applications that use OAuth with JupyterHub
-      to identify users (mostly notebook servers).
-
-      OAuth tokens can generally only be used to identify you,
-      not take actions on your behalf.
+      These are applications that use OAuth with JupyterHub to identify users
+      (mostly notebook servers). OAuth tokens can generally only be used to
+      identify you, not take actions on your behalf.
     </p>
     <table class="table table-striped">
       <thead>
@@ -130,39 +115,34 @@
       </thead>
       <tbody>
         {% for client in oauth_clients %}
-        <tr class="token-row"
-          data-token-id="{{ client['token_id'] }}">
+        <tr class="token-row" data-token-id="{{ client['token_id'] }}">
           {% block client_row scoped %}
           <td class="note-col col-sm-5">{{ client['description'] }}</td>
           <td class="time-col col-sm-3">
-            {%- if client['last_activity'] -%}
-            {{ client['last_activity'].isoformat() + 'Z' }}
-            {%- else -%}
-            Never
-            {%- endif -%}
+            {%- if client['last_activity'] -%} {{
+            client['last_activity'].isoformat() + 'Z' }} {%- else -%} Never {%-
+            endif -%}
           </td>
           <td class="time-col col-sm-3">
-            {%- if client['created'] -%}
-            {{ client['created'].isoformat() + 'Z' }}
-            {%- else -%}
-            N/A
-            {%- endif -%}
+            {%- if client['created'] -%} {{ client['created'].isoformat() + 'Z'
+            }} {%- else -%} N/A {%- endif -%}
           </td>
           <td class="col-sm-1 text-center">
-            <button class="revoke-token-btn btn btn-xs btn-danger">revoke</button>
-          {% endblock client_row %}
+            <button class="revoke-token-btn btn btn-xs btn-danger">
+              revoke
+            </button>
+            {% endblock client_row %}
+          </td>
         </tr>
+
         {% endfor %}
       </tbody>
     </table>
   </div>
   {% endif %}
 </div>
-{% endblock main %}
-
-{% block script %}
-{{ super() }}
+{% endblock main %} {% block script %} {{ super() }}
 <script type="text/javascript">
-require(["token"]);
+  require(["token"]);
 </script>
 {% endblock script %}
