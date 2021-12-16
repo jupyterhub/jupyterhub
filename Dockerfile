@@ -51,6 +51,8 @@ WORKDIR /src/jupyterhub/jsx
 # Build client component packages (they will be copied into ./share and
 # packaged with the built wheel.)
 RUN npm install --global yarn
+RUN npm install n -g
+RUN n stable
 RUN npm run build
 RUN npm run place
 WORKDIR /src/jupyterhub
