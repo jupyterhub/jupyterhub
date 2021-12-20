@@ -399,18 +399,13 @@ def _token_allowed_role(db, token, role):
 
     implicit_permissions = {'inherit', 'read:inherit'}
     explicit_scopes = expanded_scopes - implicit_permissions
-    # ignore horizontal filters
-    no_filter_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in explicit_scopes
-    }
     # find the owner's scopes
     expanded_owner_scopes = expand_roles_to_scopes(owner)
-    # ignore horizontal filters
-    no_filter_owner_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope
-        for scope in expanded_owner_scopes
-    }
-    disallowed_scopes = no_filter_scopes.difference(no_filter_owner_scopes)
+    allowed_scopes = scopes._intersect_expanded_scopes(
+        explicit_scopes, expanded_owner_scopes, db
+    )
+    disallowed_scopes = explicit_scopes.difference(allowed_scopes)
+
     if not disallowed_scopes:
         # no scopes requested outside owner's own scopes
         return True
