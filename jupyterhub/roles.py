@@ -239,26 +239,6 @@ def _check_scopes(*args, rolename=None):
                 )
 
 
-def _overwrite_role(role, role_dict):
-    """Overwrites role's description and/or scopes with role_dict if role not 'admin'"""
-    for attr in role_dict.keys():
-        if attr == 'description' or attr == 'scopes':
-            if role.name == 'admin':
-                admin_role_spec = [
-                    r for r in get_default_roles() if r['name'] == 'admin'
-                ][0]
-                if role_dict[attr] != admin_role_spec[attr]:
-                    raise ValueError(
-                        'admin role description or scopes cannot be overwritten'
-                    )
-            else:
-                if role_dict[attr] != getattr(role, attr):
-                    setattr(role, attr, role_dict[attr])
-                    app_log.info(
-                        'Role %r %r attribute has been changed', role.name, attr
-                    )
-
-
 _role_name_pattern = re.compile(r'^[a-z][a-z0-9\-_~\.]{1,253}[a-z0-9]$')
 
 
@@ -293,6 +273,17 @@ def create_role(db, role_dict):
     description = role_dict.get('description')
     scopes = role_dict.get('scopes')
 
+    if name == "admin":
+        for _role in get_default_roles():
+            if _role["name"] == "admin":
+                admin_spec = _role
+                break
+        for key in ["description", "scopes"]:
+            if key in role_dict and role_dict[key] != admin_spec[key]:
+                raise ValueError(
+                    f"Cannot override admin role admin.{key} = {role_dict[key]}"
+                )
+
     # check if the provided scopes exist
     if scopes:
         _check_scopes(*scopes, rolename=role_dict['name'])
@@ -306,8 +297,22 @@ def create_role(db, role_dict):
         if role_dict not in default_roles:
             app_log.info('Role %s added to database', name)
     else:
-        _overwrite_role(role, role_dict)
-
+        for attr in ["description", "scopes"]:
+            try:
+                new_value = role_dict[attr]
+            except KeyError:
+                continue
+            old_value = getattr(role, attr)
+            if new_value != old_value:
+                setattr(role, attr, new_value)
+                app_log.info(
+                    f'Role attribute {role.name}.{attr} has been changed',
+                )
+                app_log.debug(
+                    f'Role attribute {role.name}.{attr} changed from %r to %r',
+                    old_value,
+                    new_value,
+                )
     db.commit()
 
 
