@@ -1418,7 +1418,8 @@ async def test_login_default_role(app, username):
     user.roles = []
     app.db.commit()
 
-    # login *again*; user exists, shouldn't trigger change in roles
+    # login *again*; user exists,
+    # login should always trigger "user" role assignment
     cookies = await app.login_user(username)
     user = app.users[username]
-    assert user.roles == []
+    assert [role.name for role in user.roles] == ["user"]
