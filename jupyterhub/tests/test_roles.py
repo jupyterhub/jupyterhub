@@ -443,7 +443,14 @@ async def test_scope_existence(tmpdir, request, role, response):
 
 
 @mark.role
-async def test_load_roles_users(tmpdir, request):
+@mark.parametrize(
+    "explicit_allowed_users",
+    [
+        (True,),
+        (False,),
+    ],
+)
+async def test_load_roles_users(tmpdir, request, explicit_allowed_users):
     """Test loading predefined roles for users in app.py"""
     roles_to_load = [
         {
@@ -461,7 +468,8 @@ async def test_load_roles_users(tmpdir, request):
     hub.init_db()
     db = hub.db
     hub.authenticator.admin_users = ['admin']
-    hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
+    if explicit_allowed_users:
+        hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
     await hub.init_role_creation()
     await hub.init_users()
     await hub.init_role_assignment()
