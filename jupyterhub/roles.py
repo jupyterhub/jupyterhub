@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import re
+from functools import wraps
 from itertools import chain
 
 from sqlalchemy import func
@@ -332,55 +333,56 @@ def delete_role(db, rolename):
         raise KeyError('Cannot remove role %r that does not exist', rolename)
 
 
-def existing_only(func):
-    """Decorator for checking if objects and roles exist"""
+def _existing_only(func):
+    """Decorator for checking if roles exist"""
 
-    def _check_existence(db, entity, rolename):
-        role = orm.Role.find(db, rolename)
-        if entity is None:
-            raise ValueError(
-                f"{entity!r} of kind {type(entity).__name__!r} does not exist"
-            )
-        elif role is None:
-            raise ValueError("Role %r does not exist" % rolename)
-        else:
-            func(db, entity, role)
+    @wraps(func)
+    def _check_existence(db, entity, role=None, *, rolename=None):
+        if isinstance(role, str):
+            rolename = role
+        if rolename is not None:
+            # if given as a str, lookup role by name
+            role = orm.Role.find(db, rolename)
+        if role is None:
+            raise ValueError(f"Role {rolename} does not exist")
+
+        return func(db, entity, role)
 
     return _check_existence
 
 
-@existing_only
-def grant_role(db, entity, rolename):
+@_existing_only
+def grant_role(db, entity, role):
     """Adds a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
     else:
         entity_repr = entity.name
 
-    if rolename not in entity.roles:
-        entity.roles.append(rolename)
+    if role not in entity.roles:
+        entity.roles.append(role)
         db.commit()
         app_log.info(
             'Adding role %s for %s: %s',
-            rolename.name,
+            role.name,
             type(entity).__name__,
             entity_repr,
         )
 
 
-@existing_only
-def strip_role(db, entity, rolename):
+@_existing_only
+def strip_role(db, entity, role):
     """Removes a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
     else:
         entity_repr = entity.name
-    if rolename in entity.roles:
-        entity.roles.remove(rolename)
+    if role in entity.roles:
+        entity.roles.remove(role)
         db.commit()
         app_log.info(
             'Removing role %s for %s: %s',
-            rolename.name,
+            role.name,
             type(entity).__name__,
             entity_repr,
         )
