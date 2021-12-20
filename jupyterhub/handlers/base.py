@@ -1381,6 +1381,9 @@ class UserUrlHandler(BaseHandler):
     Note that this only occurs if bob's server is not already running.
     """
 
+    # accept token auth for API requests that are probably to non-running servers
+    _accept_token_auth = True
+
     def _fail_api_request(self, user_name='', server_name=''):
         """Fail an API request to a not-running server"""
         self.log.warning(
