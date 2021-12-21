@@ -88,7 +88,7 @@ class APIHandler(BaseHandler):
         ):
             self.log.warning(
                 f"Blocking Cross Origin API request.  Referer: {referer},"
-                " {host_header}: {host}, Host URL: {full_host}",
+                f" {host_header}: {host}, Host URL: {full_host}",
             )
             return False
         return True
