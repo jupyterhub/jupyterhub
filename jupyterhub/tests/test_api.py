@@ -188,6 +188,8 @@ def normalize_user(user):
     """
     for key in ('created', 'last_activity'):
         user[key] = normalize_timestamp(user[key])
+    if 'roles' in user:
+        user['roles'] = sorted(user['roles'])
     if 'servers' in user:
         for server in user['servers'].values():
             for key in ('started', 'last_activity'):
@@ -240,7 +242,12 @@ async def test_get_users(app):
     }
     assert users == [
         fill_user(
-            {'name': 'admin', 'admin': True, 'roles': ['admin'], 'auth_state': None}
+            {
+                'name': 'admin',
+                'admin': True,
+                'roles': ['admin', 'user'],
+                'auth_state': None,
+            }
         ),
         fill_user(user_model),
     ]

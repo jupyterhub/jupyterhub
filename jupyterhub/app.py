@@ -1903,6 +1903,7 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                roles.assign_default_roles(self.db, entity=user)
                 new_users.append(user)
                 db.add(user)
             else:
