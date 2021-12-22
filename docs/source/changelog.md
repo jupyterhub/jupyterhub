@@ -6,7 +6,56 @@ command line for details.
 
 ## [Unreleased]
 
-## [2.0.0]
+## 2.0
+
+### [2.0.1]
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/2.0.0...2.0.1))
+
+2.0.1 is a bugfix release, with some additional small improvements,
+especially in the new RBAC handling and admin page.
+
+Several issues are fixed where users might not have the
+default 'user' role as expected.
+
+#### Enhancements made
+
+- Use URL from authenticator on default login form [#3723](https://github.com/jupyterhub/jupyterhub/pull/3723) ([@sgaist](https://github.com/sgaist))
+- always assign default roles on login [#3722](https://github.com/jupyterhub/jupyterhub/pull/3722) ([@minrk](https://github.com/minrk))
+- use intersect_scopes utility to check token permissions [#3705](https://github.com/jupyterhub/jupyterhub/pull/3705) ([@minrk](https://github.com/minrk))
+- React Error Handling [#3697](https://github.com/jupyterhub/jupyterhub/pull/3697) ([@naatebarber](https://github.com/naatebarber))
+- add option to use a different Host header for referer checks [#3195](https://github.com/jupyterhub/jupyterhub/pull/3195) ([@kylewm](https://github.com/kylewm))
+
+#### Bugs fixed
+
+- initialize new admin users with default roles [#3735](https://github.com/jupyterhub/jupyterhub/pull/3735) ([@minrk](https://github.com/minrk))
+- Fix missing f-string modifier [#3733](https://github.com/jupyterhub/jupyterhub/pull/3733) ([@manics](https://github.com/manics))
+- accept token auth on `/hub/user/...` [#3731](https://github.com/jupyterhub/jupyterhub/pull/3731) ([@minrk](https://github.com/minrk))
+- simplify default role assignment [#3720](https://github.com/jupyterhub/jupyterhub/pull/3720) ([@minrk](https://github.com/minrk))
+- fix Spawner.oauth_roles config [#3717](https://github.com/jupyterhub/jupyterhub/pull/3717) ([@minrk](https://github.com/minrk))
+- Fix error message about Authenticator.pre_spawn_start [#3716](https://github.com/jupyterhub/jupyterhub/pull/3716) ([@minrk](https://github.com/minrk))
+- admin: Pass Base Url [#3715](https://github.com/jupyterhub/jupyterhub/pull/3715) ([@naatebarber](https://github.com/naatebarber))
+- Grant role after user creation during config load [#3714](https://github.com/jupyterhub/jupyterhub/pull/3714) ([@a3626a](https://github.com/a3626a))
+- Avoid clearing user role membership when defining custom user scopes [#3708](https://github.com/jupyterhub/jupyterhub/pull/3708) ([@minrk](https://github.com/minrk))
+- cors: handle mismatched implicit/explicit ports in host header [#3701](https://github.com/jupyterhub/jupyterhub/pull/3701) ([@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- clarify `role` argument in grant/strip_role [#3727](https://github.com/jupyterhub/jupyterhub/pull/3727) ([@minrk](https://github.com/minrk))
+- check for db clients before requesting install [#3719](https://github.com/jupyterhub/jupyterhub/pull/3719) ([@minrk](https://github.com/minrk))
+- run jsx tests in their own job [#3698](https://github.com/jupyterhub/jupyterhub/pull/3698) ([@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- update service-whoami example [#3726](https://github.com/jupyterhub/jupyterhub/pull/3726) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2021-12-01&to=2021-12-22&type=c))
+
+[@a3626a](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aa3626a+updated%3A2021-12-01..2021-12-22&type=Issues) | [@betatim](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Abetatim+updated%3A2021-12-01..2021-12-22&type=Issues) | [@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2021-12-01..2021-12-22&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Agithub-actions+updated%3A2021-12-01..2021-12-22&type=Issues) | [@kylewm](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Akylewm+updated%3A2021-12-01..2021-12-22&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2021-12-01..2021-12-22&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2021-12-01..2021-12-22&type=Issues) | [@naatebarber](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Anaatebarber+updated%3A2021-12-01..2021-12-22&type=Issues) | [@pre-commit-ci](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Apre-commit-ci+updated%3A2021-12-01..2021-12-22&type=Issues) | [@sgaist](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asgaist+updated%3A2021-12-01..2021-12-22&type=Issues) | [@welcome](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awelcome+updated%3A2021-12-01..2021-12-22&type=Issues)
+
+### [2.0.0]
 
 JupyterHub 2.0 is a big release!
 
@@ -1310,7 +1359,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 
 First preview release
 
-[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/2.0.0...HEAD
+[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/2.0.1...HEAD
+[2.0.1]: https://github.com/jupyterhub/jupyterhub/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/jupyterhub/jupyterhub/compare/1.5.0...2.0.0
 [1.5.0]: https://github.com/jupyterhub/jupyterhub/compare/1.4.2...1.5.0
 [1.4.2]: https://github.com/jupyterhub/jupyterhub/compare/1.4.1...1.4.2
