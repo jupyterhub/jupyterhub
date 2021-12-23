@@ -1903,6 +1903,7 @@ class JupyterHub(Application):
             user = orm.User.find(db, name)
             if user is None:
                 user = orm.User(name=name, admin=True)
+                roles.assign_default_roles(self.db, entity=user)
                 new_users.append(user)
                 db.add(user)
             else:
@@ -2015,14 +2016,25 @@ class JupyterHub(Application):
 
     async def init_role_creation(self):
         """Load default and predefined roles into the database"""
-        self.log.debug('Loading default roles to database')
+        self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
         config_role_names = [r['name'] for r in self.load_roles]
 
-        init_roles = default_roles
+        default_roles_dict = {role["name"]: role for role in default_roles}
+        init_roles = []
         roles_with_new_permissions = []
         for role_spec in self.load_roles:
             role_name = role_spec['name']
+            if role_name in default_roles_dict:
+                self.log.debug(f"Overriding default role {role_name}")
+                # merge custom role spec with default role spec when overriding
+                # so the new role can be partially defined
+                default_role_spec = default_roles_dict.pop(role_name)
+                merged_role_spec = {}
+                merged_role_spec.update(default_role_spec)
+                merged_role_spec.update(role_spec)
+                role_spec = merged_role_spec
+
             # Check for duplicates
             if config_role_names.count(role_name) > 1:
                 raise ValueError(
@@ -2033,10 +2045,13 @@ class JupyterHub(Application):
             old_role = orm.Role.find(self.db, name=role_name)
             if old_role:
                 if not set(role_spec['scopes']).issubset(old_role.scopes):
-                    app_log.warning(
+                    self.log.warning(
                         "Role %s has obtained extra permissions" % role_name
                     )
                     roles_with_new_permissions.append(role_name)
+
+        # make sure we load any default roles not overridden
+        init_roles = list(default_roles_dict.values()) + init_roles
         if roles_with_new_permissions:
             unauthorized_oauth_tokens = (
                 self.db.query(orm.APIToken)
@@ -2048,7 +2063,7 @@ class JupyterHub(Application):
                 .filter(orm.APIToken.client_id != 'jupyterhub')
             )
             for token in unauthorized_oauth_tokens:
-                app_log.warning(
+                self.log.warning(
                     "Deleting OAuth token %s; one of its roles obtained new permissions that were not authorized by user"
                     % token
                 )
@@ -2056,14 +2071,19 @@ class JupyterHub(Application):
             self.db.commit()
 
         init_role_names = [r['name'] for r in init_roles]
-        if not orm.Role.find(self.db, name='admin'):
+        if (
+            self.db.query(orm.Role).first() is None
+            and self.db.query(orm.User).first() is not None
+        ):
+            # apply rbac-upgrade default role assignment if there are users in the db,
+            # but not any roles
             self._rbac_upgrade = True
         else:
             self._rbac_upgrade = False
         for role in self.db.query(orm.Role).filter(
             orm.Role.name.notin_(init_role_names)
         ):
-            app_log.info(f"Deleting role {role.name}")
+            self.log.warning(f"Deleting role {role.name}")
             self.db.delete(role)
         self.db.commit()
         for role in init_roles:
@@ -2079,71 +2099,89 @@ class JupyterHub(Application):
         if config_admin_users:
             for role_spec in self.load_roles:
                 if role_spec['name'] == 'admin':
-                    app_log.warning(
+                    self.log.warning(
                         "Configuration specifies both admin_users and users in the admin role specification. "
                         "If admin role is present in config, c.Authenticator.admin_users should not be used."
                     )
-                    app_log.info(
+                    self.log.info(
                         "Merging admin_users set with users list in admin role"
                     )
                     role_spec['users'] = set(role_spec.get('users', []))
                     role_spec['users'] |= config_admin_users
-        self.log.debug('Loading predefined roles from config file to database')
+        self.log.debug('Loading role assignments from config')
         has_admin_role_spec = {role_bearer: False for role_bearer in admin_role_objects}
-        for predef_role in self.load_roles:
-            predef_role_obj = orm.Role.find(db, name=predef_role['name'])
-            if predef_role['name'] == 'admin':
+        for role_spec in self.load_roles:
+            role = orm.Role.find(db, name=role_spec['name'])
+            role_name = role_spec["name"]
+            if role_name == 'admin':
                 for kind in admin_role_objects:
-                    has_admin_role_spec[kind] = kind in predef_role
+                    has_admin_role_spec[kind] = kind in role_spec
                     if has_admin_role_spec[kind]:
-                        app_log.info(f"Admin role specifies static {kind} list")
+                        self.log.info(f"Admin role specifies static {kind} list")
                     else:
-                        app_log.info(
+                        self.log.info(
                             f"Admin role does not specify {kind}, preserving admin membership in database"
                         )
             # add users, services, and/or groups,
             # tokens need to be checked for permissions
             for kind in kinds:
                 orm_role_bearers = []
-                if kind in predef_role.keys():
-                    for bname in predef_role[kind]:
+                if kind in role_spec:
+                    for name in role_spec[kind]:
                         if kind == 'users':
-                            bname = self.authenticator.normalize_username(bname)
+                            name = self.authenticator.normalize_username(name)
                             if not (
                                 await maybe_future(
-                                    self.authenticator.check_allowed(bname, None)
+                                    self.authenticator.check_allowed(name, None)
                                 )
                             ):
                                 raise ValueError(
-                                    "Username %r is not in Authenticator.allowed_users"
-                                    % bname
+                                    f"Username {name} is not in Authenticator.allowed_users"
                                 )
                         Class = orm.get_class(kind)
-                        orm_obj = Class.find(db, bname)
+                        orm_obj = Class.find(db, name)
                         if orm_obj is not None:
                             orm_role_bearers.append(orm_obj)
                         else:
-                            app_log.info(
-                                f"Found unexisting {kind} {bname} in role definition {predef_role['name']}"
+                            self.log.info(
+                                f"Found unexisting {kind} {name} in role definition {role_name}"
                             )
                             if kind == 'users':
-                                orm_obj = await self._get_or_create_user(bname)
+                                orm_obj = await self._get_or_create_user(name)
                                 orm_role_bearers.append(orm_obj)
                             elif kind == 'groups':
-                                group = orm.Group(name=bname)
+                                group = orm.Group(name=name)
                                 db.add(group)
                                 db.commit()
                                 orm_role_bearers.append(group)
                             else:
                                 raise ValueError(
-                                    f"{kind} {bname} defined in config role definition {predef_role['name']} but not present in database"
+                                    f"{kind} {name} defined in config role definition {role_name} but not present in database"
                                 )
                         # Ensure all with admin role have admin flag
-                        if predef_role['name'] == 'admin':
+                        if role_name == 'admin':
                             orm_obj.admin = True
-                setattr(predef_role_obj, kind, orm_role_bearers)
+                    # explicitly defined list
+                    # ensure membership list is exact match (adds and revokes permissions)
+                    setattr(role, kind, orm_role_bearers)
+                else:
+                    # no defined members
+                    # leaving 'users' undefined in overrides of the default 'user' role
+                    # should not clear membership on startup
+                    # since allowed users could be managed by the authenticator
+                    if kind == "users" and role_name == "user":
+                        # Default user lists can be managed by the Authenticator,
+                        # if unspecified in role config
+                        pass
+                    else:
+                        # otherwise, omitting a member category is equivalent to specifying an empty list
+                        setattr(role, kind, [])
+
         db.commit()
         if self.authenticator.allowed_users:
+            self.log.debug(
+                f"Assigning {len(self.authenticator.allowed_users)} allowed_users to the user role"
+            )
             allowed_users = db.query(orm.User).filter(
                 orm.User.name.in_(self.authenticator.allowed_users)
             )
@@ -2160,8 +2198,8 @@ class JupyterHub(Application):
         db.commit()
         # make sure that on hub upgrade, all users, services and tokens have at least one role (update with default)
         if getattr(self, '_rbac_upgrade', False):
-            app_log.warning(
-                "No admin role found; assuming hub upgrade. Initializing default roles for all entities"
+            self.log.warning(
+                "No roles found; assuming hub upgrade. Initializing default roles for all entities"
             )
             for kind in kinds:
                 roles.check_for_default_roles(db, kind)

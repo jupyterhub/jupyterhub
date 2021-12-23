@@ -188,6 +188,8 @@ def normalize_user(user):
     """
     for key in ('created', 'last_activity'):
         user[key] = normalize_timestamp(user[key])
+    if 'roles' in user:
+        user['roles'] = sorted(user['roles'])
     if 'servers' in user:
         for server in user['servers'].values():
             for key in ('started', 'last_activity'):
@@ -240,7 +242,12 @@ async def test_get_users(app):
     }
     assert users == [
         fill_user(
-            {'name': 'admin', 'admin': True, 'roles': ['admin'], 'auth_state': None}
+            {
+                'name': 'admin',
+                'admin': True,
+                'roles': ['admin', 'user'],
+                'auth_state': None,
+            }
         ),
         fill_user(user_model),
     ]
@@ -625,7 +632,7 @@ async def test_add_multi_user_admin(app):
         assert user is not None
         assert user.name == name
         assert user.admin
-        assert orm.Role.find(db, 'user') not in user.roles
+        assert orm.Role.find(db, 'user') in user.roles
         assert orm.Role.find(db, 'admin') in user.roles
 
 
@@ -665,7 +672,7 @@ async def test_add_admin(app):
     assert user.name == name
     assert user.admin
     # assert newadmin has default 'admin' role
-    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'user') in user.roles
     assert orm.Role.find(db, 'admin') in user.roles
 
 
@@ -700,7 +707,7 @@ async def test_make_admin(app):
     assert user is not None
     assert user.name == name
     assert user.admin
-    assert orm.Role.find(db, 'user') not in user.roles
+    assert orm.Role.find(db, 'user') in user.roles
     assert orm.Role.find(db, 'admin') in user.roles
 
 
