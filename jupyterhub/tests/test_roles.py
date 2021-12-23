@@ -443,7 +443,14 @@ async def test_scope_existence(tmpdir, request, role, response):
 
 
 @mark.role
-async def test_load_roles_users(tmpdir, request):
+@mark.parametrize(
+    "explicit_allowed_users",
+    [
+        (True,),
+        (False,),
+    ],
+)
+async def test_load_roles_users(tmpdir, request, explicit_allowed_users):
     """Test loading predefined roles for users in app.py"""
     roles_to_load = [
         {
@@ -461,7 +468,8 @@ async def test_load_roles_users(tmpdir, request):
     hub.init_db()
     db = hub.db
     hub.authenticator.admin_users = ['admin']
-    hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
+    if explicit_allowed_users:
+        hub.authenticator.allowed_users = ['cyclops', 'gandalf', 'bilbo', 'gargamel']
     await hub.init_role_creation()
     await hub.init_users()
     await hub.init_role_assignment()
@@ -665,7 +673,11 @@ async def test_load_roles_user_tokens(tmpdir, request):
         # no role requested - gets default 'token' role
         ({}, None, None, 201),
         # role scopes within the user's default 'user' role
-        ({}, 'self-reader', ['read:users'], 201),
+        ({}, 'self-reader', ['read:users!user'], 201),
+        # role scopes within the user's default 'user' role, but with disjoint filter
+        ({}, 'other-reader', ['read:users!user=other'], 403),
+        # role scopes within the user's default 'user' role, without filter
+        ({}, 'other-reader', ['read:users'], 403),
         # role scopes outside of the user's role but within the group's role scopes of which the user is a member
         ({}, 'groups-reader', ['read:groups'], 201),
         # non-existing role request
@@ -1183,24 +1195,36 @@ async def test_no_admin_role_change():
         await hub.init_role_creation()
 
 
-async def test_user_config_respects_memberships():
-    role_spec = [
-        {
-            'name': 'user',
-            'scopes': ['self', 'shutdown'],
-        }
-    ]
-    user_names = ['eddy', 'carol']
-    hub = MockHub(load_roles=role_spec)
+@pytest.mark.parametrize(
+    "in_db, role_users, allowed_users, expected_members",
+    [
+        # users in the db, not specified in custom user role
+        # no change to membership
+        (["alpha", "beta"], None, None, ["alpha", "beta"]),
+        # allowed_users is additive, not strict
+        (["alpha", "beta"], None, {"gamma"}, ["alpha", "beta", "gamma"]),
+        # explicit empty revokes all assignments
+        (["alpha", "beta"], [], None, []),
+        # explicit value is respected exactly
+        (["alpha", "beta"], ["alpha", "gamma"], None, ["alpha", "gamma"]),
+    ],
+)
+async def test_user_role_from_config(
+    in_db, role_users, allowed_users, expected_members
+):
+    role_spec = {
+        'name': 'user',
+        'scopes': ['self', 'shutdown'],
+    }
+    if role_users is not None:
+        role_spec['users'] = role_users
+    hub = MockHub(load_roles=[role_spec])
     hub.init_db()
-    hub.authenticator.allowed_users = user_names
+    db = hub.db
+    hub.authenticator.admin_users = set()
+    if allowed_users:
+        hub.authenticator.allowed_users = allowed_users
     await hub.init_role_creation()
-    await hub.init_users()
-    await hub.init_role_assignment()
-    user_role = orm.Role.find(hub.db, 'user')
-    for user_name in user_names:
-        user = orm.User.find(hub.db, user_name)
-        assert user in user_role.users
 
 
 async def test_user_config_creates_default_role():
@@ -1243,16 +1267,45 @@ async def test_admin_role_respects_config():
         assert user in admin_role.users
 
 
-async def test_empty_admin_spec():
-    role_spec = [{'name': 'admin', 'users': []}]
-    hub = MockHub(load_roles=role_spec)
+@pytest.mark.parametrize(
+    "in_db, role_users, admin_users, expected_members",
+    [
+        # users in the db, not specified in custom user role
+        # no change to membership
+        (["alpha", "beta"], None, None, ["alpha", "beta"]),
+        # admin_users is additive, not strict
+        (["alpha", "beta"], None, {"gamma"}, ["alpha", "beta", "gamma"]),
+        # explicit empty revokes all assignments
+        (["alpha", "beta"], [], None, []),
+        # explicit value is respected exactly
+        (["alpha", "beta"], ["alpha", "gamma"], None, ["alpha", "gamma"]),
+    ],
+)
+async def test_admin_role_membership(in_db, role_users, admin_users, expected_members):
+
+    load_roles = []
+    if role_users is not None:
+        load_roles.append({"name": "admin", "users": role_users})
+    if not admin_users:
+        admin_users = set()
+    hub = MockHub(load_roles=load_roles, db_url="sqlite:///:memory:")
     hub.init_db()
-    hub.authenticator.admin_users = []
     await hub.init_role_creation()
+    db = hub.db
+    hub.authenticator.admin_users = admin_users
+    # add in_db users to the database
+    # this is the 'before' state of who had the role before startup
+    for username in in_db or []:
+        user = orm.User(name=username)
+        db.add(user)
+        db.commit()
+        roles.grant_role(db, user, "admin")
+    db.commit()
     await hub.init_users()
     await hub.init_role_assignment()
-    admin_role = orm.Role.find(hub.db, 'admin')
-    assert not admin_role.users
+    admin_role = orm.Role.find(db, 'admin')
+    role_members = sorted(user.name for user in admin_role.users)
+    assert role_members == expected_members
 
 
 async def test_no_default_service_role():
@@ -1365,7 +1418,8 @@ async def test_login_default_role(app, username):
     user.roles = []
     app.db.commit()
 
-    # login *again*; user exists, shouldn't trigger change in roles
+    # login *again*; user exists,
+    # login should always trigger "user" role assignment
     cookies = await app.login_user(username)
     user = app.users[username]
-    assert user.roles == []
+    assert [role.name for role in user.roles] == ["user"]

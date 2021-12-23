@@ -2,6 +2,7 @@
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import re
+from functools import wraps
 from itertools import chain
 
 from sqlalchemy import func
@@ -239,26 +240,6 @@ def _check_scopes(*args, rolename=None):
                 )
 
 
-def _overwrite_role(role, role_dict):
-    """Overwrites role's description and/or scopes with role_dict if role not 'admin'"""
-    for attr in role_dict.keys():
-        if attr == 'description' or attr == 'scopes':
-            if role.name == 'admin':
-                admin_role_spec = [
-                    r for r in get_default_roles() if r['name'] == 'admin'
-                ][0]
-                if role_dict[attr] != admin_role_spec[attr]:
-                    raise ValueError(
-                        'admin role description or scopes cannot be overwritten'
-                    )
-            else:
-                if role_dict[attr] != getattr(role, attr):
-                    setattr(role, attr, role_dict[attr])
-                    app_log.info(
-                        'Role %r %r attribute has been changed', role.name, attr
-                    )
-
-
 _role_name_pattern = re.compile(r'^[a-z][a-z0-9\-_~\.]{1,253}[a-z0-9]$')
 
 
@@ -293,6 +274,17 @@ def create_role(db, role_dict):
     description = role_dict.get('description')
     scopes = role_dict.get('scopes')
 
+    if name == "admin":
+        for _role in get_default_roles():
+            if _role["name"] == "admin":
+                admin_spec = _role
+                break
+        for key in ["description", "scopes"]:
+            if key in role_dict and role_dict[key] != admin_spec[key]:
+                raise ValueError(
+                    f"Cannot override admin role admin.{key} = {role_dict[key]}"
+                )
+
     # check if the provided scopes exist
     if scopes:
         _check_scopes(*scopes, rolename=role_dict['name'])
@@ -306,8 +298,22 @@ def create_role(db, role_dict):
         if role_dict not in default_roles:
             app_log.info('Role %s added to database', name)
     else:
-        _overwrite_role(role, role_dict)
-
+        for attr in ["description", "scopes"]:
+            try:
+                new_value = role_dict[attr]
+            except KeyError:
+                continue
+            old_value = getattr(role, attr)
+            if new_value != old_value:
+                setattr(role, attr, new_value)
+                app_log.info(
+                    f'Role attribute {role.name}.{attr} has been changed',
+                )
+                app_log.debug(
+                    f'Role attribute {role.name}.{attr} changed from %r to %r',
+                    old_value,
+                    new_value,
+                )
     db.commit()
 
 
@@ -327,76 +333,59 @@ def delete_role(db, rolename):
         raise KeyError('Cannot remove role %r that does not exist', rolename)
 
 
-def existing_only(func):
-    """Decorator for checking if objects and roles exist"""
+def _existing_only(func):
+    """Decorator for checking if roles exist"""
 
-    def _check_existence(db, entity, rolename):
-        role = orm.Role.find(db, rolename)
-        if entity is None:
-            raise ValueError(
-                f"{entity!r} of kind {type(entity).__name__!r} does not exist"
-            )
-        elif role is None:
-            raise ValueError("Role %r does not exist" % rolename)
-        else:
-            func(db, entity, role)
+    @wraps(func)
+    def _check_existence(db, entity, role=None, *, rolename=None):
+        if isinstance(role, str):
+            rolename = role
+        if rolename is not None:
+            # if given as a str, lookup role by name
+            role = orm.Role.find(db, rolename)
+        if role is None:
+            raise ValueError(f"Role {rolename} does not exist")
+
+        return func(db, entity, role)
 
     return _check_existence
 
 
-@existing_only
-def grant_role(db, entity, rolename):
+@_existing_only
+def grant_role(db, entity, role):
     """Adds a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
     else:
         entity_repr = entity.name
 
-    if rolename not in entity.roles:
-        entity.roles.append(rolename)
+    if role not in entity.roles:
+        entity.roles.append(role)
         db.commit()
         app_log.info(
             'Adding role %s for %s: %s',
-            rolename.name,
+            role.name,
             type(entity).__name__,
             entity_repr,
         )
 
 
-@existing_only
-def strip_role(db, entity, rolename):
+@_existing_only
+def strip_role(db, entity, role):
     """Removes a role for users, services, groups or tokens"""
     if isinstance(entity, orm.APIToken):
         entity_repr = entity
     else:
         entity_repr = entity.name
-    if rolename in entity.roles:
-        entity.roles.remove(rolename)
+    if role in entity.roles:
+        entity.roles.remove(role)
         db.commit()
         app_log.info(
             'Removing role %s for %s: %s',
-            rolename.name,
+            role.name,
             type(entity).__name__,
             entity_repr,
         )
-
-
-def _switch_default_role(db, obj, admin):
-    """Switch between default user/service and admin roles for users/services"""
-    user_role = orm.Role.find(db, 'user')
-    admin_role = orm.Role.find(db, 'admin')
-
-    def add_and_remove(db, obj, current_role, new_role):
-        if current_role in obj.roles:
-            strip_role(db, entity=obj, rolename=current_role.name)
-        # only add new default role if the user has no other roles
-        if len(obj.roles) < 1:
-            grant_role(db, entity=obj, rolename=new_role.name)
-
-    if admin:
-        add_and_remove(db, obj, user_role, admin_role)
-    else:
-        add_and_remove(db, obj, admin_role, user_role)
 
 
 def _token_allowed_role(db, token, role):
@@ -417,18 +406,13 @@ def _token_allowed_role(db, token, role):
 
     implicit_permissions = {'inherit', 'read:inherit'}
     explicit_scopes = expanded_scopes - implicit_permissions
-    # ignore horizontal filters
-    no_filter_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope for scope in explicit_scopes
-    }
     # find the owner's scopes
     expanded_owner_scopes = expand_roles_to_scopes(owner)
-    # ignore horizontal filters
-    no_filter_owner_scopes = {
-        scope.split('!', 1)[0] if '!' in scope else scope
-        for scope in expanded_owner_scopes
-    }
-    disallowed_scopes = no_filter_scopes.difference(no_filter_owner_scopes)
+    allowed_scopes = scopes._intersect_expanded_scopes(
+        explicit_scopes, expanded_owner_scopes, db
+    )
+    disallowed_scopes = explicit_scopes.difference(allowed_scopes)
+
     if not disallowed_scopes:
         # no scopes requested outside owner's own scopes
         return True
@@ -441,23 +425,36 @@ def _token_allowed_role(db, token, role):
 
 def assign_default_roles(db, entity):
     """Assigns default role(s) to an entity:
-    users and services get 'user' role, or admin role if they have admin flag
+
     tokens get 'token' role
+
+    users and services get 'admin' role if they are admin (removed if they are not)
+
+    users always get 'user' role
     """
     if isinstance(entity, orm.Group):
-        pass
-    elif isinstance(entity, orm.APIToken):
+        return
+
+    if isinstance(entity, orm.APIToken):
         app_log.debug('Assigning default role to token')
         default_token_role = orm.Role.find(db, 'token')
         if not entity.roles and (entity.user or entity.service) is not None:
             default_token_role.tokens.append(entity)
             app_log.info('Added role %s to token %s', default_token_role.name, entity)
             db.commit()
-    # users and services can have 'user' or 'admin' roles as default
+    # users and services all have 'user' role by default
+    # and optionally 'admin' as well
     else:
         kind = type(entity).__name__
         app_log.debug(f'Assigning default role to {kind} {entity.name}')
-        _switch_default_role(db, entity, entity.admin)
+        if entity.admin:
+            grant_role(db, entity=entity, rolename="admin")
+        else:
+            admin_role = orm.Role.find(db, 'admin')
+            if admin_role in entity.roles:
+                strip_role(db, entity=entity, rolename="admin")
+        if kind == "User":
+            grant_role(db, entity=entity, rolename="user")
 
 
 def update_roles(db, entity, roles):
