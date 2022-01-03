@@ -113,7 +113,6 @@ jobs:
       # Setup docker to build for multiple platforms, see:
       # https://github.com/docker/build-push-action/tree/v2.4.0#usage
       # https://github.com/docker/build-push-action/blob/v2.4.0/docs/advanced/multi-platform.md
-
       - name: Set up QEMU (for docker buildx)
         uses: docker/setup-qemu-action@25f0500ff22e406f7191a2a8ba8cda16901ca018 # associated tag: v1.0.2
 
@@ -137,6 +136,8 @@ jobs:
         run: |
           docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" -p "${{ secrets.DOCKERHUB_TOKEN }}"
 
+      # image: jupyterhub/jupyterhub
+      #
       # https://github.com/jupyterhub/action-major-minor-tag-calculator
       # If this is a tagged build this will return additional parent tags.
       # E.g. 1.2.3 is expanded to Docker tags
@@ -154,7 +155,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub
-        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -163,8 +164,8 @@ jobs:
           # array into a comma separated list of tags
           tags: ${{ join(fromJson(steps.jupyterhubtags.outputs.tags)) }}
 
-      # jupyterhub-onbuild
-
+      # image: jupyterhub/jupyterhub-onbuild
+      #
       - name: Get list of jupyterhub-onbuild tags
         id: onbuildtags
         uses: jupyterhub/action-major-minor-tag-calculator@v2
@@ -175,7 +176,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-onbuild
-        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.jupyterhubtags.outputs.tags)[0] }}
@@ -184,8 +185,8 @@ jobs:
           push: true
           tags: ${{ join(fromJson(steps.onbuildtags.outputs.tags)) }}
 
-      # jupyterhub-demo
-
+      # image: jupyterhub/jupyterhub-demo
+      #
       - name: Get list of jupyterhub-demo tags
         id: demotags
         uses: jupyterhub/action-major-minor-tag-calculator@v2
@@ -196,7 +197,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub-demo
-        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f
         with:
           build-args: |
             BASE_IMAGE=${{ fromJson(steps.onbuildtags.outputs.tags)[0] }}
@@ -208,7 +209,8 @@ jobs:
           push: true
           tags: ${{ join(fromJson(steps.demotags.outputs.tags)) }}
 
-      # jupyterhub/singleuser
+      # image: jupyterhub/singleuser
+      #
       - name: Get list of jupyterhub/singleuser tags
         id: singleusertags
         uses: jupyterhub/action-major-minor-tag-calculator@v2
@@ -219,7 +221,7 @@ jobs:
           branchRegex: ^\w[\w-.]*$
 
       - name: Build and push jupyterhub/singleuser
-        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f # associated tag: v2.4.0
+        uses: docker/build-push-action@e1b7f96249f2e4c8e4ac1519b9608c0d48944a1f
         with:
           build-args: |
             JUPYTERHUB_VERSION=${{ github.ref_type == 'tag' && github.ref_name || format('git:{0}', github.sha) }}
