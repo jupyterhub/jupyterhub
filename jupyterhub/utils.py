@@ -355,7 +355,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
         h.update(btoken)
     digest = h.hexdigest()
 
-    return "{algorithm}:{rounds}:{salt}:{digest}".format(**locals())
+    return f"{algorithm}:{rounds}:{salt}:{digest}"
 
 
 def compare_token(compare, token):
