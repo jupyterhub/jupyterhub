@@ -1,15 +1,32 @@
-# Build releases and (on tags) publish to PyPI
+# This is a GitHub workflow defining a set of jobs with a set of steps.
+# ref: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
+#
+# Test build release artifacts (PyPI package, Docker images) and publish them on
+# pushed git tags.
+#
 name: Release
 
-# always build releases (to make sure wheel-building works)
-# but only publish to PyPI on tags
 on:
-  push:
-    branches:
-      - "!dependabot/**"
-    tags:
-      - "*"
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "**.rst"
+      - ".github/workflows/*"
+      - "!.github/workflows/release.yml"
+  push:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "**.rst"
+      - ".github/workflows/*"
+      - "!.github/workflows/release.yml"
+    branches-ignore:
+      - "dependabot/**"
+      - "pre-commit-ci-update-config"
+    tags:
+      - "**"
+  workflow_dispatch:
 
 jobs:
   build-release:
