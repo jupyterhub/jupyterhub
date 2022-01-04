@@ -143,8 +143,8 @@ html_theme_options = {
             "icon": "fab fa-discourse",
         },
     ],
-  "use_edit_page_button": True,
-  "navbar_align": "left",
+    "use_edit_page_button": True,
+    "navbar_align": "left",
 }
 
 # -- Options for LaTeX output ---------------------------------------------
