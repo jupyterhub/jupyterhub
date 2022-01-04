@@ -130,6 +130,23 @@ html_static_path = ['_static']
 
 htmlhelp_basename = 'JupyterHubdoc'
 
+html_theme_options = {
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/jupyterhub/jupyterhub",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://discourse.jupyter.org/c/jupyterhub/10",
+            "icon": "fab fa-discourse",
+        },
+    ],
+  "use_edit_page_button": True,
+  "navbar_align": "left",
+}
+
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
