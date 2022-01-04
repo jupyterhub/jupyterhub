@@ -17,7 +17,7 @@ Users in the `allowed_users` set are added to the Hub database when the Hub is
 started.
 
 ```{warning}
-If this configuration value is not set, then **all users will be allowed into your hub**.
+If this configuration value is not set, then **all authenticated users will be allowed into your hub**.
 ```
 
 ## Configure admins (`admin_users`)
