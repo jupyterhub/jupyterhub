@@ -20,7 +20,7 @@ def upgrade():
     engine = op.get_bind().engine
     tables = sa.inspect(engine).get_table_names()
     if 'groups' in tables:
-        op.add_column('groups', sa.Column('display_name', Unicode(255)))
+        op.add_column('groups', sa.Column('display_name', sa.Unicode(255)))
 
 
 def downgrade():
