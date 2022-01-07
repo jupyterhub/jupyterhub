@@ -52,7 +52,7 @@ const Groups = (props) => {
                   groups_data.map((e, i) => (
                     <li className="list-group-item" key={"group-item" + i}>
                       <span className="badge badge-pill badge-success">
-                        {e.users.length + " users"}
+                        {e.display_name + " users"}
                       </span>
                       <Link
                         to={{

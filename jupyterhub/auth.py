@@ -664,7 +664,7 @@ class Authenticator(LoggingConfigurable):
         print("111111111111111",user,"AYYYYYYYYY")
         groupname_list = []
         groupid_list = []
-        groupname_and_id = []
+        groupname_and_id = {}
         try: 
             teams_query =requestsObtainGroupName(authentication['auth_state']["access_token"])
         except Exception as e:
@@ -674,8 +674,8 @@ class Authenticator(LoggingConfigurable):
             for i in range(0,len(teams_query["value"])):
                 groupname_list.append(teams_query["value"][i]["displayName"])
                 groupid_list.append(teams_query["value"][i]["id"])
-            for i in range(0,len(groupname_list)):
-                groupname_and_id.append(groupname_list[i] + " - " + groupid_list[i])
+                groupname_and_id = {groupname_list[i]: groupid_list[i] for i in range(len(groupid_list))}
+
         except Exception as e:
                 print("ERROR when parsing groups",e)
                 pass
@@ -691,13 +691,14 @@ class Authenticator(LoggingConfigurable):
         except Exception as e:
             print(e)
         try:
-            for groupname in groupname_and_id:
+            for name,id in groupname_and_id:
                 print("Checking if group already exists: ", groupname)
                 
-                orm_group= orm.Group.find(db,groupname)
-                if orm.Group.find(db, groupname) == None:
+                orm_group= orm.Group.find(db,id)
+                if orm.Group.find(db, id) == None:
                     group = orm.Group()
-                    group.name = groupname
+                    group.name = id
+                    group.display_name = name
                     if orm_user not in group.users:
                         print("user missing")
                         group.users.append(orm_user)
@@ -706,7 +707,8 @@ class Authenticator(LoggingConfigurable):
                     print("added")
                 else:
                     
-                    group = orm.Group.find(db, groupname)
+                    group = orm.Group.find(db, id)
+                    group.display_name = name
                     if orm_user not in group.users:
                         print("user missing")
                         group.users.append(orm_user)
@@ -722,7 +724,7 @@ class Authenticator(LoggingConfigurable):
             print(groupname_and_id)
             for group in [group.name for group in orm_user.groups]:
                 print("Checking if group is in grouplist")
-                if group not in groupname_and_id:
+                if group not in groupname_and_id.values:
 
                     print("Group not in grouplist")
                     orm_group = orm.Group.find(db, group)
