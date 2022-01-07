@@ -14,6 +14,7 @@ from tornado import web
 
 from .. import orm
 from ..handlers import BaseHandler
+from ..utils import get_browser_protocol
 from ..utils import isoformat
 from ..utils import url_path_join
 
@@ -60,6 +61,8 @@ class APIHandler(BaseHandler):
         """
         host_header = self.app.forwarded_host_header or "Host"
         host = self.request.headers.get(host_header)
+        if host and "," in host:
+            host = host.split(",", 1)[0].strip()
         referer = self.request.headers.get("Referer")
 
         # If no header is provided, assume it comes from a script/curl.
@@ -71,7 +74,8 @@ class APIHandler(BaseHandler):
             self.log.warning("Blocking API request with no referer")
             return False
 
-        proto = self.request.protocol
+        proto = get_browser_protocol(self.request)
+
         full_host = f"{proto}://{host}{self.hub.base_url}"
         host_url = urlparse(full_host)
         referer_url = urlparse(referer)
