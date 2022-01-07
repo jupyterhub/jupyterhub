@@ -21,7 +21,9 @@ def upgrade():
     tables = sa.inspect(engine).get_table_names()
     if 'groups' in tables:
         op.add_column('groups', sa.Column('properties', JSONDict))
+        op.add_column('groups', sa.Column('display_name', Unicode(255)))
 
 
 def downgrade():
     op.drop_column('groups', sa.Column('properties'))
+    op.drop_column('groups', sa.Column('display_name'))

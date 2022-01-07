@@ -222,6 +222,7 @@ class Group(Base):
     __tablename__ = 'groups'
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(Unicode(255), unique=True)
+    display_name = Column(Unicode(255))
     users = relationship('User', secondary='user_group_map', backref='groups')
     properties = Column(JSONDict, default={})
 
