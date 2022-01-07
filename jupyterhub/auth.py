@@ -674,7 +674,7 @@ class Authenticator(LoggingConfigurable):
             for i in range(0,len(teams_query["value"])):
                 groupname_list.append(teams_query["value"][i]["displayName"])
                 groupid_list.append(teams_query["value"][i]["id"])
-                groupname_and_id = {groupname_list[i]: groupid_list[i] for i in range(len(groupid_list))}
+            groupname_and_id = {groupname_list[i]: groupid_list[i] for i in range(len(groupid_list))}
 
         except Exception as e:
                 print("ERROR when parsing groups",e)
@@ -691,13 +691,14 @@ class Authenticator(LoggingConfigurable):
         except Exception as e:
             print(e)
         try:
-            for name,id in groupname_and_id:
-                print("Checking if group already exists: ", groupname)
+            for name in groupname_and_id:
+                groupid = groupname_and_id[name]
+                print("Checking if group already exists: ", name, "-", groupid)
                 
-                orm_group= orm.Group.find(db,id)
-                if orm.Group.find(db, id) == None:
+                orm_group= orm.Group.find(db,groupid)
+                if orm.Group.find(db, groupid) == None:
                     group = orm.Group()
-                    group.name = id
+                    group.name = groupid
                     group.display_name = name
                     if orm_user not in group.users:
                         print("user missing")
@@ -707,7 +708,7 @@ class Authenticator(LoggingConfigurable):
                     print("added")
                 else:
                     
-                    group = orm.Group.find(db, id)
+                    group = orm.Group.find(db, groupid)
                     group.display_name = name
                     if orm_user not in group.users:
                         print("user missing")
