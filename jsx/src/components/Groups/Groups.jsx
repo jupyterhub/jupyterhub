@@ -52,7 +52,7 @@ const Groups = (props) => {
                   groups_data.map((e, i) => (
                     <li className="list-group-item" key={"group-item" + i}>
                       <span className="badge badge-pill badge-success">
-                        {e.display_name + " users"}
+                        {e.users.length + " users"}
                       </span>
                       <Link
                         to={{
@@ -63,7 +63,7 @@ const Groups = (props) => {
                           },
                         }}
                       >
-                        {e.name}
+                        {e.display_name}
                       </Link>
                     </li>
                   ))
