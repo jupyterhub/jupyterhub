@@ -53,6 +53,7 @@ from traitlets import validate
 from traitlets.config import SingletonConfigurable
 
 from ..scopes import _intersect_expanded_scopes
+from ..utils import get_browser_protocol
 from ..utils import url_path_join
 
 
@@ -772,7 +773,7 @@ class HubOAuth(HubAuth):
             # OAuth that doesn't complete shouldn't linger too long.
             'max_age': 600,
         }
-        if handler.request.protocol == 'https':
+        if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)
@@ -812,7 +813,7 @@ class HubOAuth(HubAuth):
     def set_cookie(self, handler, access_token):
         """Set a cookie recording OAuth result"""
         kwargs = {'path': self.base_url, 'httponly': True}
-        if handler.request.protocol == 'https':
+        if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)

@@ -118,16 +118,39 @@ async def test_post_content_type(app, content_type, status):
         ("fake.example", {"netloc": "fake.example", "scheme": "https"}, {}, 403),
         # explicit ports, match
         ("fake.example:81", {"netloc": "fake.example:81"}, {}, 200),
-        # Test proxy defined headers taken into account by xheaders=True in
-        # https://github.com/jupyterhub/jupyterhub/blob/2.0.1/jupyterhub/app.py#L3065
+        # Test proxy protocol defined headers taken into account by utils.get_browser_protocol
         (
             "fake.example",
             {"netloc": "fake.example", "scheme": "https"},
-            # note {"X-Forwarded-Proto": "https"} does not work
             {'X-Scheme': 'https'},
             200,
         ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {'X-Forwarded-Proto': 'https'},
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {
+                'Forwarded': 'host=fake.example;proto=https,for=1.2.34;proto=http',
+                'X-Scheme': 'http',
+            },
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {
+                'Forwarded': 'host=fake.example;proto=http,for=1.2.34;proto=http',
+                'X-Scheme': 'https',
+            },
+            403,
+        ),
         ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https'}, 403),
+        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https, http'}, 403),
     ],
 )
 async def test_cors_check(request, app, host, referer, extraheaders, status):
