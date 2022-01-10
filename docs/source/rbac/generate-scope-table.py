@@ -16,6 +16,7 @@ The files are:
 import os
 from collections import defaultdict
 from pathlib import Path
+from subprocess import run
 
 from pytablewriter import MarkdownTableWriter
 from ruamel.yaml import YAML
@@ -142,6 +143,12 @@ class ScopeTableGenerator:
 
         with open(filename, 'w') as f:
             yaml.dump(content, f)
+
+        run(
+            ['pre-commit', 'run', 'prettier', '--files', filename],
+            cwd=HERE,
+            check=False,
+        )
 
 
 def main():
