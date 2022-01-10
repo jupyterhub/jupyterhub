@@ -120,8 +120,11 @@ class ScopeTableGenerator:
         JupyterHub version field and list of RBAC scopes descriptions from
         `scopes.py`."""
         filename = REST_API_YAML
-        yaml = YAML(typ='rt')
+
+        yaml = YAML(typ="rt")
         yaml.preserve_quotes = True
+        yaml.indent(mapping=2, offset=2, sequence=4)
+
         scope_dict = {}
         with open(filename) as f:
             content = yaml.load(f.read())
