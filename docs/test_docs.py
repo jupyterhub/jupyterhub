@@ -35,8 +35,9 @@ def test_rest_api_rbac_scope_descriptions_are_updated():
     run(
         [
             "git",
-            "diff",
             "--no-pager",
+            "diff",
+            "--color=always",
             "--exit-code",
             str(here.joinpath("source", "_static", "rest-api.yml")),
         ],
