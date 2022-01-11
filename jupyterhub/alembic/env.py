@@ -56,13 +56,15 @@ def run_migrations_offline():
 
     """
     connectable = config.attributes.get('connection', None)
-    
+
     if connectable is None:
         url = config.get_main_option("sqlalchemy.url")
         context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
     else:
-        context.configure(connection=connectable, target_metadata=target_metadata, literal_binds=True)
-        
+        context.configure(
+            connection=connectable, target_metadata=target_metadata, literal_binds=True
+        )
+
     with context.begin_transaction():
         context.run_migrations()
 
@@ -75,7 +77,7 @@ def run_migrations_online():
 
     """
     connectable = config.attributes.get('connection', None)
-    
+
     if connectable is None:
         connectable = engine_from_config(
             config.get_section(config.config_ini_section),
