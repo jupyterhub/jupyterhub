@@ -45,6 +45,7 @@ from ..metrics import ServerSpawnStatus
 from ..metrics import ServerStopStatus
 from ..metrics import TOTAL_USERS
 from ..objects import Server
+from ..scopes import needs_scope
 from ..spawner import LocalProcessSpawner
 from ..user import User
 from ..utils import AnyTimeoutError
@@ -1448,54 +1449,24 @@ class UserUrlHandler(BaseHandler):
     delete = non_get
 
     @web.authenticated
+    @needs_scope("access:servers")
     async def get(self, user_name, user_path):
         if not user_path:
             user_path = '/'
         current_user = self.current_user
-
-        if (
-            current_user
-            and current_user.name != user_name
-            and current_user.admin
-            and self.settings.get('admin_access', False)
-        ):
-            # allow admins to spawn on behalf of users
+        if user_name != current_user.name:
             user = self.find_user(user_name)
             if user is None:
                 # no such user
-                raise web.HTTPError(404, "No such user %s" % user_name)
+                raise web.HTTPError(404, f"No such user {user_name}")
             self.log.info(
-                "Admin %s requesting spawn on behalf of %s",
-                current_user.name,
-                user.name,
+                f"User {current_user.name} requesting spawn on behalf of {user.name}"
             )
             admin_spawn = True
             should_spawn = True
             redirect_to_self = False
         else:
             user = current_user
-            admin_spawn = False
-            # For non-admins, spawn if the user requested is the current user
-            # otherwise redirect users to their own server
-            should_spawn = current_user and current_user.name == user_name
-            redirect_to_self = not should_spawn
-
-        if redirect_to_self:
-            # logged in as a different non-admin user, redirect to user's own server
-            # this is only a stop-gap for a common mistake,
-            # because the same request will be a 403
-            # if the requested server is running
-            self.statsd.incr('redirects.user_to_user', 1)
-            self.log.warning(
-                "User %s requested server for %s, which they don't own",
-                current_user.name,
-                user_name,
-            )
-            target = url_path_join(current_user.url, user_path or '')
-            if self.request.query:
-                target = url_concat(target, parse_qsl(self.request.query))
-            self.redirect(target)
-            return
 
         # If people visit /user/:user_name directly on the Hub,
         # the redirects will just loop, because the proxy is bypassed.
