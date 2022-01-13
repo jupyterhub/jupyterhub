@@ -2,12 +2,16 @@
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import Mock
 
 import pytest
 from async_generator import aclosing
 from tornado import gen
 from tornado.concurrent import run_on_executor
+from tornado.httpserver import HTTPRequest
+from tornado.httputil import HTTPHeaders
 
+from .. import utils
 from ..utils import iterate_until
 
 
@@ -88,3 +92,33 @@ async def test_tornado_coroutines():
     # verify that tornado gen and executor methods return awaitables
     assert (await t.on_executor()) == "executor"
     assert (await t.tornado_coroutine()) == "gen.coroutine"
+
+
+@pytest.mark.parametrize(
+    "forwarded, x_scheme, x_forwarded_proto, expected",
+    [
+        ("", "", "", "_attr_"),
+        ("for=1.2.3.4", "", "", "_attr_"),
+        ("for=1.2.3.4,proto=https", "", "", "_attr_"),
+        ("", "https", "http", "https"),
+        ("", "https, http", "", "https"),
+        ("", "https, http", "http", "https"),
+        ("proto=http ; for=1.2.3.4, proto=https", "https, http", "", "http"),
+        ("proto=invalid;for=1.2.3.4,proto=http", "https, http", "", "https"),
+        ("for=1.2.3.4,proto=http", "https, http", "", "https"),
+        ("", "invalid, http", "", "_attr_"),
+    ],
+)
+def test_browser_protocol(x_scheme, x_forwarded_proto, forwarded, expected):
+    request = Mock(spec=HTTPRequest)
+    request.protocol = "_attr_"
+    request.headers = HTTPHeaders()
+    if x_scheme:
+        request.headers["X-Scheme"] = x_scheme
+    if x_forwarded_proto:
+        request.headers["X-Forwarded-Proto"] = x_forwarded_proto
+    if forwarded:
+        request.headers["Forwarded"] = forwarded
+
+    proto = utils.get_browser_protocol(request)
+    assert proto == expected
