@@ -3,8 +3,10 @@
 alabaster_jupyterhub
 autodoc-traits
 myst-parser
+pre-commit
 pydata-sphinx-theme
 pytablewriter>=0.56
+ruamel.yaml
 sphinx>=1.7
 sphinx-copybutton
 sphinx-jsonschema

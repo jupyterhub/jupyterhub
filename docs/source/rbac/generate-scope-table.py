@@ -1,16 +1,33 @@
+"""
+This script updates two files with the RBAC scope descriptions found in
+`scopes.py`.
+
+The files are:
+
+    1. scope-table.md
+
+       This file is git ignored and referenced by the documentation.
+
+    2. rest-api.yml
+
+       This file is JupyterHub's REST API schema. Both a version and the RBAC
+       scopes descriptions are updated in it.
+"""
 import os
 from collections import defaultdict
 from pathlib import Path
+from subprocess import run
 
 from pytablewriter import MarkdownTableWriter
 from ruamel.yaml import YAML
 
-import jupyterhub
+from jupyterhub import __version__
 from jupyterhub.scopes import scope_definitions
 
 HERE = os.path.abspath(os.path.dirname(__file__))
 DOCS = Path(HERE).parent.parent.absolute()
 REST_API_YAML = DOCS.joinpath("source", "_static", "rest-api.yml")
+SCOPE_TABLE_MD = Path(HERE).joinpath("scope-table.md")
 
 
 class ScopeTableGenerator:
@@ -82,8 +99,9 @@ class ScopeTableGenerator:
         return table_rows
 
     def write_table(self):
-        """Generates the scope table in markdown format and writes it into `scope-table.md`"""
-        filename = f"{HERE}/scope-table.md"
+        """Generates the RBAC scopes reference documentation as a markdown table
+        and writes it to the .gitignored `scope-table.md`."""
+        filename = SCOPE_TABLE_MD
         table_name = ""
         headers = ["Scope", "Grants permission to:"]
         values = self._parse_scopes()
@@ -99,15 +117,20 @@ class ScopeTableGenerator:
         )
 
     def write_api(self):
-        """Generates the API description in markdown format and writes it into `rest-api.yml`"""
+        """Loads `rest-api.yml` and writes it back with a dynamically set
+        JupyterHub version field and list of RBAC scopes descriptions from
+        `scopes.py`."""
         filename = REST_API_YAML
-        yaml = YAML(typ='rt')
+
+        yaml = YAML(typ="rt")
         yaml.preserve_quotes = True
+        yaml.indent(mapping=2, offset=2, sequence=4)
+
         scope_dict = {}
         with open(filename) as f:
             content = yaml.load(f.read())
 
-        content["info"]["version"] = jupyterhub.__version__
+        content["info"]["version"] = __version__
         for scope in self.scopes:
             description = self.scopes[scope]['description']
             doc_description = self.scopes[scope].get('doc_description', '')
@@ -120,6 +143,12 @@ class ScopeTableGenerator:
 
         with open(filename, 'w') as f:
             yaml.dump(content, f)
+
+        run(
+            ['pre-commit', 'run', 'prettier', '--files', filename],
+            cwd=HERE,
+            check=False,
+        )
 
 
 def main():
