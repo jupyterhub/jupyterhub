@@ -1110,19 +1110,6 @@ async def test_server_not_running_api_request_legacy_status(app):
     assert r.status_code == 503
 
 
-async def test_metrics_no_auth(app):
-    r = await get_page("metrics", app)
-    assert r.status_code == 403
-
-
-async def test_metrics_auth(app):
-    cookies = await app.login_user('river')
-    metrics_url = ujoin(public_host(app), app.hub.base_url, 'metrics')
-    r = await get_page("metrics", app, cookies=cookies)
-    assert r.status_code == 200
-    assert r.url == metrics_url
-
-
 async def test_health_check_request(app):
     r = await get_page('health', app)
     assert r.status_code == 200
