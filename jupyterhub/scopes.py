@@ -131,6 +131,9 @@ scope_definitions = {
         'description': 'Read information about the proxy’s routing table, sync the Hub with the proxy and notify the Hub about a new proxy.'
     },
     'shutdown': {'description': 'Shutdown the hub.'},
+    'read:metrics': {
+        'description': "Read prometheus metrics.",
+    },
 }
 
 
