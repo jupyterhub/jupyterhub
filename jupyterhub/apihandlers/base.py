@@ -201,7 +201,7 @@ class APIHandler(BaseHandler):
             'pending': spawner.pending,
             'ready': spawner.ready,
             'url': url_path_join(spawner.user.url, spawner.name, '/'),
-            'user_options': spawner.user_options,
+            'user_options': spawner.orm_spawner.user_options,
             'progress_url': spawner._progress_url,
         }
         scope_filter = self.get_scope_filter('admin:server_state')
