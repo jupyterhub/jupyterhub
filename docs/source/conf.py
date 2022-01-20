@@ -147,6 +147,13 @@ html_theme_options = {
     "navbar_align": "left",
 }
 
+html_context = {
+    "github_user": "jupyterhub",
+    "github_repo": "jupyterhub",
+    "github_version": "main",
+    "doc_path": "docs",
+}
+
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
