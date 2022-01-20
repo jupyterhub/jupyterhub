@@ -376,6 +376,7 @@ class User:
             oauth_client_id=client_id,
             cookie_options=self.settings.get('cookie_options', {}),
             trusted_alt_names=trusted_alt_names,
+            user_options=orm_spawner.user_options or {},
         )
 
         if self.settings.get('internal_ssl'):
@@ -600,7 +601,7 @@ class User:
         spawner.handler = handler
 
         # Passing user_options to the spawner
-        if options is None:
+        if options is None or options is {}:
             # options unspecified, load from db which should have the previous value
             options = spawner.orm_spawner.user_options or {}
         else:
