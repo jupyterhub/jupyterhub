@@ -106,22 +106,27 @@ class SpawnHandler(BaseHandler):
         )
 
     @web.authenticated
-    async def get(self, for_user=None, server_name=''):
+    def get(self, user_name=None, server_name=''):
         """GET renders form for spawning with user-specified options
 
         or triggers spawn via redirect if there is no form.
         """
+        # two-stage to get the right signature for @require_scopes filter on user_name
+        if user_name is None:
+            user_name = self.current_user.name
+        if server_name is None:
+            server_name = ""
+        return self._get(user_name=user_name, server_name=server_name)
+
+    @needs_scope("servers")
+    async def _get(self, user_name, server_name):
+        for_user = user_name
 
         user = current_user = self.current_user
-        if for_user is not None and for_user != user.name:
-            if not user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
-
+        if for_user != user.name:
             user = self.find_user(for_user)
             if user is None:
-                raise web.HTTPError(404, "No such user: %s" % for_user)
+                raise web.HTTPError(404, f"No such user: {for_user}")
 
         if server_name:
             if not self.allow_named_servers:
@@ -141,13 +146,10 @@ class SpawnHandler(BaseHandler):
                     )
 
         if not self.allow_named_servers and user.running:
-            url = self.get_next_url(user, default=user.server_url(server_name))
+            url = self.get_next_url(user, default=user.server_url(""))
             self.log.info("User is running: %s", user.name)
             self.redirect(url)
             return
-
-        if server_name is None:
-            server_name = ''
 
         spawner = user.spawners[server_name]
 
@@ -189,7 +191,6 @@ class SpawnHandler(BaseHandler):
                     spawner._log_name,
                 )
                 options = await maybe_future(spawner.options_from_query(query_options))
-                pending_url = self._get_pending_url(user, server_name)
                 return await self._wrap_spawn_single_user(
                     user, server_name, spawner, pending_url, options
                 )
@@ -219,14 +220,19 @@ class SpawnHandler(BaseHandler):
             )
 
     @web.authenticated
-    async def post(self, for_user=None, server_name=''):
+    def post(self, user_name=None, server_name=''):
         """POST spawns with user-specified options"""
+        if user_name is None:
+            user_name = self.current_user.name
+        if server_name is None:
+            server_name = ""
+        return self._post(user_name=user_name, server_name=server_name)
+
+    @needs_scope("servers")
+    async def _post(self, user_name, server_name):
+        for_user = user_name
         user = current_user = self.current_user
-        if for_user is not None and for_user != user.name:
-            if not user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
+        if for_user != user.name:
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
@@ -337,13 +343,11 @@ class SpawnPendingHandler(BaseHandler):
     """
 
     @web.authenticated
-    async def get(self, for_user, server_name=''):
+    @needs_scope("servers")
+    async def get(self, user_name, server_name=''):
+        for_user = user_name
         user = current_user = self.current_user
-        if for_user is not None and for_user != current_user.name:
-            if not current_user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
+        if for_user != current_user.name:
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
