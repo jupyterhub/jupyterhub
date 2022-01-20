@@ -253,18 +253,41 @@ class User:
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
-    def sync_groups(self, user_groups):
-        """Syncronize groups with database"""
+    def sync_groups(self, group_names):
+        """Synchronize groups with database"""
 
-        if user_groups:
+        current_groups = {g.name for g in self.orm_user.groups}
+        new_groups = set(group_names)
+        if current_groups == new_groups:
+            # no change, nothing to do
+            return
+
+        # log group changes
+        new_groups = set(group_names).difference(current_groups)
+        removed_groups = current_groups.difference(group_names)
+        if new_groups:
+            self.log.info("Adding user {self.name} to group(s): {new_groups}")
+        if removed_groups:
+            self.log.info("Removing user {self.name} from group(s): {removed_groups}")
+
+        if group_names:
             groups = (
-                self.db.query(orm.Group).filter(orm.Group.name.in_(user_groups)).all()
+                self.db.query(orm.Group).filter(orm.Group.name.in_(group_names)).all()
             )
-            groups = {g.name: g for g in groups}
-
-            self.groups = [groups.get(g, orm.Group(name=g)) for g in user_groups]
+            existing_groups = {g.name for g in groups}
+            for group_name in group_names:
+                if group_name not in existing_groups:
+                    # create groups that don't exist yet
+                    self.log.info(
+                        f"Creating new group {group_name} for user {self.name}"
+                    )
+                    group = orm.Group(name=group_name)
+                    self.db.add(group)
+                    groups.append(group)
+            self.groups = groups
         else:
             self.groups = []
+        self.db.commit()
 
     async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""

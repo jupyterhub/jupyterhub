@@ -582,9 +582,13 @@ class Authenticator(LoggingConfigurable):
                 or None if Authentication failed.
 
                 The Authenticator may return a dict instead, which MUST have a
-                key `name` holding the username, and MAY have two optional keys
-                set: `auth_state`, a dictionary of of auth state that will be
-                persisted; and `admin`, the admin setting value for the user.
+                key `name` holding the username, and MAY have additional keys:
+
+                - `auth_state`, a dictionary of of auth state that will be
+                  persisted;
+                - `admin`, the admin setting value for the user
+                - `groups`, the list of group names the user should be a member of,
+                  if Authenticator.manage_groups is True.
         """
 
     def pre_spawn_start(self, user, spawner):
@@ -639,25 +643,14 @@ class Authenticator(LoggingConfigurable):
         False,
         config=True,
         help="""Let authenticator manage user groups
-        
-        Authenticator must implement get_user_groups for this to be useful.
+
+        If True, Authenticator.authenticate and/or .refresh_user
+        may return a list of group names in the 'groups' field,
+        which will be assigned to the user.
+
+        All group-assignment APIs are disabled if this is True.
         """,
     )
-
-    def load_user_groups(self, user, auth_state):
-        """Hook called allowing authenticator to read user groups
-
-        Updates user group memberships
-
-        Args:
-            auth_state (dict): Proprietary dict returned by authenticator
-            user(User): the User object associated with the auth-state
-
-        Returns:
-            groups (list):
-                List of user group memberships
-        """
-        return None
 
     auto_login = Bool(
         False,
