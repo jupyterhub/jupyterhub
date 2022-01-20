@@ -601,7 +601,7 @@ class User:
         spawner.handler = handler
 
         # Passing user_options to the spawner
-        if options is None or options is {}:
+        if options is None:
             # options unspecified, load from db which should have the previous value
             options = spawner.orm_spawner.user_options or {}
         else:
