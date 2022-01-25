@@ -1806,6 +1806,38 @@ async def test_group_add_delete_users(app):
     assert sorted(u.name for u in group.users) == sorted(names[2:])
 
 
+@mark.group
+async def test_auth_managed_groups(request, app, group, user):
+    group.users.append(user)
+    app.db.commit()
+    app.authenticator.manage_groups = True
+    request.addfinalizer(lambda: setattr(app.authenticator, "manage_groups", False))
+    # create groups
+    r = await api_request(app, 'groups', method='post')
+    assert r.status_code == 400
+    r = await api_request(app, 'groups/newgroup', method='post')
+    assert r.status_code == 400
+    # delete groups
+    r = await api_request(app, f'groups/{group.name}', method='delete')
+    assert r.status_code == 400
+    # add users to group
+    r = await api_request(
+        app,
+        f'groups/{group.name}/users',
+        method='post',
+        data=json.dumps({"users": [user.name]}),
+    )
+    assert r.status_code == 400
+    # remove users from group
+    r = await api_request(
+        app,
+        f'groups/{group.name}/users',
+        method='delete',
+        data=json.dumps({"users": [user.name]}),
+    )
+    assert r.status_code == 400
+
+
 # -----------------
 # Service API tests
 # -----------------

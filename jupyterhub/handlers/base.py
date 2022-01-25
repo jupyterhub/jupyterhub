@@ -774,13 +774,22 @@ class BaseHandler(RequestHandler):
         # always ensure default roles ('user', 'admin' if admin) are assigned
         # after a successful login
         roles.assign_default_roles(self.db, entity=user)
+
+        # apply authenticator-managed groups
+        if self.authenticator.manage_groups:
+            group_names = authenticated.get("groups")
+            if group_names is not None:
+                user.sync_groups(group_names)
+
         # always set auth_state and commit,
         # because there could be key-rotation or clearing of previous values
         # going on.
         if not self.authenticator.enable_auth_state:
             # auth_state is not enabled. Force None.
             auth_state = None
+
         await user.save_auth_state(auth_state)
+
         return user
 
     async def login_user(self, data=None):
@@ -794,6 +803,7 @@ class BaseHandler(RequestHandler):
             self.set_login_cookie(user)
             self.statsd.incr('login.success')
             self.statsd.timing('login.authenticate.success', auth_timer.ms)
+
             self.log.info("User logged in: %s", user.name)
             user._auth_refreshed = time.monotonic()
             return user

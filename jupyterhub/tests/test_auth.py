@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 
 import pytest
 from requests import HTTPError
+from traitlets import Any
 from traitlets.config import Config
 
 from .mocking import MockPAMAuthenticator
@@ -14,6 +15,7 @@ from .mocking import MockStructGroup
 from .mocking import MockStructPasswd
 from .utils import add_user
 from .utils import async_requests
+from .utils import get_page
 from .utils import public_url
 from jupyterhub import auth
 from jupyterhub import crypto
@@ -527,3 +529,71 @@ async def test_nullauthenticator(app):
         r = await async_requests.get(public_url(app))
     assert urlparse(r.url).path.endswith("/hub/login")
     assert r.status_code == 403
+
+
+class MockGroupsAuthenticator(auth.Authenticator):
+    authenticated_groups = Any()
+    refresh_groups = Any()
+
+    manage_groups = True
+
+    def authenticate(self, handler, data):
+        return {
+            "name": data["username"],
+            "groups": self.authenticated_groups,
+        }
+
+    async def refresh_user(self, user, handler):
+        return {
+            "name": user.name,
+            "groups": self.refresh_groups,
+        }
+
+
+@pytest.mark.parametrize(
+    "authenticated_groups, refresh_groups",
+    [
+        (None, None),
+        (["auth1"], None),
+        (None, ["auth1"]),
+        (["auth1"], ["auth1", "auth2"]),
+        (["auth1", "auth2"], ["auth1"]),
+        (["auth1", "auth2"], ["auth3"]),
+        (["auth1", "auth2"], ["auth3"]),
+    ],
+)
+async def test_auth_managed_groups(
+    app, user, group, authenticated_groups, refresh_groups
+):
+
+    authenticator = MockGroupsAuthenticator(
+        parent=app,
+        authenticated_groups=authenticated_groups,
+        refresh_groups=refresh_groups,
+    )
+
+    user.groups.append(group)
+    app.db.commit()
+    before_groups = [group.name]
+    if authenticated_groups is None:
+        expected_authenticated_groups = before_groups
+    else:
+        expected_authenticated_groups = authenticated_groups
+    if refresh_groups is None:
+        expected_refresh_groups = expected_authenticated_groups
+    else:
+        expected_refresh_groups = refresh_groups
+
+    with mock.patch.dict(app.tornado_settings, {"authenticator": authenticator}):
+        cookies = await app.login_user(user.name)
+        assert not app.db.dirty
+        groups = sorted(g.name for g in user.groups)
+        assert groups == expected_authenticated_groups
+
+        # force refresh_user on next request
+        user._auth_refreshed -= 10 + app.authenticator.auth_refresh_age
+        r = await get_page('home', app, cookies=cookies, allow_redirects=False)
+        assert r.status_code == 200
+        assert not app.db.dirty
+        groups = sorted(g.name for g in user.groups)
+        assert groups == expected_refresh_groups
