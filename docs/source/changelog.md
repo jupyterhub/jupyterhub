@@ -8,6 +8,23 @@ command line for details.
 
 ## 2.1
 
+### 2.1.1 2021-01-25
+
+2.1.1 is a tiny bugfix release,
+fixing an issue where admins did not receive the new `read:metrics` permission.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/2.1.0...2.1.1))
+
+#### Bugs fixed
+
+- add missing read:metrics scope to admin role [#3778](https://github.com/jupyterhub/jupyterhub/pull/3778) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-01-21&to=2022-01-25&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2022-01-21..2022-01-25&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adependabot+updated%3A2022-01-21..2022-01-25&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2022-01-21..2022-01-25&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2022-01-21..2022-01-25&type=Issues)
+
 ### 2.1.0 2022-01-21
 
 2.1.0 is a small bugfix release, resolving regressions in 2.0 and further refinements.
