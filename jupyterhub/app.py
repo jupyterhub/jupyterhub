@@ -3153,7 +3153,9 @@ class JupyterHub(Application):
         if self.proxy.should_start:
             self.log.info("JupyterHub is now running at %s", self.proxy.public_url)
         else:
-            self.log.info("JupyterHub is now running, internal Hub API at %s", self.hub.url)
+            self.log.info(
+                "JupyterHub is now running, internal Hub API at %s", self.hub.url
+            )
         # Use atexit for Windows, it doesn't have signal handling support
         if _mswindows:
             atexit.register(self.atexit)
