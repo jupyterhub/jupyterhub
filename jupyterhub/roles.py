@@ -403,6 +403,10 @@ def _token_allowed_role(db, token, role):
     if owner is None:
         raise ValueError(f"Owner not found for {token}")
 
+    if role in owner.roles:
+        # shortcut: token is assigned an exact role the owner has
+        return True
+
     expanded_scopes = _get_subscopes(role, owner=owner)
 
     implicit_permissions = {'inherit', 'read:inherit'}
