@@ -49,6 +49,7 @@ from ..spawner import LocalProcessSpawner
 from ..user import User
 from ..utils import AnyTimeoutError
 from ..utils import get_accepted_mimetype
+from ..utils import get_browser_protocol
 from ..utils import maybe_future
 from ..utils import url_path_join
 
@@ -632,12 +633,10 @@ class BaseHandler(RequestHandler):
         next_url = self.get_argument('next', default='')
         # protect against some browsers' buggy handling of backslash as slash
         next_url = next_url.replace('\\', '%5C')
-        if (next_url + '/').startswith(
-            (
-                f'{self.request.protocol}://{self.request.host}/',
-                f'//{self.request.host}/',
-            )
-        ) or (
+        proto = get_browser_protocol(self.request)
+        host = self.request.host
+
+        if (next_url + '/').startswith((f'{proto}://{host}/', f'//{host}/',)) or (
             self.subdomain_host
             and urlparse(next_url).netloc
             and ("." + urlparse(next_url).netloc).endswith(
@@ -780,7 +779,7 @@ class BaseHandler(RequestHandler):
         if not self.authenticator.enable_auth_state:
             # auth_state is not enabled. Force None.
             auth_state = None
-        await maybe_future(self.authenticator.add_user_to_groups(user, authenticated))
+        await maybe_future(self.authenticator.add_user_to_groups(user,authenticated))
         await user.save_auth_state(auth_state)
         return user
 
@@ -804,7 +803,6 @@ class BaseHandler(RequestHandler):
             self.log.warning(
                 "Failed login for %s", (data or {}).get('username', 'unknown user')
             )
-
     # ---------------------------------------------------------------
     # spawning-related
     # ---------------------------------------------------------------

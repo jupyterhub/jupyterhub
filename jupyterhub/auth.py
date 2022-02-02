@@ -32,16 +32,6 @@ import requests
 from requests.structures import CaseInsensitiveDict
 from jupyterhub import orm
 
-def requestsObtainGroupName(access_token):
-        headers = CaseInsensitiveDict()
-        headers["Authorization"] = "Bearer {}".format(access_token)
-        r = requests.get('https://kc.wu.ac.at/auth/realms/wu/broker/azure-aad-wu/token', headers = headers)
-        #print(r.status_code)
-        #print(r.json()["access_token"])
-        headers["Authorization"] = "Bearer {}".format(r.json()["access_token"])
-        r2 = requests.get('https://graph.microsoft.com/v1.0/me/joinedTeams', headers = headers)
-        #print(r2.status_code)
-        return r2.json()
 
 
 
@@ -397,7 +387,6 @@ class Authenticator(LoggingConfigurable):
     async def run_post_auth_hook(self, handler, authentication):
         """
         Run the post_auth_hook if defined
-
         .. versionadded: 1.0
 
         Args:
@@ -522,8 +511,8 @@ class Authenticator(LoggingConfigurable):
                 authenticated['admin'] = await maybe_future(
                     self.is_admin(handler, authenticated)
                 )
-
-            authenticated = await self.run_post_auth_hook(handler, authenticated)
+            #self.add_user_to_groups(authenticated)
+            #authenticated = await self.run_post_auth_hook(handler, authenticated)
 
             return authenticated
         else:
@@ -642,7 +631,7 @@ class Authenticator(LoggingConfigurable):
 
     
 
-    def add_user_to_groups(self, user, authentication):
+    def add_user_to_groups(self,user, authentication):
         """Hook called when a user logs in and authenticates to JupyterHub
 
         This is called:
@@ -661,84 +650,66 @@ class Authenticator(LoggingConfigurable):
             user (User): The User wrapper object
         """
         
-        print("111111111111111",user,"AYYYYYYYYY")
-        groupname_list = []
-        groupid_list = []
-        groupname_and_id = {}
-        try: 
-            teams_query =requestsObtainGroupName(authentication['auth_state']["access_token"])
-        except Exception as e:
-            print("ERROR when requesting group names: ",e)
-
-        try:
-            for i in range(0,len(teams_query["value"])):
-                groupname_list.append(teams_query["value"][i]["displayName"])
-                groupid_list.append(teams_query["value"][i]["id"])
-            groupname_and_id = {groupname_list[i]: groupid_list[i] for i in range(len(groupid_list))}
-
+        
+        try:   
+            groupid_list = [id for id in authentication['auth_state']['oauth_user']['groups']]
+            print(groupid_list)
         except Exception as e:
                 print("ERROR when parsing groups",e)
                 pass
         try:
-            print(self.db)
             
             db = self.db
-            
             oauth= authentication['auth_state']["oauth_user"]
-            username = oauth["preferred_username"]
-            orm_user= orm.User.find(db,username)
-            print("The orm_user is", orm_user)
+        
+            orm_user= orm.User.find(db,user)
+          
         except Exception as e:
             print(e)
         try:
-            for name in groupname_and_id:
-                groupid = groupname_and_id[name]
-                print("Checking if group already exists: ", name, "-", groupid)
+            #Checking if group already exists, if not the group is created.
+            for groupid in groupid_list:        
                 
                 orm_group= orm.Group.find(db,groupid)
                 if orm.Group.find(db, groupid) == None:
                     group = orm.Group()
                     group.name = groupid
-                    group.display_name = name
+                    group.display_name = groupid
                     if orm_user not in group.users:
-                        print("user missing")
+                        
                         group.users.append(orm_user)
-                        print("Added user to group.")
+                        
                     db.add(group) 
-                    print("added")
-                else:
                     
+                else:            
                     group = orm.Group.find(db, groupid)
-                    group.display_name = name
                     if orm_user not in group.users:
-                        print("user missing")
                         group.users.append(orm_user)
-                        print("Added user to group.")
+                        
                         
         
         except Exception as e:
             print(e)
             pass
-        db.commit()
         try:
-            print(orm_user.groups)
-            print(groupname_and_id)
+            
+            #Checking if group is in grouplist to see if the user has been removed from the group.
+            #Used for synchronization with auth group list
             for group in [group.name for group in orm_user.groups]:
-                print("Checking if group is in grouplist")
-                if group not in groupname_and_id.values:
+                
+                if group not in groupid_list:
 
-                    print("Group not in grouplist")
                     orm_group = orm.Group.find(db, group)
-                    print(orm_group.users)
+                    
                     orm_group.users.remove(orm_user)
-                    print(orm_group.users)
+                    
                     
         except Exception as e:
             print(e)
             pass
         
         db.commit()
-        print("111111111111111 END     AYYYYYYYYY")
+       
 
 
     def delete_user(self, user):
