@@ -319,8 +319,8 @@ class APIHandler(BaseHandler):
         }
         access_map = {
             'read:groups': {'kind', 'name', 'display_name', 'properties', 'users'},
-            'read:groups:name': {'kind', 'name','display_name'},
-            'read:roles:groups': {'kind', 'name','display_name', 'roles'},
+            'read:groups:name': {'kind', 'name', 'display_name'},
+            'read:roles:groups': {'kind', 'name', 'display_name', 'roles'},
         }
         model = self._filter_model(model, access_map, group, 'group')
         return model

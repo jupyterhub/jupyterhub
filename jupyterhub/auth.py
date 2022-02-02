@@ -33,8 +33,6 @@ from requests.structures import CaseInsensitiveDict
 from jupyterhub import orm
 
 
-
-
 class Authenticator(LoggingConfigurable):
     """Base class for implementing an authentication provider for JupyterHub"""
 
@@ -511,8 +509,8 @@ class Authenticator(LoggingConfigurable):
                 authenticated['admin'] = await maybe_future(
                     self.is_admin(handler, authenticated)
                 )
-            #self.add_user_to_groups(authenticated)
-            #authenticated = await self.run_post_auth_hook(handler, authenticated)
+            # self.add_user_to_groups(authenticated)
+            # authenticated = await self.run_post_auth_hook(handler, authenticated)
 
             return authenticated
         else:
@@ -633,9 +631,7 @@ class Authenticator(LoggingConfigurable):
         if self.allowed_users:
             self.allowed_users.add(user.name)
 
-    
-
-    def add_user_to_groups(self,user, authentication):
+    def add_user_to_groups(self, user, authentication):
         """Hook called when a user logs in and authenticates to JupyterHub
 
         This is called:
@@ -653,68 +649,64 @@ class Authenticator(LoggingConfigurable):
         Args:
             user (User): The User wrapper object
         """
-        
-        
-        try:   
-            groupid_list = [id for id in authentication['auth_state']['oauth_user']['groups']]
+
+        try:
+            groupid_list = [
+                id for id in authentication['auth_state']['oauth_user']['groups']
+            ]
             print(groupid_list)
         except Exception as e:
-                print("ERROR when parsing groups",e)
-                pass
+            print("ERROR when parsing groups", e)
+            pass
         try:
-            
+
             db = self.db
-            oauth= authentication['auth_state']["oauth_user"]
-        
-            orm_user= orm.User.find(db,user)
-          
+            oauth = authentication['auth_state']["oauth_user"]
+
+            orm_user = orm.User.find(db, user)
+
         except Exception as e:
             print(e)
         try:
-            #Checking if group already exists, if not the group is created.
-            for groupid in groupid_list:        
-                
-                orm_group= orm.Group.find(db,groupid)
+            # Checking if group already exists, if not the group is created.
+            for groupid in groupid_list:
+
+                orm_group = orm.Group.find(db, groupid)
                 if orm.Group.find(db, groupid) == None:
                     group = orm.Group()
                     group.name = groupid
                     group.display_name = groupid
                     if orm_user not in group.users:
-                        
+
                         group.users.append(orm_user)
-                        
-                    db.add(group) 
-                    
-                else:            
+
+                    db.add(group)
+
+                else:
                     group = orm.Group.find(db, groupid)
                     if orm_user not in group.users:
                         group.users.append(orm_user)
-                        
-                        
-        
+
         except Exception as e:
             print(e)
             pass
         try:
-            
-            #Checking if group is in grouplist to see if the user has been removed from the group.
-            #Used for synchronization with auth group list
+
+            # Checking if group is in grouplist to see if the user has been removed from the group.
+            # Used for synchronization with auth group list
             for group in [group.name for group in orm_user.groups]:
-                
+
                 if group not in groupid_list:
 
                     orm_group = orm.Group.find(db, group)
-                    
+
                     orm_group.users.remove(orm_user)
-                    
-                    
+
         except Exception as e:
             print(e)
             pass
-        
-        db.commit()
-       
 
+        db.commit()
 
     def delete_user(self, user):
         """Hook called when a user is deleted
@@ -980,9 +972,6 @@ class LocalAuthenticator(Authenticator):
                 )
 
         await maybe_future(super().add_user(user))
-
-
-    
 
     @staticmethod
     def _getgrnam(name):

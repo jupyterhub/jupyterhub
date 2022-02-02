@@ -5,7 +5,6 @@ Revises: 0eee8c825d24
 Create Date: 2022-01-07 14:29:28.721364
 
 """
-
 # revision identifiers, used by Alembic.
 revision = 'add181e97222'
 down_revision = '0eee8c825d24'
