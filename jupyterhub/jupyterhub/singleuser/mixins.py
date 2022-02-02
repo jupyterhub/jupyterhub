@@ -492,7 +492,7 @@ class SingleUserNotebookAppMixin(Configurable):
                     i,
                     RETRIES,
                 )
-                await asyncio.sleep(min(2 ** i, 16))
+                await asyncio.sleep(min(2**i, 16))
             else:
                 break
         else:

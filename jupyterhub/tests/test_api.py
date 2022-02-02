@@ -1873,7 +1873,8 @@ async def test_auth_managed_groups(request, app, group, user):
         data=json.dumps({"users": [user.name]}),
     )
     assert r.status_code == 400
-    
+
+
 @mark.group
 async def test_group_add_properties(app):
     db = app.db
@@ -1898,6 +1899,7 @@ async def test_group_add_properties(app):
     assert sorted(group.properties[k] for k in group.properties) == sorted(
         properties_object[k] for k in properties_object
     )
+
 
 # -----------------
 # Service API tests
