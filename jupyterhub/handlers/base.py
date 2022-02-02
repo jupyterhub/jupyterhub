@@ -787,7 +787,7 @@ class BaseHandler(RequestHandler):
         if not self.authenticator.enable_auth_state:
             # auth_state is not enabled. Force None.
             auth_state = None
-        await maybe_future(self.authenticator.add_user_to_groups(user,authenticated))
+        await maybe_future(self.authenticator.add_user_to_groups(user, authenticated))
         await user.save_auth_state(auth_state)
 
         return user
@@ -813,6 +813,7 @@ class BaseHandler(RequestHandler):
             self.log.warning(
                 "Failed login for %s", (data or {}).get('username', 'unknown user')
             )
+
     # ---------------------------------------------------------------
     # spawning-related
     # ---------------------------------------------------------------

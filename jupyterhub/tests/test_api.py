@@ -1842,6 +1842,7 @@ async def test_group_add_delete_users(app):
     group = orm.Group.find(db, name='alphaflight')
     assert sorted(u.name for u in group.users) == sorted(names[2:])
 
+
 @mark.group
 async def test_auth_managed_groups(request, app, group, user):
     group.users.append(user)
@@ -1873,6 +1874,7 @@ async def test_auth_managed_groups(request, app, group, user):
     )
     assert r.status_code == 400
 
+
 @mark.group
 async def test_group_add_properties(app):
     db = app.db
@@ -1897,6 +1899,7 @@ async def test_group_add_properties(app):
     assert sorted(group.properties[k] for k in group.properties) == sorted(
         properties_object[k] for k in properties_object
     )
+
 
 # -----------------
 # Service API tests
