@@ -16,6 +16,7 @@ from tornado import web
 from .. import orm
 from .. import roles
 from .. import scopes
+from ..utils import get_browser_protocol
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -115,7 +116,10 @@ class OAuthHandler:
         # make absolute local redirects full URLs
         # to satisfy oauthlib's absolute URI requirement
         redirect_uri = (
-            self.request.protocol + "://" + self.request.headers['Host'] + redirect_uri
+            get_browser_protocol(self.request)
+            + "://"
+            + self.request.host
+            + redirect_uri
         )
         parsed_url = urlparse(uri)
         query_list = parse_qsl(parsed_url.query, keep_blank_values=True)

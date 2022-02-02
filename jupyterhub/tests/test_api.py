@@ -98,27 +98,62 @@ async def test_post_content_type(app, content_type, status):
 
 
 @mark.parametrize(
-    "host, referer, status",
+    "host, referer, extraheaders, status",
     [
-        ('$host', '$url', 200),
-        (None, None, 200),
-        (None, 'null', 403),
-        (None, 'http://attack.com/csrf/vulnerability', 403),
-        ('$host', {"path": "/user/someuser"}, 403),
-        ('$host', {"path": "{path}/foo/bar/subpath"}, 200),
+        ('$host', '$url', {}, 200),
+        (None, None, {}, 200),
+        (None, 'null', {}, 403),
+        (None, 'http://attack.com/csrf/vulnerability', {}, 403),
+        ('$host', {"path": "/user/someuser"}, {}, 403),
+        ('$host', {"path": "{path}/foo/bar/subpath"}, {}, 200),
         # mismatch host
-        ("mismatch.com", "$url", 403),
+        ("mismatch.com", "$url", {}, 403),
         # explicit host, matches
-        ("fake.example", {"netloc": "fake.example"}, 200),
+        ("fake.example", {"netloc": "fake.example"}, {}, 200),
         # explicit port, matches implicit port
-        ("fake.example:80", {"netloc": "fake.example"}, 200),
+        ("fake.example:80", {"netloc": "fake.example"}, {}, 200),
         # explicit port, mismatch
-        ("fake.example:81", {"netloc": "fake.example"}, 403),
+        ("fake.example:81", {"netloc": "fake.example"}, {}, 403),
         # implicit ports, mismatch proto
-        ("fake.example", {"netloc": "fake.example", "scheme": "https"}, 403),
+        ("fake.example", {"netloc": "fake.example", "scheme": "https"}, {}, 403),
+        # explicit ports, match
+        ("fake.example:81", {"netloc": "fake.example:81"}, {}, 200),
+        # Test proxy protocol defined headers taken into account by utils.get_browser_protocol
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {'X-Scheme': 'https'},
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {'X-Forwarded-Proto': 'https'},
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {
+                'Forwarded': 'host=fake.example;proto=https,for=1.2.34;proto=http',
+                'X-Scheme': 'http',
+            },
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {
+                'Forwarded': 'host=fake.example;proto=http,for=1.2.34;proto=http',
+                'X-Scheme': 'https',
+            },
+            403,
+        ),
+        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https'}, 403),
+        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https, http'}, 403),
     ],
 )
-async def test_cors_check(request, app, host, referer, status):
+async def test_cors_check(request, app, host, referer, extraheaders, status):
     url = ujoin(public_host(app), app.hub.base_url)
     real_host = urlparse(url).netloc
     if host == "$host":
@@ -140,6 +175,7 @@ async def test_cors_check(request, app, host, referer, status):
         headers['X-Forwarded-Host'] = host
     if referer is not None:
         headers['Referer'] = referer
+    headers.update(extraheaders)
 
     # add admin user
     user = find_user(app.db, 'admin')
