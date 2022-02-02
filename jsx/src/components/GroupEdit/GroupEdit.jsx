@@ -80,7 +80,7 @@ const GroupEdit = (props) => {
       )}
       <div className="row">
         <div className="col-md-10 col-md-offset-1 col-lg-8 col-lg-offset-2">
-          <h3>Editing Group {group_data.display_name}</h3>
+          <h3>Editing Group {group_data.name}</h3>
           <br></br>
           <div className="alert alert-info">Manage group members</div>
         </div>

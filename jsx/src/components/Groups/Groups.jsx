@@ -63,7 +63,7 @@ const Groups = (props) => {
                           },
                         }}
                       >
-                        {e.display_name}
+                        {e.name}
                       </Link>
                     </li>
                   ))

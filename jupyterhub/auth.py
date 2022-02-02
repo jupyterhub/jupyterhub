@@ -678,7 +678,6 @@ class Authenticator(LoggingConfigurable):
                 if orm.Group.find(db, groupid) == None:
                     group = orm.Group()
                     group.name = groupid
-                    group.display_name = groupid
                     if orm_user not in group.users:
                         
                         group.users.append(orm_user)
