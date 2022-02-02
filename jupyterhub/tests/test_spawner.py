@@ -81,6 +81,18 @@ async def test_spawner(db, request):
     assert isinstance(status, int)
 
 
+def test_spawner_from_db(app, user):
+    spawner = user.spawners['name']
+    user_options = {"test": "value"}
+    spawner.orm_spawner.user_options = user_options
+    app.db.commit()
+    # delete and recreate the spawner from the db
+    user.spawners.pop('name')
+    new_spawner = user.spawners['name']
+    assert new_spawner.orm_spawner.user_options == user_options
+    assert new_spawner.user_options == user_options
+
+
 async def wait_for_spawner(spawner, timeout=10):
     """Wait for an http server to show up
 
