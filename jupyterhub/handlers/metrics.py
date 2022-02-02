@@ -12,6 +12,8 @@ class MetricsHandler(BaseHandler):
     Handler to serve Prometheus metrics
     """
 
+    _accept_token_auth = True
+
     @metrics_authentication
     async def get(self):
         self.set_header('Content-Type', CONTENT_TYPE_LATEST)

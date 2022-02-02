@@ -714,7 +714,12 @@ class SpawnProgressAPIHandler(APIHandler):
             # check if spawner has just failed
             f = spawn_future
             if f and f.done() and f.exception():
-                failed_event['message'] = "Spawn failed: %s" % f.exception()
+                exc = f.exception()
+                message = getattr(exc, "jupyterhub_message", str(exc))
+                failed_event['message'] = f"Spawn failed: {message}"
+                html_message = getattr(exc, "jupyterhub_html_message", "")
+                if html_message:
+                    failed_event['html_message'] = html_message
                 await self.send_event(failed_event)
                 return
             else:
@@ -747,7 +752,12 @@ class SpawnProgressAPIHandler(APIHandler):
             # what happened? Maybe spawn failed?
             f = spawn_future
             if f and f.done() and f.exception():
-                failed_event['message'] = "Spawn failed: %s" % f.exception()
+                exc = f.exception()
+                message = getattr(exc, "jupyterhub_message", str(exc))
+                failed_event['message'] = f"Spawn failed: {message}"
+                html_message = getattr(exc, "jupyterhub_html_message", "")
+                if html_message:
+                    failed_event['html_message'] = html_message
             else:
                 self.log.warning(
                     "Server %s didn't start for unknown reason", spawner._log_name
