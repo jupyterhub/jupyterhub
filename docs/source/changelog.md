@@ -6,6 +6,68 @@ command line for details.
 
 ## [Unreleased]
 
+## 2.1
+
+### 2.1.1 2021-01-25
+
+2.1.1 is a tiny bugfix release,
+fixing an issue where admins did not receive the new `read:metrics` permission.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/2.1.0...2.1.1))
+
+#### Bugs fixed
+
+- add missing read:metrics scope to admin role [#3778](https://github.com/jupyterhub/jupyterhub/pull/3778) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-01-21&to=2022-01-25&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2022-01-21..2022-01-25&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adependabot+updated%3A2022-01-21..2022-01-25&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2022-01-21..2022-01-25&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2022-01-21..2022-01-25&type=Issues)
+
+### 2.1.0 2022-01-21
+
+2.1.0 is a small bugfix release, resolving regressions in 2.0 and further refinements.
+In particular, the authenticated prometheus metrics endpoint did not work in 2.0 because it lacked a scope.
+To access the authenticated metrics endpoint with a token,
+upgrade to 2.1 and make sure the token/owner has the `read:metrics` scope.
+
+Custom error messages for failed spawns are now handled more consistently on the spawn-progress API and the spawn-failed HTML page.
+Previously, spawn-progress did not relay the custom message provided by `exception.jupyterhub_message`,
+and full HTML messages in `exception.jupyterhub_html_message` can now be displayed in both contexts.
+
+The long-deprecated, inconsistent behavior when users visited a URL for another user's server,
+where they could sometimes be redirected back to their own server,
+has been removed in favor of consistent behavior based on the user's permissions.
+To share a URL that will take any user to their own server, use `https://my.hub/hub/user-redirect/path/...`.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/2.0.2...2.1.0))
+
+#### Enhancements made
+
+- relay custom messages in exception.jupyterhub_message in progress API [#3764](https://github.com/jupyterhub/jupyterhub/pull/3764) ([@minrk](https://github.com/minrk))
+- Add the capability to inform a connection to Alembic Migration Script [#3762](https://github.com/jupyterhub/jupyterhub/pull/3762) ([@DougTrajano](https://github.com/DougTrajano))
+
+#### Bugs fixed
+
+- Fix loading Spawner.user_options from db [#3773](https://github.com/jupyterhub/jupyterhub/pull/3773) ([@IgorBerman](https://github.com/IgorBerman))
+- Add missing `read:metrics` scope for authenticated metrics endpoint [#3770](https://github.com/jupyterhub/jupyterhub/pull/3770) ([@minrk](https://github.com/minrk))
+- apply scope checks to some admin-or-self situations [#3763](https://github.com/jupyterhub/jupyterhub/pull/3763) ([@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- DOCS: Add github metadata for edit button [#3775](https://github.com/jupyterhub/jupyterhub/pull/3775) ([@minrk](https://github.com/minrk))
+
+#### Documentation improvements
+
+- Improve documentation about spawner exception handling [#3765](https://github.com/jupyterhub/jupyterhub/pull/3765) ([@twalcari](https://github.com/twalcari))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-01-10&to=2022-01-21&type=c))
+
+[@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2022-01-10..2022-01-21&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adependabot+updated%3A2022-01-10..2022-01-21&type=Issues) | [@DougTrajano](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ADougTrajano+updated%3A2022-01-10..2022-01-21&type=Issues) | [@IgorBerman](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AIgorBerman+updated%3A2022-01-10..2022-01-21&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2022-01-10..2022-01-21&type=Issues) | [@twalcari](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Atwalcari+updated%3A2022-01-10..2022-01-21&type=Issues) | [@welcome](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Awelcome+updated%3A2022-01-10..2022-01-21&type=Issues)
+
 ## 2.0
 
 ### [2.0.2] 2022-01-10
@@ -1389,7 +1451,8 @@ Fix removal of `/login` page in 0.4.0, breaking some OAuth providers.
 
 First preview release
 
-[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/2.0.2...HEAD
+[unreleased]: https://github.com/jupyterhub/jupyterhub/compare/2.1.0...HEAD
+[2.1.0]: https://github.com/jupyterhub/jupyterhub/compare/2.0.2...2.1.0
 [2.0.2]: https://github.com/jupyterhub/jupyterhub/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/jupyterhub/jupyterhub/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/jupyterhub/jupyterhub/compare/1.5.0...2.0.0
