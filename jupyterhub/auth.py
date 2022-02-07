@@ -975,16 +975,24 @@ class PAMAuthenticator(LocalAuthenticator):
     ).tag(config=True)
 
     open_sessions = Bool(
-        True,
+        False,
         help="""
         Whether to open a new PAM session when spawners are started.
 
-        This may trigger things like mounting shared filsystems,
-        loading credentials, etc. depending on system configuration,
-        but it does not always work.
+        This may trigger things like mounting shared filesystems,
+        loading credentials, etc. depending on system configuration.
+
+        The lifecycle of PAM sessions is not correct,
+        so many PAM session configurations will not work.
 
         If any errors are encountered when opening/closing PAM sessions,
         this is automatically set to False.
+
+        .. versionchanged:: 2.2
+
+            Due to longstanding problems in the session lifecycle,
+            this is now disabled by default.
+            You may opt-in to opening sessions by setting this to True.
         """,
     ).tag(config=True)
 
