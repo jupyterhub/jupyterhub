@@ -73,6 +73,78 @@ const ServerDashboard = (props) => {
     user_data = sortMethod(user_data);
   }
 
+  const StopServerButton = ({ serverName, userName }) => {
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-danger btn-xs stop-button"
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          stopServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(data, page);
+                  })
+                  .catch(() => {
+                    setIsDisabled(false);
+                    setErrorAlert(`Failed to update users list.`);
+                  });
+              } else {
+                setErrorAlert(`Failed to stop server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to stop server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Stop Server
+      </button>
+    );
+  };
+
+  const StartServerButton = ({ serverName, userName }) => {
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-success btn-xs start-button"
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          startServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(data, page);
+                  })
+                  .catch(() => {
+                    setErrorAlert(`Failed to update users list.`);
+                    setIsDisabled(false);
+                  });
+              } else {
+                setErrorAlert(`Failed to start server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to start server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Start Server
+      </button>
+    );
+  };
+
   return (
     <div className="container" data-testid="container">
       {errorAlert != null ? (
@@ -278,41 +350,10 @@ const ServerDashboard = (props) => {
                       {server.started ? (
                         // Stop Single-user server
                         <>
-                          <button
-                            className="btn btn-danger btn-xs stop-button"
-                            disabled={
-                              disabledButtons[
-                                `stop__${e.name}__${server.name}`
-                              ] || false
-                            }
-                            onClick={() => {
-                              setDisabledButtons({
-                                [`stop__${e.name}__${server.name}`]: true,
-                              });
-                              stopServer(e.name, server.name)
-                                .then((res) => {
-                                  if (res.status < 300) {
-                                    updateUsers(...slice)
-                                      .then((data) => {
-                                        dispatchPageUpdate(data, page);
-                                      })
-                                      .catch(() =>
-                                        setErrorAlert(
-                                          `Failed to update users list.`
-                                        )
-                                      );
-                                  } else {
-                                    setErrorAlert(`Failed to stop server.`);
-                                  }
-                                  return res;
-                                })
-                                .catch(() =>
-                                  setErrorAlert(`Failed to stop server.`)
-                                );
-                            }}
-                          >
-                            Stop Server
-                          </button>
+                          <StopServerButton
+                            serverName={server.name}
+                            userName={e.name}
+                          />
                           <a
                             href={`/user/${e.name}${
                               server && server.name && "/" + server.name
@@ -329,41 +370,10 @@ const ServerDashboard = (props) => {
                       ) : (
                         // Start Single-user server
                         <>
-                          <button
-                            className="btn btn-success btn-xs start-button"
-                            disabled={
-                              disabledButtons[
-                                `start__${e.name}__${server.name}`
-                              ] || false
-                            }
-                            onClick={() => {
-                              setDisabledButtons({
-                                [`start__${e.name}__${server.name}`]: true,
-                              });
-                              startServer(e.name, (server || {}).name)
-                                .then((res) => {
-                                  if (res.status < 300) {
-                                    updateUsers(...slice)
-                                      .then((data) => {
-                                        dispatchPageUpdate(data, page);
-                                      })
-                                      .catch(() =>
-                                        setErrorAlert(
-                                          `Failed to update users list.`
-                                        )
-                                      );
-                                  } else {
-                                    setErrorAlert(`Failed to start server.`);
-                                  }
-                                  return res;
-                                })
-                                .catch(() => {
-                                  setErrorAlert(`Failed to start server.`);
-                                });
-                            }}
-                          >
-                            Start Server
-                          </button>
+                          <StartServerButton
+                            serverName={server.name}
+                            userName={e.name}
+                          />
                           <a
                             href={`/spawn/${e.name}${
                               server.name && "/" + server.name
