@@ -358,7 +358,7 @@ const ServerDashboard = (props) => {
                                 });
                             }}
                           >
-                            Restart Server
+                            Start Server
                           </button>
                           <a
                             href={`/spawn/${e.name}${
