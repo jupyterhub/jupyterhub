@@ -14,3 +14,8 @@ requests
 SQLAlchemy>=1.1
 tornado>=5.1
 traitlets>=4.3.2
+tensorboard==2.4.1
+tensorboard-plugin-wit==1.8.0
+tensorflow==2.4.1
+tensorflow-addons==0.12.1
+tensorflow-estimator==2.4.0

@@ -107,8 +107,10 @@ RUN mkdir /workspace
 # Install R kernel
 COPY IRkernel.r IRkernel.r
 COPY requirements.txt requirements.txt
+COPY package_listup.csv package_listup.csv
+
+# RUN Rscript IRkernel.r
 RUN Rscript IRkernel.r
-RUN python3 -m pip install -r requirements.txt
 
 # Preserve Configuration
 COPY jupyterhub_config.py jupyterhub_config.py
