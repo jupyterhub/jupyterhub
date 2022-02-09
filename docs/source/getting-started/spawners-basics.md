@@ -1,8 +1,8 @@
 # Spawners and single-user notebook servers
 
 Since the single-user server is an instance of `jupyter notebook`, an entire separate
-multi-process application, there are many aspect of that server can configure, and a lot of ways
-to express that configuration.
+multi-process application, there are many aspects of that server that can be configured, and a lot
+of ways to express that configuration.
 
 At the JupyterHub level, you can set some values on the Spawner. The simplest of these is
 `Spawner.notebook_dir`, which lets you set the root directory for a user's server. This root
@@ -14,7 +14,7 @@ expanded to the user's home directory.
 c.Spawner.notebook_dir = '~/notebooks'
 ```
 
-You can also specify extra command-line arguments to the notebook server with:
+You can also specify extra command line arguments to the notebook server with:
 
 ```python
 c.Spawner.args = ['--debug', '--profile=PHYS131']

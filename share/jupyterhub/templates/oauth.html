@@ -5,47 +5,47 @@
 
 {% block main %}
 <div class="container col-md-6 col-md-offset-3">
-  <h1 class="text-center">Authorize access</h1>
+    <h1 class="text-center">Authorize access</h1>
 
-  <h2>
-    A service is attempting to authorize with your
-    JupyterHub account
-  </h2>
+    <h2>
+        An application is requesting authorization to access data associated with your JupyterHub account
+    </h2>
 
-  <p>
-    {{ oauth_client.description }} (oauth URL: {{ oauth_client.redirect_uri }})
-    would like permission to identify you.
-    {% if scopes == ["identify"] %}
-    It will not be able to take actions on your behalf.
-    {% endif %}
-  </p>
+    <p>
+        {{ oauth_client.description }} (oauth URL: {{ oauth_client.redirect_uri }})
+        would like permission to identify you.
+        {% if not role_names %}
+        It will not be able to take actions on
+        your behalf.
+        {% endif %}
+    </p>
 
-  <h3>The application will be able to:</h3>
-  <div>
-    <form method="POST" action="">
-      {% for scope in scopes %}
-      <div class="checkbox input-group">
-        <label>
-          <input type="checkbox"
-                 name="scopes"
-                 checked="true"
-                 title="This authorization is required"
-                 disabled="disabled" {# disabled because it's required #}
-                 value="{{ scope }}"
-          />
-          {# disabled checkbox isn't included in form, so this is the real one #}
-          <input type="hidden" name="scopes" value="{{ scope }}"/>
-          <span>
-            {# TODO: use scope description when there's more than one #}
-            See your JupyterHub username and group membership (read-only).
+    <h3>This will grant the application permission to:</h3>
+    <div>
+        <form method="POST" action="">
+            {# these are the 'real' inputs to the form -#}
+            {% for role_name in role_names %}
+            <input type="hidden" name="scopes" value="{{ role_name }}"/>
+            {% endfor %}
+
+            {% for scope_info in scope_descriptions %}
+            <div class="checkbox input-group">
+                <label>
+                    <input type="checkbox" name="raw-scopes" checked="true" title="This authorization is required"
+                           disabled="disabled"
+                           {# disabled because it's required #} />
+                    <span>
+            {{ scope_info['description'] }}
+            {% if scope_info['filter'] %}
+            Applies to {{ scope_info['filter'] }}.
+            {% endif %}
           </span>
-        </label>
-      </div>
-      {% endfor %}
-      <input type="submit" value="Authorize" class="form-control btn-jupyter"/>
-    </form>
-  </div>
+                </label>
+            </div>
+            {% endfor %}
+            <input type="submit" value="Authorize" class="form-control btn-jupyter"/>
+        </form>
+    </div>
 </div>
-
 
 {% endblock %}

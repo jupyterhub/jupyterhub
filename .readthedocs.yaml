@@ -1,0 +1,20 @@
+version: 2
+
+sphinx:
+  configuration: docs/source/conf.py
+
+build:
+  os: ubuntu-20.04
+  tools:
+    nodejs: "16"
+    python: "3.9"
+
+python:
+  install:
+    - method: pip
+      path: .
+    - requirements: docs/requirements.txt
+
+formats:
+  - htmlzip
+  - epub

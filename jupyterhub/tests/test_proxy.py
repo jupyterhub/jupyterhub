@@ -101,7 +101,7 @@ async def test_external_proxy(request):
     print(app.base_url, user_path)
     host = ''
     if app.subdomain_host:
-        host = '%s.%s' % (name, urlparse(app.subdomain_host).hostname)
+        host = f'{name}.{urlparse(app.subdomain_host).hostname}'
     user_spec = host + user_path
     assert sorted(routes.keys()) == [app.hub.routespec, user_spec]
 
@@ -148,7 +148,7 @@ async def test_external_proxy(request):
     await wait_for_proxy()
 
     # tell the hub where the new proxy is
-    new_api_url = 'http://{}:{}'.format(proxy_ip, proxy_port)
+    new_api_url = f'http://{proxy_ip}:{proxy_port}'
     r = await api_request(
         app,
         'proxy',
@@ -193,6 +193,25 @@ async def test_check_routes(app, username, disable_check_routes):
 
     # check that before and after state are the same
     assert before == after
+
+
+async def test_extra_routes(app):
+    proxy = app.proxy
+    # When using host_routing, it's up to the admin to
+    # provide routespecs that have a domain in them.
+    # We don't explicitly validate that here.
+    if app.subdomain_host:
+        route_spec = 'example.com/test-extra-routes/'
+    else:
+        route_spec = '/test-extra-routes/'
+    target = 'http://localhost:9999/test'
+    proxy.extra_routes = {route_spec: target}
+
+    await proxy.check_routes(app.users, app._service_map)
+
+    routes = await app.proxy.get_all_routes()
+    assert route_spec in routes
+    assert routes[route_spec]['target'] == target
 
 
 @pytest.mark.parametrize(

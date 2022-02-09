@@ -26,10 +26,9 @@ def write_alembic_ini(alembic_ini='alembic.ini', db_url='sqlite:///jupyterhub.sq
 
     Parameters
     ----------
-
-    alembic_ini: str
+    alembic_ini : str
         path to the alembic.ini file that should be written.
-    db_url: str
+    db_url : str
         The SQLAlchemy database url, e.g. `sqlite:///jupyterhub.sqlite`.
     """
     with open(ALEMBIC_INI_TEMPLATE_PATH) as f:
@@ -58,13 +57,11 @@ def _temp_alembic_ini(db_url):
 
     Parameters
     ----------
-
-    db_url: str
+    db_url : str
         The SQLAlchemy database url, e.g. `sqlite:///jupyterhub.sqlite`.
 
     Returns
     -------
-
     alembic_ini: str
         The path to the temporary alembic.ini that we have created.
         This file will be cleaned up on exit from the context manager.
@@ -94,7 +91,7 @@ def backup_db_file(db_file, log=None):
     for i in range(1, 10):
         if not os.path.exists(backup_db_file):
             break
-        backup_db_file = '{}.{}.{}'.format(db_file, timestamp, i)
+        backup_db_file = f'{db_file}.{timestamp}.{i}'
     #
     if os.path.exists(backup_db_file):
         raise OSError("backup db file already exists: %s" % backup_db_file)
@@ -139,7 +136,7 @@ def upgrade_if_needed(db_url, backup=True, log=None):
 
 
 def shell(args=None):
-    """Start an IPython shell hooked up to the jupyerhub database"""
+    """Start an IPython shell hooked up to the jupyterhub database"""
     from .app import JupyterHub
 
     hub = JupyterHub()

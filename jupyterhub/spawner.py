@@ -13,9 +13,8 @@ import sys
 import warnings
 from subprocess import Popen
 from tempfile import mkdtemp
+from urllib.parse import urlparse
 
-if os.name == 'nt':
-    import psutil
 from async_generator import aclosing
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
@@ -37,13 +36,14 @@ from .objects import Server
 from .traitlets import ByteSpecification
 from .traitlets import Callable
 from .traitlets import Command
+from .utils import AnyTimeoutError
 from .utils import exponential_backoff
-from .utils import iterate_until
 from .utils import maybe_future
 from .utils import random_port
 from .utils import url_path_join
 
-# FIXME: remove when we drop Python 3.5 support
+if os.name == 'nt':
+    import psutil
 
 
 def _quote_safe(s):
@@ -97,7 +97,7 @@ class Spawner(LoggingConfigurable):
         Used in logging for consistency with named servers.
         """
         if self.name:
-            return '%s:%s' % (self.user.name, self.name)
+            return f'{self.user.name}:{self.name}'
         else:
             return self.user.name
 
@@ -216,7 +216,31 @@ class Spawner(LoggingConfigurable):
     admin_access = Bool(False)
     api_token = Unicode()
     oauth_client_id = Unicode()
+
+    oauth_scopes = List(Unicode())
+
+    @default("oauth_scopes")
+    def _default_oauth_scopes(self):
+        return [
+            f"access:servers!server={self.user.name}/{self.name}",
+            f"access:servers!user={self.user.name}",
+        ]
+
     handler = Any()
+
+    oauth_roles = Union(
+        [Callable(), List()],
+        help="""Allowed roles for oauth tokens.
+
+        This sets the maximum and default roles
+        assigned to oauth tokens issued by a single-user server's
+        oauth client (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the server can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+    """,
+    ).tag(config=True)
 
     will_resume = Bool(
         False,
@@ -231,11 +255,22 @@ class Spawner(LoggingConfigurable):
     )
 
     ip = Unicode(
-        '',
+        '127.0.0.1',
         help="""
         The IP address (or hostname) the single-user server should listen on.
 
+        Usually either '127.0.0.1' (default) or '0.0.0.0'.
+
         The JupyterHub proxy implementation should be able to send packets to this interface.
+
+        Subclasses which launch remotely or in containers
+        should override the default to '0.0.0.0'.
+
+        .. versionchanged:: 2.0
+            Default changed to '127.0.0.1', from ''.
+            In most cases, this does not result in a change in behavior,
+            as '' was interpreted as 'unspecified',
+            which used the subprocesses' own default, itself usually '127.0.0.1'.
         """,
     ).tag(config=True)
 
@@ -690,6 +725,19 @@ class Spawner(LoggingConfigurable):
         """
     ).tag(config=True)
 
+    hub_connect_url = Unicode(
+        None,
+        allow_none=True,
+        help="""
+        The URL the single-user server should connect to the Hub.
+
+        If the Hub URL set in your JupyterHub config is not reachable
+        from spawned notebooks, you can set differnt URL by this config.
+
+        Is None if you don't need to change the URL.
+        """,
+    ).tag(config=True)
+
     def load_state(self, state):
         """Restore state of spawner from database.
 
@@ -715,7 +763,7 @@ class Spawner(LoggingConfigurable):
         Returns
         -------
         state: dict
-             a JSONable dict of state
+            a JSONable dict of state
         """
         state = {}
         return state
@@ -765,20 +813,40 @@ class Spawner(LoggingConfigurable):
             self.user.url, self.name, 'oauth_callback'
         )
 
+        env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_scopes)
+
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name
         env['JUPYTERHUB_SERVER_NAME'] = self.name
-        env['JUPYTERHUB_API_URL'] = self.hub.api_url
+        if self.hub_connect_url is not None:
+            hub_api_url = url_path_join(
+                self.hub_connect_url, urlparse(self.hub.api_url).path
+            )
+        else:
+            hub_api_url = self.hub.api_url
+        env['JUPYTERHUB_API_URL'] = hub_api_url
         env['JUPYTERHUB_ACTIVITY_URL'] = url_path_join(
-            self.hub.api_url,
+            hub_api_url,
             'users',
             # tolerate mocks defining only user.name
             getattr(self.user, 'escaped_name', self.user.name),
             'activity',
         )
         env['JUPYTERHUB_BASE_URL'] = self.hub.base_url[:-4]
+
         if self.server:
+            base_url = self.server.base_url
+            if self.ip or self.port:
+                self.server.ip = self.ip
+                self.server.port = self.port
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
+        else:
+            # this should only occur in mock/testing scenarios
+            base_url = '/'
+
+        proto = 'https' if self.internal_ssl else 'http'
+        bind_url = f"{proto}://{self.ip}:{self.port}{base_url}"
+        env["JUPYTERHUB_SERVICE_URL"] = bind_url
 
         # Put in limit and guarantee info if they exist.
         # Note that this is for use by the humans / notebook extensions in the
@@ -798,6 +866,20 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_SSL_CERTFILE'] = self.cert_paths['certfile']
             env['JUPYTERHUB_SSL_CLIENT_CA'] = self.cert_paths['cafile']
 
+        if self.notebook_dir:
+            notebook_dir = self.format_string(self.notebook_dir)
+            env["JUPYTERHUB_ROOT_DIR"] = notebook_dir
+
+        if self.default_url:
+            default_url = self.format_string(self.default_url)
+            env["JUPYTERHUB_DEFAULT_URL"] = default_url
+
+        if self.debug:
+            env["JUPYTERHUB_DEBUG"] = "1"
+
+        if self.disable_user_config:
+            env["JUPYTERHUB_DISABLE_USER_CONFIG"] = "1"
+
         # env overrides from config. If the value is a callable, it will be called with
         # one parameter - the current spawner instance - and the return value
         # will be assigned to the environment variable. This will be called at
@@ -809,7 +891,6 @@ class Spawner(LoggingConfigurable):
                 env[key] = value(self)
             else:
                 env[key] = value
-
         return env
 
     async def get_url(self):
@@ -976,35 +1057,16 @@ class Spawner(LoggingConfigurable):
         """Return the arguments to be passed after self.cmd
 
         Doesn't expect shell expansion to happen.
+
+        .. versionchanged:: 2.0
+            Prior to 2.0, JupyterHub passed some options such as
+            ip, port, and default_url to the command-line.
+            JupyterHub 2.0 no longer builds any CLI args
+            other than `Spawner.cmd` and `Spawner.args`.
+            All values that come from jupyterhub itself
+            will be passed via environment variables.
         """
-        args = []
-
-        if self.ip:
-            args.append('--ip=%s' % _quote_safe(self.ip))
-
-        if self.port:
-            args.append('--port=%i' % self.port)
-        elif self.server and self.server.port:
-            self.log.warning(
-                "Setting port from user.server is deprecated as of JupyterHub 0.7."
-            )
-            args.append('--port=%i' % self.server.port)
-
-        if self.notebook_dir:
-            notebook_dir = self.format_string(self.notebook_dir)
-            args.append('--notebook-dir=%s' % _quote_safe(notebook_dir))
-        if self.default_url:
-            default_url = self.format_string(self.default_url)
-            args.append(
-                '--SingleUserNotebookApp.default_url=%s' % _quote_safe(default_url)
-            )
-
-        if self.debug:
-            args.append('--debug')
-        if self.disable_user_config:
-            args.append('--disable-user-config')
-        args.extend(self.args)
-        return args
+        return self.args
 
     def run_pre_spawn_hook(self):
         """Run the pre_spawn_hook if defined"""
@@ -1025,7 +1087,7 @@ class Spawner(LoggingConfigurable):
             try:
                 await maybe_future(self.auth_state_hook(self, auth_state))
             except Exception:
-                self.log.exception("auth_stop_hook failed with exception: %s", self)
+                self.log.exception("auth_state_hook failed with exception: %s", self)
 
     @property
     def _progress_url(self):
@@ -1121,6 +1183,18 @@ class Spawner(LoggingConfigurable):
         """
         raise NotImplementedError("Override in subclass. Must be a coroutine.")
 
+    def delete_forever(self):
+        """Called when a user or server is deleted.
+
+        This can do things like request removal of resources such as persistent storage.
+        Only called on stopped spawners, and is usually the last action ever taken for the user.
+
+        Will only be called once on each Spawner, immediately prior to removal.
+
+        Stopping a server does *not* call this method.
+        """
+        pass
+
     def add_poll_callback(self, callback, *args, **kwargs):
         """Add a callback to fire when the single-user server stops"""
         if args or kwargs:
@@ -1184,12 +1258,12 @@ class Spawner(LoggingConfigurable):
         try:
             r = await exponential_backoff(
                 _wait_for_death,
-                'Process did not die in {timeout} seconds'.format(timeout=timeout),
+                f'Process did not die in {timeout} seconds',
                 start_wait=self.death_interval,
                 timeout=timeout,
             )
             return r
-        except TimeoutError:
+        except AnyTimeoutError:
             return False
 
 
@@ -1203,7 +1277,7 @@ def _try_setcwd(path):
             os.chdir(path)
         except OSError as e:
             exc = e  # break exception instance out of except scope
-            print("Couldn't set CWD to %s (%s)" % (path, e), file=sys.stderr)
+            print(f"Couldn't set CWD to {path} ({e})", file=sys.stderr)
             path, _ = os.path.split(path)
         else:
             return
@@ -1349,7 +1423,7 @@ class LocalProcessSpawner(Spawner):
 
         Local processes only need the process id.
         """
-        super(LocalProcessSpawner, self).load_state(state)
+        super().load_state(state)
         if 'pid' in state:
             self.pid = state['pid']
 
@@ -1358,14 +1432,14 @@ class LocalProcessSpawner(Spawner):
 
         Local processes only need the process id.
         """
-        state = super(LocalProcessSpawner, self).get_state()
+        state = super().get_state()
         if self.pid:
             state['pid'] = self.pid
         return state
 
     def clear_state(self):
         """Clear stored state about this spawner (pid)"""
-        super(LocalProcessSpawner, self).clear_state()
+        super().clear_state()
         self.pid = 0
 
     def user_env(self, env):
@@ -1414,8 +1488,8 @@ class LocalProcessSpawner(Spawner):
         home = user.pw_dir
 
         # Create dir for user's certs wherever we're starting
-        hub_dir = "{home}/.jupyterhub".format(home=home)
-        out_dir = "{hub_dir}/jupyterhub-certs".format(hub_dir=hub_dir)
+        hub_dir = f"{home}/.jupyterhub"
+        out_dir = f"{hub_dir}/jupyterhub-certs"
         shutil.rmtree(out_dir, ignore_errors=True)
         os.makedirs(out_dir, 0o700, exist_ok=True)
 
@@ -1436,7 +1510,8 @@ class LocalProcessSpawner(Spawner):
 
     async def start(self):
         """Start the single-user server."""
-        self.port = random_port()
+        if self.port == 0:
+            self.port = random_port()
         cmd = []
         env = self.get_env()
 
@@ -1471,16 +1546,6 @@ class LocalProcessSpawner(Spawner):
 
         self.pid = self.proc.pid
 
-        if self.__class__ is not LocalProcessSpawner:
-            # subclasses may not pass through return value of super().start,
-            # relying on deprecated 0.6 way of setting ip, port,
-            # so keep a redundant copy here for now.
-            # A deprecation warning will be shown if the subclass
-            # does not return ip, port.
-            if self.ip:
-                self.server.ip = self.ip
-            self.server.port = self.port
-            self.db.commit()
         return (self.ip or '127.0.0.1', self.port)
 
     async def poll(self):
@@ -1493,8 +1558,11 @@ class LocalProcessSpawner(Spawner):
         if self.proc is not None:
             status = self.proc.poll()
             if status is not None:
-                # clear state if the process is done
-                self.clear_state()
+                # handle SIGCHILD to avoid zombie processes
+                # and also close stdout/stderr file descriptors
+                with self.proc:
+                    # clear state if the process is done
+                    self.clear_state()
             return status
 
         # if we resumed from stored state,

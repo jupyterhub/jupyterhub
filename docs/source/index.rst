@@ -43,7 +43,7 @@ JupyterHub performs the following functions:
   notebook servers
 
 For convenient administration of the Hub, its users, and services,
-JupyterHub also provides a `REST API`_.
+JupyterHub also provides a :doc:`REST API <reference/rest-api>`.
 
 The JupyterHub team and Project Jupyter value our community, and JupyterHub
 follows the Jupyter `Community Guides <https://jupyter.readthedocs.io/en/latest/community/content-community.html>`_.
@@ -108,6 +108,14 @@ API Reference
 
    api/index
 
+RBAC Reference
+--------------
+
+.. toctree::
+   :maxdepth: 2
+
+   rbac/index
+
 Contributing
 ------------
 
@@ -115,8 +123,8 @@ We want you to contribute to JupyterHub in ways that are most exciting
 & useful to you. We value documentation, testing, bug reporting & code equally,
 and are glad to have your contributions in whatever form you wish :)
 
-Our `Code of Conduct <https://github.com/jupyter/governance/blob/master/conduct/code_of_conduct.md>`_
-(`reporting guidelines <https://github.com/jupyter/governance/blob/master/conduct/reporting_online.md>`_)
+Our `Code of Conduct <https://github.com/jupyter/governance/blob/HEAD/conduct/code_of_conduct.md>`_
+(`reporting guidelines <https://github.com/jupyter/governance/blob/HEAD/conduct/reporting_online.md>`_)
 helps keep our community welcoming to as many people as possible.
 
 .. toctree::
@@ -147,4 +155,3 @@ Questions? Suggestions?
 
 .. _JupyterHub: https://github.com/jupyterhub/jupyterhub
 .. _Jupyter notebook: https://jupyter-notebook.readthedocs.io/en/latest/
-.. _REST API: http://petstore.swagger.io/?url=https://raw.githubusercontent.com/jupyterhub/jupyterhub/master/docs/rest-api.yml#!/default

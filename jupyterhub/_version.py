@@ -1,14 +1,8 @@
 """JupyterHub version info"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-version_info = (
-    1,
-    4,
-    0,
-    "",  # release (b1, rc1, or "" for final or dev)
-    "dev",  # dev or nothing for beta/rc/stable releases
-)
+# version_info updated by running `tbump`
+version_info = (2, 2, 0, "", "dev")
 
 # pep 440 version: no dot before beta/rc, but before .dev
 # 0.1.0rc1
@@ -16,7 +10,9 @@ version_info = (
 # 0.1.0b1.dev
 # 0.1.0.dev
 
-__version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:])
+__version__ = ".".join(map(str, version_info[:3])) + ".".join(version_info[3:]).rstrip(
+    "."
+)
 
 # Singleton flag to only log the major/minor mismatch warning once per mismatch combo.
 _version_mismatch_warning_logged = {}
@@ -46,10 +42,12 @@ def _check_version(hub_version, singleuser_version, log):
 
     # compare minor X.Y versions
     if hub_version != singleuser_version:
-        from distutils.version import LooseVersion as V
+        from packaging.version import parse
 
-        hub_major_minor = V(hub_version).version[:2]
-        singleuser_major_minor = V(singleuser_version).version[:2]
+        hub = parse(hub_version)
+        hub_major_minor = (hub.major, hub.minor)
+        singleuser = parse(singleuser_version)
+        singleuser_major_minor = (singleuser.major, singleuser.minor)
         extra = ""
         do_log = True
         if singleuser_major_minor == hub_major_minor:
@@ -58,7 +56,7 @@ def _check_version(hub_version, singleuser_version, log):
             log_method = log.debug
         else:
             # log warning-level for more significant mismatch, such as 0.8 vs 0.9, etc.
-            key = '%s-%s' % (hub_version, singleuser_version)
+            key = f'{hub_version}-{singleuser_version}'
             global _version_mismatch_warning_logged
             if _version_mismatch_warning_logged.get(key):
                 do_log = False  # We already logged this warning so don't log it again.

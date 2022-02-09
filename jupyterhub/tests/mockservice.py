@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 import requests
 from tornado import httpserver
 from tornado import ioloop
+from tornado import log
 from tornado import web
 
 from jupyterhub.services.auth import HubAuthenticated
@@ -114,7 +115,9 @@ def main():
 
 
 if __name__ == '__main__':
-    from tornado.options import parse_command_line
+    from tornado.options import parse_command_line, options
 
     parse_command_line()
+    options.logging = 'debug'
+    log.enable_pretty_logging()
     main()

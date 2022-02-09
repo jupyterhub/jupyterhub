@@ -10,14 +10,11 @@ from http.client import responses
 from jinja2 import TemplateNotFound
 from tornado import web
 from tornado.httputil import url_concat
-from tornado.httputil import urlparse
 
 from .. import __version__
-from .. import orm
 from ..metrics import SERVER_POLL_DURATION_SECONDS
 from ..metrics import ServerPollStatus
-from ..pagination import Pagination
-from ..utils import admin_only
+from ..scopes import needs_scope
 from ..utils import maybe_future
 from ..utils import url_path_join
 from .base import BaseHandler
@@ -109,22 +106,27 @@ class SpawnHandler(BaseHandler):
         )
 
     @web.authenticated
-    async def get(self, for_user=None, server_name=''):
+    def get(self, user_name=None, server_name=''):
         """GET renders form for spawning with user-specified options
 
         or triggers spawn via redirect if there is no form.
         """
+        # two-stage to get the right signature for @require_scopes filter on user_name
+        if user_name is None:
+            user_name = self.current_user.name
+        if server_name is None:
+            server_name = ""
+        return self._get(user_name=user_name, server_name=server_name)
+
+    @needs_scope("servers")
+    async def _get(self, user_name, server_name):
+        for_user = user_name
 
         user = current_user = self.current_user
-        if for_user is not None and for_user != user.name:
-            if not user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
-
+        if for_user != user.name:
             user = self.find_user(for_user)
             if user is None:
-                raise web.HTTPError(404, "No such user: %s" % for_user)
+                raise web.HTTPError(404, f"No such user: {for_user}")
 
         if server_name:
             if not self.allow_named_servers:
@@ -144,13 +146,10 @@ class SpawnHandler(BaseHandler):
                     )
 
         if not self.allow_named_servers and user.running:
-            url = self.get_next_url(user, default=user.server_url(server_name))
+            url = self.get_next_url(user, default=user.server_url(""))
             self.log.info("User is running: %s", user.name)
             self.redirect(url)
             return
-
-        if server_name is None:
-            server_name = ''
 
         spawner = user.spawners[server_name]
 
@@ -192,7 +191,6 @@ class SpawnHandler(BaseHandler):
                     spawner._log_name,
                 )
                 options = await maybe_future(spawner.options_from_query(query_options))
-                pending_url = self._get_pending_url(user, server_name)
                 return await self._wrap_spawn_single_user(
                     user, server_name, spawner, pending_url, options
                 )
@@ -222,14 +220,19 @@ class SpawnHandler(BaseHandler):
             )
 
     @web.authenticated
-    async def post(self, for_user=None, server_name=''):
+    def post(self, user_name=None, server_name=''):
         """POST spawns with user-specified options"""
+        if user_name is None:
+            user_name = self.current_user.name
+        if server_name is None:
+            server_name = ""
+        return self._post(user_name=user_name, server_name=server_name)
+
+    @needs_scope("servers")
+    async def _post(self, user_name, server_name):
+        for_user = user_name
         user = current_user = self.current_user
-        if for_user is not None and for_user != user.name:
-            if not user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
+        if for_user != user.name:
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
@@ -240,7 +243,7 @@ class SpawnHandler(BaseHandler):
             raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
         elif spawner.pending:
             raise web.HTTPError(
-                400, "%s is pending %s" % (spawner._log_name, spawner.pending)
+                400, f"{spawner._log_name} is pending {spawner.pending}"
             )
 
         form_options = {}
@@ -311,10 +314,13 @@ class SpawnHandler(BaseHandler):
         # otherwise it may cause a redirect loop
         if f.done() and f.exception():
             exc = f.exception()
+            self.log.exception(f"Error starting server {spawner._log_name}: {exc}")
+            if isinstance(exc, web.HTTPError):
+                # allow custom HTTPErrors to pass through
+                raise exc
             raise web.HTTPError(
                 500,
-                "Error in Authenticator.pre_spawn_start: %s %s"
-                % (type(exc).__name__, str(exc)),
+                f"Unhandled error starting server {spawner._log_name}",
             )
         return self.redirect(pending_url)
 
@@ -337,21 +343,17 @@ class SpawnPendingHandler(BaseHandler):
     """
 
     @web.authenticated
-    async def get(self, for_user, server_name=''):
+    @needs_scope("servers")
+    async def get(self, user_name, server_name=''):
+        for_user = user_name
         user = current_user = self.current_user
-        if for_user is not None and for_user != current_user.name:
-            if not current_user.admin:
-                raise web.HTTPError(
-                    403, "Only admins can spawn on behalf of other users"
-                )
+        if for_user != current_user.name:
             user = self.find_user(for_user)
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
         if server_name and server_name not in user.spawners:
-            raise web.HTTPError(
-                404, "%s has no such server %s" % (user.name, server_name)
-            )
+            raise web.HTTPError(404, f"{user.name} has no such server {server_name}")
 
         spawner = user.spawners[server_name]
 
@@ -389,6 +391,7 @@ class SpawnPendingHandler(BaseHandler):
                 server_name=server_name,
                 spawn_url=spawn_url,
                 failed=True,
+                failed_html_message=getattr(exc, 'jupyterhub_html_message', ''),
                 failed_message=getattr(exc, 'jupyterhub_message', ''),
                 exception=exc,
             )
@@ -455,84 +458,22 @@ class AdminHandler(BaseHandler):
     """Render the admin page."""
 
     @web.authenticated
-    @admin_only
+    # stacked decorators: all scopes must be present
+    # note: keep in sync with admin link condition in page.html
+    @needs_scope('admin:users')
+    @needs_scope('admin:servers')
     async def get(self):
-        pagination = Pagination(url=self.request.uri, config=self.config)
-        page, per_page, offset = pagination.get_page_args(self)
-
-        available = {'name', 'admin', 'running', 'last_activity'}
-        default_sort = ['admin', 'name']
-        mapping = {'running': orm.Spawner.server_id}
-        for name in available:
-            if name not in mapping:
-                table = orm.User if name != "last_activity" else orm.Spawner
-                mapping[name] = getattr(table, name)
-
-        default_order = {
-            'name': 'asc',
-            'last_activity': 'desc',
-            'admin': 'desc',
-            'running': 'desc',
-        }
-
-        sorts = self.get_arguments('sort') or default_sort
-        orders = self.get_arguments('order')
-
-        for bad in set(sorts).difference(available):
-            self.log.warning("ignoring invalid sort: %r", bad)
-            sorts.remove(bad)
-        for bad in set(orders).difference({'asc', 'desc'}):
-            self.log.warning("ignoring invalid order: %r", bad)
-            orders.remove(bad)
-
-        # add default sort as secondary
-        for s in default_sort:
-            if s not in sorts:
-                sorts.append(s)
-        if len(orders) < len(sorts):
-            for col in sorts[len(orders) :]:
-                orders.append(default_order[col])
-        else:
-            orders = orders[: len(sorts)]
-
-        # this could be one incomprehensible nested list comprehension
-        # get User columns
-        cols = [mapping[c] for c in sorts]
-        # get User.col.desc() order objects
-        ordered = [getattr(c, o)() for c, o in zip(cols, orders)]
-
-        query = self.db.query(orm.User).outerjoin(orm.Spawner).distinct(orm.User.id)
-        subquery = query.subquery("users")
-        users = (
-            self.db.query(orm.User)
-            .select_entity_from(subquery)
-            .outerjoin(orm.Spawner)
-            .order_by(*ordered)
-            .limit(per_page)
-            .offset(offset)
-        )
-
-        users = [self._user_from_orm(u) for u in users]
-
-        running = []
-        for u in users:
-            running.extend(s for s in u.spawners.values() if s.active)
-
-        pagination.total = query.count()
-
         auth_state = await self.current_user.get_auth_state()
         html = await self.render_template(
             'admin.html',
             current_user=self.current_user,
             auth_state=auth_state,
             admin_access=self.settings.get('admin_access', False),
-            users=users,
-            running=running,
-            sort={s: o for s, o in zip(sorts, orders)},
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
-            server_version='{} {}'.format(__version__, self.version_hash),
-            pagination=pagination,
+            server_version=f'{__version__} {self.version_hash}',
+            api_page_limit=self.settings["api_page_default_limit"],
+            base_url=self.settings["base_url"],
         )
         self.finish(html)
 
@@ -550,36 +491,32 @@ class TokenPageHandler(BaseHandler):
             return (token.last_activity or never, token.created or never)
 
         now = datetime.utcnow()
-        api_tokens = []
-        for token in sorted(user.api_tokens, key=sort_key, reverse=True):
-            if token.expires_at and token.expires_at < now:
-                self.db.delete(token)
-                self.db.commit()
-                continue
-            api_tokens.append(token)
 
         # group oauth client tokens by client id
-        # AccessTokens have expires_at as an integer timestamp
-        now_timestamp = now.timestamp()
-        oauth_tokens = defaultdict(list)
-        for token in user.oauth_tokens:
-            if token.expires_at and token.expires_at < now_timestamp:
-                self.log.warning("Deleting expired token")
+        all_tokens = defaultdict(list)
+        for token in sorted(user.api_tokens, key=sort_key, reverse=True):
+            if token.expires_at and token.expires_at < now:
+                self.log.warning(f"Deleting expired token {token}")
                 self.db.delete(token)
                 self.db.commit()
                 continue
             if not token.client_id:
                 # token should have been deleted when client was deleted
-                self.log.warning("Deleting stale oauth token for %s", user.name)
+                self.log.warning("Deleting stale oauth token {token}")
                 self.db.delete(token)
                 self.db.commit()
                 continue
-            oauth_tokens[token.client_id].append(token)
+            all_tokens[token.client_id].append(token)
 
+        # individually list tokens issued by jupyterhub itself
+        api_tokens = all_tokens.pop("jupyterhub", [])
+
+        # group all other tokens issued under their owners
         # get the earliest created and latest last_activity
         # timestamp for a given oauth client
         oauth_clients = []
-        for client_id, tokens in oauth_tokens.items():
+
+        for client_id, tokens in all_tokens.items():
             created = tokens[0].created
             last_activity = tokens[0].last_activity
             for token in tokens[1:]:
@@ -592,8 +529,9 @@ class TokenPageHandler(BaseHandler):
             token = tokens[0]
             oauth_clients.append(
                 {
-                    'client': token.client,
-                    'description': token.client.description or token.client.identifier,
+                    'client': token.oauth_client,
+                    'description': token.oauth_client.description
+                    or token.oauth_client.identifier,
                     'created': created,
                     'last_activity': last_activity,
                     'tokens': tokens,
@@ -678,4 +616,5 @@ default_handlers = [
     (r'/token', TokenPageHandler),
     (r'/error/(\d+)', ProxyErrorHandler),
     (r'/health$', HealthCheckHandler),
+    (r'/api/health$', HealthCheckHandler),
 ]

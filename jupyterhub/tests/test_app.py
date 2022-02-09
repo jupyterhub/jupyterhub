@@ -1,9 +1,12 @@
 """Test the JupyterHub entry point"""
 import binascii
+import json
+import logging
 import os
 import re
 import sys
 import time
+from distutils.version import LooseVersion as V
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
@@ -12,6 +15,7 @@ from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
+import traitlets
 from traitlets.config import Config
 
 from .. import orm
@@ -27,6 +31,27 @@ def test_help_all():
     )
     assert '--ip' in out
     assert '--JupyterHub.ip' in out
+
+
+@pytest.mark.skipif(V(traitlets.__version__) < V('5'), reason="requires traitlets 5")
+def test_show_config(tmpdir):
+    tmpdir.chdir()
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--show-config', '--debug'], stdout=PIPE
+    )
+    p.wait(timeout=10)
+    out = p.stdout.read().decode('utf8', 'replace')
+    assert 'log_level' in out
+
+    p = Popen(
+        [sys.executable, '-m', 'jupyterhub', '--show-config-json', '--debug'],
+        stdout=PIPE,
+    )
+    p.wait(timeout=10)
+    out = p.stdout.read().decode('utf8', 'replace')
+    config = json.loads(out)
+    assert 'JupyterHub' in config
+    assert config["JupyterHub"]["log_level"] == 10
 
 
 def test_token_app():
@@ -50,7 +75,7 @@ def test_raise_error_on_missing_specified_config():
     process = Popen(
         [sys.executable, '-m', 'jupyterhub', '--config', 'not-available.py']
     )
-    # wait inpatiently for the process to exit like we want it to
+    # wait impatiently for the process to exit like we want it to
     for i in range(100):
         time.sleep(0.1)
         returncode = process.poll()
@@ -222,15 +247,16 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
+    await hub.init_role_creation()
     await hub.init_users()
     await hub.init_groups()
     db = hub.db
     blue = orm.Group.find(db, name='blue')
     assert blue is not None
-    assert sorted([u.name for u in blue.users]) == sorted(to_load['blue'])
+    assert sorted(u.name for u in blue.users) == sorted(to_load['blue'])
     gold = orm.Group.find(db, name='gold')
     assert gold is not None
-    assert sorted([u.name for u in gold.users]) == sorted(to_load['gold'])
+    assert sorted(u.name for u in gold.users) == sorted(to_load['gold'])
 
 
 async def test_resume_spawners(tmpdir, request):
@@ -329,3 +355,41 @@ def test_url_config(hub_config, expected):
     # validate additional properties
     for key, value in expected.items():
         assert getattr(app, key) == value
+
+
+@pytest.mark.parametrize(
+    "base_url, hub_routespec, expected_routespec, should_warn, bad_prefix",
+    [
+        (None, None, "/", False, False),
+        ("/", "/", "/", False, False),
+        ("/base", "/base", "/base/", False, False),
+        ("/", "/hub", "/hub/", True, False),
+        (None, "hub/api", "/hub/api/", True, False),
+        ("/base", "/hub/", "/hub/", True, True),
+        (None, "/hub/api/health", "/hub/api/health/", True, True),
+    ],
+)
+def test_hub_routespec(
+    base_url, hub_routespec, expected_routespec, should_warn, bad_prefix, caplog
+):
+    cfg = Config()
+    if base_url:
+        cfg.JupyterHub.base_url = base_url
+    if hub_routespec:
+        cfg.JupyterHub.hub_routespec = hub_routespec
+    with caplog.at_level(logging.WARNING):
+        app = JupyterHub(config=cfg, log=logging.getLogger())
+        app.init_hub()
+    hub = app.hub
+    assert hub.routespec == expected_routespec
+
+    if should_warn:
+        assert "custom route for Hub" in caplog.text
+        assert hub_routespec in caplog.text
+    else:
+        assert "custom route for Hub" not in caplog.text
+
+    if bad_prefix:
+        assert "may not receive" in caplog.text
+    else:
+        assert "may not receive" not in caplog.text

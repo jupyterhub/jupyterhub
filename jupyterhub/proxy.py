@@ -24,6 +24,7 @@ import time
 from functools import wraps
 from subprocess import Popen
 from urllib.parse import quote
+from weakref import WeakKeyDictionary
 
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
@@ -32,6 +33,7 @@ from tornado.ioloop import PeriodicCallback
 from traitlets import Any
 from traitlets import Bool
 from traitlets import default
+from traitlets import Dict
 from traitlets import Instance
 from traitlets import Integer
 from traitlets import observe
@@ -42,8 +44,8 @@ from . import utils
 from .metrics import CHECK_ROUTES_DURATION_SECONDS
 from .metrics import PROXY_POLL_DURATION_SECONDS
 from .objects import Server
+from .utils import AnyTimeoutError
 from .utils import exponential_backoff
-from .utils import make_ssl_context
 from .utils import url_path_join
 from jupyterhub.traitlets import Command
 
@@ -54,11 +56,18 @@ def _one_at_a_time(method):
     If multiple concurrent calls to this method are made,
     queue them instead of allowing them to be concurrently outstanding.
     """
-    method._lock = asyncio.Lock()
+    # use weak dict for locks
+    # so that the lock is always acquired within the current asyncio loop
+    # should only be relevant in testing, where eventloops are created and destroyed often
+    method._locks = WeakKeyDictionary()
 
     @wraps(method)
     async def locked_method(*args, **kwargs):
-        async with method._lock:
+        loop = asyncio.get_event_loop()
+        lock = method._locks.get(loop, None)
+        if lock is None:
+            lock = method._locks[loop] = asyncio.Lock()
+        async with lock:
             return await method(*args, **kwargs)
 
     return locked_method
@@ -109,6 +118,26 @@ class Proxy(LoggingConfigurable):
         If True, the Hub will start the proxy and stop it.
         Set to False if the proxy is managed externally,
         such as by systemd, docker, or another service manager.
+        """,
+    )
+
+    extra_routes = Dict(
+        {},
+        config=True,
+        help="""
+        Additional routes to be maintained in the proxy.
+
+        A dictionary with a route specification as key, and
+        a URL as target. The hub will ensure this route is present
+        in the proxy.
+
+        If the hub is running in host based mode (with
+        JupyterHub.subdomain_host set), the routespec *must*
+        have a domain component (example.com/my-url/). If the
+        hub is not running in host based mode, the routespec
+        *must not* have a domain component (/my-url/).
+
+        Helpful when the hub is running in API-only mode.
         """,
     )
 
@@ -313,10 +342,8 @@ class Proxy(LoggingConfigurable):
         if not routes:
             self.log.debug("Fetching routes to check")
             routes = await self.get_all_routes()
-        # log info-level that we are starting the route-checking
-        # this may help diagnose performance issues,
-        # as we are about
-        self.log.info("Checking routes")
+
+        self.log.debug("Checking routes")
 
         user_routes = {path for path, r in routes.items() if 'user' in r['data']}
         futures = []
@@ -330,7 +357,7 @@ class Proxy(LoggingConfigurable):
             route = routes[self.app.hub.routespec]
             if route['target'] != hub.host:
                 self.log.warning(
-                    "Updating default route %s → %s", route['target'], hub.host
+                    "Updating Hub route %s → %s", route['target'], hub.host
                 )
                 futures.append(self.add_hub_route(hub))
 
@@ -384,6 +411,11 @@ class Proxy(LoggingConfigurable):
                     )
                     futures.append(self.add_service(service))
 
+        # Add extra routes we've been configured for
+        for routespec, url in self.extra_routes.items():
+            good_routes.add(routespec)
+            futures.append(self.add_route(routespec, url, {'extra': True}))
+
         # Now delete the routes that shouldn't be there
         for routespec in routes:
             if routespec not in good_routes:
@@ -396,7 +428,7 @@ class Proxy(LoggingConfigurable):
 
     def add_hub_route(self, hub):
         """Add the default route for the Hub"""
-        self.log.info("Adding default route for Hub: %s => %s", hub.routespec, hub.host)
+        self.log.info("Adding route for Hub: %s => %s", hub.routespec, hub.host)
         return self.add_route(hub.routespec, self.hub.host, {'hub': True})
 
     async def restore_routes(self):
@@ -476,7 +508,7 @@ class ConfigurableHTTPProxy(Proxy):
         if self.app.internal_ssl:
             proto = 'https'
 
-        return "{proto}://{url}".format(proto=proto, url=url)
+        return f"{proto}://{url}"
 
     command = Command(
         'configurable-http-proxy',
@@ -532,7 +564,7 @@ class ConfigurableHTTPProxy(Proxy):
         pid_file = os.path.abspath(self.pid_file)
         self.log.warning("Found proxy pid file: %s", pid_file)
         try:
-            with open(pid_file, "r") as f:
+            with open(pid_file) as f:
                 pid = int(f.read().strip())
         except ValueError:
             self.log.warning("%s did not appear to contain a pid", pid_file)
@@ -650,17 +682,6 @@ class ConfigurableHTTPProxy(Proxy):
             cmd.extend(['--ssl-cert', self.ssl_cert])
         if self.app.internal_ssl:
             cmd.extend(self._get_ssl_options())
-        if self.app.statsd_host:
-            cmd.extend(
-                [
-                    '--statsd-host',
-                    self.app.statsd_host,
-                    '--statsd-port',
-                    str(self.app.statsd_port),
-                    '--statsd-prefix',
-                    self.app.statsd_prefix + '.chp',
-                ]
-            )
         # Warn if SSL is not used
         if ' --ssl' not in ' '.join(cmd):
             self.log.warning(
@@ -689,15 +710,16 @@ class ConfigurableHTTPProxy(Proxy):
         def _check_process():
             status = self.proxy_process.poll()
             if status is not None:
-                e = RuntimeError("Proxy failed to start with exit code %i" % status)
-                raise e from None
+                with self.proxy_process:
+                    e = RuntimeError("Proxy failed to start with exit code %i" % status)
+                    raise e from None
 
         for server in (public_server, api_server):
             for i in range(10):
                 _check_process()
                 try:
                     await server.wait_up(1)
-                except TimeoutError:
+                except AnyTimeoutError:
                     continue
                 else:
                     break
@@ -800,7 +822,7 @@ class ConfigurableHTTPProxy(Proxy):
         req = HTTPRequest(
             url,
             method=method,
-            headers={'Authorization': 'token {}'.format(self.auth_token)},
+            headers={'Authorization': f'token {self.auth_token}'},
             body=body,
             connect_timeout=3,  # default: 20s
             request_timeout=10,  # default: 20s
@@ -822,13 +844,13 @@ class ConfigurableHTTPProxy(Proxy):
                     )
                     return False  # a falsy return value make exponential_backoff retry
                 else:
-                    self.log.error("api_request to proxy failed: {0}".format(e))
+                    self.log.error(f"api_request to proxy failed: {e}")
                     # An unhandled error here will help the hub invoke cleanup logic
                     raise
 
         result = await exponential_backoff(
             _wait_for_api_request,
-            'Repeated api_request to proxy path "{}" failed.'.format(path),
+            f'Repeated api_request to proxy path "{path}" failed.',
             timeout=30,
         )
         return result

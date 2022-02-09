@@ -29,5 +29,5 @@ dependencies = package_json['dependencies']
 for dep in dependencies:
     src = join(node_modules, dep)
     dest = join(components, dep)
-    print("%s -> %s" % (src, dest))
+    print(f"{src} -> {dest}")
     shutil.copytree(src, dest)

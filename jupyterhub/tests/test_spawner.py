@@ -21,6 +21,7 @@ from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..spawner import Spawner
 from ..user import User
+from ..utils import AnyTimeoutError
 from ..utils import new_token
 from ..utils import url_path_join
 from .mocking import public_url
@@ -80,6 +81,18 @@ async def test_spawner(db, request):
     assert isinstance(status, int)
 
 
+def test_spawner_from_db(app, user):
+    spawner = user.spawners['name']
+    user_options = {"test": "value"}
+    spawner.orm_spawner.user_options = user_options
+    app.db.commit()
+    # delete and recreate the spawner from the db
+    user.spawners.pop('name')
+    new_spawner = user.spawners['name']
+    assert new_spawner.orm_spawner.user_options == user_options
+    assert new_spawner.user_options == user_options
+
+
 async def wait_for_spawner(spawner, timeout=10):
     """Wait for an http server to show up
 
@@ -95,7 +108,7 @@ async def wait_for_spawner(spawner, timeout=10):
         assert status is None
         try:
             await wait()
-        except TimeoutError:
+        except AnyTimeoutError:
             continue
         else:
             break
@@ -258,12 +271,11 @@ async def test_shell_cmd(db, tmpdir, request):
 
 
 def test_inherit_overwrite():
-    """On 3.6+ we check things are overwritten at import time"""
-    if sys.version_info >= (3, 6):
-        with pytest.raises(NotImplementedError):
+    """We check things are overwritten at import time"""
+    with pytest.raises(NotImplementedError):
 
-            class S(Spawner):
-                pass
+        class S(Spawner):
+            pass
 
 
 def test_inherit_ok():
@@ -415,3 +427,35 @@ async def test_spawner_env(db):
     for key, value in env_overrides.items():
         assert key in env
         assert env[key] == value
+
+
+async def test_hub_connect_url(db):
+    spawner = new_spawner(db, hub_connect_url="https://example.com/")
+    name = spawner.user.name
+    env = spawner.get_env()
+    assert env["JUPYTERHUB_API_URL"] == "https://example.com/api"
+    assert (
+        env["JUPYTERHUB_ACTIVITY_URL"]
+        == "https://example.com/api/users/%s/activity" % name
+    )
+
+
+async def test_spawner_oauth_roles(app, user):
+    allowed_roles = ["admin", "user"]
+    spawner = user.spawners['']
+    spawner.oauth_roles = allowed_roles
+    # exercise start/stop which assign roles to oauth client
+    await spawner.user.spawn()
+    oauth_client = spawner.orm_spawner.oauth_client
+    assert sorted(role.name for role in oauth_client.allowed_roles) == allowed_roles
+    await spawner.user.stop()
+
+
+async def test_spawner_oauth_roles_bad(app, user):
+    allowed_roles = ["user", "nosuchrole"]
+    spawner = user.spawners['']
+    spawner.oauth_roles = allowed_roles
+    # exercise start/stop which assign roles
+    # raises ValueError if we try to assign a role that doesn't exist
+    with pytest.raises(ValueError):
+        await spawner.user.spawn()

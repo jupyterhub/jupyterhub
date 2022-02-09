@@ -17,7 +17,8 @@ from jupyterhub.orm import JSONDict
 
 
 def upgrade():
-    tables = op.get_bind().engine.table_names()
+    engine = op.get_bind().engine
+    tables = sa.inspect(engine).get_table_names()
     if 'spawners' in tables:
         op.add_column('spawners', sa.Column('user_options', JSONDict()))
 

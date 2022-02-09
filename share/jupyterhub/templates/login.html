@@ -10,6 +10,7 @@
 
 {% block login %}
 <div id="login-main" class="container">
+{% block login_container %}
 {% if custom_html %}
 {{ custom_html | safe }}
 {% elif login_service %}
@@ -19,7 +20,7 @@
   </a>
 </div>
 {% else %}
-<form action="{{login_url}}?next={{next}}" method="post" role="form">
+<form action="{{authenticator_login_url}}" method="post" role="form">
   <div class="auth-form-header">
     Sign in
   </div>
@@ -83,6 +84,7 @@
   </div>
 </form>
 {% endif %}
+{% endblock login_container %}
 </div>
 {% endblock login %}
 

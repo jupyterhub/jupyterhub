@@ -148,7 +148,9 @@ class Server(HasTraits):
     def host(self):
         if self.connect_url:
             parsed = urlparse(self.connect_url)
-            return "{proto}://{host}".format(proto=parsed.scheme, host=parsed.netloc)
+            proto = parsed.scheme
+            host = parsed.netloc
+            return f"{proto}://{host}"
 
         if ':' in self._connect_ip:
             fmt = "{proto}://[{ip}]:{port}"
@@ -162,7 +164,7 @@ class Server(HasTraits):
     def url(self):
         if self.connect_url:
             return self.connect_url
-        return "{host}{uri}".format(host=self.host, uri=self.base_url)
+        return f"{self.host}{self.base_url}"
 
     def __repr__(self):
         return "{name}(url={url}, bind_url={bind})".format(
@@ -218,4 +220,4 @@ class Hub(Server):
         return url_path_join(self.url, 'api')
 
     def __repr__(self):
-        return "<%s %s:%s>" % (self.__class__.__name__, self.ip, self.port)
+        return f"<{self.__class__.__name__} {self.ip}:{self.port}>"

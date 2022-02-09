@@ -5,8 +5,8 @@
 Before installing JupyterHub, you will need:
 
 - a Linux/Unix based system
-- [Python](https://www.python.org/downloads/) 3.5 or greater. An understanding
-  of using [`pip`](https://pip.pypa.io/en/stable/) or
+- [Python](https://www.python.org/downloads/) 3.6 or greater. An understanding
+  of using [`pip`](https://pip.pypa.io) or
   [`conda`](https://conda.io/docs/get-started.html) for
   installing Python packages is helpful.
 - [nodejs/npm](https://www.npmjs.com/). [Install nodejs/npm](https://docs.npmjs.com/getting-started/installing-node),
@@ -20,11 +20,11 @@ Before installing JupyterHub, you will need:
     For example, install it on Linux (Debian/Ubuntu) using:
 
     ```
-    sudo apt-get install npm nodejs-legacy
+    sudo apt-get install nodejs npm
     ```
 
-    The `nodejs-legacy` package installs the `node` executable and is currently
-    required for npm to work on Debian/Ubuntu.
+    [nodesource][] is a great resource to get more recent versions of the nodejs runtime,
+    if your system package manager only has an old version of Node.js (e.g. 10 or older).
 
 - A [pluggable authentication module (PAM)](https://en.wikipedia.org/wiki/Pluggable_authentication_module)
   to use the [default Authenticator](./getting-started/authenticators-users-basics.md).
@@ -33,11 +33,17 @@ Before installing JupyterHub, you will need:
 - TLS certificate and key for HTTPS communication
 - Domain name
 
+[nodesource]: https://github.com/nodesource/distributions#table-of-contents
+
 Before running the single-user notebook servers (which may be on the same
 system as the Hub or not), you will need:
 
-- [Jupyter Notebook](https://jupyter.readthedocs.io/en/latest/install.html)
-  version 4 or greater
+- [JupyterLab][] version 3 or greater,
+  or [Jupyter Notebook][]
+  4 or greater.
+
+[jupyterlab]: https://jupyterlab.readthedocs.io
+[jupyter notebook]: https://jupyter.readthedocs.io/en/latest/install.html
 
 ## Installation
 
@@ -48,14 +54,14 @@ JupyterHub can be installed with `pip` (and the proxy with `npm`) or `conda`:
 ```bash
 python3 -m pip install jupyterhub
 npm install -g configurable-http-proxy
-python3 -m pip install notebook  # needed if running the notebook servers locally
+python3 -m pip install jupyterlab notebook  # needed if running the notebook servers in the same environment
 ```
 
 **conda** (one command installs jupyterhub and proxy):
 
 ```bash
 conda install -c conda-forge jupyterhub  # installs jupyterhub and proxy
-conda install notebook  # needed if running the notebook servers locally
+conda install jupyterlab notebook  # needed if running the notebook servers in the same environment
 ```
 
 Test your installation. If installed, these commands should return the packages'
@@ -74,7 +80,7 @@ To start the Hub server, run the command:
 jupyterhub
 ```
 
-Visit `https://localhost:8000` in your browser, and sign in with your unix
+Visit `http://localhost:8000` in your browser, and sign in with your unix
 credentials.
 
 To **allow multiple users to sign in** to the Hub server, you must start

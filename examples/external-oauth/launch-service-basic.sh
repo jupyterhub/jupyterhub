@@ -9,7 +9,7 @@ if [[ -z "${JUPYTERHUB_API_TOKEN}" ]]; then
 fi
 
 # 2. oauth client ID
-export JUPYTERHUB_CLIENT_ID='whoami-oauth-client-test'
+export JUPYTERHUB_CLIENT_ID='service-oauth-client-test'
 # 3. where the Hub is
 export JUPYTERHUB_URL='http://127.0.0.1:8000'
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 import os
 import sys
@@ -19,16 +18,20 @@ extensions = [
     'autodoc_traits',
     'sphinx_copybutton',
     'sphinx-jsonschema',
-    'recommonmark',
+    'myst_parser',
 ]
 
+myst_enable_extensions = [
+    'colon_fence',
+    'deflist',
+]
 # The master toctree document.
 master_doc = 'index'
 
 # General information about the project.
-project = u'JupyterHub'
-copyright = u'2016, Project Jupyter team'
-author = u'Project Jupyter team'
+project = 'JupyterHub'
+copyright = '2016, Project Jupyter team'
+author = 'Project Jupyter team'
 
 # Autopopulate version
 from os.path import dirname
@@ -51,11 +54,6 @@ todo_include_todos = False
 
 # Set the default role so we can use `foo` instead of ``foo``
 default_role = 'literal'
-
-# -- Source -------------------------------------------------------------
-
-import recommonmark
-from recommonmark.transform import AutoStructify
 
 # -- Config -------------------------------------------------------------
 from jupyterhub.app import JupyterHub
@@ -111,9 +109,7 @@ class HelpAllDirective(SphinxDirective):
 
 
 def setup(app):
-    app.add_config_value('recommonmark_config', {'enable_eval_rst': True}, True)
     app.add_css_file('custom.css')
-    app.add_transform(AutoStructify)
     app.add_directive('jupyterhub-generate-config', ConfigDirective)
     app.add_directive('jupyterhub-help-all', HelpAllDirective)
 
@@ -134,6 +130,30 @@ html_static_path = ['_static']
 
 htmlhelp_basename = 'JupyterHubdoc'
 
+html_theme_options = {
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/jupyterhub/jupyterhub",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://discourse.jupyter.org/c/jupyterhub/10",
+            "icon": "fab fa-discourse",
+        },
+    ],
+    "use_edit_page_button": True,
+    "navbar_align": "left",
+}
+
+html_context = {
+    "github_user": "jupyterhub",
+    "github_repo": "jupyterhub",
+    "github_version": "main",
+    "doc_path": "docs",
+}
+
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
@@ -150,8 +170,8 @@ latex_documents = [
     (
         master_doc,
         'JupyterHub.tex',
-        u'JupyterHub Documentation',
-        u'Project Jupyter team',
+        'JupyterHub Documentation',
+        'Project Jupyter team',
         'manual',
     )
 ]
@@ -168,7 +188,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, 'jupyterhub', u'JupyterHub Documentation', [author], 1)]
+man_pages = [(master_doc, 'jupyterhub', 'JupyterHub Documentation', [author], 1)]
 
 # man_show_urls = False
 
@@ -182,7 +202,7 @@ texinfo_documents = [
     (
         master_doc,
         'JupyterHub',
-        u'JupyterHub Documentation',
+        'JupyterHub Documentation',
         author,
         'JupyterHub',
         'One line description of project.',
@@ -209,7 +229,10 @@ epub_exclude_files = ['search.html']
 
 # -- Intersphinx ----------------------------------------------------------
 
-intersphinx_mapping = {'https://docs.python.org/3/': None}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3/', None),
+    'tornado': ('https://www.tornadoweb.org/en/stable/', None),
+}
 
 # -- Read The Docs --------------------------------------------------------
 
@@ -219,7 +242,7 @@ if on_rtd:
     # build both metrics and rest-api, since RTD doesn't run make
     from subprocess import check_call as sh
 
-    sh(['make', 'metrics', 'rest-api'], cwd=docs)
+    sh(['make', 'metrics', 'scopes'], cwd=docs)
 
 # -- Spell checking -------------------------------------------------------
 

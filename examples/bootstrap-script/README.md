@@ -148,9 +148,9 @@ else
     echo "...initial content loading for user ..."
     mkdir $USER_DIRECTORY/tutorials
     cd $USER_DIRECTORY/tutorials
-    wget https://github.com/jakevdp/PythonDataScienceHandbook/archive/master.zip
-    unzip -o master.zip
-    rm master.zip
+    wget https://github.com/jakevdp/PythonDataScienceHandbook/archive/HEAD.zip
+    unzip -o HEAD.zip
+    rm HEAD.zip
 fi
 
 exit 0

@@ -26,7 +26,8 @@ def generate_old_db(env_dir, hub_version, db_url):
     env_pip = os.path.join(env_dir, 'bin', 'pip')
     env_py = os.path.join(env_dir, 'bin', 'python')
     check_call([sys.executable, '-m', 'virtualenv', env_dir])
-    pkgs = ['jupyterhub==' + hub_version]
+    # older jupyterhub needs older sqlachemy version
+    pkgs = ['jupyterhub==' + hub_version, 'sqlalchemy<1.4']
     if 'mysql' in db_url:
         pkgs.append('mysql-connector-python')
     elif 'postgres' in db_url:
@@ -35,7 +36,7 @@ def generate_old_db(env_dir, hub_version, db_url):
     check_call([env_py, populate_db, db_url])
 
 
-@pytest.mark.parametrize('hub_version', ['0.7.2', '0.8.1', '0.9.4'])
+@pytest.mark.parametrize('hub_version', ['1.0.0', "1.2.2", "1.3.0"])
 async def test_upgrade(tmpdir, hub_version):
     db_url = os.getenv('JUPYTERHUB_TEST_DB_URL')
     if db_url:

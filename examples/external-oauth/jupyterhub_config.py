@@ -13,7 +13,7 @@ if not api_token:
 c.JupyterHub.services = [
     {
         'name': 'external-oauth',
-        'oauth_client_id': "whoami-oauth-client-test",
+        'oauth_client_id': "service-oauth-client-test",
         'api_token': api_token,
         'oauth_redirect_uri': 'http://127.0.0.1:5555/oauth_callback',
     }

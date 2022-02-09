@@ -37,7 +37,7 @@ with any provider, is also available.
 ## The Dummy Authenticator
 
 When testing, it may be helpful to use the
-:class:`~jupyterhub.auth.DummyAuthenticator`. This allows for any username and
+{class}`jupyterhub.auth.DummyAuthenticator`. This allows for any username and
 password unless if a global password has been set. Once set, any username will
 still be accepted but the correct password will need to be provided.
 
@@ -247,6 +247,36 @@ class MyAuthenticator(Authenticator):
         spawner.environment['UPSTREAM_TOKEN'] = auth_state['upstream_token']
 ```
 
+## Authenticator-managed group membership
+
+:::{versionadded} 2.2
+:::
+
+Some identity providers may have their own concept of group membership that you would like to preserve in JupyterHub.
+This is now possible with `Authenticator.managed_groups`.
+
+You can set the config:
+
+```python
+c.Authenticator.manage_groups = True
+```
+
+to enable this behavior.
+The default is False for Authenticators that ship with JupyterHub,
+but may be True for custom Authenticators.
+Check your Authenticator's documentation for manage_groups support.
+
+If True, {meth}`.Authenticator.authenticate` and {meth}`.Authenticator.refresh_user` may include a field `groups`
+which is a list of group names the user should be a member of:
+
+- Membership will be added for any group in the list
+- Membership in any groups not in the list will be revoked
+- Any groups not already present in the database will be created
+- If `None` is returned, no changes are made to the user's group membership
+
+If authenticator-managed groups are enabled,
+all group-management via the API is disabled.
+
 ## pre_spawn_start and post_spawn_stop hooks
 
 Authenticators uses two hooks, [pre_spawn_start(user, spawner)][] and
@@ -259,7 +289,7 @@ PAM session.
 
 Beginning with version 0.8, JupyterHub is an OAuth provider.
 
-[authenticator]: https://github.com/jupyterhub/jupyterhub/blob/master/jupyterhub/auth.py
+[authenticator]: https://github.com/jupyterhub/jupyterhub/blob/HEAD/jupyterhub/auth.py
 [pam]: https://en.wikipedia.org/wiki/Pluggable_authentication_module
 [oauth]: https://en.wikipedia.org/wiki/OAuth
 [github oauth]: https://developer.github.com/v3/oauth/

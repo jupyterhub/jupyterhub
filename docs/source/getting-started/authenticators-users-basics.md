@@ -16,13 +16,24 @@ c.Authenticator.allowed_users = {'mal', 'zoe', 'inara', 'kaylee'}
 Users in the `allowed_users` set are added to the Hub database when the Hub is
 started.
 
+```{warning}
+If this configuration value is not set, then **all authenticated users will be allowed into your hub**.
+```
+
 ## Configure admins (`admin_users`)
+
+```{note}
+As of JupyterHub 2.0, the full permissions of `admin_users`
+should not be required.
+Instead, you can assign [roles][] to users or groups
+with only the scopes they require.
+```
 
 Admin users of JupyterHub, `admin_users`, can add and remove users from
 the user `allowed_users` set. `admin_users` can take actions on other users'
 behalf, such as stopping and restarting their servers.
 
-A set of initial admin users, `admin_users` can configured be as follows:
+A set of initial admin users, `admin_users` can be configured as follows:
 
 ```python
 c.Authenticator.admin_users = {'mal', 'zoe'}
@@ -32,9 +43,9 @@ Users in the admin set are automatically added to the user `allowed_users` set,
 if they are not already present.
 
 Each authenticator may have different ways of determining whether a user is an
-administrator. By default JupyterHub use the PAMAuthenticator which provide the
-`admin_groups` option and can determine administrator status base on a user
-groups. For example we can let any users in the `wheel` group be admin:
+administrator. By default JupyterHub uses the PAMAuthenticator which provides the
+`admin_groups` option and can set administrator status based on a user
+group. For example we can let any user in the `wheel` group be admin:
 
 ```python
 c.PAMAuthenticator.admin_groups = {'wheel'}
@@ -42,9 +53,9 @@ c.PAMAuthenticator.admin_groups = {'wheel'}
 
 ## Give admin access to other users' notebook servers (`admin_access`)
 
-Since the default `JupyterHub.admin_access` setting is False, the admins
+Since the default `JupyterHub.admin_access` setting is `False`, the admins
 do not have permission to log in to the single user notebook servers
-owned by _other users_. If `JupyterHub.admin_access` is set to True,
+owned by _other users_. If `JupyterHub.admin_access` is set to `True`,
 then admins have permission to log in _as other users_ on their
 respective machines, for debugging. **As a courtesy, you should make
 sure your users know if admin_access is enabled.**
@@ -53,8 +64,8 @@ sure your users know if admin_access is enabled.**
 
 Users can be added to and removed from the Hub via either the admin
 panel or the REST API. When a user is **added**, the user will be
-automatically added to the allowed users set and database. Restarting the Hub
-will not require manually updating the allowed users set in your config file,
+automatically added to the `allowed_users` set and database. Restarting the Hub
+will not require manually updating the `allowed_users` set in your config file,
 as the users will be loaded from the database.
 
 After starting the Hub once, it is not sufficient to **remove** a user
@@ -91,6 +102,7 @@ JupyterHub's [OAuthenticator][] currently supports the following
 popular services:
 
 - Auth0
+- Azure AD
 - Bitbucket
 - CILogon
 - GitHub
@@ -106,8 +118,8 @@ with any provider, is also available.
 
 ## Use DummyAuthenticator for testing
 
-The :class:`~jupyterhub.auth.DummyAuthenticator` is a simple authenticator that
-allows for any username/password unless if a global password has been set. If
+The `DummyAuthenticator` is a simple authenticator that
+allows for any username/password unless a global password has been set. If
 set, it will allow for any username as long as the correct password is provided.
 To set a global password, add this to the config file:
 

@@ -4,10 +4,11 @@
 import asyncio
 import concurrent.futures
 import errno
+import functools
 import hashlib
 import inspect
-import os
 import random
+import secrets
 import socket
 import ssl
 import sys
@@ -21,12 +22,13 @@ from hmac import compare_digest
 from operator import itemgetter
 
 from async_generator import aclosing
+from sqlalchemy.exc import SQLAlchemyError
+from tornado import gen
 from tornado import ioloop
 from tornado import web
 from tornado.httpclient import AsyncHTTPClient
 from tornado.httpclient import HTTPError
 from tornado.log import app_log
-from tornado.platform.asyncio import to_asyncio_future
 
 # For compatibility with python versions 3.6 or earlier.
 # asyncio.Task.all_tasks() is fully moved to asyncio.all_tasks() starting with 3.9. Also applies to current_task.
@@ -75,7 +77,7 @@ def can_connect(ip, port):
         ip = '127.0.0.1'
     try:
         socket.create_connection((ip, port)).close()
-    except socket.error as e:
+    except OSError as e:
         if e.errno not in {errno.ECONNREFUSED, errno.ETIMEDOUT}:
             app_log.error("Unexpected error connecting to %s:%i %s", ip, port, e)
         return False
@@ -93,6 +95,10 @@ def make_ssl_context(keyfile, certfile, cafile=None, verify=True, check_hostname
     ssl_context.load_cert_chain(certfile, keyfile)
     ssl_context.check_hostname = check_hostname
     return ssl_context
+
+
+# AnyTimeoutError catches TimeoutErrors coming from asyncio, tornado, stdlib
+AnyTimeoutError = (gen.TimeoutError, asyncio.TimeoutError, TimeoutError)
 
 
 async def exponential_backoff(
@@ -180,7 +186,7 @@ async def exponential_backoff(
         if dt < max_wait:
             scale *= scale_factor
         await asyncio.sleep(dt)
-    raise TimeoutError(fail_message)
+    raise asyncio.TimeoutError(fail_message)
 
 
 async def wait_for_server(ip, port, timeout=10):
@@ -223,7 +229,7 @@ async def wait_for_http_server(url, timeout=10, ssl_context=None):
             else:
                 app_log.debug("Server at %s responded with %s", url, e.code)
                 return e.response
-        except (OSError, socket.error) as e:
+        except OSError as e:
             if e.errno not in {
                 errno.ECONNABORTED,
                 errno.ECONNREFUSED,
@@ -252,9 +258,10 @@ def auth_decorator(check_auth):
 
     def decorator(method):
         def decorated(self, *args, **kwargs):
-            check_auth(self)
+            check_auth(self, **kwargs)
             return method(self, *args, **kwargs)
 
+        # Perhaps replace with functools.wrap
         decorated.__name__ = method.__name__
         decorated.__doc__ = method.__doc__
         return decorated
@@ -285,20 +292,39 @@ def authenticated_403(self):
         raise web.HTTPError(403)
 
 
-@auth_decorator
-def admin_only(self):
-    """Decorator for restricting access to admin users"""
-    user = self.current_user
-    if user is None or not user.admin:
-        raise web.HTTPError(403)
+def admin_only(f):
+    """Deprecated!"""
+    # write it this way to trigger deprecation warning at decoration time,
+    # not on the method call
+    warnings.warn(
+        """@jupyterhub.utils.admin_only is deprecated in JupyterHub 2.0.
+
+        Use the new `@jupyterhub.scopes.needs_scope` decorator to resolve permissions,
+        or check against `self.current_user.parsed_scopes`.
+        """,
+        DeprecationWarning,
+        stacklevel=2,
+    )
+
+    # the original decorator
+    @auth_decorator
+    def admin_only(self):
+        """Decorator for restricting access to admin users"""
+        user = self.current_user
+        if user is None or not user.admin:
+            raise web.HTTPError(403)
+
+    return admin_only(f)
 
 
 @auth_decorator
 def metrics_authentication(self):
     """Decorator for restricting access to metrics"""
-    user = self.current_user
-    if user is None and self.authenticate_prometheus:
-        raise web.HTTPError(403)
+    if not self.authenticate_prometheus:
+        return
+    scope = 'read:metrics'
+    if scope not in self.parsed_scopes:
+        raise web.HTTPError(403, f"Access to metrics requires scope '{scope}'")
 
 
 # Token utilities
@@ -319,7 +345,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
     """
     h = hashlib.new(algorithm)
     if isinstance(salt, int):
-        salt = b2a_hex(os.urandom(salt))
+        salt = b2a_hex(secrets.token_bytes(salt))
     if isinstance(salt, bytes):
         bsalt = salt
         salt = salt.decode('utf8')
@@ -331,7 +357,7 @@ def hash_token(token, salt=8, rounds=16384, algorithm='sha512'):
         h.update(btoken)
     digest = h.hexdigest()
 
-    return "{algorithm}:{rounds}:{salt}:{digest}".format(**locals())
+    return f"{algorithm}:{rounds}:{salt}:{digest}"
 
 
 def compare_token(compare, token):
@@ -607,7 +633,7 @@ def _parse_accept_header(accept):
                 media_params.append(('vendor', vnd))
                 # and re-write media_type to something like application/json so
                 # it can be used usefully when looking up emitters
-                media_type = '{}/{}'.format(typ, extra)
+                media_type = f'{typ}/{extra}'
 
         q = 1.0
         for part in parts:
@@ -641,3 +667,62 @@ def get_accepted_mimetype(accept_header, choices=None):
         else:
             return mime
     return None
+
+
+def catch_db_error(f):
+    """Catch and rollback database errors"""
+
+    @functools.wraps(f)
+    async def catching(self, *args, **kwargs):
+        try:
+            r = f(self, *args, **kwargs)
+            if inspect.isawaitable(r):
+                r = await r
+        except SQLAlchemyError:
+            self.log.exception("Rolling back session due to database error")
+            self.db.rollback()
+        else:
+            return r
+
+    return catching
+
+
+def get_browser_protocol(request):
+    """Get the _protocol_ seen by the browser
+
+    Like tornado's _apply_xheaders,
+    but in the case of multiple proxy hops,
+    use the outermost value (what the browser likely sees)
+    instead of the innermost value,
+    which is the most trustworthy.
+
+    We care about what the browser sees,
+    not where the request actually came from,
+    so trusting possible spoofs is the right thing to do.
+    """
+    headers = request.headers
+    # first choice: Forwarded header
+    forwarded_header = headers.get("Forwarded")
+    if forwarded_header:
+        first_forwarded = forwarded_header.split(",", 1)[0].strip()
+        fields = {}
+        forwarded_dict = {}
+        for field in first_forwarded.split(";"):
+            key, _, value = field.partition("=")
+            fields[key.strip().lower()] = value.strip()
+        if "proto" in fields and fields["proto"].lower() in {"http", "https"}:
+            return fields["proto"].lower()
+        else:
+            app_log.warning(
+                f"Forwarded header present without protocol: {forwarded_header}"
+            )
+
+    # second choice: X-Scheme or X-Forwarded-Proto
+    proto_header = headers.get("X-Scheme", headers.get("X-Forwarded-Proto", None))
+    if proto_header:
+        proto_header = proto_header.split(",")[0].strip().lower()
+        if proto_header in {"http", "https"}:
+            return proto_header
+
+    # no forwarded headers
+    return request.protocol

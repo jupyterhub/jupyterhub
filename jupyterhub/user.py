@@ -26,9 +26,39 @@ from .metrics import RUNNING_SERVERS
 from .metrics import TOTAL_USERS
 from .objects import Server
 from .spawner import LocalProcessSpawner
+from .utils import AnyTimeoutError
 from .utils import make_ssl_context
 from .utils import maybe_future
 from .utils import url_path_join
+
+
+# detailed messages about the most common failure-to-start errors,
+# which manifest timeouts during start
+start_timeout_message = """
+Common causes of this timeout, and debugging tips:
+
+1. Everything is working, but it took too long.
+   To fix: increase `Spawner.start_timeout` configuration
+   to a number of seconds that is enough for spawners to finish starting.
+2. The server didn't finish starting,
+   or it crashed due to a configuration issue.
+   Check the single-user server's logs for hints at what needs fixing.
+"""
+
+http_timeout_message = """
+Common causes of this timeout, and debugging tips:
+
+1. The server didn't finish starting,
+   or it crashed due to a configuration issue.
+   Check the single-user server's logs for hints at what needs fixing.
+2. The server started, but is not accessible at the specified URL.
+   This may be a configuration issue specific to your chosen Spawner.
+   Check the single-user server logs and resource to make sure the URL
+   is correct and accessible from the Hub.
+3. (unlikely) Everything is working, but the server took too long to respond.
+   To fix: increase `Spawner.http_timeout` configuration
+   to a number of seconds that is enough for servers to become responsive.
+"""
 
 
 class UserDict(dict):
@@ -84,7 +114,7 @@ class UserDict(dict):
                 if user.name == key:
                     key = user.id
                     break
-        return dict.__contains__(self, key)
+        return super().__contains__(key)
 
     def __getitem__(self, key):
         """UserDict allows retrieval of user by any of:
@@ -108,7 +138,7 @@ class UserDict(dict):
             if orm_user.id not in self:
                 user = self[orm_user.id] = User(orm_user, self.settings)
                 return user
-            user = dict.__getitem__(self, orm_user.id)
+            user = super().__getitem__(orm_user.id)
             user.db = self.db
             return user
         elif isinstance(key, int):
@@ -119,7 +149,7 @@ class UserDict(dict):
                     raise KeyError("No such user: %s" % id)
                 user = self.add(orm_user)
             else:
-                user = dict.__getitem__(self, id)
+                user = super().__getitem__(id)
             return user
         else:
             raise KeyError(repr(key))
@@ -145,7 +175,7 @@ class UserDict(dict):
                 self.db.expunge(orm_spawner)
         if user.orm_user in self.db:
             self.db.expunge(user.orm_user)
-        dict.__delitem__(self, user.id)
+        super().__delitem__(user.id)
 
     def delete(self, key):
         """Delete a user from the cache and the database"""
@@ -223,6 +253,42 @@ class User:
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
+    def sync_groups(self, group_names):
+        """Synchronize groups with database"""
+
+        current_groups = {g.name for g in self.orm_user.groups}
+        new_groups = set(group_names)
+        if current_groups == new_groups:
+            # no change, nothing to do
+            return
+
+        # log group changes
+        new_groups = set(group_names).difference(current_groups)
+        removed_groups = current_groups.difference(group_names)
+        if new_groups:
+            self.log.info("Adding user {self.name} to group(s): {new_groups}")
+        if removed_groups:
+            self.log.info("Removing user {self.name} from group(s): {removed_groups}")
+
+        if group_names:
+            groups = (
+                self.db.query(orm.Group).filter(orm.Group.name.in_(group_names)).all()
+            )
+            existing_groups = {g.name for g in groups}
+            for group_name in group_names:
+                if group_name not in existing_groups:
+                    # create groups that don't exist yet
+                    self.log.info(
+                        f"Creating new group {group_name} for user {self.name}"
+                    )
+                    group = orm.Group(name=group_name)
+                    self.db.add(group)
+                    groups.append(group)
+            self.groups = groups
+        else:
+            self.groups = []
+        self.db.commit()
+
     async def save_auth_state(self, auth_state):
         """Encrypt and store auth_state"""
         if auth_state is None:
@@ -251,6 +317,35 @@ class User:
             if len(CryptKeeper.instance().keys) > 1:
                 await self.save_auth_state(auth_state)
         return auth_state
+
+    async def delete_spawners(self):
+        """Call spawner cleanup methods
+
+        Allows the spawner to cleanup persistent resources
+        """
+        for name in self.orm_user.orm_spawners.keys():
+            await self._delete_spawner(name)
+
+    async def _delete_spawner(self, name_or_spawner):
+        """Delete a single spawner"""
+        # always ensure full Spawner
+        # this may instantiate the Spawner if it wasn't already running,
+        # just to delete it
+        if isinstance(name_or_spawner, str):
+            spawner = self.spawners[name_or_spawner]
+        else:
+            spawner = name_or_spawner
+
+        if spawner.active:
+            raise RuntimeError(
+                f"Spawner {spawner._log_name} is active and cannot be deleted."
+            )
+        try:
+            await maybe_future(spawner.delete_forever())
+        except Exception as e:
+            self.log.exception(
+                f"Error cleaning up persistent resources on {spawner._log_name}"
+            )
 
     def all_spawners(self, include_default=True):
         """Generator yielding all my spawners
@@ -299,7 +394,7 @@ class User:
         # self.escaped_name may contain @ which is legal in URLs but not cookie keys
         client_id = 'jupyterhub-user-%s' % quote(self.name)
         if server_name:
-            client_id = '%s-%s' % (client_id, quote(server_name))
+            client_id = f'{client_id}-{quote(server_name)}'
 
         trusted_alt_names = []
         trusted_alt_names.extend(self.settings.get('trusted_alt_names', []))
@@ -317,6 +412,7 @@ class User:
             oauth_client_id=client_id,
             cookie_options=self.settings.get('cookie_options', {}),
             trusted_alt_names=trusted_alt_names,
+            user_options=orm_spawner.user_options or {},
         )
 
         if self.settings.get('internal_ssl'):
@@ -423,7 +519,7 @@ class User:
         """Get the *host* for my server (proto://domain[:port])"""
         # FIXME: escaped_name probably isn't escaped enough in general for a domain fragment
         parsed = urlparse(self.settings['subdomain_host'])
-        h = '%s://%s' % (parsed.scheme, self.domain)
+        h = f'{parsed.scheme}://{self.domain}'
         if parsed.port:
             h += ':%i' % parsed.port
         return h
@@ -435,7 +531,7 @@ class User:
         Full name.domain/path if using subdomains, otherwise just my /base/url
         """
         if self.settings.get('subdomain_host'):
-            return '{host}{path}'.format(host=self.host, path=self.base_url)
+            return f'{self.host}{self.base_url}'
         else:
             return self.base_url
 
@@ -504,9 +600,7 @@ class User:
         else:
             # spawn via POST or on behalf of another user.
             # nothing we can do here but fail
-            raise web.HTTPError(
-                400, "{}'s authentication has expired".format(self.name)
-            )
+            raise web.HTTPError(400, f"{self.name}'s authentication has expired")
 
     async def spawn(self, server_name='', options=None, handler=None):
         """Start the user's spawner
@@ -531,7 +625,7 @@ class User:
         orm_server = orm.Server(base_url=base_url)
         db.add(orm_server)
         note = "Server at %s" % base_url
-        api_token = self.new_api_token(note=note)
+        api_token = self.new_api_token(note=note, roles=['server'])
         db.commit()
 
         spawner = self.spawners[server_name]
@@ -561,16 +655,32 @@ class User:
         client_id = spawner.oauth_client_id
         oauth_provider = self.settings.get('oauth_provider')
         if oauth_provider:
-            oauth_client = oauth_provider.fetch_by_client_id(client_id)
-            # create a new OAuth client + secret on every launch
-            # containers that resume will be updated below
-            oauth_provider.add_client(
+            allowed_roles = spawner.oauth_roles
+            if callable(allowed_roles):
+                allowed_roles = allowed_roles(spawner)
+
+            # allowed_roles config is a list of strings
+            # oauth provider.allowed_roles is a list of orm.Roles
+            if allowed_roles:
+                allowed_role_names = allowed_roles
+                allowed_roles = list(
+                    self.db.query(orm.Role).filter(orm.Role.name.in_(allowed_roles))
+                )
+                if len(allowed_roles) != len(allowed_role_names):
+                    missing_roles = set(allowed_role_names).difference(
+                        {role.name for role in allowed_roles}
+                    )
+                    raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
+
+            oauth_client = oauth_provider.add_client(
                 client_id,
                 api_token,
                 url_path_join(self.url, server_name, 'oauth_callback'),
+                allowed_roles=allowed_roles,
                 description="Server at %s"
                 % (url_path_join(self.base_url, server_name) + '/'),
             )
+            spawner.orm_spawner.oauth_client = oauth_client
         db.commit()
 
         # trigger pre-spawn hook on authenticator
@@ -579,7 +689,7 @@ class User:
             spawner._start_pending = True
 
             if authenticator:
-                # pre_spawn_start can thow errors that can lead to a redirect loop
+                # pre_spawn_start can throw errors that can lead to a redirect loop
                 # if left uncaught (see https://github.com/jupyterhub/jupyterhub/issues/2683)
                 await maybe_future(authenticator.pre_spawn_start(self, spawner))
 
@@ -677,11 +787,11 @@ class User:
                     db.commit()
 
         except Exception as e:
-            if isinstance(e, gen.TimeoutError):
+            if isinstance(e, AnyTimeoutError):
                 self.log.warning(
-                    "{user}'s server failed to start in {s} seconds, giving up".format(
-                        user=self.name, s=spawner.start_timeout
-                    )
+                    f"{self.name}'s server failed to start"
+                    f" in {spawner.start_timeout} seconds, giving up."
+                    f"\n{start_timeout_message}"
                 )
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.timeout')
@@ -734,14 +844,11 @@ class User:
                 http=True, timeout=spawner.http_timeout, ssl_context=ssl_context
             )
         except Exception as e:
-            if isinstance(e, TimeoutError):
+            if isinstance(e, AnyTimeoutError):
                 self.log.warning(
-                    "{user}'s server never showed up at {url} "
-                    "after {http_timeout} seconds. Giving up".format(
-                        user=self.name,
-                        url=server.url,
-                        http_timeout=spawner.http_timeout,
-                    )
+                    f"{self.name}'s server never showed up at {server.url}"
+                    f" after {spawner.http_timeout} seconds. Giving up."
+                    f"\n{http_timeout_message}"
                 )
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.http_timeout')
@@ -804,14 +911,8 @@ class User:
                 if orm_token:
                     self.db.delete(orm_token)
                 # remove oauth client as well
-                # handle upgrades from 0.8, where client id will be `user-USERNAME`,
-                # not just `jupyterhub-user-USERNAME`
-                client_ids = (
-                    spawner.oauth_client_id,
-                    spawner.oauth_client_id.split('-', 1)[1],
-                )
-                for oauth_client in self.db.query(orm.OAuthClient).filter(
-                    orm.OAuthClient.identifier.in_(client_ids)
+                for oauth_client in self.db.query(orm.OAuthClient).filter_by(
+                    identifier=spawner.oauth_client_id,
                 ):
                     self.log.debug("Deleting oauth client %s", oauth_client.identifier)
                     self.db.delete(oauth_client)
@@ -826,10 +927,7 @@ class User:
             try:
                 await maybe_future(spawner.run_post_stop_hook())
             except:
-                spawner.clear_state()
-                spawner.orm_spawner.state = spawner.get_state()
-                self.db.commit()
-                raise
+                self.log.exception("Error in Spawner.post_stop_hook for %s", self)
             spawner.clear_state()
             spawner.orm_spawner.state = spawner.get_state()
             self.db.commit()

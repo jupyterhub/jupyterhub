@@ -30,7 +30,7 @@ Please submit pull requests to update information or to add new institutions or 
 
 ### University of California Davis
 
-- [Spinning up multiple Jupyter Notebooks on AWS for a tutorial](https://github.com/mblmicdiv/course2017/blob/master/exercises/sourmash-setup.md)
+- [Spinning up multiple Jupyter Notebooks on AWS for a tutorial](https://github.com/mblmicdiv/course2017/blob/HEAD/exercises/sourmash-setup.md)
 
 Although not technically a JupyterHub deployment, this tutorial setup
 may be helpful to others in the Jupyter community.
@@ -60,6 +60,13 @@ easy to do with RStudio too.
 ### Cal Poly San Luis Obispo
 
 - [jupyterhub-deploy-teaching](https://github.com/jupyterhub/jupyterhub-deploy-teaching) based on work by Brian Granger for Cal Poly's Data Science 301 Course
+
+### Chameleon
+
+[Chameleon](https://www.chameleoncloud.org) is a NSF-funded configurable experimental environment for large-scale computer science systems research with [bare metal reconfigurability](https://chameleoncloud.readthedocs.io/en/latest/technical/baremetal.html). Chameleon users utilize JupyterHub to document and reproduce their complex CISE and networking experiments.
+
+- [Shared JupyterHub](https://jupyter.chameleoncloud.org): provides a common "workbench" environment for any Chameleon user.
+- [Trovi](https://www.chameleoncloud.org/experiment/share): a sharing portal of experiments, tutorials, and examples, which users can launch as a dedicated isolated environments on Chameleon's JupyterHub.
 
 ### Clemson University
 

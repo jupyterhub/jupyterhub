@@ -1,60 +1,67 @@
 # This is a GitHub workflow defining a set of jobs with a set of steps.
-# ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
+# ref: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
 #
 name: Test
 
-# Trigger the workflow's on all PRs but only on pushed tags or commits to
-# main/master branch to avoid PRs developed in a GitHub fork's dedicated branch
-# to trigger.
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "**.rst"
+      - ".github/workflows/*"
+      - "!.github/workflows/test.yml"
   push:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "**.rst"
+      - ".github/workflows/*"
+      - "!.github/workflows/test.yml"
+    branches-ignore:
+      - "dependabot/**"
+      - "pre-commit-ci-update-config"
+    tags:
+      - "**"
   workflow_dispatch:
-
-defaults:
-  run:
-    # Declare bash be used by default in this workflow's "run" steps.
-    #
-    # NOTE: bash will by default run with:
-    #   --noprofile: Ignore ~/.profile etc.
-    #   --norc:      Ignore ~/.bashrc etc.
-    #   -e:          Exit directly on errors
-    #   -o pipefail: Don't mask errors from a command piped into another command
-    shell: bash
 
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
+  PYTEST_ADDOPTS: "--verbose --color=yes"
 
 jobs:
-  # Run "pre-commit run --all-files"
-  pre-commit:
+  jstest:
+    # Run javascript tests
     runs-on: ubuntu-20.04
-    timeout-minutes: 2
-
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
+      #       environment and setup in a fraction of a second.
+      - name: Install Node
+        uses: actions/setup-node@v1
         with:
-          python-version: 3.8
+          node-version: "14"
 
-      # ref: https://github.com/pre-commit/action
-      - uses: pre-commit/action@v2.0.0
-      - name: Help message if pre-commit fail
-        if: ${{ failure() }}
+      - name: Install Node dependencies
         run: |
-          echo "You can install pre-commit hooks to automatically run formatting"
-          echo "on each commit with:"
-          echo "    pre-commit install"
-          echo "or you can run by hand on staged files with"
-          echo "    pre-commit run"
-          echo "or after-the-fact on already committed files with"
-          echo "    pre-commit run --all-files"
+          npm install -g yarn
+
+      - name: Run yarn
+        run: |
+          cd jsx
+          yarn
+
+      - name: yarn test
+        run: |
+          cd jsx
+          yarn test
 
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     strategy:
       # Keep running even if one variation of the job fail
@@ -73,9 +80,9 @@ jobs:
         #   Tests everything when JupyterHub works against a dedicated mysql or
         #   postgresql server.
         #
-        # jupyter_server:
+        # nbclassic:
         #   Tests everything when the user instances are started with
-        #   jupyter_server instead of notebook.
+        #   notebook instead of jupyter_server.
         #
         # ssl:
         #   Tests everything using internal SSL connections instead of
@@ -83,7 +90,7 @@ jobs:
         #
         # main_dependencies:
         #   Tests everything when the we use the latest available dependencies
-        #   from: ipytraitlets.
+        #   from: traitlets.
         #
         # NOTE: Since only the value of these parameters are presented in the
         #       GitHub UI when the workflow run, we avoid using true/false as
@@ -91,6 +98,7 @@ jobs:
         include:
           - python: "3.6"
             oldest_dependencies: oldest_dependencies
+            nbclassic: nbclassic
           - python: "3.6"
             subdomain: subdomain
           - python: "3.7"
@@ -100,7 +108,7 @@ jobs:
           - python: "3.8"
             db: postgres
           - python: "3.8"
-            jupyter_server: jupyter_server
+            nbclassic: nbclassic
           - python: "3.9"
             main_dependencies: main_dependencies
 
@@ -164,9 +172,9 @@ jobs:
           if [ "${{ matrix.main_dependencies }}" != "" ]; then
               pip install git+https://github.com/ipython/traitlets#egg=traitlets --force
           fi
-          if [ "${{ matrix.jupyter_server }}" != "" ]; then
-              pip uninstall notebook --yes
-              pip install jupyter_server
+          if [ "${{ matrix.nbclassic }}" != "" ]; then
+              pip uninstall jupyter_server --yes
+              pip install notebook
           fi
           if [ "${{ matrix.db }}" == "mysql" ]; then
               pip install mysql-connector-python
@@ -202,23 +210,47 @@ jobs:
         if: ${{ matrix.db }}
         run: |
           if [ "${{ matrix.db }}" == "mysql" ]; then
+            if [[ -z "$(which mysql)" ]]; then
               sudo apt-get update
               sudo apt-get install -y mysql-client
+            fi
               DB=mysql bash ci/docker-db.sh
               DB=mysql bash ci/init-db.sh
           fi
           if [ "${{ matrix.db }}" == "postgres" ]; then
+            if [[ -z "$(which psql)" ]]; then
               sudo apt-get update
               sudo apt-get install -y postgresql-client
+            fi
               DB=postgres bash ci/docker-db.sh
               DB=postgres bash ci/init-db.sh
           fi
 
       - name: Run pytest
-        # FIXME: --color=yes explicitly set because:
-        #        https://github.com/actions/runner/issues/241
         run: |
-          pytest -v --maxfail=2 --color=yes --cov=jupyterhub jupyterhub/tests
+          pytest --maxfail=2 --cov=jupyterhub jupyterhub/tests
       - name: Submit codecov report
         run: |
           codecov
+
+  docker-build:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: build images
+        run: |
+          docker build -t jupyterhub/jupyterhub .
+          docker build -t jupyterhub/jupyterhub-onbuild onbuild
+          docker build -t jupyterhub/jupyterhub:alpine -f dockerfiles/Dockerfile.alpine .
+          docker build -t jupyterhub/singleuser singleuser
+
+      - name: smoke test jupyterhub
+        run: |
+          docker run --rm -t jupyterhub/jupyterhub jupyterhub --help
+
+      - name: verify static files
+        run: |
+          docker run --rm -t -v $PWD/dockerfiles:/io jupyterhub/jupyterhub python3 /io/test.py

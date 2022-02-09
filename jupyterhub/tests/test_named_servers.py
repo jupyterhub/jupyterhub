@@ -52,10 +52,10 @@ async def test_default_server(app, named_servers):
     r.raise_for_status()
 
     user_model = normalize_user(r.json())
-    print(user_model)
     assert user_model == fill_user(
         {
             'name': username,
+            'roles': ['user'],
             'auth_state': None,
             'server': user.url,
             'servers': {
@@ -86,7 +86,7 @@ async def test_default_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
-        {'name': username, 'servers': {}, 'auth_state': None}
+        {'name': username, 'roles': ['user'], 'auth_state': None}
     )
 
 
@@ -108,7 +108,7 @@ async def test_create_named_server(app, named_servers):
     env = r.json()
     prefix = env.get('JUPYTERHUB_SERVICE_PREFIX')
     assert prefix == user.spawners[servername].server.base_url
-    assert prefix.endswith('/user/%s/%s/' % (username, servername))
+    assert prefix.endswith(f'/user/{username}/{servername}/')
 
     r = await api_request(app, 'users', username)
     r.raise_for_status()
@@ -117,6 +117,7 @@ async def test_create_named_server(app, named_servers):
     assert user_model == fill_user(
         {
             'name': username,
+            'roles': ['user'],
             'auth_state': None,
             'servers': {
                 servername: {
@@ -142,7 +143,7 @@ async def test_delete_named_server(app, named_servers):
     username = 'donaar'
     user = add_user(app.db, app, name=username)
     assert user.allow_named_servers
-    cookies = app.login_user(username)
+    cookies = await app.login_user(username)
     servername = 'splugoth'
     r = await api_request(app, 'users', username, 'servers', servername, method='post')
     r.raise_for_status()
@@ -159,7 +160,7 @@ async def test_delete_named_server(app, named_servers):
 
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
-        {'name': username, 'auth_state': None, 'servers': {}}
+        {'name': username, 'roles': ['user'], 'auth_state': None}
     )
     # wrapper Spawner is gone
     assert servername not in user.spawners
@@ -253,11 +254,9 @@ async def test_named_server_spawn_form(app, username, named_servers):
     cookies = await app.login_user(username)
     user = app.users[username]
     with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
-        r = await get_page(
-            'spawn/%s/%s' % (username, server_name), app, cookies=cookies
-        )
+        r = await get_page(f'spawn/{username}/{server_name}', app, cookies=cookies)
         r.raise_for_status()
-        assert r.url.endswith('/spawn/%s/%s' % (username, server_name))
+        assert r.url.endswith(f'/spawn/{username}/{server_name}')
         assert FormSpawner.options_form in r.text
 
         # submit the form
@@ -313,7 +312,7 @@ async def test_user_redirect_default_server_name(
         r = await async_requests.get(r.url, cookies=cookies)
         path = urlparse(r.url).path
     assert path == url_path_join(
-        app.base_url, '/user/{}/{}/notebooks/test.ipynb'.format(name, server_name)
+        app.base_url, f'/user/{name}/{server_name}/notebooks/test.ipynb'
     )
 
 

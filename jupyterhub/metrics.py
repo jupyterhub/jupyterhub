@@ -198,6 +198,6 @@ def prometheus_log_method(handler):
     """
     REQUEST_DURATION_SECONDS.labels(
         method=handler.request.method,
-        handler='{}.{}'.format(handler.__class__.__module__, type(handler).__name__),
+        handler=f'{handler.__class__.__module__}.{type(handler).__name__}',
         code=handler.get_status(),
     ).observe(handler.request.request_time())

@@ -127,7 +127,7 @@ async def test_refresh_pre_spawn(app, user, refresh_pre_spawn):
 
     # auth is fresh, but should be forced to refresh by spawn
     r = await api_request(
-        app, 'users/{}/server'.format(user.name), method='post', name=user.name
+        app, f'users/{user.name}/server', method='post', name=user.name
     )
     assert 200 <= r.status_code < 300
     assert user._auth_refreshed > before
@@ -141,7 +141,7 @@ async def test_refresh_pre_spawn_expired(app, user, refresh_pre_spawn, disable_r
 
     # auth is fresh, doesn't trigger expiry
     r = await api_request(
-        app, 'users/{}/server'.format(user.name), method='post', name=user.name
+        app, f'users/{user.name}/server', method='post', name=user.name
     )
     assert r.status_code == 403
     assert user._auth_refreshed == before

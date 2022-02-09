@@ -1,0 +1,32 @@
+@import url(../../style/root.css);
+
+.server-dashboard-container {
+  padding-right: 15px;
+  padding-left: 15px;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.server-dashboard-container .add-users-button {
+  border: 1px solid #ddd;
+}
+
+.server-dashboard-container tbody {
+  color: #626262;
+}
+
+.admin-table-head {
+  user-select: none;
+}
+
+.sort-icon {
+  display: inline-block;
+  top: 0.125em;
+  position: relative;
+  user-select: none;
+  cursor: pointer;
+}
+
+tr.noborder > td {
+  border: none !important;
+}
