@@ -5,10 +5,18 @@
 #========================================================#
 #          Base Builder installation (Client)            #
 #========================================================#
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=nvidia/cuda:11.0.3-devel-ubuntu20.04
 FROM $BASE_IMAGE AS builder
 
 USER root
+
+ENV CUDNN_VERSION 8.0.5.39
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8=$CUDNN_VERSION-1+cuda11.0 \
+    libcudnn8-dev=$CUDNN_VERSION-1+cuda11.0 \
+    && apt-mark hold libcudnn8 && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update && apt-get install -yq --no-install-recommends \
@@ -45,6 +53,14 @@ USER root
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+ENV CUDNN_VERSION 8.0.5.39
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcudnn8=$CUDNN_VERSION-1+cuda11.0 \
+    libcudnn8-dev=$CUDNN_VERSION-1+cuda11.0 \
+    && apt-mark hold libcudnn8 && \
+    rm -rf /var/lib/apt/lists/*
+
 RUN apt-get update \
  && apt-get install -yq --no-install-recommends \
     build-essential \
@@ -60,6 +76,7 @@ RUN apt-get update \
     vim \
     r-base \
     libzmq3-dev libcurl4-openssl-dev libssl-dev jupyter-core jupyter-client \
+    zlib1g-dev \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -85,7 +102,7 @@ RUN python3 -m pip install jupyterlab
 
 RUN mkdir -p /srv/jupyterhub/
 WORKDIR /srv/jupyterhub/
-RUN mkdir workspace/
+RUN mkdir /workspace
 
 # Install R kernel
 COPY IRkernel.r IRkernel.r

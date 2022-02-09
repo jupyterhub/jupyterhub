@@ -811,7 +811,7 @@ c.JupyterHub.cookie_max_age_days = 1
 #  - Start with `/notebooks` instead of `/tree` if `default_url` points to a notebook instead of a directory.
 #  - You can set this to `/lab` to have JupyterLab start by default, rather than Jupyter Notebook.
 #  Default: ''
-c.Spawner.default_url = '/lab'
+c.Spawner.default_url = '/lab/tree/꼭%20읽어주세요!.ipynb'
 
 ## Disable per-user configuration of single-user servers.
 #  
