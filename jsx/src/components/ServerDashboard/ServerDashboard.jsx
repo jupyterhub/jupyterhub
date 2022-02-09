@@ -116,12 +116,12 @@ const ServerDashboard = (props) => {
                   testid="admin-sort"
                 />
               </th>
-              <th id="user-header">
+              <th id="server-header">
                 Server{" "}
                 <SortHandler
                   sorts={{ asc: usernameAsc, desc: usernameDesc }}
                   callback={(method) => setSortMethod(() => method)}
-                  testid="user-sort"
+                  testid="server-sort"
                 />
               </th>
               <th id="last-activity-header">
@@ -262,8 +262,12 @@ const ServerDashboard = (props) => {
                       </td>
                     )}
 
-                    <td data-testid="user-row-name">
-                      {server.name || "[MAIN]"}
+                    <td data-testid="user-row-server">
+                      {server.name ? (
+                        <p class="text-secondary">{server.name}</p>
+                      ) : (
+                        <p style={{ color: "lightgrey" }}>[MAIN]</p>
+                      )}
                     </td>
                     <td data-testid="user-row-last-activity">
                       {server.last_activity
