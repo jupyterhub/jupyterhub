@@ -11,6 +11,7 @@ import shutil
 import signal
 import sys
 import warnings
+from inspect import signature
 from subprocess import Popen
 from tempfile import mkdtemp
 from urllib.parse import urlparse
@@ -423,6 +424,13 @@ class Spawner(LoggingConfigurable):
 
     def _default_options_from_form(self, form_data):
         return form_data
+
+    def run_options_from_form(self, form_data):
+        sig = signature(self.options_from_form)
+        if 'spawner' in sig.parameters:
+            return self.options_from_form(form_data, spawner=self)
+        else:
+            return self.options_from_form(form_data)
 
     def options_from_query(self, query_data):
         """Interpret query arguments passed to /spawn
