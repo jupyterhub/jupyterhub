@@ -464,6 +464,7 @@ async def test_spawner_oauth_roles_bad(app, user):
 async def test_spawner_options_from_form(db):
     def options_from_form(form_data):
         return form_data
+
     spawner = new_spawner(db, options_from_form=options_from_form)
     form_data = {"key": ["value"]}
     result = spawner.run_options_from_form(form_data)
@@ -475,6 +476,7 @@ async def test_spawner_options_from_form(db):
 async def test_spawner_options_from_form_with_spawner(db):
     def options_from_form(form_data, spawner):
         return form_data
+
     spawner = new_spawner(db, options_from_form=options_from_form)
     form_data = {"key": ["value"]}
     result = spawner.run_options_from_form(form_data)
