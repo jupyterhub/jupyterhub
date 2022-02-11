@@ -10,6 +10,14 @@ import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
+const AccessServerButton = ({ userName, serverName }) => (
+  <a href={`/user/${userName}/${serverName || ""}`}>
+    <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
+      Access Server
+    </button>
+  </a>
+);
+
 const ServerDashboard = (props) => {
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
@@ -142,6 +150,29 @@ const ServerDashboard = (props) => {
       >
         Start Server
       </button>
+    );
+  };
+
+  const EditUserCell = ({ user, numServers, serverName }) => {
+    if (serverName) return null;
+    return (
+      <td rowspan={numServers}>
+        <button
+          className="btn btn-primary btn-xs"
+          style={{ marginRight: 20 }}
+          onClick={() =>
+            history.push({
+              pathname: "/edit-user",
+              state: {
+                username: user.name,
+                has_admin: user.admin,
+              },
+            })
+          }
+        >
+          Edit User
+        </button>
+      </td>
     );
   };
 
@@ -354,18 +385,10 @@ const ServerDashboard = (props) => {
                             serverName={server.name}
                             userName={e.name}
                           />
-                          <a
-                            href={`/user/${e.name}${
-                              server && server.name && "/" + server.name
-                            }`}
-                          >
-                            <button
-                              className="btn btn-primary btn-xs"
-                              style={{ marginRight: 20 }}
-                            >
-                              Access Server
-                            </button>
-                          </a>
+                          <AccessServerButton
+                            serverName={server.name}
+                            userName={e.name}
+                          />
                         </>
                       ) : (
                         // Start Single-user server
@@ -383,30 +406,17 @@ const ServerDashboard = (props) => {
                               className="btn btn-secondary btn-xs"
                               style={{ marginRight: 20 }}
                             >
-                              Spawn New
+                              Spawn Page
                             </button>
                           </a>
                         </>
                       )}
                     </td>
-                    <td>
-                      {/* Edit User */}
-                      <button
-                        className="btn btn-primary btn-xs"
-                        style={{ marginRight: 20 }}
-                        onClick={() =>
-                          history.push({
-                            pathname: "/edit-user",
-                            state: {
-                              username: e.name,
-                              has_admin: e.admin,
-                            },
-                          })
-                        }
-                      >
-                        edit user
-                      </button>
-                    </td>
+                    <EditUserCell
+                      user={e}
+                      numServers={userServers.length}
+                      serverName={server.name}
+                    />
                   </tr>
                 );
               });
