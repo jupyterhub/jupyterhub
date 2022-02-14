@@ -459,3 +459,27 @@ async def test_spawner_oauth_roles_bad(app, user):
     # raises ValueError if we try to assign a role that doesn't exist
     with pytest.raises(ValueError):
         await spawner.user.spawn()
+
+
+async def test_spawner_options_from_form(db):
+    def options_from_form(form_data):
+        return form_data
+
+    spawner = new_spawner(db, options_from_form=options_from_form)
+    form_data = {"key": ["value"]}
+    result = spawner.run_options_from_form(form_data)
+    for key, value in form_data.items():
+        assert key in result
+        assert result[key] == value
+
+
+async def test_spawner_options_from_form_with_spawner(db):
+    def options_from_form(form_data, spawner):
+        return form_data
+
+    spawner = new_spawner(db, options_from_form=options_from_form)
+    form_data = {"key": ["value"]}
+    result = spawner.run_options_from_form(form_data)
+    for key, value in form_data.items():
+        assert key in result
+        assert result[key] == value

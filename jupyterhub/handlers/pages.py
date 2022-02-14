@@ -255,7 +255,7 @@ class SpawnHandler(BaseHandler):
             self.log.debug(
                 "Triggering spawn with supplied form options for %s", spawner._log_name
             )
-            options = await maybe_future(spawner.options_from_form(form_options))
+            options = await maybe_future(spawner.run_options_from_form(form_options))
             pending_url = self._get_pending_url(user, server_name)
             return await self._wrap_spawn_single_user(
                 user, server_name, spawner, pending_url, options
