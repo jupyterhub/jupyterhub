@@ -10,6 +10,14 @@ import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
+const AccessServerButton = ({ userName, serverName }) => (
+  <a href={`/user/${userName}/${serverName || ""}`}>
+    <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
+      Access Server
+    </button>
+  </a>
+);
+
 const ServerDashboard = (props) => {
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
@@ -29,6 +37,7 @@ const ServerDashboard = (props) => {
 
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
+  var [disabledButtons, setDisabledButtons] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
     user_page = useSelector((state) => state.user_page),
@@ -72,6 +81,101 @@ const ServerDashboard = (props) => {
     user_data = sortMethod(user_data);
   }
 
+  const StopServerButton = ({ serverName, userName }) => {
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-danger btn-xs stop-button"
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          stopServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(data, page);
+                  })
+                  .catch(() => {
+                    setIsDisabled(false);
+                    setErrorAlert(`Failed to update users list.`);
+                  });
+              } else {
+                setErrorAlert(`Failed to stop server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to stop server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Stop Server
+      </button>
+    );
+  };
+
+  const StartServerButton = ({ serverName, userName }) => {
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-success btn-xs start-button"
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          startServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(data, page);
+                  })
+                  .catch(() => {
+                    setErrorAlert(`Failed to update users list.`);
+                    setIsDisabled(false);
+                  });
+              } else {
+                setErrorAlert(`Failed to start server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to start server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Start Server
+      </button>
+    );
+  };
+
+  const EditUserCell = ({ user, numServers, serverName }) => {
+    if (serverName) return null;
+    return (
+      <td rowspan={numServers}>
+        <button
+          className="btn btn-primary btn-xs"
+          style={{ marginRight: 20 }}
+          onClick={() =>
+            history.push({
+              pathname: "/edit-user",
+              state: {
+                username: user.name,
+                has_admin: user.admin,
+              },
+            })
+          }
+        >
+          Edit User
+        </button>
+      </td>
+    );
+  };
+
   return (
     <div className="container" data-testid="container">
       {errorAlert != null ? (
@@ -113,6 +217,14 @@ const ServerDashboard = (props) => {
                   sorts={{ asc: adminAsc, desc: adminDesc }}
                   callback={(method) => setSortMethod(() => method)}
                   testid="admin-sort"
+                />
+              </th>
+              <th id="server-header">
+                Server{" "}
+                <SortHandler
+                  sorts={{ asc: usernameAsc, desc: usernameDesc }}
+                  callback={(method) => setSortMethod(() => method)}
+                  testid="server-sort"
                 />
               </th>
               <th id="last-activity-header">
@@ -227,88 +339,88 @@ const ServerDashboard = (props) => {
                 </Button>
               </td>
             </tr>
-            {user_data.map((e, i) => (
-              <tr key={i + "row"} className="user-row">
-                <td data-testid="user-row-name">{e.name}</td>
-                <td data-testid="user-row-admin">{e.admin ? "admin" : ""}</td>
-                <td data-testid="user-row-last-activity">
-                  {e.last_activity ? timeSince(e.last_activity) : "Never"}
-                </td>
-                <td data-testid="user-row-server-activity">
-                  {e.server != null ? (
-                    // Stop Single-user server
-                    <button
-                      className="btn btn-danger btn-xs stop-button"
-                      onClick={() =>
-                        stopServer(e.name)
-                          .then((res) => {
-                            if (res.status < 300) {
-                              updateUsers(...slice)
-                                .then((data) => {
-                                  dispatchPageUpdate(data, page);
-                                })
-                                .catch(() =>
-                                  setErrorAlert(`Failed to update users list.`)
-                                );
-                            } else {
-                              setErrorAlert(`Failed to stop server.`);
-                            }
-                            return res;
-                          })
-                          .catch(() => setErrorAlert(`Failed to stop server.`))
-                      }
-                    >
-                      Stop Server
-                    </button>
-                  ) : (
-                    // Start Single-user server
-                    <button
-                      className="btn btn-primary btn-xs start-button"
-                      onClick={() =>
-                        startServer(e.name)
-                          .then((res) => {
-                            if (res.status < 300) {
-                              updateUsers(...slice)
-                                .then((data) => {
-                                  dispatchPageUpdate(data, page);
-                                })
-                                .catch(() =>
-                                  setErrorAlert(`Failed to update users list.`)
-                                );
-                            } else {
-                              setErrorAlert(`Failed to start server.`);
-                            }
-                            return res;
-                          })
-                          .catch(() => {
-                            setErrorAlert(`Failed to start server.`);
-                          })
-                      }
-                    >
-                      Start Server
-                    </button>
-                  )}
-                </td>
-                <td>
-                  {/* Edit User */}
-                  <button
-                    className="btn btn-primary btn-xs"
-                    style={{ marginRight: 20 }}
-                    onClick={() =>
-                      history.push({
-                        pathname: "/edit-user",
-                        state: {
-                          username: e.name,
-                          has_admin: e.admin,
-                        },
-                      })
-                    }
-                  >
-                    edit user
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {user_data.flatMap((e, i) => {
+              let userServers = Object.values({
+                "": e.server,
+                ...(e.servers || {}),
+              });
+              return userServers.map((server) => {
+                server = { name: "", ...server };
+                return (
+                  <tr key={i + "row"} className="user-row">
+                    {!server.name && (
+                      <td
+                        data-testid="user-row-name"
+                        rowspan={userServers.length}
+                      >
+                        {e.name}
+                      </td>
+                    )}
+                    {!server.name && (
+                      <td
+                        data-testid="user-row-admin"
+                        rowspan={userServers.length}
+                      >
+                        {e.admin ? "admin" : ""}
+                      </td>
+                    )}
+
+                    <td data-testid="user-row-server">
+                      {server.name ? (
+                        <p class="text-secondary">{server.name}</p>
+                      ) : (
+                        <p style={{ color: "lightgrey" }}>[MAIN]</p>
+                      )}
+                    </td>
+                    <td data-testid="user-row-last-activity">
+                      {server.last_activity
+                        ? timeSince(server.last_activity)
+                        : "Never"}
+                    </td>
+                    <td data-testid="user-row-server-activity">
+                      {server.started ? (
+                        // Stop Single-user server
+                        <>
+                          <StopServerButton
+                            serverName={server.name}
+                            userName={e.name}
+                          />
+                          <AccessServerButton
+                            serverName={server.name}
+                            userName={e.name}
+                          />
+                        </>
+                      ) : (
+                        // Start Single-user server
+                        <>
+                          <StartServerButton
+                            serverName={server.name}
+                            userName={e.name}
+                          />
+                          <a
+                            href={`/spawn/${e.name}${
+                              server.name && "/" + server.name
+                            }`}
+                          >
+                            <button
+                              className="btn btn-secondary btn-xs"
+                              style={{ marginRight: 20 }}
+                            >
+                              Spawn Page
+                            </button>
+                          </a>
+                        </>
+                      )}
+                    </td>
+                    <EditUserCell
+                      user={e}
+                      numServers={userServers.length}
+                      serverName={server.name}
+                    />
+                  </tr>
+                );
+              });
+            })}
           </tbody>
         </table>
         <PaginationFooter

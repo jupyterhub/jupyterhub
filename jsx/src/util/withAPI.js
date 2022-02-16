@@ -11,8 +11,10 @@ const withAPI = withProps(() => ({
       (data) => data.json()
     ),
   shutdownHub: () => jhapiRequest("/shutdown", "POST"),
-  startServer: (name) => jhapiRequest("/users/" + name + "/server", "POST"),
-  stopServer: (name) => jhapiRequest("/users/" + name + "/server", "DELETE"),
+  startServer: (name, serverName = "") =>
+    jhapiRequest("/users/" + name + "/servers/" + (serverName || ""), "POST"),
+  stopServer: (name, serverName = "") =>
+    jhapiRequest("/users/" + name + "/servers/" + (serverName || ""), "DELETE"),
   startAll: (names) =>
     names.map((e) => jhapiRequest("/users/" + e + "/server", "POST")),
   stopAll: (names) =>
