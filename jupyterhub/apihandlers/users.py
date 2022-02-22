@@ -515,7 +515,7 @@ class UserServerAPIHandler(APIHandler):
                             user_name, self.named_server_limit_per_user
                         ),
                     )
-        spawner = user.spawners[server_name]
+        spawner = user.get_spawner(server_name, replace_failed=True)
         pending = spawner.pending
         if pending == 'spawn':
             self.set_header('Content-Type', 'text/plain')
