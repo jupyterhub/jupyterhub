@@ -83,6 +83,7 @@ c.JupyterHub.load_roles = [
             # 'admin:users' # needed if culling idle users as well
         ]
     }
+]
 
 c.JupyterHub.services = [
     {
