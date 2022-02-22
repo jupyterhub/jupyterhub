@@ -97,6 +97,7 @@ from .utils import (
     print_stacks,
     print_ps_info,
     make_ssl_context,
+    create_instance,
 )
 from .metrics import HUB_STARTUP_DURATION_SECONDS
 from .metrics import INIT_SPAWNERS_DURATION_SECONDS
@@ -1119,7 +1120,8 @@ class JupyterHub(Application):
 
     @default('authenticator')
     def _authenticator_default(self):
-        return self.authenticator_class(parent=self, db=self.db)
+        return create_instance(self.authenticator_class,
+                               parent=self, db=self.db)
 
     implicit_spawn_seconds = Float(
         0,
@@ -2595,10 +2597,11 @@ class JupyterHub(Application):
                     self.db.commit()
         self.db.commit()
 
-    def init_proxy(self):
+    async def init_proxy(self):
         """Load the Proxy config"""
         # FIXME: handle deprecated config here
-        self.proxy = self.proxy_class(
+        self.proxy = create_instance(
+            self.proxy_class,
             db_factory=lambda: self.db,
             public_url=self.bind_url,
             parent=self,
@@ -2810,7 +2813,7 @@ class JupyterHub(Application):
         self.init_internal_ssl()
         self.init_db()
         self.init_hub()
-        self.init_proxy()
+        await self.init_proxy()
         self.init_oauth()
         await self.init_role_creation()
         await self.init_users()
