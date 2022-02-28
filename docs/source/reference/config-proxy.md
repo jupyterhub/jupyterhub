@@ -208,6 +208,7 @@ Listen 443
     # proxy to JupyterHub
     ProxyPass         http://127.0.0.1:8000/
     ProxyPassReverse  http://127.0.0.1:8000/
+    RequestHeader     set "X-Forwarded-Proto" expr=%{REQUEST_SCHEME}
   </Location>
 </VirtualHost>
 ```
