@@ -246,6 +246,19 @@ action.
 HubAuth also caches the Hub's response for a number of seconds,
 configurable by the `cookie_cache_max_age` setting (default: five minutes).
 
+If your service would like to make further requests _on behalf of users_,
+it should use the token issued by this OAuth process.
+If you are using tornado,
+you can access the token authenticating the current request with {meth}`.HubAuth.get_token`.
+
+:::{versionchanged} 2.2
+
+{meth}`.HubAuth.get_token` adds support for retrieving
+tokens stored in tornado cookies after completion of OAuth.
+Previously, it only retrieved tokens from URL parameters or the Authorization header.
+Passing `get_token(handler, in_cookie=False)` preserves this behavior.
+:::
+
 ### Flask Example
 
 For example, you have a Flask service that returns information about a user.
