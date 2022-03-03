@@ -193,13 +193,13 @@ Listen 443
 
   # HTTP Strict Transport Security (mod_headers is required) (63072000 seconds)
   Header always set Strict-Transport-Security "max-age=63072000"
-  
+
   # configure SSL
   SSLEngine on
   SSLCertificateFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem
   SSLCertificateKeyFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem
   SSLOpenSSLConfCmd DHParameters /etc/ssl/certs/dhparam.pem
-  
+
   # intermediate configuration from ssl-config.mozilla.org (2022-03-03)
   # Please note, that this configuration might be out-dated - please update it accordingly using https://ssl-config.mozilla.org/
   SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
