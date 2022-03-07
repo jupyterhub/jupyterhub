@@ -128,10 +128,19 @@ async def test_admin_sort(app, sort):
     assert r.status_code == 200
 
 
-async def test_spawn_redirect(app):
+@pytest.mark.parametrize("last_failed", [True, False])
+async def test_spawn_redirect(app, last_failed):
     name = 'wash'
     cookies = await app.login_user(name)
     u = app.users[orm.User.find(app.db, name)]
+
+    if last_failed:
+        # mock a failed spawn
+        last_spawner = u.spawners['']
+        last_spawner._spawn_future = asyncio.Future()
+        last_spawner._spawn_future.set_exception(RuntimeError("I failed!"))
+    else:
+        last_spawner = None
 
     status = await u.spawner.poll()
     assert status is not None
@@ -141,6 +150,10 @@ async def test_spawn_redirect(app):
     r.raise_for_status()
     print(urlparse(r.url))
     path = urlparse(r.url).path
+
+    # ensure we got a new spawner
+    assert u.spawners[''] is not last_spawner
+
     # make sure we visited hub/spawn-pending after spawn
     # if spawn was really quick, we might get redirected all the way to the running server,
     # so check history instead of r.url
@@ -255,6 +268,25 @@ async def test_spawn_page(app):
 
         r = await get_page('spawn?next=foo', app, cookies=cookies)
         assert r.url.endswith('/spawn?next=foo')
+        assert FormSpawner.options_form in r.text
+
+
+async def test_spawn_page_after_failed(app, user):
+    cookies = await app.login_user(user.name)
+
+    # mock a failed spawn
+    last_spawner = user.spawners['']
+    last_spawner._spawn_future = asyncio.Future()
+    last_spawner._spawn_future.set_exception(RuntimeError("I failed!"))
+
+    with mock.patch.dict(app.users.settings, {'spawner_class': FormSpawner}):
+        r = await get_page('spawn', app, cookies=cookies)
+        spawner = user.spawners['']
+        # make sure we didn't reuse last spawner
+        assert isinstance(spawner, FormSpawner)
+        assert spawner is not last_spawner
+        assert r.url.endswith('/spawn')
+        spawner = user.spawners['']
         assert FormSpawner.options_form in r.text
 
 
