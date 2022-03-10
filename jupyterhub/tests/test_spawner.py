@@ -529,3 +529,10 @@ def test_spawner_server(db):
     spawner.server = None
     db.commit()
     assert spawner.orm_spawner.server is None
+
+    # test with no underlying orm.Spawner
+    # (only relevant for mocking, never true for actual Spawners)
+    spawner = Spawner()
+    spawner.server = Server.from_url("http://1.2.3.4")
+    assert spawner.server is not None
+    assert spawner.server.ip == "1.2.3.4"
