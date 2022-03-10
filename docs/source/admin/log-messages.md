@@ -6,11 +6,15 @@ log messages, and what they mean.
 
 ## Failing suspected API request to not-running server
 
+### Example
+
 Your logs might be littered with lines that might look slightly scary
 
 ```
 [W 2022-03-10 17:25:19.774 JupyterHub base:1349] Failing suspected API request to not-running server: /hub/user/<user-name>/api/metrics/v1
 ```
+
+### Most likely cause
 
 However, what this most likely means is that the user's server has
 stopped running but they still have a browser tab open. This is
@@ -29,4 +33,6 @@ to let you restart it.
 Most commonly, you'll see this in reference to the `/api/metrics/v1`
 URL, used by [jupyter-resource-usage](https://github.com/jupyter-server/jupyter-resource-usage).
 
-So for the most part, this log line is pretty benign!
+### Actions you can take
+
+This log message is benign, and there is usually no action for you to take.
