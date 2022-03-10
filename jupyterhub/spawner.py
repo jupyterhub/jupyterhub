@@ -195,8 +195,7 @@ class Spawner(LoggingConfigurable):
         # always check that we're in sync with orm_spawner
         if not self.orm_spawner:
             # no ORM spawner, nothing to check
-            self._server = None
-            return None
+            return self._server
 
         orm_server = self.orm_spawner.server
 
@@ -227,6 +226,10 @@ class Spawner(LoggingConfigurable):
                 if server.orm_server is None:
                     self.log.warning(f"No ORM server for {self._log_name}")
                 self.orm_spawner.server = server.orm_server
+        elif server is not None:
+            self.log.warning(
+                "Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
+            )
 
     @property
     def name(self):
