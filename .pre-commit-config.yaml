@@ -41,6 +41,7 @@ repos:
     rev: v4.1.0
     hooks:
       - id: end-of-file-fixer
+        exclude: share/jupyterhub/static/js/admin-react.js
       - id: requirements-txt-fixer
       - id: check-case-conflict
       - id: check-executables-have-shebangs
