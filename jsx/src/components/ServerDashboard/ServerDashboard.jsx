@@ -1,8 +1,9 @@
 import React, { useState } from "react";
+import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
-import { Button } from "react-bootstrap";
+import { Button, Col, Row, FormControl } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
@@ -37,6 +38,7 @@ const ServerDashboard = (props) => {
 
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
+  var [name_filter, setNameFilter] = useState("");
   var [disabledButtons, setDisabledButtons] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
@@ -45,7 +47,7 @@ const ServerDashboard = (props) => {
     page = parseInt(new URLSearchParams(props.location.search).get("page"));
 
   page = isNaN(page) ? 0 : page;
-  var slice = [page * limit, limit];
+  var slice = [page * limit, limit, name_filter];
 
   const dispatch = useDispatch();
 
@@ -76,6 +78,14 @@ const ServerDashboard = (props) => {
   if (page != user_page) {
     updateUsers(...slice).then((data) => dispatchPageUpdate(data, page));
   }
+
+  var debounce = require("lodash.debounce");
+  const handleSearch = debounce(async (event) => {
+    setNameFilter(event.target.value);
+    updateUsers(page * limit, limit, event.target.value).then((data) =>
+      dispatchPageUpdate(data, page)
+    );
+  }, 300);
 
   if (sortMethod != null) {
     user_data = sortMethod(user_data);
@@ -203,10 +213,22 @@ const ServerDashboard = (props) => {
       ) : (
         <></>
       )}
-      <div className="manage-groups" style={{ float: "right", margin: "20px" }}>
-        <Link to="/groups">{"> Manage Groups"}</Link>
-      </div>
       <div className="server-dashboard-container">
+        <Row>
+          <Col md={4}>
+            <FormControl
+              type="text"
+              name="user_search"
+              placeholder="Search users"
+              defaultValue={name_filter}
+              onChange={handleSearch}
+            />
+          </Col>
+
+          <Col md="auto" style={{ float: "right", margin: 15 }}>
+            <Link to="/groups">{"> Manage Groups"}</Link>
+          </Col>
+        </Row>
         <table className="table table-striped table-bordered table-hover">
           <thead className="admin-table-head">
             <tr>
