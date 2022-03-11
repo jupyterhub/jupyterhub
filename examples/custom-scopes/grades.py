@@ -43,13 +43,31 @@ def require_scope(scopes):
     return wrap
 
 
+class MyGradesHandler(HubOAuthenticated, RequestHandler):
+    # no hub_scopes, anyone with access to this service
+    # will be able to visit this URL
+
+    @authenticated
+    def get(self):
+        self.write("<h1>My grade</h1>")
+        name = self.current_user["name"]
+        grades = self.settings["grades"]
+        self.write(f"<p>My name is: {escape(name)}</p>")
+        if name in grades:
+            self.write(f"<p>My grade is: {escape(str(grades[name]))}</p>")
+        else:
+            self.write("<p>No grade entered</p>")
+        if READ_SCOPE in self.current_user["scopes"]:
+            self.write('<a href="grades/">enter grades</a>')
+
+
 class GradesHandler(HubOAuthenticated, RequestHandler):
     # default scope for this Handler: read-only
     hub_scopes = [READ_SCOPE]
 
     def _render(self):
         grades = self.settings["grades"]
-        self.write("<h1>Grades</h1>")
+        self.write("<h1>All grades</h1>")
         self.write("<table>")
         self.write("<tr><th>Student</th><th>Grade</th></tr>")
         for student, grade in grades.items():
@@ -92,7 +110,8 @@ def main():
 
     app = Application(
         [
-            (base_url, GradesHandler),
+            (base_url, MyGradesHandler),
+            (url_path_join(base_url, 'grades/'), GradesHandler),
             (
                 url_path_join(base_url, 'oauth_callback'),
                 HubOAuthCallbackHandler,

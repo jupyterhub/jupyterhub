@@ -31,7 +31,13 @@ c.JupyterHub.load_roles = [
         "name": "grader",
         # grant graders access to write grades
         "scopes": ["custom:grades:write"],
-        "users": ["grader", "instructor"],
+        "users": ["grader"],
+    },
+    {
+        "name": "instructor",
+        # grant instructors access to read, but not write grades
+        "scopes": ["custom:grades:read"],
+        "users": ["instructor"],
     },
 ]
 
