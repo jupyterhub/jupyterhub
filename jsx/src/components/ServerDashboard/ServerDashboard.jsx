@@ -153,10 +153,9 @@ const ServerDashboard = (props) => {
     );
   };
 
-  const EditUserCell = ({ user, numServers, serverName }) => {
-    if (serverName) return null;
+  const EditUserCell = ({ user }) => {
     return (
-      <td rowspan={numServers}>
+      <td>
         <button
           className="btn btn-primary btn-xs"
           style={{ marginRight: 20 }}
@@ -175,6 +174,14 @@ const ServerDashboard = (props) => {
       </td>
     );
   };
+
+  let servers = user_data.flatMap((user) => {
+    let userServers = Object.values({
+      "": user.server || {},
+      ...(user.servers || {}),
+    });
+    return userServers.map((server) => [user, server]);
+  });
 
   return (
     <div className="container" data-testid="container">
@@ -339,87 +346,65 @@ const ServerDashboard = (props) => {
                 </Button>
               </td>
             </tr>
-            {user_data.flatMap((e, i) => {
-              let userServers = Object.values({
-                "": e.server,
-                ...(e.servers || {}),
-              });
-              return userServers.map((server) => {
-                server = { name: "", ...server };
-                return (
-                  <tr key={i + "row"} className="user-row">
-                    {!server.name && (
-                      <td
-                        data-testid="user-row-name"
-                        rowspan={userServers.length}
-                      >
-                        {e.name}
-                      </td>
-                    )}
-                    {!server.name && (
-                      <td
-                        data-testid="user-row-admin"
-                        rowspan={userServers.length}
-                      >
-                        {e.admin ? "admin" : ""}
-                      </td>
-                    )}
+            {servers.map(([user, server], i) => {
+              server.name = server.name || "";
+              return (
+                <tr key={i + "row"} className="user-row">
+                  <td data-testid="user-row-name">{user.name}</td>
+                  <td data-testid="user-row-admin">
+                    {user.admin ? "admin" : ""}
+                  </td>
 
-                    <td data-testid="user-row-server">
-                      {server.name ? (
-                        <p class="text-secondary">{server.name}</p>
-                      ) : (
-                        <p style={{ color: "lightgrey" }}>[MAIN]</p>
-                      )}
-                    </td>
-                    <td data-testid="user-row-last-activity">
-                      {server.last_activity
-                        ? timeSince(server.last_activity)
-                        : "Never"}
-                    </td>
-                    <td data-testid="user-row-server-activity">
-                      {server.started ? (
-                        // Stop Single-user server
-                        <>
-                          <StopServerButton
-                            serverName={server.name}
-                            userName={e.name}
-                          />
-                          <AccessServerButton
-                            serverName={server.name}
-                            userName={e.name}
-                          />
-                        </>
-                      ) : (
-                        // Start Single-user server
-                        <>
-                          <StartServerButton
-                            serverName={server.name}
-                            userName={e.name}
-                          />
-                          <a
-                            href={`/spawn/${e.name}${
-                              server.name && "/" + server.name
-                            }`}
+                  <td data-testid="user-row-server">
+                    {server.name ? (
+                      <p class="text-secondary">{server.name}</p>
+                    ) : (
+                      <p style={{ color: "lightgrey" }}>[MAIN]</p>
+                    )}
+                  </td>
+                  <td data-testid="user-row-last-activity">
+                    {server.last_activity
+                      ? timeSince(server.last_activity)
+                      : "Never"}
+                  </td>
+                  <td data-testid="user-row-server-activity">
+                    {server.started ? (
+                      // Stop Single-user server
+                      <>
+                        <StopServerButton
+                          serverName={server.name}
+                          userName={user.name}
+                        />
+                        <AccessServerButton
+                          serverName={server.name}
+                          userName={user.name}
+                        />
+                      </>
+                    ) : (
+                      // Start Single-user server
+                      <>
+                        <StartServerButton
+                          serverName={server.name}
+                          userName={user.name}
+                        />
+                        <a
+                          href={`/spawn/${user.name}${
+                            server.name && "/" + server.name
+                          }`}
+                        >
+                          <button
+                            className="btn btn-secondary btn-xs"
+                            style={{ marginRight: 20 }}
                           >
-                            <button
-                              className="btn btn-secondary btn-xs"
-                              style={{ marginRight: 20 }}
-                            >
-                              Spawn Page
-                            </button>
-                          </a>
-                        </>
-                      )}
-                    </td>
-                    <EditUserCell
-                      user={e}
-                      numServers={userServers.length}
-                      serverName={server.name}
-                    />
-                  </tr>
-                );
-              });
+                            Spawn Page
+                          </button>
+                        </a>
+                      </>
+                    )}
+                  </td>
+                  <EditUserCell user={user} />
+                </tr>
+              );
             })}
           </tbody>
         </table>
