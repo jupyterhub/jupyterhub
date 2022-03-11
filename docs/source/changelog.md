@@ -8,6 +8,31 @@ command line for details.
 
 ## 2.2
 
+### 2.2.1 2021-03-11
+
+2.2.1 fixes a few small regressions in 2.2.0.
+
+([full changelog](https://github.com/jupyterhub/jupyterhub/compare/2.2.0...2.2.1))
+
+#### Bugs fixed
+
+- Fix clearing cookie with custom xsrf cookie options [#3823](https://github.com/jupyterhub/jupyterhub/pull/3823) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Fix admin dashboard table sorting [#3822](https://github.com/jupyterhub/jupyterhub/pull/3822) ([@NarekA](https://github.com/NarekA), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Maintenance and upkeep improvements
+
+- allow Spawner.server to be mocked without underlying orm_spawner [#3819](https://github.com/jupyterhub/jupyterhub/pull/3819) ([@minrk](https://github.com/minrk), [@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio))
+
+#### Documentation
+
+- Add some docs on common log messages [#3820](https://github.com/jupyterhub/jupyterhub/pull/3820) ([@yuvipanda](https://github.com/yuvipanda), [@choldgraf](https://github.com/choldgraf), [@consideRatio](https://github.com/consideRatio))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-03-07&to=2022-03-11&type=c))
+
+[@choldgraf](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2022-03-07..2022-03-11&type=Issues) | [@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2022-03-07..2022-03-11&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2022-03-07..2022-03-11&type=Issues) | [@NarekA](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ANarekA+updated%3A2022-03-07..2022-03-11&type=Issues) | [@yuvipanda](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2022-03-07..2022-03-11&type=Issues)
+
 # 2.2.0 2021-03-07
 
 JupyterHub 2.2.0 is a small release.
