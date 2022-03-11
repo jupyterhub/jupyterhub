@@ -10,6 +10,8 @@ from oauthlib.oauth2.rfc6749.grant_types import base
 from tornado.log import app_log
 
 from .. import orm
+from ..roles import roles_to_scopes
+from ..scopes import _check_scopes_exist
 from ..utils import compare_token
 from ..utils import hash_token
 
@@ -152,7 +154,7 @@ class JupyterHubRequestValidator(RequestValidator):
         )
         if orm_client is None:
             raise ValueError("No such client: %s" % client_id)
-        return [role.name for role in orm_client.allowed_roles]
+        return roles_to_scopes(orm_client.allowed_roles)
 
     def get_original_scopes(self, refresh_token, request, *args, **kwargs):
         """Get the list of scopes associated with the refresh token.
@@ -252,7 +254,7 @@ class JupyterHubRequestValidator(RequestValidator):
             code=code['code'],
             # oauth has 5 minutes to complete
             expires_at=int(orm.OAuthCode.now() + 300),
-            roles=request._jupyterhub_roles,
+            scopes=list(request._jupyterhub_scopes),
             user=request.user.orm_user,
             redirect_uri=orm_client.redirect_uri,
             session_id=request.session_id,
@@ -349,7 +351,7 @@ class JupyterHubRequestValidator(RequestValidator):
         orm.APIToken.new(
             client_id=client.identifier,
             expires_in=token['expires_in'],
-            roles=[rolename for rolename in request.scopes],
+            scopes=request.scopes,
             token=token['access_token'],
             session_id=request.session_id,
             user=request.user,
@@ -451,7 +453,7 @@ class JupyterHubRequestValidator(RequestValidator):
             return False
         request.user = orm_code.user
         request.session_id = orm_code.session_id
-        request.scopes = [role.name for role in orm_code.roles]
+        request.scopes = orm_code.scopes
         return True
 
     def validate_grant_type(
@@ -547,35 +549,51 @@ class JupyterHubRequestValidator(RequestValidator):
             - Resource Owner Password Credentials Grant
             - Client Credentials Grant
         """
+
         orm_client = (
             self.db.query(orm.OAuthClient).filter_by(identifier=client_id).one_or_none()
         )
         if orm_client is None:
             app_log.warning("No such oauth client %s", client_id)
             return False
-        client_allowed_roles = {role.name: role for role in orm_client.allowed_roles}
+
         # explicitly allow 'identify', which was the only allowed scope previously
         # requesting 'identify' gets no actual permissions other than self-identification
-        client_allowed_roles.setdefault('identify', None)
-        roles = []
-        requested_roles = set(scopes)
-        disallowed_roles = requested_roles.difference(client_allowed_roles)
-        if disallowed_roles:
+        scopes = set(scopes)
+        scopes.discard("identify")
+
+        # TODO: handle roles->scopes transition
+        # at this point, 'scopes' _may_ be roles
+        try:
+            _check_scopes_exist(scopes)
+        except KeyError as e:
+            # scopes don't exist, maybe they are role names
+            requested_roles = list(
+                self.db.query(orm.Role).filter(orm.Role.name.in_(scopes))
+            )
+            if len(requested_roles) != len(scopes):
+                # did not find roles
+                app_log.warning(f"No such scopes: {scopes}")
+                return False
+            app_log.info(f"OAuth client {client_id} requesting roles: {scopes}")
+            scopes = roles_to_scopes(requested_roles)
+
+        client_allowed_scopes = roles_to_scopes(orm_client.allowed_roles)
+
+        requested_scopes = set(scopes)
+        disallowed_scopes = requested_scopes.difference(client_allowed_scopes)
+        if disallowed_scopes:
             app_log.error(
-                f"Role(s) not allowed for {client_id}: {','.join(disallowed_roles)}"
+                f"Scope(s) not allowed for {client_id}: {', '.join(disallowed_scopes)}"
             )
             return False
 
         # store resolved roles on request
         app_log.debug(
-            f"Allowing request for role(s) for {client_id}:  {','.join(requested_roles) or '[]'}"
+            f"Allowing request for scope(s) for {client_id}:  {','.join(requested_scopes) or '[]'}"
         )
         # these will be stored on the OAuthCode object
-        request._jupyterhub_roles = [
-            client_allowed_roles[name]
-            for name in requested_roles
-            if client_allowed_roles[name] is not None
-        ]
+        request._jupyterhub_scopes = requested_scopes
         return True
 
 

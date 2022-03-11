@@ -180,7 +180,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             raise
         self.send_oauth_response(headers, body, status)
 
-    def needs_oauth_confirm(self, user, oauth_client, roles):
+    def needs_oauth_confirm(self, user, oauth_client, requested_scopes):
         """Return whether the given oauth client needs to prompt for access for the given user
 
         Checks list for oauth clients that don't need confirmation
@@ -211,20 +211,20 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             user_id=user.id,
             client_id=oauth_client.identifier,
         )
-        authorized_roles = set()
+        authorized_scopes = set()
         for token in existing_tokens:
-            authorized_roles.update({role.name for role in token.roles})
+            authorized_scopes.update(token.scopes)
 
-        if authorized_roles:
-            if set(roles).issubset(authorized_roles):
+        if authorized_scopes:
+            if set(requested_scopes).issubset(authorized_scopes):
                 self.log.debug(
-                    f"User {user.name} has already authorized {oauth_client.identifier} for roles {roles}"
+                    f"User {user.name} has already authorized {oauth_client.identifier} for scopes {requested_scopes}"
                 )
                 return False
             else:
                 self.log.debug(
                     f"User {user.name} has authorized {oauth_client.identifier}"
-                    f" for roles {authorized_roles}, confirming additonal roles {roles}"
+                    f" for scopes {authorized_scopes}, confirming additonal scopes {requested_scopes}"
                 )
         # default: require confirmation
         return True
@@ -251,7 +251,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         uri, http_method, body, headers = self.extract_oauth_params()
         try:
             (
-                role_names,
+                requested_scopes,
                 credentials,
             ) = self.oauth_provider.validate_authorization_request(
                 uri, http_method, body, headers
@@ -284,40 +284,35 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                     403, f"You do not have permission to access {client.description}"
                 )
 
-            # subset role names to those held by authenticating user
-            requested_role_names = set(role_names)
+            # subset 'raw scopes' to those held by authenticating user
+            requested_scopes = set(requested_scopes)
             user = self.current_user
-            user_role_names = {role.name for role in user.roles}
-            allowed_role_names = requested_role_names.intersection(user_role_names)
-            excluded_role_names = requested_role_names.difference(allowed_role_names)
-            if excluded_role_names:
-                self.log.info(
-                    f"Service {client.description} requested roles {','.join(role_names)}"
-                    f" for user {self.current_user.name},"
-                    f" granting only {','.join(allowed_role_names) or '[]'}."
-                )
-                role_names = list(allowed_role_names)
+            # raw, _not_ expanded scopes
+            user_scopes = roles.roles_to_scopes(roles.get_roles_for(user.orm_user))
+            allowed_scopes = requested_scopes.intersection(user_scopes)
+            excluded_scopes = requested_scopes.difference(user_scopes)
+            # TODO: compute lower-level intersection
+            # of _expanded_ scopes
 
-            if not self.needs_oauth_confirm(self.current_user, client, role_names):
+            if excluded_scopes:
+                self.log.info(
+                    f"Service {client.description} requested scopes {','.join(requested_scopes)}"
+                    f" for user {self.current_user.name},"
+                    f" granting only {','.join(allowed_scopes) or '[]'}."
+                )
+
+            if not self.needs_oauth_confirm(self.current_user, client, allowed_scopes):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
                     self.current_user,
                     client.description,
                 )
                 # this is the pre-1.0 behavior for all oauth
-                self._complete_login(uri, headers, role_names, credentials)
+                self._complete_login(uri, headers, allowed_scopes, credentials)
                 return
 
             # resolve roles to scopes for authorization page
-            raw_scopes = set()
-            if role_names:
-                role_objects = (
-                    self.db.query(orm.Role).filter(orm.Role.name.in_(role_names)).all()
-                )
-                raw_scopes = set(
-                    itertools.chain(*(role.scopes for role in role_objects))
-                )
-            if not raw_scopes:
+            if not allowed_scopes:
                 scope_descriptions = [
                     {
                         "scope": None,
@@ -327,8 +322,8 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                         "filter": "",
                     }
                 ]
-            elif 'inherit' in raw_scopes:
-                raw_scopes = ['inherit']
+            elif 'inherit' in allowed_scopes:
+                allowed_scopes = ['inherit']
                 scope_descriptions = [
                     {
                         "scope": "inherit",
@@ -340,7 +335,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 ]
             else:
                 scope_descriptions = scopes.describe_raw_scopes(
-                    raw_scopes,
+                    allowed_scopes,
                     username=self.current_user.name,
                 )
             # Render oauth 'Authorize application...' page
@@ -349,7 +344,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 await self.render_template(
                     "oauth.html",
                     auth_state=auth_state,
-                    role_names=role_names,
+                    allowed_scopes=allowed_scopes,
                     scope_descriptions=scope_descriptions,
                     oauth_client=client,
                 )

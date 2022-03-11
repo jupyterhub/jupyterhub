@@ -278,19 +278,19 @@ async def test_refuse_exceeding_token_permissions(
 ):
     user = create_user_with_scopes('self')
     user.new_api_token()
-    create_temp_role(['admin:users'], 'exceeding_role')
     with pytest.raises(ValueError):
-        roles.update_roles(app.db, entity=user.api_tokens[0], roles=['exceeding_role'])
+        user.api_tokens[0].update_scopes(["admin:users"])
 
 
 async def test_exceeding_user_permissions(
-    app, create_user_with_scopes, create_temp_role
+    app,
+    create_user_with_scopes,
 ):
     user = create_user_with_scopes('list:users', 'read:users:groups')
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
-    create_temp_role(['list:users', 'read:users'], 'reader_role')
-    roles.grant_role(app.db, orm_api_token, rolename='reader_role')
+    # store scopes user does not have
+    orm_api_token.scopes = orm_api_token.scopes + ['list:users', 'read:users']
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
@@ -465,7 +465,7 @@ async def test_metascope_self_expansion(
     else:
         orm_obj = create_service_with_scopes('self')
     # test expansion of user/service scopes
-    scopes = roles.expand_roles_to_scopes(orm_obj)
+    scopes = get_scopes_for(orm_obj)
     assert bool(scopes) == has_user_scopes
 
     # test expansion of token scopes
@@ -484,7 +484,7 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     assert user_scope_set == token_scope_set
 
     # Check no roles means no permissions
-    token.roles.clear()
+    token.scopes.clear()
     app.db.commit()
     token_scope_set = get_scopes_for(token)
     assert not token_scope_set
@@ -688,8 +688,8 @@ async def test_resolve_token_permissions(
     roles.strip_role(app.db, orm_user, "admin")
 
     # get expanded !user filter scopes for check
-    user_scopes = roles.expand_roles_to_scopes(orm_user)
-    token_scopes = roles.expand_roles_to_scopes(orm_api_token)
+    user_scopes = get_scopes_for(orm_user)
+    token_scopes = get_scopes_for(orm_api_token)
 
     token_retained_scopes = get_scopes_for(orm_api_token)
 

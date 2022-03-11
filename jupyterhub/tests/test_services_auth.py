@@ -428,9 +428,9 @@ async def test_oauth_page_hit(
     user = create_user_with_scopes("access:services", "self")
     for role in test_roles.values():
         roles.grant_role(app.db, user, role)
-    user.new_api_token()
+    token_scopes = roles.roles_to_scopes([test_roles[t] for t in token_roles])
+    user.new_api_token(scopes=token_scopes)
     token = user.api_tokens[0]
-    token.roles = [test_roles[t] for t in token_roles]
 
     oauth_client = (
         app.db.query(orm.OAuthClient)

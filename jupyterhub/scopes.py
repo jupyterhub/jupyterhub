@@ -15,6 +15,7 @@ import re
 import warnings
 from enum import Enum
 from functools import lru_cache
+from itertools import chain
 from textwrap import indent
 
 import sqlalchemy as sa
@@ -300,9 +301,8 @@ def get_scopes_for(orm_object):
             )
 
     if isinstance(orm_object, orm.APIToken):
-        app_log.debug(f"Authenticated with token {orm_object}")
         owner = orm_object.user or orm_object.service
-        token_scopes = roles.expand_roles_to_scopes(orm_object)
+        token_scopes = expand_scopes(orm_object.scopes, owner=owner)
         if orm_object.client_id != "jupyterhub":
             # oauth tokens can be used to access the service issuing the token,
             # assuming the owner itself still has permission to do so
@@ -320,7 +320,8 @@ def get_scopes_for(orm_object):
                         f"Token {orm_object} has no associated service or spawner!"
                     )
 
-        owner_scopes = roles.expand_roles_to_scopes(owner)
+        owner_roles = roles.get_roles_for(owner)
+        owner_scopes = roles.roles_to_expanded_scopes(owner_roles, owner)
 
         if token_scopes == {'inherit'}:
             # token_scopes is only 'inherit', return scopes inherited from owner as-is
@@ -346,7 +347,132 @@ def get_scopes_for(orm_object):
             )
         expanded_scopes = intersection
     else:
-        expanded_scopes = roles.expand_roles_to_scopes(orm_object)
+        expanded_scopes = roles.roles_to_expanded_scopes(
+            roles.get_roles_for(orm_object),
+            owner=orm_object,
+        )
+    return expanded_scopes
+
+
+def _expand_self_scope(username):
+    """
+    Users have a metascope 'self' that should be expanded to standard user privileges.
+    At the moment that is a user-filtered version (optional read) access to
+    users
+    users:name
+    users:groups
+    users:activity
+    tokens
+    servers
+    access:servers
+
+
+    Arguments:
+      username (str): user name
+
+    Returns:
+      expanded scopes (set): set of expanded scopes covering standard user privileges
+    """
+    scope_list = [
+        'read:users',
+        'read:users:name',
+        'read:users:groups',
+        'users:activity',
+        'read:users:activity',
+        'servers',
+        'delete:servers',
+        'read:servers',
+        'tokens',
+        'read:tokens',
+        'access:servers',
+    ]
+    return {f"{scope}!user={username}" for scope in scope_list}
+
+
+def _expand_scope(scope):
+    """Returns a scope and all all subscopes
+
+    Arguments:
+      scope (str): the scope to expand
+
+    Returns:
+      expanded scope (set): set of all scope's subscopes including the scope itself
+    """
+
+    # remove filter, save for later
+    scope_name, sep, filter_ = scope.partition('!')
+
+    # expand scope and subscopes
+    expanded_scope_names = set()
+
+    def _add_subscopes(scope_name):
+        expanded_scope_names.add(scope_name)
+        if scope_definitions[scope_name].get('subscopes'):
+            for subscope in scope_definitions[scope_name].get('subscopes'):
+                _add_subscopes(subscope)
+
+    _add_subscopes(scope_name)
+
+    # reapply !filter
+    if filter_:
+        expanded_scopes = {
+            f"{scope_name}!{filter_}" for scope_name in expanded_scope_names
+        }
+        # special handling of server filter
+        # any access via server filter includes permission to read the user's name
+        resource, _, value = filter_.partition('=')
+        if resource == 'server':
+            username, _, server = value.partition('/')
+            expanded_scopes.add(f'read:users:name!user={username}')
+    else:
+        expanded_scopes = expanded_scope_names
+
+    return expanded_scopes
+
+
+def expand_scopes(scopes, owner=None):
+    """Returns a set of fully expanded scopes for a collection of raw scopes
+
+    Arguments:
+      scopes (collection(str)): collection of raw scopes
+      owner (obj, optional): orm.User or orm.Service as owner of orm.APIToken
+          Used for expansion of metascopes such as `self`
+          and owner-based filters such as `!user`
+
+    Returns:
+      expanded scopes (set): set of all expanded scopes, with filters applied for the owner
+    """
+    expanded_scopes = set(chain.from_iterable(map(_expand_scope, scopes)))
+
+    if isinstance(owner, orm.User):
+        owner_name = owner.name
+    else:
+        owner_name = None
+
+    for scope in expanded_scopes.copy():
+        base_scope, _, filter = scope.partition('!')
+        if filter == 'user':
+            # translate !user into !user={username}
+            expanded_scopes.remove(scope)
+            if owner_name:
+                # translate
+                expanded_scopes.add(f'{base_scope}!user={owner_name}')
+            else:
+                warnings.warn(
+                    f"Not expanding !user filter without owner in {scope}",
+                    stacklevel=2,
+                )
+
+    if 'self' in expanded_scopes:
+        expanded_scopes.remove('self')
+        if owner_name:
+            expanded_scopes |= _expand_self_scope(owner_name)
+        else:
+            warnings.warn(
+                "Not expanding 'self' scope without owner",
+                stacklevel=2,
+            )
+
     return expanded_scopes
 
 
@@ -412,6 +538,73 @@ def _check_scope_access(api_handler, req_scope, **kwargs):
         "Client access refused; filters do not match API endpoint %s request" % api_name
     )
     raise web.HTTPError(404, "No access to resources or resources not found")
+
+
+def _check_scopes_exist(scopes, who_for=None):
+    """Check if provided scopes exist
+
+    Arguments:
+      scopes (list): list of scopes to check
+
+    Raises KeyError if scope does not exist
+    """
+
+    allowed_scopes = set(scope_definitions.keys())
+    allowed_filters = ('!user=', '!service=', '!group=', '!server=', '!user')
+
+    if who_for:
+        log_for = f"for {who_for}"
+    else:
+        log_for = ""
+
+    for scope in scopes:
+        scopename, _, filter_ = scope.partition('!')
+        if scopename not in allowed_scopes:
+            if scopename == "all":
+                raise KeyError("Draft scope 'all' is now called 'inherit'")
+            raise KeyError(f"Scope '{scope}' {log_for} does not exist")
+        if filter_:
+            full_filter = f"!{filter_}"
+            if not full_filter.startswith(allowed_filters):
+                raise KeyError(
+                    f"Scope filter {filter_} '{full_filter}' in scope '{scope}' {log_for} does not exist"
+                )
+
+
+def _check_token_scopes(scopes, owner):
+    """Check that scopes to be assigned to a token
+    are in fact
+
+    Arguments:
+      scopes: raw or expanded scopes
+      owner: orm.User or orm.Service
+
+    raises:
+        ValueError: if requested scopes exceed owner's assigned scopes
+    """
+    scopes = set(scopes)
+    if scopes.issubset({"inherit"}):
+        # nothing to check for simple 'inherit' scopes
+        return
+    scopes.discard("inherit")
+    # common short circuit
+    token_scopes = expand_scopes(scopes, owner=owner)
+
+    if not token_scopes:
+        return
+
+    owner_scopes = get_scopes_for(owner)
+    intersection = _intersect_expanded_scopes(
+        token_scopes,
+        owner_scopes,
+        db=sa.inspect(owner).session,
+    )
+    excess_scopes = token_scopes - intersection
+
+    if excess_scopes:
+        raise ValueError(
+            f"Not assigning requested scopes {','.join(excess_scopes)} not held by {owner.__class__.__name__} {owner.name}"
+        )
 
 
 def parse_scopes(scope_list):

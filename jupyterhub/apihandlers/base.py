@@ -14,6 +14,7 @@ from tornado import web
 
 from .. import orm
 from ..handlers import BaseHandler
+from ..scopes import get_scopes_for
 from ..utils import get_browser_protocol
 from ..utils import isoformat
 from ..utils import url_path_join
@@ -224,7 +225,9 @@ class APIHandler(BaseHandler):
             owner_key: owner,
             'id': token.api_id,
             'kind': 'api_token',
-            'roles': [r.name for r in token.roles],
+            # deprecated field, but leave it present.
+            'roles': [],
+            'scopes': list(get_scopes_for(token)),
             'created': isoformat(token.created),
             'last_activity': isoformat(token.last_activity),
             'expires_at': isoformat(token.expires_at),

@@ -9,7 +9,6 @@ from sqlalchemy import pool
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
 if 'jupyterhub' in sys.modules:
@@ -42,6 +41,16 @@ target_metadata = orm.Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+# pass these to context.configure(**config_opts)
+common_config_opts = dict(
+    # target_metadata for autogenerate
+    target_metadata=target_metadata,
+    # transaction per migration to ensure
+    # each migration is 'complete' before running the next one
+    # (e.g. dropped tables)
+    transaction_per_migration=True,
+)
+
 
 def run_migrations_offline():
     """Run migrations in 'offline' mode.
@@ -56,14 +65,14 @@ def run_migrations_offline():
 
     """
     connectable = config.attributes.get('connection', None)
+    config_opts = dict(literal_binds=True)
+    config_opts.update(common_config_opts)
 
     if connectable is None:
-        url = config.get_main_option("sqlalchemy.url")
-        context.configure(url=url, target_metadata=target_metadata, literal_binds=True)
+        config_opts["url"] = config.get_main_option("sqlalchemy.url")
     else:
-        context.configure(
-            connection=connectable, target_metadata=target_metadata, literal_binds=True
-        )
+        config_opts["connection"] = connectable
+    context.configure(**config_opts)
 
     with context.begin_transaction():
         context.run_migrations()
@@ -77,6 +86,8 @@ def run_migrations_online():
 
     """
     connectable = config.attributes.get('connection', None)
+    config_opts = {}
+    config_opts.update(common_config_opts)
 
     if connectable is None:
         connectable = engine_from_config(
@@ -86,7 +97,10 @@ def run_migrations_online():
         )
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        context.configure(
+            connection=connection,
+            **common_config_opts,
+        )
 
         with context.begin_transaction():
             context.run_migrations()
