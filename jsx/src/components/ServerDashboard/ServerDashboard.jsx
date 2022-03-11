@@ -177,7 +177,7 @@ const ServerDashboard = (props) => {
 
   let servers = user_data.flatMap((user) => {
     let userServers = Object.values({
-      "": user.server,
+      "": user.server || {},
       ...(user.servers || {}),
     });
     return userServers.map((server) => [user, server]);
