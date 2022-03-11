@@ -347,7 +347,7 @@ const ServerDashboard = (props) => {
               </td>
             </tr>
             {servers.map(([user, server], i) => {
-              server.name = server.name || ""
+              server.name = server.name || "";
               return (
                 <tr key={i + "row"} className="user-row">
                   <td data-testid="user-row-name">{user.name}</td>
