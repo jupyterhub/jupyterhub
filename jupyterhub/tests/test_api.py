@@ -472,6 +472,42 @@ async def test_get_users_state_filter(app, state):
 
 
 @mark.user
+async def test_get_users_name_filter(app):
+    db = app.db
+
+    add_user(db, app=app, name='q')
+    add_user(db, app=app, name='qr')
+    add_user(db, app=app, name='qrs')
+    add_user(db, app=app, name='qrst')
+    added_usernames = {'q', 'qr', 'qrs', 'qrst'}
+
+    r = await api_request(app, 'users')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert added_usernames.intersection(response_users) == added_usernames
+
+    r = await api_request(app, 'users?name_filter=q')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['q', 'qr', 'qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qr')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qr', 'qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qrs')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qrst')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qrst']
+
+
+@mark.user
 async def test_get_self(app):
     db = app.db
 
