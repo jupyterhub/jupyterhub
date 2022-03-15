@@ -1,6 +1,7 @@
 export const initialState = {
   user_data: undefined,
   user_page: 0,
+  name_filter: "",
   groups_data: undefined,
   groups_page: 0,
   limit: window.api_page_limit,
@@ -13,6 +14,7 @@ export const reducers = (state = initialState, action) => {
       return Object.assign({}, state, {
         user_page: action.value.page,
         user_data: action.value.data,
+        name_filter: action.value.name_filter,
       });
 
     // Updates the client group model data and stores the page

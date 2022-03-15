@@ -1,8 +1,9 @@
 import React, { useState } from "react";
+import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
-import { Button } from "react-bootstrap";
+import { Button, Col, Row, FormControl } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
@@ -10,8 +11,8 @@ import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
-const AccessServerButton = ({ userName, serverName }) => (
-  <a href={`/user/${userName}/${serverName || ""}`}>
+const AccessServerButton = ({ url }) => (
+  <a href={url || ""}>
     <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
       Access Server
     </button>
@@ -19,6 +20,7 @@ const AccessServerButton = ({ userName, serverName }) => (
 );
 
 const ServerDashboard = (props) => {
+  let base_url = window.base_url;
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
     usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
@@ -42,10 +44,11 @@ const ServerDashboard = (props) => {
   var user_data = useSelector((state) => state.user_data),
     user_page = useSelector((state) => state.user_page),
     limit = useSelector((state) => state.limit),
+    name_filter = useSelector((state) => state.name_filter),
     page = parseInt(new URLSearchParams(props.location.search).get("page"));
 
   page = isNaN(page) ? 0 : page;
-  var slice = [page * limit, limit];
+  var slice = [page * limit, limit, name_filter];
 
   const dispatch = useDispatch();
 
@@ -59,12 +62,13 @@ const ServerDashboard = (props) => {
     history,
   } = props;
 
-  var dispatchPageUpdate = (data, page) => {
+  var dispatchPageUpdate = (data, page, name_filter) => {
     dispatch({
       type: "USER_PAGE",
       value: {
         data: data,
         page: page,
+        name_filter: name_filter,
       },
     });
   };
@@ -74,8 +78,18 @@ const ServerDashboard = (props) => {
   }
 
   if (page != user_page) {
-    updateUsers(...slice).then((data) => dispatchPageUpdate(data, page));
+    updateUsers(...slice).then((data) =>
+      dispatchPageUpdate(data, page, name_filter)
+    );
   }
+
+  var debounce = require("lodash.debounce");
+  const handleSearch = debounce(async (event) => {
+    // setNameFilter(event.target.value);
+    updateUsers(page * limit, limit, event.target.value).then((data) =>
+      dispatchPageUpdate(data, page, name_filter)
+    );
+  }, 300);
 
   if (sortMethod != null) {
     user_data = sortMethod(user_data);
@@ -94,7 +108,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data, page);
+                    dispatchPageUpdate(data, page, name_filter);
                   })
                   .catch(() => {
                     setIsDisabled(false);
@@ -130,7 +144,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data, page);
+                    dispatchPageUpdate(data, page, name_filter);
                   })
                   .catch(() => {
                     setErrorAlert(`Failed to update users list.`);
@@ -203,10 +217,23 @@ const ServerDashboard = (props) => {
       ) : (
         <></>
       )}
-      <div className="manage-groups" style={{ float: "right", margin: "20px" }}>
-        <Link to="/groups">{"> Manage Groups"}</Link>
-      </div>
       <div className="server-dashboard-container">
+        <Row>
+          <Col md={4}>
+            <FormControl
+              type="text"
+              name="user_search"
+              placeholder="Search users"
+              aria-label="user-search"
+              value={name_filter}
+              onChange={handleSearch}
+            />
+          </Col>
+
+          <Col md="auto" style={{ float: "right", margin: 15 }}>
+            <Link to="/groups">{"> Manage Groups"}</Link>
+          </Col>
+        </Row>
         <table className="table table-striped table-bordered table-hover">
           <thead className="admin-table-head">
             <tr>
@@ -286,7 +313,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page);
+                            dispatchPageUpdate(data, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -322,7 +349,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page);
+                            dispatchPageUpdate(data, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -375,10 +402,7 @@ const ServerDashboard = (props) => {
                           serverName={server.name}
                           userName={user.name}
                         />
-                        <AccessServerButton
-                          serverName={server.name}
-                          userName={user.name}
-                        />
+                        <AccessServerButton url={server.url} />
                       </>
                     ) : (
                       // Start Single-user server
@@ -388,7 +412,7 @@ const ServerDashboard = (props) => {
                           userName={user.name}
                         />
                         <a
-                          href={`/spawn/${user.name}${
+                          href={`${base_url}spawn/${user.name}${
                             server.name && "/" + server.name
                           }`}
                         >
