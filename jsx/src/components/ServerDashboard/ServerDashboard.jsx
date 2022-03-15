@@ -4,6 +4,8 @@ import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
 import { Button, Col, Row, FormControl } from "react-bootstrap";
+import ReactObjectTableViewer from "react-object-table-viewer";
+
 import { Link } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
@@ -18,6 +20,15 @@ const AccessServerButton = ({ url }) => (
     </button>
   </a>
 );
+
+const ToggleButton = ({ dataTarget }) => {
+  var [errorAlert, setErrorAlert] = useState(null);
+  return (
+    <button data-toggle="collapse" data-target={dataTarget}>
+      <span className="caret"></span>
+    </button>
+  );
+};
 
 const ServerDashboard = (props) => {
   let base_url = window.base_url;
@@ -189,6 +200,91 @@ const ServerDashboard = (props) => {
     );
   };
 
+  const serverRow = (user, server) => {
+    const { servers, ...userNoServers } = user;
+    return [
+      <tr key={`${user.name}-${server.name}-row`} className="user-row">
+        <td data-testid="user-row-name">
+          <span>
+            <ToggleButton
+              dataTarget={`#${user.name}-${server.name}-collapse`}
+            />{" "}
+          </span>
+          {user.name}
+        </td>
+        <td data-testid="user-row-admin">{user.admin ? "admin" : ""}</td>
+
+        <td data-testid="user-row-server">
+          {server.name ? (
+            <p class="text-secondary">{server.name}</p>
+          ) : (
+            <p style={{ color: "lightgrey" }}>[MAIN]</p>
+          )}
+        </td>
+        <td data-testid="user-row-last-activity">
+          {server.last_activity ? timeSince(server.last_activity) : "Never"}
+        </td>
+        <td data-testid="user-row-server-activity">
+          {server.started ? (
+            // Stop Single-user server
+            <>
+              <StopServerButton serverName={server.name} userName={user.name} />
+              <AccessServerButton url={server.url} />
+            </>
+          ) : (
+            // Start Single-user server
+            <>
+              <StartServerButton
+                serverName={server.name}
+                userName={user.name}
+                style={{ marginRight: 20 }}
+              />
+              <a
+                href={`${base_url}spawn/${user.name}${
+                  server.name && "/" + server.name
+                }`}
+              >
+                <button
+                  className="btn btn-secondary btn-xs"
+                  style={{ marginRight: 20 }}
+                >
+                  Spawn Page
+                </button>
+              </a>
+            </>
+          )}
+        </td>
+        <EditUserCell user={user} />
+      </tr>,
+      <tr>
+        <td colSpan={6} style={{ padding: 0 }}>
+          <div
+            id={`${user.name}-${server.name}-collapse`}
+            className="collapse"
+            colSpan={6}
+          >
+            <div style={{ padding: 6 }}>
+              <ReactObjectTableViewer
+                className="table-striped table-bordered admin-table-head"
+                style={{
+                  padding: "3px 6px",
+                  margin: "auto",
+                }}
+                keyStyle={{
+                  padding: "4px",
+                }}
+                valueStyle={{
+                  padding: "4px",
+                }}
+                data={{ user: userNoServers, server: server }}
+              />
+            </div>
+          </div>
+        </td>
+      </tr>,
+    ];
+  };
+
   let servers = user_data.flatMap((user) => {
     let userServers = Object.values({
       "": user.server || {},
@@ -234,7 +330,7 @@ const ServerDashboard = (props) => {
             <Link to="/groups">{"> Manage Groups"}</Link>
           </Col>
         </Row>
-        <table className="table table-striped table-bordered table-hover">
+        <table className="table table-bordered table-hover">
           <thead className="admin-table-head">
             <tr>
               <th id="user-header">
@@ -373,63 +469,7 @@ const ServerDashboard = (props) => {
                 </Button>
               </td>
             </tr>
-            {servers.map(([user, server], i) => {
-              server.name = server.name || "";
-              return (
-                <tr key={i + "row"} className="user-row">
-                  <td data-testid="user-row-name">{user.name}</td>
-                  <td data-testid="user-row-admin">
-                    {user.admin ? "admin" : ""}
-                  </td>
-
-                  <td data-testid="user-row-server">
-                    {server.name ? (
-                      <p class="text-secondary">{server.name}</p>
-                    ) : (
-                      <p style={{ color: "lightgrey" }}>[MAIN]</p>
-                    )}
-                  </td>
-                  <td data-testid="user-row-last-activity">
-                    {server.last_activity
-                      ? timeSince(server.last_activity)
-                      : "Never"}
-                  </td>
-                  <td data-testid="user-row-server-activity">
-                    {server.started ? (
-                      // Stop Single-user server
-                      <>
-                        <StopServerButton
-                          serverName={server.name}
-                          userName={user.name}
-                        />
-                        <AccessServerButton url={server.url} />
-                      </>
-                    ) : (
-                      // Start Single-user server
-                      <>
-                        <StartServerButton
-                          serverName={server.name}
-                          userName={user.name}
-                        />
-                        <a
-                          href={`${base_url}spawn/${user.name}${
-                            server.name && "/" + server.name
-                          }`}
-                        >
-                          <button
-                            className="btn btn-secondary btn-xs"
-                            style={{ marginRight: 20 }}
-                          >
-                            Spawn Page
-                          </button>
-                        </a>
-                      </>
-                    )}
-                  </td>
-                  <EditUserCell user={user} />
-                </tr>
-              );
-            })}
+            {servers.flatMap(([user, server]) => serverRow(user, server))}
           </tbody>
         </table>
         <PaginationFooter
