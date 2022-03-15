@@ -470,12 +470,12 @@ test("Search for user calls updateUsers with name filter", async () => {
   fireEvent.change(search, { target: { value: "a" } });
   clock.tick(400);
   expect(mockUpdateUsers.mock.calls).toHaveLength(2);
-  expect(mockUpdateUsers.mock.calls[1][3]).toEqual("a");
+  expect(mockUpdateUsers.mock.calls[1][2]).toEqual("a");
   expect(search.value).toEqual("a");
 
   fireEvent.change(search, { target: { value: "ab" } });
   clock.tick(400);
   expect(mockUpdateUsers.mock.calls).toHaveLength(3);
-  expect(mockUpdateUsers.mock.calls[1][3]).toEqual("ab");
+  expect(mockUpdateUsers.mock.calls[2][2]).toEqual("ab");
   expect(search.value).toEqual("ab");
 });
