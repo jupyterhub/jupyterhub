@@ -14,7 +14,7 @@ export const reducers = (state = initialState, action) => {
       return Object.assign({}, state, {
         user_page: action.value.page,
         user_data: action.value.data,
-        name_filter: action.value.name_filter,
+        name_filter: action.value.name_filter || "",
       });
 
     // Updates the client group model data and stores the page
