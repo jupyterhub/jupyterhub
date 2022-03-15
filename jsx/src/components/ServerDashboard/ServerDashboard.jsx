@@ -3,7 +3,14 @@ import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
-import { Button, Col, Row, FormControl } from "react-bootstrap";
+import {
+  Button,
+  Col,
+  Row,
+  FormControl,
+  Card,
+  CardGroup,
+} from "react-bootstrap";
 import ReactObjectTableViewer from "react-object-table-viewer";
 
 import { Link } from "react-router-dom";
@@ -257,12 +264,14 @@ const ServerDashboard = (props) => {
       </tr>,
       <tr>
         <td colSpan={6} style={{ padding: 0 }}>
-          <div
+          {/*<div style={{ margin: "0 auto", float: "none" }}>*/}
+          <CardGroup
             id={`${user.name}-${server.name}-collapse`}
             className="collapse"
-            colSpan={6}
+            style={{ width: "90%", margin: "0 auto", float: "none" }}
           >
-            <div style={{ padding: 6 }}>
+            <Card style={{ width: "50%", padding: 6, float: "left" }}>
+              <Card.Title>User</Card.Title>
               <ReactObjectTableViewer
                 className="table-striped table-bordered admin-table-head"
                 style={{
@@ -275,10 +284,28 @@ const ServerDashboard = (props) => {
                 valueStyle={{
                   padding: "4px",
                 }}
-                data={{ user: userNoServers, server: server }}
+                data={userNoServers}
               />
-            </div>
-          </div>
+            </Card>
+            <Card style={{ width: "50%", padding: 6, display: "inline-block" }}>
+              <Card.Title>Server</Card.Title>
+              <ReactObjectTableViewer
+                className="table-striped table-bordered admin-table-head"
+                style={{
+                  padding: "3px 6px",
+                  margin: "auto",
+                }}
+                keyStyle={{
+                  padding: "4px",
+                }}
+                valueStyle={{
+                  padding: "4px",
+                }}
+                data={server}
+              />
+            </Card>
+          </CardGroup>
+          {/*</div>*/}
         </td>
       </tr>,
     ];
