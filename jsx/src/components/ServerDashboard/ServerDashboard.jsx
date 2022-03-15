@@ -11,8 +11,8 @@ import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
-const AccessServerButton = ({ userName, serverName }) => (
-  <a href={`/user/${userName}/${serverName || ""}`}>
+const AccessServerButton = ({ url }) => (
+  <a href={url || ""}>
     <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
       Access Server
     </button>
@@ -401,10 +401,7 @@ const ServerDashboard = (props) => {
                           serverName={server.name}
                           userName={user.name}
                         />
-                        <AccessServerButton
-                          serverName={server.name}
-                          userName={user.name}
-                        />
+                        <AccessServerButton url={server.url} />
                       </>
                     ) : (
                       // Start Single-user server
