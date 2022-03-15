@@ -22,7 +22,6 @@ const AccessServerButton = ({ url }) => (
 );
 
 const ToggleButton = ({ dataTarget }) => {
-  var [errorAlert, setErrorAlert] = useState(null);
   return (
     <button data-toggle="collapse" data-target={dataTarget}>
       <span className="caret"></span>
