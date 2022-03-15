@@ -38,12 +38,12 @@ const ServerDashboard = (props) => {
 
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
-  var [name_filter, setNameFilter] = useState("");
   var [disabledButtons, setDisabledButtons] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
     user_page = useSelector((state) => state.user_page),
     limit = useSelector((state) => state.limit),
+    name_filter = useSelector((state) => state.name_filter),
     page = parseInt(new URLSearchParams(props.location.search).get("page"));
 
   page = isNaN(page) ? 0 : page;
@@ -61,12 +61,13 @@ const ServerDashboard = (props) => {
     history,
   } = props;
 
-  var dispatchPageUpdate = (data, page) => {
+  var dispatchPageUpdate = (data, page, name_filter) => {
     dispatch({
       type: "USER_PAGE",
       value: {
         data: data,
         page: page,
+        name_filter: name_filter,
       },
     });
   };
@@ -76,14 +77,16 @@ const ServerDashboard = (props) => {
   }
 
   if (page != user_page) {
-    updateUsers(...slice).then((data) => dispatchPageUpdate(data, page));
+    updateUsers(...slice).then((data) =>
+      dispatchPageUpdate(data, page, name_filter)
+    );
   }
 
   var debounce = require("lodash.debounce");
   const handleSearch = debounce(async (event) => {
-    setNameFilter(event.target.value);
+    // setNameFilter(event.target.value);
     updateUsers(page * limit, limit, event.target.value).then((data) =>
-      dispatchPageUpdate(data, page)
+      dispatchPageUpdate(data, page, name_filter)
     );
   }, 300);
 
@@ -104,7 +107,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data, page);
+                    dispatchPageUpdate(data, page, name_filter);
                   })
                   .catch(() => {
                     setIsDisabled(false);
@@ -140,7 +143,7 @@ const ServerDashboard = (props) => {
               if (res.status < 300) {
                 updateUsers(...slice)
                   .then((data) => {
-                    dispatchPageUpdate(data, page);
+                    dispatchPageUpdate(data, page, name_filter);
                   })
                   .catch(() => {
                     setErrorAlert(`Failed to update users list.`);
@@ -220,7 +223,8 @@ const ServerDashboard = (props) => {
               type="text"
               name="user_search"
               placeholder="Search users"
-              defaultValue={name_filter}
+              aria-label="user-search"
+              value={name_filter}
               onChange={handleSearch}
             />
           </Col>
@@ -308,7 +312,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page);
+                            dispatchPageUpdate(data, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -344,7 +348,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page);
+                            dispatchPageUpdate(data, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)

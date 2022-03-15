@@ -9,6 +9,9 @@ import { createStore } from "redux";
 import regeneratorRuntime from "regenerator-runtime";
 
 import ServerDashboard from "./ServerDashboard";
+import * as sinon from "sinon";
+
+let clock;
 
 jest.mock("react-redux", () => ({
   ...jest.requireActual("react-redux"),
@@ -45,6 +48,7 @@ var mockAppState = () => ({
 });
 
 beforeEach(() => {
+  clock = sinon.useFakeTimers();
   useSelector.mockImplementation((callback) => {
     return callback(mockAppState());
   });
@@ -52,6 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
   useSelector.mockClear();
+  clock.restore();
 });
 
 test("Renders", async () => {
@@ -434,4 +439,43 @@ test("Shows a UI error dialogue when stop user server returns an improper status
   let errorDialog = screen.getByText("Failed to stop server.");
 
   expect(errorDialog).toBeVisible();
+});
+
+test("Search for user calls updateUsers with name filter", async () => {
+  let spy = mockAsync();
+  let mockUpdateUsers = jest.fn((offset, limit, name_filter) => {
+    return Promise.resolve([]);
+  });
+  await act(async () => {
+    render(
+      <Provider store={createStore(() => {}, {})}>
+        <HashRouter>
+          <Switch>
+            <ServerDashboard
+              updateUsers={mockUpdateUsers}
+              shutdownHub={spy}
+              startServer={spy}
+              stopServer={spy}
+              startAll={spy}
+              stopAll={spy}
+            />
+          </Switch>
+        </HashRouter>
+      </Provider>
+    );
+  });
+
+  let search = screen.getByLabelText("user-search");
+
+  fireEvent.change(search, { target: { value: "a" } });
+  clock.tick(400);
+  expect(mockUpdateUsers.mock.calls).toHaveLength(2);
+  expect(mockUpdateUsers.mock.calls[1][3]).toEqual("a");
+  expect(search.value).toEqual("a");
+
+  fireEvent.change(search, { target: { value: "ab" } });
+  clock.tick(400);
+  expect(mockUpdateUsers.mock.calls).toHaveLength(3);
+  expect(mockUpdateUsers.mock.calls[1][3]).toEqual("ab");
+  expect(search.value).toEqual("ab");
 });
