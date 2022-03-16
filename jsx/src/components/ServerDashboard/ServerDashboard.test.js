@@ -231,34 +231,35 @@ test("Shows server details with button click", async () => {
   let collapse = screen.getByTestId("foo-collapse");
   let collapseBar = screen.getByTestId("bar-collapse");
 
-  expect(collapse.className).toContain("collapse");
-  expect(collapse.className).not.toContain("show");
-  expect(collapseBar.className).not.toContain("show");
+  // expect().toBeVisible does not work here with collapse.
+  expect(collapse).toHaveClass("collapse");
+  expect(collapse).not.toHaveClass("show");
+  expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
     fireEvent.click(button);
   });
   clock.tick(400);
 
-  expect(collapse.className).toContain("collapse show");
-  expect(collapseBar.className).not.toContain("show");
+  expect(collapse).toHaveClass("collapse show");
+  expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
     fireEvent.click(button);
   });
   clock.tick(400);
 
-  expect(collapse.className).toContain("collapse");
-  expect(collapse.className).not.toContain("show");
-  expect(collapseBar.className).not.toContain("show");
+  expect(collapse).toHaveClass("collapse");
+  expect(collapse).not.toHaveClass("show");
+  expect(collapseBar).not.toHaveClass("show");
 
   await act(async () => {
     fireEvent.click(button);
   });
   clock.tick(400);
 
-  expect(collapse.className).toContain("collapse show");
-  expect(collapseBar.className).not.toContain("show");
+  expect(collapse).toHaveClass("collapse show");
+  expect(collapseBar).not.toHaveClass("show");
 });
 
 test("Renders nothing if required data is not available", async () => {
