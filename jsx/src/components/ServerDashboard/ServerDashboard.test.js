@@ -76,8 +76,8 @@ test("Renders users from props.user_data into table", async () => {
     render(serverDashboardJsx(callbackSpy));
   });
 
-  let foo = screen.getByText("foo");
-  let bar = screen.getByText("bar");
+  let foo = screen.getByTestId("user-name-div-foo");
+  let bar = screen.getByTestId("user-name-div-bar");
 
   expect(foo).toBeVisible();
   expect(bar).toBeVisible();
@@ -156,12 +156,12 @@ test("Sorts according to username", async () => {
   fireEvent.click(handler);
 
   let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("bar");
+  expect(first.textContent).toContain("bar");
 
   fireEvent.click(handler);
 
   first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("foo");
+  expect(first.textContent).toContain("foo");
 });
 
 test("Sorts according to admin", async () => {
@@ -194,12 +194,12 @@ test("Sorts according to last activity", async () => {
   fireEvent.click(handler);
 
   let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("foo");
+  expect(first.textContent).toContain("foo");
 
   fireEvent.click(handler);
 
   first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("bar");
+  expect(first.textContent).toContain("bar");
 });
 
 test("Sorts according to server status (running/not running)", async () => {
@@ -213,12 +213,12 @@ test("Sorts according to server status (running/not running)", async () => {
   fireEvent.click(handler);
 
   let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("foo");
+  expect(first.textContent).toContain("foo");
 
   fireEvent.click(handler);
 
   first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("bar");
+  expect(first.textContent).toContain("bar");
 });
 
 test("Renders nothing if required data is not available", async () => {

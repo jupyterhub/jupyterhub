@@ -216,7 +216,7 @@ const ServerDashboard = (props) => {
               dataTarget={`#${user.name}-${server.name}-collapse`}
             />{" "}
           </span>
-          {user.name}
+          <div data-testid={`user-name-div-${user.name}`}>{user.name}</div>
         </td>
         <td data-testid="user-row-admin">{user.admin ? "admin" : ""}</td>
 
