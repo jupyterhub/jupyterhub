@@ -652,6 +652,8 @@ Scopes may not end with a hyphen or colon.
 def define_custom_scopes(scopes):
     """Define custom scopes
 
+    Adds custom scopes to the scope_definitions dict.
+
     Scopes must start with `custom:`.
     It is recommended to name custom scopes with a pattern like::
 
@@ -663,7 +665,8 @@ def define_custom_scopes(scopes):
 
     That makes them easy to parse and avoids collisions across projects.
 
-    All scopes must have at least a `definition`,
+    `scopes` must have at least one scope definition,
+    and each scope definition must have a `description`,
     which will be displayed on the oauth authorization page,
     and _may_ have a `subscopes` list of other scopes if having one scope
     should imply having other, more specific scopes.
@@ -673,7 +676,7 @@ def define_custom_scopes(scopes):
     scopes: dict
         A dictionary of scope definitions.
         The keys are the scopes,
-        while the values are dictionaries with at least a `definition` field,
+        while the values are dictionaries with at least a `description` field,
         and optional `subscopes` field.
         %s
     Examples::

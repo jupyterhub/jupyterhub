@@ -160,7 +160,7 @@ c.JupyterHub.load_roles = [
         "groups": ["graders"],
         "scopes": [
             "custom:myservice:read",
-            access:service!service=myservice,
+            "access:service!service=myservice",
         ],
     },
     # instructors have read and write access to the service
@@ -169,7 +169,7 @@ c.JupyterHub.load_roles = [
         "groups": ["instructors"],
         "scopes": [
             "custom:myservice:write",
-            access:service!service=myservice,
+            "access:service!service=myservice",
         ],
     },
 ]

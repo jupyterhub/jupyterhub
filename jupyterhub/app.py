@@ -2039,7 +2039,7 @@ class JupyterHub(Application):
         db.commit()
 
     async def init_role_creation(self):
-        """Load default and user-defined roles into the database"""
+        """Load default and user-defined roles and scopes into the database"""
         if self.custom_scopes:
             self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
             scopes.define_custom_scopes(self.custom_scopes)
