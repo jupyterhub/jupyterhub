@@ -9,6 +9,7 @@ from tornado.httputil import HTTPServerRequest
 
 from .. import orm
 from .. import roles
+from .. import scopes
 from ..handlers import BaseHandler
 from ..scopes import _check_scope_access
 from ..scopes import _intersect_expanded_scopes
@@ -1047,3 +1048,82 @@ async def test_list_groups_filter(
         for name in sorted(expected)
     ]
     assert sorted(r.json(), key=itemgetter('name')) == expected_models
+
+
+@pytest.mark.parametrize(
+    "custom_scopes",
+    [
+        {"custom:okay": {"description": "simple custom scope"}},
+        {
+            "custom:parent": {
+                "description": "parent",
+                "subscopes": ["custom:child"],
+            },
+            "custom:child": {"description": "child"},
+        },
+        {
+            "custom:extra": {
+                "description": "I have extra info",
+                "extra": "warn about me",
+            }
+        },
+    ],
+)
+def test_custom_scopes(preserve_scopes, custom_scopes):
+    scopes.define_custom_scopes(custom_scopes)
+    for name, scope_def in custom_scopes.items():
+        assert name in scopes.scope_definitions
+        assert scopes.scope_definitions[name] == scope_def
+
+    # make sure describe works after registering custom scopes
+    scopes.describe_raw_scopes(list(custom_scopes.keys()))
+
+
+@pytest.mark.parametrize(
+    "custom_scopes",
+    [
+        {
+            "read:users": {
+                "description": "Can't override",
+            },
+        },
+        {
+            "custom:empty": {},
+        },
+        {
+            "notcustom:prefix": {"descroption": "bad prefix"},
+        },
+        {
+            "custom:!illegal": {"descroption": "bad character"},
+        },
+        {
+            "custom:badsubscope": {
+                "description": "non-custom subscope not allowed",
+                "subscopes": [
+                    "read:users",
+                ],
+            },
+        },
+        {
+            "custom:nosubscope": {
+                "description": "subscope not defined",
+                "subscopes": [
+                    "custom:undefined",
+                ],
+            },
+        },
+        {
+            "custom:badsubscope": {
+                "description": "subscope not a list",
+                "subscopes": "custom:notalist",
+            },
+            "custom:notalist": {
+                "description": "the subscope",
+            },
+        },
+    ],
+)
+def test_custom_scopes_bad(preserve_scopes, custom_scopes):
+    with pytest.raises(ValueError):
+        scopes.define_custom_scopes(custom_scopes)
+    assert scopes.scope_definitions == preserve_scopes

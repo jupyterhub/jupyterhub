@@ -26,6 +26,7 @@ Fixtures to add functionality or spawning behavior
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
+import copy
 import inspect
 import os
 import sys
@@ -44,6 +45,7 @@ import jupyterhub.services.service
 from . import mocking
 from .. import crypto
 from .. import orm
+from .. import scopes
 from ..roles import create_role
 from ..roles import get_default_roles
 from ..roles import mock_roles
@@ -456,3 +458,11 @@ def create_service_with_scopes(app, create_temp_role):
     for service in temp_service:
         app.db.delete(service)
     app.db.commit()
+
+
+@fixture
+def preserve_scopes():
+    """Revert any custom scopes after test"""
+    scope_definitions = copy.deepcopy(scopes.scope_definitions)
+    yield scope_definitions
+    scopes.scope_definitions = scope_definitions

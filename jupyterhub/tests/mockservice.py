@@ -23,6 +23,7 @@ from tornado import httpserver
 from tornado import ioloop
 from tornado import log
 from tornado import web
+from tornado.httputil import url_concat
 
 from jupyterhub.services.auth import HubAuthenticated
 from jupyterhub.services.auth import HubOAuthCallbackHandler
@@ -75,6 +76,13 @@ class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
 
     Uses OAuth login flow
     """
+
+    def get_login_url(self):
+        login_url = super().get_login_url()
+        scopes = self.get_argument("request-scope", None)
+        if scopes is not None:
+            login_url = url_concat(login_url, {"scope": scopes})
+        return login_url
 
     @web.authenticated
     def get(self):

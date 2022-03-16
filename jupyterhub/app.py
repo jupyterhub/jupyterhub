@@ -17,10 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from datetime import timedelta
 from datetime import timezone
-from functools import partial
 from getpass import getuser
-from glob import glob
-from itertools import chain
 from operator import itemgetter
 from textwrap import dedent
 from urllib.parse import unquote
@@ -54,7 +51,6 @@ from traitlets import (
     Unicode,
     Integer,
     Dict,
-    TraitError,
     List,
     Bool,
     Any,
@@ -81,8 +77,10 @@ from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
 from .services.service import Service
 
 from . import crypto
-from . import dbutil, orm
+from . import dbutil
+from . import orm
 from . import roles
+from . import scopes
 from .user import UserDict
 from .oauth.provider import make_provider
 from ._data import DATA_FILES_PATH
@@ -350,6 +348,29 @@ class JupyterHub(Application):
 
         Default roles are defined in roles.py.
 
+        """,
+    ).tag(config=True)
+
+    custom_scopes = Dict(
+        key_trait=Unicode(),
+        value_trait=Dict(
+            key_trait=Unicode(),
+        ),
+        help="""Custom scopes to define.
+
+        For use when defining custom roles,
+        to grant users granular permissions
+
+        All custom scopes must have a description,
+        and must start with the prefix `custom:`.
+
+        For example::
+
+            custom_scopes = {
+                "custom:jupyter_server:read": {
+                    "description": "read-only access to a single-user server",
+                },
+            }
         """,
     ).tag(config=True)
 
@@ -2018,7 +2039,10 @@ class JupyterHub(Application):
         db.commit()
 
     async def init_role_creation(self):
-        """Load default and predefined roles into the database"""
+        """Load default and user-defined roles and scopes into the database"""
+        if self.custom_scopes:
+            self.log.info(f"Defining {len(self.custom_scopes)} custom scopes.")
+            scopes.define_custom_scopes(self.custom_scopes)
         self.log.debug('Loading roles into database')
         default_roles = roles.get_default_roles()
         config_role_names = [r['name'] for r in self.load_roles]

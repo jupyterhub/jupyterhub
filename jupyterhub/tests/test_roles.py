@@ -498,7 +498,7 @@ async def test_load_roles_users(tmpdir, request, explicit_allowed_users):
 
 
 @mark.role
-async def test_load_roles_services(tmpdir, request):
+async def test_load_roles_services(tmpdir, request, preserve_scopes):
     services = [
         {'name': 'idle-culler', 'api_token': 'some-token'},
         {'name': 'user_service', 'api_token': 'some-other-token'},
@@ -509,6 +509,11 @@ async def test_load_roles_services(tmpdir, request):
         'some-other-token': 'user_service',
         'secret-token': 'admin_service',
     }
+    custom_scopes = {
+        "custom:empty-scope": {
+            "description": "empty custom scope",
+        }
+    }
     roles_to_load = [
         {
             'name': 'idle-culler',
@@ -518,11 +523,13 @@ async def test_load_roles_services(tmpdir, request):
                 'read:users:activity',
                 'read:servers',
                 'servers',
+                'custom:empty-scope',
             ],
             'services': ['idle-culler'],
         },
     ]
     kwargs = {
+        'custom_scopes': custom_scopes,
         'load_roles': roles_to_load,
         'services': services,
         'service_tokens': service_tokens,

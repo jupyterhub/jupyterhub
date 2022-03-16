@@ -1134,6 +1134,7 @@ async def test_oauth_page_scope_appearance(
     )
     service = mockservice_url
     user = create_user_with_scopes("access:services")
+    roles.grant_role(app.db, user, service_role)
     oauth_client = (
         app.db.query(orm.OAuthClient)
         .filter_by(identifier=service.oauth_client_id)
