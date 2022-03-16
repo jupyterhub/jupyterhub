@@ -221,6 +221,46 @@ test("Sorts according to server status (running/not running)", async () => {
   expect(first.textContent).toContain("bar");
 });
 
+test("Shows server details with button click", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(serverDashboardJsx(callbackSpy));
+  });
+  let button = screen.getByTestId("foo-collapse-button");
+  let collapse = screen.getByTestId("foo-collapse");
+  let collapseBar = screen.getByTestId("bar-collapse");
+
+  expect(collapse.className).toContain("collapse");
+  expect(collapse.className).not.toContain("show");
+  expect(collapseBar.className).not.toContain("show");
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  clock.tick(400);
+
+  expect(collapse.className).toContain("collapse show");
+  expect(collapseBar.className).not.toContain("show");
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  clock.tick(400);
+
+  expect(collapse.className).toContain("collapse");
+  expect(collapse.className).not.toContain("show");
+  expect(collapseBar.className).not.toContain("show");
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  clock.tick(400);
+
+  expect(collapse.className).toContain("collapse show");
+  expect(collapseBar.className).not.toContain("show");
+});
+
 test("Renders nothing if required data is not available", async () => {
   useSelector.mockImplementation((callback) => {
     return callback({});

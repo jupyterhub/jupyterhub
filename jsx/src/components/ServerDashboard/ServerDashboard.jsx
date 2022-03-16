@@ -10,6 +10,7 @@ import {
   FormControl,
   Card,
   CardGroup,
+  Collapse,
 } from "react-bootstrap";
 import ReactObjectTableViewer from "react-object-table-viewer";
 
@@ -27,14 +28,6 @@ const AccessServerButton = ({ url }) => (
     </button>
   </a>
 );
-
-const ToggleButton = ({ dataTarget }) => {
-  return (
-    <button data-toggle="collapse" data-target={dataTarget}>
-      <span className="caret"></span>
-    </button>
-  );
-};
 
 const ServerDashboard = (props) => {
   let base_url = window.base_url;
@@ -57,6 +50,7 @@ const ServerDashboard = (props) => {
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
   var [disabledButtons, setDisabledButtons] = useState({});
+  const [collapseStates, setCollapseStates] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
     user_page = useSelector((state) => state.user_page),
@@ -208,21 +202,38 @@ const ServerDashboard = (props) => {
 
   const serverRow = (user, server) => {
     const { servers, ...userNoServers } = user;
+    const serverNameDash = server.name ? `-${server.name}` : "";
+    const userServerName = user.name + serverNameDash;
+    const open = collapseStates[userServerName] || false;
     return [
-      <tr key={`${user.name}-${server.name}-row`} className="user-row">
+      <tr key={`${userServerName}-row`} className="user-row">
         <td data-testid="user-row-name">
           <span>
-            <ToggleButton
-              dataTarget={`#${user.name}-${server.name}-collapse`}
-            />{" "}
+            <Button
+              onClick={() =>
+                setCollapseStates({
+                  ...collapseStates,
+                  [userServerName]: !open,
+                })
+              }
+              aria-controls={`${userServerName}-collapse`}
+              aria-expanded={open}
+              data-testid={`${userServerName}-collapse-button`}
+              variant={open ? "secondary" : "primary"}
+              size="sm"
+            >
+              <span className="caret"></span>
+            </Button>{" "}
           </span>
-          <div data-testid={`user-name-div-${user.name}`}>{user.name}</div>
+          <span data-testid={`user-name-div-${userServerName}`}>
+            {user.name}
+          </span>
         </td>
         <td data-testid="user-row-admin">{user.admin ? "admin" : ""}</td>
 
         <td data-testid="user-row-server">
           {server.name ? (
-            <p class="text-secondary">{server.name}</p>
+            <p className="text-secondary">{server.name}</p>
           ) : (
             <p style={{ color: "lightgrey" }}>[MAIN]</p>
           )}
@@ -263,49 +274,54 @@ const ServerDashboard = (props) => {
         <EditUserCell user={user} />
       </tr>,
       <tr>
-        <td colSpan={6} style={{ padding: 0 }}>
-          {/*<div style={{ margin: "0 auto", float: "none" }}>*/}
-          <CardGroup
-            id={`${user.name}-${server.name}-collapse`}
-            className="collapse"
-            style={{ width: "90%", margin: "0 auto", float: "none" }}
-          >
-            <Card style={{ width: "50%", padding: 6, float: "left" }}>
-              <Card.Title>User</Card.Title>
-              <ReactObjectTableViewer
-                className="table-striped table-bordered admin-table-head"
-                style={{
-                  padding: "3px 6px",
-                  margin: "auto",
-                }}
-                keyStyle={{
-                  padding: "4px",
-                }}
-                valueStyle={{
-                  padding: "4px",
-                }}
-                data={userNoServers}
-              />
-            </Card>
-            <Card style={{ width: "50%", padding: 6, display: "inline-block" }}>
-              <Card.Title>Server</Card.Title>
-              <ReactObjectTableViewer
-                className="table-striped table-bordered admin-table-head"
-                style={{
-                  padding: "3px 6px",
-                  margin: "auto",
-                }}
-                keyStyle={{
-                  padding: "4px",
-                }}
-                valueStyle={{
-                  padding: "4px",
-                }}
-                data={server}
-              />
-            </Card>
-          </CardGroup>
-          {/*</div>*/}
+        <td
+          colSpan={6}
+          style={{ padding: 0 }}
+          data-testid={`${userServerName}-td`}
+        >
+          <Collapse in={open} data-testid={`${userServerName}-collapse`}>
+            <CardGroup
+              id={`${userServerName}-card-group`}
+              style={{ width: "90%", margin: "0 auto", float: "none" }}
+            >
+              <Card style={{ width: "50%", padding: 6, float: "left" }}>
+                <Card.Title>User</Card.Title>
+                <ReactObjectTableViewer
+                  className="table-striped table-bordered admin-table-head"
+                  style={{
+                    padding: "3px 6px",
+                    margin: "auto",
+                  }}
+                  keyStyle={{
+                    padding: "4px",
+                  }}
+                  valueStyle={{
+                    padding: "4px",
+                  }}
+                  data={userNoServers}
+                />
+              </Card>
+              <Card
+                style={{ width: "50%", padding: 6, display: "inline-block" }}
+              >
+                <Card.Title>Server</Card.Title>
+                <ReactObjectTableViewer
+                  className="table-striped table-bordered admin-table-head"
+                  style={{
+                    padding: "3px 6px",
+                    margin: "auto",
+                  }}
+                  keyStyle={{
+                    padding: "4px",
+                  }}
+                  valueStyle={{
+                    padding: "4px",
+                  }}
+                  data={server}
+                />
+              </Card>
+            </CardGroup>
+          </Collapse>
         </td>
       </tr>,
     ];
