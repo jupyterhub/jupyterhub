@@ -154,9 +154,8 @@ class JupyterHubRequestValidator(RequestValidator):
         scopes = roles_to_scopes(orm_client.allowed_roles)
         if 'inherit' not in scopes:
             # add identify-user scope
-            scopes.update(identify_scopes())
-            # add access-service scope
-            scopes.update(access_scopes(orm_client))
+            # and access-service scope
+            scopes |= identify_scopes() | access_scopes(orm_client)
         return scopes
 
     def get_original_scopes(self, refresh_token, request, *args, **kwargs):

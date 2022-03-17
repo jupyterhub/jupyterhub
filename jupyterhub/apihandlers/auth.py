@@ -1,7 +1,6 @@
 """Authorization handlers"""
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-import itertools
 import json
 from datetime import datetime
 from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
@@ -30,7 +29,7 @@ class TokenAPIHandler(APIHandler):
         if owner:
             # having a token means we should be able to read the owner's model
             # (this is the only thing this handler is for)
-            self.expanded_scopes.update(scopes.identify_scopes(owner))
+            self.expanded_scopes |= scopes.identify_scopes(owner)
             self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
 
         # record activity whenever we see a token
@@ -288,7 +287,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             # rather than the expanded_scope intersection
 
             required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
-            user_scopes.update({"inherit", *required_scopes})
+            user_scopes |= {"inherit", *required_scopes}
 
             allowed_scopes = requested_scopes.intersection(user_scopes)
             excluded_scopes = requested_scopes.difference(user_scopes)

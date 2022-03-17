@@ -360,7 +360,7 @@ async def test_oauth_service_roles(
             )
 
     if 'inherit' in expected_scopes:
-        expected_scopes = scopes.get_scopes_for(user.orm_user)
+        expected_scopes = set(scopes.get_scopes_for(user.orm_user))
 
     # always expect identify/access scopes
     # on successful authentication
