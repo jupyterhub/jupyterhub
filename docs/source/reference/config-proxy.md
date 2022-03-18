@@ -165,7 +165,7 @@ As with nginx above, you can use [Apache](https://httpd.apache.org) as the rever
 First, we will need to enable the apache modules that we are going to need:
 
 ```bash
-a2enmod ssl rewrite proxy proxy_http proxy_wstunnel
+a2enmod ssl rewrite proxy headers proxy_http proxy_wstunnel
 ```
 
 Our Apache configuration is equivalent to the nginx configuration above:
@@ -188,13 +188,24 @@ Listen 443
 
   ServerName HUB.DOMAIN.TLD
 
+  # enable HTTP/2, if available
+  Protocols h2 http/1.1
+
+  # HTTP Strict Transport Security (mod_headers is required) (63072000 seconds)
+  Header always set Strict-Transport-Security "max-age=63072000"
+
   # configure SSL
   SSLEngine on
   SSLCertificateFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/fullchain.pem
   SSLCertificateKeyFile /etc/letsencrypt/live/HUB.DOMAIN.TLD/privkey.pem
-  SSLProtocol All -SSLv2 -SSLv3
   SSLOpenSSLConfCmd DHParameters /etc/ssl/certs/dhparam.pem
-  SSLCipherSuite EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH
+
+  # intermediate configuration from ssl-config.mozilla.org (2022-03-03)
+  # Please note, that this configuration might be out-dated - please update it accordingly using https://ssl-config.mozilla.org/
+  SSLProtocol             all -SSLv3 -TLSv1 -TLSv1.1
+  SSLCipherSuite          ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384
+  SSLHonorCipherOrder     off
+  SSLSessionTickets       off
 
   # Use RewriteEngine to handle websocket connection upgrades
   RewriteEngine On
@@ -208,6 +219,7 @@ Listen 443
     # proxy to JupyterHub
     ProxyPass         http://127.0.0.1:8000/
     ProxyPassReverse  http://127.0.0.1:8000/
+    RequestHeader     set "X-Forwarded-Proto" expr=%{REQUEST_SCHEME}
   </Location>
 </VirtualHost>
 ```

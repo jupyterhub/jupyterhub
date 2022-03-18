@@ -151,7 +151,7 @@ class SpawnHandler(BaseHandler):
             self.redirect(url)
             return
 
-        spawner = user.spawners[server_name]
+        spawner = user.get_spawner(server_name, replace_failed=True)
 
         pending_url = self._get_pending_url(user, server_name)
 
@@ -237,7 +237,7 @@ class SpawnHandler(BaseHandler):
             if user is None:
                 raise web.HTTPError(404, "No such user: %s" % for_user)
 
-        spawner = user.spawners[server_name]
+        spawner = user.get_spawner(server_name, replace_failed=True)
 
         if spawner.ready:
             raise web.HTTPError(400, "%s is already running" % (spawner._log_name))
@@ -369,13 +369,9 @@ class SpawnPendingHandler(BaseHandler):
         auth_state = await user.get_auth_state()
 
         # First, check for previous failure.
-        if (
-            not spawner.active
-            and spawner._spawn_future
-            and spawner._spawn_future.done()
-            and spawner._spawn_future.exception()
-        ):
-            # Condition: spawner not active and _spawn_future exists and contains an Exception
+        if not spawner.active and spawner._failed:
+            # Condition: spawner not active and last spawn failed
+            # (failure is available as spawner._spawn_future.exception()).
             # Implicit spawn on /user/:name is not allowed if the user's last spawn failed.
             # We should point the user to Home if the most recent spawn failed.
             exc = spawner._spawn_future.exception()

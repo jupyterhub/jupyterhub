@@ -253,6 +253,22 @@ class User:
     def spawner_class(self):
         return self.settings.get('spawner_class', LocalProcessSpawner)
 
+    def get_spawner(self, server_name="", replace_failed=False):
+        """Get a spawner by name
+
+        replace_failed governs whether a failed spawner should be replaced
+        or returned (default: returned).
+
+        .. versionadded:: 2.2
+        """
+        spawner = self.spawners[server_name]
+        if replace_failed and spawner._failed:
+            self.log.debug(f"Discarding failed spawner {spawner._log_name}")
+            # remove failed spawner, create a new one
+            self.spawners.pop(server_name)
+            spawner = self.spawners[server_name]
+        return spawner
+
     def sync_groups(self, group_names):
         """Synchronize groups with database"""
 
@@ -628,7 +644,7 @@ class User:
         api_token = self.new_api_token(note=note, roles=['server'])
         db.commit()
 
-        spawner = self.spawners[server_name]
+        spawner = self.get_spawner(server_name, replace_failed=True)
         spawner.server = server = Server(orm_server=orm_server)
         assert spawner.orm_spawner.server is orm_server
 

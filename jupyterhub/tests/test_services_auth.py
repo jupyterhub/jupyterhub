@@ -5,18 +5,20 @@ import sys
 from binascii import hexlify
 from unittest import mock
 from urllib.parse import parse_qs
+from urllib.parse import quote
 from urllib.parse import urlparse
 
 import pytest
+from bs4 import BeautifulSoup
 from pytest import raises
 from tornado.httputil import url_concat
 
 from .. import orm
 from .. import roles
+from .. import scopes
 from ..services.auth import _ExpiringDict
 from ..utils import url_path_join
 from .mocking import public_url
-from .test_api import add_user
 from .utils import async_requests
 from .utils import AsyncSession
 
@@ -226,6 +228,10 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
         # requesting subset
         (["admin", "user"], ["user"], ["user"]),
         (["user", "token", "server"], ["token", "user"], ["token", "user"]),
+        (["admin", "user", "read-only"], ["read-only"], ["read-only"]),
+        # requesting valid subset, some not held by user
+        (["admin", "user"], ["admin", "user"], ["user"]),
+        (["admin", "user"], ["admin"], []),
     ],
 )
 async def test_oauth_service_roles(
@@ -235,6 +241,7 @@ async def test_oauth_service_roles(
     client_allowed_roles,
     request_roles,
     expected_roles,
+    preserve_scopes,
 ):
     service = mockservice_url
     oauth_client = (
@@ -242,30 +249,40 @@ async def test_oauth_service_roles(
         .filter_by(identifier=service.oauth_client_id)
         .one()
     )
+    scopes.define_custom_scopes(
+        {
+            "custom:jupyter_server:read:*": {
+                "description": "read-only access to jupyter server",
+            },
+        },
+    )
+    roles.create_role(
+        app.db,
+        {
+            "name": "read-only",
+            "description": "read-only access to servers",
+            "scopes": [
+                "access:servers",
+                "custom:jupyter_server:read:*",
+            ],
+        },
+    )
     oauth_client.allowed_roles = [
         orm.Role.find(app.db, role_name) for role_name in client_allowed_roles
     ]
     app.db.commit()
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
+    if request_roles:
+        url = url_concat(url, {"request-scope": " ".join(request_roles)})
     # first request is only going to login and get us to the oauth form page
     s = AsyncSession()
     user = create_user_with_scopes("access:services")
     roles.grant_role(app.db, user, "user")
+    roles.grant_role(app.db, user, "read-only")
     name = user.name
     s.cookies = await app.login_user(name)
 
     r = await s.get(url)
-    r.raise_for_status()
-    # we should be looking at the oauth confirmation page
-    assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
-    # verify oauth state cookie was set at some point
-    assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
-
-    # submit the oauth form to complete authorization
-    data = {}
-    if request_roles:
-        data["scopes"] = request_roles
-    r = await s.post(r.url, data=data, headers={'Referer': r.url})
     if expected_roles is None:
         # expected failed auth, stop here
         # verify expected 'invalid scope' error, not server error
@@ -274,6 +291,21 @@ async def test_oauth_service_roles(
         assert parse_qs(query).get("error") == ["invalid_scope"]
         assert r.status_code == 400
         return
+    r.raise_for_status()
+    # we should be looking at the oauth confirmation page
+    assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
+    # verify oauth state cookie was set at some point
+    assert set(r.history[0].cookies.keys()) == {'service-%s-oauth-state' % service.name}
+
+    page = BeautifulSoup(r.text, "html.parser")
+    scope_inputs = page.find_all("input", {"name": "scopes"})
+    scope_values = [input["value"] for input in scope_inputs]
+    print("Submitting request with scope values", scope_values)
+    # submit the oauth form to complete authorization
+    data = {}
+    if scope_values:
+        data["scopes"] = scope_values
+    r = await s.post(r.url, data=data, headers={'Referer': r.url})
     r.raise_for_status()
     assert r.url == url
     # verify oauth cookie is set
@@ -374,7 +406,11 @@ async def test_oauth_access_scopes(
 
 @pytest.mark.parametrize(
     "token_roles, hits_page",
-    [([], True), (['writer'], True), (['writer', 'reader'], False)],
+    [
+        ([], True),
+        (['writer'], True),
+        (['writer', 'reader'], False),
+    ],
 )
 async def test_oauth_page_hit(
     app,
@@ -390,6 +426,8 @@ async def test_oauth_page_hit(
     }
     service = mockservice_url
     user = create_user_with_scopes("access:services", "self")
+    for role in test_roles.values():
+        roles.grant_role(app.db, user, role)
     user.new_api_token()
     token = user.api_tokens[0]
     token.roles = [test_roles[t] for t in token_roles]

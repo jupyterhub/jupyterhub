@@ -472,6 +472,42 @@ async def test_get_users_state_filter(app, state):
 
 
 @mark.user
+async def test_get_users_name_filter(app):
+    db = app.db
+
+    add_user(db, app=app, name='q')
+    add_user(db, app=app, name='qr')
+    add_user(db, app=app, name='qrs')
+    add_user(db, app=app, name='qrst')
+    added_usernames = {'q', 'qr', 'qrs', 'qrst'}
+
+    r = await api_request(app, 'users')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert added_usernames.intersection(response_users) == added_usernames
+
+    r = await api_request(app, 'users?name_filter=q')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['q', 'qr', 'qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qr')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qr', 'qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qrs')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qrst')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qrst']
+
+
+@mark.user
 async def test_get_self(app):
     db = app.db
 
@@ -1030,7 +1066,7 @@ async def test_never_spawn(app, no_patience, never_spawn):
     assert not app_user.spawner._spawn_pending
     status = await app_user.spawner.poll()
     assert status is not None
-    # failed spawn should decrements pending count
+    # failed spawn should decrement pending count
     assert app.users.count_active_users()['pending'] == 0
 
 
@@ -1039,8 +1075,15 @@ async def test_bad_spawn(app, bad_spawn):
     name = 'prim'
     user = add_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
+    # check that we don't re-use spawners that failed
+    user.spawners[''].reused = True
     assert r.status_code == 500
     assert app.users.count_active_users()['pending'] == 0
+
+    r = await api_request(app, 'users', name, 'server', method='post')
+    # check that we don't re-use spawners that failed
+    spawner = user.spawners['']
+    assert not getattr(spawner, 'reused', False)
 
 
 async def test_spawn_nosuch_user(app):

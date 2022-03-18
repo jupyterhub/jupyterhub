@@ -526,10 +526,16 @@ class BaseHandler(RequestHandler):
             path=url_path_join(self.base_url, 'services'),
             **kwargs,
         )
-        # clear tornado cookie
+        # clear_cookie only accepts a subset of set_cookie's kwargs
+        clear_xsrf_cookie_kwargs = {
+            key: value
+            for key, value in self.settings.get('xsrf_cookie_kwargs', {})
+            if key in {"path", "domain"}
+        }
+
         self.clear_cookie(
             '_xsrf',
-            **self.settings.get('xsrf_cookie_kwargs', {}),
+            **clear_xsrf_cookie_kwargs,
         )
         # Reset _jupyterhub_user
         self._jupyterhub_user = None

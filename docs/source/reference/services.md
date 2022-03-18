@@ -83,6 +83,7 @@ c.JupyterHub.load_roles = [
             # 'admin:users' # needed if culling idle users as well
         ]
     }
+]
 
 c.JupyterHub.services = [
     {
@@ -208,23 +209,23 @@ can be used by services. You may go beyond this reference implementation and
 create custom hub-authenticating clients and services. We describe the process
 below.
 
-The reference, or base, implementation is the [`HubAuth`][hubauth] class,
+The reference, or base, implementation is the {class}`.HubAuth` class,
 which implements the API requests to the Hub that resolve a token to a User model.
 
 There are two levels of authentication with the Hub:
 
-- [`HubAuth`][hubauth] - the most basic authentication,
+- {class}`.HubAuth` - the most basic authentication,
   for services that should only accept API requests authorized with a token.
 
-- [`HubOAuth`][huboauth] - For services that should use oauth to authenticate with the Hub.
+- {class}`.HubOAuth` - For services that should use oauth to authenticate with the Hub.
   This should be used for any service that serves pages that should be visited with a browser.
 
 To use HubAuth, you must set the `.api_token`, either programmatically when constructing the class,
 or via the `JUPYTERHUB_API_TOKEN` environment variable.
 
 Most of the logic for authentication implementation is found in the
-[`HubAuth.user_for_token`][hubauth.user_for_token]
-methods, which makes a request of the Hub, and returns:
+{meth}`.HubAuth.user_for_token` methods,
+which makes a request of the Hub, and returns:
 
 - None, if no user could be identified, or
 - a dict of the following form:
@@ -244,6 +245,19 @@ action.
 
 HubAuth also caches the Hub's response for a number of seconds,
 configurable by the `cookie_cache_max_age` setting (default: five minutes).
+
+If your service would like to make further requests _on behalf of users_,
+it should use the token issued by this OAuth process.
+If you are using tornado,
+you can access the token authenticating the current request with {meth}`.HubAuth.get_token`.
+
+:::{versionchanged} 2.2
+
+{meth}`.HubAuth.get_token` adds support for retrieving
+tokens stored in tornado cookies after completion of OAuth.
+Previously, it only retrieved tokens from URL parameters or the Authorization header.
+Passing `get_token(handler, in_cookie=False)` preserves this behavior.
+:::
 
 ### Flask Example
 
@@ -370,11 +384,6 @@ section on securing the notebook viewer.
 
 [requests]: http://docs.python-requests.org/en/master/
 [services_auth]: ../api/services.auth.html
-[hubauth]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth
-[huboauth]: ../api/services.auth.html#jupyterhub.services.auth.HubOAuth
-[hubauth.user_for_token]: ../api/services.auth.html#jupyterhub.services.auth.HubAuth.user_for_token
-[hubauthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubAuthenticated
-[huboauthenticated]: ../api/services.auth.html#jupyterhub.services.auth.HubOAuthenticated
 [nbviewer example]: https://github.com/jupyter/nbviewer#securing-the-notebook-viewer
 [fastapi example]: https://github.com/jupyterhub/jupyterhub/tree/HEAD/examples/service-fastapi
 [fastapi]: https://fastapi.tiangolo.com

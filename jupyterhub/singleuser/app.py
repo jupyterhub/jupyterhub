@@ -29,9 +29,9 @@ else:
         try:
             App = import_item(JUPYTERHUB_SINGLEUSER_APP)
         except ImportError as e:
-            continue
             if _import_error is None:
                 _import_error = e
+            continue
         else:
             break
     if App is None:
