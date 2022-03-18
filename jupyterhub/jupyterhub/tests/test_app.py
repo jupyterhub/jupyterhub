@@ -6,7 +6,6 @@ import os
 import re
 import sys
 import time
-from distutils.version import LooseVersion as V
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
@@ -16,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 import traitlets
+from distutils.version import LooseVersion as V
 from traitlets.config import Config
 
 from .. import orm
