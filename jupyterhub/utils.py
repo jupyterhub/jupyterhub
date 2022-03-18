@@ -726,3 +726,16 @@ def get_browser_protocol(request):
 
     # no forwarded headers
     return request.protocol
+
+def has_async_create_classmethod(klass):
+    if ( getattr(klass, "create", None) and
+         asyncio.iscoroutinefunction(klass.create) and
+         inspect.ismethod(klass.create) and
+         klass.create.__self__ is klass):
+        return True
+    return False
+
+async def create_instance(klass,*args,**kwargs):
+    if has_async_create_classmethod(klass):
+        return await klass.create(*args,**kwargs)
+    return klass(*args,**kwargs)

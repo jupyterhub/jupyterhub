@@ -30,6 +30,7 @@ from .utils import AnyTimeoutError
 from .utils import make_ssl_context
 from .utils import maybe_future
 from .utils import url_path_join
+from .utils import create_instance
 
 
 # detailed messages about the most common failure-to-start errors,
@@ -441,7 +442,7 @@ class User:
 
         # update with kwargs. Mainly for testing.
         spawn_kwargs.update(kwargs)
-        spawner = spawner_class(**spawn_kwargs)
+        spawner = create_instance(spawner_class,**spawn_kwargs)
         spawner.load_state(orm_spawner.state or {})
         return spawner
 
