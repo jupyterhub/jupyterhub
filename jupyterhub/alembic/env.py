@@ -65,8 +65,9 @@ def run_migrations_offline():
 
     """
     connectable = config.attributes.get('connection', None)
-    config_opts = dict(literal_binds=True)
+    config_opts = {}
     config_opts.update(common_config_opts)
+    config_opts["literal_binds"] = True
 
     if connectable is None:
         config_opts["url"] = config.get_main_option("sqlalchemy.url")
