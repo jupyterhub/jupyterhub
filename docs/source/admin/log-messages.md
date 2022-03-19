@@ -1,4 +1,4 @@
-# Common log messages emitted by JupyterHub
+# Interpreting common log messages
 
 When debugging errors and outages, looking at the logs emitted by
 JupyterHub is very helpful. This document tries to document some common
@@ -36,3 +36,38 @@ URL, used by [jupyter-resource-usage](https://github.com/jupyter-server/jupyter-
 ### Actions you can take
 
 This log message is benign, and there is usually no action for you to take.
+
+## JupyterHub Singleuser Version mismatch
+
+### Example
+
+```
+ jupyterhub version 1.5.0 != jupyterhub-singleuser version 1.3.0. This could cause failure to authenticate and result in redirect loops!
+```
+
+### Cause
+
+JupyterHub requires the `jupyterhub` python package installed inside the image or
+environment the user server starts in. This message indicates that the version of
+the `jupyterhub` package installed inside the user image or environment is not
+the same version as the JupyterHub server itself. This is not necessarily always a
+problem - some version drift is mostly acceptable, and the only two known cases of
+breakage are across the 0.7 and 2.0 version releases. In those cases, issues pop
+up immediately after upgrading your version of JupyterHub, so **always check the JupyterHub
+changelog before upgrading!**. The primary problems this _could_ cause are:
+
+1. Infinite redirect loops after the user server starts
+2. Missing expected environment variables in the user server once it starts
+3. Failure for the started user server to authenticate with the JupyterHub server -
+   note that this is _not_ the same as _user authentication_ failing!
+
+However, for the most part, unless you are seeing these specific issues, the log
+message should be counted as a warning to get the `jupyterhub` package versions
+aligned, rather than as an indicator of an existing problem.
+
+### Actions you can take
+
+Upgrade the version of the `jupyterhub` package in your user environment or image
+so it matches the version of JupyterHub running your JupyterHub server! If you
+are using the [zero-to-jupyterhub](https://z2jh.jupyter.org) helm chart, you can find the appropriate
+version of the `jupyterhub` package to install in your user image [here](https://jupyterhub.github.io/helm-chart/)
