@@ -282,9 +282,9 @@ const ServerDashboard = (props) => {
           <Collapse in={open} data-testid={`${userServerName}-collapse`}>
             <CardGroup
               id={`${userServerName}-card-group`}
-              style={{ width: "90%", margin: "0 auto", float: "none" }}
+              style={{ width: "100%", margin: "0 auto", float: "none" }}
             >
-              <Card style={{ width: "50%", padding: 6, float: "left" }}>
+              <Card style={{ width: "100%", padding: 3, margin: "0 auto" }}>
                 <Card.Title>User</Card.Title>
                 <ReactObjectTableViewer
                   className="table-striped table-bordered admin-table-head"
@@ -301,9 +301,7 @@ const ServerDashboard = (props) => {
                   data={userNoServers}
                 />
               </Card>
-              <Card
-                style={{ width: "50%", padding: 6, display: "inline-block" }}
-              >
+              <Card style={{ width: "100%", padding: 3, margin: "0 auto" }}>
                 <Card.Title>Server</Card.Title>
                 <ReactObjectTableViewer
                   className="table-striped table-bordered admin-table-head"
