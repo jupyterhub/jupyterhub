@@ -351,7 +351,7 @@ class JupyterHubRequestValidator(RequestValidator):
 
         # APIToken.new commits the token to the db
         orm.APIToken.new(
-            client_id=client.identifier,
+            oauth_client=client,
             expires_in=token['expires_in'],
             scopes=request.scopes,
             token=token['access_token'],
