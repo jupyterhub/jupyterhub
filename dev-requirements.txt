@@ -11,7 +11,8 @@ jupyterlab >=3
 mock
 pre-commit
 pytest>=3.3
-pytest-asyncio
+pytest-asyncio; python_version < "3.7"
+pytest-asyncio>=0.17; python_version >= "3.7"
 pytest-cov
 requests-mock
 tbump
