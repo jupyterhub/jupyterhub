@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 import pytest
 import traitlets
+from distutils.version import LooseVersion as V
 from traitlets.config import Config
 
 from .. import orm
@@ -32,7 +33,7 @@ def test_help_all():
     assert '--JupyterHub.ip' in out
 
 
-@pytest.mark.skipif(traitlets.version_info < (5,), reason="requires traitlets 5")
+@pytest.mark.skipif(V(traitlets.__version__) < V('5'), reason="requires traitlets 5")
 def test_show_config(tmpdir):
     tmpdir.chdir()
     p = Popen(
@@ -246,7 +247,6 @@ async def test_load_groups(tmpdir, request):
         kwargs['internal_certs_location'] = str(tmpdir)
     hub = MockHub(**kwargs)
     hub.init_db()
-    await hub.init_role_creation()
     await hub.init_users()
     await hub.init_groups()
     db = hub.db
