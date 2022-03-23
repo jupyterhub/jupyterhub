@@ -21,6 +21,7 @@ extensions = [
     'myst_parser',
 ]
 
+myst_heading_anchors = 2
 myst_enable_extensions = [
     'colon_fence',
     'deflist',
@@ -129,6 +130,30 @@ html_favicon = '_static/images/logo/favicon.ico'
 html_static_path = ['_static']
 
 htmlhelp_basename = 'JupyterHubdoc'
+
+html_theme_options = {
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/jupyterhub/jupyterhub",
+            "icon": "fab fa-github-square",
+        },
+        {
+            "name": "Discourse",
+            "url": "https://discourse.jupyter.org/c/jupyterhub/10",
+            "icon": "fab fa-discourse",
+        },
+    ],
+    "use_edit_page_button": True,
+    "navbar_align": "left",
+}
+
+html_context = {
+    "github_user": "jupyterhub",
+    "github_repo": "jupyterhub",
+    "github_version": "main",
+    "doc_path": "docs",
+}
 
 # -- Options for LaTeX output ---------------------------------------------
 

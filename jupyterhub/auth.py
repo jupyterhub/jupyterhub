@@ -582,9 +582,13 @@ class Authenticator(LoggingConfigurable):
                 or None if Authentication failed.
 
                 The Authenticator may return a dict instead, which MUST have a
-                key `name` holding the username, and MAY have two optional keys
-                set: `auth_state`, a dictionary of of auth state that will be
-                persisted; and `admin`, the admin setting value for the user.
+                key `name` holding the username, and MAY have additional keys:
+
+                - `auth_state`, a dictionary of of auth state that will be
+                  persisted;
+                - `admin`, the admin setting value for the user
+                - `groups`, the list of group names the user should be a member of,
+                  if Authenticator.manage_groups is True.
         """
 
     def pre_spawn_start(self, user, spawner):
@@ -634,6 +638,19 @@ class Authenticator(LoggingConfigurable):
             user (User): The User wrapper object
         """
         self.allowed_users.discard(user.name)
+
+    manage_groups = Bool(
+        False,
+        config=True,
+        help="""Let authenticator manage user groups
+
+        If True, Authenticator.authenticate and/or .refresh_user
+        may return a list of group names in the 'groups' field,
+        which will be assigned to the user.
+
+        All group-assignment APIs are disabled if this is True.
+        """,
+    )
 
     auto_login = Bool(
         False,
@@ -958,16 +975,24 @@ class PAMAuthenticator(LocalAuthenticator):
     ).tag(config=True)
 
     open_sessions = Bool(
-        True,
+        False,
         help="""
         Whether to open a new PAM session when spawners are started.
 
-        This may trigger things like mounting shared filsystems,
-        loading credentials, etc. depending on system configuration,
-        but it does not always work.
+        This may trigger things like mounting shared filesystems,
+        loading credentials, etc. depending on system configuration.
+
+        The lifecycle of PAM sessions is not correct,
+        so many PAM session configurations will not work.
 
         If any errors are encountered when opening/closing PAM sessions,
         this is automatically set to False.
+
+        .. versionchanged:: 2.2
+
+            Due to longstanding problems in the session lifecycle,
+            this is now disabled by default.
+            You may opt-in to opening sessions by setting this to True.
         """,
     ).tag(config=True)
 

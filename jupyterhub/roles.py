@@ -45,6 +45,7 @@ def get_default_roles():
                 'access:services',
                 'access:servers',
                 'read:roles',
+                'read:metrics',
             ],
         },
         {
@@ -401,6 +402,10 @@ def _token_allowed_role(db, token, role):
 
     if owner is None:
         raise ValueError(f"Owner not found for {token}")
+
+    if role in owner.roles:
+        # shortcut: token is assigned an exact role the owner has
+        return True
 
     expanded_scopes = _get_subscopes(role, owner=owner)
 

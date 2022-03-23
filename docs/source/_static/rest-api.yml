@@ -6,7 +6,7 @@ info:
   description: The REST API for JupyterHub
   license:
     name: BSD-3-Clause
-  version: 2.1.0.dev
+  version: 2.3.0.dev
 servers:
   - url: /hub/api
 security:
@@ -1419,3 +1419,4 @@ components:
               Read information about the proxy’s routing table, sync the Hub
               with the proxy and notify the Hub about a new proxy.
             shutdown: Shutdown the hub.
+            read:metrics: Read prometheus metrics.

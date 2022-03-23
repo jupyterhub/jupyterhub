@@ -16,8 +16,8 @@ import random
 import secrets
 import sys
 import warnings
+from datetime import datetime
 from datetime import timezone
-from importlib import import_module
 from textwrap import dedent
 from urllib.parse import urlparse
 
@@ -606,34 +606,10 @@ class SingleUserNotebookAppMixin(Configurable):
             t = self.hub_activity_interval * (1 + 0.2 * (random.random() - 0.5))
             await asyncio.sleep(t)
 
-    def _log_app_versions(self):
-        """Log application versions at startup
-
-        Logs versions of jupyterhub and singleuser-server base versions (jupyterlab, jupyter_server, notebook)
-        """
-        self.log.info(f"Starting jupyterhub single-user server version {__version__}")
-
-        # don't log these package versions
-        seen = {"jupyterhub", "traitlets", "jupyter_core", "builtins"}
-
-        for cls in self.__class__.mro():
-            module_name = cls.__module__.partition(".")[0]
-            if module_name not in seen:
-                seen.add(module_name)
-                try:
-                    mod = import_module(module_name)
-                    mod_version = getattr(mod, "__version__")
-                except Exception:
-                    mod_version = ""
-                self.log.info(
-                    f"Extending {cls.__module__}.{cls.__name__} from {module_name} {mod_version}"
-                )
-
     def initialize(self, argv=None):
         # disable trash by default
         # this can be re-enabled by config
         self.config.FileContentsManager.delete_to_trash = False
-        self._log_app_versions()
         return super().initialize(argv)
 
     def start(self):
@@ -679,7 +655,6 @@ class SingleUserNotebookAppMixin(Configurable):
         s['hub_prefix'] = self.hub_prefix
         s['hub_host'] = self.hub_host
         s['hub_auth'] = self.hub_auth
-        s['page_config_hook'] = self.page_config_hook
         csp_report_uri = s['csp_report_uri'] = self.hub_host + url_path_join(
             self.hub_prefix, 'security/csp-report'
         )
@@ -706,18 +681,6 @@ class SingleUserNotebookAppMixin(Configurable):
         # apply X-JupyterHub-Version to *all* request handlers (even redirects)
         self.patch_default_headers()
         self.patch_templates()
-
-    def page_config_hook(self, handler, page_config):
-        """JupyterLab page config hook
-
-        Adds JupyterHub info to page config.
-
-        Places the JupyterHub API token in PageConfig.token.
-
-        Only has effect on jupyterlab_server >=2.9
-        """
-        page_config["token"] = self.hub_auth.get_token(handler) or ""
-        return page_config
 
     def patch_default_headers(self):
         if hasattr(RequestHandler, '_orig_set_default_headers'):

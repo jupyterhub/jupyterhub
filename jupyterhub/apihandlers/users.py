@@ -84,6 +84,7 @@ class UserListAPIHandler(APIHandler):
     @needs_scope('list:users')
     def get(self):
         state_filter = self.get_argument("state", None)
+        name_filter = self.get_argument("name_filter", None)
         offset, limit = self.get_api_pagination()
 
         # post_filter
@@ -147,6 +148,9 @@ class UserListAPIHandler(APIHandler):
                 query = query.filter(filters[0])
             else:
                 query = query.filter(or_(*filters))
+
+        if name_filter:
+            query = query.filter(orm.User.name.ilike(f'%{name_filter}%'))
 
         full_query = query
         query = query.order_by(orm.User.id.asc()).offset(offset).limit(limit)
@@ -515,7 +519,7 @@ class UserServerAPIHandler(APIHandler):
                             user_name, self.named_server_limit_per_user
                         ),
                     )
-        spawner = user.spawners[server_name]
+        spawner = user.get_spawner(server_name, replace_failed=True)
         pending = spawner.pending
         if pending == 'spawn':
             self.set_header('Content-Type', 'text/plain')
@@ -714,7 +718,12 @@ class SpawnProgressAPIHandler(APIHandler):
             # check if spawner has just failed
             f = spawn_future
             if f and f.done() and f.exception():
-                failed_event['message'] = "Spawn failed: %s" % f.exception()
+                exc = f.exception()
+                message = getattr(exc, "jupyterhub_message", str(exc))
+                failed_event['message'] = f"Spawn failed: {message}"
+                html_message = getattr(exc, "jupyterhub_html_message", "")
+                if html_message:
+                    failed_event['html_message'] = html_message
                 await self.send_event(failed_event)
                 return
             else:
@@ -747,7 +756,12 @@ class SpawnProgressAPIHandler(APIHandler):
             # what happened? Maybe spawn failed?
             f = spawn_future
             if f and f.done() and f.exception():
-                failed_event['message'] = "Spawn failed: %s" % f.exception()
+                exc = f.exception()
+                message = getattr(exc, "jupyterhub_message", str(exc))
+                failed_event['message'] = f"Spawn failed: {message}"
+                html_message = getattr(exc, "jupyterhub_html_message", "")
+                if html_message:
+                    failed_event['html_message'] = html_message
             else:
                 self.log.warning(
                     "Server %s didn't start for unknown reason", spawner._log_name

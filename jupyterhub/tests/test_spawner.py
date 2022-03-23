@@ -81,6 +81,18 @@ async def test_spawner(db, request):
     assert isinstance(status, int)
 
 
+def test_spawner_from_db(app, user):
+    spawner = user.spawners['name']
+    user_options = {"test": "value"}
+    spawner.orm_spawner.user_options = user_options
+    app.db.commit()
+    # delete and recreate the spawner from the db
+    user.spawners.pop('name')
+    new_spawner = user.spawners['name']
+    assert new_spawner.orm_spawner.user_options == user_options
+    assert new_spawner.user_options == user_options
+
+
 async def wait_for_spawner(spawner, timeout=10):
     """Wait for an http server to show up
 
@@ -447,3 +459,80 @@ async def test_spawner_oauth_roles_bad(app, user):
     # raises ValueError if we try to assign a role that doesn't exist
     with pytest.raises(ValueError):
         await spawner.user.spawn()
+
+
+async def test_spawner_options_from_form(db):
+    def options_from_form(form_data):
+        return form_data
+
+    spawner = new_spawner(db, options_from_form=options_from_form)
+    form_data = {"key": ["value"]}
+    result = spawner.run_options_from_form(form_data)
+    for key, value in form_data.items():
+        assert key in result
+        assert result[key] == value
+
+
+async def test_spawner_options_from_form_with_spawner(db):
+    def options_from_form(form_data, spawner):
+        return form_data
+
+    spawner = new_spawner(db, options_from_form=options_from_form)
+    form_data = {"key": ["value"]}
+    result = spawner.run_options_from_form(form_data)
+    for key, value in form_data.items():
+        assert key in result
+        assert result[key] == value
+
+
+def test_spawner_server(db):
+    spawner = new_spawner(db)
+    spawner.orm_spawner = None
+    orm_spawner = orm.Spawner()
+    orm_server = orm.Server(base_url="/1/")
+    orm_spawner.server = orm_server
+    db.add(orm_spawner)
+    db.add(orm_server)
+    db.commit()
+    # initial: no orm_spawner
+    assert spawner.server is None
+    # assigning spawner.orm_spawner updates spawner.server
+    spawner.orm_spawner = orm_spawner
+    assert spawner.server is not None
+    assert spawner.server.orm_server is orm_server
+    # update orm_spawner.server without direct access on Spawner
+    orm_spawner.server = new_server = orm.Server(base_url="/2/")
+    db.commit()
+    assert spawner.server is not None
+    assert spawner.server.orm_server is not orm_server
+    assert spawner.server.orm_server is new_server
+    # clear orm_server via orm_spawner clears spawner.server
+    orm_spawner.server = None
+    db.commit()
+    assert spawner.server is None
+    # assigning spawner.server updates orm_spawner.server
+    orm_server = orm.Server(base_url="/3/")
+    db.add(orm_server)
+    db.commit()
+    spawner.server = server = Server(orm_server=orm_server)
+    db.commit()
+    assert spawner.server is server
+    assert spawner.orm_spawner.server is orm_server
+    # change orm spawner.server
+    orm_server = orm.Server(base_url="/4/")
+    db.add(orm_server)
+    db.commit()
+    spawner.server = server2 = Server(orm_server=orm_server)
+    assert spawner.server is server2
+    assert spawner.orm_spawner.server is orm_server
+    # clear server via spawner.server
+    spawner.server = None
+    db.commit()
+    assert spawner.orm_spawner.server is None
+
+    # test with no underlying orm.Spawner
+    # (only relevant for mocking, never true for actual Spawners)
+    spawner = Spawner()
+    spawner.server = Server.from_url("http://1.2.3.4")
+    assert spawner.server is not None
+    assert spawner.server.ip == "1.2.3.4"

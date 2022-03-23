@@ -1,14 +1,28 @@
 # This is a GitHub workflow defining a set of jobs with a set of steps.
-# ref: https://docs.github.com/en/free-pro-team@latest/actions/reference/workflow-syntax-for-github-actions
+# ref: https://docs.github.com/en/actions/learn-github-actions/workflow-syntax-for-github-actions
 #
 name: Test
 
-# Trigger the workflow's on all PRs but only on pushed tags or commits to
-# main/master branch to avoid PRs developed in a GitHub fork's dedicated branch
-# to trigger.
 on:
   pull_request:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "**.rst"
+      - ".github/workflows/*"
+      - "!.github/workflows/test.yml"
   push:
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "**.rst"
+      - ".github/workflows/*"
+      - "!.github/workflows/test.yml"
+    branches-ignore:
+      - "dependabot/**"
+      - "pre-commit-ci-update-config"
+    tags:
+      - "**"
   workflow_dispatch:
 
 env:
@@ -17,52 +31,6 @@ env:
   PYTEST_ADDOPTS: "--verbose --color=yes"
 
 jobs:
-  rest-api:
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - name: Validate REST API
-        uses: char0n/swagger-editor-validate@182d1a5d26ff5c2f4f452c43bd55e2c7d8064003
-        with:
-          definition-file: docs/source/_static/rest-api.yml
-
-      - uses: actions/setup-python@v2
-        with:
-          python-version: "3.9"
-      # in addition to the doc requirements
-      # the docs *tests* require pre-commit and pytest
-      - run: |
-          pip install -r docs/requirements.txt pytest pre-commit -e .
-      - run: |
-          pytest docs/
-
-  jstest:
-    # Run javascript tests
-    runs-on: ubuntu-20.04
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v2
-      # NOTE: actions/setup-node@v1 make use of a cache within the GitHub base
-      #       environment and setup in a fraction of a second.
-      - name: Install Node
-        uses: actions/setup-node@v1
-        with:
-          node-version: "14"
-
-      - name: Install Node dependencies
-        run: |
-          npm install -g yarn
-
-      - name: Run yarn
-        run: |
-          cd jsx
-          yarn
-
-      - name: yarn test
-        run: |
-          cd jsx
-          yarn test
-
   # Run "pytest jupyterhub/tests" in various configurations
   pytest:
     runs-on: ubuntu-20.04

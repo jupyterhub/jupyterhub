@@ -320,9 +320,11 @@ def admin_only(f):
 @auth_decorator
 def metrics_authentication(self):
     """Decorator for restricting access to metrics"""
-    user = self.current_user
-    if user is None and self.authenticate_prometheus:
-        raise web.HTTPError(403)
+    if not self.authenticate_prometheus:
+        return
+    scope = 'read:metrics'
+    if scope not in self.parsed_scopes:
+        raise web.HTTPError(403, f"Access to metrics requires scope '{scope}'")
 
 
 # Token utilities
@@ -683,3 +685,44 @@ def catch_db_error(f):
             return r
 
     return catching
+
+
+def get_browser_protocol(request):
+    """Get the _protocol_ seen by the browser
+
+    Like tornado's _apply_xheaders,
+    but in the case of multiple proxy hops,
+    use the outermost value (what the browser likely sees)
+    instead of the innermost value,
+    which is the most trustworthy.
+
+    We care about what the browser sees,
+    not where the request actually came from,
+    so trusting possible spoofs is the right thing to do.
+    """
+    headers = request.headers
+    # first choice: Forwarded header
+    forwarded_header = headers.get("Forwarded")
+    if forwarded_header:
+        first_forwarded = forwarded_header.split(",", 1)[0].strip()
+        fields = {}
+        forwarded_dict = {}
+        for field in first_forwarded.split(";"):
+            key, _, value = field.partition("=")
+            fields[key.strip().lower()] = value.strip()
+        if "proto" in fields and fields["proto"].lower() in {"http", "https"}:
+            return fields["proto"].lower()
+        else:
+            app_log.warning(
+                f"Forwarded header present without protocol: {forwarded_header}"
+            )
+
+    # second choice: X-Scheme or X-Forwarded-Proto
+    proto_header = headers.get("X-Scheme", headers.get("X-Forwarded-Proto", None))
+    if proto_header:
+        proto_header = proto_header.split(",")[0].strip().lower()
+        if proto_header in {"http", "https"}:
+            return proto_header
+
+    # no forwarded headers
+    return request.protocol

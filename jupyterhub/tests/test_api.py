@@ -98,27 +98,62 @@ async def test_post_content_type(app, content_type, status):
 
 
 @mark.parametrize(
-    "host, referer, status",
+    "host, referer, extraheaders, status",
     [
-        ('$host', '$url', 200),
-        (None, None, 200),
-        (None, 'null', 403),
-        (None, 'http://attack.com/csrf/vulnerability', 403),
-        ('$host', {"path": "/user/someuser"}, 403),
-        ('$host', {"path": "{path}/foo/bar/subpath"}, 200),
+        ('$host', '$url', {}, 200),
+        (None, None, {}, 200),
+        (None, 'null', {}, 403),
+        (None, 'http://attack.com/csrf/vulnerability', {}, 403),
+        ('$host', {"path": "/user/someuser"}, {}, 403),
+        ('$host', {"path": "{path}/foo/bar/subpath"}, {}, 200),
         # mismatch host
-        ("mismatch.com", "$url", 403),
+        ("mismatch.com", "$url", {}, 403),
         # explicit host, matches
-        ("fake.example", {"netloc": "fake.example"}, 200),
+        ("fake.example", {"netloc": "fake.example"}, {}, 200),
         # explicit port, matches implicit port
-        ("fake.example:80", {"netloc": "fake.example"}, 200),
+        ("fake.example:80", {"netloc": "fake.example"}, {}, 200),
         # explicit port, mismatch
-        ("fake.example:81", {"netloc": "fake.example"}, 403),
+        ("fake.example:81", {"netloc": "fake.example"}, {}, 403),
         # implicit ports, mismatch proto
-        ("fake.example", {"netloc": "fake.example", "scheme": "https"}, 403),
+        ("fake.example", {"netloc": "fake.example", "scheme": "https"}, {}, 403),
+        # explicit ports, match
+        ("fake.example:81", {"netloc": "fake.example:81"}, {}, 200),
+        # Test proxy protocol defined headers taken into account by utils.get_browser_protocol
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {'X-Scheme': 'https'},
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {'X-Forwarded-Proto': 'https'},
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {
+                'Forwarded': 'host=fake.example;proto=https,for=1.2.34;proto=http',
+                'X-Scheme': 'http',
+            },
+            200,
+        ),
+        (
+            "fake.example",
+            {"netloc": "fake.example", "scheme": "https"},
+            {
+                'Forwarded': 'host=fake.example;proto=http,for=1.2.34;proto=http',
+                'X-Scheme': 'https',
+            },
+            403,
+        ),
+        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https'}, 403),
+        ("fake.example", {"netloc": "fake.example"}, {'X-Scheme': 'https, http'}, 403),
     ],
 )
-async def test_cors_check(request, app, host, referer, status):
+async def test_cors_check(request, app, host, referer, extraheaders, status):
     url = ujoin(public_host(app), app.hub.base_url)
     real_host = urlparse(url).netloc
     if host == "$host":
@@ -140,6 +175,7 @@ async def test_cors_check(request, app, host, referer, status):
         headers['X-Forwarded-Host'] = host
     if referer is not None:
         headers['Referer'] = referer
+    headers.update(extraheaders)
 
     # add admin user
     user = find_user(app.db, 'admin')
@@ -433,6 +469,42 @@ async def test_get_users_state_filter(app, state):
 
     usernames = sorted(u["name"] for u in r.json() if u["name"] in test_usernames)
     assert usernames == expected
+
+
+@mark.user
+async def test_get_users_name_filter(app):
+    db = app.db
+
+    add_user(db, app=app, name='q')
+    add_user(db, app=app, name='qr')
+    add_user(db, app=app, name='qrs')
+    add_user(db, app=app, name='qrst')
+    added_usernames = {'q', 'qr', 'qrs', 'qrst'}
+
+    r = await api_request(app, 'users')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert added_usernames.intersection(response_users) == added_usernames
+
+    r = await api_request(app, 'users?name_filter=q')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['q', 'qr', 'qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qr')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qr', 'qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qrs')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qrs', 'qrst']
+
+    r = await api_request(app, 'users?name_filter=qrst')
+    assert r.status_code == 200
+    response_users = [u.get("name") for u in r.json()]
+    assert response_users == ['qrst']
 
 
 @mark.user
@@ -994,7 +1066,7 @@ async def test_never_spawn(app, no_patience, never_spawn):
     assert not app_user.spawner._spawn_pending
     status = await app_user.spawner.poll()
     assert status is not None
-    # failed spawn should decrements pending count
+    # failed spawn should decrement pending count
     assert app.users.count_active_users()['pending'] == 0
 
 
@@ -1003,8 +1075,15 @@ async def test_bad_spawn(app, bad_spawn):
     name = 'prim'
     user = add_user(db, app=app, name=name)
     r = await api_request(app, 'users', name, 'server', method='post')
+    # check that we don't re-use spawners that failed
+    user.spawners[''].reused = True
     assert r.status_code == 500
     assert app.users.count_active_users()['pending'] == 0
+
+    r = await api_request(app, 'users', name, 'server', method='post')
+    # check that we don't re-use spawners that failed
+    spawner = user.spawners['']
+    assert not getattr(spawner, 'reused', False)
 
 
 async def test_spawn_nosuch_user(app):
@@ -1805,6 +1884,38 @@ async def test_group_add_delete_users(app):
 
     group = orm.Group.find(db, name='alphaflight')
     assert sorted(u.name for u in group.users) == sorted(names[2:])
+
+
+@mark.group
+async def test_auth_managed_groups(request, app, group, user):
+    group.users.append(user)
+    app.db.commit()
+    app.authenticator.manage_groups = True
+    request.addfinalizer(lambda: setattr(app.authenticator, "manage_groups", False))
+    # create groups
+    r = await api_request(app, 'groups', method='post')
+    assert r.status_code == 400
+    r = await api_request(app, 'groups/newgroup', method='post')
+    assert r.status_code == 400
+    # delete groups
+    r = await api_request(app, f'groups/{group.name}', method='delete')
+    assert r.status_code == 400
+    # add users to group
+    r = await api_request(
+        app,
+        f'groups/{group.name}/users',
+        method='post',
+        data=json.dumps({"users": [user.name]}),
+    )
+    assert r.status_code == 400
+    # remove users from group
+    r = await api_request(
+        app,
+        f'groups/{group.name}/users',
+        method='delete',
+        data=json.dumps({"users": [user.name]}),
+    )
+    assert r.status_code == 400
 
 
 @mark.group

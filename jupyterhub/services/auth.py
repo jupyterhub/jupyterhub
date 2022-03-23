@@ -53,6 +53,7 @@ from traitlets import validate
 from traitlets.config import SingletonConfigurable
 
 from ..scopes import _intersect_expanded_scopes
+from ..utils import get_browser_protocol
 from ..utils import url_path_join
 
 
@@ -500,11 +501,17 @@ class HubAuth(SingletonConfigurable):
     auth_header_name = 'Authorization'
     auth_header_pat = re.compile(r'(?:token|bearer)\s+(.+)', re.IGNORECASE)
 
-    def get_token(self, handler):
-        """Get the user token from a request
+    def get_token(self, handler, in_cookie=True):
+        """Get the token authenticating a request
+
+        .. versionchanged:: 2.2
+          in_cookie added.
+          Previously, only URL params and header were considered.
+          Pass `in_cookie=False` to preserve that behavior.
 
         - in URL parameters: ?token=<token>
         - in header: Authorization: token <token>
+        - in cookie (stored after oauth), if in_cookie is True
         """
 
         user_token = handler.get_argument('token', '')
@@ -515,7 +522,13 @@ class HubAuth(SingletonConfigurable):
             )
             if m:
                 user_token = m.group(1)
+        if not user_token and in_cookie:
+            user_token = self._get_token_cookie(handler)
         return user_token
+
+    def _get_token_cookie(self, handler):
+        """Base class doesn't store tokens in cookies"""
+        return None
 
     def _get_user_cookie(self, handler):
         """Get the user model from a cookie"""
@@ -552,8 +565,10 @@ class HubAuth(SingletonConfigurable):
         handler._cached_hub_user = user_model = None
         session_id = self.get_session_id(handler)
 
-        # check token first
-        token = self.get_token(handler)
+        # check token first, ignoring cookies
+        # because some checks are different when a request
+        # is token-authenticated (CORS-related)
+        token = self.get_token(handler, in_cookie=False)
         if token:
             user_model = self.user_for_token(token, session_id=session_id)
             if user_model:
@@ -613,11 +628,18 @@ class HubOAuth(HubAuth):
         """
         return self.cookie_name + '-oauth-state'
 
-    def _get_user_cookie(self, handler):
+    def _get_token_cookie(self, handler):
+        """Base class doesn't store tokens in cookies"""
         token = handler.get_secure_cookie(self.cookie_name)
+        if token:
+            # decode cookie bytes
+            token = token.decode('ascii', 'replace')
+        return token
+
+    def _get_user_cookie(self, handler):
+        token = self._get_token_cookie(handler)
         session_id = self.get_session_id(handler)
         if token:
-            token = token.decode('ascii', 'replace')
             user_model = self.user_for_token(token, session_id=session_id)
             if user_model is None:
                 app_log.warning("Token stored in cookie may have expired")
@@ -772,7 +794,7 @@ class HubOAuth(HubAuth):
             # OAuth that doesn't complete shouldn't linger too long.
             'max_age': 600,
         }
-        if handler.request.protocol == 'https':
+        if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)
@@ -812,7 +834,7 @@ class HubOAuth(HubAuth):
     def set_cookie(self, handler, access_token):
         """Set a cookie recording OAuth result"""
         kwargs = {'path': self.base_url, 'httponly': True}
-        if handler.request.protocol == 'https':
+        if get_browser_protocol(handler.request) == 'https':
             kwargs['secure'] = True
         # load user cookie overrides
         kwargs.update(self.cookie_options)

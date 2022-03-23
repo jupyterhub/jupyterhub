@@ -16,6 +16,7 @@ from tornado import web
 from .. import orm
 from .. import roles
 from .. import scopes
+from ..utils import get_browser_protocol
 from ..utils import token_authenticated
 from .base import APIHandler
 from .base import BaseHandler
@@ -115,7 +116,10 @@ class OAuthHandler:
         # make absolute local redirects full URLs
         # to satisfy oauthlib's absolute URI requirement
         redirect_uri = (
-            self.request.protocol + "://" + self.request.headers['Host'] + redirect_uri
+            get_browser_protocol(self.request)
+            + "://"
+            + self.request.host
+            + redirect_uri
         )
         parsed_url = urlparse(uri)
         query_list = parse_qsl(parsed_url.query, keep_blank_values=True)
@@ -279,6 +283,21 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 raise web.HTTPError(
                     403, f"You do not have permission to access {client.description}"
                 )
+
+            # subset role names to those held by authenticating user
+            requested_role_names = set(role_names)
+            user = self.current_user
+            user_role_names = {role.name for role in user.roles}
+            allowed_role_names = requested_role_names.intersection(user_role_names)
+            excluded_role_names = requested_role_names.difference(allowed_role_names)
+            if excluded_role_names:
+                self.log.info(
+                    f"Service {client.description} requested roles {','.join(role_names)}"
+                    f" for user {self.current_user.name},"
+                    f" granting only {','.join(allowed_role_names) or '[]'}."
+                )
+                role_names = list(allowed_role_names)
+
             if not self.needs_oauth_confirm(self.current_user, client, role_names):
                 self.log.debug(
                     "Skipping oauth confirmation for %s accessing %s",
@@ -377,6 +396,10 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
         # The scopes the user actually authorized, i.e. checkboxes
         # that were selected.
         scopes = self.get_arguments('scopes')
+        if scopes == []:
+            # avoid triggering default scopes (provider selects default scopes when scopes is falsy)
+            # when an explicit empty list is authorized
+            scopes = ["identify"]
         # credentials we need in the validator
         credentials = self.add_credentials()
 

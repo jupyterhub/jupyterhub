@@ -1,8 +1,9 @@
 import React, { useState } from "react";
+import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
-import { Button } from "react-bootstrap";
+import { Button, Col, Row, FormControl } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
 
@@ -10,7 +11,16 @@ import "./server-dashboard.css";
 import { timeSince } from "../../util/timeSince";
 import PaginationFooter from "../PaginationFooter/PaginationFooter";
 
+const AccessServerButton = ({ url }) => (
+  <a href={url || ""}>
+    <button className="btn btn-primary btn-xs" style={{ marginRight: 20 }}>
+      Access Server
+    </button>
+  </a>
+);
+
 const ServerDashboard = (props) => {
+  let base_url = window.base_url;
   // sort methods
   var usernameDesc = (e) => e.sort((a, b) => (a.name > b.name ? 1 : -1)),
     usernameAsc = (e) => e.sort((a, b) => (a.name < b.name ? 1 : -1)),
@@ -29,14 +39,16 @@ const ServerDashboard = (props) => {
 
   var [errorAlert, setErrorAlert] = useState(null);
   var [sortMethod, setSortMethod] = useState(null);
+  var [disabledButtons, setDisabledButtons] = useState({});
 
   var user_data = useSelector((state) => state.user_data),
     user_page = useSelector((state) => state.user_page),
     limit = useSelector((state) => state.limit),
+    name_filter = useSelector((state) => state.name_filter),
     page = parseInt(new URLSearchParams(props.location.search).get("page"));
 
   page = isNaN(page) ? 0 : page;
-  var slice = [page * limit, limit];
+  var slice = [page * limit, limit, name_filter];
 
   const dispatch = useDispatch();
 
@@ -50,12 +62,13 @@ const ServerDashboard = (props) => {
     history,
   } = props;
 
-  var dispatchPageUpdate = (data, page) => {
+  var dispatchPageUpdate = (data, page, name_filter) => {
     dispatch({
       type: "USER_PAGE",
       value: {
         data: data,
         page: page,
+        name_filter: name_filter,
       },
     });
   };
@@ -65,12 +78,124 @@ const ServerDashboard = (props) => {
   }
 
   if (page != user_page) {
-    updateUsers(...slice).then((data) => dispatchPageUpdate(data, page));
+    updateUsers(...slice).then((data) =>
+      dispatchPageUpdate(data, page, name_filter)
+    );
   }
+
+  var debounce = require("lodash.debounce");
+  const handleSearch = debounce(async (event) => {
+    // setNameFilter(event.target.value);
+    updateUsers(page * limit, limit, event.target.value).then((data) =>
+      dispatchPageUpdate(data, page, name_filter)
+    );
+  }, 300);
 
   if (sortMethod != null) {
     user_data = sortMethod(user_data);
   }
+
+  const StopServerButton = ({ serverName, userName }) => {
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-danger btn-xs stop-button"
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          stopServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(data, page, name_filter);
+                  })
+                  .catch(() => {
+                    setIsDisabled(false);
+                    setErrorAlert(`Failed to update users list.`);
+                  });
+              } else {
+                setErrorAlert(`Failed to stop server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to stop server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Stop Server
+      </button>
+    );
+  };
+
+  const StartServerButton = ({ serverName, userName }) => {
+    var [isDisabled, setIsDisabled] = useState(false);
+    return (
+      <button
+        className="btn btn-success btn-xs start-button"
+        disabled={isDisabled}
+        onClick={() => {
+          setIsDisabled(true);
+          startServer(userName, serverName)
+            .then((res) => {
+              if (res.status < 300) {
+                updateUsers(...slice)
+                  .then((data) => {
+                    dispatchPageUpdate(data, page, name_filter);
+                  })
+                  .catch(() => {
+                    setErrorAlert(`Failed to update users list.`);
+                    setIsDisabled(false);
+                  });
+              } else {
+                setErrorAlert(`Failed to start server.`);
+                setIsDisabled(false);
+              }
+              return res;
+            })
+            .catch(() => {
+              setErrorAlert(`Failed to start server.`);
+              setIsDisabled(false);
+            });
+        }}
+      >
+        Start Server
+      </button>
+    );
+  };
+
+  const EditUserCell = ({ user }) => {
+    return (
+      <td>
+        <button
+          className="btn btn-primary btn-xs"
+          style={{ marginRight: 20 }}
+          onClick={() =>
+            history.push({
+              pathname: "/edit-user",
+              state: {
+                username: user.name,
+                has_admin: user.admin,
+              },
+            })
+          }
+        >
+          Edit User
+        </button>
+      </td>
+    );
+  };
+
+  let servers = user_data.flatMap((user) => {
+    let userServers = Object.values({
+      "": user.server || {},
+      ...(user.servers || {}),
+    });
+    return userServers.map((server) => [user, server]);
+  });
 
   return (
     <div className="container" data-testid="container">
@@ -92,10 +217,23 @@ const ServerDashboard = (props) => {
       ) : (
         <></>
       )}
-      <div className="manage-groups" style={{ float: "right", margin: "20px" }}>
-        <Link to="/groups">{"> Manage Groups"}</Link>
-      </div>
       <div className="server-dashboard-container">
+        <Row>
+          <Col md={4}>
+            <FormControl
+              type="text"
+              name="user_search"
+              placeholder="Search users"
+              aria-label="user-search"
+              value={name_filter}
+              onChange={handleSearch}
+            />
+          </Col>
+
+          <Col md="auto" style={{ float: "right", margin: 15 }}>
+            <Link to="/groups">{"> Manage Groups"}</Link>
+          </Col>
+        </Row>
         <table className="table table-striped table-bordered table-hover">
           <thead className="admin-table-head">
             <tr>
@@ -113,6 +251,14 @@ const ServerDashboard = (props) => {
                   sorts={{ asc: adminAsc, desc: adminDesc }}
                   callback={(method) => setSortMethod(() => method)}
                   testid="admin-sort"
+                />
+              </th>
+              <th id="server-header">
+                Server{" "}
+                <SortHandler
+                  sorts={{ asc: usernameAsc, desc: usernameDesc }}
+                  callback={(method) => setSortMethod(() => method)}
+                  testid="server-sort"
                 />
               </th>
               <th id="last-activity-header">
@@ -167,7 +313,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page);
+                            dispatchPageUpdate(data, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -203,7 +349,7 @@ const ServerDashboard = (props) => {
                       .then((res) => {
                         updateUsers(...slice)
                           .then((data) => {
-                            dispatchPageUpdate(data, page);
+                            dispatchPageUpdate(data, page, name_filter);
                           })
                           .catch(() =>
                             setErrorAlert(`Failed to update users list.`)
@@ -227,88 +373,63 @@ const ServerDashboard = (props) => {
                 </Button>
               </td>
             </tr>
-            {user_data.map((e, i) => (
-              <tr key={i + "row"} className="user-row">
-                <td data-testid="user-row-name">{e.name}</td>
-                <td data-testid="user-row-admin">{e.admin ? "admin" : ""}</td>
-                <td data-testid="user-row-last-activity">
-                  {e.last_activity ? timeSince(e.last_activity) : "Never"}
-                </td>
-                <td data-testid="user-row-server-activity">
-                  {e.server != null ? (
-                    // Stop Single-user server
-                    <button
-                      className="btn btn-danger btn-xs stop-button"
-                      onClick={() =>
-                        stopServer(e.name)
-                          .then((res) => {
-                            if (res.status < 300) {
-                              updateUsers(...slice)
-                                .then((data) => {
-                                  dispatchPageUpdate(data, page);
-                                })
-                                .catch(() =>
-                                  setErrorAlert(`Failed to update users list.`)
-                                );
-                            } else {
-                              setErrorAlert(`Failed to stop server.`);
-                            }
-                            return res;
-                          })
-                          .catch(() => setErrorAlert(`Failed to stop server.`))
-                      }
-                    >
-                      Stop Server
-                    </button>
-                  ) : (
-                    // Start Single-user server
-                    <button
-                      className="btn btn-primary btn-xs start-button"
-                      onClick={() =>
-                        startServer(e.name)
-                          .then((res) => {
-                            if (res.status < 300) {
-                              updateUsers(...slice)
-                                .then((data) => {
-                                  dispatchPageUpdate(data, page);
-                                })
-                                .catch(() =>
-                                  setErrorAlert(`Failed to update users list.`)
-                                );
-                            } else {
-                              setErrorAlert(`Failed to start server.`);
-                            }
-                            return res;
-                          })
-                          .catch(() => {
-                            setErrorAlert(`Failed to start server.`);
-                          })
-                      }
-                    >
-                      Start Server
-                    </button>
-                  )}
-                </td>
-                <td>
-                  {/* Edit User */}
-                  <button
-                    className="btn btn-primary btn-xs"
-                    style={{ marginRight: 20 }}
-                    onClick={() =>
-                      history.push({
-                        pathname: "/edit-user",
-                        state: {
-                          username: e.name,
-                          has_admin: e.admin,
-                        },
-                      })
-                    }
-                  >
-                    edit user
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {servers.map(([user, server], i) => {
+              server.name = server.name || "";
+              return (
+                <tr key={i + "row"} className="user-row">
+                  <td data-testid="user-row-name">{user.name}</td>
+                  <td data-testid="user-row-admin">
+                    {user.admin ? "admin" : ""}
+                  </td>
+
+                  <td data-testid="user-row-server">
+                    {server.name ? (
+                      <p class="text-secondary">{server.name}</p>
+                    ) : (
+                      <p style={{ color: "lightgrey" }}>[MAIN]</p>
+                    )}
+                  </td>
+                  <td data-testid="user-row-last-activity">
+                    {server.last_activity
+                      ? timeSince(server.last_activity)
+                      : "Never"}
+                  </td>
+                  <td data-testid="user-row-server-activity">
+                    {server.started ? (
+                      // Stop Single-user server
+                      <>
+                        <StopServerButton
+                          serverName={server.name}
+                          userName={user.name}
+                        />
+                        <AccessServerButton url={server.url} />
+                      </>
+                    ) : (
+                      // Start Single-user server
+                      <>
+                        <StartServerButton
+                          serverName={server.name}
+                          userName={user.name}
+                        />
+                        <a
+                          href={`${base_url}spawn/${user.name}${
+                            server.name && "/" + server.name
+                          }`}
+                        >
+                          <button
+                            className="btn btn-secondary btn-xs"
+                            style={{ marginRight: 20 }}
+                          >
+                            Spawn Page
+                          </button>
+                        </a>
+                      </>
+                    )}
+                  </td>
+                  <EditUserCell user={user} />
+                </tr>
+              );
+            })}
           </tbody>
         </table>
         <PaginationFooter

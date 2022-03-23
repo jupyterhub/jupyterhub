@@ -10,4 +10,5 @@ well as other information relevant to running your own JupyterHub over time.
 
    troubleshooting
    admin/upgrading
+   admin/log-messages
    changelog

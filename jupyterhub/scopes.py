@@ -11,9 +11,11 @@ identify scopes: set of expanded scopes needed for identify (whoami) endpoints
 """
 import functools
 import inspect
+import re
 import warnings
 from enum import Enum
 from functools import lru_cache
+from textwrap import indent
 
 import sqlalchemy as sa
 from tornado import web
@@ -131,6 +133,9 @@ scope_definitions = {
         'description': 'Read information about the proxy’s routing table, sync the Hub with the proxy and notify the Hub about a new proxy.'
     },
     'shutdown': {'description': 'Shutdown the hub.'},
+    'read:metrics': {
+        'description': "Read prometheus metrics.",
+    },
 }
 
 
@@ -626,3 +631,120 @@ def describe_raw_scopes(raw_scopes, username=None):
             }
         )
     return descriptions
+
+
+# regex for custom scope
+# for-humans description below
+# note: scope description duplicated in docs/source/rbac/scopes.md
+# update docs when making changes here
+_custom_scope_pattern = re.compile(r"^custom:[a-z0-9][a-z0-9_\-\*:]+[a-z0-9_\*]$")
+
+# custom scope pattern description
+# used in docstring below and error message when scopes don't match _custom_scope_pattern
+_custom_scope_description = """
+Custom scopes must start with `custom:`
+and contain only lowercase ascii letters, numbers, hyphen, underscore, colon, and asterisk (-_:*).
+The part after `custom:` must start with a letter or number.
+Scopes may not end with a hyphen or colon.
+"""
+
+
+def define_custom_scopes(scopes):
+    """Define custom scopes
+
+    Adds custom scopes to the scope_definitions dict.
+
+    Scopes must start with `custom:`.
+    It is recommended to name custom scopes with a pattern like::
+
+        custom:$your-project:$action:$resource
+
+    e.g.::
+
+        custom:jupyter_server:read:contents
+
+    That makes them easy to parse and avoids collisions across projects.
+
+    `scopes` must have at least one scope definition,
+    and each scope definition must have a `description`,
+    which will be displayed on the oauth authorization page,
+    and _may_ have a `subscopes` list of other scopes if having one scope
+    should imply having other, more specific scopes.
+
+    Args:
+
+    scopes: dict
+        A dictionary of scope definitions.
+        The keys are the scopes,
+        while the values are dictionaries with at least a `description` field,
+        and optional `subscopes` field.
+        %s
+    Examples::
+
+        define_custom_scopes(
+            {
+                "custom:jupyter_server:read:contents": {
+                    "description": "read-only access to files in a Jupyter server",
+                },
+                "custom:jupyter_server:read": {
+                    "description": "read-only access to a Jupyter server",
+                    "subscopes": [
+                        "custom:jupyter_server:read:contents",
+                        "custom:jupyter_server:read:kernels",
+                        "...",
+                },
+            }
+        )
+    """ % indent(
+        _custom_scope_description, " " * 8
+    )
+    for scope, scope_definition in scopes.items():
+        if scope in scope_definitions and scope_definitions[scope] != scope_definition:
+            raise ValueError(
+                f"Cannot redefine scope {scope}={scope_definition}. Already have {scope}={scope_definitions[scope]}"
+            )
+        if not _custom_scope_pattern.match(scope):
+            # note: keep this description in sync with docstring above
+            raise ValueError(
+                f"Invalid scope name: {scope!r}.\n{_custom_scope_description}"
+                " and contain only lowercase ascii letters, numbers, hyphen, underscore, colon, and asterisk."
+                " The part after `custom:` must start with a letter or number."
+                " Scopes may not end with a hyphen or colon."
+            )
+        if "description" not in scope_definition:
+            raise ValueError(
+                f"scope {scope}={scope_definition} missing key 'description'"
+            )
+        if "subscopes" in scope_definition:
+            subscopes = scope_definition["subscopes"]
+            if not isinstance(subscopes, list) or not all(
+                isinstance(s, str) for s in subscopes
+            ):
+                raise ValueError(
+                    f"subscopes must be a list of scope strings, got {subscopes!r}"
+                )
+            for subscope in subscopes:
+                if subscope not in scopes:
+                    if subscope in scope_definitions:
+                        raise ValueError(
+                            f"non-custom subscope {subscope} in {scope}={scope_definition} is not allowed."
+                            f" Custom scopes may only have custom subscopes."
+                            f" Roles should be used to assign multiple scopes together."
+                        )
+                    raise ValueError(
+                        f"subscope {subscope} in {scope}={scope_definition} not found. All scopes must be defined."
+                    )
+
+        extra_keys = set(scope_definition.keys()).difference(
+            ["description", "subscopes"]
+        )
+        if extra_keys:
+            warnings.warn(
+                f"Ignoring unrecognized key(s) {', '.join(extra_keys)!r} in {scope}={scope_definition}",
+                UserWarning,
+                stacklevel=2,
+            )
+        app_log.info(f"Defining custom scope {scope}")
+        # deferred evaluation for debug-logging
+        app_log.debug("Defining custom scope %s=%s", scope, scope_definition)
+        scope_definitions[scope] = scope_definition
