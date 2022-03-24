@@ -7,7 +7,7 @@ JupyterHub provides four roles that are available by default:
 ```{admonition} **Default roles**
 - `user` role provides a {ref}`default user scope <default-user-scope-target>` `self` that grants access to the user's own resources.
 - `admin` role contains all available scopes and grants full rights to all actions. This role **cannot be edited**.
-- `token` role provides a {ref}`default token scope <default-token-scope-target>` `all` that resolves to the same permissions as the owner of the token has.
+- `token` role provides a {ref}`default token scope <default-token-scope-target>` `inherit` that resolves to the same permissions as the owner of the token has.
 - `server` role allows for posting activity of "itself" only.
 
 **These roles cannot be deleted.**
