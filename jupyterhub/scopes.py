@@ -319,11 +319,11 @@ def get_scopes_for(orm_object):
         if orm_object.client_id != "jupyterhub":
             # oauth tokens can be used to access the service issuing the token,
             # assuming the owner itself still has permission to do so
-            access = access_scopes(orm_object.oauth_client)
-            token_scopes.update(access)
+            token_scopes.update(access_scopes(orm_object.oauth_client))
 
         # reduce to collapse multiple filters on the same scope
         # to avoid spurious logs about discarded scopes
+        token_scopes.update(identify_scopes(owner))
         token_scopes = reduce_scopes(token_scopes)
 
         intersection = _intersect_expanded_scopes(
@@ -346,6 +346,8 @@ def get_scopes_for(orm_object):
                 token_scopes,
             )
         expanded_scopes = intersection
+        # always include identify scopes
+        expanded_scopes
     else:
         expanded_scopes = roles.roles_to_expanded_scopes(
             roles.get_roles_for(orm_object),
@@ -354,9 +356,6 @@ def get_scopes_for(orm_object):
         if isinstance(orm_object, (orm.User, orm.Service)):
             owner = orm_object
 
-    # always include identify scopes
-    if owner:
-        expanded_scopes.update(identify_scopes(owner))
     return expanded_scopes
 
 
