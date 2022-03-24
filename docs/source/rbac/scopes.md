@@ -38,7 +38,7 @@ By adding a scope to an existing role, all role bearers will gain the associated
 Metascopes do not follow the general scope syntax. Instead, a metascope resolves to a set of scopes, which can refer to different resources, based on their owning entity. In JupyterHub, there are currently two metascopes:
 
 1. default user scope `self`, and
-2. default token scope `all`.
+2. default token scope `inherit`.
 
 (default-user-scope-target)=
 
@@ -57,11 +57,11 @@ The `self` scope is only valid for user entities. In other cases (e.g., for serv
 
 ### Default token scope
 
-The token metascope `all` covers the same scopes as the token owner's scopes during requests. For example, if a token owner has roles containing the scopes `read:groups` and `read:users`, the `all` scope resolves to the set of scopes `{read:groups, read:users}`.
+The token metascope `inherit` causes the token to have the same permissions as the token's owner. For example, if a token owner has roles containing the scopes `read:groups` and `read:users`, the `inherit` scope resolves to the set of scopes `{read:groups, read:users}`.
 
-If the token owner has default `user` role, the `all` scope resolves to `self`, which will subsequently be expanded to include all the user-specific scopes (or empty set in the case of services).
+If the token owner has default `user` role, the `inherit` scope resolves to `self`, which will subsequently be expanded to include all the user-specific scopes (or empty set in the case of services).
 
-If the token owner is a member of any group with roles, the group scopes will also be included in resolving the `all` scope.
+If the token owner is a member of any group with roles, the group scopes will also be included in resolving the `inherit` scope.
 
 (horizontal-filtering-target)=
 
