@@ -424,9 +424,11 @@ def _expand_scope(scope):
             f"{scope_name}!{filter_}" for scope_name in expanded_scope_names
         }
         # special handling of server filter
-        # any access via server filter includes permission to read the user's name
+        # any read access via server filter includes permission to read the user's name
         resource, _, value = filter_.partition('=')
-        if resource == 'server':
+        if resource == 'server' and any(
+            scope_name.startswith("read:") for scope_name in expanded_scope_names
+        ):
             username, _, server = value.partition('/')
             expanded_scopes.add(f'read:users:name!user={username}')
     else:
