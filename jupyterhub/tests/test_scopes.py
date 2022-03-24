@@ -12,7 +12,9 @@ from .. import roles
 from .. import scopes
 from ..handlers import BaseHandler
 from ..scopes import _check_scope_access
+from ..scopes import _expand_self_scope
 from ..scopes import _intersect_expanded_scopes
+from ..scopes import expand_scopes
 from ..scopes import get_scopes_for
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
@@ -290,7 +292,7 @@ async def test_exceeding_user_permissions(
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
     # store scopes user does not have
-    orm_api_token.scopes = orm_api_token.scopes + ['list:users', 'read:users']
+    orm_api_token.update_scopes(orm_api_token.scopes + ['list:users', 'read:users'])
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
@@ -1127,3 +1129,45 @@ def test_custom_scopes_bad(preserve_scopes, custom_scopes):
     with pytest.raises(ValueError):
         scopes.define_custom_scopes(custom_scopes)
     assert scopes.scope_definitions == preserve_scopes
+
+
+async def test_user_filter_expansion(app, create_user_with_scopes):
+    scope_list = _expand_self_scope('ignored')
+    # turn !user=ignored into !user
+    # Mimic the role 'self' based on '!user' filter for tokens
+    scope_list = [scope.partition("=")[0] for scope in scope_list]
+    user = create_user_with_scopes('self')
+    user.new_api_token(scopes=scope_list)
+    user.new_api_token()
+    manual_scope_set = get_scopes_for(user.api_tokens[0])
+    auto_scope_set = get_scopes_for(user.api_tokens[1])
+    assert manual_scope_set == auto_scope_set
+
+
+@pytest.mark.parametrize(
+    "scopes, expected",
+    [
+        ("read:users:name!user", ["read:users:name!user=$user"]),
+        (
+            "users:activity!user",
+            [
+                "read:users:activity!user=$user",
+                "users:activity!user=$user",
+            ],
+        ),
+        ("self", ["*"]),
+        (["access:services", "access:services!service=x"], ["access:services"]),
+    ],
+)
+def test_expand_scopes(user, scopes, expected):
+    if isinstance(scopes, str):
+        scopes = [scopes]
+    scopes = {s.replace("$user", user.name) for s in scopes}
+    expected = {s.replace("$user", user.name) for s in expected}
+
+    if "*" in expected:
+        expected.remove("*")
+        expected.update(_expand_self_scope(user.name))
+
+    expanded = expand_scopes(scopes, owner=user.orm_user)
+    assert sorted(expanded) == sorted(expected)

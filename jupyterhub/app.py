@@ -55,7 +55,6 @@ from traitlets import (
     Bool,
     Any,
     Tuple,
-    Type,
     Set,
     Instance,
     Bytes,

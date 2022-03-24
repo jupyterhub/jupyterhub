@@ -3,11 +3,12 @@ General scope definitions and utilities
 
 Scope variable nomenclature
 ---------------------------
-scopes: list of scopes with abbreviations (e.g., in role definition)
-expanded scopes: set of expanded scopes without abbreviations (i.e., resolved metascopes, filters and subscopes)
-parsed scopes: dictionary JSON like format of expanded scopes
+scopes or 'raw' scopes: collection of scopes that may contain abbreviations (e.g., in role definition)
+expanded scopes: set of expanded scopes without abbreviations (i.e., resolved metascopes, filters, and subscopes)
+parsed scopes: dictionary format of expanded scopes (`read:users!user=name` -> `{'read:users': {user: [name]}`)
 intersection : set of expanded scopes as intersection of 2 expanded scope sets
 identify scopes: set of expanded scopes needed for identify (whoami) endpoints
+reduced scopes: expanded scopes that have been reduced
 """
 import functools
 import inspect
@@ -300,37 +301,30 @@ def get_scopes_for(orm_object):
                 f"Only allow orm objects or User wrappers, got {orm_object}"
             )
 
+    owner = None
     if isinstance(orm_object, orm.APIToken):
         owner = orm_object.user or orm_object.service
-        token_scopes = expand_scopes(orm_object.scopes, owner=owner)
-        if orm_object.client_id != "jupyterhub":
-            # oauth tokens can be used to access the service issuing the token,
-            # assuming the owner itself still has permission to do so
-            spawner = orm_object.oauth_client.spawner
-            if spawner:
-                token_scopes.add(
-                    f"access:servers!server={spawner.user.name}/{spawner.name}"
-                )
-            else:
-                service = orm_object.oauth_client.service
-                if service:
-                    token_scopes.add(f"access:services!service={service.name}")
-                else:
-                    app_log.warning(
-                        f"Token {orm_object} has no associated service or spawner!"
-                    )
-
         owner_roles = roles.get_roles_for(owner)
         owner_scopes = roles.roles_to_expanded_scopes(owner_roles, owner)
 
-        if token_scopes == {'inherit'}:
-            # token_scopes is only 'inherit', return scopes inherited from owner as-is
-            # short-circuit common case where we don't need to compute an intersection
+        token_scopes = set(orm_object.scopes)
+        if 'inherit' in token_scopes:
+            # token_scopes includes 'inherit',
+            # so we know the intersection is exactly the owner's scopes
+            # only thing we miss by short-circuiting here: warning about excluded extra scopes
             return owner_scopes
 
-        if 'inherit' in token_scopes:
-            token_scopes.remove('inherit')
-            token_scopes |= owner_scopes
+        token_scopes = expand_scopes(token_scopes, owner=owner)
+
+        if orm_object.client_id != "jupyterhub":
+            # oauth tokens can be used to access the service issuing the token,
+            # assuming the owner itself still has permission to do so
+            access = access_scopes(orm_object.oauth_client)
+            token_scopes.update(access)
+
+        # reduce to collapse multiple filters on the same scope
+        # to avoid spurious logs about discarded scopes
+        token_scopes = reduce_scopes(token_scopes)
 
         intersection = _intersect_expanded_scopes(
             token_scopes,
@@ -342,8 +336,14 @@ def get_scopes_for(orm_object):
         # Not taking symmetric difference here because token owner can naturally have more scopes than token
         if discarded_token_scopes:
             app_log.warning(
-                "discarding scopes [%s], not present in owner roles"
-                % ", ".join(discarded_token_scopes)
+                f"discarding scopes [{discarded_token_scopes}],"
+                f" not present in roles of owner {owner}"
+            )
+            app_log.debug(
+                "Owner %s has scopes: %s\nToken has scopes: %s",
+                owner,
+                owner_scopes,
+                token_scopes,
             )
         expanded_scopes = intersection
     else:
@@ -351,6 +351,12 @@ def get_scopes_for(orm_object):
             roles.get_roles_for(orm_object),
             owner=orm_object,
         )
+        if isinstance(orm_object, (orm.User, orm.Service)):
+            owner = orm_object
+
+    # always include identify scopes
+    if owner:
+        expanded_scopes.update(identify_scopes(owner))
     return expanded_scopes
 
 
@@ -473,7 +479,8 @@ def expand_scopes(scopes, owner=None):
                 stacklevel=2,
             )
 
-    return expanded_scopes
+    # reduce to minimize
+    return reduce_scopes(expanded_scopes)
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -658,6 +665,14 @@ def unparse_scopes(parsed_scopes):
     return expanded_scopes
 
 
+def reduce_scopes(expanded_scopes):
+    """Reduce expanded scopes to minimal set
+
+    Eliminates redundancy, such as access:services and access:services!service=x
+    """
+    return unparse_scopes(parse_scopes(expanded_scopes))
+
+
 def needs_scope(*scopes):
     """Decorator to restrict access to users or services with the required scope"""
 
@@ -708,21 +723,44 @@ def needs_scope(*scopes):
     return scope_decorator
 
 
-def identify_scopes(obj):
+def identify_scopes(obj=None):
     """Return 'identify' scopes for an orm object
 
     Arguments:
-      obj: orm.User or orm.Service
+      obj (optional): orm.User or orm.Service
+          If not specified, 'raw' scopes for identifying the current user are returned,
+          which may need to be expanded, later.
 
     Returns:
       identify scopes (set): set of scopes needed for 'identify' endpoints
     """
-    if isinstance(obj, orm.User):
+    if obj is None:
+        return {f"read:users:{field}!user" for field in {"name", "groups"}}
+    elif isinstance(obj, orm.User):
         return {f"read:users:{field}!user={obj.name}" for field in {"name", "groups"}}
     elif isinstance(obj, orm.Service):
         return {f"read:services:{field}!service={obj.name}" for field in {"name"}}
     else:
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
+
+
+def access_scopes(oauth_client):
+    """Return scope(s) required to access an oauth client"""
+    scopes = set()
+    if oauth_client.identifier == "jupyterhub":
+        return scopes
+    spawner = oauth_client.spawner
+    if spawner:
+        scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
+    else:
+        service = oauth_client.service
+        if service:
+            scopes.add(f"access:services!service={service.name}")
+        else:
+            app_log.warning(
+                f"OAuth client {oauth_client} has no associated service or spawner!"
+            )
+    return scopes
 
 
 def check_scope_filter(sub_scope, orm_resource, kind):

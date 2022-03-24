@@ -10,7 +10,6 @@ from tornado.log import app_log
 
 from .. import orm
 from .. import roles
-from ..scopes import _expand_self_scope
 from ..scopes import get_scopes_for
 from ..scopes import scope_definitions
 from ..utils import utcnow
@@ -808,19 +807,6 @@ async def test_user_filter_expansion(app, scope_list, kind, test_for_token):
 
     app.db.delete(orm_obj)
     app.db.delete(test_role)
-
-
-async def test_large_filter_expansion(app, create_temp_role, create_user_with_scopes):
-    scope_list = _expand_self_scope('==')
-    # Mimic the role 'self' based on '!user' filter for tokens
-    scope_list = [scope.rstrip("=") for scope in scope_list]
-    filtered_role = create_temp_role(scope_list)
-    user = create_user_with_scopes('self')
-    user.new_api_token(roles=[filtered_role.name])
-    user.new_api_token(roles=['token'])
-    manual_scope_set = get_scopes_for(user.api_tokens[0])
-    auto_scope_set = get_scopes_for(user.api_tokens[1])
-    assert manual_scope_set == auto_scope_set
 
 
 @mark.role

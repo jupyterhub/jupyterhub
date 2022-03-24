@@ -224,7 +224,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             else:
                 self.log.debug(
                     f"User {user.name} has authorized {oauth_client.identifier}"
-                    f" for scopes {authorized_scopes}, confirming additonal scopes {requested_scopes}"
+                    f" for scopes {authorized_scopes}, confirming additional scopes {requested_scopes}"
                 )
         # default: require confirmation
         return True
@@ -289,13 +289,22 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
             user = self.current_user
             # raw, _not_ expanded scopes
             user_scopes = roles.roles_to_scopes(roles.get_roles_for(user.orm_user))
+            # these are some scopes the user may not have
+            # in 'raw' form, but definitely have at this point
+            # make sure they are here, because we are computing the
+            # 'raw' scope intersection,
+            # rather than the expanded_scope intersection
+
+            required_scopes = {*scopes.identify_scopes(), *scopes.access_scopes(client)}
+            user_scopes.update({"inherit", *required_scopes})
+
             allowed_scopes = requested_scopes.intersection(user_scopes)
             excluded_scopes = requested_scopes.difference(user_scopes)
-            # TODO: compute lower-level intersection
-            # of _expanded_ scopes
+            # TODO: compute lower-level intersection of remaining _expanded_ scopes
+            # (e.g. user has admin:users, requesting read:users!group=x)
 
             if excluded_scopes:
-                self.log.info(
+                self.log.warning(
                     f"Service {client.description} requested scopes {','.join(requested_scopes)}"
                     f" for user {self.current_user.name},"
                     f" granting only {','.join(allowed_scopes) or '[]'}."
@@ -311,8 +320,14 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 self._complete_login(uri, headers, allowed_scopes, credentials)
                 return
 
-            # resolve roles to scopes for authorization page
-            if not allowed_scopes:
+            # discard 'required' scopes from description
+            # no need to describe the ability to access itself
+            scopes_to_describe = allowed_scopes.difference(required_scopes)
+
+            if not scopes_to_describe:
+                # TODO: describe all scopes?
+                # Not right now, because the no-scope default 'identify' text
+                # is clearer than what we produce for those scopes individually
                 scope_descriptions = [
                     {
                         "scope": None,
@@ -322,8 +337,8 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                         "filter": "",
                     }
                 ]
-            elif 'inherit' in allowed_scopes:
-                allowed_scopes = ['inherit']
+            elif 'inherit' in scopes_to_describe:
+                allowed_scopes = scopes_to_describe = ['inherit']
                 scope_descriptions = [
                     {
                         "scope": "inherit",
@@ -335,7 +350,7 @@ class OAuthAuthorizeHandler(OAuthHandler, BaseHandler):
                 ]
             else:
                 scope_descriptions = scopes.describe_raw_scopes(
-                    allowed_scopes,
+                    scopes_to_describe,
                     username=self.current_user.name,
                 )
             # Render oauth 'Authorize application...' page

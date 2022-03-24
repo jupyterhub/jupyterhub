@@ -14,7 +14,7 @@
     <p>
         {{ oauth_client.description }} (oauth URL: {{ oauth_client.redirect_uri }})
         would like permission to identify you.
-        {% if not role_names %}
+        {% if scope_descriptions | length == 1 and not scope_descriptions[0].scope %}
         It will not be able to take actions on
         your behalf.
         {% endif %}
@@ -24,8 +24,8 @@
     <div>
         <form method="POST" action="">
             {# these are the 'real' inputs to the form -#}
-            {% for role_name in role_names %}
-            <input type="hidden" name="scopes" value="{{ role_name }}"/>
+            {% for scope in allowed_scopes %}
+            <input type="hidden" name="scopes" value="{{ scope }}"/>
             {% endfor %}
 
             {% for scope_info in scope_descriptions %}
