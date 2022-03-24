@@ -16,6 +16,7 @@ from ..scopes import _expand_self_scope
 from ..scopes import _intersect_expanded_scopes
 from ..scopes import expand_scopes
 from ..scopes import get_scopes_for
+from ..scopes import identify_scopes
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
 from ..scopes import Scope
@@ -292,7 +293,7 @@ async def test_exceeding_user_permissions(
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
     # store scopes user does not have
-    orm_api_token.update_scopes(orm_api_token.scopes + ['list:users', 'read:users'])
+    orm_api_token.scopes = orm_api_token.scopes + ['list:users', 'read:users']
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
@@ -476,9 +477,9 @@ async def test_metascope_self_expansion(
     assert bool(token_scopes) == has_user_scopes
 
 
-async def test_metascope_all_expansion(app, create_user_with_scopes):
+async def test_metascope_inherit_expansion(app, create_user_with_scopes):
     user = create_user_with_scopes('self')
-    user.new_api_token()
+    user.new_api_token(scopes=["inherit"])
     token = user.api_tokens[0]
     # Check 'inherit' expansion
     token_scope_set = get_scopes_for(token)
@@ -489,7 +490,7 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     token.scopes.clear()
     app.db.commit()
     token_scope_set = get_scopes_for(token)
-    assert not token_scope_set
+    assert token_scope_set.issubset(identify_scopes(user.orm_user))
 
 
 @mark.parametrize(
