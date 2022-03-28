@@ -4,7 +4,7 @@ import { jhapiRequest } from "./jhapiUtil";
 const withAPI = withProps(() => ({
   updateUsers: (offset, limit, name_filter) =>
     jhapiRequest(
-      `/users?offset=${offset}&limit=${limit}&name_filter=${name_filter}`,
+      `/users?offset=${offset}&limit=${limit}&name_filter=${name_filter || ""}`,
       "GET"
     ).then((data) => data.json()),
   updateGroups: (offset, limit) =>
