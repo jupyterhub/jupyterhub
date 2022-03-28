@@ -76,8 +76,8 @@ test("Renders users from props.user_data into table", async () => {
     render(serverDashboardJsx(callbackSpy));
   });
 
-  let foo = screen.getByText("foo");
-  let bar = screen.getByText("bar");
+  let foo = screen.getByTestId("user-name-div-foo");
+  let bar = screen.getByTestId("user-name-div-bar");
 
   expect(foo).toBeVisible();
   expect(bar).toBeVisible();
@@ -156,12 +156,12 @@ test("Sorts according to username", async () => {
   fireEvent.click(handler);
 
   let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("bar");
+  expect(first.textContent).toContain("bar");
 
   fireEvent.click(handler);
 
   first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("foo");
+  expect(first.textContent).toContain("foo");
 });
 
 test("Sorts according to admin", async () => {
@@ -194,12 +194,12 @@ test("Sorts according to last activity", async () => {
   fireEvent.click(handler);
 
   let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("foo");
+  expect(first.textContent).toContain("foo");
 
   fireEvent.click(handler);
 
   first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("bar");
+  expect(first.textContent).toContain("bar");
 });
 
 test("Sorts according to server status (running/not running)", async () => {
@@ -213,12 +213,53 @@ test("Sorts according to server status (running/not running)", async () => {
   fireEvent.click(handler);
 
   let first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("foo");
+  expect(first.textContent).toContain("foo");
 
   fireEvent.click(handler);
 
   first = screen.getAllByTestId("user-row-name")[0];
-  expect(first.textContent).toBe("bar");
+  expect(first.textContent).toContain("bar");
+});
+
+test("Shows server details with button click", async () => {
+  let callbackSpy = mockAsync();
+
+  await act(async () => {
+    render(serverDashboardJsx(callbackSpy));
+  });
+  let button = screen.getByTestId("foo-collapse-button");
+  let collapse = screen.getByTestId("foo-collapse");
+  let collapseBar = screen.getByTestId("bar-collapse");
+
+  // expect().toBeVisible does not work here with collapse.
+  expect(collapse).toHaveClass("collapse");
+  expect(collapse).not.toHaveClass("show");
+  expect(collapseBar).not.toHaveClass("show");
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  clock.tick(400);
+
+  expect(collapse).toHaveClass("collapse show");
+  expect(collapseBar).not.toHaveClass("show");
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  clock.tick(400);
+
+  expect(collapse).toHaveClass("collapse");
+  expect(collapse).not.toHaveClass("show");
+  expect(collapseBar).not.toHaveClass("show");
+
+  await act(async () => {
+    fireEvent.click(button);
+  });
+  clock.tick(400);
+
+  expect(collapse).toHaveClass("collapse show");
+  expect(collapseBar).not.toHaveClass("show");
 });
 
 test("Renders nothing if required data is not available", async () => {
