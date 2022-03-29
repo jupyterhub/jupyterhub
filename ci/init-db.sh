@@ -20,7 +20,7 @@ fi
 
 # Configure a set of databases in the database server for upgrade tests
 set -x
-for SUFFIX in '' _upgrade_100 _upgrade_122 _upgrade_130; do
+for SUFFIX in '' _upgrade_100 _upgrade_122 _upgrade_130 _upgrade_150 _upgrade_211; do
     $SQL_CLIENT "DROP DATABASE jupyterhub${SUFFIX};" 2>/dev/null || true
     $SQL_CLIENT "CREATE DATABASE jupyterhub${SUFFIX} ${EXTRA_CREATE_DATABASE_ARGS:-};"
 done

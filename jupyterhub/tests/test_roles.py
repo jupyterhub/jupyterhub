@@ -76,24 +76,17 @@ def test_orm_roles(db):
     # assigns it the default 'token' role
     token = user.new_api_token()
     user_token = orm.APIToken.find(db, token=token)
-    assert user_token in token_role.tokens
-    assert token_role in user_token.roles
+    assert set(user_token.scopes) == set(token_role.scopes)
 
     # check creating token with a specific role
     token = service.new_api_token(roles=['service'])
     service_token = orm.APIToken.find(db, token=token)
-    assert service_token in service_role.tokens
-    assert service_role in service_token.roles
+    assert set(service_token.scopes) == set(service_role.scopes)
 
-    # check deleting user removes the user and the token from roles
+    # check deleting user removes the user from roles
     db.delete(user)
     db.commit()
     assert user_role.users == []
-    assert user_token not in token_role.tokens
-    # check deleting the service token removes it from 'service' role
-    db.delete(service_token)
-    db.commit()
-    assert service_token not in service_role.tokens
     # check deleting the service_role removes it from service.roles
     db.delete(service_role)
     db.commit()
@@ -174,7 +167,7 @@ def test_orm_roles_delete_cascade(db):
 
 @mark.role
 @mark.parametrize(
-    "scopes, subscopes",
+    "scopes, expected_scopes",
     [
         (
             ['admin:users'],
@@ -246,12 +239,12 @@ def test_orm_roles_delete_cascade(db):
         ),
     ],
 )
-def test_get_subscopes(db, scopes, subscopes):
-    """Test role scopes expansion into their subscopes"""
+def test_get_expanded_scopes(db, scopes, expected_scopes):
+    """Test role scopes expansion into their fully expanded scopes"""
     roles.create_role(db, {'name': 'testing_scopes', 'scopes': scopes})
     role = orm.Role.find(db, name='testing_scopes')
-    response = roles._get_subscopes(role)
-    assert response == subscopes
+    expanded_scopes = roles.roles_to_expanded_scopes([role], owner=None)
+    assert expanded_scopes == expected_scopes
     db.delete(role)
 
 
@@ -659,9 +652,9 @@ async def test_load_roles_user_tokens(tmpdir, request):
     # test if all other tokens have default 'user' role
     token_role = orm.Role.find(db, 'token')
     secret_token = orm.APIToken.find(db, 'secret-token')
-    assert token_role in secret_token.roles
+    assert set(secret_token.scopes) == set(token_role.scopes)
     secrety_token = orm.APIToken.find(db, 'secrety-token')
-    assert token_role in secrety_token.roles
+    assert set(secrety_token.scopes) == set(token_role.scopes)
 
     # delete the test tokens
     for token in db.query(orm.APIToken):
@@ -682,15 +675,15 @@ async def test_load_roles_user_tokens(tmpdir, request):
         # role scopes within the user's default 'user' role
         ({}, 'self-reader', ['read:users!user'], 201),
         # role scopes within the user's default 'user' role, but with disjoint filter
-        ({}, 'other-reader', ['read:users!user=other'], 403),
+        ({}, 'other-reader', ['read:users!user=other'], 400),
         # role scopes within the user's default 'user' role, without filter
-        ({}, 'other-reader', ['read:users'], 403),
+        ({}, 'other-reader', ['read:users'], 400),
         # role scopes outside of the user's role but within the group's role scopes of which the user is a member
         ({}, 'groups-reader', ['read:groups'], 201),
         # non-existing role request
-        ({}, 'non-existing', [], 404),
+        ({}, 'non-existing', [], 400),
         # role scopes outside of both user's role and group's role scopes
-        ({}, 'users-creator', ['admin:users'], 403),
+        ({}, 'users-creator', ['admin:users'], 400),
     ],
 )
 async def test_get_new_token_via_api(app, headers, rolename, scopes, status):
@@ -756,7 +749,7 @@ async def test_self_expansion(app, kind, has_user_scopes):
     test_role = orm.Role(name='test_role', scopes=['self'])
     orm_obj.roles.append(test_role)
     # test expansion of user/service scopes
-    scopes = roles.expand_roles_to_scopes(orm_obj)
+    scopes = get_scopes_for(orm_obj)
     assert bool(scopes) == has_user_scopes
     if kind == 'users':
         for scope in scopes:
@@ -797,9 +790,9 @@ async def test_user_filter_expansion(app, scope_list, kind, test_for_token):
     if test_for_token:
         token = orm_obj.new_api_token(roles=['test_role'])
         orm_token = orm.APIToken.find(app.db, token)
-        expanded_scopes = roles.expand_roles_to_scopes(orm_token)
+        expanded_scopes = get_scopes_for(orm_token)
     else:
-        expanded_scopes = roles.expand_roles_to_scopes(orm_obj)
+        expanded_scopes = get_scopes_for(orm_obj)
 
     for scope in scope_list:
         base, _, filter = scope.partition('!')
@@ -814,19 +807,6 @@ async def test_user_filter_expansion(app, scope_list, kind, test_for_token):
 
     app.db.delete(orm_obj)
     app.db.delete(test_role)
-
-
-async def test_large_filter_expansion(app, create_temp_role, create_user_with_scopes):
-    scope_list = roles.expand_self_scope('==')
-    # Mimic the role 'self' based on '!user' filter for tokens
-    scope_list = [scope.rstrip("=") for scope in scope_list]
-    filtered_role = create_temp_role(scope_list)
-    user = create_user_with_scopes('self')
-    user.new_api_token(roles=[filtered_role.name])
-    user.new_api_token(roles=['token'])
-    manual_scope_set = get_scopes_for(user.api_tokens[0])
-    auto_scope_set = get_scopes_for(user.api_tokens[1])
-    assert manual_scope_set == auto_scope_set
 
 
 @mark.role
@@ -864,9 +844,7 @@ async def test_server_token_role(app):
     assert orm_server_token
 
     server_role = orm.Role.find(app.db, 'server')
-    token_role = orm.Role.find(app.db, 'token')
-    assert server_role in orm_server_token.roles
-    assert token_role not in orm_server_token.roles
+    assert set(server_role.scopes) == set(orm_server_token.scopes)
 
     assert orm_server_token.user.name == user.name
     assert user.api_tokens == [orm_server_token]
@@ -891,7 +869,7 @@ async def test_server_role_api_calls(
     user = add_user(app.db, app, name='test_user')
     roles.grant_role(app.db, user, 'user')
     app_log.debug(user.roles)
-    app_log.debug(roles.expand_roles_to_scopes(user.orm_user))
+    app_log.debug(get_scopes_for(user.orm_user))
     if token_role == 'no_role':
         api_token = user.new_api_token(roles=[])
     else:
@@ -963,7 +941,7 @@ async def test_user_group_roles(app, create_temp_role):
     # regression test for #3472
     roles_before = list(user.roles)
     for i in range(3):
-        roles.expand_roles_to_scopes(user.orm_user)
+        get_scopes_for(user.orm_user)
         user_roles = list(user.roles)
         assert user_roles == roles_before
 
@@ -1063,33 +1041,6 @@ async def test_config_role_users():
     user = orm.User.find(hub.db, name=user_name)
     role = orm.Role.find(hub.db, name=role_name)
     assert role not in user.roles
-
-
-async def test_scope_expansion_revokes_tokens(app, mockservice_url):
-    role_name = 'morpheus'
-    roles_to_load = [
-        {
-            'name': role_name,
-            'description': 'wears sunglasses',
-            'scopes': ['users', 'groups'],
-        },
-    ]
-    app.load_roles = roles_to_load
-    await app.init_role_creation()
-    user = add_user(app.db, name='laurence')
-    for _ in range(2):
-        user.new_api_token()
-    red_token, blue_token = user.api_tokens
-    roles.grant_role(app.db, red_token, role_name)
-    service = mockservice_url
-    red_token.client_id = service.oauth_client_id
-    app.db.commit()
-    # Restart hub and see if token is revoked
-    app.load_roles[0]['scopes'].append('proxy')
-    await app.init_role_creation()
-    user = orm.User.find(app.db, name='laurence')
-    assert red_token not in user.api_tokens
-    assert blue_token in user.api_tokens
 
 
 async def test_duplicate_role_users():
@@ -1352,7 +1303,7 @@ async def test_hub_upgrade_detection(tmpdir):
     for name in user_names:
         user = orm.User.find(hub.db, name)
         assert user_role in user.roles
-        assert token_role in user.api_tokens[0].roles
+        assert set(user.api_tokens[0].scopes) == set(token_role.scopes)
     # Strip all roles and see if it sticks
     user_role.users = []
     token_role.tokens = []
@@ -1371,48 +1322,8 @@ async def test_hub_upgrade_detection(tmpdir):
     allowed_user = orm.User.find(hub.db, 'patricia')
     rem_user = orm.User.find(hub.db, 'quentin')
     assert user_role in allowed_user.roles
-    assert token_role not in allowed_user.api_tokens[0].roles
     assert user_role not in rem_user.roles
     assert token_role not in rem_user.roles
-
-
-async def test_token_keep_roles_on_restart():
-    role_spec = [
-        {
-            'name': 'bloop',
-            'scopes': ['read:users'],
-        }
-    ]
-    hub = MockHub(load_roles=role_spec)
-    hub.init_db()
-    hub.authenticator.admin_users = ['ben']
-    await hub.init_role_creation()
-    await hub.init_users()
-    await hub.init_role_assignment()
-    user = orm.User.find(hub.db, name='ben')
-    for _ in range(3):
-        user.new_api_token()
-    happy_token, content_token, sad_token = user.api_tokens
-    roles.grant_role(hub.db, happy_token, 'bloop')
-    roles.strip_role(hub.db, sad_token, 'token')
-    assert len(happy_token.roles) == 2
-    assert len(content_token.roles) == 1
-    assert len(sad_token.roles) == 0
-    # Restart hub and see if roles are as expected
-    hub.load_roles = []
-    await hub.init_role_creation()
-    await hub.init_users()
-    await hub.init_api_tokens()
-    await hub.init_role_assignment()
-    user = orm.User.find(hub.db, name='ben')
-    happy_token, content_token, sad_token = user.api_tokens
-    assert len(happy_token.roles) == 1
-    assert len(content_token.roles) == 1
-    print(sad_token.roles)
-    assert len(sad_token.roles) == 0
-    for token in user.api_tokens:
-        hub.db.delete(token)
-    hub.db.commit()
 
 
 async def test_login_default_role(app, username):

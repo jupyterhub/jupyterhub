@@ -1,5 +1,4 @@
 """Tests for services"""
-import asyncio
 import os
 import sys
 from binascii import hexlify
@@ -99,7 +98,6 @@ async def test_external_service(app):
         assert service.oauth_client is not None
         assert service.oauth_client.allowed_roles == [orm.Role.find(app.db, "user")]
         api_token = service.orm.api_tokens[0]
-        update_roles(app.db, api_token, roles=['token'])
         url = public_url(app, service) + '/api/users'
         r = await async_requests.get(url, allow_redirects=False)
         r.raise_for_status()

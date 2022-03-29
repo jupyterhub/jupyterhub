@@ -55,7 +55,6 @@ from traitlets import (
     Bool,
     Any,
     Tuple,
-    Type,
     Set,
     Instance,
     Bytes,
@@ -2079,23 +2078,6 @@ class JupyterHub(Application):
 
         # make sure we load any default roles not overridden
         init_roles = list(default_roles_dict.values()) + init_roles
-        if roles_with_new_permissions:
-            unauthorized_oauth_tokens = (
-                self.db.query(orm.APIToken)
-                .filter(
-                    orm.APIToken.roles.any(
-                        orm.Role.name.in_(roles_with_new_permissions)
-                    )
-                )
-                .filter(orm.APIToken.client_id != 'jupyterhub')
-            )
-            for token in unauthorized_oauth_tokens:
-                self.log.warning(
-                    "Deleting OAuth token %s; one of its roles obtained new permissions that were not authorized by user"
-                    % token
-                )
-                self.db.delete(token)
-            self.db.commit()
 
         init_role_names = [r['name'] for r in init_roles]
         if (
@@ -2230,9 +2212,6 @@ class JupyterHub(Application):
             )
             for kind in kinds:
                 roles.check_for_default_roles(db, kind)
-
-            # check tokens for default roles
-            roles.check_for_default_roles(db, bearer='tokens')
 
     async def _add_tokens(self, token_dict, kind):
         """Add tokens for users or services to the database"""

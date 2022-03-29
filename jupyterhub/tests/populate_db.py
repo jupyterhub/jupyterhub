@@ -18,6 +18,32 @@ def populate_db(url):
     if 'mysql' in url:
         connect_args['auth_plugin'] = 'mysql_native_password'
     db = orm.new_session_factory(url, connect_args=connect_args)()
+
+    if jupyterhub.version_info >= (2,):
+        if (
+            not db.query(orm.OAuthClient)
+            .filter_by(identifier="jupyterhub")
+            .one_or_none()
+        ):
+            # create the oauth client for jupyterhub itself
+            # this allows us to distinguish between orphaned tokens
+            # (failed cascade deletion) and tokens issued by the hub
+            # it has no client_secret, which means it cannot be used
+            # to make requests
+            client = orm.OAuthClient(
+                identifier="jupyterhub",
+                secret="",
+                redirect_uri="",
+                description="JupyterHub",
+            )
+            db.add(client)
+            db.commit()
+
+        from jupyterhub import roles
+
+        for role in roles.get_default_roles():
+            roles.create_role(db, role)
+
     # create some users
     admin = orm.User(name='admin', admin=True)
     db.add(admin)
@@ -80,6 +106,11 @@ def populate_db(url):
         client_id=client.identifier,
         user_id=user.id,
     )
+    if jupyterhub.version_info >= (2,):
+        if jupyterhub.version_info < (2, 2):
+            access_token.roles = [db.query(orm.Role).filter_by(name="server").one()]
+        else:
+            access_token.scopes = [f"read:users!user={user.name}"]
     db.add(access_token)
     db.commit()
 

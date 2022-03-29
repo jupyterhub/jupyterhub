@@ -12,8 +12,11 @@ from .. import roles
 from .. import scopes
 from ..handlers import BaseHandler
 from ..scopes import _check_scope_access
+from ..scopes import _expand_self_scope
 from ..scopes import _intersect_expanded_scopes
+from ..scopes import expand_scopes
 from ..scopes import get_scopes_for
+from ..scopes import identify_scopes
 from ..scopes import needs_scope
 from ..scopes import parse_scopes
 from ..scopes import Scope
@@ -278,19 +281,19 @@ async def test_refuse_exceeding_token_permissions(
 ):
     user = create_user_with_scopes('self')
     user.new_api_token()
-    create_temp_role(['admin:users'], 'exceeding_role')
     with pytest.raises(ValueError):
-        roles.update_roles(app.db, entity=user.api_tokens[0], roles=['exceeding_role'])
+        user.api_tokens[0].update_scopes(["admin:users"])
 
 
 async def test_exceeding_user_permissions(
-    app, create_user_with_scopes, create_temp_role
+    app,
+    create_user_with_scopes,
 ):
     user = create_user_with_scopes('list:users', 'read:users:groups')
     api_token = user.new_api_token()
     orm_api_token = orm.APIToken.find(app.db, token=api_token)
-    create_temp_role(['list:users', 'read:users'], 'reader_role')
-    roles.grant_role(app.db, orm_api_token, rolename='reader_role')
+    # store scopes user does not have
+    orm_api_token.scopes = orm_api_token.scopes + ['list:users', 'read:users']
     headers = {'Authorization': 'token %s' % api_token}
     r = await api_request(app, 'users', headers=headers)
     assert r.status_code == 200
@@ -465,7 +468,7 @@ async def test_metascope_self_expansion(
     else:
         orm_obj = create_service_with_scopes('self')
     # test expansion of user/service scopes
-    scopes = roles.expand_roles_to_scopes(orm_obj)
+    scopes = get_scopes_for(orm_obj)
     assert bool(scopes) == has_user_scopes
 
     # test expansion of token scopes
@@ -474,9 +477,9 @@ async def test_metascope_self_expansion(
     assert bool(token_scopes) == has_user_scopes
 
 
-async def test_metascope_all_expansion(app, create_user_with_scopes):
+async def test_metascope_inherit_expansion(app, create_user_with_scopes):
     user = create_user_with_scopes('self')
-    user.new_api_token()
+    user.new_api_token(scopes=["inherit"])
     token = user.api_tokens[0]
     # Check 'inherit' expansion
     token_scope_set = get_scopes_for(token)
@@ -484,10 +487,10 @@ async def test_metascope_all_expansion(app, create_user_with_scopes):
     assert user_scope_set == token_scope_set
 
     # Check no roles means no permissions
-    token.roles.clear()
+    token.scopes.clear()
     app.db.commit()
     token_scope_set = get_scopes_for(token)
-    assert not token_scope_set
+    assert token_scope_set.issubset(identify_scopes(user.orm_user))
 
 
 @mark.parametrize(
@@ -688,8 +691,8 @@ async def test_resolve_token_permissions(
     roles.strip_role(app.db, orm_user, "admin")
 
     # get expanded !user filter scopes for check
-    user_scopes = roles.expand_roles_to_scopes(orm_user)
-    token_scopes = roles.expand_roles_to_scopes(orm_api_token)
+    user_scopes = get_scopes_for(orm_user)
+    token_scopes = get_scopes_for(orm_api_token)
 
     token_retained_scopes = get_scopes_for(orm_api_token)
 
@@ -1127,3 +1130,45 @@ def test_custom_scopes_bad(preserve_scopes, custom_scopes):
     with pytest.raises(ValueError):
         scopes.define_custom_scopes(custom_scopes)
     assert scopes.scope_definitions == preserve_scopes
+
+
+async def test_user_filter_expansion(app, create_user_with_scopes):
+    scope_list = _expand_self_scope('ignored')
+    # turn !user=ignored into !user
+    # Mimic the role 'self' based on '!user' filter for tokens
+    scope_list = [scope.partition("=")[0] for scope in scope_list]
+    user = create_user_with_scopes('self')
+    user.new_api_token(scopes=scope_list)
+    user.new_api_token()
+    manual_scope_set = get_scopes_for(user.api_tokens[0])
+    auto_scope_set = get_scopes_for(user.api_tokens[1])
+    assert manual_scope_set == auto_scope_set
+
+
+@pytest.mark.parametrize(
+    "scopes, expected",
+    [
+        ("read:users:name!user", ["read:users:name!user=$user"]),
+        (
+            "users:activity!user",
+            [
+                "read:users:activity!user=$user",
+                "users:activity!user=$user",
+            ],
+        ),
+        ("self", ["*"]),
+        (["access:services", "access:services!service=x"], ["access:services"]),
+    ],
+)
+def test_expand_scopes(user, scopes, expected):
+    if isinstance(scopes, str):
+        scopes = [scopes]
+    scopes = {s.replace("$user", user.name) for s in scopes}
+    expected = {s.replace("$user", user.name) for s in expected}
+
+    if "*" in expected:
+        expected.remove("*")
+        expected.update(_expand_self_scope(user.name))
+
+    expanded = expand_scopes(scopes, owner=user.orm_user)
+    assert sorted(expanded) == sorted(expected)

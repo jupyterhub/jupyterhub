@@ -12,6 +12,7 @@ import pytest
 from bs4 import BeautifulSoup
 from pytest import raises
 from tornado.httputil import url_concat
+from tornado.log import app_log
 
 from .. import orm
 from .. import roles
@@ -206,32 +207,50 @@ async def test_hubauth_service_token(request, app, mockservice_url, scopes, allo
 
 
 @pytest.mark.parametrize(
-    "client_allowed_roles, request_roles, expected_roles",
+    "client_allowed_roles, request_scopes, expected_scopes",
     [
-        # allow empty roles
+        # allow empty permissions
         ([], [], []),
         # allow original 'identify' scope to map to no role
         ([], ["identify"], []),
         # requesting roles outside client list doesn't work
         ([], ["admin"], None),
-        ([], ["token"], None),
-        # requesting nonexistent roles fails in the same way (no server error)
-        ([], ["nosuchrole"], None),
-        # requesting exactly client allow list works
+        ([], ["read:users"], None),
+        # requesting nonexistent roles or scopes fails in the same way (no server error)
+        ([], ["nosuchscope"], None),
+        ([], ["admin:invalid!no=bo!"], None),
+        # requesting role exactly client allow list works
         (["user"], ["user"], ["user"]),
+        # Request individual scope, held by user, not listed in allowed role
         # no explicit request, defaults to all
         (["token", "user"], [], ["token", "user"]),
-        # explicit 'identify' maps to none
-        (["token", "user"], ["identify"], []),
+        # explicit 'identify' maps to read:users:name!user
+        (["token", "user"], ["identify"], ["read:users:name!user=$user"]),
         # any item outside the list isn't allowed
         (["token", "user"], ["token", "server"], None),
+        (["read-only"], ["access:services"], None),
         # requesting subset
         (["admin", "user"], ["user"], ["user"]),
         (["user", "token", "server"], ["token", "user"], ["token", "user"]),
         (["admin", "user", "read-only"], ["read-only"], ["read-only"]),
+        # Request individual scopes, listed in allowed role
+        (["read-only"], ["access:servers"], ["access:servers"]),
         # requesting valid subset, some not held by user
-        (["admin", "user"], ["admin", "user"], ["user"]),
-        (["admin", "user"], ["admin"], []),
+        (
+            ["admin", "user"],
+            ["admin:users", "access:servers", "self"],
+            ["access:servers", "user"],
+        ),
+        (["other"], ["other"], []),
+        # custom scopes
+        (["user"], ["custom:jupyter_server:read:*"], None),
+        (
+            ["read-only"],
+            ["custom:jupyter_server:read:*"],
+            ["custom:jupyter_server:read:*"],
+        ),
+        # this one _should_ work, but doesn't until we implement expanded_scope filtering
+        # (["read-only"], ["custom:jupyter_server:read:*!user=$user"], ["custom:jupyter_server:read:*!user=$user"]),
     ],
 )
 async def test_oauth_service_roles(
@@ -239,8 +258,8 @@ async def test_oauth_service_roles(
     mockservice_url,
     create_user_with_scopes,
     client_allowed_roles,
-    request_roles,
-    expected_roles,
+    request_scopes,
+    expected_scopes,
     preserve_scopes,
 ):
     service = mockservice_url
@@ -267,13 +286,24 @@ async def test_oauth_service_roles(
             ],
         },
     )
+
+    roles.create_role(
+        app.db,
+        {
+            "name": "other",
+            "description": "A role not held by our test user",
+            "scopes": [
+                "admin:users",
+            ],
+        },
+    )
     oauth_client.allowed_roles = [
         orm.Role.find(app.db, role_name) for role_name in client_allowed_roles
     ]
     app.db.commit()
     url = url_path_join(public_url(app, mockservice_url) + 'owhoami/?arg=x')
-    if request_roles:
-        url = url_concat(url, {"request-scope": " ".join(request_roles)})
+    if request_scopes:
+        url = url_concat(url, {"request-scope": " ".join(request_scopes)})
     # first request is only going to login and get us to the oauth form page
     s = AsyncSession()
     user = create_user_with_scopes("access:services")
@@ -283,7 +313,7 @@ async def test_oauth_service_roles(
     s.cookies = await app.login_user(name)
 
     r = await s.get(url)
-    if expected_roles is None:
+    if expected_scopes is None:
         # expected failed auth, stop here
         # verify expected 'invalid scope' error, not server error
         dest_url, _, query = r.url.partition("?")
@@ -291,6 +321,7 @@ async def test_oauth_service_roles(
         assert parse_qs(query).get("error") == ["invalid_scope"]
         assert r.status_code == 400
         return
+
     r.raise_for_status()
     # we should be looking at the oauth confirmation page
     assert urlparse(r.url).path == app.base_url + 'hub/api/oauth2/authorize'
@@ -300,7 +331,7 @@ async def test_oauth_service_roles(
     page = BeautifulSoup(r.text, "html.parser")
     scope_inputs = page.find_all("input", {"name": "scopes"})
     scope_values = [input["value"] for input in scope_inputs]
-    print("Submitting request with scope values", scope_values)
+    app_log.info(f"Submitting request with scope values {scope_values}")
     # submit the oauth form to complete authorization
     data = {}
     if scope_values:
@@ -317,9 +348,34 @@ async def test_oauth_service_roles(
     r = await s.get(url, allow_redirects=False)
     r.raise_for_status()
     assert r.status_code == 200
+    assert len(r.history) == 0
     reply = r.json()
     sub_reply = {key: reply.get(key, 'missing') for key in ('kind', 'name')}
     assert sub_reply == {'name': user.name, 'kind': 'user'}
+
+    expected_scopes = {s.replace("$user", user.name) for s in expected_scopes}
+
+    # expand roles to scopes (shortcut)
+    for scope in list(expected_scopes):
+        role = orm.Role.find(app.db, scope)
+        if role:
+            expected_scopes.discard(role.name)
+            expected_scopes.update(
+                roles.roles_to_expanded_scopes([role], owner=user.orm_user)
+            )
+
+    if 'inherit' in expected_scopes:
+        expected_scopes = scopes.get_scopes_for(user.orm_user)
+
+    # always expect identify/access scopes
+    # on successful authentication
+    expected_scopes.update(scopes.identify_scopes(user.orm_user))
+    expected_scopes.update(scopes.access_scopes(oauth_client))
+    expected_scopes = scopes.reduce_scopes(expected_scopes)
+    have_scopes = scopes.reduce_scopes(set(reply['scopes']))
+    # pytest is better at reporting list differences
+    # than set differences, especially with `-vv`
+    assert sorted(have_scopes) == sorted(expected_scopes)
 
     # token-authenticated request to HubOAuth
     token = app.users[name].new_api_token()
@@ -428,18 +484,23 @@ async def test_oauth_page_hit(
     user = create_user_with_scopes("access:services", "self")
     for role in test_roles.values():
         roles.grant_role(app.db, user, role)
-    user.new_api_token()
-    token = user.api_tokens[0]
-    token.roles = [test_roles[t] for t in token_roles]
 
+    # Create a token with the prior authorization
     oauth_client = (
         app.db.query(orm.OAuthClient)
         .filter_by(identifier=service.oauth_client_id)
         .one()
     )
     oauth_client.allowed_roles = list(test_roles.values())
+
+    authorized_scopes = roles.roles_to_scopes([test_roles[t] for t in token_roles])
+    authorized_scopes.update(scopes.identify_scopes())
+    authorized_scopes.update(scopes.access_scopes(oauth_client))
+    user.new_api_token(scopes=authorized_scopes)
+    token = user.api_tokens[0]
     token.client_id = service.oauth_client_id
     app.db.commit()
+
     s = AsyncSession()
     s.cookies = await app.login_user(user.name)
     url = url_path_join(public_url(app, service) + 'owhoami/?arg=x')
