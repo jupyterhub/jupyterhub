@@ -24,7 +24,7 @@ from tornado import web
 from tornado.log import app_log
 
 from . import orm, roles
-from ._memoize import DoNotCache, lru_cache_key
+from ._memoize import DoNotCache, FrozenDict, lru_cache_key
 
 """when modifying the scope definitions, make sure that `docs/source/rbac/generate-scope-table.py` is run
    so that changes are reflected in the documentation and REST API description."""
@@ -698,13 +698,10 @@ def parse_scopes(scope_list):
                 parsed_scopes[base_scope][key] = {value}
             else:
                 parsed_scopes[base_scope][key].add(value)
-    return parsed_scopes
+    return FrozenDict(parsed_scopes)
 
 
-# Note: it doesn't make sense to cache unparse_scopes
-# because computing the cache key is as expensive as the function itself
-
-
+@lru_cache_key(FrozenDict)
 def unparse_scopes(parsed_scopes):
     """Turn a parsed_scopes dictionary back into a expanded scopes set"""
     expanded_scopes = set()
@@ -722,7 +719,7 @@ def unparse_scopes(parsed_scopes):
 def reduce_scopes(expanded_scopes):
     """Reduce expanded scopes to minimal set
 
-    Eliminates redundancy, such as access:services and access:services!service=x
+    Eliminates overlapping scopes, such as access:services and access:services!service=x
     """
     return unparse_scopes(parse_scopes(expanded_scopes))
 

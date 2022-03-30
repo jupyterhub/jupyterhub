@@ -1,4 +1,6 @@
-from jupyterhub._memoize import DoNotCache, LRUCache, lru_cache_key
+import pytest
+
+from jupyterhub._memoize import DoNotCache, FrozenDict, LRUCache, lru_cache_key
 
 
 def test_lru_cache():
@@ -73,3 +75,20 @@ def test_do_not_cache():
     before = call_count
     assert is_even(1) == False
     assert call_count == before + 1
+
+
+@pytest.mark.parametrize(
+    "d",
+    [
+        {"key": "value"},
+        {"key": ["list"]},
+        {"key": {"set"}},
+        {"key": ("tu", "ple")},
+        {"key": {"nested": ["dict"]}},
+    ],
+)
+def test_frozen_dict(d):
+    frozen_1 = FrozenDict(d)
+    frozen_2 = FrozenDict(d)
+    assert hash(frozen_1) == hash(frozen_2)
+    assert frozen_1 == frozen_2

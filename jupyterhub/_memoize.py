@@ -88,3 +88,50 @@ def lru_cache_key(key_func, maxsize=1024):
         return cached
 
     return cache_func
+
+
+class FrozenDict(dict):
+    """A frozen dictionary subclass
+
+    Immutable and hashable, so it can be used as a cache key
+
+    Values will be frozen with `.freeze(value)`
+    and must be hashable after freezing.
+
+    Not rigorous, but enough for our purposes.
+    """
+
+    _hash = None
+
+    def __init__(self, d):
+        dict_set = dict.__setitem__
+        for key, value in d.items():
+            dict.__setitem__(self, key, self._freeze(value))
+
+    def _freeze(self, item):
+        """Make values of a dict hashable
+        - list, set -> frozenset
+        - dict -> recursive _FrozenDict
+        - anything else: assumed hashable
+        """
+        if isinstance(item, FrozenDict):
+            return item
+        elif isinstance(item, (set, list)):
+            return frozenset(item)
+        elif isinstance(item, dict):
+            return FrozenDict(item)
+        else:
+            # any other type is assumed hashable
+            return item
+
+    def __setitem__(self, key):
+        raise RuntimeError("Cannot modify frozen {type(self).__name__}")
+
+    def update(self, other):
+        raise RuntimeError("Cannot modify frozen {type(self).__name__}")
+
+    def __hash__(self):
+        """Cache hash because we are immutable"""
+        if self._hash is None:
+            self._hash = hash(tuple((key, value) for key, value in self.items()))
+        return self._hash
