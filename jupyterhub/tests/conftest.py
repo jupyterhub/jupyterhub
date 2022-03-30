@@ -59,17 +59,26 @@ from .utils import add_user
 _db = None
 
 
-def pytest_collection_modifyitems(items):
+def _pytest_collection_modifyitems(items):
     """This function is automatically run by pytest passing all collected test
     functions.
 
     We use it to add asyncio marker to all async tests and assert we don't use
     test functions that are async generators which wouldn't make sense.
+
+    It is no longer required with pytest-asyncio >= 0.17
     """
     for item in items:
         if inspect.iscoroutinefunction(item.obj):
             item.add_marker('asyncio')
         assert not inspect.isasyncgenfunction(item.obj)
+
+
+if sys.version_info < (3, 7):
+    # apply pytest-asyncio's 'auto' mode on Python 3.6.
+    # 'auto' mode is new in pytest-asyncio 0.17,
+    # which requires Python 3.7.
+    pytest_collection_modifyitems = _pytest_collection_modifyitems
 
 
 @fixture(scope='module')
@@ -303,7 +312,6 @@ def _mockservice(request, app, url=False):
         assert name in app._service_map
         service = app._service_map[name]
         token = service.orm.api_tokens[0]
-        update_roles(app.db, token, roles=['token'])
 
         async def start():
             # wait for proxy to be updated before starting the service

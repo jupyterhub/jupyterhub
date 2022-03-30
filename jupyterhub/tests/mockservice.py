@@ -68,7 +68,7 @@ class WhoAmIHandler(HubAuthenticated, web.RequestHandler):
 
     @web.authenticated
     def get(self):
-        self.write(self.get_current_user())
+        self.write(json.dumps(self.get_current_user()))
 
 
 class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
@@ -86,7 +86,7 @@ class OWhoAmIHandler(HubOAuthenticated, web.RequestHandler):
 
     @web.authenticated
     def get(self):
-        self.write(self.get_current_user())
+        self.write(json.dumps(self.get_current_user()))
 
 
 def main():

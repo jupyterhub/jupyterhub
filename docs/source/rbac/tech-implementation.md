@@ -7,11 +7,11 @@ Roles and scopes utilities can be found in `roles.py` and `scopes.py` modules. S
 ```{admonition} **Scope variable nomenclature**
 :class: tip
 - _scopes_ \
-  List of scopes with abbreviations (used in role definitions). E.g., `["users:activity!user"]`.
+  List of scopes that may contain abbreviations (used in role definitions). E.g., `["users:activity!user", "self"]`.
 - _expanded scopes_ \
-  Set of expanded scopes without abbreviations (i.e., resolved metascopes, filters and subscopes). E.g., `{"users:activity!user=charlie", "read:users:activity!user=charlie"}`.
+  Set of fully expanded scopes without abbreviations (i.e., resolved metascopes, filters, and subscopes). E.g., `{"users:activity!user=charlie", "read:users:activity!user=charlie"}`.
 - _parsed scopes_ \
-  Dictionary JSON like format of expanded scopes. E.g., `{"users:activity": {"user": ["charlie"]}, "read:users:activity": {"users": ["charlie"]}}`.
+  Dictionary represenation of expanded scopes. E.g., `{"users:activity": {"user": ["charlie"]}, "read:users:activity": {"users": ["charlie"]}}`.
 - _intersection_ \
   Set of expanded scopes as intersection of 2 expanded scope sets.
 - _identify scopes_ \
@@ -32,17 +32,29 @@ Roles and scopes are resolved on several occasions, for example when requesting 
 
 ### Requesting API token with specific roles
 
-API tokens grant access to JupyterHub's APIs. The RBAC framework allows for requesting tokens with specific existing roles. To date, it is only possible to add roles to a token through the _POST /users/:name/tokens_ API where the roles can be specified in the token parameters body (see [](../reference/rest-api.rst)).
+:::{versionchanged} 2.3
+API tokens have _scopes_ instead of roles,
+so that their permissions cannot be updated.
+
+You may still request roles for a token,
+but those roles will be evaluated to the corresponding _scopes_ immediately.
+:::
+
+API tokens grant access to JupyterHub's APIs. The RBAC framework allows for requesting tokens with specific permissions.
+As of JupyterHub 2.3, it is only possible to specify scopes for a token through the _POST /users/:name/tokens_ API where the scopes can be specified in the token parameters body (see [](../reference/rest-api.rst)).
 
 RBAC adds several steps into the token issue flow.
 
-If no roles are requested, the token is issued with the default `token` role (providing the requester is allowed to create the token).
+If no scopes are requested, the token is issued with the permissions stored on the default `token` role
+(providing the requester is allowed to create the token).
 
-If the token is requested with any roles, the permissions of requesting entity are checked against the requested permissions to ensure the token would not grant its owner additional privileges.
+If the token is requested with any scopes, the permissions of requesting entity are checked against the requested permissions to ensure the token would not grant its owner additional privileges.
 
-If, due to modifications of roles or entities, at API request time a token has any scopes that its owner does not, those scopes are removed. The API request is resolved without additional errors using the scopes _intersection_, but the Hub logs a warning (see {ref}`Figure 2 <api-request-chart>`).
+If, due to modifications of roles or entities, at API request time a token has any scopes that its owner does not, those scopes are removed.
+The API request is resolved without additional errors using the scope _intersection_,
+but the Hub logs a warning (see {ref}`Figure 2 <api-request-chart>`).
 
-Resolving a token's roles (yellow box in {ref}`Figure 1 <token-request-chart>`) corresponds to resolving all the token's owner roles (including the roles associated with their groups) and the token's requested roles into a set of scopes. The two sets are compared (Resolve the scopes box in orange in {ref}`Figure 1 <token-request-chart>`), taking into account the scope hierarchy but, solely for role assignment, omitting any {ref}`horizontal filter <horizontal-filtering-target>` comparison. If the token's scopes are a subset of the token owner's scopes, the token is issued with the requested roles; if not, JupyterHub will raise an error.
+Resolving a token's scope (yellow box in {ref}`Figure 1 <token-request-chart>`) corresponds to resolving all the token's owner roles (including the roles associated with their groups) and the token's requested roles into a set of scopes. The two sets are compared (Resolve the scopes box in orange in {ref}`Figure 1 <token-request-chart>`), taking into account the scope hierarchy but, solely for role assignment, omitting any {ref}`horizontal filter <horizontal-filtering-target>` comparison. If the token's scopes are a subset of the token owner's scopes, the token is issued with the requested roles; if not, JupyterHub will raise an error.
 
 {ref}`Figure 1 <token-request-chart>` below illustrates the steps involved. The orange rectangles highlight where in the process the roles and scopes are resolved.
 
