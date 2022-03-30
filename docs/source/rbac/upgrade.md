@@ -49,6 +49,6 @@ API tokens can also be issued to users via API ([_/hub/token_](../reference/urls
 
 ### With RBAC
 
-The RBAC framework allows for granting tokens different levels of permissions via scopes attached to roles. The 'only identify' purpose of the separate OAuth tokens is no longer required. API tokens can be used used for every action, including the login and authentication, for which an API token with no role (i.e., no scope in {ref}`available-scopes-target`) is used.
+The RBAC framework allows for granting tokens different levels of permissions via scopes attached to roles. The 'only identify' purpose of the separate OAuth tokens is no longer required. API tokens can be used for every action, including the login and authentication, for which an API token with no role (i.e., no scope in {ref}`available-scopes-target`) is used.
 
 OAuth tokens are therefore dropped from the Hub upgraded with the RBAC framework.
