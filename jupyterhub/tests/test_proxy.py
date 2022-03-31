@@ -3,8 +3,7 @@ import json
 import os
 from contextlib import contextmanager
 from subprocess import Popen
-from urllib.parse import quote
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import pytest
 from traitlets.config import Config
@@ -12,8 +11,7 @@ from traitlets.config import Config
 from ..utils import url_path_join as ujoin
 from ..utils import wait_for_http_server
 from .mocking import MockHub
-from .test_api import add_user
-from .test_api import api_request
+from .test_api import add_user, api_request
 from .utils import skip_if_ssl
 
 

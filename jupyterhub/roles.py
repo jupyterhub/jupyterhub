@@ -7,8 +7,7 @@ from functools import wraps
 from sqlalchemy import func
 from tornado.log import app_log
 
-from . import orm
-from . import scopes
+from . import orm, scopes
 
 
 def get_default_roles():

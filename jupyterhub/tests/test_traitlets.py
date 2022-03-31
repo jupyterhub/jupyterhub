@@ -1,10 +1,7 @@
 import pytest
-from traitlets import HasTraits
-from traitlets import TraitError
+from traitlets import HasTraits, TraitError
 
-from jupyterhub.traitlets import ByteSpecification
-from jupyterhub.traitlets import Command
-from jupyterhub.traitlets import URLPrefix
+from jupyterhub.traitlets import ByteSpecification, Command, URLPrefix
 
 
 def test_url_prefix():

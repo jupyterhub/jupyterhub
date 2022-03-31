@@ -3,9 +3,7 @@ import datetime
 import json
 import os
 
-from tornado import escape
-from tornado import ioloop
-from tornado import web
+from tornado import escape, ioloop, web
 
 from jupyterhub.services.auth import HubAuthenticated
 

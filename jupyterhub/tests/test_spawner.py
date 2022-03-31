@@ -16,14 +16,10 @@ import pytest
 
 from .. import orm
 from .. import spawner as spawnermod
-from ..objects import Hub
-from ..objects import Server
-from ..spawner import LocalProcessSpawner
-from ..spawner import Spawner
+from ..objects import Hub, Server
+from ..spawner import LocalProcessSpawner, Spawner
 from ..user import User
-from ..utils import AnyTimeoutError
-from ..utils import new_token
-from ..utils import url_path_join
+from ..utils import AnyTimeoutError, new_token, url_path_join
 from .mocking import public_url
 from .test_api import add_user
 from .utils import async_requests

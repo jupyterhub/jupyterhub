@@ -12,11 +12,10 @@ down_revision = '4dc2d5a8c53c'
 branch_labels = None
 depends_on = None
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 from jupyterhub import orm
-
 
 naming_convention = orm.meta.naming_convention
 

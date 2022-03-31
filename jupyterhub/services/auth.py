@@ -40,21 +40,12 @@ from urllib.parse import urlencode
 import requests
 from tornado.httputil import url_concat
 from tornado.log import app_log
-from tornado.web import HTTPError
-from tornado.web import RequestHandler
-from traitlets import default
-from traitlets import Dict
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import observe
-from traitlets import Set
-from traitlets import Unicode
-from traitlets import validate
+from tornado.web import HTTPError, RequestHandler
+from traitlets import Dict, Instance, Integer, Set, Unicode, default, observe, validate
 from traitlets.config import SingletonConfigurable
 
 from ..scopes import _intersect_expanded_scopes
-from ..utils import get_browser_protocol
-from ..utils import url_path_join
+from ..utils import get_browser_protocol, url_path_join
 
 
 def check_scopes(required_scopes, scopes):

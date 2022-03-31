@@ -16,7 +16,6 @@ from traitlets.config import Config
 
 from .mocking import MockHub
 
-
 # To test new schemas, add them to the `valid_events`
 # and `invalid_events` dictionary below.
 

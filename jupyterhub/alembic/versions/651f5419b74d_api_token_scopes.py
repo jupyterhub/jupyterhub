@@ -13,17 +13,12 @@ depends_on = None
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy import Column
-from sqlalchemy import ForeignKey
-from sqlalchemy import Integer
-from sqlalchemy import Table
-from sqlalchemy import Unicode
+from sqlalchemy import Column, ForeignKey, Integer, Table, Unicode
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.orm.session import Session
 
-from jupyterhub import orm
-from jupyterhub import roles
+from jupyterhub import orm, roles
 
 
 def upgrade():

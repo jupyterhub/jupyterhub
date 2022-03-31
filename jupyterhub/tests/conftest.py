@@ -35,22 +35,17 @@ from getpass import getuser
 from subprocess import TimeoutExpired
 from unittest import mock
 
-from pytest import fixture
-from pytest import raises
+from pytest import fixture, raises
 from tornado import ioloop
 from tornado.httpclient import HTTPError
 from tornado.platform.asyncio import AsyncIOMainLoop
 
 import jupyterhub.services.service
-from . import mocking
-from .. import crypto
-from .. import orm
-from .. import scopes
-from ..roles import create_role
-from ..roles import get_default_roles
-from ..roles import mock_roles
-from ..roles import update_roles
+
+from .. import crypto, orm, scopes
+from ..roles import create_role, get_default_roles, mock_roles, update_roles
 from ..utils import random_port
+from . import mocking
 from .mocking import MockHub
 from .test_services import mockservice_cmd
 from .utils import add_user

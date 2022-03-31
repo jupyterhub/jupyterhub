@@ -1,7 +1,5 @@
 """Handlers for serving prometheus metrics"""
-from prometheus_client import CONTENT_TYPE_LATEST
-from prometheus_client import generate_latest
-from prometheus_client import REGISTRY
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
 
 from ..utils import metrics_authentication
 from .base import BaseHandler

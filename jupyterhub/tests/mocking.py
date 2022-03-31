@@ -37,23 +37,15 @@ from urllib.parse import urlparse
 
 from pamela import PAMError
 from tornado.ioloop import IOLoop
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
+from traitlets import Bool, Dict, default
 
-from .. import metrics
-from .. import orm
-from .. import roles
+from .. import metrics, orm, roles
 from ..app import JupyterHub
 from ..auth import PAMAuthenticator
 from ..singleuser import SingleUserNotebookApp
 from ..spawner import SimpleLocalProcessSpawner
-from ..utils import random_port
-from ..utils import utcnow
-from .utils import async_requests
-from .utils import public_host
-from .utils import public_url
-from .utils import ssl_setup
+from ..utils import random_port, utcnow
+from .utils import async_requests, public_host, public_url, ssl_setup
 
 
 def mock_authenticate(username, password, service, encoding):

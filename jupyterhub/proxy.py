@@ -26,28 +26,17 @@ from subprocess import Popen
 from urllib.parse import quote
 from weakref import WeakKeyDictionary
 
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPError
-from tornado.httpclient import HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPError, HTTPRequest
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import observe
-from traitlets import Unicode
+from traitlets import Any, Bool, Dict, Instance, Integer, Unicode, default, observe
 from traitlets.config import LoggingConfigurable
 
-from . import utils
-from .metrics import CHECK_ROUTES_DURATION_SECONDS
-from .metrics import PROXY_POLL_DURATION_SECONDS
-from .objects import Server
-from .utils import AnyTimeoutError
-from .utils import exponential_backoff
-from .utils import url_path_join
 from jupyterhub.traitlets import Command
+
+from . import utils
+from .metrics import CHECK_ROUTES_DURATION_SECONDS, PROXY_POLL_DURATION_SECONDS
+from .objects import Server
+from .utils import AnyTimeoutError, exponential_backoff, url_path_join
 
 
 def _one_at_a_time(method):

@@ -15,8 +15,8 @@ import logging
 
 logger = logging.getLogger('alembic')
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 tables = ('oauth_access_tokens', 'oauth_codes')
 

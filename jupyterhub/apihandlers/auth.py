@@ -4,22 +4,14 @@
 import itertools
 import json
 from datetime import datetime
-from urllib.parse import parse_qsl
-from urllib.parse import quote
-from urllib.parse import urlencode
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
 from oauthlib import oauth2
 from tornado import web
 
-from .. import orm
-from .. import roles
-from .. import scopes
-from ..utils import get_browser_protocol
-from ..utils import token_authenticated
-from .base import APIHandler
-from .base import BaseHandler
+from .. import orm, roles, scopes
+from ..utils import get_browser_protocol, token_authenticated
+from .base import APIHandler, BaseHandler
 
 
 class TokenAPIHandler(APIHandler):

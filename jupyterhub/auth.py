@@ -9,9 +9,7 @@ import warnings
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from shutil import which
-from subprocess import PIPE
-from subprocess import Popen
-from subprocess import STDOUT
+from subprocess import PIPE, STDOUT, Popen
 
 try:
     import pamela
@@ -20,13 +18,12 @@ except Exception as e:
     _pamela_error = e
 
 from tornado.concurrent import run_on_executor
-
+from traitlets import Any, Bool, Dict, Integer, Set, Unicode, default, observe
 from traitlets.config import LoggingConfigurable
-from traitlets import Bool, Integer, Set, Unicode, Dict, Any, default, observe
 
 from .handlers.login import LoginHandler
-from .utils import maybe_future, url_path_join
 from .traitlets import Command
+from .utils import maybe_future, url_path_join
 
 
 class Authenticator(LoggingConfigurable):

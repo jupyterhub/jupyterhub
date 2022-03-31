@@ -10,9 +10,7 @@ from urllib.parse import urlparse
 
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
-from tornado.web import Application
-from tornado.web import authenticated
-from tornado.web import RequestHandler
+from tornado.web import Application, RequestHandler, authenticated
 
 from jupyterhub.services.auth import HubAuthenticated
 

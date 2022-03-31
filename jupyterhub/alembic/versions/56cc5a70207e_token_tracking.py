@@ -11,10 +11,10 @@ down_revision = '1cebaf56856c'
 branch_labels = None
 depends_on = None
 
-from alembic import op
-import sqlalchemy as sa
-
 import logging
+
+import sqlalchemy as sa
+from alembic import op
 
 logger = logging.getLogger('alembic')
 
