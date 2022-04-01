@@ -9,50 +9,43 @@ import random
 import re
 import time
 import uuid
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from http.client import responses
-from urllib.parse import parse_qs
-from urllib.parse import parse_qsl
-from urllib.parse import urlencode
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import parse_qs, parse_qsl, urlencode, urlparse, urlunparse
 
 from jinja2 import TemplateNotFound
 from sqlalchemy.exc import SQLAlchemyError
-from tornado import gen
-from tornado import web
-from tornado.httputil import HTTPHeaders
-from tornado.httputil import url_concat
+from tornado import gen, web
+from tornado.httputil import HTTPHeaders, url_concat
 from tornado.ioloop import IOLoop
 from tornado.log import app_log
-from tornado.web import addslash
-from tornado.web import RequestHandler
+from tornado.web import RequestHandler, addslash
 
-from .. import __version__
-from .. import orm
-from .. import roles
-from .. import scopes
-from ..metrics import PROXY_ADD_DURATION_SECONDS
-from ..metrics import PROXY_DELETE_DURATION_SECONDS
-from ..metrics import ProxyDeleteStatus
-from ..metrics import RUNNING_SERVERS
-from ..metrics import SERVER_POLL_DURATION_SECONDS
-from ..metrics import SERVER_SPAWN_DURATION_SECONDS
-from ..metrics import SERVER_STOP_DURATION_SECONDS
-from ..metrics import ServerPollStatus
-from ..metrics import ServerSpawnStatus
-from ..metrics import ServerStopStatus
-from ..metrics import TOTAL_USERS
+from .. import __version__, orm, roles, scopes
+from ..metrics import (
+    PROXY_ADD_DURATION_SECONDS,
+    PROXY_DELETE_DURATION_SECONDS,
+    RUNNING_SERVERS,
+    SERVER_POLL_DURATION_SECONDS,
+    SERVER_SPAWN_DURATION_SECONDS,
+    SERVER_STOP_DURATION_SECONDS,
+    TOTAL_USERS,
+    ProxyDeleteStatus,
+    ServerPollStatus,
+    ServerSpawnStatus,
+    ServerStopStatus,
+)
 from ..objects import Server
 from ..scopes import needs_scope
 from ..spawner import LocalProcessSpawner
 from ..user import User
-from ..utils import AnyTimeoutError
-from ..utils import get_accepted_mimetype
-from ..utils import get_browser_protocol
-from ..utils import maybe_future
-from ..utils import url_path_join
+from ..utils import (
+    AnyTimeoutError,
+    get_accepted_mimetype,
+    get_browser_protocol,
+    maybe_future,
+    url_path_join,
+)
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)

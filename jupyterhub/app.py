@@ -14,15 +14,11 @@ import socket
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 from getpass import getuser
 from operator import itemgetter
 from textwrap import dedent
-from urllib.parse import unquote
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import unquote, urlparse, urlunparse
 
 if sys.version_info[:2] < (3, 3):
     raise ValueError("Python < 3.3 not supported: %s" % sys.version)
@@ -36,78 +32,72 @@ except AttributeError as e:
     asyncio_all_tasks = asyncio.Task.all_tasks
     asyncio_current_task = asyncio.Task.current_task
 
-from dateutil.parser import parse as parse_date
-from jinja2 import Environment, FileSystemLoader, PrefixLoader, ChoiceLoader
-from sqlalchemy.exc import OperationalError, SQLAlchemyError
-
-from tornado.httpclient import AsyncHTTPClient
 import tornado.httpserver
-from tornado.ioloop import IOLoop, PeriodicCallback
-from tornado.log import app_log, access_log, gen_log
 import tornado.options
+from dateutil.parser import parse as parse_date
+from jinja2 import ChoiceLoader, Environment, FileSystemLoader, PrefixLoader
+from jupyter_telemetry.eventlog import EventLog
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 from tornado import gen, web
-
+from tornado.httpclient import AsyncHTTPClient
+from tornado.ioloop import IOLoop, PeriodicCallback
+from tornado.log import access_log, app_log, gen_log
 from traitlets import (
-    Unicode,
-    Integer,
-    Dict,
-    List,
-    Bool,
     Any,
-    Tuple,
-    Set,
-    Instance,
+    Bool,
     Bytes,
+    Dict,
     Float,
+    Instance,
+    Integer,
+    List,
+    Set,
+    Tuple,
+    Unicode,
     Union,
-    observe,
     default,
+    observe,
     validate,
 )
 from traitlets.config import Application, Configurable, catch_config_error
 
-from jupyter_telemetry.eventlog import EventLog
-
 here = os.path.dirname(__file__)
 
 import jupyterhub
-from . import handlers, apihandlers
-from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
-from .services.service import Service
 
-from . import crypto
-from . import dbutil
-from . import orm
-from . import roles
-from . import scopes
-from .user import UserDict
-from .oauth.provider import make_provider
+from . import apihandlers, crypto, dbutil, handlers, orm, roles, scopes
 from ._data import DATA_FILES_PATH
-from .log import CoroutineLogFormatter, log_request
-from .proxy import Proxy, ConfigurableHTTPProxy
-from .traitlets import URLPrefix, Command, EntryPointType, Callable
-from .utils import (
-    AnyTimeoutError,
-    catch_db_error,
-    maybe_future,
-    url_path_join,
-    print_stacks,
-    print_ps_info,
-    make_ssl_context,
-)
-from .metrics import HUB_STARTUP_DURATION_SECONDS
-from .metrics import INIT_SPAWNERS_DURATION_SECONDS
-from .metrics import RUNNING_SERVERS
-from .metrics import TOTAL_USERS
 
 # classes for config
 from .auth import Authenticator, PAMAuthenticator
 from .crypto import CryptKeeper
-from .spawner import Spawner, LocalProcessSpawner
-from .objects import Hub, Server
 
 # For faking stats
 from .emptyclass import EmptyClass
+from .handlers.static import CacheControlStaticFilesHandler, LogoHandler
+from .log import CoroutineLogFormatter, log_request
+from .metrics import (
+    HUB_STARTUP_DURATION_SECONDS,
+    INIT_SPAWNERS_DURATION_SECONDS,
+    RUNNING_SERVERS,
+    TOTAL_USERS,
+)
+from .oauth.provider import make_provider
+from .objects import Hub, Server
+from .proxy import ConfigurableHTTPProxy, Proxy
+from .services.service import Service
+from .spawner import LocalProcessSpawner, Spawner
+from .traitlets import Callable, Command, EntryPointType, URLPrefix
+from .user import UserDict
+from .utils import (
+    AnyTimeoutError,
+    catch_db_error,
+    make_ssl_context,
+    maybe_future,
+    print_ps_info,
+    print_stacks,
+    url_path_join,
+)
 
 common_aliases = {
     'log-level': 'Application.log_level',

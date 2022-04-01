@@ -16,7 +16,6 @@ import time
 
 import requests
 
-
 log = logging.getLogger(__name__)
 
 

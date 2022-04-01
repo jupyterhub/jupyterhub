@@ -7,22 +7,20 @@ from pytest import mark
 from tornado import web
 from tornado.httputil import HTTPServerRequest
 
-from .. import orm
-from .. import roles
-from .. import scopes
+from .. import orm, roles, scopes
 from ..handlers import BaseHandler
-from ..scopes import _check_scope_access
-from ..scopes import _expand_self_scope
-from ..scopes import _intersect_expanded_scopes
-from ..scopes import expand_scopes
-from ..scopes import get_scopes_for
-from ..scopes import identify_scopes
-from ..scopes import needs_scope
-from ..scopes import parse_scopes
-from ..scopes import Scope
-from .utils import add_user
-from .utils import api_request
-from .utils import auth_header
+from ..scopes import (
+    Scope,
+    _check_scope_access,
+    _expand_self_scope,
+    _intersect_expanded_scopes,
+    expand_scopes,
+    get_scopes_for,
+    identify_scopes,
+    needs_scope,
+    parse_scopes,
+)
+from .utils import add_user, api_request, auth_header
 
 
 def get_handler_with_scopes(scopes):

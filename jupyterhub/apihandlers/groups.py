@@ -6,8 +6,7 @@ import json
 from tornado import web
 
 from .. import orm
-from ..scopes import needs_scope
-from ..scopes import Scope
+from ..scopes import Scope, needs_scope
 from .base import APIHandler
 
 

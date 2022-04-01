@@ -19,29 +19,31 @@ from urllib.parse import urlparse
 from async_generator import aclosing
 from sqlalchemy import inspect
 from tornado.ioloop import PeriodicCallback
-from traitlets import Any
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
-from traitlets import Unicode
-from traitlets import Union
-from traitlets import validate
+from traitlets import (
+    Any,
+    Bool,
+    Dict,
+    Float,
+    Instance,
+    Integer,
+    List,
+    Unicode,
+    Union,
+    default,
+    observe,
+    validate,
+)
 from traitlets.config import LoggingConfigurable
 
 from .objects import Server
-from .traitlets import ByteSpecification
-from .traitlets import Callable
-from .traitlets import Command
-from .utils import AnyTimeoutError
-from .utils import exponential_backoff
-from .utils import maybe_future
-from .utils import random_port
-from .utils import url_path_join
+from .traitlets import ByteSpecification, Callable, Command
+from .utils import (
+    AnyTimeoutError,
+    exponential_backoff,
+    maybe_future,
+    random_port,
+    url_path_join,
+)
 
 if os.name == 'nt':
     import psutil

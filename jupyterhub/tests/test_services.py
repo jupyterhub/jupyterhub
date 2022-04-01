@@ -8,14 +8,15 @@ from async_generator import asynccontextmanager
 
 from .. import orm
 from ..roles import update_roles
-from ..utils import exponential_backoff
-from ..utils import maybe_future
-from ..utils import random_port
-from ..utils import url_path_join
-from ..utils import wait_for_http_server
+from ..utils import (
+    exponential_backoff,
+    maybe_future,
+    random_port,
+    url_path_join,
+    wait_for_http_server,
+)
 from .mocking import public_url
-from .utils import async_requests
-from .utils import skip_if_ssl
+from .utils import async_requests, skip_if_ssl
 
 mockservice_path = os.path.dirname(os.path.abspath(__file__))
 mockservice_py = os.path.join(mockservice_path, 'mockservice.py')

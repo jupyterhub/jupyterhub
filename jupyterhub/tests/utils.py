@@ -7,11 +7,9 @@ import pytest
 import requests
 from certipy import Certipy
 
-from jupyterhub import metrics
-from jupyterhub import orm
+from jupyterhub import metrics, orm
 from jupyterhub.objects import Server
-from jupyterhub.roles import assign_default_roles
-from jupyterhub.roles import update_roles
+from jupyterhub.roles import assign_default_roles, update_roles
 from jupyterhub.utils import url_path_join as ujoin
 
 

@@ -12,11 +12,9 @@ from tornado import web
 from tornado.httputil import url_concat
 
 from .. import __version__
-from ..metrics import SERVER_POLL_DURATION_SECONDS
-from ..metrics import ServerPollStatus
+from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import needs_scope
-from ..utils import maybe_future
-from ..utils import url_path_join
+from ..utils import maybe_future, url_path_join
 from .base import BaseHandler
 
 

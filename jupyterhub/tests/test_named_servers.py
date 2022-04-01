@@ -2,22 +2,15 @@
 import asyncio
 import json
 from unittest import mock
-from urllib.parse import urlencode
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import pytest
 from tornado.httputil import url_concat
 
 from ..utils import url_path_join
-from .mocking import FormSpawner
-from .mocking import public_url
-from .test_api import add_user
-from .test_api import api_request
-from .test_api import fill_user
-from .test_api import normalize_user
-from .test_api import TIMESTAMP
-from .utils import async_requests
-from .utils import get_page
+from .mocking import FormSpawner, public_url
+from .test_api import TIMESTAMP, add_user, api_request, fill_user, normalize_user
+from .utils import async_requests, get_page
 
 
 @pytest.fixture

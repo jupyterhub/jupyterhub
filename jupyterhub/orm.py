@@ -3,47 +3,44 @@
 # Distributed under the terms of the Modified BSD License.
 import enum
 import json
-from base64 import decodebytes
-from base64 import encodebytes
-from datetime import datetime
-from datetime import timedelta
+from base64 import decodebytes, encodebytes
+from datetime import datetime, timedelta
 
 import alembic.command
 import alembic.config
 from alembic.script import ScriptDirectory
-from sqlalchemy import Boolean
-from sqlalchemy import Column
-from sqlalchemy import create_engine
-from sqlalchemy import DateTime
-from sqlalchemy import event
-from sqlalchemy import exc
-from sqlalchemy import ForeignKey
-from sqlalchemy import inspect
-from sqlalchemy import Integer
-from sqlalchemy import MetaData
-from sqlalchemy import or_
-from sqlalchemy import select
-from sqlalchemy import Table
-from sqlalchemy import Unicode
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    MetaData,
+    Table,
+    Unicode,
+    create_engine,
+    event,
+    exc,
+    inspect,
+    or_,
+    select,
+)
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import backref
-from sqlalchemy.orm import interfaces
-from sqlalchemy.orm import object_session
-from sqlalchemy.orm import relationship
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import (
+    Session,
+    backref,
+    interfaces,
+    object_session,
+    relationship,
+    sessionmaker,
+)
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.sql.expression import bindparam
-from sqlalchemy.types import LargeBinary
-from sqlalchemy.types import Text
-from sqlalchemy.types import TypeDecorator
+from sqlalchemy.types import LargeBinary, Text, TypeDecorator
 from tornado.log import app_log
 
 from .roles import roles_to_scopes
-from .utils import compare_token
-from .utils import hash_token
-from .utils import new_token
-from .utils import random_port
+from .utils import compare_token, hash_token, new_token, random_port
 
 # top-level variable for easier mocking in tests
 utcnow = datetime.utcnow

@@ -23,8 +23,7 @@ import sqlalchemy as sa
 from tornado import web
 from tornado.log import app_log
 
-from . import orm
-from . import roles
+from . import orm, roles
 
 """when modifying the scope definitions, make sure that `docs/source/rbac/generate-scope-table.py` is run
    so that changes are reflected in the documentation and REST API description."""

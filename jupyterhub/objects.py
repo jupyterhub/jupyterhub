@@ -3,25 +3,20 @@
 # Distributed under the terms of the Modified BSD License.
 import socket
 import warnings
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import urlparse, urlunparse
 
-from traitlets import default
-from traitlets import HasTraits
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import observe
-from traitlets import Unicode
-from traitlets import validate
+from traitlets import HasTraits, Instance, Integer, Unicode, default, observe, validate
 
 from . import orm
 from .traitlets import URLPrefix
-from .utils import can_connect
-from .utils import make_ssl_context
-from .utils import random_port
-from .utils import url_path_join
-from .utils import wait_for_http_server
-from .utils import wait_for_server
+from .utils import (
+    can_connect,
+    make_ssl_context,
+    random_port,
+    url_path_join,
+    wait_for_http_server,
+    wait_for_server,
+)
 
 
 class Server(HasTraits):

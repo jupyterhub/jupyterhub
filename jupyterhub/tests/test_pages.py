@@ -2,31 +2,28 @@
 import asyncio
 import sys
 from unittest import mock
-from urllib.parse import parse_qs
-from urllib.parse import urlencode
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
 from tornado.escape import url_escape
 from tornado.httputil import url_concat
 
-from .. import orm
-from .. import roles
-from .. import scopes
+from .. import orm, roles, scopes
 from ..auth import Authenticator
 from ..handlers import BaseHandler
 from ..utils import url_path_join
 from ..utils import url_path_join as ujoin
-from .mocking import FalsyCallableFormSpawner
-from .mocking import FormSpawner
+from .mocking import FalsyCallableFormSpawner, FormSpawner
 from .test_api import next_event
-from .utils import api_request
-from .utils import async_requests
-from .utils import AsyncSession
-from .utils import get_page
-from .utils import public_host
-from .utils import public_url
+from .utils import (
+    AsyncSession,
+    api_request,
+    async_requests,
+    get_page,
+    public_host,
+    public_url,
+)
 
 
 async def test_root_no_auth(app):

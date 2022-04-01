@@ -4,10 +4,7 @@
 import json
 from functools import lru_cache
 from http.client import responses
-from urllib.parse import parse_qs
-from urllib.parse import urlencode
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy.exc import SQLAlchemyError
 from tornado import web
@@ -15,9 +12,7 @@ from tornado import web
 from .. import orm
 from ..handlers import BaseHandler
 from ..scopes import get_scopes_for
-from ..utils import get_browser_protocol
-from ..utils import isoformat
-from ..utils import url_path_join
+from ..utils import get_browser_protocol, isoformat, url_path_join
 
 PAGINATION_MEDIA_TYPE = "application/jupyterhub-pagination+json"
 

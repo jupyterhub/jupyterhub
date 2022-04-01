@@ -6,13 +6,10 @@ import logging
 import traceback
 from functools import partial
 from http.cookies import SimpleCookie
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from urllib.parse import urlparse, urlunparse
 
-from tornado.log import access_log
-from tornado.log import LogFormatter
-from tornado.web import HTTPError
-from tornado.web import StaticFileHandler
+from tornado.log import LogFormatter, access_log
+from tornado.web import HTTPError, StaticFileHandler
 
 from .handlers.pages import HealthCheckHandler
 from .metrics import prometheus_log_method

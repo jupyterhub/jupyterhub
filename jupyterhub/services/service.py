@@ -45,21 +45,22 @@ import pipes
 import shutil
 from subprocess import Popen
 
-from traitlets import Any
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
-from traitlets import HasTraits
-from traitlets import Instance
-from traitlets import List
-from traitlets import Unicode
-from traitlets import validate
+from traitlets import (
+    Any,
+    Bool,
+    Dict,
+    HasTraits,
+    Instance,
+    List,
+    Unicode,
+    default,
+    validate,
+)
 from traitlets.config import LoggingConfigurable
 
 from .. import orm
 from ..objects import Server
-from ..spawner import LocalProcessSpawner
-from ..spawner import set_user_setuid
+from ..spawner import LocalProcessSpawner, set_user_setuid
 from ..traitlets import Command
 from ..utils import url_path_join
 

@@ -3,19 +3,14 @@
 implements https://oauthlib.readthedocs.io/en/latest/oauth2/server.html
 """
 from oauthlib import uri_validate
-from oauthlib.oauth2 import RequestValidator
-from oauthlib.oauth2 import WebApplicationServer
-from oauthlib.oauth2.rfc6749.grant_types import authorization_code
-from oauthlib.oauth2.rfc6749.grant_types import base
+from oauthlib.oauth2 import RequestValidator, WebApplicationServer
+from oauthlib.oauth2.rfc6749.grant_types import authorization_code, base
 from tornado.log import app_log
 
 from .. import orm
 from ..roles import roles_to_scopes
-from ..scopes import _check_scopes_exist
-from ..scopes import access_scopes
-from ..scopes import identify_scopes
-from ..utils import compare_token
-from ..utils import hash_token
+from ..scopes import _check_scopes_exist, access_scopes, identify_scopes
+from ..utils import compare_token, hash_token
 
 # patch absolute-uri check
 # because we want to allow relative uri oauth
