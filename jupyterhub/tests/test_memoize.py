@@ -18,7 +18,7 @@ def test_lru_cache():
 
     # storing c pushes oldest ('b') out of cache
     cache["c"] = 3
-    print(cache.maxsize, len(cache._cache))
+    assert len(cache._cache) == 2
     assert "a" in cache
     assert "c" in cache
     assert "b" not in cache

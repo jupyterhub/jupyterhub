@@ -116,7 +116,9 @@ class FrozenDict(dict):
         """
         if isinstance(item, FrozenDict):
             return item
-        elif isinstance(item, (set, list)):
+        elif isinstance(item, list):
+            return tuple(self._freeze(e) for e in item)
+        elif isinstance(item, set):
             return frozenset(item)
         elif isinstance(item, dict):
             return FrozenDict(item)

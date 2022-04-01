@@ -662,7 +662,7 @@ def _check_token_scopes(scopes, owner):
         )
 
 
-@lru_cache_key(lambda scope_list: frozenset(scope_list))
+@lru_cache_key(frozenset)
 def parse_scopes(scope_list):
     """
     Parses scopes and filters in something akin to JSON style
