@@ -522,7 +522,7 @@ class BaseHandler(RequestHandler):
         # clear_cookie only accepts a subset of set_cookie's kwargs
         clear_xsrf_cookie_kwargs = {
             key: value
-            for key, value in self.settings.get('xsrf_cookie_kwargs', {})
+            for key, value in self.settings.get('xsrf_cookie_kwargs', {}).items()
             if key in {"path", "domain"}
         }
 
