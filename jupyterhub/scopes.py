@@ -1,6 +1,10 @@
 """
 General scope definitions and utilities
 
+Scope functions generally return _immutable_ collections,
+such as `frozenset` to avoid mutating cached values.
+If needed, mutable copies can be made, e.g. `set(frozen_scopes)`
+
 Scope variable nomenclature
 ---------------------------
 scopes or 'raw' scopes: collection of scopes that may contain abbreviations (e.g., in role definition)
@@ -294,7 +298,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
     intersection = unparse_scopes(common_filters)
     if needs_db:
         # return intersection, but don't cache it if it needed db lookups
-        raise DoNotCache(intersection)
+        return DoNotCache(intersection)
 
     return intersection
 
@@ -415,7 +419,7 @@ def _expand_self_scope(username):
         'read:tokens',
         'access:servers',
     ]
-    # return frozenset because the result is cached
+    # return immutable frozenset because the result is cached
     return frozenset(f"{scope}!user={username}" for scope in scope_list)
 
 
@@ -460,7 +464,7 @@ def _expand_scope(scope):
     else:
         expanded_scopes = expanded_scope_names
 
-    # return frozenset because we are cached
+    # return immutable frozenset because the result is cached
     return frozenset(expanded_scopes)
 
 
@@ -528,7 +532,8 @@ def expand_scopes(scopes, owner=None):
             )
 
     # reduce to discard overlapping scopes
-    return reduce_scopes(expanded_scopes)
+    # return immutable frozenset because the result is cached
+    return frozenset(reduce_scopes(expanded_scopes))
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -698,6 +703,7 @@ def parse_scopes(scope_list):
                 parsed_scopes[base_scope][key] = {value}
             else:
                 parsed_scopes[base_scope][key].add(value)
+    # return immutable FrozenDict because the result is cached
     return FrozenDict(parsed_scopes)
 
 
@@ -712,6 +718,7 @@ def unparse_scopes(parsed_scopes):
             for entity, names_list in filters.items():
                 for name in names_list:
                     expanded_scopes.add(f'{base}!{entity}={name}')
+    # return immutable frozenset because the result is cached
     return frozenset(expanded_scopes)
 
 
@@ -721,6 +728,7 @@ def reduce_scopes(expanded_scopes):
 
     Eliminates overlapping scopes, such as access:services and access:services!service=x
     """
+    # unparse_scopes already returns a frozenset
     return unparse_scopes(parse_scopes(expanded_scopes))
 
 
@@ -866,7 +874,7 @@ def check_scope_filter(sub_scope, orm_resource, kind):
         group_names = {group.name for group in orm_resource.groups}
         user_in_group = bool(group_names & set(sub_scope['group']))
         # cannot cache if we needed to lookup groups in db
-        raise DoNotCache(user_in_group)
+        return DoNotCache(user_in_group)
     return False
 
 

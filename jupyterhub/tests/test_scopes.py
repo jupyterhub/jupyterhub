@@ -8,6 +8,7 @@ from tornado import web
 from tornado.httputil import HTTPServerRequest
 
 from .. import orm, roles, scopes
+from .._memoize import FrozenDict
 from ..handlers import BaseHandler
 from ..scopes import (
     Scope,
@@ -38,6 +39,7 @@ def test_scope_constructor():
         f'read:users!user={user2}',
     ]
     parsed_scopes = parse_scopes(scope_list)
+    assert isinstance(parsed_scopes, FrozenDict)
 
     assert 'read:users' in parsed_scopes
     assert parsed_scopes['users']
@@ -467,6 +469,7 @@ async def test_metascope_self_expansion(
         orm_obj = create_service_with_scopes('self')
     # test expansion of user/service scopes
     scopes = get_scopes_for(orm_obj)
+    assert isinstance(scopes, frozenset)
     assert bool(scopes) == has_user_scopes
 
     # test expansion of token scopes
@@ -488,6 +491,8 @@ async def test_metascope_inherit_expansion(app, create_user_with_scopes):
     token.scopes.clear()
     app.db.commit()
     token_scope_set = get_scopes_for(token)
+    assert isinstance(token_scope_set, frozenset)
+
     assert token_scope_set.issubset(identify_scopes(user.orm_user))
 
 
@@ -1169,4 +1174,5 @@ def test_expand_scopes(user, scopes, expected):
         expected.update(_expand_self_scope(user.name))
 
     expanded = expand_scopes(scopes, owner=user.orm_user)
+    assert isinstance(expanded, frozenset)
     assert sorted(expanded) == sorted(expected)

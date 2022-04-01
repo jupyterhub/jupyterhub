@@ -1,10 +1,23 @@
-"""Utilities for memoization"""
+"""Utilities for memoization
+
+Note: a memoized function should always return an _immutable_
+result to avoid later modifications polluting cached results.
+"""
 from collections import OrderedDict
 from functools import wraps
 
 
-class DoNotCache(Exception):
-    """Special exception to return a result without caching it"""
+class DoNotCache:
+    """Wrapper to return a result without caching it.
+
+    In a function decorated with `@lru_cache_key`:
+
+        return DoNotCache(result)
+
+    is equivalent to:
+
+        return result  # but don't cache it!
+    """
 
     def __init__(self, result):
         self.result = result
@@ -51,6 +64,9 @@ def lru_cache_key(key_func, maxsize=1024):
     or mutable objects where only immutable fields might be used
     (e.g. User, where only username affects output).
 
+    For safety: Cached results should always be immutable,
+    such as using `frozenset` instead of mutable `set`.
+
     Example:
 
         @lru_cache_key(lambda user: user.name)
@@ -76,11 +92,10 @@ def lru_cache_key(key_func, maxsize=1024):
                 return cache[cache_key]
             else:
                 # cache miss, call function and cache result
-                try:
-                    result = func(*args, **kwargs)
-                except DoNotCache as e:
+                result = func(*args, **kwargs)
+                if isinstance(result, DoNotCache):
                     # DoNotCache prevents caching
-                    result = e.result
+                    result = result.result
                 else:
                     cache[cache_key] = result
             return result

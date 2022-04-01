@@ -55,7 +55,7 @@ def test_do_not_cache():
         nonlocal call_count
         call_count += 1
         if arg % 2:
-            raise DoNotCache(False)
+            return DoNotCache(False)
         return True
 
     before = call_count
