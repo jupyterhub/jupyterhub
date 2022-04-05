@@ -35,7 +35,9 @@ else:
         else:
             break
     if App is None:
-        raise RuntimeError("No jupyter client was found: please ensure `jupyterlab` or `nbclassic` is installed or in your environment")
+        raise RuntimeError(
+            "No jupyter client was found: please ensure `jupyterlab` or `nbclassic` is installed or in your environment"
+        )
 
 
 SingleUserNotebookApp = make_singleuser_app(App)
