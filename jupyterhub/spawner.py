@@ -873,9 +873,6 @@ class Spawner(LoggingConfigurable):
 
         if self.server:
             base_url = self.server.base_url
-            if self.ip or self.port:
-                self.server.ip = self.ip
-                self.server.port = self.port
             env['JUPYTERHUB_SERVICE_PREFIX'] = self.server.base_url
         else:
             # this should only occur in mock/testing scenarios
