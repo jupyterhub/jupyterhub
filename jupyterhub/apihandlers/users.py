@@ -44,7 +44,7 @@ class SelfAPIHandler(APIHandler):
         for scope in identify_scopes:
             if scope not in self.expanded_scopes:
                 _added_scopes.add(scope)
-                self.expanded_scopes.add(scope)
+                self.expanded_scopes |= {scope}
         if _added_scopes:
             # re-parse with new scopes
             self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)
