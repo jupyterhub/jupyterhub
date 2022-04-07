@@ -267,7 +267,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
                     # resolve group/server hierarchy if db available
                     servers = servers.difference(common_servers)
                     if db is not None and servers and 'group' in b:
-                        _needs_db = True
+                        needs_db = True
                         for server in servers:
                             server_groups = groups_for_server(server)
                             if server_groups & b['group']:
