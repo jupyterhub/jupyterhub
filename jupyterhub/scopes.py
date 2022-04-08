@@ -519,10 +519,10 @@ def expand_scopes(scopes, owner=None, oauth_client=None):
         "service": None,
         "server": None,
     }
-    owner_name = None
+    user_name = None
     if isinstance(owner, orm.User):
-        owner_name = owner.name
-        filter_replacements["user"] = f"user={owner_name}"
+        user_name = owner.name
+        filter_replacements["user"] = f"user={user_name}"
     elif isinstance(owner, orm.Service):
         filter_replacements["service"] = f"service={owner.name}"
 
@@ -552,11 +552,11 @@ def expand_scopes(scopes, owner=None, oauth_client=None):
 
     if 'self' in expanded_scopes:
         expanded_scopes.remove('self')
-        if owner_name:
-            expanded_scopes |= _expand_self_scope(owner_name)
+        if user_name:
+            expanded_scopes |= _expand_self_scope(user_name)
         else:
             warnings.warn(
-                "Not expanding 'self' scope without owner",
+                f"Not expanding 'self' scope for owner {owner} which is not a User",
                 stacklevel=2,
             )
 
