@@ -1,6 +1,7 @@
 import React from "react";
 import "@testing-library/jest-dom";
 import { act } from "react-dom/test-utils";
+import userEvent from "@testing-library/user-event";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { HashRouter, Switch } from "react-router-dom";
 import { Provider, useSelector } from "react-redux";
@@ -508,15 +509,15 @@ test("Search for user calls updateUsers with name filter", async () => {
 
   let search = screen.getByLabelText("user-search");
 
-  fireEvent.change(search, { target: { value: "a" } });
-  clock.tick(400);
-  expect(mockUpdateUsers.mock.calls).toHaveLength(2);
-  expect(mockUpdateUsers.mock.calls[1][2]).toEqual("a");
+  userEvent.type(search, "a");
   expect(search.value).toEqual("a");
-
-  fireEvent.change(search, { target: { value: "ab" } });
   clock.tick(400);
-  expect(mockUpdateUsers.mock.calls).toHaveLength(3);
-  expect(mockUpdateUsers.mock.calls[2][2]).toEqual("ab");
+  expect(mockUpdateUsers.mock.calls[1][2]).toEqual("a");
+  expect(mockUpdateUsers.mock.calls).toHaveLength(2);
+
+  userEvent.type(search, "b");
   expect(search.value).toEqual("ab");
+  clock.tick(400);
+  expect(mockUpdateUsers.mock.calls[2][2]).toEqual("ab");
+  expect(mockUpdateUsers.mock.calls).toHaveLength(3);
 });
