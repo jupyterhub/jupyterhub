@@ -4,8 +4,7 @@ import time
 from unittest import mock
 
 import pytest
-from requests.exceptions import ConnectionError
-from requests.exceptions import SSLError
+from requests.exceptions import ConnectionError, SSLError
 
 from ..utils import AnyTimeoutError
 from .test_api import add_user

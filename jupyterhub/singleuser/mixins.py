@@ -21,35 +21,29 @@ from datetime import timezone
 from textwrap import dedent
 from urllib.parse import urlparse
 
-from jinja2 import ChoiceLoader
-from jinja2 import FunctionLoader
+from jinja2 import ChoiceLoader, FunctionLoader
 from tornado import ioloop
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPRequest
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 from tornado.web import RequestHandler
-from traitlets import Any
-from traitlets import Bool
-from traitlets import Bytes
-from traitlets import CUnicode
-from traitlets import default
-from traitlets import import_item
-from traitlets import Integer
-from traitlets import observe
-from traitlets import TraitError
-from traitlets import Unicode
-from traitlets import validate
+from traitlets import (
+    Any,
+    Bool,
+    Bytes,
+    CUnicode,
+    Integer,
+    TraitError,
+    Unicode,
+    default,
+    import_item,
+    observe,
+    validate,
+)
 from traitlets.config import Configurable
 
-from .._version import __version__
-from .._version import _check_version
+from .._version import __version__, _check_version
 from ..log import log_request
-from ..services.auth import HubOAuth
-from ..services.auth import HubOAuthCallbackHandler
-from ..services.auth import HubOAuthenticated
-from ..utils import exponential_backoff
-from ..utils import isoformat
-from ..utils import make_ssl_context
-from ..utils import url_path_join
+from ..services.auth import HubOAuth, HubOAuthCallbackHandler, HubOAuthenticated
+from ..utils import exponential_backoff, isoformat, make_ssl_context, url_path_join
 
 
 def _bool_env(key):

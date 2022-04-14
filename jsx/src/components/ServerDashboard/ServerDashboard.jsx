@@ -361,7 +361,7 @@ const ServerDashboard = (props) => {
               name="user_search"
               placeholder="Search users"
               aria-label="user-search"
-              value={name_filter}
+              defaultValue={name_filter}
               onChange={handleSearch}
             />
           </Col>

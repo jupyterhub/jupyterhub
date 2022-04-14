@@ -22,8 +22,9 @@ import logging
 
 logger = logging.getLogger('alembic')
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+
 from jupyterhub.orm import JSONDict
 
 

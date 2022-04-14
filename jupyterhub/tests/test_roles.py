@@ -8,14 +8,11 @@ import pytest
 from pytest import mark
 from tornado.log import app_log
 
-from .. import orm
-from .. import roles
-from ..scopes import get_scopes_for
-from ..scopes import scope_definitions
+from .. import orm, roles
+from ..scopes import get_scopes_for, scope_definitions
 from ..utils import utcnow
 from .mocking import MockHub
-from .utils import add_user
-from .utils import api_request
+from .utils import add_user, api_request
 
 
 @mark.role

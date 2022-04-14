@@ -7,22 +7,21 @@ from pytest import mark
 from tornado import web
 from tornado.httputil import HTTPServerRequest
 
-from .. import orm
-from .. import roles
-from .. import scopes
+from .. import orm, roles, scopes
+from .._memoize import FrozenDict
 from ..handlers import BaseHandler
-from ..scopes import _check_scope_access
-from ..scopes import _expand_self_scope
-from ..scopes import _intersect_expanded_scopes
-from ..scopes import expand_scopes
-from ..scopes import get_scopes_for
-from ..scopes import identify_scopes
-from ..scopes import needs_scope
-from ..scopes import parse_scopes
-from ..scopes import Scope
-from .utils import add_user
-from .utils import api_request
-from .utils import auth_header
+from ..scopes import (
+    Scope,
+    _check_scope_access,
+    _expand_self_scope,
+    _intersect_expanded_scopes,
+    expand_scopes,
+    get_scopes_for,
+    identify_scopes,
+    needs_scope,
+    parse_scopes,
+)
+from .utils import add_user, api_request, auth_header
 
 
 def get_handler_with_scopes(scopes):
@@ -40,6 +39,7 @@ def test_scope_constructor():
         f'read:users!user={user2}',
     ]
     parsed_scopes = parse_scopes(scope_list)
+    assert isinstance(parsed_scopes, FrozenDict)
 
     assert 'read:users' in parsed_scopes
     assert parsed_scopes['users']
@@ -469,6 +469,7 @@ async def test_metascope_self_expansion(
         orm_obj = create_service_with_scopes('self')
     # test expansion of user/service scopes
     scopes = get_scopes_for(orm_obj)
+    assert isinstance(scopes, frozenset)
     assert bool(scopes) == has_user_scopes
 
     # test expansion of token scopes
@@ -490,6 +491,8 @@ async def test_metascope_inherit_expansion(app, create_user_with_scopes):
     token.scopes.clear()
     app.db.commit()
     token_scope_set = get_scopes_for(token)
+    assert isinstance(token_scope_set, frozenset)
+
     assert token_scope_set.issubset(identify_scopes(user.orm_user))
 
 
@@ -1172,4 +1175,5 @@ def test_expand_scopes(user, scopes, expected):
         expected.update(_expand_self_scope(user.name))
 
     expanded = expand_scopes(scopes, owner=user.orm_user)
+    assert isinstance(expanded, frozenset)
     assert sorted(expanded) == sorted(expected)

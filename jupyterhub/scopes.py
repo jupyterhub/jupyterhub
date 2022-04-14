@@ -1,6 +1,10 @@
 """
 General scope definitions and utilities
 
+Scope functions generally return _immutable_ collections,
+such as `frozenset` to avoid mutating cached values.
+If needed, mutable copies can be made, e.g. `set(frozen_scopes)`
+
 Scope variable nomenclature
 ---------------------------
 scopes or 'raw' scopes: collection of scopes that may contain abbreviations (e.g., in role definition)
@@ -23,8 +27,8 @@ import sqlalchemy as sa
 from tornado import web
 from tornado.log import app_log
 
-from . import orm
-from . import roles
+from . import orm, roles
+from ._memoize import DoNotCache, FrozenDict, lru_cache_key
 
 """when modifying the scope definitions, make sure that `docs/source/rbac/generate-scope-table.py` is run
    so that changes are reflected in the documentation and REST API description."""
@@ -145,6 +149,12 @@ class Scope(Enum):
     ALL = True
 
 
+def _intersection_cache_key(scopes_a, scopes_b, db=None):
+    """Cache key function for scope intersections"""
+    return (frozenset(scopes_a), frozenset(scopes_b))
+
+
+@lru_cache_key(_intersection_cache_key)
 def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
     """Intersect two sets of scopes by comparing their permissions
 
@@ -160,11 +170,16 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
           (i.e. users!group=x & users!user=y will be empty, even if user y is in group x.)
     """
     empty_set = frozenset()
+    scopes_a = frozenset(scopes_a)
+    scopes_b = frozenset(scopes_b)
 
     # cached lookups for group membership of users and servers
     @lru_cache()
     def groups_for_user(username):
         """Get set of group names for a given username"""
+        # if we need a group lookup, the result is not cacheable
+        nonlocal needs_db
+        needs_db = True
         user = db.query(orm.User).filter_by(name=username).first()
         if user is None:
             return empty_set
@@ -179,6 +194,11 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
 
     parsed_scopes_a = parse_scopes(scopes_a)
     parsed_scopes_b = parse_scopes(scopes_b)
+
+    # track whether we need a db lookup (for groups)
+    # because we can't cache the intersection if we do
+    # if there are no group filters, this is cacheable
+    needs_db = False
 
     common_bases = parsed_scopes_a.keys() & parsed_scopes_b.keys()
 
@@ -221,6 +241,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
                                 UserWarning,
                             )
                             warned = True
+                            needs_db = True
 
             common_filters[base] = {
                 entity: filters_a[entity] & filters_b[entity]
@@ -246,6 +267,7 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
                     # resolve group/server hierarchy if db available
                     servers = servers.difference(common_servers)
                     if db is not None and servers and 'group' in b:
+                        needs_db = True
                         for server in servers:
                             server_groups = groups_for_server(server)
                             if server_groups & b['group']:
@@ -273,7 +295,12 @@ def _intersect_expanded_scopes(scopes_a, scopes_b, db=None):
             if common_users and "user" not in common_filters[base]:
                 common_filters[base]["user"] = common_users
 
-    return unparse_scopes(common_filters)
+    intersection = unparse_scopes(common_filters)
+    if needs_db:
+        # return intersection, but don't cache it if it needed db lookups
+        return DoNotCache(intersection)
+
+    return intersection
 
 
 def get_scopes_for(orm_object):
@@ -314,7 +341,7 @@ def get_scopes_for(orm_object):
             # only thing we miss by short-circuiting here: warning about excluded extra scopes
             return owner_scopes
 
-        token_scopes = expand_scopes(token_scopes, owner=owner)
+        token_scopes = set(expand_scopes(token_scopes, owner=owner))
 
         if orm_object.client_id != "jupyterhub":
             # oauth tokens can be used to access the service issuing the token,
@@ -359,6 +386,7 @@ def get_scopes_for(orm_object):
     return expanded_scopes
 
 
+@lru_cache()
 def _expand_self_scope(username):
     """
     Users have a metascope 'self' that should be expanded to standard user privileges.
@@ -391,9 +419,11 @@ def _expand_self_scope(username):
         'read:tokens',
         'access:servers',
     ]
-    return {f"{scope}!user={username}" for scope in scope_list}
+    # return immutable frozenset because the result is cached
+    return frozenset(f"{scope}!user={username}" for scope in scope_list)
 
 
+@lru_cache(maxsize=65535)
 def _expand_scope(scope):
     """Returns a scope and all all subscopes
 
@@ -434,9 +464,30 @@ def _expand_scope(scope):
     else:
         expanded_scopes = expanded_scope_names
 
-    return expanded_scopes
+    # return immutable frozenset because the result is cached
+    return frozenset(expanded_scopes)
 
 
+def _expand_scopes_key(scopes, owner=None):
+    """Cache key function for expand_scopes
+
+    scopes is usually a mutable list or set,
+    which can be hashed as a frozenset
+
+    For the owner, we only care about what kind they are,
+    and their name.
+    """
+    # freeze scopes for hash
+    frozen_scopes = frozenset(scopes)
+    if owner is None:
+        owner_key = None
+    else:
+        # owner key is the type and name
+        owner_key = (type(owner).__name__, owner.name)
+    return (frozen_scopes, owner_key)
+
+
+@lru_cache_key(_expand_scopes_key)
 def expand_scopes(scopes, owner=None):
     """Returns a set of fully expanded scopes for a collection of raw scopes
 
@@ -480,8 +531,9 @@ def expand_scopes(scopes, owner=None):
                 stacklevel=2,
             )
 
-    # reduce to minimize
-    return reduce_scopes(expanded_scopes)
+    # reduce to discard overlapping scopes
+    # return immutable frozenset because the result is cached
+    return frozenset(reduce_scopes(expanded_scopes))
 
 
 def _needs_scope_expansion(filter_, filter_value, sub_scope):
@@ -615,6 +667,7 @@ def _check_token_scopes(scopes, owner):
         )
 
 
+@lru_cache_key(frozenset)
 def parse_scopes(scope_list):
     """
     Parses scopes and filters in something akin to JSON style
@@ -650,9 +703,11 @@ def parse_scopes(scope_list):
                 parsed_scopes[base_scope][key] = {value}
             else:
                 parsed_scopes[base_scope][key].add(value)
-    return parsed_scopes
+    # return immutable FrozenDict because the result is cached
+    return FrozenDict(parsed_scopes)
 
 
+@lru_cache_key(FrozenDict)
 def unparse_scopes(parsed_scopes):
     """Turn a parsed_scopes dictionary back into a expanded scopes set"""
     expanded_scopes = set()
@@ -663,14 +718,17 @@ def unparse_scopes(parsed_scopes):
             for entity, names_list in filters.items():
                 for name in names_list:
                     expanded_scopes.add(f'{base}!{entity}={name}')
-    return expanded_scopes
+    # return immutable frozenset because the result is cached
+    return frozenset(expanded_scopes)
 
 
+@lru_cache_key(frozenset)
 def reduce_scopes(expanded_scopes):
     """Reduce expanded scopes to minimal set
 
-    Eliminates redundancy, such as access:services and access:services!service=x
+    Eliminates overlapping scopes, such as access:services and access:services!service=x
     """
+    # unparse_scopes already returns a frozenset
     return unparse_scopes(parse_scopes(expanded_scopes))
 
 
@@ -724,6 +782,14 @@ def needs_scope(*scopes):
     return scope_decorator
 
 
+def _identify_key(obj=None):
+    if obj is None:
+        return None
+    else:
+        return (type(obj).__name__, obj.name)
+
+
+@lru_cache_key(_identify_key)
 def identify_scopes(obj=None):
     """Return 'identify' scopes for an orm object
 
@@ -736,20 +802,25 @@ def identify_scopes(obj=None):
       identify scopes (set): set of scopes needed for 'identify' endpoints
     """
     if obj is None:
-        return {f"read:users:{field}!user" for field in {"name", "groups"}}
+        return frozenset(f"read:users:{field}!user" for field in {"name", "groups"})
     elif isinstance(obj, orm.User):
-        return {f"read:users:{field}!user={obj.name}" for field in {"name", "groups"}}
+        return frozenset(
+            f"read:users:{field}!user={obj.name}" for field in {"name", "groups"}
+        )
     elif isinstance(obj, orm.Service):
-        return {f"read:services:{field}!service={obj.name}" for field in {"name"}}
+        return frozenset(
+            f"read:services:{field}!service={obj.name}" for field in {"name"}
+        )
     else:
         raise TypeError(f"Expected orm.User or orm.Service, got {obj!r}")
 
 
+@lru_cache_key(lambda oauth_client: oauth_client.identifier)
 def access_scopes(oauth_client):
     """Return scope(s) required to access an oauth client"""
     scopes = set()
     if oauth_client.identifier == "jupyterhub":
-        return scopes
+        return frozenset()
     spawner = oauth_client.spawner
     if spawner:
         scopes.add(f"access:servers!server={spawner.user.name}/{spawner.name}")
@@ -761,9 +832,19 @@ def access_scopes(oauth_client):
             app_log.warning(
                 f"OAuth client {oauth_client} has no associated service or spawner!"
             )
-    return scopes
+    return frozenset(scopes)
 
 
+def _check_scope_key(sub_scope, orm_resource, kind):
+    """Cache key function for check_scope_filter"""
+    if kind == 'server':
+        resource_key = (orm_resource.user.name, orm_resource.name)
+    else:
+        resource_key = orm_resource.name
+    return (sub_scope, resource_key, kind)
+
+
+@lru_cache_key(_check_scope_key)
 def check_scope_filter(sub_scope, orm_resource, kind):
     """Return whether a sub_scope filter applies to a given resource.
 
@@ -792,8 +873,8 @@ def check_scope_filter(sub_scope, orm_resource, kind):
     if kind == 'user' and 'group' in sub_scope:
         group_names = {group.name for group in orm_resource.groups}
         user_in_group = bool(group_names & set(sub_scope['group']))
-        if user_in_group:
-            return True
+        # cannot cache if we needed to lookup groups in db
+        return DoNotCache(user_in_group)
     return False
 
 
@@ -832,6 +913,7 @@ def describe_parsed_scopes(parsed_scopes, username=None):
     return descriptions
 
 
+@lru_cache_key(lambda raw_scopes, username=None: (frozenset(raw_scopes), username))
 def describe_raw_scopes(raw_scopes, username=None):
     """Return list of descriptions of raw scopes
 
@@ -862,7 +944,8 @@ def describe_raw_scopes(raw_scopes, username=None):
                 "filter": filter_text,
             }
         )
-    return descriptions
+    # make sure we return immutable from a cached function
+    return tuple(descriptions)
 
 
 # regex for custom scope

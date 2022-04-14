@@ -3,11 +3,9 @@ from unittest import mock
 
 import pytest
 
-from .utils import api_request
-from .utils import get_page
-from jupyterhub import metrics
-from jupyterhub import orm
-from jupyterhub import roles
+from jupyterhub import metrics, orm, roles
+
+from .utils import api_request, get_page
 
 
 async def test_total_users(app):

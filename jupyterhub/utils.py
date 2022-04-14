@@ -16,18 +16,14 @@ import threading
 import uuid
 import warnings
 from binascii import b2a_hex
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from hmac import compare_digest
 from operator import itemgetter
 
 from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
-from tornado import gen
-from tornado import ioloop
-from tornado import web
-from tornado.httpclient import AsyncHTTPClient
-from tornado.httpclient import HTTPError
+from tornado import gen, ioloop, web
+from tornado.httpclient import AsyncHTTPClient, HTTPError
 from tornado.log import app_log
 
 # For compatibility with python versions 3.6 or earlier.
@@ -477,6 +473,7 @@ def print_stacks(file=sys.stderr):
     # no need to add them to startup
     import asyncio
     import traceback
+
     from .log import coroutine_frames
 
     print("Active threads: %i" % threading.active_count(), file=file)

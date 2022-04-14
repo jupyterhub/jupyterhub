@@ -9,12 +9,10 @@ import shutil
 import sys
 from subprocess import check_call
 
-from setuptools import Command
-from setuptools import setup
+from setuptools import Command, setup
 from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.build_py import build_py
 from setuptools.command.sdist import sdist
-
 
 v = sys.version_info
 if v[:2] < (3, 6):

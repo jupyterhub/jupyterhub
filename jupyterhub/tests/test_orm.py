@@ -3,17 +3,13 @@
 # Distributed under the terms of the Modified BSD License.
 import os
 import socket
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import mock
 
 import pytest
 from tornado import gen
 
-from .. import crypto
-from .. import objects
-from .. import orm
-from .. import roles
+from .. import crypto, objects, orm, roles
 from ..emptyclass import EmptyClass
 from ..user import User
 from .mocking import MockSpawner

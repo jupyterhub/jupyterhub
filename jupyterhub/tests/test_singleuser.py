@@ -2,20 +2,18 @@
 import os
 import sys
 from contextlib import contextmanager
-from subprocess import CalledProcessError
-from subprocess import check_output
+from subprocess import CalledProcessError, check_output
 from unittest import mock
 from urllib.parse import urlparse
 
 import pytest
 
 import jupyterhub
+
 from .. import orm
 from ..utils import url_path_join
-from .mocking import public_url
-from .mocking import StubSingleUserSpawner
-from .utils import async_requests
-from .utils import AsyncSession
+from .mocking import StubSingleUserSpawner, public_url
+from .utils import AsyncSession, async_requests
 
 
 @contextmanager

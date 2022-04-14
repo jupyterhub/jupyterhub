@@ -6,8 +6,7 @@ Currently GET-only, no actions can be taken to modify services.
 # Distributed under the terms of the Modified BSD License.
 import json
 
-from ..scopes import needs_scope
-from ..scopes import Scope
+from ..scopes import Scope, needs_scope
 from .base import APIHandler
 
 

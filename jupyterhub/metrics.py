@@ -21,8 +21,7 @@ them manually here.
 """
 from enum import Enum
 
-from prometheus_client import Gauge
-from prometheus_client import Histogram
+from prometheus_client import Gauge, Histogram
 
 REQUEST_DURATION_SECONDS = Histogram(
     'jupyterhub_request_duration_seconds',

@@ -4,13 +4,7 @@ Traitlets that are used in JupyterHub
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
 import entrypoints
-from traitlets import Integer
-from traitlets import List
-from traitlets import TraitError
-from traitlets import TraitType
-from traitlets import Type
-from traitlets import Undefined
-from traitlets import Unicode
+from traitlets import Integer, List, TraitError, TraitType, Type, Undefined, Unicode
 
 
 class URLPrefix(Unicode):

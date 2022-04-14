@@ -10,16 +10,10 @@ from requests import HTTPError
 from traitlets import Any
 from traitlets.config import Config
 
-from .mocking import MockPAMAuthenticator
-from .mocking import MockStructGroup
-from .mocking import MockStructPasswd
-from .utils import add_user
-from .utils import async_requests
-from .utils import get_page
-from .utils import public_url
-from jupyterhub import auth
-from jupyterhub import crypto
-from jupyterhub import orm
+from jupyterhub import auth, crypto, orm
+
+from .mocking import MockPAMAuthenticator, MockStructGroup, MockStructPasswd
+from .utils import add_user, async_requests, get_page, public_url
 
 
 async def test_pam_auth():

@@ -59,7 +59,7 @@ JupyterHub also provides a
 [REST API][]
 for administration of the Hub and its users.
 
-[rest api]: https://juptyerhub.readthedocs.io/en/latest/reference/rest-api.html
+[rest api]: https://jupyterhub.readthedocs.io/en/latest/reference/rest-api.html
 
 ## Installation
 

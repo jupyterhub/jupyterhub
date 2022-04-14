@@ -9,8 +9,7 @@ from pytest import raises
 from traitlets.config import Config
 
 from .. import orm
-from ..app import NewToken
-from ..app import UpgradeDB
+from ..app import NewToken, UpgradeDB
 from ..scopes import _check_scopes_exist
 
 here = os.path.abspath(os.path.dirname(__file__))

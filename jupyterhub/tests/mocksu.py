@@ -16,10 +16,7 @@ import os
 import sys
 from urllib.parse import urlparse
 
-from tornado import httpserver
-from tornado import ioloop
-from tornado import log
-from tornado import web
+from tornado import httpserver, ioloop, log, web
 from tornado.options import options
 
 from ..utils import make_ssl_context

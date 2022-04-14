@@ -3,26 +3,19 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import json
-from datetime import datetime
-from datetime import timedelta
-from datetime import timezone
+from datetime import datetime, timedelta, timezone
 
 from async_generator import aclosing
 from dateutil.parser import parse as parse_date
-from sqlalchemy import func
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from tornado import web
 from tornado.iostream import StreamClosedError
 
-from .. import orm
-from .. import scopes
+from .. import orm, scopes
 from ..roles import assign_default_roles
 from ..scopes import needs_scope
 from ..user import User
-from ..utils import isoformat
-from ..utils import iterate_until
-from ..utils import maybe_future
-from ..utils import url_path_join
+from ..utils import isoformat, iterate_until, maybe_future, url_path_join
 from .base import APIHandler
 
 
@@ -51,7 +44,7 @@ class SelfAPIHandler(APIHandler):
         for scope in identify_scopes:
             if scope not in self.expanded_scopes:
                 _added_scopes.add(scope)
-                self.expanded_scopes.add(scope)
+                self.expanded_scopes |= {scope}
         if _added_scopes:
             # re-parse with new scopes
             self.parsed_scopes = scopes.parse_scopes(self.expanded_scopes)

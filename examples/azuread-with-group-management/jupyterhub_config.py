@@ -7,8 +7,9 @@ to enable testing without administrative privileges.
 c = get_config()  # noqa
 c.Application.log_level = 'DEBUG'
 
-from oauthenticator.azuread import AzureAdOAuthenticator
 import os
+
+from oauthenticator.azuread import AzureAdOAuthenticator
 
 c.JupyterHub.authenticator_class = AzureAdOAuthenticator
 

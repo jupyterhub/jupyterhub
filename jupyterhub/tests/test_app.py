@@ -6,11 +6,8 @@ import os
 import re
 import sys
 import time
-from subprocess import check_output
-from subprocess import PIPE
-from subprocess import Popen
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
+from subprocess import PIPE, Popen, check_output
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest.mock import patch
 
 import pytest
@@ -19,8 +16,7 @@ from distutils.version import LooseVersion as V
 from traitlets.config import Config
 
 from .. import orm
-from ..app import COOKIE_SECRET_BYTES
-from ..app import JupyterHub
+from ..app import COOKIE_SECRET_BYTES, JupyterHub
 from .mocking import MockHub
 from .test_api import add_user
 

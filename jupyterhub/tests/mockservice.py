@@ -19,15 +19,14 @@ import sys
 from urllib.parse import urlparse
 
 import requests
-from tornado import httpserver
-from tornado import ioloop
-from tornado import log
-from tornado import web
+from tornado import httpserver, ioloop, log, web
 from tornado.httputil import url_concat
 
-from jupyterhub.services.auth import HubAuthenticated
-from jupyterhub.services.auth import HubOAuthCallbackHandler
-from jupyterhub.services.auth import HubOAuthenticated
+from jupyterhub.services.auth import (
+    HubAuthenticated,
+    HubOAuthCallbackHandler,
+    HubOAuthenticated,
+)
 from jupyterhub.utils import make_ssl_context
 
 
@@ -123,7 +122,7 @@ def main():
 
 
 if __name__ == '__main__':
-    from tornado.options import parse_command_line, options
+    from tornado.options import options, parse_command_line
 
     parse_command_line()
     options.logging = 'debug'

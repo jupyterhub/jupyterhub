@@ -4,9 +4,7 @@ import os
 import sys
 from binascii import hexlify
 from unittest import mock
-from urllib.parse import parse_qs
-from urllib.parse import quote
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import pytest
 from bs4 import BeautifulSoup
@@ -14,14 +12,11 @@ from pytest import raises
 from tornado.httputil import url_concat
 from tornado.log import app_log
 
-from .. import orm
-from .. import roles
-from .. import scopes
+from .. import orm, roles, scopes
 from ..services.auth import _ExpiringDict
 from ..utils import url_path_join
 from .mocking import public_url
-from .utils import async_requests
-from .utils import AsyncSession
+from .utils import AsyncSession, async_requests
 
 # mock for sending monotonic counter way into the future
 monotonic_future = mock.patch('time.monotonic', lambda: sys.maxsize)
@@ -365,7 +360,7 @@ async def test_oauth_service_roles(
             )
 
     if 'inherit' in expected_scopes:
-        expected_scopes = scopes.get_scopes_for(user.orm_user)
+        expected_scopes = set(scopes.get_scopes_for(user.orm_user))
 
     # always expect identify/access scopes
     # on successful authentication

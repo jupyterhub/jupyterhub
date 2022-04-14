@@ -3,8 +3,7 @@ import logging
 
 import pytest
 
-from .._version import _check_version
-from .._version import reset_globals
+from .._version import _check_version, reset_globals
 
 
 def setup_function(function):

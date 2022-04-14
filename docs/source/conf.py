@@ -56,12 +56,14 @@ todo_include_todos = False
 # Set the default role so we can use `foo` instead of ``foo``
 default_role = 'literal'
 
-# -- Config -------------------------------------------------------------
-from jupyterhub.app import JupyterHub
-from docutils import nodes
-from sphinx.directives.other import SphinxDirective
 from contextlib import redirect_stdout
 from io import StringIO
+
+from docutils import nodes
+from sphinx.directives.other import SphinxDirective
+
+# -- Config -------------------------------------------------------------
+from jupyterhub.app import JupyterHub
 
 # create a temp instance of JupyterHub just to get the output of the generate-config
 # and help --all commands.
