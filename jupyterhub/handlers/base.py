@@ -38,7 +38,6 @@ from ..metrics import (
 from ..objects import Server
 from ..spawner import LocalProcessSpawner
 from ..user import User
-
 from ..utils import (
     AnyTimeoutError,
     get_accepted_mimetype,
@@ -46,7 +45,6 @@ from ..utils import (
     maybe_future,
     url_path_join,
 )
-
 
 # pattern for the authentication token header
 auth_header_pat = re.compile(r'^(?:token|bearer)\s+([^\s]+)$', flags=re.IGNORECASE)

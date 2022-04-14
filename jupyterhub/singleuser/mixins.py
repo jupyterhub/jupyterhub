@@ -16,8 +16,7 @@ import random
 import secrets
 import sys
 import warnings
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from textwrap import dedent
 from urllib.parse import urlparse
 
