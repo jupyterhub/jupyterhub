@@ -3,10 +3,14 @@ profile = "black"
 
 [tool.black]
 skip-string-normalization = true
+# target-version should be all supported versions, see
+# https://github.com/psf/black/issues/751#issuecomment-473066811
 target_version = [
     "py36",
     "py37",
     "py38",
+    "py39",
+    "py310",
 ]
 
 [tool.tbump]
