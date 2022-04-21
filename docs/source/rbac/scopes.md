@@ -72,13 +72,29 @@ Requested resources are filtered based on the filter of the corresponding scope.
 
 In case a user resource is being accessed, any scopes with _group_ filters will be expanded to filters for each _user_ in those groups.
 
-### `!user` filter
+### Self-referencing filters
+
+There are some 'shortcut' filters,
+which can be applied to all scopes,
+that filter based on the entities associated with the request.
 
 The `!user` filter is a special horizontal filter that strictly refers to the **"owner only"** scopes, where _owner_ is a user entity. The filter resolves internally into `!user=<ownerusername>` ensuring that only the owner's resources may be accessed through the associated scopes.
 
 For example, the `server` role assigned by default to server tokens contains `access:servers!user` and `users:activity!user` scopes. This allows the token to access and post activity of only the servers owned by the token owner.
 
-The filter can be applied to any scope.
+:::{versionadded} 2.3
+`!service` and `!server` filters.
+:::
+
+In addition to `!user`, _tokens_ may have filters `!service`
+or `!server`, which expand similarly to `!service=servicename`
+and `!server=servername`.
+This only applies to tokens issued via the OAuth flow.
+In these cases, the name is the _issuing_ entity (a service or single-user server),
+so that access can be restricted to the issuing service,
+e.g. `access:servers!server` would grant access only to the server that requested the token.
+
+These filters can be applied to any scope.
 
 (vertical-filtering-target)=
 

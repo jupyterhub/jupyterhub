@@ -341,7 +341,13 @@ def get_scopes_for(orm_object):
             # only thing we miss by short-circuiting here: warning about excluded extra scopes
             return owner_scopes
 
-        token_scopes = set(expand_scopes(token_scopes, owner=owner))
+        token_scopes = set(
+            expand_scopes(
+                token_scopes,
+                owner=owner,
+                oauth_client=orm_object.oauth_client,
+            )
+        )
 
         if orm_object.client_id != "jupyterhub":
             # oauth tokens can be used to access the service issuing the token,
@@ -468,7 +474,7 @@ def _expand_scope(scope):
     return frozenset(expanded_scopes)
 
 
-def _expand_scopes_key(scopes, owner=None):
+def _expand_scopes_key(scopes, owner=None, oauth_client=None):
     """Cache key function for expand_scopes
 
     scopes is usually a mutable list or set,
@@ -484,11 +490,15 @@ def _expand_scopes_key(scopes, owner=None):
     else:
         # owner key is the type and name
         owner_key = (type(owner).__name__, owner.name)
-    return (frozen_scopes, owner_key)
+    if oauth_client is None:
+        oauth_client_key = None
+    else:
+        oauth_client_key = oauth_client.identifier
+    return (frozen_scopes, owner_key, oauth_client_key)
 
 
 @lru_cache_key(_expand_scopes_key)
-def expand_scopes(scopes, owner=None):
+def expand_scopes(scopes, owner=None, oauth_client=None):
     """Returns a set of fully expanded scopes for a collection of raw scopes
 
     Arguments:
@@ -496,38 +506,57 @@ def expand_scopes(scopes, owner=None):
       owner (obj, optional): orm.User or orm.Service as owner of orm.APIToken
           Used for expansion of metascopes such as `self`
           and owner-based filters such as `!user`
+      oauth_client (obj, optional): orm.OAuthClient
+          The issuing OAuth client of an API token.
 
     Returns:
       expanded scopes (set): set of all expanded scopes, with filters applied for the owner
     """
     expanded_scopes = set(chain.from_iterable(map(_expand_scope, scopes)))
 
+    filter_replacements = {
+        "user": None,
+        "service": None,
+        "server": None,
+    }
+    user_name = None
     if isinstance(owner, orm.User):
-        owner_name = owner.name
-    else:
-        owner_name = None
+        user_name = owner.name
+        filter_replacements["user"] = f"user={user_name}"
+    elif isinstance(owner, orm.Service):
+        filter_replacements["service"] = f"service={owner.name}"
+
+    if oauth_client is not None:
+        if oauth_client.service is not None:
+            filter_replacements["service"] = f"service={oauth_client.service.name}"
+        elif oauth_client.spawner is not None:
+            spawner = oauth_client.spawner
+            filter_replacements["server"] = f"server={spawner.user.name}/{spawner.name}"
 
     for scope in expanded_scopes.copy():
         base_scope, _, filter = scope.partition('!')
-        if filter == 'user':
+        if filter in filter_replacements:
             # translate !user into !user={username}
+            # and !service into !service={servicename}
+            # and !server into !server={username}/{servername}
             expanded_scopes.remove(scope)
-            if owner_name:
+            expanded_filter = filter_replacements[filter]
+            if expanded_filter:
                 # translate
-                expanded_scopes.add(f'{base_scope}!user={owner_name}')
+                expanded_scopes.add(f'{base_scope}!{expanded_filter}')
             else:
                 warnings.warn(
-                    f"Not expanding !user filter without owner in {scope}",
+                    f"Not expanding !{filter} filter without target {filter} in {scope}",
                     stacklevel=2,
                 )
 
     if 'self' in expanded_scopes:
         expanded_scopes.remove('self')
-        if owner_name:
-            expanded_scopes |= _expand_self_scope(owner_name)
+        if user_name:
+            expanded_scopes |= _expand_self_scope(user_name)
         else:
             warnings.warn(
-                "Not expanding 'self' scope without owner",
+                f"Not expanding 'self' scope for owner {owner} which is not a User",
                 stacklevel=2,
             )
 
@@ -610,7 +639,8 @@ def _check_scopes_exist(scopes, who_for=None):
     """
 
     allowed_scopes = set(scope_definitions.keys())
-    allowed_filters = ('!user=', '!service=', '!group=', '!server=', '!user')
+    filter_prefixes = ('!user=', '!service=', '!group=', '!server=')
+    exact_filters = {"!user", "!service", "!server"}
 
     if who_for:
         log_for = f"for {who_for}"
@@ -625,13 +655,15 @@ def _check_scopes_exist(scopes, who_for=None):
             raise KeyError(f"Scope '{scope}' {log_for} does not exist")
         if filter_:
             full_filter = f"!{filter_}"
-            if not full_filter.startswith(allowed_filters):
+            if full_filter not in exact_filters and not full_filter.startswith(
+                filter_prefixes
+            ):
                 raise KeyError(
                     f"Scope filter {filter_} '{full_filter}' in scope '{scope}' {log_for} does not exist"
                 )
 
 
-def _check_token_scopes(scopes, owner):
+def _check_token_scopes(scopes, owner, oauth_client):
     """Check that scopes to be assigned to a token
     are in fact
 
@@ -648,7 +680,7 @@ def _check_token_scopes(scopes, owner):
         return
     scopes.discard("inherit")
     # common short circuit
-    token_scopes = expand_scopes(scopes, owner=owner)
+    token_scopes = expand_scopes(scopes, owner=owner, oauth_client=oauth_client)
 
     if not token_scopes:
         return
