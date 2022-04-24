@@ -124,7 +124,7 @@ class UserListAPIHandler(APIHandler):
             if not set(sub_scope).issubset({'group', 'user'}):
                 # don't expand invalid !server=x filter to all users!
                 self.log.warning(
-                    "Invalid filter on list:user for {self.current_user}: {sub_scope}"
+                    f"Invalid filter on list:user for {self.current_user}: {sub_scope}"
                 )
                 raise web.HTTPError(403)
             filters = []

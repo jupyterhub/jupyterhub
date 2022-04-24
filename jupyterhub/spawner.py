@@ -230,7 +230,7 @@ class Spawner(LoggingConfigurable):
                 self.orm_spawner.server = server.orm_server
         elif server is not None:
             self.log.warning(
-                "Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
+                f"Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
             )
 
     @property
