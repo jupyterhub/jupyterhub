@@ -496,7 +496,7 @@ class TokenPageHandler(BaseHandler):
                 continue
             if not token.client_id:
                 # token should have been deleted when client was deleted
-                self.log.warning("Deleting stale oauth token {token}")
+                self.log.warning(f"Deleting stale oauth token {token}")
                 self.db.delete(token)
                 self.db.commit()
                 continue

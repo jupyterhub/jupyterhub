@@ -269,9 +269,9 @@ class User:
         new_groups = set(group_names).difference(current_groups)
         removed_groups = current_groups.difference(group_names)
         if new_groups:
-            self.log.info("Adding user {self.name} to group(s): {new_groups}")
+            self.log.info(f"Adding user {self.name} to group(s): {new_groups}")
         if removed_groups:
-            self.log.info("Removing user {self.name} from group(s): {removed_groups}")
+            self.log.info(f"Removing user {self.name} from group(s): {removed_groups}")
 
         if group_names:
             groups = (

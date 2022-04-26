@@ -99,10 +99,15 @@ class Spawner(LoggingConfigurable):
 
         Used in logging for consistency with named servers.
         """
-        if self.name:
-            return f'{self.user.name}:{self.name}'
+        if self.user:
+            user_name = self.user.name
         else:
-            return self.user.name
+            # no user, only happens in mock tests
+            user_name = "(no user)"
+        if self.name:
+            return f"{user_name}:{self.name}"
+        else:
+            return user_name
 
     @property
     def _failed(self):
@@ -230,7 +235,7 @@ class Spawner(LoggingConfigurable):
                 self.orm_spawner.server = server.orm_server
         elif server is not None:
             self.log.warning(
-                "Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
+                f"Setting Spawner.server for {self._log_name} with no underlying orm_spawner"
             )
 
     @property
