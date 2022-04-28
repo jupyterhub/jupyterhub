@@ -635,29 +635,32 @@ class BaseHandler(RequestHandler):
         next_url = next_url.replace('\\', '%5C')
         proto = get_browser_protocol(self.request)
         host = self.request.host
+        if next_url.startswith("///"):
+            # strip more than 2 leading // down to 2
+            # because urlparse treats that as empty netloc,
+            # whereas browsers treat more than two leading // the same as //,
+            # so netloc is the first non-/ bit
+            next_url = "//" + next_url.lstrip("/")
+        parsed_next_url = urlparse(next_url)
 
         if (next_url + '/').startswith((f'{proto}://{host}/', f'//{host}/',)) or (
             self.subdomain_host
-            and urlparse(next_url).netloc
-            and ("." + urlparse(next_url).netloc).endswith(
+            and parsed_next_url.netloc
+            and ("." + parsed_next_url.netloc).endswith(
                 "." + urlparse(self.subdomain_host).netloc
             )
         ):
             # treat absolute URLs for our host as absolute paths:
-            # below, redirects that aren't strictly paths
-            parsed = urlparse(next_url)
-            next_url = parsed.path
-            if parsed.query:
-                next_url = next_url + '?' + parsed.query
-            if parsed.fragment:
-                next_url = next_url + '#' + parsed.fragment
+            # below, redirects that aren't strictly paths are rejected
+            next_url = parsed_next_url.path
+            if parsed_next_url.query:
+                next_url = next_url + '?' + parsed_next_url.query
+            if parsed_next_url.fragment:
+                next_url = next_url + '#' + parsed_next_url.fragment
+            parsed_next_url = urlparse(next_url)
 
         # if it still has host info, it didn't match our above check for *this* host
-        if next_url and (
-            '://' in next_url
-            or next_url.startswith('//')
-            or not next_url.startswith('/')
-        ):
+        if next_url and (parsed_next_url.netloc or not next_url.startswith('/')):
             self.log.warning("Disallowing redirect outside JupyterHub: %r", next_url)
             next_url = ''
 

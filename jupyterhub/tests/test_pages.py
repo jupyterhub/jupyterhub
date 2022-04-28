@@ -768,6 +768,10 @@ async def test_login_strip(app):
         (False, '/user/other', '/hub/user/other', None),
         (False, '/absolute', '/absolute', None),
         (False, '/has?query#andhash', '/has?query#andhash', None),
+        # :// in query string or fragment
+        (False, '/has?repo=https/host.git', '/has?repo=https/host.git', None),
+        (False, '/has?repo=https://host.git', '/has?repo=https://host.git', None),
+        (False, '/has#repo=https://host.git', '/has#repo=https://host.git', None),
         # next_url outside is not allowed
         (False, 'relative/path', '', None),
         (False, 'https://other.domain', '', None),
@@ -807,7 +811,9 @@ async def test_login_redirect(app, running, next_url, location, params):
     if params:
         url = url_concat(url, params)
     if next_url:
-        if '//' not in next_url and next_url.startswith('/'):
+        if next_url.startswith('/') and not (
+            next_url.startswith("//") or urlparse(next_url).netloc
+        ):
             next_url = ujoin(app.base_url, next_url, '')
         url = url_concat(url, dict(next=next_url))
 
