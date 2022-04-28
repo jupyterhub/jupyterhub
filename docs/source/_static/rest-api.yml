@@ -564,7 +564,7 @@ paths:
                     A list of role names from which to derive scopes.
                     This is a shortcut for assigning collections of scopes;
                     Tokens do not retain role assignment.
-                    (Changed in 2.3: roles are immediately resolved to scopes
+                    (Changed in 2.4: roles are immediately resolved to scopes
                     instead of stored on roles.)
                   items:
                     type: string
@@ -572,7 +572,7 @@ paths:
                   type: array
                   description: |
                     A list of scopes that the token should have.
-                    (new in JupyterHub 2.3).
+                    (new in JupyterHub 2.4).
                   items:
                     type: string
         required: false

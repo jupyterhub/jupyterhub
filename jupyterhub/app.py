@@ -2372,21 +2372,34 @@ class JupyterHub(Application):
                 service.orm.server = None
 
             if service.oauth_available:
-                allowed_roles = []
+                allowed_scopes = set()
+                if service.oauth_allowed_scopes:
+                    allowed_scopes.update(service.oauth_allowed_scopes)
                 if service.oauth_roles:
-                    allowed_roles = list(
-                        self.db.query(orm.Role).filter(
-                            orm.Role.name.in_(service.oauth_roles)
+                    if not allowed_scopes:
+                        # DEPRECATED? It's still convenient and valid,
+                        # e.g. 'admin'
+                        allowed_roles = list(
+                            self.db.query(orm.Role).filter(
+                                orm.Role.name.in_(service.oauth_roles)
+                            )
                         )
-                    )
+                        allowed_scopes.update(roles.roles_to_scopes(allowed_roles))
+                    else:
+                        self.log.warning(
+                            f"Ignoring oauth_roles for {service.name}: {service.oauth_roles},"
+                            f" using oauth_allowed_scopes={allowed_scopes}."
+                        )
                 oauth_client = self.oauth_provider.add_client(
                     client_id=service.oauth_client_id,
                     client_secret=service.api_token,
                     redirect_uri=service.oauth_redirect_uri,
-                    allowed_roles=allowed_roles,
                     description="JupyterHub service %s" % service.name,
                 )
                 service.orm.oauth_client = oauth_client
+                # add access-scopes, derived from OAuthClient itself
+                allowed_scopes.update(scopes.access_scopes(oauth_client))
+                oauth_client.allowed_scopes = sorted(allowed_scopes)
             else:
                 if service.oauth_client:
                     self.db.delete(service.oauth_client)

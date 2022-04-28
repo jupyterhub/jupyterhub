@@ -26,7 +26,7 @@ After logging in with any username and password, you should see a JSON dump of y
 ```
 
 What is contained in the model will depend on the permissions
-requested in the `oauth_roles` configuration of the service `whoami-oauth` service.
+requested in the `oauth_allowed_scopes` configuration of the service `whoami-oauth` service.
 The default is the minimum required for identification and access to the service,
 which will provide the username and current scopes.
 

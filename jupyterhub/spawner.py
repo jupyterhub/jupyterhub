@@ -36,7 +36,9 @@ from traitlets import (
 )
 from traitlets.config import LoggingConfigurable
 
+from . import orm
 from .objects import Server
+from .roles import roles_to_scopes
 from .traitlets import ByteSpecification, Callable, Command
 from .utils import (
     AnyTimeoutError,
@@ -274,8 +276,25 @@ class Spawner(LoggingConfigurable):
 
     oauth_scopes = List(Unicode())
 
-    @default("oauth_scopes")
-    def _default_oauth_scopes(self):
+    @property
+    def oauth_scopes(self):
+        warnings.warn(
+            """Spawner.oauth_scopes is deprecated in JupyterHub 2.3.
+
+            Use Spawner.oauth_access_scopes
+            """,
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.oauth_access_scopes
+
+    oauth_access_scopes = List(
+        Unicode(),
+        help="""The scope(s) needed to access this server""",
+    )
+
+    @default("oauth_access_scopes")
+    def _default_access_scopes(self):
         return [
             f"access:servers!server={self.user.name}/{self.name}",
             f"access:servers!user={self.user.name}",
@@ -287,7 +306,23 @@ class Spawner(LoggingConfigurable):
         [Callable(), List()],
         help="""Allowed roles for oauth tokens.
 
+        Deprecated in 2.4: use oauth_allowed_scopes
+
         This sets the maximum and default roles
+        assigned to oauth tokens issued by a single-user server's
+        oauth client (i.e. tokens stored in browsers after authenticating with the server),
+        defining what actions the server can take on behalf of logged-in users.
+
+        Default is an empty list, meaning minimal permissions to identify users,
+        no actions can be taken on their behalf.
+        """,
+    ).tag(config=True)
+
+    oauth_allowed_scopes = Union(
+        [Callable(), List()],
+        help="""Allowed scopes for oauth tokens.
+
+        This sets the maximum and default scopes
         assigned to oauth tokens issued by a single-user server's
         oauth client (i.e. tokens stored in browsers after authenticating with the server),
         defining what actions the server can take on behalf of logged-in users.
@@ -296,6 +331,51 @@ class Spawner(LoggingConfigurable):
         no actions can be taken on their behalf.
     """,
     ).tag(config=True)
+
+    def _get_oauth_allowed_scopes(self):
+        """Private method: get oauth allowed scopes
+
+        Handle:
+
+        - oauth_allowed_scopes
+        - callable config
+        - deprecated oauth_roles config
+        - access_scopes
+        """
+        # cases:
+        # 1. only scopes
+        # 2. only roles
+        # 3. both! (conflict, favor scopes)
+        scopes = []
+        if self.oauth_allowed_scopes:
+            allowed_scopes = self.oauth_allowed_scopes
+            if callable(allowed_scopes):
+                allowed_scopes = allowed_scopes(self)
+            scopes.extend(allowed_scopes)
+
+        if self.oauth_roles:
+            if scopes:
+                # both defined! Warn
+                warnings.warn(
+                    f"Ignoring deprecated Spawner.oauth_roles={self.oauth_roles} in favor of Spawner.oauth_allowed_scopes.",
+                )
+            else:
+                role_names = self.oauth_roles
+                if callable(role_names):
+                    role_names = role_names(self)
+                roles = list(
+                    self.db.query(orm.Role).filter(orm.Role.name.in_(role_names))
+                )
+                if len(roles) != len(role_names):
+                    missing_roles = set(role_names).difference(
+                        {role.name for role in roles}
+                    )
+                    raise ValueError(f"No such role(s): {', '.join(missing_roles)}")
+                scopes.extend(roles_to_scopes(roles))
+
+        # always add access scopes
+        scopes.extend(self.oauth_access_scopes)
+        return sorted(set(scopes))
 
     will_resume = Bool(
         False,
@@ -875,7 +955,12 @@ class Spawner(LoggingConfigurable):
             self.user.url, url_escape_path(self.name), 'oauth_callback'
         )
 
-        env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_scopes)
+        # deprecated env, renamed in 2.4 for disambiguation
+        env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_access_scopes)
+        env['JUPYTERHUB_OAUTH_ACCESS_SCOPES'] = json.dumps(self.oauth_access_scopes)
+
+        # added in 2.4
+        env['JUPYTERHUB_OAUTH_ALLOWED_SCOPES'] = json.dumps(self.oauth_allowed_scopes)
 
         # Info previously passed on args
         env['JUPYTERHUB_USER'] = self.user.name

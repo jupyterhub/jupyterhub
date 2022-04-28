@@ -116,7 +116,10 @@ JUPYTERHUB_BASE_URL:       Base URL of the Hub (https://mydomain[:port]/)
 JUPYTERHUB_SERVICE_PREFIX: URL path prefix of this service (/services/:service-name/)
 JUPYTERHUB_SERVICE_URL:    Local URL where the service is expected to be listening.
                            Only for proxied web services.
-JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing access to the service.
+JUPYTERHUB_OAUTH_SCOPES:   JSON-serialized list of scopes to use for allowing access to the service
+                           (deprecated in 2.4, use JUPYTERHUB_OAUTH_ACCESS_SCOPES).
+JUPYTERHUB_OAUTH_ACCESS_SCOPES: JSON-serialized list of scopes to use for allowing access to the service (new in 2.4).
+JUPYTERHUB_OAUTH_ALLOWED_SCOPES: JSON-serialized list of scopes that can be requested on behalf of users (new in 2.4).
 ```
 
 For the previous 'cull idle' Service example, these environment variables
@@ -376,7 +379,7 @@ The `scopes` field can be used to manage access.
 Note: a user will have access to a service to complete oauth access to the service for the first time.
 Individual permissions may be revoked at any later point without revoking the token,
 in which case the `scopes` field in this model should be checked on each access.
-The default required scopes for access are available from `hub_auth.oauth_scopes` or `$JUPYTERHUB_OAUTH_SCOPES`.
+The default required scopes for access are available from `hub_auth.oauth_scopes` or `$JUPYTERHUB_OAUTH_ACCESS_SCOPES`.
 
 An example of using an Externally-Managed Service and authentication is
 in [nbviewer README][nbviewer example] section on securing the notebook viewer,

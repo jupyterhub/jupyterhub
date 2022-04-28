@@ -343,7 +343,9 @@ class HubAuth(SingletonConfigurable):
 
     @default('oauth_scopes')
     def _default_scopes(self):
-        env_scopes = os.getenv('JUPYTERHUB_OAUTH_SCOPES')
+        env_scopes = os.getenv('JUPYTERHUB_OAUTH_ACCESS_SCOPES')
+        if not env_scopes:
+            env_scopes = os.getenv('JUPYTERHUB_OAUTH_ACCESS_SCOPES')
         if env_scopes:
             return set(json.loads(env_scopes))
         service_name = os.getenv("JUPYTERHUB_SERVICE_NAME")
@@ -864,7 +866,7 @@ class HubAuthenticated:
     - .hub_auth: A HubAuth instance
     - .hub_scopes: A set of JupyterHub 2.0 OAuth scopes to allow.
       Default comes from .hub_auth.oauth_scopes,
-      which in turn is set by $JUPYTERHUB_OAUTH_SCOPES
+      which in turn is set by $JUPYTERHUB_OAUTH_ACCESS_SCOPES
       Default values include:
       - 'access:services', 'access:services!service={service_name}' for services
       - 'access:servers', 'access:servers!user={user}',
