@@ -454,15 +454,14 @@ class AdminHandler(BaseHandler):
     @web.authenticated
     # stacked decorators: all scopes must be present
     # note: keep in sync with admin link condition in page.html
-    @needs_scope('admin:users')
-    @needs_scope('admin:servers')
+    @needs_scope('admin-ui')
     async def get(self):
         auth_state = await self.current_user.get_auth_state()
         html = await self.render_template(
             'admin.html',
             current_user=self.current_user,
             auth_state=auth_state,
-            admin_access=self.settings.get('admin_access', False),
+            admin_access=True,
             allow_named_servers=self.allow_named_servers,
             named_server_limit_per_user=self.named_server_limit_per_user,
             server_version=f'{__version__} {self.version_hash}',

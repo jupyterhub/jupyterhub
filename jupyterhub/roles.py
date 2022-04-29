@@ -31,6 +31,7 @@ def get_default_roles():
             'name': 'admin',
             'description': 'Elevated privileges (can do anything)',
             'scopes': [
+                'admin-ui',
                 'admin:users',
                 'admin:servers',
                 'tokens',
