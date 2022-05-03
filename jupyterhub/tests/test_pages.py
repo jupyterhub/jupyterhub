@@ -1111,17 +1111,27 @@ async def test_bad_oauth_get(app, params):
     [
         (["users"], False),
         (["admin:users"], False),
-        (["users", "admin:users", "admin:servers"], True),
+        (["users", "admin:users", "admin:servers"], False),
+        (["admin-ui"], True),
     ],
 )
 async def test_admin_page_access(app, scopes, has_access, create_user_with_scopes):
     user = create_user_with_scopes(*scopes)
     cookies = await app.login_user(user.name)
-    r = await get_page("/admin", app, cookies=cookies)
+    home_resp = await get_page("/home", app, cookies=cookies)
+    admin_resp = await get_page("/admin", app, cookies=cookies)
+    assert home_resp.status_code == 200
+    soup = BeautifulSoup(home_resp.text, "html.parser")
+    nav = soup.find("div", id="thenavbar")
+    links = [a["href"] for a in nav.find_all("a")]
+
+    admin_url = app.base_url + "hub/admin"
     if has_access:
-        assert r.status_code == 200
+        assert admin_resp.status_code == 200
+        assert admin_url in links
     else:
-        assert r.status_code == 403
+        assert admin_resp.status_code == 403
+        assert admin_url not in links
 
 
 async def test_oauth_page_scope_appearance(

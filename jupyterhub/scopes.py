@@ -42,6 +42,10 @@ scope_definitions = {
         'description': 'Anything you have access to',
         'doc_description': 'Everything that the token-owning entity can access _(metascope for tokens)_',
     },
+    'admin-ui': {
+        'description': 'Access the admin page.',
+        'doc_description': 'Access the admin page. Permission to take actions via the admin page granted separately.',
+    },
     'admin:users': {
         'description': 'Read, write, create and delete users and their authentication state, not including their servers or tokens.',
         'subscopes': ['admin:auth_state', 'users', 'read:roles:users', 'delete:users'],
