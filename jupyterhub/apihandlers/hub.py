@@ -47,9 +47,8 @@ class ShutdownAPIHandler(APIHandler):
         self.set_status(202)
         self.finish(json.dumps({"message": "Shutting down Hub"}))
 
-        # stop the eventloop, which will trigger cleanup
-        loop = IOLoop.current()
-        loop.add_callback(loop.stop)
+        # instruct the app to stop, which will trigger cleanup
+        app.stop()
 
 
 class RootAPIHandler(APIHandler):

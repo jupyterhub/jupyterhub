@@ -188,6 +188,8 @@ def cleanup_after(request, io_loop):
         if not MockHub.initialized():
             return
         app = MockHub.instance()
+        if app.db_file.closed:
+            return
         for uid, user in list(app.users.items()):
             for name, spawner in list(user.spawners.items()):
                 if spawner.active:
