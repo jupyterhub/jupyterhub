@@ -325,26 +325,28 @@ class MockHub(JupyterHub):
         roles.assign_default_roles(self.db, entity=user)
         self.db.commit()
 
-    def stop(self):
-        super().stop()
+    _stop_called = False
 
+    def stop(self):
+        if self._stop_called:
+            return
+        self._stop_called = True
         # run cleanup in a background thread
         # to avoid multiple eventloops in the same thread errors from asyncio
 
         def cleanup():
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            loop = IOLoop.current()
-            loop.run_sync(self.cleanup)
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(self.cleanup())
             loop.close()
 
-        pool = ThreadPoolExecutor(1)
-        f = pool.submit(cleanup)
-        # wait for cleanup to finish
-        f.result()
-        pool.shutdown()
+        with ThreadPoolExecutor(1) as pool:
+            f = pool.submit(cleanup)
+            # wait for cleanup to finish
+            f.result()
 
-        # ignore the call that will fire in atexit
-        self.cleanup = lambda: None
+        # prevent redundant atexit from running
+        self._atexit_ran = True
+        super().stop()
         self.db_file.close()
 
     async def login_user(self, name):
