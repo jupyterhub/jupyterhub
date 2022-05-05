@@ -6,6 +6,43 @@ command line for details.
 
 ## [Unreleased]
 
+## 2.3
+
+### 2.3.0 - 2022-05-06
+
+#### Enhancements made
+
+- Admin Dashboard - Collapsible Details View [#3834](https://github.com/jupyterhub/jupyterhub/pull/3834) ([@NarekA](https://github.com/NarekA), [@minrk](https://github.com/minrk), [@ykazakov](https://github.com/ykazakov), [@johnkpark](https://github.com/johnkpark))
+- Admin Dashboard - Add search bar for user name [#3827](https://github.com/jupyterhub/jupyterhub/pull/3827) ([@NarekA](https://github.com/NarekA), [@minrk](https://github.com/minrk), [@ykazakov](https://github.com/ykazakov))
+
+#### Bugs fixed
+
+- don't confuse :// in next_url query params for a redirect hostname [#3876](https://github.com/jupyterhub/jupyterhub/pull/3876) ([@minrk](https://github.com/minrk), [@GeorgianaElena](https://github.com/GeorgianaElena))
+- Search bar disabled on admin dashboard [#3863](https://github.com/jupyterhub/jupyterhub/pull/3863) ([@NarekA](https://github.com/NarekA), [@minrk](https://github.com/minrk))
+- Do not store Spawner.ip/port on spawner.server during get_env [#3859](https://github.com/jupyterhub/jupyterhub/pull/3859) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
+- Fix xsrf_cookie_kwargs ValueError [#3853](https://github.com/jupyterhub/jupyterhub/pull/3853) ([@jwclark](https://github.com/jwclark), [@minrk](https://github.com/minrk))
+- ensure \_import_error is set when JUPYTERHUB_SINGLEUSER_APP is unavailable [#3837](https://github.com/jupyterhub/jupyterhub/pull/3837) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Maintenance and upkeep improvements
+
+- Use log.exception when logging exceptions [#3882](https://github.com/jupyterhub/jupyterhub/pull/3882) ([@yuvipanda](https://github.com/yuvipanda), [@minrk](https://github.com/minrk), [@sgibson91](https://github.com/sgibson91))
+- Missing `f` prefix on f-strings fix [#3874](https://github.com/jupyterhub/jupyterhub/pull/3874) ([@code-review-doctor](https://github.com/code-review-doctor), [@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- adopt pytest-asyncio asyncio_mode='auto' [#3841](https://github.com/jupyterhub/jupyterhub/pull/3841) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio), [@manics](https://github.com/manics))
+- remove lingering reference to distutils [#3835](https://github.com/jupyterhub/jupyterhub/pull/3835) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+
+#### Documentation improvements
+
+- Fix typo in RESP API link in README.md [#3862](https://github.com/jupyterhub/jupyterhub/pull/3862) ([@cmd-ntrf](https://github.com/cmd-ntrf), [@consideRatio](https://github.com/consideRatio))
+- The word `used` is duplicated in upgrade.md [#3849](https://github.com/jupyterhub/jupyterhub/pull/3849) ([@huage1994](https://github.com/huage1994), [@consideRatio](https://github.com/consideRatio))
+- Some typos in docs [#3843](https://github.com/jupyterhub/jupyterhub/pull/3843) ([@minrk](https://github.com/minrk), [@consideRatio](https://github.com/consideRatio))
+- Document version mismatch log message [#3839](https://github.com/jupyterhub/jupyterhub/pull/3839) ([@yuvipanda](https://github.com/yuvipanda), [@consideRatio](https://github.com/consideRatio), [@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/jupyterhub/jupyterhub/graphs/contributors?from=2022-03-14&to=2022-05-05&type=c))
+
+[@choldgraf](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acholdgraf+updated%3A2022-03-14..2022-05-05&type=Issues) | [@cmd-ntrf](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acmd-ntrf+updated%3A2022-03-14..2022-05-05&type=Issues) | [@code-review-doctor](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Acode-review-doctor+updated%3A2022-03-14..2022-05-05&type=Issues) | [@consideRatio](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AconsideRatio+updated%3A2022-03-14..2022-05-05&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Adependabot+updated%3A2022-03-14..2022-05-05&type=Issues) | [@GeorgianaElena](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3AGeorgianaElena+updated%3A2022-03-14..2022-05-05&type=Issues) | [@github-actions](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Agithub-actions+updated%3A2022-03-14..2022-05-05&type=Issues) | [@huage1994](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ahuage1994+updated%3A2022-03-14..2022-05-05&type=Issues) | [@johnkpark](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajohnkpark+updated%3A2022-03-14..2022-05-05&type=Issues) | [@jwclark](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ajwclark+updated%3A2022-03-14..2022-05-05&type=Issues) | [@manics](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Amanics+updated%3A2022-03-14..2022-05-05&type=Issues) | [@minrk](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aminrk+updated%3A2022-03-14..2022-05-05&type=Issues) | [@NarekA](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3ANarekA+updated%3A2022-03-14..2022-05-05&type=Issues) | [@pre-commit-ci](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Apre-commit-ci+updated%3A2022-03-14..2022-05-05&type=Issues) | [@sgibson91](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Asgibson91+updated%3A2022-03-14..2022-05-05&type=Issues) | [@ykazakov](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Aykazakov+updated%3A2022-03-14..2022-05-05&type=Issues) | [@yuvipanda](https://github.com/search?q=repo%3Ajupyterhub%2Fjupyterhub+involves%3Ayuvipanda+updated%3A2022-03-14..2022-05-05&type=Issues)
+
 ## 2.2
 
 ### 2.2.2 2022-03-14
