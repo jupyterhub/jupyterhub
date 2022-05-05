@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import regeneratorRuntime from "regenerator-runtime";
 import { useSelector, useDispatch } from "react-redux";
 import PropTypes from "prop-types";
 
