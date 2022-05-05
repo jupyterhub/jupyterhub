@@ -1129,7 +1129,7 @@ class JupyterHub(Application):
 
     @default('authenticator')
     def _authenticator_default(self):
-        return self.authenticator_class(parent=self, db=self.db)
+        return self.authenticator_class(parent=self, _deprecated_db_session=self.db)
 
     implicit_spawn_seconds = Float(
         0,

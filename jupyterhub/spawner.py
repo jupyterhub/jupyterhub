@@ -14,6 +14,7 @@ import warnings
 from inspect import signature
 from subprocess import Popen
 from tempfile import mkdtemp
+from textwrap import dedent
 from urllib.parse import urlparse
 
 from async_generator import aclosing
@@ -157,8 +158,26 @@ class Spawner(LoggingConfigurable):
     authenticator = Any()
     hub = Any()
     orm_spawner = Any()
-    db = Any()
     cookie_options = Dict()
+
+    db = Any()
+
+    @default("db")
+    def _deprecated_db(self):
+        self.log.warning(
+            dedent(
+                """
+                The shared database session at Spawner.db is deprecated, and will be removed.
+                Please manage your own database and connections.
+
+                Contact JupyterHub at https://github.com/jupyterhub/jupyterhub/issues/3700
+                if you have questions or ideas about direct database needs for your Spawner.
+                """
+            ),
+        )
+        return self._deprecated_db_session
+
+    _deprecated_db_session = Any()
 
     @observe('orm_spawner')
     def _orm_spawner_changed(self, change):
