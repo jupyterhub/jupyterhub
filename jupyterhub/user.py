@@ -282,9 +282,9 @@ class User:
         new_groups = set(group_names).difference(current_groups)
         removed_groups = current_groups.difference(group_names)
         if new_groups:
-            self.log.info("Adding user {self.name} to group(s): {new_groups}")
+            self.log.info(f"Adding user {self.name} to group(s): {new_groups}")
         if removed_groups:
-            self.log.info("Removing user {self.name} from group(s): {removed_groups}")
+            self.log.info(f"Removing user {self.name} from group(s): {removed_groups}")
 
         if group_names:
             groups = (
@@ -812,7 +812,7 @@ class User:
                 e.reason = 'timeout'
                 self.settings['statsd'].incr('spawner.failure.timeout')
             else:
-                self.log.error(
+                self.log.exception(
                     "Unhandled error starting {user}'s server: {error}".format(
                         user=self.name, error=e
                     )
@@ -822,7 +822,7 @@ class User:
             try:
                 await self.stop(spawner.name)
             except Exception:
-                self.log.error(
+                self.log.exception(
                     "Failed to cleanup {user}'s server that failed to start".format(
                         user=self.name
                     ),
@@ -870,7 +870,7 @@ class User:
                 self.settings['statsd'].incr('spawner.failure.http_timeout')
             else:
                 e.reason = 'error'
-                self.log.error(
+                self.log.exception(
                     "Unhandled error waiting for {user}'s server to show up at {url}: {error}".format(
                         user=self.name, url=server.url, error=e
                     )
@@ -879,7 +879,7 @@ class User:
             try:
                 await self.stop(spawner.name)
             except Exception:
-                self.log.error(
+                self.log.exception(
                     "Failed to cleanup {user}'s server that failed to start".format(
                         user=self.name
                     ),
