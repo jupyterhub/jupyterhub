@@ -17,6 +17,7 @@ command line for details.
 
 #### Bugs fixed
 
+- Cleanup everything on API shutdown [#3886](https://github.com/jupyterhub/jupyterhub/pull/3886) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics))
 - don't confuse :// in next_url query params for a redirect hostname [#3876](https://github.com/jupyterhub/jupyterhub/pull/3876) ([@minrk](https://github.com/minrk), [@GeorgianaElena](https://github.com/GeorgianaElena))
 - Search bar disabled on admin dashboard [#3863](https://github.com/jupyterhub/jupyterhub/pull/3863) ([@NarekA](https://github.com/NarekA), [@minrk](https://github.com/minrk))
 - Do not store Spawner.ip/port on spawner.server during get_env [#3859](https://github.com/jupyterhub/jupyterhub/pull/3859) ([@minrk](https://github.com/minrk), [@manics](https://github.com/manics), [@consideRatio](https://github.com/consideRatio))
