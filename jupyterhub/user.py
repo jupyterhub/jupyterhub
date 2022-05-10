@@ -411,7 +411,7 @@ class User:
             authenticator=self.authenticator,
             config=self.settings.get('config'),
             proxy_spec=url_path_join(self.proxy_spec, server_name, '/'),
-            db=self.db,
+            _deprecated_db_session=self.db,
             oauth_client_id=client_id,
             cookie_options=self.settings.get('cookie_options', {}),
             trusted_alt_names=trusted_alt_names,
