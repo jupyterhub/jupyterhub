@@ -1317,11 +1317,14 @@ class JupyterHub(Application):
 
     admin_access = Bool(
         False,
-        help="""Grant admin users permission to access single-user servers.
+        help="""DEPRECATED since version 2.0.0.
 
-        Users should be properly informed if this is enabled.
+        The default admin role has full permissions, use custom RBAC scopes instead to
+        create restricted administrator roles.
+        https://jupyterhub.readthedocs.io/en/stable/rbac/index.html
         """,
     ).tag(config=True)
+
     admin_users = Set(
         help="""DEPRECATED since version 0.7.2, use Authenticator.admin_users instead."""
     ).tag(config=True)
