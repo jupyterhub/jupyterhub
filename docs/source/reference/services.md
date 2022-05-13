@@ -35,6 +35,8 @@ A Service may have the following properties:
   the service will be added to the proxy at `/services/:name`
 - `api_token: str (default - None)` - For Externally-Managed Services you need to specify
   an API token to perform API requests to the Hub
+- `display: bool (default - True)` - When set to true, display a link to the
+  service's URL under the 'Services' dropdown in user's hub home page.
 
 If a service is also to be managed by the Hub, it has a few extra options:
 
