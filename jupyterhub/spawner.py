@@ -43,6 +43,7 @@ from .utils import (
     exponential_backoff,
     maybe_future,
     random_port,
+    url_escape_path,
     url_path_join,
 )
 
@@ -871,7 +872,7 @@ class Spawner(LoggingConfigurable):
             env['JUPYTERHUB_COOKIE_OPTIONS'] = json.dumps(self.cookie_options)
         env['JUPYTERHUB_HOST'] = self.hub.public_host
         env['JUPYTERHUB_OAUTH_CALLBACK_URL'] = url_path_join(
-            self.user.url, self.name, 'oauth_callback'
+            self.user.url, url_escape_path(self.name), 'oauth_callback'
         )
 
         env['JUPYTERHUB_OAUTH_SCOPES'] = json.dumps(self.oauth_scopes)

@@ -19,6 +19,7 @@ from binascii import b2a_hex
 from datetime import datetime, timezone
 from hmac import compare_digest
 from operator import itemgetter
+from urllib.parse import quote
 
 from async_generator import aclosing
 from sqlalchemy.exc import SQLAlchemyError
@@ -369,6 +370,11 @@ def compare_token(compare, token):
     if compare_digest(compare, hashed):
         return True
     return False
+
+
+def url_escape_path(value):
+    """Escape a value to be used in URLs, cookies, etc."""
+    return quote(value, safe='@~')
 
 
 def url_path_join(*pieces):
