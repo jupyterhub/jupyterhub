@@ -7,7 +7,7 @@ from urllib.parse import unquote, urlencode, urlparse
 import pytest
 from tornado.httputil import url_concat
 
-from ..utils import url_path_join
+from ..utils import url_escape_path, url_path_join
 from .mocking import FormSpawner, public_url
 from .test_api import TIMESTAMP, add_user, api_request, fill_user, normalize_user
 from .utils import async_requests, get_page
@@ -84,18 +84,28 @@ async def test_default_server(app, named_servers):
 
 
 @pytest.mark.parametrize(
-    'servername,escapedname',
+    'servername,escapedname,caller_escape',
     [
-        ('trevor', 'trevor'),
-        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs'),
+        ('trevor', 'trevor', False),
+        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', False),
+        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True),
+        ('must/be/escaped', 'must%2Fbe%2Fescaped', True),
     ],
 )
-async def test_create_named_server(app, named_servers, servername, escapedname):
+async def test_create_named_server(
+    app, named_servers, servername, escapedname, caller_escape
+):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
-    r = await api_request(app, 'users', username, 'servers', servername, method='post')
+    request_servername = servername
+    if caller_escape:
+        request_servername = url_escape_path(servername)
+
+    r = await api_request(
+        app, 'users', username, 'servers', request_servername, method='post'
+    )
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
