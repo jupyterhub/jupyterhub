@@ -89,7 +89,6 @@ async def test_default_server(app, named_servers):
         ('trevor', 'trevor', False),
         ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', False),
         ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True),
-        ('must/be/escaped', 'must%2Fbe%2Fescaped', True),
     ],
 )
 async def test_create_named_server(
