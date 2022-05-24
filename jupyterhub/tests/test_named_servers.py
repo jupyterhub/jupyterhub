@@ -2,7 +2,7 @@
 import asyncio
 import json
 from unittest import mock
-from urllib.parse import urlencode, urlparse
+from urllib.parse import unquote, urlencode, urlparse
 
 import pytest
 from tornado.httputil import url_concat
@@ -83,25 +83,35 @@ async def test_default_server(app, named_servers):
     )
 
 
-async def test_create_named_server(app, named_servers):
+@pytest.mark.parametrize(
+    'servername,escapedname',
+    [
+        ('trevor', 'trevor'),
+        ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs'),
+    ],
+)
+async def test_create_named_server(app, named_servers, servername, escapedname):
     username = 'walnut'
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
-    servername = 'trevor'
     r = await api_request(app, 'users', username, 'servers', servername, method='post')
     r.raise_for_status()
     assert r.status_code == 201
     assert r.text == ''
 
     url = url_path_join(public_url(app, user), servername, 'env')
+    expected_url = url_path_join(public_url(app, user), escapedname, 'env')
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()
-    assert r.url == url
+    # requests doesn't fully encode the servername: "$p~c%7Ca!%20ch@rs".
+    # Since this is the internal requests representation and not the JupyterHub
+    # representation it just needs to be equivalent.
+    assert unquote(r.url) == unquote(expected_url)
     env = r.json()
     prefix = env.get('JUPYTERHUB_SERVICE_PREFIX')
     assert prefix == user.spawners[servername].server.base_url
-    assert prefix.endswith(f'/user/{username}/{servername}/')
+    assert prefix.endswith(f'/user/{username}/{escapedname}/')
 
     r = await api_request(app, 'users', username)
     r.raise_for_status()
@@ -121,7 +131,7 @@ async def test_create_named_server(app, named_servers):
                     'pending': None,
                     'ready': True,
                     'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(
-                        username, servername
+                        username, escapedname
                     ),
                     'state': {'pid': 0},
                     'user_options': {},
