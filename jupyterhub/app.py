@@ -1702,7 +1702,9 @@ class JupyterHub(Application):
             for authority, files in self.internal_ssl_authorities.items():
                 if files:
                     self.log.info("Adding CA for %s", authority)
-                    certipy.store.add_record(authority, is_ca=True, files=files)
+                    certipy.store.add_record(
+                        authority, is_ca=True, files=files, overwrite=True
+                    )
 
             self.internal_trust_bundles = certipy.trust_from_graph(
                 self.internal_ssl_components_trust
