@@ -1142,10 +1142,7 @@ class Spawner(LoggingConfigurable):
     async def run_auth_state_hook(self, auth_state):
         """Run the auth_state_hook if defined"""
         if self.auth_state_hook is not None:
-            try:
-                await maybe_future(self.auth_state_hook(self, auth_state))
-            except Exception:
-                self.log.exception("auth_state_hook failed with exception: %s", self)
+            await maybe_future(self.auth_state_hook(self, auth_state))
 
     @property
     def _progress_url(self):
