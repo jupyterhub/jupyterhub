@@ -5,3 +5,4 @@ jinja2
 pamela
 sqlalchemy>=1.0
 requests
+certifi==2021.10.8
