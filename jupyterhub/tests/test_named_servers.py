@@ -144,7 +144,7 @@ async def test_create_named_server(
                     'name': name,
                     'started': TIMESTAMP,
                     'last_activity': TIMESTAMP,
-                    'url': url_path_join(user.url, name, '/'),
+                    'url': url_path_join(user.url, escapedname, '/'),
                     'pending': None,
                     'ready': True,
                     'progress_url': 'PREFIX/hub/api/users/{}/servers/{}/progress'.format(

@@ -12,7 +12,7 @@ from tornado import web
 from .. import orm
 from ..handlers import BaseHandler
 from ..scopes import get_scopes_for
-from ..utils import get_browser_protocol, isoformat, url_path_join
+from ..utils import get_browser_protocol, isoformat, url_escape_path, url_path_join
 
 PAGINATION_MEDIA_TYPE = "application/jupyterhub-pagination+json"
 
@@ -196,7 +196,7 @@ class APIHandler(BaseHandler):
             'started': isoformat(spawner.orm_spawner.started),
             'pending': spawner.pending,
             'ready': spawner.ready,
-            'url': url_path_join(spawner.user.url, spawner.name, '/'),
+            'url': url_path_join(spawner.user.url, url_escape_path(spawner.name), '/'),
             'user_options': spawner.user_options,
             'progress_url': spawner._progress_url,
         }
