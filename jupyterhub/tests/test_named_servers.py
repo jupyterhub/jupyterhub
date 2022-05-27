@@ -8,6 +8,7 @@ import pytest
 from requests.exceptions import HTTPError
 from tornado.httputil import url_concat
 
+from .. import orm
 from ..utils import url_escape_path, url_path_join
 from .mocking import FormSpawner, public_url
 from .test_api import TIMESTAMP, add_user, api_request, fill_user, normalize_user
@@ -126,6 +127,12 @@ async def test_create_named_server(
     r = await api_request(app, 'users', username)
     r.raise_for_status()
 
+    # Ensure the unescaped name is stored in the DB
+    db_server_names = set(
+        app.db.query(orm.User).filter_by(name=username).first().orm_spawners.keys()
+    )
+    assert db_server_names == {"", servername}
+
     user_model = normalize_user(r.json())
     assert user_model == fill_user(
         {
@@ -157,16 +164,18 @@ async def test_create_invalid_named_server(app, named_servers):
     user = add_user(app.db, app, name=username)
     # assert user.allow_named_servers == True
     cookies = await app.login_user(username)
-    request_servername = 'a%2fb'
+    server_name = "a$/b"
+    request_servername = 'a%24%2fb'
 
     r = await api_request(
         app, 'users', username, 'servers', request_servername, method='post'
     )
+
     with pytest.raises(HTTPError) as exc:
         r.raise_for_status()
     assert exc.value.response.json() == {
         'status': 400,
-        'message': 'Invalid server_name: a/b',
+        'message': 'Invalid server_name: a$/b',
     }
 
 

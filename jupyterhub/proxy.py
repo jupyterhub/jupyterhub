@@ -288,7 +288,7 @@ class Proxy(LoggingConfigurable):
         await self.add_route(
             spawner.proxy_spec,
             spawner.server.host,
-            {'user': user.name, 'server_name': server_name},
+            {'user': user.name, 'server_name': url_escape_path(server_name)},
         )
 
     async def delete_user(self, user, server_name=''):
