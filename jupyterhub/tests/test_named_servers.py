@@ -5,6 +5,7 @@ from unittest import mock
 from urllib.parse import unquote, urlencode, urlparse
 
 import pytest
+from requests.exceptions import HTTPError
 from tornado.httputil import url_concat
 
 from ..utils import url_escape_path, url_path_join
@@ -149,6 +150,24 @@ async def test_create_named_server(
             },
         }
     )
+
+
+async def test_create_invalid_named_server(app, named_servers):
+    username = 'walnut'
+    user = add_user(app.db, app, name=username)
+    # assert user.allow_named_servers == True
+    cookies = await app.login_user(username)
+    request_servername = 'a%2fb'
+
+    r = await api_request(
+        app, 'users', username, 'servers', request_servername, method='post'
+    )
+    with pytest.raises(HTTPError) as exc:
+        r.raise_for_status()
+    assert exc.value.response.json() == {
+        'status': 400,
+        'message': 'Invalid server_name: a/b',
+    }
 
 
 async def test_delete_named_server(app, named_servers):

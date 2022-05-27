@@ -855,6 +855,10 @@ class BaseHandler(RequestHandler):
         user_server_name = user.name
 
         if server_name:
+            if '/' in server_name:
+                error_message = f"Invalid server_name: {server_name}"
+                self.log.error(error_message)
+                raise web.HTTPError(400, error_message)
             user_server_name = f'{user.name}:{server_name}'
 
         if server_name in user.spawners and user.spawners[server_name].pending:

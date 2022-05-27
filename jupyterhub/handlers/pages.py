@@ -118,9 +118,6 @@ class SpawnHandler(BaseHandler):
 
     @needs_scope("servers")
     async def _get(self, user_name, server_name):
-        if '/' in server_name:
-            raise web.HTTPError(400, f"Invalid server_name: {server_name}")
-
         for_user = user_name
 
         user = current_user = self.current_user
