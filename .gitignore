@@ -10,6 +10,7 @@ docs/build
 docs/source/_static/rest-api
 docs/source/rbac/scope-table.md
 .ipynb_checkpoints
+jsx/build/
 # ignore config file at the top-level of the repo
 # but not sub-dirs
 /jupyterhub_config.py
@@ -19,6 +20,7 @@ package-lock.json
 share/jupyterhub/static/components
 share/jupyterhub/static/css/style.min.css
 share/jupyterhub/static/css/style.min.css.map
+share/jupyterhub/static/js/admin-react.js
 *.egg-info
 MANIFEST
 .coverage
