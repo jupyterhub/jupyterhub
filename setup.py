@@ -268,7 +268,6 @@ class JSX(BaseCommand):
 
     jsx_dir = pjoin(here, 'jsx')
     js_target = pjoin(static, 'js', 'admin-react.js')
-    yarn_bin = 'yarn'
 
     def should_run(self):
         update_needed = False
@@ -280,9 +279,6 @@ class JSX(BaseCommand):
             jsx_mtime = recursive_mtime(self.jsx_dir)
             if js_target_mtime < jsx_mtime:
                 update_needed = True
-
-        if update_needed and not shutil.which('yarn'):
-            raise Exception('JSX needs to be updated but yarn is not installed')
         return update_needed
 
     def run(self):
@@ -290,23 +286,32 @@ class JSX(BaseCommand):
             print("JSX admin app is up to date")
             return
 
+        # jlpm is a version of yarn bundled with JupyterLab
+        if shutil.which('yarn'):
+            yarn = 'yarn'
+        elif shutil.which('jlpm'):
+            print("yarn not found, using jlpm")
+            yarn = 'jlpm'
+        else:
+            raise Exception('JSX needs to be updated but yarn is not installed')
+
         print("Installing JSX admin app requirements")
         check_call(
-            [self.yarn_bin],
+            [yarn],
             cwd=self.jsx_dir,
             shell=shell,
         )
 
         print("Building JSX admin app")
         check_call(
-            [self.yarn_bin, 'build'],
+            [yarn, 'build'],
             cwd=self.jsx_dir,
             shell=shell,
         )
 
         print("Copying JSX admin app to static/js")
         check_call(
-            [self.yarn_bin, 'place'],
+            [yarn, 'place'],
             cwd=self.jsx_dir,
             shell=shell,
         )
