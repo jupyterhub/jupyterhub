@@ -41,8 +41,9 @@ jobs:
         with:
           node-version: "14"
 
-      - name: install build package
+      - name: install build requirements
         run: |
+          npm install -g yarn
           pip install --upgrade pip
           pip install build
           pip freeze
@@ -66,6 +67,7 @@ jobs:
               "templates/page.html",
               "static/css/style.min.css",
               "static/components/jquery/dist/jquery.js",
+              "static/js/admin-react.js",
           ):
               path = os.path.join(DATA_FILES_PATH, subpath)
               assert os.path.exists(path), path
