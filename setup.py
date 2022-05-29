@@ -135,6 +135,19 @@ def mtime(path):
     return os.stat(path).st_mtime
 
 
+def recursive_mtime(path):
+    """Recursively get newest mtime of files"""
+    if os.path.isfile(path):
+        return mtime(path)
+    current = 0
+    for dirname, _, filenames in os.walk(path):
+        if filenames:
+            current = max(
+                current, max(mtime(os.path.join(dirname, f)) for f in filenames)
+            )
+    return current
+
+
 class BaseCommand(Command):
     """Dumb empty command because Command needs subclasses to override too much"""
 
@@ -250,12 +263,65 @@ class CSS(BaseCommand):
         self.distribution.data_files = get_data_files()
 
 
+class JSX(BaseCommand):
+    description = "build admin app"
+
+    jsx_dir = pjoin(here, 'jsx')
+    js_target = pjoin(static, 'js', 'admin-react.js')
+    yarn_bin = 'yarn'
+
+    def should_run(self):
+        update_needed = False
+        if not os.path.exists(self.js_target):
+            update_needed = True
+        else:
+            js_target_mtime = mtime(self.js_target)
+            # The sdist doesn't contain the jsx directory so this always returns 0:
+            jsx_mtime = recursive_mtime(self.jsx_dir)
+            if js_target_mtime < jsx_mtime:
+                update_needed = True
+
+        if update_needed and not shutil.which('yarn'):
+            raise Exception('JSX needs to be updated but yarn is not installed')
+        return update_needed
+
+    def run(self):
+        if not self.should_run():
+            print("JSX admin app is up to date")
+            return
+
+        print("Installing JSX admin app requirements")
+        check_call(
+            [self.yarn_bin],
+            cwd=self.jsx_dir,
+            shell=shell,
+        )
+
+        print("Building JSX admin app")
+        check_call(
+            [self.yarn_bin, 'build'],
+            cwd=self.jsx_dir,
+            shell=shell,
+        )
+
+        print("Copying JSX admin app to static/js")
+        check_call(
+            [self.yarn_bin, 'place'],
+            cwd=self.jsx_dir,
+            shell=shell,
+        )
+
+        # update data-files in case this created new files
+        self.distribution.data_files = get_data_files()
+
+
 def js_css_first(cls, strict=True):
     class Command(cls):
         def run(self):
             try:
                 self.run_command('js')
                 self.run_command('css')
+                self.run_command('jsx')
             except Exception:
                 if strict:
                     raise
@@ -282,6 +348,7 @@ class bdist_egg_disabled(bdist_egg):
 setup_args['cmdclass'] = {
     'js': NPM,
     'css': CSS,
+    'jsx': JSX,
     'build_py': js_css_first(build_py, strict=is_repo),
     'sdist': js_css_first(sdist, strict=True),
     'bdist_egg': bdist_egg if 'bdist_egg' in sys.argv else bdist_egg_disabled,
