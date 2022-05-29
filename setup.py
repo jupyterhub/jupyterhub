@@ -270,16 +270,20 @@ class JSX(BaseCommand):
     js_target = pjoin(static, 'js', 'admin-react.js')
 
     def should_run(self):
-        update_needed = False
+        if os.getenv('READTHEDOCS'):
+            # yarn not available on RTD
+            return False
+
         if not os.path.exists(self.js_target):
-            update_needed = True
-        else:
-            js_target_mtime = mtime(self.js_target)
-            # The sdist doesn't contain the jsx directory so this always returns 0:
-            jsx_mtime = recursive_mtime(self.jsx_dir)
-            if js_target_mtime < jsx_mtime:
-                update_needed = True
-        return update_needed
+            return True
+
+        js_target_mtime = mtime(self.js_target)
+        # The sdist doesn't contain the jsx directory so this always returns 0
+        # if run from the dist/*.tar.gz
+        jsx_mtime = recursive_mtime(self.jsx_dir)
+        if js_target_mtime < jsx_mtime:
+            return True
+        return False
 
     def run(self):
         if not self.should_run():
