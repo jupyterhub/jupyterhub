@@ -16,7 +16,7 @@ Install Python
 --------------
 
 JupyterHub is written in the `Python <https://python.org>`_ programming language, and
-requires you have at least version 3.5 installed locally. If you haven’t
+requires you have at least version 3.6 installed locally. If you haven’t
 installed Python before, the recommended way to install it is to use
 `miniconda <https://conda.io/miniconda.html>`_. Remember to get the ‘Python 3’ version,
 and **not** the ‘Python 2’ version!
@@ -24,11 +24,10 @@ and **not** the ‘Python 2’ version!
 Install nodejs
 --------------
 
-``configurable-http-proxy``, the default proxy implementation for
-JupyterHub, is written in Javascript to run on `NodeJS
-<https://nodejs.org/en/>`_. If you have not installed nodejs before, we
-recommend installing it in the ``miniconda`` environment you set up for
-Python. You can do so with ``conda install nodejs``.
+`NodeJS 12+ <https://nodejs.org/en/>`_ is required for building some JavaScript components.
+``configurable-http-proxy``, the default proxy implementation for JupyterHub, is written in Javascript.
+If you have not installed nodejs before, we recommend installing it in the ``miniconda`` environment you set up for Python.
+You can do so with ``conda install nodejs``.
 
 Install git
 -----------
@@ -46,7 +45,7 @@ their effects quickly. You need to do a developer install to make that
 happen.
 
 .. note:: This guide does not attempt to dictate *how* development
-   environements should be isolated since that is a personal preference and can
+   environments should be isolated since that is a personal preference and can
    be achieved in many ways, for example `tox`, `conda`, `docker`, etc. See this
    `forum thread <https://discourse.jupyter.org/t/thoughts-on-using-tox/3497>`_ for
    a more detailed discussion.
@@ -66,7 +65,7 @@ happen.
 
       python -V
 
-   This should return a version number greater than or equal to 3.5.
+   This should return a version number greater than or equal to 3.6.
 
    .. code:: bash
 
@@ -74,12 +73,11 @@ happen.
 
    This should return a version number greater than or equal to 5.0.
 
-3. Install ``configurable-http-proxy``. This is required to run
-   JupyterHub.
+3. Install ``configurable-http-proxy`` (required to run and test the default JupyterHub configuration) and ``yarn`` (required to build some components):
 
    .. code:: bash
 
-      npm install -g configurable-http-proxy
+      npm install -g configurable-http-proxy yarn
 
    If you get an error that says ``Error: EACCES: permission denied``,
    you might need to prefix the command with ``sudo``. If you do not
@@ -87,10 +85,16 @@ happen.
 
    .. code:: bash
 
-      npm install configurable-http-proxy
+      npm install configurable-http-proxy yarn
       export PATH=$PATH:$(pwd)/node_modules/.bin
 
    The second line needs to be run every time you open a new terminal.
+
+   If you are using conda you can instead run:
+
+   .. code:: bash
+
+      conda install configurable-http-proxy yarn
 
 4. Install the python packages required for JupyterHub development.
 
@@ -186,3 +190,4 @@ development updates, with:
 
    python3 setup.py js    # fetch updated client-side js
    python3 setup.py css   # recompile CSS from LESS sources
+   python3 setup.py jsx   # build React admin app
