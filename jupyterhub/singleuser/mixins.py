@@ -627,6 +627,12 @@ class SingleUserNotebookAppMixin(Configurable):
         # disable trash by default
         # this can be re-enabled by config
         self.config.FileContentsManager.delete_to_trash = False
+        # load default-url env at higher priority than `@default`,
+        # which may have their own _defaults_ which should not override explicit default_url config
+        # via e.g. c.Spawner.default_url. Seen in jupyterlab's SingleUserLabApp.
+        default_url = os.environ.get("JUPYTERHUB_DEFAULT_URL")
+        if default_url:
+            self.config[self.__class__.__name__].default_url = default_url
         self._log_app_versions()
         return super().initialize(argv)
 
