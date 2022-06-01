@@ -57,26 +57,10 @@ jobs:
         run: |
           ./ci/check_sdist.py dist/jupyterhub-*.tar.gz
 
-      - name: verify wheel
+      - name: verify data-files are installed where they are found
         run: |
-          cd dist
-          pip install ./*.whl
-          # verify data-files are installed where they are found
-          cat <<EOF | python
-          import os
-          from jupyterhub._data import DATA_FILES_PATH
-          print(f"DATA_FILES_PATH={DATA_FILES_PATH}")
-          assert os.path.exists(DATA_FILES_PATH), DATA_FILES_PATH
-          for subpath in (
-              "templates/page.html",
-              "static/css/style.min.css",
-              "static/components/jquery/dist/jquery.js",
-              "static/js/admin-react.js",
-          ):
-              path = os.path.join(DATA_FILES_PATH, subpath)
-              assert os.path.exists(path), path
-          print("OK")
-          EOF
+          pip install dist/*.whl
+          ./ci/check_installed_data.py
 
       # ref: https://github.com/actions/upload-artifact#readme
       - uses: actions/upload-artifact@v2
