@@ -176,6 +176,7 @@ page_template = """
 
 <span>
     <a href='{{hub_control_panel_url}}'
+       id='jupyterhub-control-panel-link'
        class='btn btn-default btn-sm navbar-btn pull-right'
        style='margin-right: 4px; margin-left: 2px;'>
         Control Panel
@@ -628,7 +629,8 @@ class SingleUserNotebookAppMixin(Configurable):
         # this can be re-enabled by config
         self.config.FileContentsManager.delete_to_trash = False
         self._log_app_versions()
-        return super().initialize(argv)
+        super().initialize(argv)
+        self.patch_templates()
 
     def start(self):
         self.log.info("Starting jupyterhub-singleuser server version %s", __version__)
@@ -699,7 +701,6 @@ class SingleUserNotebookAppMixin(Configurable):
 
         # apply X-JupyterHub-Version to *all* request handlers (even redirects)
         self.patch_default_headers()
-        self.patch_templates()
 
     def page_config_hook(self, handler, page_config):
         """JupyterLab page config hook
@@ -732,19 +733,30 @@ class SingleUserNotebookAppMixin(Configurable):
         )
         self.jinja_template_vars['hub_host'] = self.hub_host
         self.jinja_template_vars['hub_prefix'] = self.hub_prefix
-        env = self.web_app.settings['jinja2_env']
+        self.jinja_template_vars[
+            'hub_control_panel_url'
+        ] = self.hub_host + url_path_join(self.hub_prefix, 'home')
 
-        env.globals['hub_control_panel_url'] = self.hub_host + url_path_join(
-            self.hub_prefix, 'home'
-        )
+        settings = self.web_app.settings
+        # patch classic notebook jinja env
+        jinja_envs = []
+        if 'jinja2_env' in settings:
+            # default jinja env (should we do this on jupyter-server, or only notebook?)
+            jinja_envs.append(settings['jinja2_env'])
+        if 'notebook_jinja2_env' in settings:
+            # when running with jupyter-server, classic notebook (nbclassic server extension)
+            # gets its own jinja env, which needs the same patch
+            jinja_envs.append(settings['notebook_jinja2_env'])
 
-        # patch jinja env loading to modify page template
+        # patch jinja env loading to get modified template, only for base page.html
         def get_page(name):
             if name == 'page.html':
                 return page_template
 
-        orig_loader = env.loader
-        env.loader = ChoiceLoader([FunctionLoader(get_page), orig_loader])
+        for jinja_env in jinja_envs:
+            jinja_env.loader = ChoiceLoader(
+                [FunctionLoader(get_page), jinja_env.loader]
+            )
 
     def load_server_extensions(self):
         # Loading LabApp sets $JUPYTERHUB_API_TOKEN on load, which is incorrect
