@@ -20,6 +20,9 @@ c.Authenticator.delete_invalid_users = True
 # Optionally set a global password that all users must use
 # c.DummyAuthenticator.password = "your_password"
 
+c.JupyterHub.ip = '0.0.0.0'
+c.JupyterHub.port = 8000
+
 from jupyterhub.spawner import SimpleLocalProcessSpawner
 
 c.JupyterHub.spawner_class = SimpleLocalProcessSpawner
