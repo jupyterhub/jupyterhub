@@ -856,7 +856,9 @@ class BaseHandler(RequestHandler):
 
         if server_name:
             if '/' in server_name:
-                error_message = f"Invalid server_name (may not contain '/'): {server_name}"
+                error_message = (
+                    f"Invalid server_name (may not contain '/'): {server_name}"
+                )
                 self.log.error(error_message)
                 raise web.HTTPError(400, error_message)
             user_server_name = f'{user.name}:{server_name}'
