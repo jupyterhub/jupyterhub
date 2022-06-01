@@ -528,9 +528,7 @@ class Hashed(Expiring):
         prefix = token[: cls.prefix_length]
         # since we can't filter on hashed values, filter on prefix
         # so we aren't comparing with all tokens
-        prefix_match = db.query(cls).filter(
-            bindparam('prefix', prefix).startswith(cls.prefix)
-        )
+        prefix_match = db.query(cls).filter_by(prefix=prefix)
         prefix_match = prefix_match.filter(
             or_(cls.expires_at == None, cls.expires_at >= cls.now())
         )
