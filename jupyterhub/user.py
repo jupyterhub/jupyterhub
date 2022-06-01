@@ -687,7 +687,6 @@ class User:
                 client_id,
                 api_token,
                 url_path_join(self.url, url_escape_path(server_name), 'oauth_callback'),
-                # url_path_join(self.url, server_name, 'oauth_callback'),
                 allowed_roles=allowed_roles,
                 description="Server at %s"
                 % (url_path_join(self.base_url, server_name) + '/'),
