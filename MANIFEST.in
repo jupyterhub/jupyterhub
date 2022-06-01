@@ -8,6 +8,7 @@ include *requirements.txt
 include Dockerfile
 
 graft onbuild
+graft jsx
 graft jupyterhub
 graft scripts
 graft share
@@ -17,6 +18,10 @@ graft ci
 # Documentation
 graft docs
 prune docs/node_modules
+
+# Intermediate javascript files
+prune jsx/node_modules
+prune jsx/build
 
 # prune some large unused files from components
 prune share/jupyterhub/static/components/bootstrap/dist/css
