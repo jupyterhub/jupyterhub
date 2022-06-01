@@ -175,7 +175,7 @@ async def test_create_invalid_named_server(app, named_servers):
         r.raise_for_status()
     assert exc.value.response.json() == {
         'status': 400,
-        'message': 'Invalid server_name: a$/b',
+        'message': "Invalid server_name (may not contain '/'): a$/b",
     }
 
 
