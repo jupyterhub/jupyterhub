@@ -53,6 +53,10 @@ jobs:
           python -m build --sdist --wheel .
           ls -l dist
 
+      - name: verify sdist
+        run: |
+          ./ci/check_sdist.py dist/jupyterhub-*.tar.gz
+
       - name: verify wheel
         run: |
           cd dist
