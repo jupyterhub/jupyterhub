@@ -8,7 +8,7 @@
   "scripts": {
     "build": "yarn && webpack",
     "hot": "webpack && webpack-dev-server",
-    "place": "cp -r build/admin-react.js ../share/jupyterhub/static/js/admin-react.js",
+    "place": "cp build/admin-react.js* ../share/jupyterhub/static/js/",
     "test": "jest --verbose",
     "snap": "jest --updateSnapshot",
     "lint": "eslint --ext .jsx --ext .js src/",

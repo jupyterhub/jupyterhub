@@ -117,10 +117,10 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: "14"
-      - name: Install Node dependencies
+      - name: Install Javascript dependencies
         run: |
           npm install
-          npm install -g configurable-http-proxy
+          npm install -g configurable-http-proxy yarn
           npm list
 
       # NOTE: actions/setup-python@v2 make use of a cache within the GitHub base
