@@ -91,6 +91,7 @@ async def test_default_server(app, named_servers):
         ('trevor', 'trevor', False),
         ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', False),
         ('$p~c|a! ch@rs', '%24p~c%7Ca%21%20ch@rs', True),
+        ('hash#?question', 'hash%23%3Fquestion', True),
     ],
 )
 async def test_create_named_server(
@@ -111,7 +112,7 @@ async def test_create_named_server(
     assert r.status_code == 201
     assert r.text == ''
 
-    url = url_path_join(public_url(app, user), servername, 'env')
+    url = url_path_join(public_url(app, user), request_servername, 'env')
     expected_url = url_path_join(public_url(app, user), escapedname, 'env')
     r = await async_requests.get(url, cookies=cookies)
     r.raise_for_status()

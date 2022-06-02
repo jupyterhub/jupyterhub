@@ -14,7 +14,7 @@ from tornado.httputil import url_concat
 from .. import __version__
 from ..metrics import SERVER_POLL_DURATION_SECONDS, ServerPollStatus
 from ..scopes import needs_scope
-from ..utils import maybe_future, url_path_join
+from ..utils import maybe_future, url_escape_path, url_path_join
 from .base import BaseHandler
 
 
@@ -284,7 +284,10 @@ class SpawnHandler(BaseHandler):
         # which may get handled by the default server if they aren't ready yet
 
         pending_url = url_path_join(
-            self.hub.base_url, "spawn-pending", user.escaped_name, server_name
+            self.hub.base_url,
+            "spawn-pending",
+            user.escaped_name,
+            url_escape_path(server_name),
         )
 
         pending_url = self.append_query_parameters(pending_url, exclude=['next'])
@@ -353,6 +356,7 @@ class SpawnPendingHandler(BaseHandler):
         if server_name and server_name not in user.spawners:
             raise web.HTTPError(404, f"{user.name} has no such server {server_name}")
 
+        escaped_server_name = url_escape_path(server_name)
         spawner = user.spawners[server_name]
 
         if spawner.ready:
@@ -375,7 +379,7 @@ class SpawnPendingHandler(BaseHandler):
             exc = spawner._spawn_future.exception()
             self.log.error("Previous spawn for %s failed: %s", spawner._log_name, exc)
             spawn_url = url_path_join(
-                self.hub.base_url, "spawn", user.escaped_name, server_name
+                self.hub.base_url, "spawn", user.escaped_name, escaped_server_name
             )
             self.set_status(500)
             html = await self.render_template(
@@ -428,7 +432,7 @@ class SpawnPendingHandler(BaseHandler):
         # serving the expected page
         if status is not None:
             spawn_url = url_path_join(
-                self.hub.base_url, "spawn", user.escaped_name, server_name
+                self.hub.base_url, "spawn", user.escaped_name, escaped_server_name
             )
             html = await self.render_template(
                 "not_running.html",

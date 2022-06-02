@@ -44,6 +44,7 @@ from ..utils import (
     get_accepted_mimetype,
     get_browser_protocol,
     maybe_future,
+    url_escape_path,
     url_path_join,
 )
 
@@ -1519,6 +1520,7 @@ class UserUrlHandler(BaseHandler):
                 server_name = ''
         else:
             server_name = ''
+        escaped_server_name = url_escape_path(server_name)
         spawner = user.spawners[server_name]
 
         if spawner.ready:
@@ -1537,7 +1539,10 @@ class UserUrlHandler(BaseHandler):
 
         pending_url = url_concat(
             url_path_join(
-                self.hub.base_url, 'spawn-pending', user.escaped_name, server_name
+                self.hub.base_url,
+                'spawn-pending',
+                user.escaped_name,
+                escaped_server_name,
             ),
             {'next': self.request.uri},
         )
@@ -1551,7 +1556,9 @@ class UserUrlHandler(BaseHandler):
         # page *in* the server is not found, we return a 424 instead of a 404.
         # We allow retaining the old behavior to support older JupyterLab versions
         spawn_url = url_concat(
-            url_path_join(self.hub.base_url, "spawn", user.escaped_name, server_name),
+            url_path_join(
+                self.hub.base_url, "spawn", user.escaped_name, escaped_server_name
+            ),
             {"next": self.request.uri},
         )
         self.set_status(
