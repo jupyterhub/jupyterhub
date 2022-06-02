@@ -268,15 +268,6 @@ class SpawnHandler(BaseHandler):
             )
             self.finish(form)
             return
-        if current_user is user:
-            self.set_login_cookie(user)
-        next_url = self.get_next_url(
-            user,
-            default=url_path_join(
-                self.hub.base_url, "spawn-pending", user.escaped_name, server_name
-            ),
-        )
-        self.redirect(next_url)
 
     def _get_pending_url(self, user, server_name):
         # resolve `?next=...`, falling back on the spawn-pending url
