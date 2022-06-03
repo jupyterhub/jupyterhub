@@ -4,9 +4,9 @@ metadata:
   name: hub
   namespace: default
   uid: 1586733f-c57c-46ed-9b5d-df27c85db06c
-  resourceVersion: '9840'
+  resourceVersion: "9840"
   generation: 3
-  creationTimestamp: '2022-05-31T20:45:09Z'
+  creationTimestamp: "2022-05-31T20:45:09Z"
   labels:
     app: jupyterhub
     app.kubernetes.io/managed-by: Helm
@@ -15,14 +15,14 @@ metadata:
     heritage: Helm
     release: jhub2
   annotations:
-    deployment.kubernetes.io/revision: '3'
+    deployment.kubernetes.io/revision: "3"
     meta.helm.sh/release-name: jhub2
     meta.helm.sh/release-namespace: default
   managedFields:
     - manager: helm
       operation: Update
       apiVersion: apps/v1
-      time: '2022-05-31T20:45:09Z'
+      time: "2022-05-31T20:45:09Z"
       fieldsType: FieldsV1
       fieldsV1:
         f:metadata:
@@ -190,7 +190,7 @@ metadata:
     - manager: kubectl-edit
       operation: Update
       apiVersion: apps/v1
-      time: '2022-05-31T21:05:54Z'
+      time: "2022-05-31T21:05:54Z"
       fieldsType: FieldsV1
       fieldsV1:
         f:spec:
@@ -200,7 +200,7 @@ metadata:
     - manager: kube-controller-manager
       operation: Update
       apiVersion: apps/v1
-      time: '2022-06-03T08:34:39Z'
+      time: "2022-06-03T08:34:39Z"
       fieldsType: FieldsV1
       fieldsV1:
         f:metadata:
@@ -244,9 +244,9 @@ spec:
       labels:
         app: jupyterhub
         component: hub
-        hub.jupyter.org/network-access-proxy-api: 'true'
-        hub.jupyter.org/network-access-proxy-http: 'true'
-        hub.jupyter.org/network-access-singleuser: 'true'
+        hub.jupyter.org/network-access-proxy-api: "true"
+        hub.jupyter.org/network-access-proxy-http: "true"
+        hub.jupyter.org/network-access-singleuser: "true"
         release: jhub2
       annotations:
         checksum/config-map: 6ea3b31db89b0dcc1c112220d250037a0715f964b3542249336ad30565ac37b5
@@ -269,16 +269,16 @@ spec:
           image: jupyterhub/k8s-hub:1.2.0
           args:
             - jupyterhub
-            - '--config'
+            - "--config"
             - /usr/local/etc/jupyterhub/jupyterhub_config.py
-            - '--upgrade-db'
+            - "--upgrade-db"
           ports:
             - name: http
               containerPort: 8081
               protocol: TCP
           env:
             - name: PYTHONUNBUFFERED
-              value: '1'
+              value: "1"
             - name: HELM_RELEASE_NAME
               value: jhub2
             - name: POD_NAMESPACE
@@ -370,14 +370,14 @@ status:
   availableReplicas: 1
   conditions:
     - type: Progressing
-      status: 'True'
-      lastUpdateTime: '2022-05-31T21:05:58Z'
-      lastTransitionTime: '2022-05-31T20:45:09Z'
+      status: "True"
+      lastUpdateTime: "2022-05-31T21:05:58Z"
+      lastTransitionTime: "2022-05-31T20:45:09Z"
       reason: NewReplicaSetAvailable
       message: ReplicaSet "hub-855499c46c" has successfully progressed.
     - type: Available
-      status: 'True'
-      lastUpdateTime: '2022-06-03T08:34:39Z'
-      lastTransitionTime: '2022-06-03T08:34:39Z'
+      status: "True"
+      lastUpdateTime: "2022-06-03T08:34:39Z"
+      lastTransitionTime: "2022-06-03T08:34:39Z"
       reason: MinimumReplicasAvailable
       message: Deployment has minimum availability.

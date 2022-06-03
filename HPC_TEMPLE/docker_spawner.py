@@ -2,10 +2,12 @@
 configures jupyterhub with dummyauthenticator and simplespawner
 to enable testing without administrative privileges.
 """
-import netifaces
 import os
 import sys
+
+import netifaces
 from dockerspawner import DockerSpawner
+
 from jupyterhub.auth import DummyAuthenticator
 
 script_dir = os.path.dirname(__file__)
@@ -27,7 +29,6 @@ c.Authenticator.admin_users = {'admin1', 'admin2', 'admin3'}
 c.DummyAuthenticator.password = "admin12345"
 c.LocalAuthenticator.create_system_users = True
 c.Authenticator.delete_invalid_users = True
-
 
 
 # Optionally set a global password that all users must use
@@ -61,4 +62,4 @@ c.DockerSpawner.cpu_guarantee = 0.5
 
 # c.JupyterHub.spawner_class = SimpleLocalProcessSpawner
 
-from jupyterhub.spawner import Spawner, LocalProcessSpawner
+from jupyterhub.spawner import LocalProcessSpawner, Spawner

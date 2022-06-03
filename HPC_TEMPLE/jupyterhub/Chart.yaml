@@ -26,16 +26,16 @@ description: Multi-user Jupyter installation
 home: https://z2jh.jupyter.org
 icon: https://jupyter.org/assets/hublogo.svg
 keywords:
-- jupyter
-- jupyterhub
-- z2jh
-kubeVersion: '>=1.17.0-0'
+  - jupyter
+  - jupyterhub
+  - z2jh
+kubeVersion: ">=1.17.0-0"
 maintainers:
-- email: erik@sundellopensource.se
-  name: Erik Sundell
-- name: Simon Li
-  url: https://github.com/manics/
+  - email: erik@sundellopensource.se
+    name: Erik Sundell
+  - name: Simon Li
+    url: https://github.com/manics/
 name: jupyterhub
 sources:
-- https://github.com/jupyterhub/zero-to-jupyterhub-k8s
+  - https://github.com/jupyterhub/zero-to-jupyterhub-k8s
 version: 1.2.0

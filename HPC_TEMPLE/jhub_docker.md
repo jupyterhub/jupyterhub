@@ -1,6 +1,7 @@
 # Installing jupyterhub on docker
 
 ### `Step 1 — Installing Docker`
+
 ```
 $ sudo apt update
 $ sudo apt install apt-transport-https ca-certificates curl software-properties-common
@@ -9,7 +10,9 @@ $ sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ub
 $ apt-cache policy docker-ce
 $ sudo apt install docker-ce
 ```
+
 **sudo systemctl status docker**
+
 ```
 ● docker.service - Docker Application Container Engine
      Loaded: loaded (/lib/systemd/system/docker.service; enabled; vendor preset: enabled)
@@ -29,9 +32,10 @@ TriggeredBy: ● docker.socket
              └─177446 /usr/bin/docker-proxy -proto tcp -host-ip :: -host-port 8001 -container-ip
 ```
 
-*The above indicates that the docker has been successfully  installed and running*
+_The above indicates that the docker has been successfully installed and running_
 
 ### `Step 2 — Install Portainer with Docker`
+
 ```
 $ docker volume create portainer_data
 $ docker run -d -p 9000:8000 -p 9443:9443 --name portainer \
@@ -40,34 +44,42 @@ $ docker run -d -p 9000:8000 -p 9443:9443 --name portainer \
     -v portainer_data:/data \
     portainer/portainer-ce:2.9.3
 ```
+
 **docker ps**
+
 ```
 CONTAINER ID   IMAGE                          COMMAND        CREATED          STATUS          PORTS                                                                                            NAMES
 05c417c7ab1c   jupyterhub/jupyterhub          "jupyterhub"   18 minutes ago   Up 18 minutes   0.0.0.0:8001->8000/tcp, :::8001->8000/tcp                                                        jupyterhub
 0a6533d8fcc2   portainer/portainer-ce:2.9.3   "/portainer"   8 hours ago      Up 3 hours      0.0.0.0:8000->8000/tcp, :::8000->8000/tcp, 0.0.0.0:9443->9443/tcp, :::9443->9443/tcp, 9000/tcp   portainer
 
 ```
+
 **https://localhost:9443**
+
 ### `Step 3 — Configuring Jupyterhub on docker`
 
-* We will pull the latest image from https://hub.docker.com/r/jupyterhub/jupyterhub/#docker 
+- We will pull the latest image from https://hub.docker.com/r/jupyterhub/jupyterhub/#docker
 
-* Refer to the documentation for installation and configuration 
+- Refer to the documentation for installation and configuration
 
 ```
 $ docker pull jupyterhub/jupyterhub
 $ docker run -p 8000:8000 -d --name jupyterhub jupyterhub/jupyterhub jupyterhub
 ```
-*This command will create a container named jupyterhub that you can stop and resume with docker stop/start.The Hub service will be listening on all interfaces at port 8001, which makes this a good choice for testing JupyterHub on your desktop or laptop.*
 
-*To create system user in the container*
+_This command will create a container named jupyterhub that you can stop and resume with docker stop/start.The Hub service will be listening on all interfaces at port 8001, which makes this a good choice for testing JupyterHub on your desktop or laptop._
+
+_To create system user in the container_
+
 ```
 $ docker exec -it jupyterhub bash
 $ adduser admin
 $ npm install -g configurable-http-proxy
 $ python3 -m pip install jupyterlab notebook
 ```
+
 ### `Step 4 — Config file in Docker`
+
 ```
 $ docker ps
 $ docker exec -u 0 -it CONTAINER-ID /bin/bash

@@ -2,11 +2,11 @@ import glob
 import os
 import re
 import sys
-
 from binascii import a2b_hex
 
-from tornado.httpclient import AsyncHTTPClient
 from kubernetes import client
+from tornado.httpclient import AsyncHTTPClient
+
 from jupyterhub.utils import url_path_join
 
 # Make sure that modules placed in the same directory as the jupyterhub config are added to the pythonpath
@@ -15,10 +15,10 @@ sys.path.insert(0, configuration_directory)
 
 from z2jh import (
     get_config,
-    set_config_if_not_none,
     get_name,
     get_name_env,
     get_secret_value,
+    set_config_if_not_none,
 )
 
 
@@ -175,7 +175,7 @@ image = get_config("singleuser.image.name")
 if image:
     tag = get_config("singleuser.image.tag")
     if tag:
-        image = "{}:{}".format(image, tag)
+        image = f"{image}:{tag}"
 
     c.KubeSpawner.image = image
 

@@ -4,8 +4,8 @@ metadata:
   name: hub
   namespace: default
   uid: 2b11be76-fa86-443d-a4b8-b759d78479ac
-  resourceVersion: '4348'
-  creationTimestamp: '2022-05-31T20:32:39Z'
+  resourceVersion: "4348"
+  creationTimestamp: "2022-05-31T20:32:39Z"
   labels:
     app: jupyterhub
     app.kubernetes.io/managed-by: Helm
@@ -17,13 +17,13 @@ metadata:
     meta.helm.sh/release-name: jhub2
     meta.helm.sh/release-namespace: default
     prometheus.io/path: /hub/metrics
-    prometheus.io/port: '8081'
-    prometheus.io/scrape: 'true'
+    prometheus.io/port: "8081"
+    prometheus.io/scrape: "true"
   managedFields:
     - manager: helm
       operation: Update
       apiVersion: v1
-      time: '2022-05-31T20:32:39Z'
+      time: "2022-05-31T20:32:39Z"
       fieldsType: FieldsV1
       fieldsV1:
         f:metadata:

@@ -1,6 +1,7 @@
 # **Configuring jupyterhub on kubernetes**
 
 ### `Step 1 — Installing Docker or configure a Hypervisor`
+
 ```console
 $ sudo apt update
 $ sudo apt install apt-transport-https ca-certificates curl software-properties-common
@@ -29,7 +30,7 @@ TriggeredBy: ● docker.socket
             ....
 ```
 
-*The above indicates that the docker has been successfully  installed and running*
+_The above indicates that the docker has been successfully installed and running_
 
 ### `Step 2 — Installing minikube 1 Node k8s cluster`
 
@@ -38,7 +39,8 @@ $ curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube_late
 $ sudo dpkg -i minikube_latest_amd64.deb
 $ sudo snap install kubectl
 ```
-* Start minikube in docker environment
+
+- Start minikube in docker environment
 
 ```console
 $ minikube start --driver=docker
@@ -56,11 +58,12 @@ $ minikube start --driver=docker
 🏄  Done! kubectl is now configured to use "minikube" cluster and "default" namespace by default
 
 ```
-* In order to generate the dashboard use **minikube dashboard**
-* Few widely used **kubectl commands**
+
+- In order to generate the dashboard use **minikube dashboard**
+- Few widely used **kubectl commands**
 
 ```console
-$ kubectl get node 
+$ kubectl get node
 $ kubectl get all
 $ kubectl logs <pod_name>
 
@@ -80,8 +83,8 @@ $ kubectl exec -it <pod_nmae> --bin/bash
 
 ### `Step 2 — Installing Helm`
 
-* helm is package manager fro kubernetes
-* Helm packages ar called **charts**
+- helm is package manager fro kubernetes
+- Helm packages ar called **charts**
 
 ```console
 $ sudo snap install helm
@@ -91,10 +94,11 @@ or
 $ curl https://raw.githubusercontent.com/helm/helm/HEAD/scripts/get-helm-3 | bash
 
 ```
+
 ### `Step 2 — Installing jupyterHub`
 
-* After successfully configuring docker, minikube or helm 
-* Make Helm aware of the JupyterHub Helm chart repository
+- After successfully configuring docker, minikube or helm
+- Make Helm aware of the JupyterHub Helm chart repository
 
 ```console
 $ helm repo add jupyterhub https://jupyterhub.github.io/helm-chart/
@@ -107,13 +111,15 @@ Update Complete. ⎈Happy Helming!⎈
 $ helm repo list
 
 ```
-* Download the latest helm charts for jupyterhub from [link-to-Helm-charts-juputerhub](https://jupyterhub.github.io/helm-chart/)
 
-* Using the builtin yaml file we can start jupyterhub
+- Download the latest helm charts for jupyterhub from [link-to-Helm-charts-juputerhub](https://jupyterhub.github.io/helm-chart/)
+
+- Using the builtin yaml file we can start jupyterhub
 
 ```console
 $ helm upgrade <name> jupyterhub/jupyterhub --values=values.yaml
 ```
+
 ```console
 $ kubectl describe service hub
 
@@ -143,14 +149,16 @@ Session Affinity:  None
 Events:            <none>
 
 ```
-* Since we have not configured ingress controller or any other proxy services, we will confine ourself to the use of **minikube tunnel**
+
+- Since we have not configured ingress controller or any other proxy services, we will confine ourself to the use of **minikube tunnel**
 
 ```console
 $ minikube tunnel
 ```
-* Use the following ip from **service** to access the hub on port 8000/8081 
 
-```
+- Use the following ip from **service** to access the hub on port 8000/8081
+
+````
 Name:              hub
 Namespace:         default
 Labels:            app=jupyterhub
@@ -170,4 +178,4 @@ Endpoints:         172.17.0.4:8081
 
 ```console
 $ kubectl exec -it  <pod_name>  -- bash
-```
+````

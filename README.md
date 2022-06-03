@@ -17,8 +17,6 @@
   </a>
 </p>
 
-
-
 With [JupyterHub](https://jupyterhub.readthedocs.io) you can create a
 **multi-user Hub** that spawns, manages, and proxies multiple instances of the
 single-user [Jupyter notebook](https://jupyter-notebook.readthedocs.io)

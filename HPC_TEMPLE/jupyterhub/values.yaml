@@ -34,7 +34,7 @@ hub:
     type: ClusterIP
     annotations: {}
     ports:
-      nodePort: 
+      nodePort:
     extraPorts: []
     loadBalancerIP:
   baseUrl: /
